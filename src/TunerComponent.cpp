@@ -56,16 +56,16 @@ void TunerComponent::getNextAudioBlock(
         bufferToFill.numSamples, audioFifo.getFreeSpace());
 
     const auto writeScope = audioFifo.write(writable);
-    auto sourceOffset = 0;
 
-    for (const auto block : writeScope)
-    {
-        std::copy_n(
-            input + sourceOffset,
-            block.blockSize,
-            fifoBuffer.begin() + block.startIndex);
-        sourceOffset += block.blockSize;
-    }
+    std::copy_n(
+        input,
+        writeScope.blockSize1,
+        fifoBuffer.begin() + writeScope.startIndex1);
+
+    std::copy_n(
+        input + writeScope.blockSize1,
+        writeScope.blockSize2,
+        fifoBuffer.begin() + writeScope.startIndex2);
 }
 
 void TunerComponent::releaseResources()
@@ -115,16 +115,16 @@ void TunerComponent::drainAudioFifo()
 
     std::vector<float> newSamples(static_cast<std::size_t>(available));
     const auto readScope = audioFifo.read(available);
-    auto destinationOffset = 0;
 
-    for (const auto block : readScope)
-    {
-        std::copy_n(
-            fifoBuffer.begin() + block.startIndex,
-            block.blockSize,
-            newSamples.begin() + destinationOffset);
-        destinationOffset += block.blockSize;
-    }
+    std::copy_n(
+        fifoBuffer.begin() + readScope.startIndex1,
+        readScope.blockSize1,
+        newSamples.begin());
+
+    std::copy_n(
+        fifoBuffer.begin() + readScope.startIndex2,
+        readScope.blockSize2,
+        newSamples.begin() + readScope.blockSize1);
 
     if (available >= analysisSize)
     {
@@ -246,7 +246,7 @@ void TunerComponent::updateNote(double frequency)
     const auto noteIndex = ((nearestMidi % 12) + 12) % 12;
     const auto octave = (nearestMidi / 12) - 1;
 
-    displayedFrequency = displayedFrequency == 0.0
+    displayedFrequency = displayedFrequency <= 0.0
         ? frequency
         : (0.75 * displayedFrequency) + (0.25 * frequency);
 
