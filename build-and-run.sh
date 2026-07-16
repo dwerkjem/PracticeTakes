@@ -46,6 +46,11 @@ cmake "${cmake_args[@]}"
 printf 'Building %s...\n' "$TARGET_NAME"
 cmake --build "$BUILD_DIR" --config "$BUILD_TYPE" --target "$TARGET_NAME" --parallel
 
+if [[ "${1:-}" == "--build-only" ]]; then
+    exit 0
+fi
+
+
 executable_candidates=(
     "$BUILD_DIR/$TARGET_NAME"
     "$BUILD_DIR/$TARGET_NAME.exe"
