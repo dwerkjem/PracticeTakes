@@ -21,7 +21,6 @@ TunerComponent::TunerComponent()
 {
     setOpaque(true);
     setSize(620, 430);
-    correlation.resize(analysisSize, 0.0f);
 
     setAudioChannels(1, 0);
     startTimerHz(20);
@@ -172,9 +171,9 @@ double TunerComponent::detectPitch() const
 
         for (auto index = 0; index < sampleCount; ++index)
         {
-            const auto first = static_cast<double>(analysisBuffer[index]);
+            const auto first = static_cast<double>(analysisBuffer[static_cast<std::size_t>(index)]);
             const auto second =
-                static_cast<double>(analysisBuffer[index + lag]);
+                static_cast<double>(analysisBuffer[static_cast<std::size_t>(index + lag)]);
 
             numerator += first * second;
             firstEnergy += first * first;
@@ -211,9 +210,9 @@ double TunerComponent::detectPitch() const
             for (auto index = 0; index < analysisSize - lag; ++index)
             {
                 const auto first =
-                    static_cast<double>(analysisBuffer[index]);
+                    static_cast<double>(analysisBuffer[static_cast<std::size_t>(index)]);
                 const auto second =
-                    static_cast<double>(analysisBuffer[index + lag]);
+                    static_cast<double>(analysisBuffer[static_cast<std::size_t>(index + lag)]);
 
                 numerator += first * second;
                 firstEnergy += first * first;
