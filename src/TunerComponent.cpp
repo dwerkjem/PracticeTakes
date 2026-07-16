@@ -29,25 +29,48 @@ TunerComponent::TunerComponent()
     microphoneLabel.setFont(juce::FontOptions(15.0f));
     microphoneLabel.setJustificationType(juce::Justification::centredLeft);
 
+    const auto configureButton = [](juce::TextButton& button)
+    {
+        button.setColour(
+            juce::TextButton::buttonColourId,
+            juce::Colour::fromRGB(54, 59, 72));
+        button.setColour(
+            juce::TextButton::buttonOnColourId,
+            juce::Colour::fromRGB(70, 92, 130));
+        button.setColour(
+            juce::TextButton::textColourOffId,
+            juce::Colour::fromRGB(238, 241, 247));
+    };
+
     addAndMakeVisible(microphoneButton);
-    microphoneButton.setColour(
-        juce::TextButton::buttonColourId,
-        juce::Colour::fromRGB(54, 59, 72));
-    microphoneButton.setColour(
-        juce::TextButton::buttonOnColourId,
-        juce::Colour::fromRGB(70, 92, 130));
-    microphoneButton.setColour(
-        juce::TextButton::textColourOffId,
-        juce::Colour::fromRGB(238, 241, 247));
+    configureButton(microphoneButton);
     microphoneButton.onClick = [this]
     {
         showAudioDeviceSelector();
     };
 
+    configureButton(audioSettingsDoneButton);
+    audioSettingsDoneButton.onClick = [this]
+    {
+        hideAudioDeviceSelector();
+    };
+    addChildComponent(audioSettingsDoneButton);
+
     audioErrorMessage = audioDeviceManager.initialise(1, 0, nullptr, true);
 
-    audioSourcePlayer.setSource(this);
-    audioDeviceManager.addAudioCallback(&audioSourcePlayer);
+    audioDeviceSelector =
+        std::make_unique<juce::AudioDeviceSelectorComponent>(
+            audioDeviceManager,
+            1,
+            2,
+            0,
+            0,
+            false,
+            false,
+            false,
+            true);
+    addChildComponent(*audioDeviceSelector);
+
     audioDeviceManager.addChangeListener(this);
 
     if (audioErrorMessage.isNotEmpty())
@@ -64,8 +87,8 @@ TunerComponent::~TunerComponent()
 {
     stopTimer();
     audioDeviceManager.removeChangeListener(this);
-    audioSourcePlayer.setSource(nullptr);
-    audioDeviceManager.removeAudioCallback(&audioSourcePlayer);
+    detachAudioCallback();
+    audioDeviceSelector.reset();
     audioDeviceManager.closeAudioDevice();
 }
 
@@ -151,32 +174,86 @@ void TunerComponent::changeListenerCallback(
 
 void TunerComponent::showAudioDeviceSelector()
 {
-    auto selector = std::make_unique<juce::AudioDeviceSelectorComponent>(
-        audioDeviceManager,
-        1,
-        2,
-        0,
-        0,
-        false,
-        false,
-        false,
-        true);
+    if (showingAudioDeviceSelector || audioDeviceSelector == nullptr)
+    {
+        return;
+    }
 
-    selector->setSize(520, 420);
+    showingAudioDeviceSelector = true;
+    detachAudioCallback();
 
-    auto& callout = juce::CallOutBox::launchAsynchronously(
-        std::move(selector),
-        microphoneButton.getScreenBounds(),
-        nullptr);
+    microphoneLabel.setVisible(false);
+    microphoneButton.setVisible(false);
+    audioDeviceSelector->setVisible(true);
+    audioSettingsDoneButton.setVisible(true);
 
-    callout.setDismissalMouseClicksAreAlwaysConsumed(true);
+    resized();
+    repaint();
+}
+
+void TunerComponent::hideAudioDeviceSelector()
+{
+    if (! showingAudioDeviceSelector)
+    {
+        return;
+    }
+
+    showingAudioDeviceSelector = false;
+
+    if (audioDeviceSelector != nullptr)
+    {
+        audioDeviceSelector->setVisible(false);
+    }
+
+    audioSettingsDoneButton.setVisible(false);
+    microphoneLabel.setVisible(true);
+    microphoneButton.setVisible(true);
+
+    updateAudioDeviceStatus();
+    resized();
+    repaint();
+}
+
+bool TunerComponent::hasUsableInputDevice() const
+{
+    auto* currentDevice = audioDeviceManager.getCurrentAudioDevice();
+
+    return currentDevice != nullptr
+        && currentDevice->isOpen()
+        && currentDevice->getActiveInputChannels().countNumberOfSetBits() > 0;
+}
+
+void TunerComponent::attachAudioCallbackIfPossible()
+{
+    if (audioCallbackAttached
+        || showingAudioDeviceSelector
+        || ! hasUsableInputDevice())
+    {
+        return;
+    }
+
+    audioSourcePlayer.setSource(this);
+    audioDeviceManager.addAudioCallback(&audioSourcePlayer);
+    audioCallbackAttached = true;
+}
+
+void TunerComponent::detachAudioCallback()
+{
+    if (! audioCallbackAttached)
+    {
+        return;
+    }
+
+    audioSourcePlayer.setSource(nullptr);
+    audioDeviceManager.removeAudioCallback(&audioSourcePlayer);
+    audioCallbackAttached = false;
 }
 
 void TunerComponent::updateAudioDeviceStatus()
 {
-    const auto* currentDevice = audioDeviceManager.getCurrentAudioDevice();
+    auto* currentDevice = audioDeviceManager.getCurrentAudioDevice();
 
-    if (currentDevice != nullptr)
+    if (hasUsableInputDevice())
     {
         const auto setup = audioDeviceManager.getAudioDeviceSetup();
         const auto deviceName = setup.inputDeviceName.isNotEmpty()
@@ -187,9 +264,12 @@ void TunerComponent::updateAudioDeviceStatus()
             "Microphone: " + deviceName,
             juce::dontSendNotification);
         audioErrorMessage.clear();
+        attachAudioCallbackIfPossible();
     }
     else
     {
+        detachAudioCallback();
+
         microphoneLabel.setText(
             "Microphone: none selected",
             juce::dontSendNotification);
@@ -197,7 +277,7 @@ void TunerComponent::updateAudioDeviceStatus()
         if (audioErrorMessage.isEmpty())
         {
             audioErrorMessage =
-                "No microphone is selected. Use Select microphone below.";
+                "No usable microphone is selected. Open audio settings below.";
         }
     }
 
@@ -367,6 +447,17 @@ void TunerComponent::paint(juce::Graphics& graphics)
 
     graphics.fillAll(background);
 
+    if (showingAudioDeviceSelector)
+    {
+        graphics.setColour(foreground);
+        graphics.setFont(juce::FontOptions(22.0f, juce::Font::bold));
+        graphics.drawText(
+            "AUDIO INPUT SETTINGS",
+            getLocalBounds().reduced(24).removeFromTop(40),
+            juce::Justification::centred);
+        return;
+    }
+
     auto bounds = getLocalBounds().reduced(32);
     bounds.removeFromBottom(56);
 
@@ -474,6 +565,22 @@ void TunerComponent::paint(juce::Graphics& graphics)
 
 void TunerComponent::resized()
 {
+    if (showingAudioDeviceSelector)
+    {
+        auto settingsBounds = getLocalBounds().reduced(24);
+        settingsBounds.removeFromTop(46);
+        auto footer = settingsBounds.removeFromBottom(44);
+
+        if (audioDeviceSelector != nullptr)
+        {
+            audioDeviceSelector->setBounds(settingsBounds);
+        }
+
+        audioSettingsDoneButton.setBounds(
+            footer.removeFromRight(120).reduced(0, 4));
+        return;
+    }
+
     auto controls = getLocalBounds().reduced(32).removeFromBottom(44);
     auto buttonBounds = controls.removeFromRight(190);
     controls.removeFromRight(12);
