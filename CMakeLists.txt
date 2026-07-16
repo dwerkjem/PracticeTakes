@@ -10,6 +10,14 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Keep JUCE's optional browser/network dependencies out of this tuner.
+# These directory-level definitions also apply while JUCE builds juceaide.
+add_compile_definitions(
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0
+    JUCE_USE_XCURSOR=0
+)
+
 include(FetchContent)
 
 FetchContent_Declare(
