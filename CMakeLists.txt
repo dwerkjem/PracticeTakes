@@ -69,6 +69,8 @@ target_sources(PracticeTakes
         src/main.cpp
         src/MainComponent.cpp
         src/MainComponent.h
+        src/SpectrogramComponent.cpp
+        src/SpectrogramComponent.h
         src/TunerComponent.cpp
         src/TunerComponent.h
 )
@@ -82,6 +84,7 @@ target_compile_definitions(PracticeTakes
 target_link_libraries(PracticeTakes
     PRIVATE
         juce::juce_audio_utils
+        juce::juce_dsp
         juce::juce_gui_extra
     PUBLIC
         juce::juce_recommended_config_flags
