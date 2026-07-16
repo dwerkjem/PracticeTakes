@@ -1,3 +1,3 @@
-# Notation Pilot
+# Practice Takes
 
-**Notation Pilot** is a desktop application for Linux and Windows that helps users learn piano through interactive sheet music, MIDI input, and guided practice tools.
+**Practice Takes** is a desktop application for Linux and Windows that helps users interments through interactive sheet music and guided practice tools.
