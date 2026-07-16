@@ -56,7 +56,11 @@ TunerComponent::TunerComponent()
     };
     addChildComponent(audioSettingsDoneButton);
 
-    audioErrorMessage = audioDeviceManager.initialise(1, 0, nullptr, true);
+    // Do not open the system's default ALSA device here. Some Linux device
+    // combinations report inconsistent channel counts while JUCE is starting
+    // its internal callback, which can assert before this component receives
+    // any audio. The selector below opens only the device chosen by the user.
+    audioErrorMessage = "Select a microphone to begin.";
 
     audioDeviceSelector =
         std::make_unique<juce::AudioDeviceSelectorComponent>(
@@ -72,12 +76,6 @@ TunerComponent::TunerComponent()
     addChildComponent(*audioDeviceSelector);
 
     audioDeviceManager.addChangeListener(this);
-
-    if (audioErrorMessage.isNotEmpty())
-    {
-        juce::Logger::writeToLog(
-            "Microphone initialisation failed: " + audioErrorMessage);
-    }
 
     updateAudioDeviceStatus();
     startTimerHz(20);
