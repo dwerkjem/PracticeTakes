@@ -22,14 +22,28 @@ TunerComponent::TunerComponent()
     setOpaque(true);
     setSize(620, 430);
 
-    setAudioChannels(1, 0);
+    audioErrorMessage = audioDeviceManager.initialise(1, 0, nullptr, true);
+
+    if (audioErrorMessage.isEmpty())
+    {
+        audioSourcePlayer.setSource(this);
+        audioDeviceManager.addAudioCallback(&audioSourcePlayer);
+    }
+    else
+    {
+        juce::Logger::writeToLog(
+            "Microphone initialisation failed: " + audioErrorMessage);
+    }
+
     startTimerHz(20);
 }
 
 TunerComponent::~TunerComponent()
 {
     stopTimer();
-    shutdownAudio();
+    audioSourcePlayer.setSource(nullptr);
+    audioDeviceManager.removeAudioCallback(&audioSourcePlayer);
+    audioDeviceManager.closeAudioDevice();
 }
 
 void TunerComponent::prepareToPlay(int, double sampleRate)
@@ -282,9 +296,11 @@ void TunerComponent::paint(juce::Graphics& graphics)
         juce::Justification::centred);
 
     graphics.setFont(juce::FontOptions(22.0f));
-    const auto frequencyText = hasSignal
-        ? juce::String(displayedFrequency, 1) + " Hz"
-        : "Play or sing a sustained note";
+    const auto frequencyText = audioErrorMessage.isNotEmpty()
+        ? juce::String("Microphone unavailable")
+        : hasSignal
+            ? juce::String(displayedFrequency, 1) + " Hz"
+            : juce::String("Play or sing a sustained note");
 
     graphics.drawText(
         frequencyText,
@@ -337,15 +353,18 @@ void TunerComponent::paint(juce::Graphics& graphics)
     graphics.setColour(hasSignal ? accent : muted);
     graphics.setFont(juce::FontOptions(18.0f));
 
-    const auto centsText = hasSignal
-        ? juce::String(displayedCents > 0.0 ? "+" : "")
-            + juce::String(displayedCents, 1) + " cents"
-        : juce::String("Waiting for microphone input");
+    const auto centsText = audioErrorMessage.isNotEmpty()
+        ? audioErrorMessage
+        : hasSignal
+            ? juce::String(displayedCents > 0.0 ? "+" : "")
+                + juce::String(displayedCents, 1) + " cents"
+            : juce::String("Waiting for microphone input");
 
-    graphics.drawText(
+    graphics.drawFittedText(
         centsText,
-        bounds.removeFromTop(30),
-        juce::Justification::centred);
+        bounds.removeFromTop(46),
+        juce::Justification::centred,
+        2);
 
     const auto levelWidth = juce::jlimit(
         0.0f,
