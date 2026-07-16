@@ -86,6 +86,12 @@ if [[ -n "$vcpkg_toolchain" ]]; then
             -DVCPKG_OVERLAY_TRIPLETS="$PROJECT_ROOT/triplets"
         )
 
+        if [[ "$(uname -m)" == "x86_64" ]]; then
+            cmake_args+=(
+                -DVCPKG_HOST_TRIPLET="${VCPKG_HOST_TRIPLET:-x64-linux-practice}"
+            )
+        fi
+
         vcpkg_prefix="$vcpkg_installed_dir/$vcpkg_triplet"
         vcpkg_pkgconfig_paths=(
             "$vcpkg_prefix/lib/pkgconfig"
