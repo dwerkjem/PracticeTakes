@@ -114,8 +114,9 @@ if [[ -n "$vcpkg_toolchain" ]]; then
         # JUCE configures juceaide in a nested CMake project that does not
         # inherit the outer project's toolchain settings. Environment flags
         # are inherited by both CMake invocations and by Nix's compiler wrapper.
+        juce_platform_defines="-DJUCE_USE_XCURSOR=0 -DJUCE_WEB_BROWSER=0 -DJUCE_USE_CURL=0"
         export CFLAGS="-I$vcpkg_prefix/include ${CFLAGS:-}"
-        export CXXFLAGS="-I$vcpkg_prefix/include ${CXXFLAGS:-}"
+        export CXXFLAGS="-I$vcpkg_prefix/include $juce_platform_defines ${CXXFLAGS:-}"
         export LDFLAGS="-L$vcpkg_prefix/lib -Wl,-rpath,$vcpkg_prefix/lib ${LDFLAGS:-}"
     fi
 fi
