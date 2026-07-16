@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-#!/usr/bin/env bash
-#!/usr/bin/env bash
 
 set -euo pipefail
 
@@ -8,10 +6,34 @@ PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_TYPE="${BUILD_TYPE:-Debug}"
 BUILD_DIR="${BUILD_DIR:-${PROJECT_ROOT}/build}"
 TARGET_NAME="${TARGET_NAME:-PracticeTakes}"
+BUILD_ONLY=false
+CLEAN=false
+program_args=()
 
-if [[ "${1:-}" == "--clean" ]]; then
+while (( $# > 0 )); do
+    case "$1" in
+        --build-only)
+            BUILD_ONLY=true
+            shift
+            ;;
+        --clean)
+            CLEAN=true
+            shift
+            ;;
+        --)
+            shift
+            program_args+=("$@")
+            break
+            ;;
+        *)
+            program_args+=("$1")
+            shift
+            ;;
+    esac
+done
+
+if [[ "$CLEAN" == true ]]; then
     rm -rf -- "$BUILD_DIR"
-    shift
 fi
 
 if [[ ! -f "$PROJECT_ROOT/CMakeLists.txt" ]]; then
@@ -46,10 +68,9 @@ cmake "${cmake_args[@]}"
 printf 'Building %s...\n' "$TARGET_NAME"
 cmake --build "$BUILD_DIR" --config "$BUILD_TYPE" --target "$TARGET_NAME" --parallel
 
-if [[ "${1:-}" == "--build-only" ]]; then
+if [[ "$BUILD_ONLY" == true ]]; then
     exit 0
 fi
-
 
 executable_candidates=(
     "$BUILD_DIR/$TARGET_NAME"
@@ -61,7 +82,7 @@ executable_candidates=(
 for executable in "${executable_candidates[@]}"; do
     if [[ -x "$executable" ]]; then
         printf 'Running %s...\n' "$executable"
-        exec "$executable" "$@"
+        exec "$executable" "${program_args[@]}"
     fi
 done
 
