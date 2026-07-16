@@ -4,7 +4,8 @@
 
 #include <array>
 
-class TunerComponent final : public juce::AudioAppComponent,
+class TunerComponent final : public juce::Component,
+                             private juce::AudioSource,
                              private juce::Timer
 {
 public:
@@ -26,6 +27,10 @@ private:
     void drainAudioFifo();
     [[nodiscard]] double detectPitch() const;
     void updateNote(double frequency);
+
+    juce::AudioDeviceManager audioDeviceManager;
+    juce::AudioSourcePlayer audioSourcePlayer;
+    juce::String audioErrorMessage;
 
     juce::AbstractFifo audioFifo { fifoCapacity };
     std::array<float, fifoCapacity> fifoBuffer {};
