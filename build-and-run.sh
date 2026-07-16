@@ -103,6 +103,13 @@ if [[ -n "$vcpkg_toolchain" ]]; then
         export CPATH="$vcpkg_prefix/include${CPATH:+:$CPATH}"
         export LIBRARY_PATH="$vcpkg_prefix/lib${LIBRARY_PATH:+:$LIBRARY_PATH}"
         export LD_LIBRARY_PATH="$vcpkg_prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+        # JUCE configures juceaide in a nested CMake project that does not
+        # inherit the outer project's toolchain settings. Environment flags
+        # are inherited by both CMake invocations and by Nix's compiler wrapper.
+        export CFLAGS="-I$vcpkg_prefix/include ${CFLAGS:-}"
+        export CXXFLAGS="-I$vcpkg_prefix/include ${CXXFLAGS:-}"
+        export LDFLAGS="-L$vcpkg_prefix/lib -Wl,-rpath,$vcpkg_prefix/lib ${LDFLAGS:-}"
     fi
 fi
 
