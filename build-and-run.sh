@@ -85,9 +85,10 @@ if [[ -n "$vcpkg_toolchain" ]]; then
             -DVCPKG_TARGET_TRIPLET="$vcpkg_triplet"
         )
 
+        vcpkg_prefix="$vcpkg_installed_dir/$vcpkg_triplet"
         vcpkg_pkgconfig_paths=(
-            "$vcpkg_installed_dir/$vcpkg_triplet/lib/pkgconfig"
-            "$vcpkg_installed_dir/$vcpkg_triplet/share/pkgconfig"
+            "$vcpkg_prefix/lib/pkgconfig"
+            "$vcpkg_prefix/share/pkgconfig"
         )
 
         joined_pkgconfig_path="$(
@@ -96,6 +97,12 @@ if [[ -n "$vcpkg_toolchain" ]]; then
         )"
 
         export PKG_CONFIG_PATH="$joined_pkgconfig_path${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+        export CMAKE_PREFIX_PATH="$vcpkg_prefix${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
+        export CMAKE_INCLUDE_PATH="$vcpkg_prefix/include${CMAKE_INCLUDE_PATH:+:$CMAKE_INCLUDE_PATH}"
+        export CMAKE_LIBRARY_PATH="$vcpkg_prefix/lib${CMAKE_LIBRARY_PATH:+:$CMAKE_LIBRARY_PATH}"
+        export CPATH="$vcpkg_prefix/include${CPATH:+:$CPATH}"
+        export LIBRARY_PATH="$vcpkg_prefix/lib${LIBRARY_PATH:+:$LIBRARY_PATH}"
+        export LD_LIBRARY_PATH="$vcpkg_prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     fi
 fi
 
