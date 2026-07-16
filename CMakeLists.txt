@@ -30,7 +30,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(JUCE)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    include(cmake/PatchJuceAlsaChannelMismatch.cmake)
+    include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PatchJuceAlsaChannelMismatch.cmake")
     practice_takes_patch_juce_alsa_channel_mismatch("${juce_SOURCE_DIR}")
 endif()
 
