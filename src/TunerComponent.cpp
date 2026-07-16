@@ -10,6 +10,8 @@ constexpr double minimumFrequency = 55.0;
 constexpr double maximumFrequency = 1200.0;
 constexpr float minimumRms = 0.008f;
 constexpr double minimumCorrelation = 0.72;
+constexpr double pitchSmoothingAmount = 0.35;
+constexpr double noteSwitchThresholdSemitones = 0.55;
 
 const std::array<const char*, 12> noteNames {
     "C", "C#", "D", "D#", "E", "F",
@@ -136,19 +138,26 @@ void TunerComponent::timerCallback()
     inputLevel = static_cast<float>(
         std::sqrt(squareSum / static_cast<double>(analysisSize)));
 
-    const auto frequency = detectPitch();
+    const auto detectedFrequency = detectPitch();
 
-    if (frequency > 0.0)
+    if (detectedFrequency > 0.0)
     {
-        updateNote(frequency);
+        framesWithoutPitch = 0;
+
+        const auto stableFrequency =
+            smoothFrequency(detectedFrequency);
+
+        updateNote(stableFrequency);
         hasSignal = true;
     }
     else
     {
-        hasSignal = false;
-        displayedFrequency = 0.0;
-        displayedCents = 0.0;
-        displayedNote = "--";
+        ++framesWithoutPitch;
+
+        if (framesWithoutPitch >= pitchDropoutHoldFrames)
+        {
+            resetPitchTracking();
+        }
     }
 
     repaint();
@@ -188,6 +197,7 @@ void TunerComponent::showAudioDeviceSelector()
 
     showingAudioDeviceSelector = true;
     detachAudioCallback();
+    resetPitchTracking();
 
     microphoneLabel.setVisible(false);
     microphoneButton.setVisible(false);
@@ -276,6 +286,7 @@ void TunerComponent::updateAudioDeviceStatus()
     else
     {
         detachAudioCallback();
+        resetPitchTracking();
 
         microphoneLabel.setText(
             "Microphone: none selected",
@@ -425,19 +436,92 @@ double TunerComponent::detectPitch() const
     return currentSampleRate / refinedLag;
 }
 
+double TunerComponent::smoothFrequency(double frequency)
+{
+    const auto midiPitch =
+        69.0 + (12.0 * std::log2(frequency / 440.0));
+
+    pitchHistory[static_cast<std::size_t>(pitchHistoryWriteIndex)] =
+        midiPitch;
+    pitchHistoryWriteIndex =
+        (pitchHistoryWriteIndex + 1) % pitchHistorySize;
+    pitchHistoryCount =
+        std::min(pitchHistoryCount + 1, pitchHistorySize);
+
+    auto sortedHistory = pitchHistory;
+    const auto validEnd =
+        sortedHistory.begin() + pitchHistoryCount;
+
+    std::sort(sortedHistory.begin(), validEnd);
+
+    auto averageBegin = sortedHistory.begin();
+    auto averageEnd = validEnd;
+
+    if (pitchHistoryCount == pitchHistorySize)
+    {
+        ++averageBegin;
+        --averageEnd;
+    }
+
+    const auto sampleCount =
+        static_cast<double>(std::distance(averageBegin, averageEnd));
+    const auto windowAverage =
+        std::accumulate(averageBegin, averageEnd, 0.0) / sampleCount;
+
+    if (smoothedMidiNote == 0.0)
+    {
+        smoothedMidiNote = windowAverage;
+    }
+    else
+    {
+        smoothedMidiNote +=
+            pitchSmoothingAmount
+            * (windowAverage - smoothedMidiNote);
+    }
+
+    return 440.0
+        * std::pow(2.0, (smoothedMidiNote - 69.0) / 12.0);
+}
+
+void TunerComponent::resetPitchTracking()
+{
+    pitchHistory.fill(0.0);
+    pitchHistoryCount = 0;
+    pitchHistoryWriteIndex = 0;
+    smoothedMidiNote = 0.0;
+    framesWithoutPitch = 0;
+    hasLockedMidiNote = false;
+    hasSignal = false;
+    displayedFrequency = 0.0;
+    displayedCents = 0.0;
+    displayedNote = "--";
+    inputLevel = 0.0f;
+    analysisBuffer.fill(0.0f);
+}
+
 void TunerComponent::updateNote(double frequency)
 {
     const auto midiNote =
         69.0 + (12.0 * std::log2(frequency / 440.0));
     const auto nearestMidi = static_cast<int>(std::round(midiNote));
-    const auto noteIndex = ((nearestMidi % 12) + 12) % 12;
-    const auto octave = (nearestMidi / 12) - 1;
 
-    displayedFrequency = displayedFrequency <= 0.0
-        ? frequency
-        : (0.75 * displayedFrequency) + (0.25 * frequency);
+    if (! hasLockedMidiNote)
+    {
+        lockedMidiNote = nearestMidi;
+        hasLockedMidiNote = true;
+    }
+    else if (std::abs(midiNote - static_cast<double>(lockedMidiNote))
+             > noteSwitchThresholdSemitones)
+    {
+        lockedMidiNote = nearestMidi;
+    }
 
-    displayedCents = 100.0 * (midiNote - nearestMidi);
+    const auto noteIndex = ((lockedMidiNote % 12) + 12) % 12;
+    const auto octave = (lockedMidiNote / 12) - 1;
+
+    displayedFrequency = frequency;
+    displayedCents =
+        100.0 * (midiNote - static_cast<double>(lockedMidiNote));
     displayedNote =
         juce::String(noteNames[static_cast<std::size_t>(noteIndex)])
         + juce::String(octave);
