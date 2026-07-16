@@ -1,5 +1,16 @@
 {
   "name": "practice-takes",
   "version-string": "0.1.0",
-  "dependencies": []
+  "dependencies": [
+    "alsa",
+    "fontconfig",
+    "freetype",
+    "jack2",
+    "libx11",
+    "libxcomposite",
+    "libxext",
+    "libxinerama",
+    "libxrandr",
+    "libxrender"
+  ]
 }
