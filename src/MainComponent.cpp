@@ -142,22 +142,23 @@ void MainComponent::resized()
 
     const auto hasTuner = tunerComponent != nullptr;
     const auto hasSpectrogram = spectrogramComponent != nullptr;
+    auto toolArea = workspaceBounds;
 
     if (hasTuner && hasSpectrogram)
     {
-        auto left = workspaceBounds.removeFromLeft(workspaceBounds.getWidth() / 2);
+        auto left = toolArea.removeFromLeft(toolArea.getWidth() / 2);
         left.removeFromRight(6);
-        workspaceBounds.removeFromLeft(6);
+        toolArea.removeFromLeft(6);
         tunerComponent->setBounds(left);
-        spectrogramComponent->setBounds(workspaceBounds);
+        spectrogramComponent->setBounds(toolArea);
     }
     else if (hasTuner)
     {
-        tunerComponent->setBounds(workspaceBounds);
+        tunerComponent->setBounds(toolArea);
     }
     else if (hasSpectrogram)
     {
-        spectrogramComponent->setBounds(workspaceBounds);
+        spectrogramComponent->setBounds(toolArea);
     }
 }
 
@@ -184,6 +185,10 @@ void MainComponent::showAudioSettings()
     spectrogramToggle.setVisible(false);
     workspaceLabel.setVisible(false);
     settingsButton.setVisible(false);
+    if (tunerComponent != nullptr)
+        tunerComponent->setVisible(false);
+    if (spectrogramComponent != nullptr)
+        spectrogramComponent->setVisible(false);
     audioDeviceSelector->setVisible(true);
     settingsDoneButton.setVisible(true);
     resized();
@@ -200,6 +205,10 @@ void MainComponent::hideAudioSettings()
     spectrogramToggle.setVisible(true);
     workspaceLabel.setVisible(true);
     settingsButton.setVisible(true);
+    if (tunerComponent != nullptr)
+        tunerComponent->setVisible(true);
+    if (spectrogramComponent != nullptr)
+        spectrogramComponent->setVisible(true);
     updateMicrophoneLabel();
     resized();
     repaint();
