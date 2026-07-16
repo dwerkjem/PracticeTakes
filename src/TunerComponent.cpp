@@ -56,24 +56,17 @@ TunerComponent::TunerComponent()
     };
     addChildComponent(audioSettingsDoneButton);
 
-    // Do not open the system's default ALSA device here. Some Linux device
-    // combinations report inconsistent channel counts while JUCE is starting
-    // its internal callback, which can assert before this component receives
-    // any audio. The selector below opens only the device chosen by the user.
-    audioErrorMessage = "Select a microphone to begin.";
+    // Configure the desired input width without opening a default device.
+    // The empty DEVICESETUP state leaves audio closed until the user chooses
+    // an input, while requesting two channels avoids fixed-stereo ALSA devices
+    // being opened with an inconsistent callback layout.
+    juce::XmlElement noDeviceState { "DEVICESETUP" };
+    const auto initialisationError =
+        audioDeviceManager.initialise(2, 0, &noDeviceState, false);
 
-    audioDeviceSelector =
-        std::make_unique<juce::AudioDeviceSelectorComponent>(
-            audioDeviceManager,
-            1,
-            2,
-            0,
-            0,
-            false,
-            false,
-            false,
-            true);
-    addChildComponent(*audioDeviceSelector);
+    audioErrorMessage = initialisationError.isNotEmpty()
+        ? initialisationError
+        : juce::String("Select a microphone to begin.");
 
     audioDeviceManager.addChangeListener(this);
 
@@ -172,9 +165,25 @@ void TunerComponent::changeListenerCallback(
 
 void TunerComponent::showAudioDeviceSelector()
 {
-    if (showingAudioDeviceSelector || audioDeviceSelector == nullptr)
+    if (showingAudioDeviceSelector)
     {
         return;
+    }
+
+    if (audioDeviceSelector == nullptr)
+    {
+        audioDeviceSelector =
+            std::make_unique<juce::AudioDeviceSelectorComponent>(
+                audioDeviceManager,
+                1,
+                2,
+                0,
+                0,
+                false,
+                false,
+                false,
+                true);
+        addChildComponent(*audioDeviceSelector);
     }
 
     showingAudioDeviceSelector = true;
