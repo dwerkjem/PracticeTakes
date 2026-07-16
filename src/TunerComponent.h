@@ -3,7 +3,6 @@
 #include <JuceHeader.h>
 
 #include <array>
-#include <vector>
 
 class TunerComponent final : public juce::AudioAppComponent,
                              private juce::Timer
@@ -32,7 +31,6 @@ private:
     std::array<float, fifoCapacity> fifoBuffer {};
     std::array<float, analysisSize> analysisBuffer {};
 
-    std::vector<float> correlation;
     double currentSampleRate = 44100.0;
     double displayedFrequency = 0.0;
     double displayedCents = 0.0;
