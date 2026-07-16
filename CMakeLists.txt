@@ -29,6 +29,11 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(JUCE)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    include(cmake/PatchJuceAlsaChannelMismatch.cmake)
+    practice_takes_patch_juce_alsa_channel_mismatch("${juce_SOURCE_DIR}")
+endif()
+
 juce_add_gui_app(PracticeTakes
     PRODUCT_NAME "Practice Takes"
     COMPANY_NAME "Derek R. Neilson"
