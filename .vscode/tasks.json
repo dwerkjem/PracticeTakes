@@ -4,8 +4,11 @@
     {
       "label": "Build Practice Takes",
       "type": "shell",
-      "command": "${workspaceFolder}/build-and-run.sh",
-      "args": ["--build-only"],
+      "command": "bash",
+      "args": [
+        "${workspaceFolder}/build-and-run.sh",
+        "--build-only"
+      ],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -13,6 +16,11 @@
       "group": {
         "kind": "build",
         "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
       }
     }
   ]
