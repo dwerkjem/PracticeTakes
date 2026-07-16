@@ -56,13 +56,15 @@ void TunerComponent::getNextAudioBlock(
         bufferToFill.numSamples, audioFifo.getFreeSpace());
 
     const auto writeScope = audioFifo.write(writable);
+    auto sourceOffset = 0;
 
     for (const auto block : writeScope)
     {
         std::copy_n(
-            input + block.startIndex,
+            input + sourceOffset,
             block.blockSize,
             fifoBuffer.begin() + block.startIndex);
+        sourceOffset += block.blockSize;
     }
 }
 
@@ -274,7 +276,7 @@ void TunerComponent::paint(juce::Graphics& graphics)
         juce::Justification::centred);
 
     graphics.setColour(hasSignal ? foreground : muted);
-    graphics.setFont(juce::FontOptions(104.0f).withStyle("Bold"));
+    graphics.setFont(juce::FontOptions(104.0f, juce::Font::bold));
     graphics.drawText(
         displayedNote,
         bounds.removeFromTop(145),
