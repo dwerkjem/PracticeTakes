@@ -63,10 +63,10 @@ fi
 if [[ -n "$vcpkg_toolchain" ]]; then
     case "$(uname -m)" in
         x86_64)
-            default_vcpkg_triplet="x64-linux"
+            default_vcpkg_triplet="x64-linux-practice"
             ;;
         aarch64 | arm64)
-            default_vcpkg_triplet="arm64-linux"
+            default_vcpkg_triplet="arm64-linux-practice"
             ;;
         *)
             default_vcpkg_triplet=""
@@ -83,6 +83,7 @@ if [[ -n "$vcpkg_toolchain" ]]; then
     if [[ -n "$vcpkg_triplet" ]]; then
         cmake_args+=(
             -DVCPKG_TARGET_TRIPLET="$vcpkg_triplet"
+            -DVCPKG_OVERLAY_TRIPLETS="$PROJECT_ROOT/triplets"
         )
 
         vcpkg_prefix="$vcpkg_installed_dir/$vcpkg_triplet"
