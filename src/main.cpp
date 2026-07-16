@@ -1,6 +1,6 @@
 #include <JuceHeader.h>
 
-#include "TunerComponent.h"
+#include "MainComponent.h"
 
 class PracticeTakesApplication final : public juce::JUCEApplication
 {
@@ -46,7 +46,7 @@ private:
                 DocumentWindow::allButtons)
         {
             setUsingNativeTitleBar(true);
-            setContentOwned(new TunerComponent(), true);
+            setContentOwned(new MainComponent(), true);
             setResizable(true, true);
             centreWithSize(getWidth(), getHeight());
             setVisible(true);
