@@ -124,6 +124,16 @@ fi
 printf 'Configuring Practice Takes (%s)...\n' "$BUILD_TYPE"
 cmake "${cmake_args[@]}"
 
+if [[ -n "${vcpkg_prefix:-}" && "$(uname -s)" == "Linux" ]]; then
+    for library_pattern in 'libX11.so*' 'libXext.so*'; do
+        if ! compgen -G "$vcpkg_prefix/lib/$library_pattern" >/dev/null; then
+            printf 'Error: vcpkg did not install shared %s libraries.\n' "$library_pattern" >&2
+            printf 'Run ./build-and-run.sh --clean after pulling the latest triplet.\n' >&2
+            exit 1
+        fi
+    done
+fi
+
 printf 'Building %s...\n' "$TARGET_NAME"
 cmake --build "$BUILD_DIR" --config "$BUILD_TYPE" --target "$TARGET_NAME" --parallel
 
@@ -139,6 +149,16 @@ executable_candidates=(
     "$BUILD_DIR/$BUILD_TYPE/$TARGET_NAME"
     "$BUILD_DIR/$BUILD_TYPE/$TARGET_NAME.exe"
 )
+
+if [[ "$(uname -s)" == "Linux" && -z "${DISPLAY:-}" ]]; then
+    printf 'Error: DISPLAY is not set, so JUCE cannot open its X11 window.\n' >&2
+
+    if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+        printf 'This JUCE build requires XWayland to run in a Wayland session.\n' >&2
+    fi
+
+    exit 1
+fi
 
 for executable in "${executable_candidates[@]}"; do
     if [[ -x "$executable" ]]; then
