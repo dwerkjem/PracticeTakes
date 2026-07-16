@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iterator>
 #include <numeric>
 
 namespace
@@ -11,68 +10,48 @@ constexpr double minimumFrequency = 55.0;
 constexpr double maximumFrequency = 1200.0;
 constexpr float minimumRms = 0.008f;
 constexpr double minimumCorrelation = 0.72;
-constexpr double pitchSmoothingAmount = 0.35;
-constexpr double noteSwitchThresholdSemitones = 0.55;
-
 const std::array<const char*, 12> noteNames {
-    "C", "C#", "D", "D#", "E", "F",
-    "F#", "G", "G#", "A", "A#", "B"
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
 };
 }
 
-TunerComponent::TunerComponent()
+TunerComponent::TunerComponent(
+    juce::AudioDeviceManager& sharedAudioDeviceManager)
+    : audioDeviceManager(sharedAudioDeviceManager)
 {
     setOpaque(true);
-    setSize(640, 500);
 
-    addAndMakeVisible(microphoneLabel);
-    microphoneLabel.setColour(
-        juce::Label::textColourId,
-        juce::Colour::fromRGB(142, 150, 166));
-    microphoneLabel.setFont(juce::FontOptions(15.0f));
-    microphoneLabel.setJustificationType(juce::Justification::centredLeft);
-
-    const auto configureButton = [](juce::TextButton& button)
+    const auto configureLabel = [this](juce::Label& label,
+                                       const juce::String& text)
     {
-        button.setColour(
-            juce::TextButton::buttonColourId,
-            juce::Colour::fromRGB(54, 59, 72));
-        button.setColour(
-            juce::TextButton::buttonOnColourId,
-            juce::Colour::fromRGB(70, 92, 130));
-        button.setColour(
-            juce::TextButton::textColourOffId,
-            juce::Colour::fromRGB(238, 241, 247));
+        label.setText(text, juce::dontSendNotification);
+        label.setColour(juce::Label::textColourId,
+                        juce::Colour::fromRGB(188, 194, 207));
+        label.setFont(juce::FontOptions(13.0f));
+        addAndMakeVisible(label);
     };
 
-    addAndMakeVisible(microphoneButton);
-    configureButton(microphoneButton);
-    microphoneButton.onClick = [this]
+    configureLabel(microphoneLabel, "Microphone: none selected");
+    configureLabel(easingLabel, "Pitch easing");
+    configureLabel(averagingLabel, "Average window");
+    configureLabel(thresholdLabel, "Note switch");
+    configureLabel(dropoutLabel, "Dropout hold");
+    configureLabel(durationLabel, "Graph duration");
+
+    configureSlider(easingSlider, 0.02, 1.0, 0.01, 0.35, "");
+    configureSlider(averagingSlider, 1.0, 15.0, 1.0, 5.0, " samples");
+    configureSlider(thresholdSlider, 0.1, 1.5, 0.05, 0.55, " st");
+    configureSlider(dropoutSlider, 1.0, 20.0, 1.0, 4.0, " frames");
+    configureSlider(durationSlider, 5.0, 60.0, 1.0, 20.0, " sec");
+
+    clearGraphButton.onClick = [this]
     {
-        showAudioDeviceSelector();
+        graphHistory.clear();
+        repaint(graphBounds);
     };
-
-    configureButton(audioSettingsDoneButton);
-    audioSettingsDoneButton.onClick = [this]
-    {
-        hideAudioDeviceSelector();
-    };
-    addChildComponent(audioSettingsDoneButton);
-
-    // Configure the desired input width without opening a default device.
-    // The empty DEVICESETUP state leaves audio closed until the user chooses
-    // an input, while requesting two channels avoids fixed-stereo ALSA devices
-    // being opened with an inconsistent callback layout.
-    juce::XmlElement noDeviceState { "DEVICESETUP" };
-    const auto initialisationError =
-        audioDeviceManager.initialise(2, 0, &noDeviceState, false);
-
-    audioErrorMessage = initialisationError.isNotEmpty()
-        ? initialisationError
-        : juce::String("Select a microphone to begin.");
+    addAndMakeVisible(clearGraphButton);
 
     audioDeviceManager.addChangeListener(this);
-
     updateAudioDeviceStatus();
     startTimerHz(20);
 }
@@ -82,204 +61,99 @@ TunerComponent::~TunerComponent()
     stopTimer();
     audioDeviceManager.removeChangeListener(this);
     detachAudioCallback();
-    audioDeviceSelector.reset();
-    audioDeviceManager.closeAudioDevice();
 }
 
-void TunerComponent::prepareToPlay(int, double sampleRate)
+void TunerComponent::configureSlider(juce::Slider& slider,
+                                     double minimum,
+                                     double maximum,
+                                     double interval,
+                                     double initialValue,
+                                     const juce::String& suffix)
 {
-    currentSampleRate = sampleRate;
+    slider.setRange(minimum, maximum, interval);
+    slider.setValue(initialValue, juce::dontSendNotification);
+    slider.setSliderStyle(juce::Slider::LinearHorizontal);
+    slider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 82, 22);
+    slider.setTextValueSuffix(suffix);
+    addAndMakeVisible(slider);
+}
+
+void TunerComponent::audioDeviceIOCallbackWithContext(
+    const float* const* inputChannelData,
+    int numInputChannels,
+    float* const* outputChannelData,
+    int numOutputChannels,
+    int numSamples,
+    const juce::AudioIODeviceCallbackContext&)
+{
+    for (int channel = 0; channel < numOutputChannels; ++channel)
+        if (outputChannelData[channel] != nullptr)
+            juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
+
+    if (numInputChannels <= 0 || inputChannelData[0] == nullptr)
+        return;
+
+    const auto writable = std::min(numSamples, audioFifo.getFreeSpace());
+    const auto scope = audioFifo.write(writable);
+    std::copy_n(inputChannelData[0], scope.blockSize1,
+                fifoBuffer.begin() + scope.startIndex1);
+    std::copy_n(inputChannelData[0] + scope.blockSize1, scope.blockSize2,
+                fifoBuffer.begin() + scope.startIndex2);
+}
+
+void TunerComponent::audioDeviceAboutToStart(juce::AudioIODevice* device)
+{
+    currentSampleRate.store(device != nullptr ? device->getCurrentSampleRate()
+                                              : 44100.0);
     audioFifo.reset();
     analysisBuffer.fill(0.0f);
 }
 
-void TunerComponent::getNextAudioBlock(
-    const juce::AudioSourceChannelInfo& bufferToFill)
-{
-    if (bufferToFill.buffer == nullptr
-        || bufferToFill.buffer->getNumChannels() == 0)
-    {
-        return;
-    }
-
-    const auto* input = bufferToFill.buffer->getReadPointer(
-        0, bufferToFill.startSample);
-
-    const auto writable = std::min(
-        bufferToFill.numSamples, audioFifo.getFreeSpace());
-
-    const auto writeScope = audioFifo.write(writable);
-
-    std::copy_n(
-        input,
-        writeScope.blockSize1,
-        fifoBuffer.begin() + writeScope.startIndex1);
-
-    std::copy_n(
-        input + writeScope.blockSize1,
-        writeScope.blockSize2,
-        fifoBuffer.begin() + writeScope.startIndex2);
-}
-
-void TunerComponent::releaseResources()
+void TunerComponent::audioDeviceStopped()
 {
     audioFifo.reset();
 }
 
-void TunerComponent::timerCallback()
-{
-    drainAudioFifo();
-
-    const auto squareSum = std::inner_product(
-        analysisBuffer.begin(),
-        analysisBuffer.end(),
-        analysisBuffer.begin(),
-        0.0);
-
-    inputLevel = static_cast<float>(
-        std::sqrt(squareSum / static_cast<double>(analysisSize)));
-
-    const auto detectedFrequency = detectPitch();
-
-    if (detectedFrequency > 0.0)
-    {
-        framesWithoutPitch = 0;
-
-        const auto stableFrequency =
-            smoothFrequency(detectedFrequency);
-
-        updateNote(stableFrequency);
-        hasSignal = true;
-    }
-    else
-    {
-        ++framesWithoutPitch;
-
-        if (framesWithoutPitch >= pitchDropoutHoldFrames)
-        {
-            resetPitchTracking();
-        }
-    }
-
-    repaint();
-}
-
-void TunerComponent::changeListenerCallback(
-    juce::ChangeBroadcaster* source)
+void TunerComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
     if (source == &audioDeviceManager)
-    {
         updateAudioDeviceStatus();
-    }
-}
-
-void TunerComponent::showAudioDeviceSelector()
-{
-    if (showingAudioDeviceSelector)
-    {
-        return;
-    }
-
-    if (audioDeviceSelector == nullptr)
-    {
-        audioDeviceSelector =
-            std::make_unique<juce::AudioDeviceSelectorComponent>(
-                audioDeviceManager,
-                1,
-                2,
-                0,
-                0,
-                false,
-                false,
-                false,
-                true);
-        addChildComponent(*audioDeviceSelector);
-    }
-
-    showingAudioDeviceSelector = true;
-    detachAudioCallback();
-    resetPitchTracking();
-
-    microphoneLabel.setVisible(false);
-    microphoneButton.setVisible(false);
-    audioDeviceSelector->setVisible(true);
-    audioSettingsDoneButton.setVisible(true);
-
-    resized();
-    repaint();
-}
-
-void TunerComponent::hideAudioDeviceSelector()
-{
-    if (! showingAudioDeviceSelector)
-    {
-        return;
-    }
-
-    showingAudioDeviceSelector = false;
-
-    if (audioDeviceSelector != nullptr)
-    {
-        audioDeviceSelector->setVisible(false);
-    }
-
-    audioSettingsDoneButton.setVisible(false);
-    microphoneLabel.setVisible(true);
-    microphoneButton.setVisible(true);
-
-    updateAudioDeviceStatus();
-    resized();
-    repaint();
 }
 
 bool TunerComponent::hasUsableInputDevice() const
 {
-    auto* currentDevice = audioDeviceManager.getCurrentAudioDevice();
-
-    return currentDevice != nullptr
-        && currentDevice->isOpen()
-        && currentDevice->getActiveInputChannels().countNumberOfSetBits() > 0;
+    auto* device = audioDeviceManager.getCurrentAudioDevice();
+    return device != nullptr && device->isOpen()
+        && device->getActiveInputChannels().countNumberOfSetBits() > 0;
 }
 
 void TunerComponent::attachAudioCallbackIfPossible()
 {
-    if (audioCallbackAttached
-        || showingAudioDeviceSelector
-        || ! hasUsableInputDevice())
+    if (!audioCallbackAttached && hasUsableInputDevice())
     {
-        return;
+        audioDeviceManager.addAudioCallback(this);
+        audioCallbackAttached = true;
     }
-
-    audioSourcePlayer.setSource(this);
-    audioDeviceManager.addAudioCallback(&audioSourcePlayer);
-    audioCallbackAttached = true;
 }
 
 void TunerComponent::detachAudioCallback()
 {
-    if (! audioCallbackAttached)
+    if (audioCallbackAttached)
     {
-        return;
+        audioDeviceManager.removeAudioCallback(this);
+        audioCallbackAttached = false;
     }
-
-    audioSourcePlayer.setSource(nullptr);
-    audioDeviceManager.removeAudioCallback(&audioSourcePlayer);
-    audioCallbackAttached = false;
 }
 
 void TunerComponent::updateAudioDeviceStatus()
 {
-    auto* currentDevice = audioDeviceManager.getCurrentAudioDevice();
-
+    auto* device = audioDeviceManager.getCurrentAudioDevice();
     if (hasUsableInputDevice())
     {
         const auto setup = audioDeviceManager.getAudioDeviceSetup();
-        const auto deviceName = setup.inputDeviceName.isNotEmpty()
-            ? setup.inputDeviceName
-            : currentDevice->getName();
-
         microphoneLabel.setText(
-            "Microphone: " + deviceName,
+            "Microphone: " + (setup.inputDeviceName.isNotEmpty()
+                ? setup.inputDeviceName : device->getName()),
             juce::dontSendNotification);
         audioErrorMessage.clear();
         attachAudioCallbackIfPossible();
@@ -287,104 +161,91 @@ void TunerComponent::updateAudioDeviceStatus()
     else
     {
         detachAudioCallback();
+        microphoneLabel.setText("Microphone: none selected",
+                                juce::dontSendNotification);
+        audioErrorMessage = "Choose a microphone in the global Audio settings.";
         resetPitchTracking();
-
-        microphoneLabel.setText(
-            "Microphone: none selected",
-            juce::dontSendNotification);
-
-        if (audioErrorMessage.isEmpty())
-        {
-            audioErrorMessage =
-                "No usable microphone is selected. Open audio settings below.";
-        }
     }
-
     repaint();
 }
 
 void TunerComponent::drainAudioFifo()
 {
     const auto available = audioFifo.getNumReady();
-
     if (available <= 0)
-    {
         return;
-    }
 
-    std::vector<float> newSamples(static_cast<std::size_t>(available));
-    const auto readScope = audioFifo.read(available);
-
-    std::copy_n(
-        fifoBuffer.begin() + readScope.startIndex1,
-        readScope.blockSize1,
-        newSamples.begin());
-
-    std::copy_n(
-        fifoBuffer.begin() + readScope.startIndex2,
-        readScope.blockSize2,
-        newSamples.begin() + readScope.blockSize1);
+    std::vector<float> samples(static_cast<std::size_t>(available));
+    const auto scope = audioFifo.read(available);
+    std::copy_n(fifoBuffer.begin() + scope.startIndex1, scope.blockSize1,
+                samples.begin());
+    std::copy_n(fifoBuffer.begin() + scope.startIndex2, scope.blockSize2,
+                samples.begin() + scope.blockSize1);
 
     if (available >= analysisSize)
+        std::copy(samples.end() - analysisSize, samples.end(), analysisBuffer.begin());
+    else
     {
-        std::copy(
-            newSamples.end() - analysisSize,
-            newSamples.end(),
-            analysisBuffer.begin());
-        return;
+        std::move(analysisBuffer.begin() + available,
+                  analysisBuffer.end(), analysisBuffer.begin());
+        std::copy(samples.begin(), samples.end(), analysisBuffer.end() - available);
     }
+}
 
-    std::move(
-        analysisBuffer.begin() + available,
-        analysisBuffer.end(),
-        analysisBuffer.begin());
+void TunerComponent::timerCallback()
+{
+    drainAudioFifo();
+    const auto squareSum = std::inner_product(analysisBuffer.begin(),
+        analysisBuffer.end(), analysisBuffer.begin(), 0.0);
+    inputLevel = static_cast<float>(
+        std::sqrt(squareSum / static_cast<double>(analysisSize)));
 
-    std::copy(
-        newSamples.begin(),
-        newSamples.end(),
-        analysisBuffer.end() - available);
+    const auto frequency = detectPitch();
+    if (frequency > 0.0)
+    {
+        framesWithoutPitch = 0;
+        const auto stableFrequency = smoothFrequency(frequency);
+        updateNote(stableFrequency);
+        addHistoryPoint(smoothedMidiNote);
+        hasSignal = true;
+    }
+    else
+    {
+        ++framesWithoutPitch;
+        addHistoryPoint(std::numeric_limits<double>::quiet_NaN());
+        if (framesWithoutPitch >= static_cast<int>(dropoutSlider.getValue()))
+            resetPitchTracking();
+    }
+    repaint();
 }
 
 double TunerComponent::detectPitch() const
 {
-    if (inputLevel < minimumRms || currentSampleRate <= 0.0)
-    {
+    const auto sampleRate = currentSampleRate.load();
+    if (inputLevel < minimumRms || sampleRate <= 0.0)
         return 0.0;
-    }
 
-    const auto minimumLag = std::max(
-        2, static_cast<int>(currentSampleRate / maximumFrequency));
+    const auto minimumLag = std::max(2, static_cast<int>(sampleRate / maximumFrequency));
+    const auto maximumLag = std::min(analysisSize / 2,
+                                     static_cast<int>(sampleRate / minimumFrequency));
+    int bestLag = 0;
+    double bestCorrelation = 0.0;
 
-    const auto maximumLag = std::min(
-        analysisSize / 2,
-        static_cast<int>(currentSampleRate / minimumFrequency));
-
-    auto bestLag = 0;
-    auto bestCorrelation = 0.0;
-
-    for (auto lag = minimumLag; lag <= maximumLag; ++lag)
+    for (int lag = minimumLag; lag <= maximumLag; ++lag)
     {
-        auto numerator = 0.0;
-        auto firstEnergy = 0.0;
-        auto secondEnergy = 0.0;
-        const auto sampleCount = analysisSize - lag;
-
-        for (auto index = 0; index < sampleCount; ++index)
+        double numerator = 0.0;
+        double firstEnergy = 0.0;
+        double secondEnergy = 0.0;
+        for (int index = 0; index < analysisSize - lag; ++index)
         {
-            const auto first = static_cast<double>(analysisBuffer[static_cast<std::size_t>(index)]);
-            const auto second =
-                static_cast<double>(analysisBuffer[static_cast<std::size_t>(index + lag)]);
-
+            const auto first = static_cast<double>(analysisBuffer[index]);
+            const auto second = static_cast<double>(analysisBuffer[index + lag]);
             numerator += first * second;
             firstEnergy += first * first;
             secondEnergy += second * second;
         }
-
         const auto denominator = std::sqrt(firstEnergy * secondEnergy);
-        const auto score = denominator > 0.0
-            ? numerator / denominator
-            : 0.0;
-
+        const auto score = denominator > 0.0 ? numerator / denominator : 0.0;
         if (score > bestCorrelation)
         {
             bestCorrelation = score;
@@ -392,291 +253,153 @@ double TunerComponent::detectPitch() const
         }
     }
 
-    if (bestLag == 0 || bestCorrelation < minimumCorrelation)
-    {
-        return 0.0;
-    }
-
-    auto refinedLag = static_cast<double>(bestLag);
-
-    if (bestLag > minimumLag && bestLag < maximumLag)
-    {
-        const auto scoreAt = [this](int lag)
-        {
-            auto numerator = 0.0;
-            auto firstEnergy = 0.0;
-            auto secondEnergy = 0.0;
-
-            for (auto index = 0; index < analysisSize - lag; ++index)
-            {
-                const auto first =
-                    static_cast<double>(analysisBuffer[static_cast<std::size_t>(index)]);
-                const auto second =
-                    static_cast<double>(analysisBuffer[static_cast<std::size_t>(index + lag)]);
-
-                numerator += first * second;
-                firstEnergy += first * first;
-                secondEnergy += second * second;
-            }
-
-            const auto denominator = std::sqrt(firstEnergy * secondEnergy);
-            return denominator > 0.0 ? numerator / denominator : 0.0;
-        };
-
-        const auto left = scoreAt(bestLag - 1);
-        const auto center = scoreAt(bestLag);
-        const auto right = scoreAt(bestLag + 1);
-        const auto curvature = left - (2.0 * center) + right;
-
-        if (std::abs(curvature) > 1.0e-12)
-        {
-            refinedLag += 0.5 * (left - right) / curvature;
-        }
-    }
-
-    return currentSampleRate / refinedLag;
+    return bestLag > 0 && bestCorrelation >= minimumCorrelation
+        ? sampleRate / static_cast<double>(bestLag) : 0.0;
 }
 
 double TunerComponent::smoothFrequency(double frequency)
 {
-    const auto midiPitch =
-        69.0 + (12.0 * std::log2(frequency / 440.0));
+    const auto midiPitch = 69.0 + 12.0 * std::log2(frequency / 440.0);
+    pitchAverageHistory[static_cast<std::size_t>(pitchHistoryWriteIndex)] = midiPitch;
+    pitchHistoryWriteIndex = (pitchHistoryWriteIndex + 1) % maximumAverageWindow;
+    pitchHistoryCount = std::min(pitchHistoryCount + 1, maximumAverageWindow);
 
-    pitchHistory[static_cast<std::size_t>(pitchHistoryWriteIndex)] =
-        midiPitch;
-    pitchHistoryWriteIndex =
-        (pitchHistoryWriteIndex + 1) % pitchHistorySize;
-    pitchHistoryCount =
-        std::min(pitchHistoryCount + 1, pitchHistorySize);
-
-    auto sortedHistory = pitchHistory;
-    const auto validEnd =
-        sortedHistory.begin() + pitchHistoryCount;
-
-    std::sort(sortedHistory.begin(), validEnd);
-
-    auto averageBegin = sortedHistory.begin();
-    auto averageEnd = validEnd;
-
-    if (pitchHistoryCount == pitchHistorySize)
+    const auto requested = static_cast<int>(averagingSlider.getValue());
+    const auto count = std::min(requested, pitchHistoryCount);
+    double sum = 0.0;
+    for (int offset = 0; offset < count; ++offset)
     {
-        ++averageBegin;
-        --averageEnd;
+        const auto index = (pitchHistoryWriteIndex - 1 - offset
+                            + maximumAverageWindow) % maximumAverageWindow;
+        sum += pitchAverageHistory[static_cast<std::size_t>(index)];
     }
+    const auto average = sum / static_cast<double>(std::max(1, count));
+    const auto easing = easingSlider.getValue();
+    smoothedMidiNote = smoothedMidiNote == 0.0
+        ? average : smoothedMidiNote + easing * (average - smoothedMidiNote);
+    return 440.0 * std::pow(2.0, (smoothedMidiNote - 69.0) / 12.0);
+}
 
-    const auto sampleCount =
-        static_cast<double>(std::distance(averageBegin, averageEnd));
-    const auto windowAverage =
-        std::accumulate(averageBegin, averageEnd, 0.0) / sampleCount;
-
-    if (smoothedMidiNote == 0.0)
+void TunerComponent::updateNote(double frequency)
+{
+    const auto midi = 69.0 + 12.0 * std::log2(frequency / 440.0);
+    const auto nearest = static_cast<int>(std::round(midi));
+    if (!hasLockedMidiNote)
     {
-        smoothedMidiNote = windowAverage;
+        lockedMidiNote = nearest;
+        hasLockedMidiNote = true;
     }
-    else
-    {
-        smoothedMidiNote +=
-            pitchSmoothingAmount
-            * (windowAverage - smoothedMidiNote);
-    }
+    else if (std::abs(midi - lockedMidiNote) > thresholdSlider.getValue())
+        lockedMidiNote = nearest;
 
-    return 440.0
-        * std::pow(2.0, (smoothedMidiNote - 69.0) / 12.0);
+    const auto noteIndex = ((lockedMidiNote % 12) + 12) % 12;
+    displayedNote = juce::String(noteNames[static_cast<std::size_t>(noteIndex)])
+        + juce::String((lockedMidiNote / 12) - 1);
+    displayedFrequency = frequency;
+    displayedCents = 100.0 * (midi - lockedMidiNote);
+}
+
+void TunerComponent::addHistoryPoint(double midiPitch)
+{
+    graphHistory.push_back(midiPitch);
+    const auto desired = juce::jlimit(100, maximumGraphPoints,
+        static_cast<int>(durationSlider.getValue() * 20.0));
+    if (static_cast<int>(graphHistory.size()) > desired)
+        graphHistory.erase(graphHistory.begin(),
+                           graphHistory.begin() + (graphHistory.size() - desired));
 }
 
 void TunerComponent::resetPitchTracking()
 {
-    pitchHistory.fill(0.0);
+    pitchAverageHistory.fill(0.0);
     pitchHistoryCount = 0;
     pitchHistoryWriteIndex = 0;
     smoothedMidiNote = 0.0;
-    framesWithoutPitch = 0;
     hasLockedMidiNote = false;
     hasSignal = false;
     displayedFrequency = 0.0;
     displayedCents = 0.0;
     displayedNote = "--";
-    inputLevel = 0.0f;
-    analysisBuffer.fill(0.0f);
 }
 
-void TunerComponent::updateNote(double frequency)
+void TunerComponent::drawPitchGraph(juce::Graphics& graphics,
+                                    juce::Rectangle<int> bounds) const
 {
-    const auto midiNote =
-        69.0 + (12.0 * std::log2(frequency / 440.0));
-    const auto nearestMidi = static_cast<int>(std::round(midiNote));
+    graphics.setColour(juce::Colour::fromRGB(25, 28, 37));
+    graphics.fillRoundedRectangle(bounds.toFloat(), 8.0f);
+    graphics.setColour(juce::Colour::fromRGB(58, 65, 82));
+    graphics.drawRoundedRectangle(bounds.toFloat(), 8.0f, 1.0f);
 
-    if (! hasLockedMidiNote)
+    if (graphHistory.size() < 2)
+        return;
+
+    std::vector<double> valid;
+    for (const auto value : graphHistory)
+        if (std::isfinite(value)) valid.push_back(value);
+    if (valid.empty()) return;
+
+    const auto minValue = *std::min_element(valid.begin(), valid.end()) - 0.5;
+    const auto maxValue = *std::max_element(valid.begin(), valid.end()) + 0.5;
+    juce::Path path;
+    bool drawing = false;
+    for (std::size_t index = 0; index < graphHistory.size(); ++index)
     {
-        lockedMidiNote = nearestMidi;
-        hasLockedMidiNote = true;
+        const auto value = graphHistory[index];
+        if (!std::isfinite(value)) { drawing = false; continue; }
+        const auto x = juce::jmap(static_cast<float>(index), 0.0f,
+            static_cast<float>(graphHistory.size() - 1),
+            static_cast<float>(bounds.getX()), static_cast<float>(bounds.getRight()));
+        const auto y = juce::jmap(static_cast<float>(value),
+            static_cast<float>(minValue), static_cast<float>(maxValue),
+            static_cast<float>(bounds.getBottom()), static_cast<float>(bounds.getY()));
+        if (drawing) path.lineTo(x, y); else { path.startNewSubPath(x, y); drawing = true; }
     }
-    else if (std::abs(midiNote - static_cast<double>(lockedMidiNote))
-             > noteSwitchThresholdSemitones)
-    {
-        lockedMidiNote = nearestMidi;
-    }
-
-    const auto noteIndex = ((lockedMidiNote % 12) + 12) % 12;
-    const auto octave = (lockedMidiNote / 12) - 1;
-
-    displayedFrequency = frequency;
-    displayedCents =
-        100.0 * (midiNote - static_cast<double>(lockedMidiNote));
-    displayedNote =
-        juce::String(noteNames[static_cast<std::size_t>(noteIndex)])
-        + juce::String(octave);
+    graphics.setColour(juce::Colour::fromRGB(100, 170, 255));
+    graphics.strokePath(path, juce::PathStrokeType(2.0f));
 }
 
 void TunerComponent::paint(juce::Graphics& graphics)
 {
-    const auto background = juce::Colour::fromRGB(18, 20, 27);
-    const auto foreground = juce::Colour::fromRGB(238, 241, 247);
-    const auto muted = juce::Colour::fromRGB(142, 150, 166);
-    const auto accent = std::abs(displayedCents) <= 5.0
-        ? juce::Colour::fromRGB(85, 214, 136)
-        : juce::Colour::fromRGB(100, 170, 255);
+    graphics.fillAll(juce::Colour::fromRGB(18, 20, 27));
+    auto bounds = getLocalBounds().reduced(18);
+    auto top = bounds.removeFromTop(220);
 
-    graphics.fillAll(background);
-
-    if (showingAudioDeviceSelector)
-    {
-        graphics.setColour(foreground);
-        graphics.setFont(juce::FontOptions(22.0f, juce::Font::bold));
-        graphics.drawText(
-            "AUDIO INPUT SETTINGS",
-            getLocalBounds().reduced(24).removeFromTop(40),
-            juce::Justification::centred);
-        return;
-    }
-
-    auto bounds = getLocalBounds().reduced(32);
-    bounds.removeFromBottom(56);
-
-    graphics.setColour(muted);
+    graphics.setColour(hasSignal ? juce::Colours::white
+                                 : juce::Colour::fromRGB(142, 150, 166));
+    graphics.setFont(juce::FontOptions(78.0f, juce::Font::bold));
+    graphics.drawText(displayedNote, top.removeFromTop(100),
+                      juce::Justification::centred);
     graphics.setFont(juce::FontOptions(18.0f));
-    graphics.drawText(
-        "PRACTICE TAKES  /  TUNER",
-        bounds.removeFromTop(32),
-        juce::Justification::centred);
+    const auto status = audioErrorMessage.isNotEmpty() ? audioErrorMessage
+        : hasSignal ? juce::String(displayedFrequency, 1) + " Hz   "
+            + juce::String(displayedCents > 0.0 ? "+" : "")
+            + juce::String(displayedCents, 1) + " cents"
+        : "Play or sing a sustained note";
+    graphics.drawFittedText(status, top.removeFromTop(42),
+                            juce::Justification::centred, 2);
 
-    graphics.setColour(hasSignal ? foreground : muted);
-    graphics.setFont(juce::FontOptions(104.0f, juce::Font::bold));
-    graphics.drawText(
-        displayedNote,
-        bounds.removeFromTop(145),
-        juce::Justification::centred);
-
-    graphics.setFont(juce::FontOptions(22.0f));
-    const auto frequencyText = audioErrorMessage.isNotEmpty()
-        ? juce::String("Microphone unavailable")
-        : hasSignal
-            ? juce::String(displayedFrequency, 1) + " Hz"
-            : juce::String("Play or sing a sustained note");
-
-    graphics.drawText(
-        frequencyText,
-        bounds.removeFromTop(38),
-        juce::Justification::centred);
-
-    auto meter = bounds.removeFromTop(100).reduced(20, 24);
-    const auto centerX = meter.getCentreX();
-
-    graphics.setColour(juce::Colour::fromRGB(54, 59, 72));
-    graphics.fillRoundedRectangle(
-        meter.toFloat().withHeight(8.0f).withY(
-            static_cast<float>(meter.getCentreY()) - 4.0f),
-        4.0f);
-
-    for (const auto cents : { -50, -25, 0, 25, 50 })
-    {
-        const auto x = juce::jmap(
-            static_cast<float>(cents),
-            -50.0f,
-            50.0f,
-            static_cast<float>(meter.getX()),
-            static_cast<float>(meter.getRight()));
-
-        graphics.setColour(cents == 0 ? foreground : muted);
-        graphics.drawVerticalLine(
-            static_cast<int>(x),
-            static_cast<float>(meter.getCentreY()) - 14.0f,
-            static_cast<float>(meter.getCentreY()) + 14.0f);
-    }
-
-    if (hasSignal)
-    {
-        const auto needleX = juce::jmap(
-            static_cast<float>(juce::jlimit(
-                -50.0, 50.0, displayedCents)),
-            -50.0f,
-            50.0f,
-            static_cast<float>(meter.getX()),
-            static_cast<float>(meter.getRight()));
-
-        graphics.setColour(accent);
-        graphics.fillEllipse(
-            needleX - 9.0f,
-            static_cast<float>(meter.getCentreY()) - 9.0f,
-            18.0f,
-            18.0f);
-    }
-
-    graphics.setColour(hasSignal ? accent : muted);
-    graphics.setFont(juce::FontOptions(18.0f));
-
-    const auto centsText = audioErrorMessage.isNotEmpty()
-        ? audioErrorMessage
-        : hasSignal
-            ? juce::String(displayedCents > 0.0 ? "+" : "")
-                + juce::String(displayedCents, 1) + " cents"
-            : juce::String("Waiting for microphone input");
-
-    graphics.drawFittedText(
-        centsText,
-        bounds.removeFromTop(46),
-        juce::Justification::centred,
-        2);
-
-    const auto levelWidth = juce::jlimit(
-        0.0f,
-        static_cast<float>(bounds.getWidth()),
-        inputLevel * 900.0f);
-
-    auto levelBounds = bounds.removeFromTop(16).reduced(40, 5);
-    graphics.setColour(juce::Colour::fromRGB(54, 59, 72));
-    graphics.fillRoundedRectangle(levelBounds.toFloat(), 3.0f);
-    graphics.setColour(accent.withAlpha(0.75f));
-    graphics.fillRoundedRectangle(
-        levelBounds.toFloat().withWidth(
-            std::min(levelWidth, static_cast<float>(levelBounds.getWidth()))),
-        3.0f);
-
-    juce::ignoreUnused(centerX);
+    graphBounds = bounds.removeFromTop(std::max(120, bounds.getHeight() / 2));
+    drawPitchGraph(graphics, graphBounds);
 }
 
 void TunerComponent::resized()
 {
-    if (showingAudioDeviceSelector)
+    auto bounds = getLocalBounds().reduced(18);
+    microphoneLabel.setBounds(bounds.removeFromTop(28));
+    bounds.removeFromTop(192);
+    bounds.removeFromTop(std::max(120, bounds.getHeight() / 2));
+    bounds.removeFromTop(8);
+
+    const auto placeRow = [&bounds](juce::Label& label, juce::Slider& slider)
     {
-        auto settingsBounds = getLocalBounds().reduced(24);
-        settingsBounds.removeFromTop(46);
-        auto footer = settingsBounds.removeFromBottom(44);
-
-        if (audioDeviceSelector != nullptr)
-        {
-            audioDeviceSelector->setBounds(settingsBounds);
-        }
-
-        audioSettingsDoneButton.setBounds(
-            footer.removeFromRight(120).reduced(0, 4));
-        return;
-    }
-
-    auto controls = getLocalBounds().reduced(32).removeFromBottom(44);
-    auto buttonBounds = controls.removeFromRight(190);
-    controls.removeFromRight(12);
-
-    microphoneLabel.setBounds(controls);
-    microphoneButton.setBounds(buttonBounds);
+        auto row = bounds.removeFromTop(30);
+        label.setBounds(row.removeFromLeft(120));
+        slider.setBounds(row);
+    };
+    placeRow(easingLabel, easingSlider);
+    placeRow(averagingLabel, averagingSlider);
+    placeRow(thresholdLabel, thresholdSlider);
+    placeRow(dropoutLabel, dropoutSlider);
+    placeRow(durationLabel, durationSlider);
+    clearGraphButton.setBounds(bounds.removeFromTop(34).removeFromRight(120));
 }
