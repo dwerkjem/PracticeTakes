@@ -7,9 +7,9 @@
 #include <vector>
 
 class TunerComponent final : public juce::Component,
-                             private juce::AudioIODeviceCallback,
-                             private juce::ChangeListener,
-                             private juce::Timer
+                              private juce::AudioIODeviceCallback,
+                              private juce::ChangeListener,
+                              private juce::Timer
 {
 public:
     explicit TunerComponent(juce::AudioDeviceManager& sharedAudioDeviceManager);
@@ -19,6 +19,13 @@ public:
     void resized() override;
 
 private:
+    enum class DisplayMode
+    {
+        graph = 1,
+        bar,
+        meter
+    };
+
     static constexpr int fifoCapacity = 65536;
     static constexpr int analysisSize = 4096;
     static constexpr int maximumAverageWindow = 15;
@@ -52,11 +59,22 @@ private:
                          double interval,
                          double initialValue,
                          const juce::String& suffix);
+    void updateAdvancedSettingsVisibility();
+    void updateGraphControlAvailability();
     void drawPitchGraph(juce::Graphics& graphics,
                         juce::Rectangle<int> bounds) const;
+    void drawPitchBar(juce::Graphics& graphics,
+                      juce::Rectangle<int> bounds) const;
+    void drawPitchMeter(juce::Graphics& graphics,
+                        juce::Rectangle<int> bounds) const;
+    void drawSelectedDisplay(juce::Graphics& graphics,
+                             juce::Rectangle<int> bounds) const;
 
     juce::AudioDeviceManager& audioDeviceManager;
     juce::Label microphoneLabel;
+    juce::Label displayModeLabel;
+    juce::ComboBox displayModeBox;
+    juce::TextButton advancedSettingsButton { "Advanced settings  >" };
     juce::Label easingLabel;
     juce::Label averagingLabel;
     juce::Label thresholdLabel;
@@ -88,8 +106,9 @@ private:
     bool hasLockedMidiNote = false;
     bool hasSignal = false;
     bool audioCallbackAttached = false;
+    bool advancedSettingsExpanded = false;
     juce::String audioErrorMessage;
-    juce::Rectangle<int> graphBounds;
+    juce::Rectangle<int> displayBounds;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TunerComponent)
 };
