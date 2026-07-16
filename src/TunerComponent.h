@@ -6,6 +6,7 @@
 
 class TunerComponent final : public juce::Component,
                              private juce::AudioSource,
+                             private juce::ChangeListener,
                              private juce::Timer
 {
 public:
@@ -24,12 +25,17 @@ private:
     static constexpr int analysisSize = 4096;
 
     void timerCallback() override;
+    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
+    void showAudioDeviceSelector();
+    void updateAudioDeviceStatus();
     void drainAudioFifo();
     [[nodiscard]] double detectPitch() const;
     void updateNote(double frequency);
 
     juce::AudioDeviceManager audioDeviceManager;
     juce::AudioSourcePlayer audioSourcePlayer;
+    juce::Label microphoneLabel;
+    juce::TextButton microphoneButton { "Select microphone..." };
     juce::String audioErrorMessage;
 
     juce::AbstractFifo audioFifo { fifoCapacity };
