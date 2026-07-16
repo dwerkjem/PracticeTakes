@@ -11,6 +11,7 @@ function(practice_takes_patch_juce_alsa_channel_mismatch juce_source_directory)
     endif()
 
     file(READ "${manager_file}" manager_source)
+    string(REPLACE "\r\n" "\n" manager_source "${manager_source}")
 
     set(original_code [=[
         jassert ((int) storedInputChannels.size()  == numInputChannels);
