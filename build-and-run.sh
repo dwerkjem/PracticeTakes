@@ -132,6 +132,8 @@ if [[ "$BUILD_ONLY" == true ]]; then
 fi
 
 executable_candidates=(
+    "$BUILD_DIR/bin/$TARGET_NAME"
+    "$BUILD_DIR/bin/$TARGET_NAME.exe"
     "$BUILD_DIR/$TARGET_NAME"
     "$BUILD_DIR/$TARGET_NAME.exe"
     "$BUILD_DIR/$BUILD_TYPE/$TARGET_NAME"
