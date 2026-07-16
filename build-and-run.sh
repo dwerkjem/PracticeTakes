@@ -48,17 +48,54 @@ cmake_args=(
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 )
 
+vcpkg_toolchain=""
+
 if [[ -n "${VCPKG_ROOT:-}" && -f "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" ]]; then
-    cmake_args+=(
-        -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
-    )
+    vcpkg_toolchain="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
 elif command -v vcpkg >/dev/null 2>&1; then
     detected_vcpkg_root="$(cd -- "$(dirname -- "$(command -v vcpkg)")" && pwd)"
 
     if [[ -f "$detected_vcpkg_root/scripts/buildsystems/vcpkg.cmake" ]]; then
+        vcpkg_toolchain="$detected_vcpkg_root/scripts/buildsystems/vcpkg.cmake"
+    fi
+fi
+
+if [[ -n "$vcpkg_toolchain" ]]; then
+    case "$(uname -m)" in
+        x86_64)
+            default_vcpkg_triplet="x64-linux"
+            ;;
+        aarch64 | arm64)
+            default_vcpkg_triplet="arm64-linux"
+            ;;
+        *)
+            default_vcpkg_triplet=""
+            ;;
+    esac
+
+    vcpkg_triplet="${VCPKG_TARGET_TRIPLET:-$default_vcpkg_triplet}"
+    vcpkg_installed_dir="${VCPKG_INSTALLED_DIR:-$BUILD_DIR/vcpkg_installed}"
+
+    cmake_args+=(
+        -DCMAKE_TOOLCHAIN_FILE="$vcpkg_toolchain"
+    )
+
+    if [[ -n "$vcpkg_triplet" ]]; then
         cmake_args+=(
-            -DCMAKE_TOOLCHAIN_FILE="$detected_vcpkg_root/scripts/buildsystems/vcpkg.cmake"
+            -DVCPKG_TARGET_TRIPLET="$vcpkg_triplet"
         )
+
+        vcpkg_pkgconfig_paths=(
+            "$vcpkg_installed_dir/$vcpkg_triplet/lib/pkgconfig"
+            "$vcpkg_installed_dir/$vcpkg_triplet/share/pkgconfig"
+        )
+
+        joined_pkgconfig_path="$(
+            IFS=:
+            printf '%s' "${vcpkg_pkgconfig_paths[*]}"
+        )"
+
+        export PKG_CONFIG_PATH="$joined_pkgconfig_path${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
     fi
 fi
 
