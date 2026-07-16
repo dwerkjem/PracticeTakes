@@ -24,6 +24,8 @@ public:
 private:
     static constexpr int fifoCapacity = 32768;
     static constexpr int analysisSize = 4096;
+    static constexpr int pitchHistorySize = 5;
+    static constexpr int pitchDropoutHoldFrames = 4;
 
     void timerCallback() override;
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
@@ -35,6 +37,8 @@ private:
     void detachAudioCallback();
     void drainAudioFifo();
     [[nodiscard]] double detectPitch() const;
+    [[nodiscard]] double smoothFrequency(double frequency);
+    void resetPitchTracking();
     void updateNote(double frequency);
 
     juce::AudioDeviceManager audioDeviceManager;
@@ -48,12 +52,19 @@ private:
     juce::AbstractFifo audioFifo { fifoCapacity };
     std::array<float, fifoCapacity> fifoBuffer {};
     std::array<float, analysisSize> analysisBuffer {};
+    std::array<double, pitchHistorySize> pitchHistory {};
 
     double currentSampleRate = 44100.0;
+    double smoothedMidiNote = 0.0;
     double displayedFrequency = 0.0;
     double displayedCents = 0.0;
     juce::String displayedNote { "--" };
     float inputLevel = 0.0f;
+    int pitchHistoryCount = 0;
+    int pitchHistoryWriteIndex = 0;
+    int lockedMidiNote = 69;
+    int framesWithoutPitch = 0;
+    bool hasLockedMidiNote = false;
     bool hasSignal = false;
     bool audioCallbackAttached = false;
     bool showingAudioDeviceSelector = false;
