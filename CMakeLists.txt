@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.25)
 project(
     PracticeTakes
     VERSION 0.1.0
-    LANGUAGES CXX
+    LANGUAGES C CXX
 )
 
 set(CMAKE_CXX_STANDARD 20)
@@ -32,6 +32,7 @@ FetchContent_MakeAvailable(JUCE)
 juce_add_gui_app(PracticeTakes
     PRODUCT_NAME "Practice Takes"
     COMPANY_NAME "Derek R. Neilson"
+    BUNDLE_ID "org.derekrneilson.practicetakes"
 )
 
 juce_generate_juce_header(PracticeTakes)
