@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include <array>
+#include <memory>
 
 class TunerComponent final : public juce::Component,
                              private juce::AudioSource,
@@ -27,15 +28,21 @@ private:
     void timerCallback() override;
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     void showAudioDeviceSelector();
+    void hideAudioDeviceSelector();
     void updateAudioDeviceStatus();
+    [[nodiscard]] bool hasUsableInputDevice() const;
+    void attachAudioCallbackIfPossible();
+    void detachAudioCallback();
     void drainAudioFifo();
     [[nodiscard]] double detectPitch() const;
     void updateNote(double frequency);
 
     juce::AudioDeviceManager audioDeviceManager;
     juce::AudioSourcePlayer audioSourcePlayer;
+    std::unique_ptr<juce::AudioDeviceSelectorComponent> audioDeviceSelector;
     juce::Label microphoneLabel;
     juce::TextButton microphoneButton { "Select microphone..." };
+    juce::TextButton audioSettingsDoneButton { "Done" };
     juce::String audioErrorMessage;
 
     juce::AbstractFifo audioFifo { fifoCapacity };
@@ -48,6 +55,8 @@ private:
     juce::String displayedNote { "--" };
     float inputLevel = 0.0f;
     bool hasSignal = false;
+    bool audioCallbackAttached = false;
+    bool showingAudioDeviceSelector = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TunerComponent)
 };
