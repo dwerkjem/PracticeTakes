@@ -46,6 +46,19 @@ set_target_properties(PracticeTakes PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_BINARY_DIR}/bin"
 )
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND DEFINED VCPKG_TARGET_TRIPLET)
+    if(DEFINED VCPKG_INSTALLED_DIR)
+        set(vcpkg_runtime_directory
+            "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib")
+    else()
+        set(vcpkg_runtime_directory
+            "${CMAKE_BINARY_DIR}/vcpkg_installed/${VCPKG_TARGET_TRIPLET}/lib")
+    endif()
+
+    set_target_properties(PracticeTakes PROPERTIES
+        BUILD_RPATH "${vcpkg_runtime_directory}")
+endif()
+
 target_sources(PracticeTakes
     PRIVATE
         src/main.cpp
