@@ -67,6 +67,8 @@ endif()
 target_sources(PracticeTakes
     PRIVATE
         src/main.cpp
+        src/MainComponent.cpp
+        src/MainComponent.h
         src/TunerComponent.cpp
         src/TunerComponent.h
 )
