@@ -37,6 +37,15 @@ juce_add_gui_app(PracticeTakes
 
 juce_generate_juce_header(PracticeTakes)
 
+set_target_properties(PracticeTakes PROPERTIES
+    OUTPUT_NAME "PracticeTakes"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_BINARY_DIR}/bin"
+)
+
 target_sources(PracticeTakes
     PRIVATE
         src/main.cpp
