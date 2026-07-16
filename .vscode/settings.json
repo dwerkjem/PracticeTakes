@@ -1,7 +1,16 @@
 {
     "cSpell.words": [
+        "alsa",
+        "fontconfig",
+        "freetype",
         "jlimit",
         "jmap",
-        "juce"
+        "juce",
+        "libx",
+        "libxcomposite",
+        "libxext",
+        "libxinerama",
+        "libxrandr",
+        "libxrender"
     ]
 }
