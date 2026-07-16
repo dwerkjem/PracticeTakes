@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Build and Run Practice Takes",
+      "name": "Practice Takes: Build and Debug",
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/build/PracticeTakes",
@@ -11,8 +11,15 @@
       "stopAtEntry": false,
       "externalConsole": false,
       "MIMode": "gdb",
-      "miDebuggerPath": "/usr/bin/gdb",
-      "preLaunchTask": "Build Practice Takes"
+      "miDebuggerPath": "gdb",
+      "preLaunchTask": "Build Practice Takes",
+      "setupCommands": [
+        {
+          "description": "Enable GDB pretty printing",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
     }
   ]
 }
