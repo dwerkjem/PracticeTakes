@@ -5,7 +5,7 @@
       "name": "Practice Takes: Build and Debug",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build/PracticeTakes",
+      "program": "${workspaceFolder}/build/bin/PracticeTakes",
       "args": [],
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
