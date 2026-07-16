@@ -20,27 +20,50 @@ const std::array<const char*, 12> noteNames {
 TunerComponent::TunerComponent()
 {
     setOpaque(true);
-    setSize(620, 430);
+    setSize(640, 500);
+
+    addAndMakeVisible(microphoneLabel);
+    microphoneLabel.setColour(
+        juce::Label::textColourId,
+        juce::Colour::fromRGB(142, 150, 166));
+    microphoneLabel.setFont(juce::FontOptions(15.0f));
+    microphoneLabel.setJustificationType(juce::Justification::centredLeft);
+
+    addAndMakeVisible(microphoneButton);
+    microphoneButton.setColour(
+        juce::TextButton::buttonColourId,
+        juce::Colour::fromRGB(54, 59, 72));
+    microphoneButton.setColour(
+        juce::TextButton::buttonOnColourId,
+        juce::Colour::fromRGB(70, 92, 130));
+    microphoneButton.setColour(
+        juce::TextButton::textColourOffId,
+        juce::Colour::fromRGB(238, 241, 247));
+    microphoneButton.onClick = [this]
+    {
+        showAudioDeviceSelector();
+    };
 
     audioErrorMessage = audioDeviceManager.initialise(1, 0, nullptr, true);
 
-    if (audioErrorMessage.isEmpty())
-    {
-        audioSourcePlayer.setSource(this);
-        audioDeviceManager.addAudioCallback(&audioSourcePlayer);
-    }
-    else
+    audioSourcePlayer.setSource(this);
+    audioDeviceManager.addAudioCallback(&audioSourcePlayer);
+    audioDeviceManager.addChangeListener(this);
+
+    if (audioErrorMessage.isNotEmpty())
     {
         juce::Logger::writeToLog(
             "Microphone initialisation failed: " + audioErrorMessage);
     }
 
+    updateAudioDeviceStatus();
     startTimerHz(20);
 }
 
 TunerComponent::~TunerComponent()
 {
     stopTimer();
+    audioDeviceManager.removeChangeListener(this);
     audioSourcePlayer.setSource(nullptr);
     audioDeviceManager.removeAudioCallback(&audioSourcePlayer);
     audioDeviceManager.closeAudioDevice();
@@ -112,6 +135,70 @@ void TunerComponent::timerCallback()
         displayedFrequency = 0.0;
         displayedCents = 0.0;
         displayedNote = "--";
+    }
+
+    repaint();
+}
+
+void TunerComponent::changeListenerCallback(
+    juce::ChangeBroadcaster* source)
+{
+    if (source == &audioDeviceManager)
+    {
+        updateAudioDeviceStatus();
+    }
+}
+
+void TunerComponent::showAudioDeviceSelector()
+{
+    auto selector = std::make_unique<juce::AudioDeviceSelectorComponent>(
+        audioDeviceManager,
+        1,
+        2,
+        0,
+        0,
+        false,
+        false,
+        false,
+        true);
+
+    selector->setSize(520, 420);
+
+    auto& callout = juce::CallOutBox::launchAsynchronously(
+        std::move(selector),
+        microphoneButton.getScreenBounds(),
+        nullptr);
+
+    callout.setDismissalMouseClicksAreAlwaysConsumed(true);
+}
+
+void TunerComponent::updateAudioDeviceStatus()
+{
+    const auto* currentDevice = audioDeviceManager.getCurrentAudioDevice();
+
+    if (currentDevice != nullptr)
+    {
+        const auto setup = audioDeviceManager.getAudioDeviceSetup();
+        const auto deviceName = setup.inputDeviceName.isNotEmpty()
+            ? setup.inputDeviceName
+            : currentDevice->getName();
+
+        microphoneLabel.setText(
+            "Microphone: " + deviceName,
+            juce::dontSendNotification);
+        audioErrorMessage.clear();
+    }
+    else
+    {
+        microphoneLabel.setText(
+            "Microphone: none selected",
+            juce::dontSendNotification);
+
+        if (audioErrorMessage.isEmpty())
+        {
+            audioErrorMessage =
+                "No microphone is selected. Use Select microphone below.";
+        }
     }
 
     repaint();
@@ -281,6 +368,8 @@ void TunerComponent::paint(juce::Graphics& graphics)
     graphics.fillAll(background);
 
     auto bounds = getLocalBounds().reduced(32);
+    bounds.removeFromBottom(56);
+
     graphics.setColour(muted);
     graphics.setFont(juce::FontOptions(18.0f));
     graphics.drawText(
@@ -385,4 +474,10 @@ void TunerComponent::paint(juce::Graphics& graphics)
 
 void TunerComponent::resized()
 {
+    auto controls = getLocalBounds().reduced(32).removeFromBottom(44);
+    auto buttonBounds = controls.removeFromRight(190);
+    controls.removeFromRight(12);
+
+    microphoneLabel.setBounds(controls);
+    microphoneButton.setBounds(buttonBounds);
 }
