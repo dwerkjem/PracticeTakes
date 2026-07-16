@@ -26,6 +26,8 @@ juce_add_gui_app(PracticeTakes
     COMPANY_NAME "Derek R. Neilson"
 )
 
+juce_generate_juce_header(PracticeTakes)
+
 target_sources(PracticeTakes
     PRIVATE
         src/main.cpp
