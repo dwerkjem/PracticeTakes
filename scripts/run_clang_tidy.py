@@ -21,7 +21,7 @@ def find_tool(environment_variable: str, executable_name: str) -> str | None:
 
 
 def parse_arguments(arguments: list[str]) -> argparse.Namespace:
-    """Parse script options while preserving filenames supplied by pre-commit."""
+    """Parse script options while preserving filenames supplied by callers."""
     parser = argparse.ArgumentParser(
         description="Run clang-tidy against files in the CMake compilation database."
     )
@@ -32,6 +32,57 @@ def parse_arguments(arguments: list[str]) -> argparse.Namespace:
     )
     parser.add_argument("files", nargs="*")
     return parser.parse_args(arguments)
+
+
+def project_uses_generated_juce_header() -> bool:
+    """Return whether application-owned source includes JUCE's generated header."""
+    source_directory = Path("src")
+    if not source_directory.is_dir():
+        return False
+
+    for source_file in source_directory.rglob("*"):
+        if source_file.suffix not in {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"}:
+            continue
+
+        try:
+            if "JuceHeader.h" in source_file.read_text(encoding="utf-8"):
+                return True
+        except OSError:
+            continue
+
+    return False
+
+
+def generated_juce_header_exists(build_directory: Path) -> bool:
+    """Return whether CMake/JUCE has generated JuceHeader.h in the build tree."""
+    return any(build_directory.rglob("JuceHeader.h"))
+
+
+def validate_build_artifacts(build_directory: Path) -> bool:
+    """Check build-time files required for accurate clang-tidy parsing."""
+    compilation_database = build_directory / "compile_commands.json"
+
+    if not compilation_database.is_file():
+        print(
+            f"{compilation_database} does not exist. Configure the project first:\n"
+            f"  cmake -S . -B {build_directory} -G Ninja "
+            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+            file=sys.stderr,
+        )
+        return False
+
+    if project_uses_generated_juce_header() and not generated_juce_header_exists(
+        build_directory
+    ):
+        print(
+            "JuceHeader.h has not been generated in the build directory. "
+            "Build the application target before running clang-tidy:\n"
+            f"  cmake --build {build_directory} --target PracticeTakes --parallel",
+            file=sys.stderr,
+        )
+        return False
+
+    return True
 
 
 def main(arguments: list[str]) -> int:
@@ -47,17 +98,7 @@ def main(arguments: list[str]) -> int:
         return 1
 
     build_directory = Path(os.environ.get("CLANG_TIDY_BUILD_DIR", "build"))
-    compilation_database = build_directory / "compile_commands.json"
-
-    if not compilation_database.is_file():
-        print(
-            f"{compilation_database} does not exist. Configure the project first:\n"
-            f"  cmake -S . -B {build_directory} "
-            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON\n"
-            "Use a Makefile or Ninja generator; Visual Studio and Xcode "
-            "generators do not produce this database.",
-            file=sys.stderr,
-        )
+    if not validate_build_artifacts(build_directory):
         return 1
 
     source_files = [

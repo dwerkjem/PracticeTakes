@@ -55,10 +55,11 @@ The workflow:
 1. Checks out the updated `main` branch.
 2. Installs Clang, CMake, Ninja, and the Linux JUCE development dependencies.
 3. Configures `build/compile_commands.json`.
-4. Runs `clang-tidy --fix` against the implementation files.
-5. Runs `clang-format` over the resulting source and header edits.
-6. Commits and pushes changed files under `src/` back to `main` as `github-actions[bot]`.
-7. Runs clang-tidy again without fixes and fails the workflow when blocking findings remain.
+4. Builds `PracticeTakes` once so JUCE creates `JuceHeader.h` and other generated files required by the compiler commands.
+5. Runs `clang-tidy --fix` against the implementation files.
+6. Runs `clang-format` over the resulting source and header edits.
+7. Rebuilds and runs clang-tidy without fixes, failing when compilation or blocking findings remain.
+8. Commits and pushes changed files under `src/` back to `main` as `github-actions[bot]`.
 
 The workflow ignores pushes made by `github-actions[bot]`, preventing its own fix commit from starting another auto-fix cycle.
 
@@ -68,11 +69,14 @@ Repositories with branch protection must allow GitHub Actions to push the automa
 
 ## Manual clang-tidy use
 
-Configure the project before running clang-tidy locally:
+Configure and build the project before running clang-tidy locally:
 
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --target PracticeTakes --parallel
 ```
+
+The build step is required because JUCE generates `JuceHeader.h` during the build. A compilation database alone contains the include path but does not guarantee that the generated header exists.
 
 Run without modifying files:
 
@@ -111,7 +115,8 @@ After cloning or deleting the build directory:
 2. Open the repository root in VS Code.
 3. Run **CMake: Select a Kit** when prompted.
 4. Run **CMake: Configure** from the Command Palette.
-5. Wait for CMake Tools and IntelliSense indexing to finish.
+5. Build the `PracticeTakes` target once so JUCE generates `JuceHeader.h`.
+6. Wait for CMake Tools and IntelliSense indexing to finish.
 
 This resolves common false errors caused by VS Code not knowing about JUCE's generated `JuceHeader.h`, fetched JUCE sources, platform include directories, or CMake compile definitions.
 
