@@ -1,94 +1,96 @@
 # Code quality and editor setup
 
-Practice Takes uses three related tools:
+Practice Takes separates fast local formatting from slower repository-wide static analysis:
 
-- `clang-format` rewrites C and C++ files to match `.clang-format`.
-- `clang-tidy` performs static analysis using `.clang-tidy` and CMake's real compiler commands.
-- `pre-commit` runs both tools before a commit is created.
+- `clang-format` rewrites C and C++ files to match `.clang-format` before every local commit.
+- `clang-tidy` runs after relevant changes land on `main`, applies supported safe fixes, and commits those source changes back to `main`.
+- VS Code uses CMake's compilation database so editor diagnostics match the actual project configuration.
 
-The checks are intentionally moderate. Analyzer, bug-prone, and performance findings block a commit. Readability findings are reported without turning every stylistic preference into an error.
+## Local pre-commit formatting
 
-## Install the tools
-
-Install the following programs through the package manager appropriate for your platform:
+Local commits require:
 
 - Python 3
-- pre-commit
-- LLVM/Clang, including `clang-format` and `clang-tidy`
-- CMake
+- `pre-commit`
+- `clang-format`
 
-A portable way to install pre-commit after Python is available is:
+Install pre-commit with the package manager for your platform, or with Python:
 
 ```bash
 python -m pip install pre-commit
 ```
 
-## Configure the project before linting
-
-`clang-tidy` needs `build/compile_commands.json`, which contains the exact include paths, generated JUCE headers, compiler definitions, and language settings used by CMake.
-
-Configure the project once before installing or running the hooks:
-
-```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-```
-
-CMake is configured to export the compilation database automatically. The database is supported by Makefile and Ninja generators. On Windows, select Ninja in CMake Tools when the default Visual Studio generator does not create `compile_commands.json`.
-
-The build directory can be changed for the lint hook:
-
-```bash
-CLANG_TIDY_BUILD_DIR=out/dev pre-commit run clang-tidy --all-files
-```
-
-## Enable the Git hook
-
-From the repository root:
+Install the Git hook from the repository root:
 
 ```bash
 pre-commit install
 ```
 
-After installation, each commit performs these steps:
+Every commit runs `clang-format` against staged C and C++ files. When formatting changes a file, the commit stops so the result can be reviewed and staged. Run the commit again after staging the formatted files.
 
-1. `clang-format` formats staged C and C++ files.
-2. `clang-tidy` analyzes staged implementation files under `src/` and applies fix-it replacements that the enabled check marks as safe.
-3. Diagnostics without a supported fix remain visible and must be reviewed manually.
-
-When either tool changes a file, pre-commit stops the commit so the result can be reviewed. Stage the changed files and run the commit again.
-
-The hook uses clang-tidy's ordinary `--fix` mode rather than `--fix-errors`. It will not attempt to rewrite code when clang reports compilation errors.
-
-## Run checks manually
-
-Run every configured hook against the repository:
+Run the formatter manually across the repository with:
 
 ```bash
 pre-commit run --all-files
 ```
 
-Run only the formatter:
+or:
 
 ```bash
 pre-commit run clang-format --all-files
 ```
 
-Run clang-tidy with automatic safe fixes:
+Set an explicit executable when `clang-format` is not on `PATH`:
 
 ```bash
-pre-commit run clang-tidy --all-files
+CLANG_FORMAT=/path/to/clang-format pre-commit run --all-files
 ```
 
-Run clang-tidy directly without modifying files:
+## Clang-tidy auto-fixes on main
+
+Clang-tidy is not part of the local pre-commit hook. The `.github/workflows/clang-tidy-main.yml` workflow runs when relevant C++ or analysis configuration changes are pushed to `main`.
+
+The workflow:
+
+1. Checks out the updated `main` branch.
+2. Installs Clang, CMake, Ninja, and the Linux JUCE development dependencies.
+3. Configures `build/compile_commands.json`.
+4. Runs `clang-tidy --fix` against the implementation files.
+5. Runs `clang-format` over the resulting source and header edits.
+6. Commits and pushes changed files under `src/` back to `main` as `github-actions[bot]`.
+7. Runs clang-tidy again without fixes and fails the workflow when blocking findings remain.
+
+The workflow ignores pushes made by `github-actions[bot]`, preventing its own fix commit from starting another auto-fix cycle.
+
+Automatic fixes use ordinary clang-tidy `--fix` behavior, not `--fix-errors`. Clang-tidy only applies replacements supplied by enabled checks; ambiguous or unsupported findings remain visible in the final verification step.
+
+Repositories with branch protection must allow GitHub Actions to push the automatic fix commit to `main`. Otherwise the analysis can run, but the push step will fail.
+
+## Manual clang-tidy use
+
+Configure the project before running clang-tidy locally:
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+```
+
+Run without modifying files:
 
 ```bash
 python scripts/run_clang_tidy.py src/*.cpp
 ```
 
-Run it directly with supported fixes enabled:
+Run with supported fixes enabled:
 
 ```bash
 python scripts/run_clang_tidy.py --fix src/*.cpp
+python scripts/run_clang_format.py src/*.cpp src/*.h
+```
+
+Use a different build directory with:
+
+```bash
+CLANG_TIDY_BUILD_DIR=out/dev python scripts/run_clang_tidy.py src/*.cpp
 ```
 
 Set explicit executable paths when LLVM tools are not on `PATH`:
@@ -96,7 +98,7 @@ Set explicit executable paths when LLVM tools are not on `PATH`:
 ```bash
 CLANG_FORMAT=/path/to/clang-format \
 CLANG_TIDY=/path/to/clang-tidy \
-pre-commit run --all-files
+python scripts/run_clang_tidy.py --fix src/*.cpp
 ```
 
 ## Resolving VS Code errors
@@ -111,15 +113,16 @@ After cloning or deleting the build directory:
 4. Run **CMake: Configure** from the Command Palette.
 5. Wait for CMake Tools and IntelliSense indexing to finish.
 
-This resolves the common false errors caused by VS Code not knowing about JUCE's generated `JuceHeader.h`, fetched JUCE sources, platform include directories, or CMake compile definitions.
+This resolves common false errors caused by VS Code not knowing about JUCE's generated `JuceHeader.h`, fetched JUCE sources, platform include directories, or CMake compile definitions.
 
-When the project has been configured successfully but stale diagnostics remain, run **C/C++: Reset IntelliSense Database**, then reopen the affected file. Do not disable error squiggles; genuine syntax and type errors should remain visible.
+When configuration succeeds but stale diagnostics remain, run **C/C++: Reset IntelliSense Database**, then reopen the affected file. Do not disable error squiggles; genuine syntax and type errors should remain visible.
 
 ## Tool configuration files
 
 - `.clang-format` defines source formatting.
 - `.clang-tidy` defines static-analysis checks.
-- `.pre-commit-config.yaml` defines the commit hooks.
-- `scripts/run_clang_format.py` locates and invokes `clang-format`.
-- `scripts/run_clang_tidy.py` locates and invokes `clang-tidy` with the build directory and optional safe fixes.
+- `.pre-commit-config.yaml` runs clang-format before local commits.
+- `.github/workflows/clang-tidy-main.yml` fixes and verifies C++ after changes land on `main`.
+- `scripts/run_clang_format.py` locates and invokes clang-format.
+- `scripts/run_clang_tidy.py` locates and invokes clang-tidy with the build directory and optional safe fixes.
 - `.vscode/settings.json` connects VS Code to CMake Tools and the compilation database.
