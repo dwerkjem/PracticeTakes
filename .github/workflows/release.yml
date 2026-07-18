@@ -1,0 +1,72 @@
+name: Publish semantic release
+
+on:
+  push:
+    tags:
+      - "v[0-9]*.[0-9]*.[0-9]*"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-version:
+    name: Validate semantic version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Validate tag
+        id: version
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME}"
+
+          if [[ ! "${tag}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Release tags must use vMAJOR.MINOR.PATCH, for example v1.2.0." >&2
+            exit 1
+          fi
+
+          echo "version=${tag#v}" >> "${GITHUB_OUTPUT}"
+
+  build:
+    name: Build release packages
+    needs: validate-version
+    uses: ./.github/workflows/build-multiplatform.yml
+    with:
+      version: ${{ needs.validate-version.outputs.version }}
+
+  publish:
+    name: Publish GitHub release
+    needs:
+      - validate-version
+      - build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download release packages
+        uses: actions/download-artifact@v5
+        with:
+          pattern: PracticeTakes-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create checksums
+        shell: bash
+        run: |
+          cd release-assets
+          sha256sum PracticeTakes-* > SHA256SUMS.txt
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "${GITHUB_REF_NAME}" release-assets/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "Practice Takes ${GITHUB_REF_NAME}" \
+            --generate-notes \
+            --latest \
+            --verify-tag
