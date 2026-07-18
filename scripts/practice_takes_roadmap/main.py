@@ -12,8 +12,10 @@ from .config import (
     PROJECT_TITLE,
     REPO,
     ROOT_ISSUE,
+    STATUS_OPTIONS,
     VIEW_SPECS,
 )
+from .discovery import list_all_issues
 from .github import GitHubClient, GitHubError, Project
 from .models import PlannedIssue, ProjectItem
 from .planning import descendants_of, next_monday, parent_map, plan_issues
@@ -36,9 +38,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="Create or update the Practice Takes GitHub Projects roadmap."
     )
     parser.add_argument(
-        "--all-issues",
+        "--roadmap-only",
         action="store_true",
-        help="Include every repository issue instead of only the roadmap hierarchy.",
+        help="Include only issues descending from --root-issue instead of every issue.",
     )
     parser.add_argument(
         "--root-issue",
@@ -69,6 +71,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def configure_fields(client: GitHubClient, project: Project) -> list[dict]:
     fields = client.list_fields(project)
+    fields = client.ensure_single_select_field(
+        project, fields, "Status", STATUS_OPTIONS
+    )
     for name, options in FIELD_OPTIONS.items():
         fields = client.ensure_single_select_field(project, fields, name, options)
     fields = client.ensure_date_field(project, fields, "Start date")
@@ -134,14 +139,14 @@ def setup(args: argparse.Namespace) -> SetupResult:
     client = GitHubClient(OWNER, REPO)
     client.preflight()
 
-    all_issues = client.list_issues()
+    all_issues = list_all_issues(client)
     if not all_issues:
         raise GitHubError("The repository has no issues to add to the roadmap.")
     parents = parent_map(all_issues)
     selected = (
-        all_issues
-        if args.all_issues
-        else descendants_of(all_issues, parents, args.root_issue)
+        descendants_of(all_issues, parents, args.root_issue)
+        if args.roadmap_only
+        else all_issues
     )
     if not selected:
         raise GitHubError("No roadmap issues were discovered.")
