@@ -1,8 +1,15 @@
 cmake_minimum_required(VERSION 3.25)
 
+set(PRACTICE_TAKES_VERSION "0.1.0" CACHE STRING "Practice Takes semantic version")
+
+if(NOT PRACTICE_TAKES_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
+    message(FATAL_ERROR
+        "PRACTICE_TAKES_VERSION must use MAJOR.MINOR.PATCH format, for example 1.2.0")
+endif()
+
 project(
     PracticeTakes
-    VERSION 0.1.0
+    VERSION ${PRACTICE_TAKES_VERSION}
     LANGUAGES C CXX
 )
 
@@ -35,6 +42,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 juce_add_gui_app(PracticeTakes
+    VERSION ${PROJECT_VERSION}
     PRODUCT_NAME "Practice Takes"
     COMPANY_NAME "Derek R. Neilson"
     BUNDLE_ID "org.derekrneilson.practicetakes"

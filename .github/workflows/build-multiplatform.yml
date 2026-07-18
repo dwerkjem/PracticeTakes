@@ -1,24 +1,44 @@
-name: Build desktop releases
+name: Build desktop packages
 
 on:
   push:
     branches:
       - main
-    tags:
-      - "v*"
   pull_request:
   workflow_dispatch:
+    inputs:
+      version:
+        description: Version embedded in the application
+        required: false
+        default: "0.1.0"
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        description: Version embedded in the application
+        required: false
+        default: "0.1.0"
+        type: string
 
 permissions:
   contents: read
 
 env:
   BUILD_TYPE: Release
+  BUILD_VERSION: ${{ inputs.version || '0.1.0' }}
 
 jobs:
-  linux-x64:
-    name: Linux x64
-    runs-on: ubuntu-24.04
+  linux:
+    name: Linux ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Check out repository
@@ -50,29 +70,41 @@ jobs:
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DPRACTICE_TAKES_VERSION="${BUILD_VERSION}"
 
       - name: Build
         run: cmake --build build --config "${BUILD_TYPE}" --parallel
 
       - name: Package
         run: |
-          package_dir="dist/PracticeTakes-linux-x64"
+          artifact_name="PracticeTakes-linux-${{ matrix.arch }}"
+          package_dir="dist/${artifact_name}"
           mkdir -p "${package_dir}"
           install -m 0755 build/bin/PracticeTakes "${package_dir}/PracticeTakes"
           cp README.md "${package_dir}/README.md"
-          tar -C dist -czf dist/PracticeTakes-linux-x64.tar.gz PracticeTakes-linux-x64
+          tar -C dist -czf "dist/${artifact_name}.tar.gz" "${artifact_name}"
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PracticeTakes-linux-x64
-          path: dist/PracticeTakes-linux-x64.tar.gz
+          name: PracticeTakes-linux-${{ matrix.arch }}
+          path: dist/PracticeTakes-linux-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
 
-  windows-x64:
-    name: Windows x64
-    runs-on: windows-2022
+  windows:
+    name: Windows ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            arch: x64
+            cmake_arch: x64
+          - runner: windows-11-arm
+            arch: arm64
+            cmake_arch: ARM64
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Check out repository
@@ -83,8 +115,9 @@ jobs:
         run: |
           cmake -S . -B build `
             -G "Visual Studio 17 2022" `
-            -A x64 `
-            -DCMAKE_CONFIGURATION_TYPES="${env:BUILD_TYPE}"
+            -A "${{ matrix.cmake_arch }}" `
+            -DCMAKE_CONFIGURATION_TYPES="${env:BUILD_TYPE}" `
+            -DPRACTICE_TAKES_VERSION="${env:BUILD_VERSION}"
 
       - name: Build
         shell: pwsh
@@ -100,24 +133,37 @@ jobs:
             throw "PracticeTakes.exe was not found after the build."
           }
 
-          $packageDir = "dist/PracticeTakes-windows-x64"
+          $artifactName = "PracticeTakes-windows-${{ matrix.arch }}"
+          $packageDir = "dist/$artifactName"
           New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
           Copy-Item $binary.FullName "$packageDir/PracticeTakes.exe"
           Copy-Item README.md "$packageDir/README.md"
           Compress-Archive -Path "$packageDir/*" `
-            -DestinationPath "dist/PracticeTakes-windows-x64.zip" `
+            -DestinationPath "dist/$artifactName.zip" `
             -Force
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PracticeTakes-windows-x64
-          path: dist/PracticeTakes-windows-x64.zip
+          name: PracticeTakes-windows-${{ matrix.arch }}
+          path: dist/PracticeTakes-windows-${{ matrix.arch }}.zip
           if-no-files-found: error
 
-  macos-x64:
-    name: macOS Intel x64
-    runs-on: macos-15-intel
+  macos:
+    name: macOS ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            name: Intel x64
+            arch: x64
+            cmake_arch: x86_64
+          - runner: macos-15
+            name: Apple Silicon ARM64
+            arch: arm64
+            cmake_arch: arm64
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Check out repository
@@ -127,8 +173,9 @@ jobs:
         run: |
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
-            -DCMAKE_OSX_ARCHITECTURES=x86_64 \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
+            -DCMAKE_OSX_ARCHITECTURES="${{ matrix.cmake_arch }}" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DPRACTICE_TAKES_VERSION="${BUILD_VERSION}"
 
       - name: Build
         run: cmake --build build --config "${BUILD_TYPE}" --parallel
@@ -142,15 +189,16 @@ jobs:
             exit 1
           fi
 
+          artifact_name="PracticeTakes-macos-${{ matrix.arch }}"
           mkdir -p dist
           codesign --force --deep --sign - "${app_path}"
           ditto -c -k --sequesterRsrc --keepParent \
             "${app_path}" \
-            dist/PracticeTakes-macos-x64.zip
+            "dist/${artifact_name}.zip"
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PracticeTakes-macos-x64
-          path: dist/PracticeTakes-macos-x64.zip
+          name: PracticeTakes-macos-${{ matrix.arch }}
+          path: dist/PracticeTakes-macos-${{ matrix.arch }}.zip
           if-no-files-found: error
