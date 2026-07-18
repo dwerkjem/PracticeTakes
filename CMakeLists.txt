@@ -1,10 +1,18 @@
 cmake_minimum_required(VERSION 3.25)
 
-set(PRACTICE_TAKES_VERSION "0.1.0" CACHE STRING "Practice Takes semantic version")
+set(PRACTICE_TAKES_VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/VERSION")
+
+if(NOT EXISTS "${PRACTICE_TAKES_VERSION_FILE}")
+    message(FATAL_ERROR
+        "Missing VERSION file at ${PRACTICE_TAKES_VERSION_FILE}")
+endif()
+
+file(READ "${PRACTICE_TAKES_VERSION_FILE}" PRACTICE_TAKES_VERSION)
+string(STRIP "${PRACTICE_TAKES_VERSION}" PRACTICE_TAKES_VERSION)
 
 if(NOT PRACTICE_TAKES_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
     message(FATAL_ERROR
-        "PRACTICE_TAKES_VERSION must use MAJOR.MINOR.PATCH format, for example 1.2.0")
+        "VERSION must use MAJOR.MINOR.PATCH format, for example 1.2.0")
 endif()
 
 project(
