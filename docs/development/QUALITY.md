@@ -52,9 +52,12 @@ pre-commit install
 After installation, each commit performs these steps:
 
 1. `clang-format` formats staged C and C++ files.
-2. `clang-tidy` analyzes staged implementation files under `src/`.
+2. `clang-tidy` analyzes staged implementation files under `src/` and applies fix-it replacements that the enabled check marks as safe.
+3. Diagnostics without a supported fix remain visible and must be reviewed manually.
 
-When formatting changes a file, the commit stops so the formatted result can be reviewed and staged. Run the commit again after staging it.
+When either tool changes a file, pre-commit stops the commit so the result can be reviewed. Stage the changed files and run the commit again.
+
+The hook uses clang-tidy's ordinary `--fix` mode rather than `--fix-errors`. It will not attempt to rewrite code when clang reports compilation errors.
 
 ## Run checks manually
 
@@ -70,10 +73,22 @@ Run only the formatter:
 pre-commit run clang-format --all-files
 ```
 
-Run only static analysis:
+Run clang-tidy with automatic safe fixes:
 
 ```bash
 pre-commit run clang-tidy --all-files
+```
+
+Run clang-tidy directly without modifying files:
+
+```bash
+python scripts/run_clang_tidy.py src/*.cpp
+```
+
+Run it directly with supported fixes enabled:
+
+```bash
+python scripts/run_clang_tidy.py --fix src/*.cpp
 ```
 
 Set explicit executable paths when LLVM tools are not on `PATH`:
@@ -106,5 +121,5 @@ When the project has been configured successfully but stale diagnostics remain, 
 - `.clang-tidy` defines static-analysis checks.
 - `.pre-commit-config.yaml` defines the commit hooks.
 - `scripts/run_clang_format.py` locates and invokes `clang-format`.
-- `scripts/run_clang_tidy.py` locates and invokes `clang-tidy` with the build directory.
+- `scripts/run_clang_tidy.py` locates and invokes `clang-tidy` with the build directory and optional safe fixes.
 - `.vscode/settings.json` connects VS Code to CMake Tools and the compilation database.
