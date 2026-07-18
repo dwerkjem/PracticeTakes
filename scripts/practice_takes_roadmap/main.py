@@ -19,6 +19,7 @@ from .discovery import list_all_issues
 from .github import GitHubClient, GitHubError, Project
 from .models import Issue, PlannedIssue, ProjectItem
 from .planning import descendants_of, next_monday, parent_map, plan_issues
+from .progress import ProgressBar
 
 
 def log(message: str) -> None:
@@ -118,12 +119,11 @@ def add_issues_with_progress(
         log("All selected issues are already present in the project.")
         return existing
 
-    total = len(missing)
-    for index, issue in enumerate(missing, start=1):
+    progress = ProgressBar("Adding issues", len(missing))
+    for issue in missing:
         short_title = issue.title
-        if len(short_title) > 68:
-            short_title = f"{short_title[:65]}..."
-        log(f"Add issue [{index}/{total}] #{issue.number}: {short_title}")
+        if len(short_title) > 46:
+            short_title = f"{short_title[:43]}..."
         raw = client.json(
             "project",
             "item-add",
@@ -140,13 +140,17 @@ def add_issues_with_progress(
             existing[issue.number] = ProjectItem(
                 item_id=str(raw["id"]), issue_number=issue.number
             )
-            log(f"Add issue [{index}/{total}] #{issue.number}: complete")
+            detail = f"#{issue.number} {short_title}"
         else:
-            warning(
-                f"Add issue [{index}/{total}] #{issue.number}: GitHub did not return "
-                "a project item ID."
+            progress.message(
+                f"WARNING: issue #{issue.number} was not added; "
+                "GitHub did not return a project item ID.",
+                error=True,
             )
+            detail = f"#{issue.number} failed"
+        progress.advance(detail)
 
+    progress.finish("project items submitted")
     log("Refreshing project items after additions...")
     return client.list_project_items(project)
 
@@ -161,22 +165,19 @@ def assign_fields(
 ) -> int:
     by_name = {str(field.get("name")): field for field in fields}
     failed = 0
-    total = len(plans)
+    progress = ProgressBar("Assigning fields", len(plans))
 
-    for index, plan in enumerate(plans, start=1):
+    for plan in plans:
         item = items.get(plan.issue.number)
-        short_title = plan.issue.title
-        if len(short_title) > 68:
-            short_title = f"{short_title[:65]}..."
-
         if item is None:
-            warning(
-                f"Fields [{index}/{total}] issue #{plan.issue.number} is not in the "
-                "project; skipping field assignment."
+            progress.message(
+                f"WARNING: issue #{plan.issue.number} is not in the project; "
+                "skipping field assignment.",
+                error=True,
             )
+            progress.advance(f"#{plan.issue.number} skipped")
             continue
 
-        log(f"Fields [{index}/{total}] #{plan.issue.number}: {short_title}")
         failures_before = failed
         values = {
             "Stage": plan.stage.name if plan.stage else None,
@@ -204,8 +205,10 @@ def assign_fields(
             option_id = client.option_id(field, value)
             if not client.set_single_select(project, item, field_id, option_id):
                 failed += 1
-                warning(
-                    f"Could not set {field_name!r} on issue #{plan.issue.number}."
+                progress.message(
+                    f"WARNING: could not set {field_name!r} on "
+                    f"issue #{plan.issue.number}.",
+                    error=True,
                 )
 
         for field_name, value in (
@@ -217,19 +220,58 @@ def assign_fields(
             text = value.isoformat() if value else None
             if text and not client.set_date(project, item, field_id, text):
                 failed += 1
-                warning(
-                    f"Could not set {field_name!r} on issue #{plan.issue.number}."
+                progress.message(
+                    f"WARNING: could not set {field_name!r} on "
+                    f"issue #{plan.issue.number}.",
+                    error=True,
                 )
 
-        if failed == failures_before:
-            log(f"Fields [{index}/{total}] #{plan.issue.number}: complete")
-        else:
-            warning(
-                f"Fields [{index}/{total}] #{plan.issue.number}: completed with "
-                f"{failed - failures_before} failed update(s)."
-            )
+        issue_failures = failed - failures_before
+        detail = (
+            f"#{plan.issue.number} complete"
+            if issue_failures == 0
+            else f"#{plan.issue.number} {issue_failures} failure(s)"
+        )
+        progress.advance(detail)
 
+    progress.finish(f"{failed} failed update(s)")
     return failed
+
+
+def ensure_subissues_with_progress(
+    client: GitHubClient,
+    selected: dict[int, Issue],
+    plans: list[PlannedIssue],
+) -> list[str]:
+    subissue_plans = [plan for plan in plans if plan.parent_number is not None]
+    failed_subissues: list[str] = []
+    progress = ProgressBar("Linking sub-issues", len(subissue_plans))
+
+    for plan in subissue_plans:
+        parent = selected.get(plan.parent_number) if plan.parent_number else None
+        if parent is None:
+            progress.message(
+                f"WARNING: parent #{plan.parent_number} was not selected for "
+                f"child #{plan.issue.number}.",
+                error=True,
+            )
+            failed_subissues.append(f"{plan.parent_number}->{plan.issue.number}")
+            progress.advance(f"#{plan.issue.number} missing parent")
+            continue
+
+        relationship = f"#{parent.number} -> #{plan.issue.number}"
+        if not client.ensure_sub_issue(parent, plan.issue):
+            failed_subissues.append(f"{parent.number}->{plan.issue.number}")
+            progress.message(
+                f"WARNING: could not ensure sub-issue link {relationship}.",
+                error=True,
+            )
+            progress.advance(f"{relationship} failed")
+        else:
+            progress.advance(relationship)
+
+    progress.finish(f"{len(failed_subissues)} failed link(s)")
+    return failed_subissues
 
 
 def setup(args: argparse.Namespace) -> SetupResult:
@@ -243,7 +285,10 @@ def setup(args: argparse.Namespace) -> SetupResult:
 
     client = GitHubClient(OWNER, REPO)
 
-    log("Step 1/9: checking required commands, GitHub authentication, and repository access...")
+    log(
+        "Step 1/9: checking required commands, GitHub authentication, "
+        "and repository access..."
+    )
     client.preflight()
     log("Step 1/9 complete: GitHub authentication and repository access verified.")
 
@@ -266,7 +311,10 @@ def setup(args: argparse.Namespace) -> SetupResult:
     log(f"Step 3/9 complete: selected {len(selected)} issues.")
 
     start = args.start_date or next_monday()
-    log(f"Step 4/9: calculating stages, dependencies, estimates, and dates from {start}...")
+    log(
+        "Step 4/9: calculating stages, dependencies, estimates, and dates "
+        f"from {start}..."
+    )
     plans = plan_issues(selected, start)
     planned_dates = sum(
         1 for plan in plans if plan.start_date is not None and plan.target_date is not None
@@ -306,31 +354,13 @@ def setup(args: argparse.Namespace) -> SetupResult:
         f"{failed_updates} failed update(s)."
     )
 
-    failed_subissues: list[str] = []
     if args.skip_subissues:
         log("Step 8/9: native sub-issue linking skipped by --skip-subissues.")
+        failed_subissues: list[str] = []
     else:
-        subissue_plans = [plan for plan in plans if plan.parent_number is not None]
-        total_links = len(subissue_plans)
+        total_links = sum(1 for plan in plans if plan.parent_number is not None)
         log(f"Step 8/9: ensuring {total_links} native sub-issue relationships...")
-        for index, plan in enumerate(subissue_plans, start=1):
-            parent = selected.get(plan.parent_number) if plan.parent_number else None
-            if parent is None:
-                warning(
-                    f"Sub-issue [{index}/{total_links}] parent #{plan.parent_number} "
-                    f"was not selected for child #{plan.issue.number}."
-                )
-                continue
-            log(
-                f"Sub-issue [{index}/{total_links}] #{parent.number} -> "
-                f"#{plan.issue.number}"
-            )
-            if not client.ensure_sub_issue(parent, plan.issue):
-                failed_subissues.append(f"{parent.number}->{plan.issue.number}")
-                warning(
-                    f"Could not ensure sub-issue link #{parent.number} -> "
-                    f"#{plan.issue.number}."
-                )
+        failed_subissues = ensure_subissues_with_progress(client, selected, plans)
         log(
             f"Step 8/9 complete: {total_links - len(failed_subissues)} links "
             f"succeeded or already existed; {len(failed_subissues)} failed."
