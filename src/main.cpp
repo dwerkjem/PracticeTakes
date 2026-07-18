@@ -1,5 +1,7 @@
 #include <JuceHeader.h>
 
+#include <iostream>
+
 #include "MainComponent.h"
 
 // JUCE owns the application object for the lifetime of the process. This class
@@ -28,7 +30,14 @@ class PracticeTakesApplication final : public juce::JUCEApplication
 
     void initialise(const juce::String& commandLineArguments) override
     {
-        juce::ignoreUnused(commandLineArguments);
+        const auto argument = commandLineArguments.trim();
+
+        if (argument == "-v" || argument == "--version")
+        {
+            std::cout << getApplicationName() << " v" << getApplicationVersion() << '\n';
+            quit();
+            return;
+        }
 
         const auto windowTitle = getApplicationName() + " v" + getApplicationVersion();
 

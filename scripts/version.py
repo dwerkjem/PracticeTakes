@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 from pathlib import Path
 from typing import Final
 
 PROJECT_ROOT: Final = Path(__file__).resolve().parents[1]
 VERSION_FILE: Final = PROJECT_ROOT / "VERSION"
+VCPKG_MANIFEST_FILE: Final = PROJECT_ROOT / "vcpkg.json"
 VERSION_PATTERN: Final = re.compile(
     r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
 )
@@ -42,9 +44,15 @@ def read_version() -> tuple[int, int, int]:
 
 
 def write_version(version: tuple[int, int, int]) -> str:
-    """Write a validated version to VERSION and return it as text."""
+    """Write a validated version to VERSION and the vcpkg manifest."""
     value = format_version(version)
+    manifest = json.loads(VCPKG_MANIFEST_FILE.read_text(encoding="utf-8"))
+    manifest["version-string"] = value
+
     VERSION_FILE.write_text(f"{value}\n", encoding="utf-8")
+    VCPKG_MANIFEST_FILE.write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
     return value
 
 

@@ -1,9 +1,10 @@
 # Releasing Practice Takes
 
-Practice Takes has one persistent version value: the root [`VERSION`](../../VERSION)
-file. CMake, JUCE application metadata, the C++ application version, window
-titles, package names, tags, build artifacts, and GitHub Releases all derive
-from that value.
+Practice Takes has one source of truth for its version: the root
+[`VERSION`](../../VERSION) file. CMake, JUCE application metadata, the C++
+application version, window titles, package names, tags, build artifacts, and
+GitHub Releases all derive from that value. When the version helper writes a
+release version, it also synchronizes the `version-string` in `vcpkg.json`.
 
 Do not copy the version into `CMakeLists.txt` or C++ source files.
 
@@ -27,8 +28,9 @@ source commit, expected six package files, and SHA-256 checksums, then publishes
 those exact files to the GitHub Release.
 
 After all six builds and artifact verification pass, the workflow changes
-`VERSION`, commits the change, creates the version tag, and publishes the
-release. The same artifact path is used for patch, minor, and major releases.
+`VERSION`, synchronizes the vcpkg manifest, commits both changes, creates the
+version tag, and publishes the release. The same artifact path is used for
+patch, minor, and major releases.
 
 ## Release artifact bundle
 
@@ -79,7 +81,7 @@ python3 scripts/version.py next minor
 python3 scripts/version.py next major
 ```
 
-To update only the local `VERSION` file:
+To update the local `VERSION` file and synchronize `vcpkg.json`:
 
 ```bash
 python3 scripts/version.py bump patch
