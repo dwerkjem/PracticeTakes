@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 
 from .config import (
     FIELD_OPTIONS,
@@ -19,6 +19,17 @@ from .discovery import list_all_issues
 from .github import GitHubClient, GitHubError, Project
 from .models import PlannedIssue, ProjectItem
 from .planning import descendants_of, next_monday, parent_map, plan_issues
+
+
+def log(message: str) -> None:
+    """Print a timestamped progress message immediately."""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"[{timestamp}] {message}", flush=True)
+
+
+def warning(message: str) -> None:
+    """Print a visible warning without stopping the setup."""
+    print(f"WARNING: {message}", file=sys.stderr, flush=True)
 
 
 @dataclass
@@ -70,16 +81,30 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def configure_fields(client: GitHubClient, project: Project) -> list[dict]:
+    log("Reading existing project fields...")
     fields = client.list_fields(project)
+    log(f"Found {len(fields)} existing project fields.")
+
+    log("Ensuring field 1/7: Status")
     fields = client.ensure_single_select_field(
         project, fields, "Status", STATUS_OPTIONS
     )
-    for name, options in FIELD_OPTIONS.items():
+
+    custom_fields = list(FIELD_OPTIONS.items())
+    for index, (name, options) in enumerate(custom_fields, start=2):
+        log(f"Ensuring field {index}/7: {name}")
         fields = client.ensure_single_select_field(project, fields, name, options)
+
+    log("Ensuring field 6/7: Start date")
     fields = client.ensure_date_field(project, fields, "Start date")
+    log("Ensuring field 7/7: Target date")
     fields = client.ensure_date_field(project, fields, "Target date")
+
+    log("Ensuring optional Iteration field...")
     fields = client.ensure_iteration_field(project, fields, "Iteration")
-    return client.list_fields(project)
+    refreshed = client.list_fields(project)
+    log(f"Project field configuration complete ({len(refreshed)} fields visible).")
+    return refreshed
 
 
 def assign_fields(
@@ -92,10 +117,25 @@ def assign_fields(
 ) -> int:
     by_name = {str(field.get("name")): field for field in fields}
     failed = 0
-    for plan in plans:
+    total = len(plans)
+
+    for index, plan in enumerate(plans, start=1):
         item = items.get(plan.issue.number)
+        short_title = plan.issue.title
+        if len(short_title) > 68:
+            short_title = f"{short_title[:65]}..."
+
         if item is None:
+            warning(
+                f"Fields [{index}/{total}] issue #{plan.issue.number} is not in the "
+                "project; skipping field assignment."
+            )
             continue
+
+        log(
+            f"Fields [{index}/{total}] #{plan.issue.number}: {short_title}"
+        )
+        failures_before = failed
         values = {
             "Stage": plan.stage.name if plan.stage else None,
             "Priority": plan.priority,
@@ -122,6 +162,9 @@ def assign_fields(
             option_id = client.option_id(field, value)
             if not client.set_single_select(project, item, field_id, option_id):
                 failed += 1
+                warning(
+                    f"Could not set {field_name!r} on issue #{plan.issue.number}."
+                )
 
         for field_name, value in (
             ("Start date", plan.start_date),
@@ -132,17 +175,45 @@ def assign_fields(
             text = value.isoformat() if value else None
             if text and not client.set_date(project, item, field_id, text):
                 failed += 1
+                warning(
+                    f"Could not set {field_name!r} on issue #{plan.issue.number}."
+                )
+
+        if failed == failures_before:
+            log(f"Fields [{index}/{total}] #{plan.issue.number}: complete")
+        else:
+            warning(
+                f"Fields [{index}/{total}] #{plan.issue.number}: completed with "
+                f"{failed - failures_before} failed update(s)."
+            )
+
     return failed
 
 
 def setup(args: argparse.Namespace) -> SetupResult:
-    client = GitHubClient(OWNER, REPO)
-    client.preflight()
+    log("Practice Takes roadmap setup starting.")
+    log(f"Repository: {OWNER}/{REPO}")
+    log(
+        "Mode: roadmap descendants only"
+        if args.roadmap_only
+        else "Mode: all repository issues"
+    )
 
+    client = GitHubClient(OWNER, REPO)
+
+    log("Step 1/9: checking required commands, GitHub authentication, and repository access...")
+    client.preflight()
+    log("Step 1/9 complete: GitHub authentication and repository access verified.")
+
+    log("Step 2/9: discovering every repository issue through paginated GraphQL...")
     all_issues = list_all_issues(client)
     if not all_issues:
         raise GitHubError("The repository has no issues to add to the roadmap.")
+    log(f"Step 2/9 complete: discovered {len(all_issues)} issues.")
+
+    log("Step 3/9: resolving parent relationships and selecting roadmap issues...")
     parents = parent_map(all_issues)
+    log(f"Detected {len(parents)} parent-child issue relationships.")
     selected = (
         descendants_of(all_issues, parents, args.root_issue)
         if args.roadmap_only
@@ -150,34 +221,108 @@ def setup(args: argparse.Namespace) -> SetupResult:
     )
     if not selected:
         raise GitHubError("No roadmap issues were discovered.")
+    log(f"Step 3/9 complete: selected {len(selected)} issues.")
 
     start = args.start_date or next_monday()
+    log(f"Step 4/9: calculating stages, dependencies, estimates, and dates from {start}...")
     plans = plan_issues(selected, start)
+    planned_dates = sum(
+        1 for plan in plans if plan.start_date is not None and plan.target_date is not None
+    )
+    log(
+        f"Step 4/9 complete: generated {len(plans)} plans; "
+        f"{planned_dates} have scheduled date ranges."
+    )
+
+    log(f"Step 5/9: finding or creating project {PROJECT_TITLE!r}...")
     project = client.get_or_create_project(PROJECT_TITLE, PROJECT_DESCRIPTION)
+    log(f"Step 5/9 complete: project #{project.number} at {project.url}")
+
+    log("Step 6/9: reading existing project items...")
     items = client.list_project_items(project)
+    existing_count = len(items)
+    missing_before = len(set(selected) - set(items))
+    log(
+        f"Project currently contains {existing_count} issue items; "
+        f"{missing_before} selected issues need to be added."
+    )
+    if missing_before:
+        log(
+            "Adding missing issues now. GitHub performs one request per missing issue, "
+            "so this may take a while..."
+        )
     items = client.add_issues(project, selected.values(), items)
+    added_count = max(0, len(items) - existing_count)
+    log(
+        f"Step 6/9 complete: project now contains {len(items)} issue items "
+        f"({added_count} newly detected after refresh)."
+    )
+
+    log("Step 7/9: configuring project fields...")
     fields = configure_fields(client, project)
+    log("Assigning field values and roadmap dates to each selected issue...")
     failed_updates = assign_fields(
         client, project, items, fields, plans, args.reset_statuses
     )
+    log(
+        f"Step 7/9 complete: field assignment finished with "
+        f"{failed_updates} failed update(s)."
+    )
 
     failed_subissues: list[str] = []
-    if not args.skip_subissues:
-        for plan in plans:
-            if plan.parent_number is None:
+    if args.skip_subissues:
+        log("Step 8/9: native sub-issue linking skipped by --skip-subissues.")
+    else:
+        subissue_plans = [plan for plan in plans if plan.parent_number is not None]
+        total_links = len(subissue_plans)
+        log(f"Step 8/9: ensuring {total_links} native sub-issue relationships...")
+        for index, plan in enumerate(subissue_plans, start=1):
+            parent = selected.get(plan.parent_number) if plan.parent_number else None
+            if parent is None:
+                warning(
+                    f"Sub-issue [{index}/{total_links}] parent #{plan.parent_number} "
+                    f"was not selected for child #{plan.issue.number}."
+                )
                 continue
-            parent = selected.get(plan.parent_number)
-            if parent and not client.ensure_sub_issue(parent, plan.issue):
+            log(
+                f"Sub-issue [{index}/{total_links}] #{parent.number} -> "
+                f"#{plan.issue.number}"
+            )
+            if not client.ensure_sub_issue(parent, plan.issue):
                 failed_subissues.append(f"{parent.number}->{plan.issue.number}")
+                warning(
+                    f"Could not ensure sub-issue link #{parent.number} -> "
+                    f"#{plan.issue.number}."
+                )
+        log(
+            f"Step 8/9 complete: {total_links - len(failed_subissues)} links "
+            f"succeeded or already existed; {len(failed_subissues)} failed."
+        )
 
-    failed_views = [] if args.skip_views else client.ensure_views(project, VIEW_SPECS)
+    if args.skip_views:
+        log("Step 9/9: project view creation skipped by --skip-views.")
+        failed_views: list[str] = []
+    else:
+        log(f"Step 9/9: ensuring {len(VIEW_SPECS)} project views...")
+        for name, layout, _ in VIEW_SPECS:
+            log(f"View requested: {name} ({layout})")
+        failed_views = client.ensure_views(project, VIEW_SPECS)
+        log(
+            f"Step 9/9 complete: view setup finished with "
+            f"{len(failed_views)} failure(s)."
+        )
 
+    log("Verification: refreshing project items and checking coverage...")
     refreshed = client.list_project_items(project)
     counts: dict[int, int] = {}
     for number in refreshed:
         counts[number] = counts.get(number, 0) + 1
     missing = sorted(set(selected) - set(refreshed))
     duplicates = sorted(number for number, count in counts.items() if count > 1)
+    log(
+        f"Verification complete: {len(missing)} missing item(s), "
+        f"{len(duplicates)} duplicate item(s)."
+    )
 
     return SetupResult(
         project=project,
@@ -192,25 +337,34 @@ def setup(args: argparse.Namespace) -> SetupResult:
 
 
 def print_report(result: SetupResult) -> None:
-    print("\n================ FINAL REPORT ================")
-    print(f"Project URL: {result.project.url}")
-    print(f"Repository issues discovered dynamically: {result.discovered_count}")
-    print(f"Roadmap issues selected: {result.selected_count}")
-    print(f"Missing project items: {result.missing_items or 'none'}")
-    print(f"Duplicate project items: {result.duplicate_items or 'none'}")
-    print(f"Failed field updates: {result.failed_field_updates}")
-    print(f"Failed sub-issue links: {result.failed_subissues or 'none'}")
-    print(f"Failed view creations: {result.failed_views or 'none'}")
-    print("No issue maximum is configured; issue discovery uses GitHub pagination.")
-    print("==============================================")
+    print("\n================ FINAL REPORT ================", flush=True)
+    print(f"Project URL: {result.project.url}", flush=True)
+    print(
+        f"Repository issues discovered dynamically: {result.discovered_count}",
+        flush=True,
+    )
+    print(f"Roadmap issues selected: {result.selected_count}", flush=True)
+    print(f"Missing project items: {result.missing_items or 'none'}", flush=True)
+    print(f"Duplicate project items: {result.duplicate_items or 'none'}", flush=True)
+    print(f"Failed field updates: {result.failed_field_updates}", flush=True)
+    print(f"Failed sub-issue links: {result.failed_subissues or 'none'}", flush=True)
+    print(f"Failed view creations: {result.failed_views or 'none'}", flush=True)
+    print(
+        "No issue maximum is configured; issue discovery uses GitHub pagination.",
+        flush=True,
+    )
+    print("==============================================", flush=True)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
         result = setup(args)
+    except KeyboardInterrupt:
+        print("\nCancelled by user.", file=sys.stderr, flush=True)
+        return 130
     except (GitHubError, ValueError) as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
+        print(f"ERROR: {exc}", file=sys.stderr, flush=True)
         return 1
     print_report(result)
     return 0
