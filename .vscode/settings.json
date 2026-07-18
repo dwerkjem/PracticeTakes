@@ -19,7 +19,9 @@
         "editor.formatOnSave": true
     },
     "cSpell.words": [
+        "Allman",
         "alsa",
+        "bugprone",
         "clang",
         "clangtidy",
         "fontconfig",
@@ -32,6 +34,7 @@
         "libxext",
         "libxinerama",
         "libxrandr",
-        "libxrender"
+        "libxrender",
+        "nullptr"
     ]
 }
