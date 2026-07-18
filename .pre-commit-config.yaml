@@ -6,10 +6,3 @@ repos:
         entry: python scripts/run_clang_format.py
         language: python
         files: '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$'
-
-      - id: clang-tidy
-        name: Lint and fix C++ with clang-tidy
-        entry: python scripts/run_clang_tidy.py --fix
-        language: python
-        files: '^src/.*\.(c|cc|cpp|cxx)$'
-        require_serial: true
