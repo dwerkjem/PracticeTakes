@@ -12,16 +12,15 @@ class SpectrogramComponent final : public juce::Component,
                                    private juce::ChangeListener,
                                    private juce::Timer
 {
-public:
-    explicit SpectrogramComponent(
-        juce::AudioDeviceManager& sharedAudioDeviceManager);
+  public:
+    explicit SpectrogramComponent(juce::AudioDeviceManager& sharedAudioDeviceManager);
     ~SpectrogramComponent() override;
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
     void setDarkMode(bool shouldUseDarkMode);
 
-private:
+  private:
     static constexpr int fifoCapacity = 65536;
     static constexpr int fftOrder = 10;
     static constexpr int fftSize = 1 << fftOrder;
@@ -35,17 +34,14 @@ private:
     static constexpr float visibleDecibelFloor = -90.0f;
 
     // Audio capture ---------------------------------------------------------
-    void audioDeviceIOCallbackWithContext(
-        const float* const* inputChannelData,
-        int numInputChannels,
-        float* const* outputChannelData,
-        int numOutputChannels,
-        int numSamples,
-        const juce::AudioIODeviceCallbackContext& context) override;
+    void
+    audioDeviceIOCallbackWithContext(const float* const* inputChannelData, int numInputChannels,
+                                     float* const* outputChannelData, int numOutputChannels,
+                                     int numSamples,
+                                     const juce::AudioIODeviceCallbackContext& context) override;
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
     void audioDeviceStopped() override;
-    void changeListenerCallback(
-        juce::ChangeBroadcaster* source) override;
+    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
     [[nodiscard]] bool hasUsableInputDevice() const;
     void updateAudioDeviceStatus();
@@ -75,23 +71,16 @@ private:
     juce::Rectangle<int> spectrogramBounds;
 
     // Samples are written on the audio thread and read on the timer thread.
-    juce::AbstractFifo audioFifo { fifoCapacity };
-    std::array<float, fifoCapacity> fifoBuffer {};
-    std::array<float, fftSize * 2> fftData {};
+    juce::AbstractFifo audioFifo{fifoCapacity};
+    std::array<float, fifoCapacity> fifoBuffer{};
+    std::array<float, fftSize * 2> fftData{};
 
-    juce::dsp::FFT forwardFFT { fftOrder };
-    juce::dsp::WindowingFunction<float> hannWindow {
-        fftSize,
-        juce::dsp::WindowingFunction<float>::hann
-    };
-    juce::Image spectrogramImage {
-        juce::Image::RGB,
-        imageWidth,
-        imageHeight,
-        true
-    };
+    juce::dsp::FFT forwardFFT{fftOrder};
+    juce::dsp::WindowingFunction<float> hannWindow{fftSize,
+                                                   juce::dsp::WindowingFunction<float>::hann};
+    juce::Image spectrogramImage{juce::Image::RGB, imageWidth, imageHeight, true};
 
-    std::atomic<double> currentSampleRate { 44100.0 };
+    std::atomic<double> currentSampleRate{44100.0};
     bool isAudioCallbackAttached = false;
     bool isDarkMode = false;
     juce::String audioErrorMessage;

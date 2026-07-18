@@ -6,7 +6,7 @@
 // creates the main window during startup and releases it during shutdown.
 class PracticeTakesApplication final : public juce::JUCEApplication
 {
-public:
+  public:
     [[nodiscard]] const juce::String getApplicationName() override
     {
         return "Practice Takes";
@@ -30,8 +30,7 @@ public:
     {
         juce::ignoreUnused(commandLineArguments);
 
-        const auto windowTitle =
-            getApplicationName() + " v" + getApplicationVersion();
+        const auto windowTitle = getApplicationName() + " v" + getApplicationVersion();
 
         mainWindow = std::make_unique<MainWindow>(windowTitle);
     }
@@ -47,17 +46,15 @@ public:
         quit();
     }
 
-private:
+  private:
     // The top-level window owns MainComponent and therefore all shared audio,
     // settings, warning, and tool-window state.
     class MainWindow final : public juce::DocumentWindow
     {
-    public:
+      public:
         explicit MainWindow(const juce::String& title)
-            : DocumentWindow(
-                  title,
-                  juce::Colour::fromRGB(18, 20, 27),
-                  juce::DocumentWindow::allButtons)
+            : DocumentWindow(title, juce::Colour::fromRGB(18, 20, 27),
+                             juce::DocumentWindow::allButtons)
         {
             setUsingNativeTitleBar(true);
             setContentOwned(new MainComponent(), true);

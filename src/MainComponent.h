@@ -6,17 +6,16 @@
 
 // MainComponent is the application's central coordinator. It owns the shared
 // audio device, the top-level controls, and the independent tool windows.
-class MainComponent final : public juce::Component,
-                            private juce::ChangeListener
+class MainComponent final : public juce::Component, private juce::ChangeListener
 {
-public:
+  public:
     MainComponent();
     ~MainComponent() override;
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
-private:
+  private:
     enum class ToolType
     {
         tuner,
@@ -39,11 +38,9 @@ private:
     void showSettings();
     void closeSettings();
 
-    [[nodiscard]] std::unique_ptr<juce::Component>
-        createToolComponent(ToolType tool);
+    [[nodiscard]] std::unique_ptr<juce::Component> createToolComponent(ToolType tool);
     [[nodiscard]] juce::String toolName(ToolType tool) const;
-    [[nodiscard]] juce::Point<int>
-        preferredToolWindowSize(ToolType tool) const;
+    [[nodiscard]] juce::Point<int> preferredToolWindowSize(ToolType tool) const;
     [[nodiscard]] std::unique_ptr<ToolWindow>& windowFor(ToolType tool);
 
     // Appearance ------------------------------------------------------------
@@ -63,9 +60,9 @@ private:
     juce::AudioDeviceManager audioDeviceManager;
     juce::LookAndFeel_V4 appLookAndFeel;
 
-    juce::TextButton fileButton { "File" };
-    juce::TextButton settingsButton { "Settings" };
-    juce::TextButton toolsButton { "Tools" };
+    juce::TextButton fileButton{"File"};
+    juce::TextButton settingsButton{"Settings"};
+    juce::TextButton toolsButton{"Tools"};
 
     std::unique_ptr<ToolWindow> tunerWindow;
     std::unique_ptr<ToolWindow> spectrogramWindow;
