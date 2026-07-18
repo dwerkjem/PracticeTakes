@@ -17,7 +17,7 @@ from .config import (
 )
 from .discovery import list_all_issues
 from .github import GitHubClient, GitHubError, Project
-from .models import PlannedIssue, ProjectItem
+from .models import Issue, PlannedIssue, ProjectItem
 from .planning import descendants_of, next_monday, parent_map, plan_issues
 
 
@@ -107,6 +107,50 @@ def configure_fields(client: GitHubClient, project: Project) -> list[dict]:
     return refreshed
 
 
+def add_issues_with_progress(
+    client: GitHubClient,
+    project: Project,
+    selected: dict[int, Issue],
+    existing: dict[int, ProjectItem],
+) -> dict[int, ProjectItem]:
+    missing = [selected[number] for number in sorted(set(selected) - set(existing))]
+    if not missing:
+        log("All selected issues are already present in the project.")
+        return existing
+
+    total = len(missing)
+    for index, issue in enumerate(missing, start=1):
+        short_title = issue.title
+        if len(short_title) > 68:
+            short_title = f"{short_title[:65]}..."
+        log(f"Add issue [{index}/{total}] #{issue.number}: {short_title}")
+        raw = client.json(
+            "project",
+            "item-add",
+            str(project.number),
+            "--owner",
+            client.owner,
+            "--url",
+            issue.url,
+            "--format",
+            "json",
+            check=False,
+        )
+        if raw and raw.get("id"):
+            existing[issue.number] = ProjectItem(
+                item_id=str(raw["id"]), issue_number=issue.number
+            )
+            log(f"Add issue [{index}/{total}] #{issue.number}: complete")
+        else:
+            warning(
+                f"Add issue [{index}/{total}] #{issue.number}: GitHub did not return "
+                "a project item ID."
+            )
+
+    log("Refreshing project items after additions...")
+    return client.list_project_items(project)
+
+
 def assign_fields(
     client: GitHubClient,
     project: Project,
@@ -132,9 +176,7 @@ def assign_fields(
             )
             continue
 
-        log(
-            f"Fields [{index}/{total}] #{plan.issue.number}: {short_title}"
-        )
+        log(f"Fields [{index}/{total}] #{plan.issue.number}: {short_title}")
         failures_before = failed
         values = {
             "Stage": plan.stage.name if plan.stage else None,
@@ -246,12 +288,7 @@ def setup(args: argparse.Namespace) -> SetupResult:
         f"Project currently contains {existing_count} issue items; "
         f"{missing_before} selected issues need to be added."
     )
-    if missing_before:
-        log(
-            "Adding missing issues now. GitHub performs one request per missing issue, "
-            "so this may take a while..."
-        )
-    items = client.add_issues(project, selected.values(), items)
+    items = add_issues_with_progress(client, project, selected, items)
     added_count = max(0, len(items) - existing_count)
     log(
         f"Step 6/9 complete: project now contains {len(items)} issue items "
