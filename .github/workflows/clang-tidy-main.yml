@@ -59,6 +59,9 @@ jobs:
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
+      - name: Generate JUCE headers and validate compilation
+        run: cmake --build build --target PracticeTakes --parallel
+
       - name: Apply safe clang-tidy fixes
         shell: bash
         run: |
@@ -68,6 +71,11 @@ jobs:
 
       - name: Format automatic edits
         run: python3 scripts/run_clang_format.py src/*.cpp src/*.h
+
+      - name: Validate automatic edits
+        run: |
+          cmake --build build --target PracticeTakes --parallel
+          python3 scripts/run_clang_tidy.py src/*.cpp
 
       - name: Commit automatic fixes
         shell: bash
@@ -82,6 +90,3 @@ jobs:
           git add src
           git commit -m "chore: apply clang-tidy automatic fixes"
           git push origin HEAD:main
-
-      - name: Verify no blocking findings remain
-        run: python3 scripts/run_clang_tidy.py src/*.cpp
