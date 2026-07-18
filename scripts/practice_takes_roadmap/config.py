@@ -21,6 +21,15 @@ STAGES = (
     Stage("Final Feature Release", "Stage 5", "Month 15–18", 16),
 )
 
+STATUS_OPTIONS = (
+    "Backlog",
+    "Ready",
+    "In progress",
+    "Review and testing",
+    "Blocked",
+    "Done",
+)
+
 FIELD_OPTIONS = {
     "Stage": tuple(stage.name for stage in STAGES),
     "Priority": ("Critical", "High", "Normal", "Later"),
