@@ -50,6 +50,25 @@ cmake -S . -B build
 cmake --build build --config Debug --target PracticeTakes --parallel
 ```
 
+## Compilation database
+
+The project enables `CMAKE_EXPORT_COMPILE_COMMANDS`, producing
+`build/compile_commands.json` when the selected CMake generator supports it.
+That database contains the exact compiler commands used for each source file
+and is consumed by `clang-tidy` and VS Code.
+
+Makefile and Ninja generators produce the database. IDE generators such as
+Visual Studio and Xcode do not. Use Ninja for a dedicated linting build tree
+when necessary:
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+```
+
+Configuring is enough to create the database; the executable does not need to
+be built first. See [Code quality and editor setup](QUALITY.md) for pre-commit
+and VS Code instructions.
+
 ## Build output
 
 CMake places the executable in `build/bin` for ordinary desktop builds. macOS
