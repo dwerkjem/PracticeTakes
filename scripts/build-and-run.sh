@@ -83,7 +83,7 @@ if [[ -n "$vcpkg_toolchain" ]]; then
     if [[ -n "$vcpkg_triplet" ]]; then
         cmake_args+=(
             -DVCPKG_TARGET_TRIPLET="$vcpkg_triplet"
-            -DVCPKG_OVERLAY_TRIPLETS="$PROJECT_ROOT/triplets"
+            -DVCPKG_OVERLAY_TRIPLETS="$PROJECT_ROOT/cmake/triplets"
         )
 
         if [[ "$(uname -m)" == "x86_64" ]]; then
