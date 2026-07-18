@@ -1,0 +1,15 @@
+repos:
+  - repo: local
+    hooks:
+      - id: clang-format
+        name: Format C++ with clang-format
+        entry: python scripts/run_clang_format.py
+        language: python
+        files: '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$'
+
+      - id: clang-tidy
+        name: Lint C++ with clang-tidy
+        entry: python scripts/run_clang_tidy.py
+        language: python
+        files: '^src/.*\.(c|cc|cpp|cxx)$'
+        require_serial: true
