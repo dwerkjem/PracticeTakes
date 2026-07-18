@@ -25,6 +25,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Generate the compilation database used by clang-tidy and VS Code IntelliSense.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Keep JUCE's optional browser/network dependencies out of this tuner.
 # These directory-level definitions also apply while JUCE builds juceaide.
 add_compile_definitions(
