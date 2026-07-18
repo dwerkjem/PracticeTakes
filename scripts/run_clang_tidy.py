@@ -36,12 +36,16 @@ def main(arguments: list[str]) -> int:
         print(
             f"{compilation_database} does not exist. Configure the project first:\n"
             f"  cmake -S . -B {build_directory} "
-            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+            "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON\n"
+            "Use a Makefile or Ninja generator; Visual Studio and Xcode "
+            "generators do not produce this database.",
             file=sys.stderr,
         )
         return 1
 
-    source_files = [Path(argument) for argument in arguments if Path(argument).is_file()]
+    source_files = [
+        Path(argument) for argument in arguments if Path(argument).is_file()
+    ]
     if not source_files:
         return 0
 
