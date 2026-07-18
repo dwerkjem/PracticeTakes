@@ -2,7 +2,8 @@
 
 Practice Takes has one persistent version value: the root [`VERSION`](../../VERSION)
 file. CMake, JUCE application metadata, the C++ application version, window
-titles, package names, tags, and GitHub Releases all derive from that value.
+titles, package names, tags, build artifacts, and GitHub Releases all derive
+from that value.
 
 Do not copy the version into `CMakeLists.txt` or C++ source files.
 
@@ -15,10 +16,40 @@ Do not copy the version into `CMakeLists.txt` or C++ source files.
 5. Choose `patch`, `minor`, or `major`.
 6. Select **Run workflow** again.
 
-The workflow calculates the next version and builds Windows, Linux, and macOS
-packages for x64 and ARM64. It changes `VERSION`, commits the change, creates
-the version tag, and publishes the GitHub Release only after all six builds
-pass.
+The workflow calculates the next version and calls the shared multiplatform
+build workflow. That workflow builds Windows, Linux, and macOS packages for x64
+and ARM64, uploads each package as an artifact, then assembles one verified
+release-artifact bundle.
+
+The release workflow does not rebuild those packages during publishing. It
+downloads the bundle produced by the build workflow, verifies the version,
+source commit, expected six package files, and SHA-256 checksums, then publishes
+those exact files to the GitHub Release.
+
+After all six builds and artifact verification pass, the workflow changes
+`VERSION`, commits the change, creates the version tag, and publishes the
+release. The same artifact path is used for patch, minor, and major releases.
+
+## Release artifact bundle
+
+The shared build workflow produces these release packages:
+
+- `PracticeTakes-VERSION-linux-x64.tar.gz`
+- `PracticeTakes-VERSION-linux-arm64.tar.gz`
+- `PracticeTakes-VERSION-windows-x64.zip`
+- `PracticeTakes-VERSION-windows-arm64.zip`
+- `PracticeTakes-VERSION-macos-x64.zip`
+- `PracticeTakes-VERSION-macos-arm64.zip`
+
+It also adds:
+
+- `SHA256SUMS.txt` for package integrity checks
+- `BUILD-METADATA.txt` containing the version, source commit, and originating
+  workflow run
+
+Individual platform artifacts are retained for 14 days. The combined
+release-artifact bundle is retained for 30 days so a failed publish step can be
+diagnosed or recovered without immediately rebuilding every platform.
 
 ## Choosing a release type
 
@@ -57,7 +88,8 @@ python3 scripts/version.py bump major
 ```
 
 The automated workflow is preferred for published releases because it builds
-every supported platform before committing the version and creating the tag.
+every supported platform, verifies the complete artifact bundle, and publishes
+only the files that passed the shared build process.
 
 ## Manual tag compatibility
 
@@ -71,6 +103,7 @@ git tag -a v0.2.0 -m "Practice Takes v0.2.0"
 git push origin v0.2.0
 ```
 
-The release workflow then builds all six packages, creates SHA-256 checksums,
-generates release notes, and publishes the release. Never reuse or move a
-published version tag; make corrections in a new PATCH release.
+The release workflow then calls the shared build workflow, assembles and
+verifies the release-artifact bundle, generates release notes, and publishes
+the release. Never reuse or move a published version tag; make corrections in
+a new PATCH release.
