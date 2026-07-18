@@ -41,13 +41,13 @@ class ProgressBar:
         self._is_tty = bool(getattr(self.stream, "isatty", lambda: False)())
         self._render(final=self.total == 0)
 
-    def advance(self, detail: str = "", amount: int = 1) -> None:
+    def advance(self, detail: str = "", amount: int = 1, *, measure: bool = True) -> None:
         now = monotonic()
         amount = max(1, amount)
         previous = self._current
         self._current = min(self.total, self._current + amount)
         completed = self._current - previous
-        if completed:
+        if completed and measure:
             sample = (now - self._last_update_at) / completed
             if self._seconds_per_item is None:
                 self._seconds_per_item = sample
@@ -58,20 +58,13 @@ class ProgressBar:
         self._render(final=self._current >= self.total)
 
     def finish(self, detail: str = "complete") -> None:
-        if self._current >= self.total:
-            return
         self._current = self.total
         self._detail = detail
         self._render(final=True)
 
     def message(self, message: str, *, error: bool = False) -> None:
         if self._is_tty and self._last_render_length:
-            print(
-                "\r" + (" " * self._last_render_length) + "\r",
-                end="",
-                file=self.stream,
-                flush=True,
-            )
+            print("\r" + (" " * self._last_render_length) + "\r", end="", file=self.stream, flush=True)
         target = sys.stderr if error else self.stream
         print(message, file=target, flush=True)
         if self._is_tty and self._current < self.total:
@@ -98,12 +91,7 @@ class ProgressBar:
 
         if self._is_tty:
             padded = line.ljust(self._last_render_length)
-            print(
-                f"\r{padded}",
-                end="\n" if final else "",
-                file=self.stream,
-                flush=True,
-            )
+            print(f"\r{padded}", end="\n" if final else "", file=self.stream, flush=True)
             self._last_render_length = len(line)
         else:
             print(line, file=self.stream, flush=True)
