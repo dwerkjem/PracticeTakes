@@ -12,6 +12,46 @@ constexpr double maximumFrequency = 1200.0;
 constexpr float minimumRms = 0.008f;
 constexpr double minimumCorrelation = 0.72;
 
+struct TunerPalette
+{
+    juce::Colour background;
+    juce::Colour panel;
+    juce::Colour control;
+    juce::Colour outline;
+    juce::Colour foreground;
+    juce::Colour muted;
+    juce::Colour accent;
+    juce::Colour inTune;
+};
+
+TunerPalette tunerPaletteFor(bool darkMode)
+{
+    if (darkMode)
+    {
+        return {
+            juce::Colour::fromRGB(18, 20, 27),
+            juce::Colour::fromRGB(25, 28, 37),
+            juce::Colour::fromRGB(54, 59, 72),
+            juce::Colour::fromRGB(58, 65, 82),
+            juce::Colour::fromRGB(238, 241, 247),
+            juce::Colour::fromRGB(142, 150, 166),
+            juce::Colour::fromRGB(100, 170, 255),
+            juce::Colour::fromRGB(85, 214, 136)
+        };
+    }
+
+    return {
+        juce::Colour::fromRGB(235, 236, 238),
+        juce::Colour::fromRGB(250, 250, 251),
+        juce::Colour::fromRGB(220, 224, 230),
+        juce::Colour::fromRGB(165, 169, 178),
+        juce::Colour::fromRGB(28, 31, 37),
+        juce::Colour::fromRGB(92, 98, 108),
+        juce::Colour::fromRGB(55, 112, 196),
+        juce::Colour::fromRGB(35, 145, 82)
+    };
+}
+
 const std::array<const char*, 12> noteNames {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
 };
@@ -35,23 +75,10 @@ TunerComponent::TunerComponent(
                                        const juce::String& text)
     {
         label.setText(text, juce::dontSendNotification);
-        label.setColour(juce::Label::textColourId,
-                        juce::Colour::fromRGB(188, 194, 207));
         label.setFont(juce::FontOptions(13.0f));
         addAndMakeVisible(label);
     };
 
-    const auto configureButton = [](juce::TextButton& button)
-    {
-        button.setColour(juce::TextButton::buttonColourId,
-                         juce::Colour::fromRGB(54, 59, 72));
-        button.setColour(juce::TextButton::buttonOnColourId,
-                         juce::Colour::fromRGB(70, 92, 130));
-        button.setColour(juce::TextButton::textColourOffId,
-                         juce::Colour::fromRGB(238, 241, 247));
-    };
-
-    configureLabel(microphoneLabel, "Microphone: none selected");
     configureLabel(displayModeLabel, "Display");
     configureLabel(easingLabel, "Pitch easing");
     configureLabel(averagingLabel, "Average window");
@@ -72,7 +99,6 @@ TunerComponent::TunerComponent(
     };
     addAndMakeVisible(displayModeBox);
 
-    configureButton(advancedSettingsButton);
     advancedSettingsButton.onClick = [this]
     {
         advancedSettingsExpanded = ! advancedSettingsExpanded;
@@ -88,7 +114,6 @@ TunerComponent::TunerComponent(
     configureSlider(dropoutSlider, 1.0, 20.0, 1.0, 4.0, " frames");
     configureSlider(durationSlider, 5.0, 60.0, 1.0, 20.0, " sec");
 
-    configureButton(clearGraphButton);
     clearGraphButton.onClick = [this]
     {
         graphHistory.clear();
@@ -96,6 +121,7 @@ TunerComponent::TunerComponent(
     };
     addAndMakeVisible(clearGraphButton);
 
+    applyThemeToControls();
     updateAdvancedSettingsVisibility();
 
     audioDeviceManager.addChangeListener(this);
@@ -108,6 +134,59 @@ TunerComponent::~TunerComponent()
     stopTimer();
     audioDeviceManager.removeChangeListener(this);
     detachAudioCallback();
+}
+
+void TunerComponent::setDarkMode(bool shouldUseDarkMode)
+{
+    if (darkMode == shouldUseDarkMode)
+        return;
+
+    darkMode = shouldUseDarkMode;
+    applyThemeToControls();
+    repaint();
+}
+
+void TunerComponent::applyThemeToControls()
+{
+    const auto palette = tunerPaletteFor(darkMode);
+
+    for (auto* label : { &displayModeLabel, &easingLabel, &averagingLabel,
+                         &thresholdLabel, &dropoutLabel, &durationLabel })
+    {
+        label->setColour(juce::Label::textColourId, palette.muted);
+    }
+
+    for (auto* button : { &advancedSettingsButton, &clearGraphButton })
+    {
+        button->setColour(juce::TextButton::buttonColourId, palette.control);
+        button->setColour(juce::TextButton::buttonOnColourId,
+                          palette.accent.withAlpha(0.75f));
+        button->setColour(juce::TextButton::textColourOffId,
+                          palette.foreground);
+        button->setColour(juce::TextButton::textColourOnId,
+                          palette.foreground);
+    }
+
+    displayModeBox.setColour(juce::ComboBox::backgroundColourId, palette.control);
+    displayModeBox.setColour(juce::ComboBox::textColourId, palette.foreground);
+    displayModeBox.setColour(juce::ComboBox::outlineColourId, palette.outline);
+    displayModeBox.setColour(juce::ComboBox::arrowColourId, palette.foreground);
+
+    for (auto* slider : { &easingSlider, &averagingSlider, &thresholdSlider,
+                           &dropoutSlider, &durationSlider })
+    {
+        slider->setColour(juce::Slider::backgroundColourId, palette.panel);
+        slider->setColour(juce::Slider::trackColourId,
+                          palette.accent.withAlpha(0.75f));
+        slider->setColour(juce::Slider::thumbColourId, palette.accent);
+        slider->setColour(juce::Slider::textBoxTextColourId, palette.foreground);
+        slider->setColour(juce::Slider::textBoxBackgroundColourId,
+                          palette.control);
+        slider->setColour(juce::Slider::textBoxOutlineColourId,
+                          palette.outline);
+    }
+
+    sendLookAndFeelChange();
 }
 
 void TunerComponent::configureSlider(juce::Slider& slider,
@@ -226,24 +305,15 @@ void TunerComponent::detachAudioCallback()
 
 void TunerComponent::updateAudioDeviceStatus()
 {
-    auto* device = audioDeviceManager.getCurrentAudioDevice();
-
     if (hasUsableInputDevice())
     {
-        const auto setup = audioDeviceManager.getAudioDeviceSetup();
-        microphoneLabel.setText(
-            "Microphone: " + (setup.inputDeviceName.isNotEmpty()
-                ? setup.inputDeviceName : device->getName()),
-            juce::dontSendNotification);
         audioErrorMessage.clear();
         attachAudioCallbackIfPossible();
     }
     else
     {
         detachAudioCallback();
-        microphoneLabel.setText("Microphone: none selected",
-                                juce::dontSendNotification);
-        audioErrorMessage = "Choose a microphone in the global Audio settings.";
+        audioErrorMessage = "No microphone input is available.";
         resetPitchTracking();
     }
 
@@ -439,14 +509,11 @@ void TunerComponent::resetPitchTracking()
 void TunerComponent::drawPitchGraph(juce::Graphics& graphics,
                                     juce::Rectangle<int> bounds) const
 {
-    const auto panelColour = juce::Colour::fromRGB(25, 28, 37);
-    const auto outlineColour = juce::Colour::fromRGB(58, 65, 82);
-    const auto mutedColour = juce::Colour::fromRGB(142, 150, 166);
-    const auto accentColour = juce::Colour::fromRGB(100, 170, 255);
+    const auto palette = tunerPaletteFor(darkMode);
 
-    graphics.setColour(panelColour);
+    graphics.setColour(palette.panel);
     graphics.fillRoundedRectangle(bounds.toFloat(), 8.0f);
-    graphics.setColour(outlineColour);
+    graphics.setColour(palette.outline);
     graphics.drawRoundedRectangle(bounds.toFloat(), 8.0f, 1.0f);
 
     auto content = bounds.reduced(8);
@@ -501,9 +568,9 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics,
         const auto isC = ((midiNote % 12) + 12) % 12 == 0;
 
         graphics.setColour(
-            isCurrentNote ? accentColour.withAlpha(0.48f)
-                          : isC ? mutedColour.withAlpha(0.30f)
-                                : outlineColour.withAlpha(0.62f));
+            isCurrentNote ? palette.accent.withAlpha(0.48f)
+                          : isC ? palette.muted.withAlpha(0.30f)
+                                : palette.outline.withAlpha(0.62f));
         graphics.drawHorizontalLine(
             static_cast<int>(std::round(y)),
             static_cast<float>(plotArea.getX()),
@@ -512,7 +579,7 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics,
         if (pixelsPerSemitone >= 10.0 || isCurrentNote || isC)
         {
             graphics.setColour(
-                isCurrentNote ? accentColour : mutedColour);
+                isCurrentNote ? palette.accent : palette.muted);
             graphics.drawFittedText(
                 noteNameForMidi(midiNote),
                 labelArea.withY(static_cast<int>(std::round(y)) - 8)
@@ -559,28 +626,26 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics,
         }
     }
 
-    graphics.setColour(accentColour);
+    graphics.setColour(palette.accent);
     graphics.strokePath(path, juce::PathStrokeType(2.0f));
 }
 
 void TunerComponent::drawPitchBar(juce::Graphics& graphics,
                                   juce::Rectangle<int> bounds) const
 {
-    const auto foreground = juce::Colour::fromRGB(238, 241, 247);
-    const auto muted = juce::Colour::fromRGB(142, 150, 166);
+    const auto palette = tunerPaletteFor(darkMode);
     const auto accent = std::abs(displayedCents) <= 5.0
-        ? juce::Colour::fromRGB(85, 214, 136)
-        : juce::Colour::fromRGB(100, 170, 255);
+        ? palette.inTune : palette.accent;
 
-    graphics.setColour(juce::Colour::fromRGB(25, 28, 37));
+    graphics.setColour(palette.panel);
     graphics.fillRoundedRectangle(bounds.toFloat(), 8.0f);
-    graphics.setColour(juce::Colour::fromRGB(58, 65, 82));
+    graphics.setColour(palette.outline);
     graphics.drawRoundedRectangle(bounds.toFloat(), 8.0f, 1.0f);
 
     auto bar = bounds.reduced(28, 34);
     const auto centreY = bar.getCentreY();
 
-    graphics.setColour(juce::Colour::fromRGB(54, 59, 72));
+    graphics.setColour(palette.control);
     graphics.fillRoundedRectangle(
         bar.toFloat().withHeight(10.0f).withCentre(
             { static_cast<float>(bar.getCentreX()),
@@ -594,7 +659,7 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics,
             static_cast<float>(cents), -50.0f, 50.0f,
             static_cast<float>(bar.getX()),
             static_cast<float>(bar.getRight()));
-        graphics.setColour(cents == 0 ? foreground : muted);
+        graphics.setColour(cents == 0 ? palette.foreground : palette.muted);
         graphics.drawVerticalLine(
             static_cast<int>(std::round(x)),
             static_cast<float>(centreY) - 18.0f,
@@ -625,15 +690,13 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics,
 void TunerComponent::drawPitchMeter(juce::Graphics& graphics,
                                     juce::Rectangle<int> bounds) const
 {
-    const auto foreground = juce::Colour::fromRGB(238, 241, 247);
-    const auto muted = juce::Colour::fromRGB(142, 150, 166);
+    const auto palette = tunerPaletteFor(darkMode);
     const auto accent = std::abs(displayedCents) <= 5.0
-        ? juce::Colour::fromRGB(85, 214, 136)
-        : juce::Colour::fromRGB(100, 170, 255);
+        ? palette.inTune : palette.accent;
 
-    graphics.setColour(juce::Colour::fromRGB(25, 28, 37));
+    graphics.setColour(palette.panel);
     graphics.fillRoundedRectangle(bounds.toFloat(), 8.0f);
-    graphics.setColour(juce::Colour::fromRGB(58, 65, 82));
+    graphics.setColour(palette.outline);
     graphics.drawRoundedRectangle(bounds.toFloat(), 8.0f, 1.0f);
 
     const auto centre = juce::Point<float>(
@@ -658,7 +721,7 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics,
             arc.lineTo(point);
     }
 
-    graphics.setColour(juce::Colour::fromRGB(70, 76, 92));
+    graphics.setColour(palette.outline);
     graphics.strokePath(arc, juce::PathStrokeType(5.0f));
 
     graphics.setFont(juce::FontOptions(12.0f));
@@ -673,7 +736,7 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics,
         const auto inner = centre + juce::Point<float>(
             static_cast<float>(std::cos(angle) * (radius - 15.0f)),
             static_cast<float>(std::sin(angle) * (radius - 15.0f)));
-        graphics.setColour(cents == 0 ? foreground : muted);
+        graphics.setColour(cents == 0 ? palette.foreground : palette.muted);
         graphics.drawLine({ inner, outer }, cents == 0 ? 2.0f : 1.0f);
     }
 
@@ -685,11 +748,11 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics,
         static_cast<float>(std::cos(needleAngle) * (radius - 20.0f)),
         static_cast<float>(std::sin(needleAngle) * (radius - 20.0f)));
 
-    graphics.setColour(hasSignal ? accent : muted);
+    graphics.setColour(hasSignal ? accent : palette.muted);
     graphics.drawLine({ centre, needleEnd }, 3.0f);
     graphics.fillEllipse(centre.x - 7.0f, centre.y - 7.0f, 14.0f, 14.0f);
 
-    graphics.setColour(muted);
+    graphics.setColour(palette.muted);
     graphics.drawText("FLAT", bounds.removeFromLeft(74).removeFromBottom(24),
                       juce::Justification::centred);
     graphics.drawText("SHARP", bounds.removeFromRight(74).removeFromBottom(24),
@@ -717,14 +780,13 @@ void TunerComponent::drawSelectedDisplay(
 
 void TunerComponent::paint(juce::Graphics& graphics)
 {
-    graphics.fillAll(juce::Colour::fromRGB(18, 20, 27));
+    const auto palette = tunerPaletteFor(darkMode);
+    graphics.fillAll(palette.background);
 
     auto bounds = getLocalBounds().reduced(18);
-    bounds.removeFromTop(28);
     auto top = bounds.removeFromTop(142);
 
-    graphics.setColour(hasSignal ? juce::Colours::white
-                                 : juce::Colour::fromRGB(142, 150, 166));
+    graphics.setColour(hasSignal ? palette.foreground : palette.muted);
     graphics.setFont(juce::FontOptions(78.0f, juce::Font::bold));
     graphics.drawText(displayedNote, top.removeFromTop(96),
                       juce::Justification::centred);
@@ -753,7 +815,6 @@ void TunerComponent::paint(juce::Graphics& graphics)
 void TunerComponent::resized()
 {
     auto bounds = getLocalBounds().reduced(18);
-    microphoneLabel.setBounds(bounds.removeFromTop(28));
     bounds.removeFromTop(142);
 
     const auto controlsHeight = 32 + 8 + 34
