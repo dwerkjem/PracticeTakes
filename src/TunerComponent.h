@@ -7,9 +7,9 @@
 #include <vector>
 
 class TunerComponent final : public juce::Component,
-                              private juce::AudioIODeviceCallback,
-                              private juce::ChangeListener,
-                              private juce::Timer
+                               private juce::AudioIODeviceCallback,
+                               private juce::ChangeListener,
+                               private juce::Timer
 {
 public:
     explicit TunerComponent(juce::AudioDeviceManager& sharedAudioDeviceManager);
@@ -17,6 +17,7 @@ public:
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
+    void setDarkMode(bool shouldUseDarkMode);
 
 private:
     enum class DisplayMode
@@ -61,6 +62,7 @@ private:
                          const juce::String& suffix);
     void updateAdvancedSettingsVisibility();
     void updateGraphControlAvailability();
+    void applyThemeToControls();
     void drawPitchGraph(juce::Graphics& graphics,
                         juce::Rectangle<int> bounds) const;
     void drawPitchBar(juce::Graphics& graphics,
@@ -71,7 +73,6 @@ private:
                              juce::Rectangle<int> bounds) const;
 
     juce::AudioDeviceManager& audioDeviceManager;
-    juce::Label microphoneLabel;
     juce::Label displayModeLabel;
     juce::ComboBox displayModeBox;
     juce::TextButton advancedSettingsButton { "Advanced settings  >" };
@@ -107,6 +108,7 @@ private:
     bool hasSignal = false;
     bool audioCallbackAttached = false;
     bool advancedSettingsExpanded = false;
+    bool darkMode = false;
     juce::String audioErrorMessage;
     juce::Rectangle<int> displayBounds;
 
