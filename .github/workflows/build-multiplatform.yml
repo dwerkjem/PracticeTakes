@@ -1,0 +1,156 @@
+name: Build desktop releases
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  linux-x64:
+    name: Linux x64
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            build-essential \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libasound2-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libgl1-mesa-dev \
+            libgtk-3-dev \
+            libjack-jackd2-dev \
+            libx11-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Build
+        run: cmake --build build --config "${BUILD_TYPE}" --parallel
+
+      - name: Package
+        run: |
+          package_dir="dist/PracticeTakes-linux-x64"
+          mkdir -p "${package_dir}"
+          install -m 0755 build/bin/PracticeTakes "${package_dir}/PracticeTakes"
+          cp README.md "${package_dir}/README.md"
+          tar -C dist -czf dist/PracticeTakes-linux-x64.tar.gz PracticeTakes-linux-x64
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PracticeTakes-linux-x64
+          path: dist/PracticeTakes-linux-x64.tar.gz
+          if-no-files-found: error
+
+  windows-x64:
+    name: Windows x64
+    runs-on: windows-2022
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S . -B build `
+            -G "Visual Studio 17 2022" `
+            -A x64 `
+            -DCMAKE_CONFIGURATION_TYPES="${env:BUILD_TYPE}"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config "${env:BUILD_TYPE}" --parallel
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $binary = Get-ChildItem -Path build -Recurse -File -Filter PracticeTakes.exe |
+            Select-Object -First 1
+
+          if (-not $binary) {
+            throw "PracticeTakes.exe was not found after the build."
+          }
+
+          $packageDir = "dist/PracticeTakes-windows-x64"
+          New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
+          Copy-Item $binary.FullName "$packageDir/PracticeTakes.exe"
+          Copy-Item README.md "$packageDir/README.md"
+          Compress-Archive -Path "$packageDir/*" `
+            -DestinationPath "dist/PracticeTakes-windows-x64.zip" `
+            -Force
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PracticeTakes-windows-x64
+          path: dist/PracticeTakes-windows-x64.zip
+          if-no-files-found: error
+
+  macos-x64:
+    name: macOS Intel x64
+    runs-on: macos-15-intel
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
+            -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
+
+      - name: Build
+        run: cmake --build build --config "${BUILD_TYPE}" --parallel
+
+      - name: Package
+        run: |
+          app_path="$(find build -type d -name 'PracticeTakes.app' -print -quit)"
+
+          if [[ -z "${app_path}" ]]; then
+            echo "PracticeTakes.app was not found after the build." >&2
+            exit 1
+          fi
+
+          mkdir -p dist
+          codesign --force --deep --sign - "${app_path}"
+          ditto -c -k --sequesterRsrc --keepParent \
+            "${app_path}" \
+            dist/PracticeTakes-macos-x64.zip
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PracticeTakes-macos-x64
+          path: dist/PracticeTakes-macos-x64.zip
+          if-no-files-found: error
