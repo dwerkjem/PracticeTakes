@@ -1,0 +1,87 @@
+name: Clang-Tidy auto-fix on main
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - ".clang-format"
+      - ".clang-tidy"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "scripts/run_clang_format.py"
+      - "scripts/run_clang_tidy.py"
+
+permissions:
+  contents: write
+
+jobs:
+  clang-tidy:
+    name: Fix and lint merged C++
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Install analysis dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            build-essential \
+            clang-format \
+            clang-tidy \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libasound2-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libgl1-mesa-dev \
+            libgtk-3-dev \
+            libjack-jackd2-dev \
+            libx11-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev
+
+      - name: Configure compilation database
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Apply safe clang-tidy fixes
+        shell: bash
+        run: |
+          # clang-tidy can return a non-zero status while still applying valid
+          # fix-its. Preserve those edits and verify unresolved findings later.
+          python3 scripts/run_clang_tidy.py --fix src/*.cpp || true
+
+      - name: Format automatic edits
+        run: python3 scripts/run_clang_format.py src/*.cpp src/*.h
+
+      - name: Commit automatic fixes
+        shell: bash
+        run: |
+          if git diff --quiet -- src; then
+            echo "clang-tidy did not produce any source changes."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src
+          git commit -m "chore: apply clang-tidy automatic fixes"
+          git push origin HEAD:main
+
+      - name: Verify no blocking findings remain
+        run: python3 scripts/run_clang_tidy.py src/*.cpp
