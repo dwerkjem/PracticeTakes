@@ -8,13 +8,7 @@ SpectrogramComponent::SpectrogramComponent(
     : audioDeviceManager(sharedAudioDeviceManager)
 {
     setOpaque(true);
-    microphoneLabel.setColour(juce::Label::textColourId,
-                              juce::Colour::fromRGB(142, 150, 166));
-    microphoneLabel.setFont(juce::FontOptions(14.0f));
-    addAndMakeVisible(microphoneLabel);
-
-    spectrogramImage.clear(spectrogramImage.getBounds(),
-                           juce::Colour::fromRGB(18, 20, 27));
+    spectrogramImage.clear(spectrogramImage.getBounds(), backgroundColour());
     audioDeviceManager.addChangeListener(this);
     updateAudioDeviceStatus();
     startTimerHz(30);
@@ -25,6 +19,46 @@ SpectrogramComponent::~SpectrogramComponent()
     stopTimer();
     audioDeviceManager.removeChangeListener(this);
     detachAudioCallback();
+}
+
+void SpectrogramComponent::setDarkMode(bool shouldUseDarkMode)
+{
+    if (darkMode == shouldUseDarkMode)
+        return;
+
+    darkMode = shouldUseDarkMode;
+    spectrogramImage.clear(spectrogramImage.getBounds(), backgroundColour());
+    repaint();
+}
+
+juce::Colour SpectrogramComponent::backgroundColour() const
+{
+    return darkMode ? juce::Colour::fromRGB(18, 20, 27)
+                    : juce::Colour::fromRGB(235, 236, 238);
+}
+
+juce::Colour SpectrogramComponent::panelColour() const
+{
+    return darkMode ? juce::Colour::fromRGB(25, 28, 37)
+                    : juce::Colour::fromRGB(250, 250, 251);
+}
+
+juce::Colour SpectrogramComponent::foregroundColour() const
+{
+    return darkMode ? juce::Colour::fromRGB(238, 241, 247)
+                    : juce::Colour::fromRGB(28, 31, 37);
+}
+
+juce::Colour SpectrogramComponent::mutedColour() const
+{
+    return darkMode ? juce::Colour::fromRGB(188, 194, 207)
+                    : juce::Colour::fromRGB(82, 88, 99);
+}
+
+juce::Colour SpectrogramComponent::outlineColour() const
+{
+    return darkMode ? juce::Colour::fromRGB(58, 65, 82)
+                    : juce::Colour::fromRGB(165, 169, 178);
 }
 
 void SpectrogramComponent::audioDeviceIOCallbackWithContext(
@@ -96,23 +130,15 @@ void SpectrogramComponent::detachAudioCallback()
 
 void SpectrogramComponent::updateAudioDeviceStatus()
 {
-    auto* device = audioDeviceManager.getCurrentAudioDevice();
     if (hasUsableInputDevice())
     {
-        const auto setup = audioDeviceManager.getAudioDeviceSetup();
-        microphoneLabel.setText(
-            "Microphone: " + (setup.inputDeviceName.isNotEmpty()
-                ? setup.inputDeviceName : device->getName()),
-            juce::dontSendNotification);
         audioErrorMessage.clear();
         attachAudioCallbackIfPossible();
     }
     else
     {
         detachAudioCallback();
-        microphoneLabel.setText("Microphone: none selected",
-                                juce::dontSendNotification);
-        audioErrorMessage = "Choose a microphone in the global Audio settings.";
+        audioErrorMessage = "No microphone input is available.";
     }
     repaint();
 }
@@ -166,11 +192,22 @@ void SpectrogramComponent::updateSpectrogramColumn()
 juce::Colour SpectrogramComponent::colourForLevel(float level) const
 {
     const auto clipped = juce::jlimit(0.0f, 1.0f, level);
-    return juce::Colour::fromHSV(
-        juce::jmap(clipped, 0.0f, 1.0f, 0.72f, 0.0f),
-        juce::jmap(clipped, 0.0f, 1.0f, 0.45f, 1.0f),
-        juce::jmap(clipped, 0.0f, 1.0f, 0.08f, 1.0f),
-        1.0f);
+
+    if (darkMode)
+    {
+        return juce::Colour::fromHSV(
+            juce::jmap(clipped, 0.0f, 1.0f, 0.72f, 0.0f),
+            juce::jmap(clipped, 0.0f, 1.0f, 0.45f, 1.0f),
+            juce::jmap(clipped, 0.0f, 1.0f, 0.08f, 1.0f),
+            1.0f);
+    }
+
+    const auto quiet = juce::Colour::fromRGB(246, 248, 252);
+    const auto mid = juce::Colour::fromRGB(85, 139, 214);
+    const auto loud = juce::Colour::fromRGB(208, 66, 53);
+    return clipped < 0.62f
+        ? quiet.interpolatedWith(mid, clipped / 0.62f)
+        : mid.interpolatedWith(loud, (clipped - 0.62f) / 0.38f);
 }
 
 float SpectrogramComponent::yForFrequency(double frequency) const
@@ -186,9 +223,8 @@ float SpectrogramComponent::yForFrequency(double frequency) const
 
 void SpectrogramComponent::paint(juce::Graphics& graphics)
 {
-    graphics.fillAll(juce::Colour::fromRGB(18, 20, 27));
-
-    graphics.setColour(juce::Colour::fromRGB(25, 28, 37));
+    graphics.fillAll(backgroundColour());
+    graphics.setColour(panelColour());
     graphics.fillRoundedRectangle(spectrogramBounds.toFloat(), 8.0f);
 
     if (audioErrorMessage.isEmpty())
@@ -199,17 +235,17 @@ void SpectrogramComponent::paint(juce::Graphics& graphics)
     }
     else
     {
-        graphics.setColour(juce::Colour::fromRGB(142, 150, 166));
+        graphics.setColour(mutedColour());
         graphics.setFont(juce::FontOptions(17.0f));
         graphics.drawFittedText(audioErrorMessage,
                                 spectrogramBounds.reduced(20),
                                 juce::Justification::centred, 2);
     }
 
-    graphics.setColour(juce::Colour::fromRGB(58, 65, 82));
+    graphics.setColour(outlineColour());
     graphics.drawRoundedRectangle(spectrogramBounds.toFloat(), 8.0f, 1.0f);
 
-    graphics.setColour(juce::Colour::fromRGB(188, 194, 207));
+    graphics.setColour(mutedColour());
     graphics.setFont(juce::FontOptions(11.0f));
     for (const auto frequency : { 100.0, 500.0, 1000.0, 5000.0, 10000.0 })
     {
@@ -232,8 +268,5 @@ void SpectrogramComponent::paint(juce::Graphics& graphics)
 
 void SpectrogramComponent::resized()
 {
-    auto bounds = getLocalBounds().reduced(18);
-    microphoneLabel.setBounds(bounds.removeFromTop(28));
-    bounds.removeFromTop(8);
-    spectrogramBounds = bounds;
+    spectrogramBounds = getLocalBounds().reduced(18);
 }

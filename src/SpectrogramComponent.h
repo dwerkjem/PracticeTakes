@@ -6,9 +6,9 @@
 #include <atomic>
 
 class SpectrogramComponent final : public juce::Component,
-                                   private juce::AudioIODeviceCallback,
-                                   private juce::ChangeListener,
-                                   private juce::Timer
+                                    private juce::AudioIODeviceCallback,
+                                    private juce::ChangeListener,
+                                    private juce::Timer
 {
 public:
     explicit SpectrogramComponent(
@@ -17,6 +17,7 @@ public:
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
+    void setDarkMode(bool shouldUseDarkMode);
 
 private:
     static constexpr int fifoCapacity = 65536;
@@ -47,9 +48,13 @@ private:
     void updateSpectrogramColumn();
     [[nodiscard]] juce::Colour colourForLevel(float level) const;
     [[nodiscard]] float yForFrequency(double frequency) const;
+    [[nodiscard]] juce::Colour backgroundColour() const;
+    [[nodiscard]] juce::Colour panelColour() const;
+    [[nodiscard]] juce::Colour foregroundColour() const;
+    [[nodiscard]] juce::Colour mutedColour() const;
+    [[nodiscard]] juce::Colour outlineColour() const;
 
     juce::AudioDeviceManager& audioDeviceManager;
-    juce::Label microphoneLabel;
     juce::Rectangle<int> spectrogramBounds;
 
     juce::AbstractFifo audioFifo { fifoCapacity };
@@ -70,6 +75,7 @@ private:
 
     std::atomic<double> currentSampleRate { 44100.0 };
     bool audioCallbackAttached = false;
+    bool darkMode = false;
     juce::String audioErrorMessage;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SpectrogramComponent)

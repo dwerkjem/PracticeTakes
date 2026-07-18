@@ -1,279 +1,682 @@
 #include "MainComponent.h"
 
+#include "SpectrogramComponent.h"
+#include "TunerComponent.h"
+
+#include <functional>
+#include <utility>
+
 namespace
 {
-const auto backgroundColour = juce::Colour::fromRGB(18, 20, 27);
-const auto panelColour = juce::Colour::fromRGB(31, 35, 46);
-const auto panelOutlineColour = juce::Colour::fromRGB(58, 65, 82);
-const auto foregroundColour = juce::Colour::fromRGB(238, 241, 247);
-const auto mutedColour = juce::Colour::fromRGB(142, 150, 166);
+struct Palette
+{
+    juce::Colour background;
+    juce::Colour panel;
+    juce::Colour button;
+    juce::Colour buttonHover;
+    juce::Colour foreground;
+    juce::Colour muted;
+    juce::Colour outline;
+    juce::Colour accent;
+    juce::Colour warning;
+};
+
+Palette paletteFor(bool darkMode)
+{
+    if (darkMode)
+    {
+        return {
+            juce::Colour::fromRGB(18, 20, 27),
+            juce::Colour::fromRGB(30, 33, 42),
+            juce::Colour::fromRGB(54, 59, 72),
+            juce::Colour::fromRGB(70, 76, 92),
+            juce::Colour::fromRGB(238, 241, 247),
+            juce::Colour::fromRGB(158, 166, 181),
+            juce::Colour::fromRGB(78, 85, 103),
+            juce::Colour::fromRGB(100, 170, 255),
+            juce::Colour::fromRGB(244, 178, 73)
+        };
+    }
+
+    return {
+        juce::Colour::fromRGB(235, 236, 238),
+        juce::Colour::fromRGB(250, 250, 251),
+        juce::Colour::fromRGB(244, 244, 245),
+        juce::Colour::fromRGB(225, 228, 233),
+        juce::Colour::fromRGB(28, 31, 37),
+        juce::Colour::fromRGB(92, 98, 108),
+        juce::Colour::fromRGB(165, 169, 178),
+        juce::Colour::fromRGB(55, 112, 196),
+        juce::Colour::fromRGB(172, 103, 18)
+    };
 }
+}
+
+class MainComponent::ToolWindow final : public juce::DocumentWindow
+{
+public:
+    ToolWindow(const juce::String& title,
+               std::unique_ptr<juce::Component> content,
+               int preferredWidth,
+               int preferredHeight,
+               std::function<void()> closeHandler)
+        : DocumentWindow(title,
+                         juce::Colours::darkgrey,
+                         juce::DocumentWindow::allButtons),
+          onClose(std::move(closeHandler))
+    {
+        setUsingNativeTitleBar(true);
+        setContentOwned(content.release(), true);
+        setResizable(true, true);
+        setResizeLimits(520, 420, 2400, 1600);
+        centreWithSize(preferredWidth, preferredHeight);
+        setVisible(true);
+    }
+
+    ~ToolWindow() override
+    {
+        setLookAndFeel(nullptr);
+    }
+
+    void closeButtonPressed() override
+    {
+        setVisible(false);
+        const auto callback = onClose;
+        juce::MessageManager::callAsync([callback]
+        {
+            if (callback)
+                callback();
+        });
+    }
+
+    void applyAppearance(juce::LookAndFeel* lookAndFeel,
+                         juce::Colour background,
+                         bool darkMode)
+    {
+        setLookAndFeel(lookAndFeel);
+        setBackgroundColour(background);
+
+        if (auto* tuner = dynamic_cast<TunerComponent*>(getContentComponent()))
+            tuner->setDarkMode(darkMode);
+        if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(getContentComponent()))
+            spectrogram->setDarkMode(darkMode);
+
+        sendLookAndFeelChange();
+        repaint();
+    }
+
+private:
+    std::function<void()> onClose;
+};
+
+class MainComponent::SettingsWindow final : public juce::DocumentWindow
+{
+public:
+    class Content final : public juce::Component
+    {
+    public:
+        Content(juce::AudioDeviceManager& audioDeviceManager,
+                bool initiallyDark,
+                std::function<void(bool)> appearanceHandler)
+            : deviceSelector(audioDeviceManager,
+                             1, 2,
+                             0, 0,
+                             false, false,
+                             false, true),
+              onAppearanceChanged(std::move(appearanceHandler))
+        {
+            appearanceHeading.setText("Appearance", juce::dontSendNotification);
+            appearanceHeading.setFont(juce::FontOptions(18.0f, juce::Font::bold));
+            addAndMakeVisible(appearanceHeading);
+
+            appearanceLabel.setText("Theme", juce::dontSendNotification);
+            addAndMakeVisible(appearanceLabel);
+
+            appearanceBox.addItem("Light", 1);
+            appearanceBox.addItem("Dark", 2);
+            appearanceBox.setSelectedId(initiallyDark ? 2 : 1,
+                                        juce::dontSendNotification);
+            appearanceBox.onChange = [this]
+            {
+                if (onAppearanceChanged)
+                    onAppearanceChanged(appearanceBox.getSelectedId() == 2);
+            };
+            addAndMakeVisible(appearanceBox);
+
+            audioHeading.setText("Audio", juce::dontSendNotification);
+            audioHeading.setFont(juce::FontOptions(18.0f, juce::Font::bold));
+            addAndMakeVisible(audioHeading);
+            addAndMakeVisible(deviceSelector);
+        }
+
+        void paint(juce::Graphics& graphics) override
+        {
+            graphics.fillAll(findColour(juce::ResizableWindow::backgroundColourId));
+        }
+
+        void resized() override
+        {
+            auto bounds = getLocalBounds().reduced(22);
+
+            appearanceHeading.setBounds(bounds.removeFromTop(30));
+            bounds.removeFromTop(8);
+
+            auto appearanceRow = bounds.removeFromTop(34);
+            appearanceLabel.setBounds(appearanceRow.removeFromLeft(130));
+            appearanceBox.setBounds(appearanceRow.removeFromLeft(220));
+
+            bounds.removeFromTop(24);
+            audioHeading.setBounds(bounds.removeFromTop(30));
+            bounds.removeFromTop(8);
+            deviceSelector.setBounds(bounds);
+        }
+
+        void setDarkMode(bool darkMode)
+        {
+            appearanceBox.setSelectedId(darkMode ? 2 : 1,
+                                        juce::dontSendNotification);
+            sendLookAndFeelChange();
+            repaint();
+        }
+
+    private:
+        juce::Label appearanceHeading;
+        juce::Label appearanceLabel;
+        juce::ComboBox appearanceBox;
+        juce::Label audioHeading;
+        juce::AudioDeviceSelectorComponent deviceSelector;
+        std::function<void(bool)> onAppearanceChanged;
+    };
+
+    SettingsWindow(juce::AudioDeviceManager& audioDeviceManager,
+                   bool initiallyDark,
+                   std::function<void(bool)> appearanceHandler,
+                   std::function<void()> closeHandler)
+        : DocumentWindow("Settings",
+                         juce::Colours::darkgrey,
+                         juce::DocumentWindow::allButtons),
+          onClose(std::move(closeHandler))
+    {
+        setUsingNativeTitleBar(true);
+        setContentOwned(new Content(audioDeviceManager,
+                                    initiallyDark,
+                                    std::move(appearanceHandler)),
+                        true);
+        setResizable(true, true);
+        setResizeLimits(620, 500, 1300, 1000);
+        centreWithSize(760, 650);
+        setVisible(true);
+    }
+
+    ~SettingsWindow() override
+    {
+        setLookAndFeel(nullptr);
+    }
+
+    void closeButtonPressed() override
+    {
+        setVisible(false);
+        const auto callback = onClose;
+        juce::MessageManager::callAsync([callback]
+        {
+            if (callback)
+                callback();
+        });
+    }
+
+    void applyAppearance(juce::LookAndFeel* lookAndFeel,
+                         juce::Colour background,
+                         bool darkMode)
+    {
+        setLookAndFeel(lookAndFeel);
+        setBackgroundColour(background);
+        if (auto* content = dynamic_cast<Content*>(getContentComponent()))
+            content->setDarkMode(darkMode);
+        sendLookAndFeelChange();
+        repaint();
+    }
+
+private:
+    std::function<void()> onClose;
+};
+
+class MainComponent::MicrophoneWarning final : public juce::Component
+{
+public:
+    MicrophoneWarning(std::function<void()> settingsHandler,
+                      std::function<void()> dismissHandler)
+        : onOpenSettings(std::move(settingsHandler)),
+          onDismiss(std::move(dismissHandler))
+    {
+        setInterceptsMouseClicks(true, true);
+
+        title.setText("No microphone detected", juce::dontSendNotification);
+        title.setFont(juce::FontOptions(16.0f, juce::Font::bold));
+        addAndMakeVisible(title);
+
+        message.setText("Choose an input device in Settings to use the tuner and spectrogram.",
+                        juce::dontSendNotification);
+        message.setFont(juce::FontOptions(13.0f));
+        message.setJustificationType(juce::Justification::centredLeft);
+        addAndMakeVisible(message);
+
+        settingsButton.setButtonText("Open Settings");
+        settingsButton.onClick = [this]
+        {
+            if (onOpenSettings)
+                onOpenSettings();
+        };
+        addAndMakeVisible(settingsButton);
+
+        dismissButton.setButtonText("Dismiss");
+        dismissButton.onClick = [this]
+        {
+            if (onDismiss)
+                onDismiss();
+        };
+        addAndMakeVisible(dismissButton);
+    }
+
+    void setDarkMode(bool shouldUseDarkMode)
+    {
+        darkMode = shouldUseDarkMode;
+        const auto palette = paletteFor(darkMode);
+        title.setColour(juce::Label::textColourId, palette.foreground);
+        message.setColour(juce::Label::textColourId, palette.muted);
+        repaint();
+    }
+
+    void paint(juce::Graphics& graphics) override
+    {
+        const auto palette = paletteFor(darkMode);
+        const auto card = getLocalBounds().toFloat().reduced(6.0f);
+
+        graphics.setColour(juce::Colours::black.withAlpha(darkMode ? 0.35f : 0.14f));
+        graphics.fillRoundedRectangle(card.translated(0.0f, 3.0f), 13.0f);
+
+        graphics.setColour(palette.panel);
+        graphics.fillRoundedRectangle(card, 13.0f);
+        graphics.setColour(palette.warning.withAlpha(0.95f));
+        graphics.fillRoundedRectangle(card.withWidth(5.0f), 3.0f);
+        graphics.setColour(palette.outline.withAlpha(0.85f));
+        graphics.drawRoundedRectangle(card, 13.0f, 1.0f);
+
+        graphics.setColour(palette.warning);
+        graphics.fillEllipse(20.0f, 23.0f, 24.0f, 24.0f);
+        graphics.setColour(darkMode ? juce::Colour::fromRGB(35, 29, 18)
+                                    : juce::Colours::white);
+        graphics.setFont(juce::FontOptions(17.0f, juce::Font::bold));
+        graphics.drawText("!", 20, 22, 24, 25, juce::Justification::centred);
+    }
+
+    void resized() override
+    {
+        auto bounds = getLocalBounds().reduced(18, 14);
+        bounds.removeFromLeft(42);
+
+        auto buttons = bounds.removeFromBottom(30);
+        dismissButton.setBounds(buttons.removeFromRight(88));
+        buttons.removeFromRight(8);
+        settingsButton.setBounds(buttons.removeFromRight(122));
+
+        title.setBounds(bounds.removeFromTop(24));
+        message.setBounds(bounds);
+    }
+
+private:
+    juce::Label title;
+    juce::Label message;
+    juce::TextButton settingsButton;
+    juce::TextButton dismissButton;
+    std::function<void()> onOpenSettings;
+    std::function<void()> onDismiss;
+    bool darkMode = false;
+};
 
 MainComponent::MainComponent()
 {
     setOpaque(true);
 
-    const auto configureLabel = [this](juce::Label& label,
-                                       const juce::String& text,
-                                       float fontSize,
-                                       bool bold)
-    {
-        label.setText(text, juce::dontSendNotification);
-        label.setColour(juce::Label::textColourId, foregroundColour);
-        label.setFont(juce::FontOptions(
-            fontSize,
-            bold ? juce::Font::bold : juce::Font::plain));
-        label.setJustificationType(juce::Justification::centredLeft);
-        addAndMakeVisible(label);
-    };
-
-    configureLabel(appTitle, "PRACTICE TAKES", 28.0f, true);
-    configureLabel(appSubtitle, "Live practice analysis workspace", 15.0f, false);
-    appSubtitle.setColour(juce::Label::textColourId, mutedColour);
-    configureLabel(microphoneLabel, "Microphone: none selected", 14.0f, false);
-    microphoneLabel.setColour(juce::Label::textColourId, mutedColour);
-    configureLabel(workspaceLabel, "OPEN TOOLS", 13.0f, true);
-    workspaceLabel.setColour(juce::Label::textColourId, mutedColour);
-
-    const auto configureButton = [](juce::Button& button)
-    {
-        button.setColour(juce::TextButton::buttonColourId,
-                         juce::Colour::fromRGB(54, 59, 72));
-        button.setColour(juce::TextButton::buttonOnColourId,
-                         juce::Colour::fromRGB(70, 92, 130));
-        button.setColour(juce::TextButton::textColourOffId, foregroundColour);
-        button.setColour(juce::TextButton::textColourOnId, foregroundColour);
-    };
-
-    configureButton(settingsButton);
-    configureButton(settingsDoneButton);
-    configureButton(tunerToggle);
-    configureButton(spectrogramToggle);
-
-    settingsButton.onClick = [this] { showAudioSettings(); };
-    settingsDoneButton.onClick = [this] { hideAudioSettings(); };
-    tunerToggle.onClick = [this] { toggleTuner(); };
-    spectrogramToggle.onClick = [this] { toggleSpectrogram(); };
-
+    addAndMakeVisible(fileButton);
     addAndMakeVisible(settingsButton);
-    addChildComponent(settingsDoneButton);
-    addAndMakeVisible(tunerToggle);
-    addAndMakeVisible(spectrogramToggle);
+    addAndMakeVisible(toolsButton);
+
+    fileButton.setTooltip("File actions will be added later.");
+    settingsButton.onClick = [this] { showSettings(); };
+    toolsButton.onClick = [this] { showToolsMenu(); };
+
+    microphoneWarning = std::make_unique<MicrophoneWarning>(
+        [this] { showSettings(); },
+        [this] { dismissMicrophoneWarning(); });
+    addChildComponent(*microphoneWarning);
 
     juce::XmlElement noDeviceState { "DEVICESETUP" };
-    const auto error = audioDeviceManager.initialise(2, 0, &noDeviceState, false);
-    audioErrorMessage = error.isNotEmpty() ? error : "Select a microphone in Audio settings.";
+    audioDeviceManager.initialise(2, 0, &noDeviceState, false);
     audioDeviceManager.addChangeListener(this);
 
-    tunerToggle.setToggleState(true, juce::dontSendNotification);
-    tunerComponent = std::make_unique<TunerComponent>(audioDeviceManager);
-    addAndMakeVisible(*tunerComponent);
-
-    updateMicrophoneLabel();
-    setSize(1180, 760);
+    applyAppearance();
+    updateMicrophoneWarning();
+    setSize(1200, 760);
 }
 
 MainComponent::~MainComponent()
 {
-    spectrogramComponent.reset();
-    tunerComponent.reset();
-    audioDeviceSelector.reset();
     audioDeviceManager.removeChangeListener(this);
+    settingsWindow.reset();
+    spectrogramWindow.reset();
+    tunerWindow.reset();
+    microphoneWarning.reset();
+    setLookAndFeel(nullptr);
     audioDeviceManager.closeAudioDevice();
 }
 
 void MainComponent::paint(juce::Graphics& graphics)
 {
-    graphics.fillAll(backgroundColour);
+    const auto palette = paletteFor(darkMode);
+    graphics.fillAll(palette.background);
 
-    graphics.setColour(panelColour);
-    graphics.fillRect(headerBounds);
-    graphics.fillRect(toolbarBounds);
+    const auto barTop = darkMode
+        ? juce::Colour::fromRGB(8, 9, 12)
+        : juce::Colour::fromRGB(38, 39, 42);
+    const auto barBottom = darkMode
+        ? palette.panel
+        : juce::Colour::fromRGB(160, 162, 167);
 
-    graphics.setColour(panelOutlineColour);
-    graphics.drawHorizontalLine(headerBounds.getBottom() - 1,
+    juce::ColourGradient menuGradient(
+        barTop,
+        static_cast<float>(menuBarBounds.getCentreX()),
+        static_cast<float>(menuBarBounds.getY()),
+        barBottom,
+        static_cast<float>(menuBarBounds.getCentreX()),
+        static_cast<float>(menuBarBounds.getBottom()),
+        false);
+    graphics.setGradientFill(menuGradient);
+    graphics.fillRect(menuBarBounds);
+
+    graphics.setColour(palette.outline.withAlpha(0.7f));
+    graphics.drawHorizontalLine(menuBarBounds.getBottom() - 1,
                                 0.0f,
                                 static_cast<float>(getWidth()));
-    graphics.drawHorizontalLine(toolbarBounds.getBottom() - 1,
-                                0.0f,
-                                static_cast<float>(getWidth()));
-
-    if (showingAudioSettings)
-        return;
-
-    if (tunerComponent == nullptr && spectrogramComponent == nullptr)
-    {
-        graphics.setColour(mutedColour);
-        graphics.setFont(juce::FontOptions(20.0f));
-        graphics.drawText("Choose one or more tools above.",
-                          workspaceBounds,
-                          juce::Justification::centred);
-    }
 }
 
 void MainComponent::resized()
 {
     auto bounds = getLocalBounds();
-    headerBounds = bounds.removeFromTop(76);
-    toolbarBounds = bounds.removeFromTop(58);
-    workspaceBounds = bounds.reduced(12);
+    menuBarBounds = bounds.removeFromTop(40);
 
-    auto header = headerBounds.reduced(20, 10);
-    auto settingsArea = header.removeFromRight(190);
-    settingsButton.setBounds(settingsArea.reduced(10, 6));
-    microphoneLabel.setBounds(header.removeFromRight(340));
-    appTitle.setBounds(header.removeFromTop(34));
-    appSubtitle.setBounds(header);
+    auto menu = menuBarBounds.reduced(4, 5);
+    constexpr int buttonWidth = 96;
+    constexpr int gap = 4;
 
-    auto toolbar = toolbarBounds.reduced(20, 8);
-    workspaceLabel.setBounds(toolbar.removeFromLeft(110));
-    tunerToggle.setBounds(toolbar.removeFromLeft(120).reduced(5, 2));
-    spectrogramToggle.setBounds(toolbar.removeFromLeft(160).reduced(5, 2));
+    fileButton.setBounds(menu.removeFromLeft(buttonWidth));
+    menu.removeFromLeft(gap);
+    settingsButton.setBounds(menu.removeFromLeft(buttonWidth));
+    menu.removeFromLeft(gap);
+    toolsButton.setBounds(menu.removeFromLeft(buttonWidth));
 
-    if (showingAudioSettings)
+    if (microphoneWarning != nullptr)
     {
-        auto settings = workspaceBounds.reduced(20);
-        auto footer = settings.removeFromBottom(48);
-        if (audioDeviceSelector != nullptr)
-            audioDeviceSelector->setBounds(settings);
-        settingsDoneButton.setBounds(footer.removeFromRight(130).reduced(4));
+        auto warningArea = bounds.reduced(18);
+        microphoneWarning->setBounds(
+            warningArea.removeFromTop(118).removeFromRight(
+                juce::jmin(470, warningArea.getWidth())));
+    }
+}
+
+void MainComponent::showToolsMenu()
+{
+    juce::PopupMenu menu;
+    menu.setLookAndFeel(&appLookAndFeel);
+    menu.addItem(1, "Tuner", true, tunerWindow != nullptr);
+    menu.addItem(2, "Spectrogram", true, spectrogramWindow != nullptr);
+
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    menu.showMenuAsync(
+        juce::PopupMenu::Options()
+            .withTargetComponent(&toolsButton)
+            .withMinimumWidth(190),
+        [safeThis](int result)
+        {
+            if (safeThis == nullptr)
+                return;
+
+            if (result == 1)
+                safeThis->openTool(ToolType::tuner);
+            else if (result == 2)
+                safeThis->openTool(ToolType::spectrogram);
+        });
+}
+
+void MainComponent::openTool(ToolType tool)
+{
+    auto& window = tool == ToolType::tuner ? tunerWindow : spectrogramWindow;
+
+    if (window != nullptr)
+    {
+        window->setVisible(true);
+        window->toFront(true);
         return;
     }
 
-    const auto hasTuner = tunerComponent != nullptr;
-    const auto hasSpectrogram = spectrogramComponent != nullptr;
-    auto toolArea = workspaceBounds;
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    const auto closeHandler = [safeThis, tool]
+    {
+        if (safeThis != nullptr)
+            safeThis->closeTool(tool);
+    };
 
-    if (hasTuner && hasSpectrogram)
+    if (tool == ToolType::tuner)
     {
-        auto left = toolArea.removeFromLeft(toolArea.getWidth() / 2);
-        left.removeFromRight(6);
-        toolArea.removeFromLeft(6);
-        tunerComponent->setBounds(left);
-        spectrogramComponent->setBounds(toolArea);
+        auto content = std::make_unique<TunerComponent>(audioDeviceManager);
+        content->setDarkMode(darkMode);
+        window = std::make_unique<ToolWindow>(
+            "Tuner",
+            std::move(content),
+            920,
+            760,
+            closeHandler);
     }
-    else if (hasTuner)
+    else
     {
-        tunerComponent->setBounds(toolArea);
+        auto content = std::make_unique<SpectrogramComponent>(audioDeviceManager);
+        content->setDarkMode(darkMode);
+        window = std::make_unique<ToolWindow>(
+            "Spectrogram",
+            std::move(content),
+            980,
+            650,
+            closeHandler);
     }
-    else if (hasSpectrogram)
+
+    const auto palette = paletteFor(darkMode);
+    window->applyAppearance(&appLookAndFeel, palette.background, darkMode);
+    window->toFront(true);
+}
+
+void MainComponent::closeTool(ToolType tool)
+{
+    if (tool == ToolType::tuner)
+        tunerWindow.reset();
+    else
+        spectrogramWindow.reset();
+}
+
+void MainComponent::showSettings()
+{
+    if (settingsWindow != nullptr)
     {
-        spectrogramComponent->setBounds(toolArea);
+        settingsWindow->setVisible(true);
+        settingsWindow->toFront(true);
+        return;
     }
+
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    settingsWindow = std::make_unique<SettingsWindow>(
+        audioDeviceManager,
+        darkMode,
+        [safeThis](bool shouldUseDarkMode)
+        {
+            if (safeThis != nullptr)
+                safeThis->setDarkMode(shouldUseDarkMode);
+        },
+        [safeThis]
+        {
+            if (safeThis != nullptr)
+                safeThis->closeSettings();
+        });
+
+    const auto palette = paletteFor(darkMode);
+    settingsWindow->applyAppearance(&appLookAndFeel,
+                                    palette.background,
+                                    darkMode);
+    settingsWindow->toFront(true);
+}
+
+void MainComponent::closeSettings()
+{
+    settingsWindow.reset();
+    updateMicrophoneWarning();
+}
+
+void MainComponent::setDarkMode(bool shouldUseDarkMode)
+{
+    if (darkMode == shouldUseDarkMode)
+        return;
+
+    darkMode = shouldUseDarkMode;
+    applyAppearance();
+}
+
+void MainComponent::applyAppearance()
+{
+    const auto palette = paletteFor(darkMode);
+
+    appLookAndFeel.setColour(juce::ResizableWindow::backgroundColourId,
+                             palette.background);
+    appLookAndFeel.setColour(juce::DocumentWindow::textColourId,
+                             palette.foreground);
+    appLookAndFeel.setColour(juce::Label::textColourId,
+                             palette.foreground);
+    appLookAndFeel.setColour(juce::Label::backgroundColourId,
+                             juce::Colours::transparentBlack);
+    appLookAndFeel.setColour(juce::Label::outlineColourId,
+                             juce::Colours::transparentBlack);
+
+    appLookAndFeel.setColour(juce::TextButton::buttonColourId,
+                             palette.button);
+    appLookAndFeel.setColour(juce::TextButton::buttonOnColourId,
+                             palette.buttonHover);
+    appLookAndFeel.setColour(juce::TextButton::textColourOffId,
+                             palette.foreground);
+    appLookAndFeel.setColour(juce::TextButton::textColourOnId,
+                             palette.foreground);
+
+    appLookAndFeel.setColour(juce::ComboBox::backgroundColourId,
+                             palette.button);
+    appLookAndFeel.setColour(juce::ComboBox::textColourId,
+                             palette.foreground);
+    appLookAndFeel.setColour(juce::ComboBox::outlineColourId,
+                             palette.outline);
+    appLookAndFeel.setColour(juce::ComboBox::arrowColourId,
+                             palette.foreground);
+
+    appLookAndFeel.setColour(juce::PopupMenu::backgroundColourId,
+                             palette.panel);
+    appLookAndFeel.setColour(juce::PopupMenu::textColourId,
+                             palette.foreground);
+    appLookAndFeel.setColour(juce::PopupMenu::headerTextColourId,
+                             palette.muted);
+    appLookAndFeel.setColour(juce::PopupMenu::highlightedBackgroundColourId,
+                             palette.accent.withAlpha(0.7f));
+    appLookAndFeel.setColour(juce::PopupMenu::highlightedTextColourId,
+                             palette.foreground);
+
+    appLookAndFeel.setColour(juce::Slider::backgroundColourId,
+                             palette.panel);
+    appLookAndFeel.setColour(juce::Slider::trackColourId,
+                             palette.accent.withAlpha(0.75f));
+    appLookAndFeel.setColour(juce::Slider::thumbColourId,
+                             palette.accent);
+    appLookAndFeel.setColour(juce::Slider::textBoxTextColourId,
+                             palette.foreground);
+    appLookAndFeel.setColour(juce::Slider::textBoxBackgroundColourId,
+                             palette.button);
+    appLookAndFeel.setColour(juce::Slider::textBoxOutlineColourId,
+                             palette.outline);
+
+    appLookAndFeel.setColour(juce::ToggleButton::textColourId,
+                             palette.foreground);
+    appLookAndFeel.setColour(juce::ToggleButton::tickColourId,
+                             palette.accent);
+    appLookAndFeel.setColour(juce::ToggleButton::tickDisabledColourId,
+                             palette.muted);
+
+    setLookAndFeel(&appLookAndFeel);
+
+    for (auto* button : { &fileButton, &settingsButton, &toolsButton })
+    {
+        button->setColour(juce::TextButton::buttonColourId, palette.button);
+        button->setColour(juce::TextButton::buttonOnColourId,
+                          palette.buttonHover);
+        button->setColour(juce::TextButton::textColourOffId,
+                          palette.foreground);
+        button->setColour(juce::TextButton::textColourOnId,
+                          palette.foreground);
+    }
+
+    if (microphoneWarning != nullptr)
+        microphoneWarning->setDarkMode(darkMode);
+    if (tunerWindow != nullptr)
+        tunerWindow->applyAppearance(&appLookAndFeel,
+                                     palette.background,
+                                     darkMode);
+    if (spectrogramWindow != nullptr)
+        spectrogramWindow->applyAppearance(&appLookAndFeel,
+                                           palette.background,
+                                           darkMode);
+    if (settingsWindow != nullptr)
+        settingsWindow->applyAppearance(&appLookAndFeel,
+                                        palette.background,
+                                        darkMode);
+
+    sendLookAndFeelChange();
+    repaint();
 }
 
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
     if (source == &audioDeviceManager)
-        updateMicrophoneLabel();
+        updateMicrophoneWarning();
 }
 
-void MainComponent::showAudioSettings()
-{
-    if (showingAudioSettings)
-        return;
-
-    if (audioDeviceSelector == nullptr)
-    {
-        audioDeviceSelector = std::make_unique<juce::AudioDeviceSelectorComponent>(
-            audioDeviceManager, 1, 2, 0, 0, false, false, false, true);
-        addChildComponent(*audioDeviceSelector);
-    }
-
-    showingAudioSettings = true;
-    tunerToggle.setVisible(false);
-    spectrogramToggle.setVisible(false);
-    workspaceLabel.setVisible(false);
-    settingsButton.setVisible(false);
-    if (tunerComponent != nullptr)
-        tunerComponent->setVisible(false);
-    if (spectrogramComponent != nullptr)
-        spectrogramComponent->setVisible(false);
-    audioDeviceSelector->setVisible(true);
-    settingsDoneButton.setVisible(true);
-    resized();
-    repaint();
-}
-
-void MainComponent::hideAudioSettings()
-{
-    showingAudioSettings = false;
-    if (audioDeviceSelector != nullptr)
-        audioDeviceSelector->setVisible(false);
-    settingsDoneButton.setVisible(false);
-    tunerToggle.setVisible(true);
-    spectrogramToggle.setVisible(true);
-    workspaceLabel.setVisible(true);
-    settingsButton.setVisible(true);
-    if (tunerComponent != nullptr)
-        tunerComponent->setVisible(true);
-    if (spectrogramComponent != nullptr)
-        spectrogramComponent->setVisible(true);
-    updateMicrophoneLabel();
-    resized();
-    repaint();
-}
-
-void MainComponent::updateMicrophoneLabel()
+bool MainComponent::hasUsableMicrophone() const
 {
     auto* device = audioDeviceManager.getCurrentAudioDevice();
-    if (device != nullptr && device->isOpen()
-        && device->getActiveInputChannels().countNumberOfSetBits() > 0)
-    {
-        const auto setup = audioDeviceManager.getAudioDeviceSetup();
-        const auto name = setup.inputDeviceName.isNotEmpty()
-            ? setup.inputDeviceName
-            : device->getName();
-        microphoneLabel.setText("Microphone: " + name,
-                                juce::dontSendNotification);
-        audioErrorMessage.clear();
-    }
-    else
-    {
-        microphoneLabel.setText("Microphone: none selected",
-                                juce::dontSendNotification);
-    }
+    return device != nullptr
+        && device->isOpen()
+        && device->getActiveInputChannels().countNumberOfSetBits() > 0;
 }
 
-void MainComponent::toggleTuner()
+void MainComponent::updateMicrophoneWarning()
 {
-    if (tunerToggle.getToggleState())
+    if (microphoneWarning == nullptr)
+        return;
+
+    if (hasUsableMicrophone())
     {
-        if (tunerComponent == nullptr)
-        {
-            tunerComponent = std::make_unique<TunerComponent>(audioDeviceManager);
-            addAndMakeVisible(*tunerComponent);
-        }
-    }
-    else
-    {
-        tunerComponent.reset();
+        microphoneWarningDismissed = false;
+        microphoneWarning->setVisible(false);
+        return;
     }
 
-    updateToolVisibility();
+    microphoneWarning->setVisible(! microphoneWarningDismissed);
+    if (microphoneWarning->isVisible())
+        microphoneWarning->toFront(false);
 }
 
-void MainComponent::toggleSpectrogram()
+void MainComponent::dismissMicrophoneWarning()
 {
-    if (spectrogramToggle.getToggleState())
-    {
-        if (spectrogramComponent == nullptr)
-        {
-            spectrogramComponent =
-                std::make_unique<SpectrogramComponent>(audioDeviceManager);
-            addAndMakeVisible(*spectrogramComponent);
-        }
-    }
-    else
-    {
-        spectrogramComponent.reset();
-    }
-
-    updateToolVisibility();
-}
-
-void MainComponent::updateToolVisibility()
-{
-    resized();
-    repaint();
+    microphoneWarningDismissed = true;
+    if (microphoneWarning != nullptr)
+        microphoneWarning->setVisible(false);
 }
