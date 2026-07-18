@@ -1,6 +1,18 @@
-name: Publish semantic release
+name: Create Practice Takes release
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('Create {0} release', inputs.bump) || format('Publish {0}', github.ref_name) }}
 
 on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Choose how VERSION should increase
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
   push:
     tags:
       - "v[0-9]*.[0-9]*.[0-9]*"
@@ -8,39 +20,130 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: practice-takes-release
+  cancel-in-progress: false
+
 jobs:
-  validate-version:
-    name: Validate semantic version
+  prepare:
+    name: Calculate release version
     runs-on: ubuntu-24.04
     outputs:
+      current_version: ${{ steps.version.outputs.current_version }}
       version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      source_sha: ${{ steps.version.outputs.source_sha }}
 
     steps:
-      - name: Validate tag
+      - name: Check out release source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.ref }}
+
+      - name: Calculate or validate version
         id: version
         shell: bash
         run: |
-          tag="${GITHUB_REF_NAME}"
+          current_version="$(python3 scripts/version.py current)"
+          source_sha="$(git rev-parse HEAD)"
 
-          if [[ ! "${tag}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "Release tags must use vMAJOR.MINOR.PATCH, for example v1.2.0." >&2
-            exit 1
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            version="$(python3 scripts/version.py next '${{ inputs.bump }}')"
+            tag="v${version}"
+
+            if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+              echo "Tag ${tag} already exists." >&2
+              exit 1
+            fi
+          else
+            tag="${GITHUB_REF_NAME}"
+
+            if [[ ! "${tag}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+              echo "Release tags must use vMAJOR.MINOR.PATCH, for example v1.2.0." >&2
+              exit 1
+            fi
+
+            version="${tag#v}"
+
+            if [[ "${current_version}" != "${version}" ]]; then
+              echo "Tag ${tag} does not match VERSION (${current_version})." >&2
+              exit 1
+            fi
           fi
 
-          echo "version=${tag#v}" >> "${GITHUB_OUTPUT}"
+          echo "current_version=${current_version}" >> "${GITHUB_OUTPUT}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          echo "source_sha=${source_sha}" >> "${GITHUB_OUTPUT}"
+
+          {
+            echo "### Release preparation"
+            echo "- Current version: ${current_version}"
+            echo "- Release version: ${version}"
+            echo "- Tag: ${tag}"
+            echo "- Source commit: ${source_sha}"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
   build:
     name: Build release packages
-    needs: validate-version
+    needs: prepare
     uses: ./.github/workflows/build-multiplatform.yml
     with:
-      version: ${{ needs.validate-version.outputs.version }}
+      ref: ${{ needs.prepare.outputs.source_sha }}
+      version: ${{ needs.prepare.outputs.version }}
+
+  finalize-version:
+    name: Update VERSION and create tag
+    needs:
+      - prepare
+      - build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out main
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Commit version and tag
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        run: |
+          expected_sha="${{ needs.prepare.outputs.source_sha }}"
+          actual_sha="$(git rev-parse HEAD)"
+
+          if [[ "${actual_sha}" != "${expected_sha}" ]]; then
+            echo "main changed while the release was building." >&2
+            echo "Expected ${expected_sha}, but main is now ${actual_sha}. Rerun the release workflow." >&2
+            exit 1
+          fi
+
+          version="${{ needs.prepare.outputs.version }}"
+          tag="${{ needs.prepare.outputs.tag }}"
+          python3 scripts/version.py set "${version}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add VERSION
+          git commit -m "chore(release): ${tag}"
+          git tag -a "${tag}" -m "Practice Takes ${tag}"
+          git push --atomic origin HEAD:main "refs/tags/${tag}"
+
+      - name: Use existing version tag
+        if: ${{ github.event_name == 'push' }}
+        run: echo "Using existing tag ${{ needs.prepare.outputs.tag }}."
 
   publish:
     name: Publish GitHub release
     needs:
-      - validate-version
+      - prepare
       - build
+      - finalize-version
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -49,7 +152,7 @@ jobs:
       - name: Download release packages
         uses: actions/download-artifact@v5
         with:
-          pattern: PracticeTakes-*
+          pattern: PracticeTakes-${{ needs.prepare.outputs.version }}-*
           path: release-assets
           merge-multiple: true
 
@@ -64,9 +167,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          gh release create "${GITHUB_REF_NAME}" release-assets/* \
+          gh release create "${{ needs.prepare.outputs.tag }}" release-assets/* \
             --repo "${GITHUB_REPOSITORY}" \
-            --title "Practice Takes ${GITHUB_REF_NAME}" \
+            --title "Practice Takes ${{ needs.prepare.outputs.tag }}" \
             --generate-notes \
             --latest \
             --verify-tag

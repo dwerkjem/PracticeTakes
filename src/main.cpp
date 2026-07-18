@@ -12,7 +12,7 @@ public:
 
     [[nodiscard]] const juce::String getApplicationVersion() override
     {
-        return "0.1.0";
+        return ProjectInfo::versionString;
     }
 
     [[nodiscard]] bool moreThanOneInstanceAllowed() override
@@ -22,7 +22,9 @@ public:
 
     void initialise(const juce::String&) override
     {
-        mainWindow = std::make_unique<MainWindow>(getApplicationName());
+        const auto windowTitle =
+            getApplicationName() + " v" + getApplicationVersion();
+        mainWindow = std::make_unique<MainWindow>(windowTitle);
     }
 
     void shutdown() override
@@ -41,9 +43,9 @@ private:
     public:
         explicit MainWindow(const juce::String& name)
             : DocumentWindow(
-                name,
-                juce::Colour::fromRGB(18, 20, 27),
-                DocumentWindow::allButtons)
+                  name,
+                  juce::Colour::fromRGB(18, 20, 27),
+                  DocumentWindow::allButtons)
         {
             setUsingNativeTitleBar(true);
             setContentOwned(new MainComponent(), true);

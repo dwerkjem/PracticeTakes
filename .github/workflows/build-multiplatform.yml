@@ -7,17 +7,27 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
-      version:
-        description: Version embedded in the application
+      ref:
+        description: Optional branch, tag, or commit to build
         required: false
-        default: "0.1.0"
+        default: ""
+        type: string
+      version:
+        description: Optional temporary semantic version for release preparation
+        required: false
+        default: ""
         type: string
   workflow_call:
     inputs:
-      version:
-        description: Version embedded in the application
+      ref:
+        description: Optional branch, tag, or commit to build
         required: false
-        default: "0.1.0"
+        default: ""
+        type: string
+      version:
+        description: Optional temporary semantic version for release preparation
+        required: false
+        default: ""
         type: string
 
 permissions:
@@ -25,7 +35,6 @@ permissions:
 
 env:
   BUILD_TYPE: Release
-  BUILD_VERSION: ${{ inputs.version || '0.1.0' }}
 
 jobs:
   linux:
@@ -43,6 +52,17 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Apply requested release version
+        if: ${{ inputs.version != '' }}
+        run: python3 scripts/version.py set "${{ inputs.version }}"
+
+      - name: Read application version
+        id: version
+        shell: bash
+        run: echo "version=$(python3 scripts/version.py current)" >> "${GITHUB_OUTPUT}"
 
       - name: Install Linux build dependencies
         run: |
@@ -70,26 +90,25 @@ jobs:
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-            -DPRACTICE_TAKES_VERSION="${BUILD_VERSION}"
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Build
         run: cmake --build build --config "${BUILD_TYPE}" --parallel
 
       - name: Package
         run: |
-          artifact_name="PracticeTakes-linux-${{ matrix.arch }}"
+          artifact_name="PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}"
           package_dir="dist/${artifact_name}"
           mkdir -p "${package_dir}"
           install -m 0755 build/bin/PracticeTakes "${package_dir}/PracticeTakes"
-          cp README.md "${package_dir}/README.md"
+          cp README.md VERSION "${package_dir}/"
           tar -C dist -czf "dist/${artifact_name}.tar.gz" "${artifact_name}"
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PracticeTakes-linux-${{ matrix.arch }}
-          path: dist/PracticeTakes-linux-${{ matrix.arch }}.tar.gz
+          name: PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
+          path: dist/PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
 
   windows:
@@ -109,6 +128,20 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Apply requested release version
+        if: ${{ inputs.version != '' }}
+        shell: pwsh
+        run: python scripts/version.py set "${{ inputs.version }}"
+
+      - name: Read application version
+        id: version
+        shell: pwsh
+        run: |
+          $version = (python scripts/version.py current).Trim()
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Configure
         shell: pwsh
@@ -116,8 +149,7 @@ jobs:
           cmake -S . -B build `
             -G "Visual Studio 17 2022" `
             -A "${{ matrix.cmake_arch }}" `
-            -DCMAKE_CONFIGURATION_TYPES="${env:BUILD_TYPE}" `
-            -DPRACTICE_TAKES_VERSION="${env:BUILD_VERSION}"
+            -DCMAKE_CONFIGURATION_TYPES="${env:BUILD_TYPE}"
 
       - name: Build
         shell: pwsh
@@ -133,11 +165,11 @@ jobs:
             throw "PracticeTakes.exe was not found after the build."
           }
 
-          $artifactName = "PracticeTakes-windows-${{ matrix.arch }}"
+          $artifactName = "PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}"
           $packageDir = "dist/$artifactName"
           New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
           Copy-Item $binary.FullName "$packageDir/PracticeTakes.exe"
-          Copy-Item README.md "$packageDir/README.md"
+          Copy-Item README.md, VERSION -Destination $packageDir
           Compress-Archive -Path "$packageDir/*" `
             -DestinationPath "dist/$artifactName.zip" `
             -Force
@@ -145,8 +177,8 @@ jobs:
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PracticeTakes-windows-${{ matrix.arch }}
-          path: dist/PracticeTakes-windows-${{ matrix.arch }}.zip
+          name: PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}
+          path: dist/PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}.zip
           if-no-files-found: error
 
   macos:
@@ -168,14 +200,24 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Apply requested release version
+        if: ${{ inputs.version != '' }}
+        run: python3 scripts/version.py set "${{ inputs.version }}"
+
+      - name: Read application version
+        id: version
+        shell: bash
+        run: echo "version=$(python3 scripts/version.py current)" >> "${GITHUB_OUTPUT}"
 
       - name: Configure
         run: |
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
             -DCMAKE_OSX_ARCHITECTURES="${{ matrix.cmake_arch }}" \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
-            -DPRACTICE_TAKES_VERSION="${BUILD_VERSION}"
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
 
       - name: Build
         run: cmake --build build --config "${BUILD_TYPE}" --parallel
@@ -189,7 +231,7 @@ jobs:
             exit 1
           fi
 
-          artifact_name="PracticeTakes-macos-${{ matrix.arch }}"
+          artifact_name="PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}"
           mkdir -p dist
           codesign --force --deep --sign - "${app_path}"
           ditto -c -k --sequesterRsrc --keepParent \
@@ -199,6 +241,6 @@ jobs:
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PracticeTakes-macos-${{ matrix.arch }}
-          path: dist/PracticeTakes-macos-${{ matrix.arch }}.zip
+          name: PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}
+          path: dist/PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}.zip
           if-no-files-found: error
