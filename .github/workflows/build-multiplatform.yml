@@ -110,6 +110,8 @@ jobs:
           name: PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
           path: dist/PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
 
   windows:
     name: Windows ${{ matrix.arch }}
@@ -180,6 +182,8 @@ jobs:
           name: PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}
           path: dist/PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}.zip
           if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
 
   macos:
     name: macOS ${{ matrix.name }}
@@ -244,3 +248,85 @@ jobs:
           name: PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}
           path: dist/PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}.zip
           if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  release-assets:
+    name: Assemble release artifact bundle
+    needs:
+      - linux
+      - windows
+      - macos
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out build source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Apply requested release version
+        if: ${{ inputs.version != '' }}
+        run: python3 scripts/version.py set "${{ inputs.version }}"
+
+      - name: Read build metadata
+        id: metadata
+        shell: bash
+        run: |
+          echo "version=$(python3 scripts/version.py current)" >> "${GITHUB_OUTPUT}"
+          echo "source_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+
+      - name: Download platform artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: PracticeTakes-${{ steps.metadata.outputs.version }}-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Verify and checksum release assets
+        shell: bash
+        run: |
+          version="${{ steps.metadata.outputs.version }}"
+
+          expected_files=(
+            "PracticeTakes-${version}-linux-x64.tar.gz"
+            "PracticeTakes-${version}-linux-arm64.tar.gz"
+            "PracticeTakes-${version}-windows-x64.zip"
+            "PracticeTakes-${version}-windows-arm64.zip"
+            "PracticeTakes-${version}-macos-x64.zip"
+            "PracticeTakes-${version}-macos-arm64.zip"
+          )
+
+          for file in "${expected_files[@]}"; do
+            if [[ ! -f "release-assets/${file}" ]]; then
+              echo "Missing expected build artifact: ${file}" >&2
+              exit 1
+            fi
+          done
+
+          actual_count="$(find release-assets -maxdepth 1 -type f -name 'PracticeTakes-*' | wc -l)"
+          if [[ "${actual_count}" -ne "${#expected_files[@]}" ]]; then
+            echo "Expected ${#expected_files[@]} platform packages, found ${actual_count}." >&2
+            find release-assets -maxdepth 1 -type f -print >&2
+            exit 1
+          fi
+
+          (
+            cd release-assets
+            sha256sum PracticeTakes-* > SHA256SUMS.txt
+          )
+
+          {
+            echo "Version: ${version}"
+            echo "Source SHA: ${{ steps.metadata.outputs.source_sha }}"
+            echo "Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } > release-assets/BUILD-METADATA.txt
+
+      - name: Upload release artifact bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: PracticeTakes-${{ steps.metadata.outputs.version }}-release-assets
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
