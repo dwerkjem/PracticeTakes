@@ -24,10 +24,13 @@
         "bugprone",
         "clang",
         "clangtidy",
+        "darkgrey",
         "fontconfig",
         "freetype",
+        "Hann",
         "jlimit",
         "jmap",
+        "jmin",
         "juce",
         "libx",
         "libxcomposite",
@@ -35,6 +38,8 @@
         "libxinerama",
         "libxrandr",
         "libxrender",
-        "nullptr"
+        "nonmodal",
+        "nullptr",
+        "nyquist"
     ]
 }
