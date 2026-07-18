@@ -1,0 +1,55 @@
+name: Clang-Tidy on main
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+permissions:
+  contents: read
+
+jobs:
+  clang-tidy:
+    name: Lint merged C++
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out merged main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Install analysis dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            build-essential \
+            clang-tidy \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libasound2-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libgl1-mesa-dev \
+            libgtk-3-dev \
+            libjack-jackd2-dev \
+            libx11-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev
+
+      - name: Configure compilation database
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Run clang-tidy
+        run: python3 scripts/run_clang_tidy.py src/*.cpp
