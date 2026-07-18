@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import os
 import shutil
 import subprocess
@@ -19,7 +20,23 @@ def find_tool(environment_variable: str, executable_name: str) -> str | None:
     return shutil.which(executable_name)
 
 
+def parse_arguments(arguments: list[str]) -> argparse.Namespace:
+    """Parse script options while preserving filenames supplied by pre-commit."""
+    parser = argparse.ArgumentParser(
+        description="Run clang-tidy against files in the CMake compilation database."
+    )
+    parser.add_argument(
+        "--fix",
+        action="store_true",
+        help="Apply safe fix-it replacements offered by enabled clang-tidy checks.",
+    )
+    parser.add_argument("files", nargs="*")
+    return parser.parse_args(arguments)
+
+
 def main(arguments: list[str]) -> int:
+    options = parse_arguments(arguments)
+
     clang_tidy = find_tool("CLANG_TIDY", "clang-tidy")
     if clang_tidy is None:
         print(
@@ -44,20 +61,26 @@ def main(arguments: list[str]) -> int:
         return 1
 
     source_files = [
-        Path(argument) for argument in arguments if Path(argument).is_file()
+        Path(argument) for argument in options.files if Path(argument).is_file()
     ]
     if not source_files:
         return 0
 
-    result = subprocess.run(
-        [
-            clang_tidy,
-            "-p",
-            str(build_directory),
-            *map(str, source_files),
-        ],
-        check=False,
-    )
+    command = [
+        clang_tidy,
+        "--quiet",
+        "-p",
+        str(build_directory),
+    ]
+
+    if options.fix:
+        # --fix applies only replacements that the selected check explicitly
+        # marks as safe. Formatting around replacements follows .clang-format.
+        command.extend(["--fix", "--format-style=file"])
+
+    command.extend(map(str, source_files))
+
+    result = subprocess.run(command, check=False)
     return result.returncode
 
 
