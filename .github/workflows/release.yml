@@ -86,7 +86,7 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
   build:
-    name: Build release packages
+    name: Build release artifacts
     needs: prepare
     uses: ./.github/workflows/build-multiplatform.yml
     with:
@@ -118,7 +118,7 @@ jobs:
           actual_sha="$(git rev-parse HEAD)"
 
           if [[ "${actual_sha}" != "${expected_sha}" ]]; then
-            echo "main changed while the release was building." >&2
+            echo "main changed while the release artifacts were building." >&2
             echo "Expected ${expected_sha}, but main is now ${actual_sha}. Rerun the release workflow." >&2
             exit 1
           fi
@@ -139,7 +139,7 @@ jobs:
         run: echo "Using existing tag ${{ needs.prepare.outputs.tag }}."
 
   publish:
-    name: Publish GitHub release
+    name: Publish GitHub release from build artifacts
     needs:
       - prepare
       - build
@@ -149,18 +149,50 @@ jobs:
       contents: write
 
     steps:
-      - name: Download release packages
+      - name: Download release artifact bundle
         uses: actions/download-artifact@v5
         with:
-          pattern: PracticeTakes-${{ needs.prepare.outputs.version }}-*
+          name: PracticeTakes-${{ needs.prepare.outputs.version }}-release-assets
           path: release-assets
-          merge-multiple: true
 
-      - name: Create checksums
+      - name: Verify downloaded release artifacts
         shell: bash
         run: |
-          cd release-assets
-          sha256sum PracticeTakes-* > SHA256SUMS.txt
+          version="${{ needs.prepare.outputs.version }}"
+          source_sha="${{ needs.prepare.outputs.source_sha }}"
+
+          expected_files=(
+            "PracticeTakes-${version}-linux-x64.tar.gz"
+            "PracticeTakes-${version}-linux-arm64.tar.gz"
+            "PracticeTakes-${version}-windows-x64.zip"
+            "PracticeTakes-${version}-windows-arm64.zip"
+            "PracticeTakes-${version}-macos-x64.zip"
+            "PracticeTakes-${version}-macos-arm64.zip"
+            "SHA256SUMS.txt"
+            "BUILD-METADATA.txt"
+          )
+
+          for file in "${expected_files[@]}"; do
+            if [[ ! -f "release-assets/${file}" ]]; then
+              echo "Missing expected release artifact: ${file}" >&2
+              exit 1
+            fi
+          done
+
+          actual_count="$(find release-assets -maxdepth 1 -type f | wc -l)"
+          if [[ "${actual_count}" -ne "${#expected_files[@]}" ]]; then
+            echo "Expected ${#expected_files[@]} release files, found ${actual_count}." >&2
+            find release-assets -maxdepth 1 -type f -print >&2
+            exit 1
+          fi
+
+          grep -Fx "Version: ${version}" release-assets/BUILD-METADATA.txt
+          grep -Fx "Source SHA: ${source_sha}" release-assets/BUILD-METADATA.txt
+
+          (
+            cd release-assets
+            sha256sum --check SHA256SUMS.txt
+          )
 
       - name: Publish release
         env:
