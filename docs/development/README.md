@@ -12,6 +12,7 @@ broader music-practice and digital-audio workstation application.
 - [Building](BUILDING.md) — prerequisites, local configuration, and run commands
 - [Architecture](ARCHITECTURE.md) — application ownership, audio flow, and UI structure
 - [Code style](CODE_STYLE.md) — readability and real-time audio guidelines
+- [Code quality](QUALITY.md) — clang-format, clang-tidy, pre-commit, and VS Code diagnostics
 - [Releasing](RELEASING.md) — semantic versions and GitHub release automation
 
 ## Main technologies
