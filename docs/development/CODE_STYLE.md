@@ -50,12 +50,18 @@ Use RAII and `std::unique_ptr` for windows and components with a single owner.
 References are used for shared services, such as the global
 `AudioDeviceManager`, whose lifetime is guaranteed by `MainComponent`.
 
-## Formatting
+## Formatting and linting
 
-The repository does not require a strict linter. Preserve the existing style:
+`.clang-format` is the source of truth for mechanical C and C++ formatting.
+The style uses four-space indentation, braces on the following line, left-aligned
+pointers, sorted includes, and deliberate line wrapping.
 
-- four-space indentation
-- braces on the following line
-- spaces inside control-flow conditions only where conventional
-- one declaration per line when state has different responsibilities
-- line lengths kept reasonable through deliberate wrapping
+`.clang-tidy` performs a moderate static-analysis pass. It focuses on analyzer,
+bug-prone, performance, portability, selected modernization, and selected
+readability checks. It intentionally avoids highly subjective rules that would
+make early development unnecessarily rigid.
+
+Do not manually fight the formatter. Format the file, then make structural
+changes when the formatted result exposes code that is too deeply nested or too
+large. See [Code quality and editor setup](QUALITY.md) for installation and
+pre-commit commands.
