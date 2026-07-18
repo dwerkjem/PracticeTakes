@@ -2,13 +2,9 @@
 
 #include <JuceHeader.h>
 
-#include "SpectrogramComponent.h"
-#include "TunerComponent.h"
-
 #include <memory>
 
-class MainComponent final : public juce::Component,
-                            private juce::ChangeListener
+class MainComponent final : public juce::Component
 {
 public:
     MainComponent();
@@ -18,33 +14,36 @@ public:
     void resized() override;
 
 private:
-    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
-    void showAudioSettings();
-    void hideAudioSettings();
-    void updateMicrophoneLabel();
-    void toggleTuner();
-    void toggleSpectrogram();
-    void updateToolVisibility();
+    enum class ToolType
+    {
+        tuner,
+        spectrogram
+    };
+
+    class ToolWindow;
+    class SettingsWindow;
+
+    void showToolsMenu();
+    void openTool(ToolType tool);
+    void closeTool(ToolType tool);
+    void showSettings();
+    void closeSettings();
+    void setDarkMode(bool shouldUseDarkMode);
+    void applyAppearance();
 
     juce::AudioDeviceManager audioDeviceManager;
-    std::unique_ptr<juce::AudioDeviceSelectorComponent> audioDeviceSelector;
+    juce::LookAndFeel_V4 appLookAndFeel;
 
-    juce::Label appTitle;
-    juce::Label appSubtitle;
-    juce::Label microphoneLabel;
-    juce::Label workspaceLabel;
-    juce::TextButton settingsButton { "Audio settings" };
-    juce::TextButton settingsDoneButton { "Done" };
-    juce::ToggleButton tunerToggle { "Tuner" };
-    juce::ToggleButton spectrogramToggle { "Spectrogram" };
+    juce::TextButton fileButton { "File" };
+    juce::TextButton settingsButton { "Settings" };
+    juce::TextButton toolsButton { "Tools" };
 
-    std::unique_ptr<TunerComponent> tunerComponent;
-    std::unique_ptr<SpectrogramComponent> spectrogramComponent;
-    juce::Rectangle<int> headerBounds;
-    juce::Rectangle<int> toolbarBounds;
-    juce::Rectangle<int> workspaceBounds;
-    juce::String audioErrorMessage;
-    bool showingAudioSettings = false;
+    std::unique_ptr<ToolWindow> tunerWindow;
+    std::unique_ptr<ToolWindow> spectrogramWindow;
+    std::unique_ptr<SettingsWindow> settingsWindow;
+
+    juce::Rectangle<int> menuBarBounds;
+    bool darkMode = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
