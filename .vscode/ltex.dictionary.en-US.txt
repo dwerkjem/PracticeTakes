@@ -1,0 +1,12 @@
+JUCE
+preallocated
+FIFOs
+RAII
+nonmodal
+autocorrelation
+Hann
+logarithmically
+vcpkg
+JUCE-generated
+JUCE
+dismissible

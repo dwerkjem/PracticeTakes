@@ -19,10 +19,10 @@ per-user application settings. A non-success response from the submission
 route is reported as failed and also preserves the draft.
 
 The six user-facing feedback types map onto the four wire categories. The
-specific user-facing type is included in the message so information is not
+specific user-facing type is included in the message, so information is not
 lost:
 
-- Bug, Audio problem, and Notation/MIDI problem -> `bug`
-- Usability problem -> `usability`
-- Feature request -> `idea`
-- Other -> `other`
+- Bug, Audio problem, and Notation/MIDI problem ⇾ `bug`
+- Usability problem ⇾ `usability`
+- Feature request ⇾ `idea`
+- Other ⇾ `other`

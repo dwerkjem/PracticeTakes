@@ -9,7 +9,7 @@ Practice Takes requires:
 - Git
 - platform audio and window-system development libraries
 
-JUCE is downloaded by CMake at configure time. Linux dependencies are managed
+JUCE is downloaded by CMake at configure time. Linux's dependencies are managed
 through the repository's `vcpkg.json` manifest and custom triplets.
 
 ## Linux helper script

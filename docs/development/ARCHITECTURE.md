@@ -61,7 +61,7 @@ The tuner:
 3. estimates pitch using normalized autocorrelation
 4. converts frequency to a fractional MIDI-note value
 5. averages and eases the result to reduce visual jitter
-6. applies note-switch hysteresis so the displayed note does not chatter
+6. applies note-switch hysteresis, so the displayed note does not chatter
 7. stores recent values for the history graph
 
 The user can display the result as a history graph, horizontal bar, or meter.
@@ -77,5 +77,5 @@ The spectrogram:
 5. draws a new logarithmically spaced frequency column
 6. shifts the existing image left to create a scrolling display
 
-The rendered color mapping differs between light and dark themes so the graph
+The rendered color mapping differs between light and dark themes, so the graph
 remains legible in either appearance.

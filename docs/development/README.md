@@ -23,15 +23,5 @@ broader music-practice and digital-audio workstation application.
 - vcpkg for Linux system dependencies
 - GitHub Actions for Windows, Linux, and macOS packages
 
-## Source layout
-
-```text
-src/
-├── main.cpp                    Application entry point and main window
-├── MainComponent.cpp/.h        Main shell, settings, tool windows, and warnings
-├── TunerComponent.cpp/.h       Pitch detection, smoothing, controls, and rendering
-└── SpectrogramComponent.cpp/.h FFT processing and scrolling frequency display
-```
-
 The application version is stored only in the root `VERSION` file. Do not
 copy the version into CMake or C++ source code.

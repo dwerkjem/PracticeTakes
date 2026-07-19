@@ -4,7 +4,7 @@ Practice Takes separates fast local formatting from slower repository-wide stati
 
 - `clang-format` rewrites C and C++ files to match `.clang-format` before every local commit.
 - `clang-tidy` runs after relevant changes land on `main`, applies supported safe fixes, and commits those source changes back to `main`.
-- VS Code uses CMake's compilation database so editor diagnostics match the actual project configuration.
+- VS Code uses CMake's compilation database, so editor diagnostics match the actual project configuration.
 
 ## Local pre-commit formatting
 

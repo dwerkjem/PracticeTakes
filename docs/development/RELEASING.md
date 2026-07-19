@@ -50,7 +50,7 @@ It also adds:
   workflow run
 
 Individual platform artifacts are retained for 14 days. The combined
-release-artifact bundle is retained for 30 days so a failed publish step can be
+release-artifact bundle is retained for 30 days, so a failed publishing step can be
 diagnosed or recovered without immediately rebuilding every platform.
 
 ## Choosing a release type
