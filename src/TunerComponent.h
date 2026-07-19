@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 
+#include "Theme.h"
+
 #include <array>
 #include <atomic>
 #include <vector>
@@ -19,7 +21,7 @@ class TunerComponent final : public juce::Component,
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
-    void setDarkMode(bool shouldUseDarkMode);
+    void setTheme(Theme theme);
 
   private:
     enum class DisplayMode
@@ -128,7 +130,7 @@ class TunerComponent final : public juce::Component,
     bool hasSignal = false;
     bool isAudioCallbackAttached = false;
     bool areAdvancedSettingsExpanded = false;
-    bool isDarkMode = false;
+    Theme currentTheme = Theme::light;
 
     juce::String audioErrorMessage;
     juce::Rectangle<int> displayBounds;

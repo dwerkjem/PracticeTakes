@@ -1,4 +1,4 @@
-#include "SpectrogramComponent.h"
+#include "../SpectrogramComponent.h"
 
 #include <algorithm>
 #include <array>
@@ -42,14 +42,14 @@ SpectrogramComponent::~SpectrogramComponent()
 //==============================================================================
 // Appearance
 
-void SpectrogramComponent::setDarkMode(bool shouldUseDarkMode)
+void SpectrogramComponent::setTheme(Theme theme)
 {
-    if (isDarkMode == shouldUseDarkMode)
+    if (currentTheme == theme)
     {
         return;
     }
 
-    isDarkMode = shouldUseDarkMode;
+    currentTheme = theme;
 
     // Old columns use colours from the previous theme, so clear the image when
     // the appearance changes instead of mixing light and dark palettes.
@@ -59,22 +59,22 @@ void SpectrogramComponent::setDarkMode(bool shouldUseDarkMode)
 
 juce::Colour SpectrogramComponent::backgroundColour() const
 {
-    return isDarkMode ? juce::Colour::fromRGB(18, 20, 27) : juce::Colour::fromRGB(235, 236, 238);
+    return spectrogramPaletteFor(currentTheme).background;
 }
 
 juce::Colour SpectrogramComponent::panelColour() const
 {
-    return isDarkMode ? juce::Colour::fromRGB(25, 28, 37) : juce::Colour::fromRGB(250, 250, 251);
+    return spectrogramPaletteFor(currentTheme).panel;
 }
 
 juce::Colour SpectrogramComponent::mutedColour() const
 {
-    return isDarkMode ? juce::Colour::fromRGB(188, 194, 207) : juce::Colour::fromRGB(82, 88, 99);
+    return spectrogramPaletteFor(currentTheme).muted;
 }
 
 juce::Colour SpectrogramComponent::outlineColour() const
 {
-    return isDarkMode ? juce::Colour::fromRGB(58, 65, 82) : juce::Colour::fromRGB(165, 169, 178);
+    return spectrogramPaletteFor(currentTheme).outline;
 }
 
 //==============================================================================
@@ -252,24 +252,7 @@ int SpectrogramComponent::fftBinForFrequency(double frequency) const
 
 juce::Colour SpectrogramComponent::colourForLevel(float level) const
 {
-    const auto clippedLevel = juce::jlimit(0.0f, 1.0f, level);
-
-    if (isDarkMode)
-    {
-        return juce::Colour::fromHSV(juce::jmap(clippedLevel, 0.0f, 1.0f, 0.72f, 0.0f),
-                                     juce::jmap(clippedLevel, 0.0f, 1.0f, 0.45f, 1.0f),
-                                     juce::jmap(clippedLevel, 0.0f, 1.0f, 0.08f, 1.0f), 1.0f);
-    }
-
-    const auto quietColour = juce::Colour::fromRGB(246, 248, 252);
-    const auto middleColour = juce::Colour::fromRGB(85, 139, 214);
-    const auto loudColour = juce::Colour::fromRGB(208, 66, 53);
-    constexpr float middlePoint = 0.62f;
-
-    return clippedLevel < middlePoint
-               ? quietColour.interpolatedWith(middleColour, clippedLevel / middlePoint)
-               : middleColour.interpolatedWith(loudColour,
-                                               (clippedLevel - middlePoint) / (1.0f - middlePoint));
+    return spectrogramColourForLevel(currentTheme, level);
 }
 
 //==============================================================================

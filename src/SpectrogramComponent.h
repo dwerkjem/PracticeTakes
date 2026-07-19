@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 
+#include "Theme.h"
+
 #include <array>
 #include <atomic>
 
@@ -18,7 +20,7 @@ class SpectrogramComponent final : public juce::Component,
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
-    void setDarkMode(bool shouldUseDarkMode);
+    void setTheme(Theme theme);
 
   private:
     static constexpr int fifoCapacity = 65536;
@@ -82,7 +84,7 @@ class SpectrogramComponent final : public juce::Component,
 
     std::atomic<double> currentSampleRate{44100.0};
     bool isAudioCallbackAttached = false;
-    bool isDarkMode = false;
+    Theme currentTheme = Theme::light;
     juce::String audioErrorMessage;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SpectrogramComponent)

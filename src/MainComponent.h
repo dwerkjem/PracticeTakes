@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 
+#include "Theme.h"
+
 #include <memory>
 
 // MainComponent is the application's central coordinator. It owns the shared
@@ -44,7 +46,7 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     [[nodiscard]] std::unique_ptr<ToolWindow>& windowFor(ToolType tool);
 
     // Appearance ------------------------------------------------------------
-    void setDarkMode(bool shouldUseDarkMode);
+    void setTheme(Theme theme);
     void applyAppearance();
     void configureLookAndFeelColours();
     void applyAppearanceToTopButtons();
@@ -70,7 +72,7 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     std::unique_ptr<MicrophoneWarning> microphoneWarning;
 
     juce::Rectangle<int> menuBarBounds;
-    bool isDarkMode = false;
+    Theme currentTheme = Theme::light;
     bool isMicrophoneWarningDismissed = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)

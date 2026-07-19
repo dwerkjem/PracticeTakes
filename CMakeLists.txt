@@ -86,12 +86,15 @@ endif()
 target_sources(PracticeTakes
     PRIVATE
         src/main.cpp
-        src/MainComponent.cpp
+        src/app/MainComponent.cpp
         src/MainComponent.h
-        src/SpectrogramComponent.cpp
+        src/spectrogram/SpectrogramComponent.cpp
         src/SpectrogramComponent.h
-        src/TunerComponent.cpp
+        src/tuner/TunerComponent.cpp
+        src/tuner/TunerDrawing.cpp
         src/TunerComponent.h
+        src/Theme.h
+        src/Theme.cpp
 )
 
 target_compile_definitions(PracticeTakes
