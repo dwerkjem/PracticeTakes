@@ -24,7 +24,9 @@
         "bugprone",
         "clang",
         "clangtidy",
+        "codz",
         "darkgrey",
+        "derekrneilson",
         "fontconfig",
         "freetype",
         "Hann",
@@ -32,14 +34,21 @@
         "jmap",
         "jmin",
         "juce",
+        "juceaide",
         "libx",
         "libxcomposite",
         "libxext",
         "libxinerama",
         "libxrandr",
         "libxrender",
+        "MINSIZEREL",
+        "Neilson",
         "nonmodal",
         "nullptr",
-        "nyquist"
+        "nyquist",
+        "practicetakes",
+        "RELWITHDEBINFO",
+        "STREQUAL",
+        "XCURSOR"
     ]
 }
