@@ -21,6 +21,7 @@ class SpectrogramComponent final : public juce::Component,
     void paint(juce::Graphics& graphics) override;
     void resized() override;
     void setTheme(Theme theme);
+    void resetToDefaults();
 
   private:
     static constexpr int fifoCapacity = 65536;

@@ -28,6 +28,9 @@ class AudioInputService final : public juce::ChangeBroadcaster,
 
     [[nodiscard]] juce::AudioDeviceManager& deviceManager() noexcept;
     [[nodiscard]] bool hasUsableInput() const;
+    void resetToDefaultInput();
+    void applySavedDeviceState(const juce::XmlElement& state);
+    [[nodiscard]] std::unique_ptr<juce::XmlElement> createDeviceState() const;
 
   private:
     void audioDeviceIOCallbackWithContext(const float* const* inputChannelData,

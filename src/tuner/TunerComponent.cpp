@@ -51,7 +51,7 @@ TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService)
     displayModeBox.addItem("Graph", static_cast<int>(DisplayMode::graph));
     displayModeBox.addItem("Bar", static_cast<int>(DisplayMode::bar));
     displayModeBox.addItem("Meter", static_cast<int>(DisplayMode::meter));
-    displayModeBox.setSelectedId(static_cast<int>(DisplayMode::graph), juce::dontSendNotification);
+    displayModeBox.setSelectedId(AppDefaults::Tuner::displayMode, juce::dontSendNotification);
     displayModeBox.onChange = [this]
     {
         updateGraphControlAvailability();
@@ -69,11 +69,13 @@ TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService)
     };
     addAndMakeVisible(advancedSettingsButton);
 
-    configureSlider(easingSlider, 0.02, 1.0, 0.01, 0.35, "");
-    configureSlider(averagingSlider, 1.0, 15.0, 1.0, 5.0, " samples");
-    configureSlider(thresholdSlider, 0.1, 1.5, 0.05, 0.55, " st");
-    configureSlider(dropoutSlider, 1.0, 20.0, 1.0, 4.0, " frames");
-    configureSlider(durationSlider, 5.0, 60.0, 1.0, 20.0, " sec");
+    configureSlider(easingSlider, 0.02, 1.0, 0.01, AppDefaults::Tuner::easing, "");
+    configureSlider(averagingSlider, 1.0, 15.0, 1.0, AppDefaults::Tuner::averaging, " samples");
+    configureSlider(thresholdSlider, 0.1, 1.5, 0.05, AppDefaults::Tuner::noteSwitchSemitones,
+                    " st");
+    configureSlider(dropoutSlider, 1.0, 20.0, 1.0, AppDefaults::Tuner::dropoutFrames, " frames");
+    configureSlider(durationSlider, 5.0, 60.0, 1.0, AppDefaults::Tuner::graphDurationSeconds,
+                    " sec");
 
     clearGraphButton.onClick = [this]
     {
@@ -93,6 +95,45 @@ TunerComponent::~TunerComponent()
 {
     stopTimer();
     audioInputService.removeListener(this);
+}
+
+void TunerComponent::resetToDefaults()
+{
+    displayModeBox.setSelectedId(AppDefaults::Tuner::displayMode, juce::sendNotificationSync);
+    easingSlider.setValue(AppDefaults::Tuner::easing);
+    averagingSlider.setValue(AppDefaults::Tuner::averaging);
+    thresholdSlider.setValue(AppDefaults::Tuner::noteSwitchSemitones);
+    dropoutSlider.setValue(AppDefaults::Tuner::dropoutFrames);
+    durationSlider.setValue(AppDefaults::Tuner::graphDurationSeconds);
+    areAdvancedSettingsExpanded = false;
+    graphHistory.clear();
+    resetPitchTracking();
+    updateAdvancedSettingsVisibility();
+    resized();
+    repaint();
+}
+
+void TunerComponent::applyPreset(AppDefaults::Preset preset)
+{
+    applySettings(AppDefaults::tunerPreset(preset));
+}
+
+void TunerComponent::applySettings(const AppDefaults::TunerSettings& values)
+{
+    easingSlider.setValue(values.easing);
+    averagingSlider.setValue(values.averaging);
+    thresholdSlider.setValue(values.noteSwitchSemitones);
+    dropoutSlider.setValue(values.dropoutFrames);
+    durationSlider.setValue(values.graphDurationSeconds);
+    graphHistory.clear();
+    resetPitchTracking();
+    repaint();
+}
+
+AppDefaults::TunerSettings TunerComponent::settings() const
+{
+    return {easingSlider.getValue(), averagingSlider.getValue(), thresholdSlider.getValue(),
+            dropoutSlider.getValue(), durationSlider.getValue()};
 }
 
 //==============================================================================
