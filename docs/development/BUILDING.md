@@ -27,6 +27,7 @@ Useful options:
 ./scripts/build-and-run.sh --clean
 BUILD_TYPE=Release ./scripts/build-and-run.sh
 ./scripts/build-and-run.sh --install-dependencies
+./scripts/build-and-run.sh --jobs 2
 ```
 
 On Debian and Ubuntu, the script first checks every required system package.
@@ -34,6 +35,11 @@ If anything is missing, it lists the packages and asks before using `apt-get`.
 It never installs packages without an interactive confirmation or the explicit
 `--install-dependencies` option. Other Linux distributions receive a clear
 manual-installation message.
+
+Use `--jobs N` to limit the number of concurrent compiler processes. This is
+useful on laptops where an unrestricted parallel build can exhaust memory and
+cause VS Code or other applications to close. The same value can be supplied
+through the `BUILD_JOBS` environment variable.
 
 The script detects vcpkg through `VCPKG_ROOT` or the `vcpkg` executable,
 selects the repository's architecture-specific Linux triplet, configures
@@ -100,4 +106,3 @@ The pull-request workflow builds and packages six targets:
 
 A successful CI build confirms compilation and packaging. It does not replace
 interactive testing of audio devices, window behavior, or platform appearance.
-
