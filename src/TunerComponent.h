@@ -25,6 +25,8 @@ class TunerComponent final : public juce::Component,
     void setTheme(Theme theme);
     void resetToDefaults();
     void applyPreset(AppDefaults::Preset preset);
+    void applySettings(const AppDefaults::TunerSettings& settings);
+    [[nodiscard]] AppDefaults::TunerSettings settings() const;
 
   private:
     enum class DisplayMode

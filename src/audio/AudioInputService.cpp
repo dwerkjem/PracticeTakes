@@ -58,6 +58,20 @@ void AudioInputService::resetToDefaultInput()
     publishState();
 }
 
+void AudioInputService::applySavedDeviceState(const juce::XmlElement& state)
+{
+    recovering = true;
+    manager.closeAudioDevice();
+    juce::ignoreUnused(manager.initialise(2, 0, &state, true));
+    recovering = false;
+    publishState();
+}
+
+std::unique_ptr<juce::XmlElement> AudioInputService::createDeviceState() const
+{
+    return manager.createStateXml();
+}
+
 void AudioInputService::audioDeviceIOCallbackWithContext(const float* const* inputChannelData,
                                                          int numInputChannels,
                                                          float* const* outputChannelData,

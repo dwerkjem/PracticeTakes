@@ -21,6 +21,18 @@ constexpr int spectrogramMenuItemId = 2;
 constexpr int lightThemeId = static_cast<int>(Theme::light);
 constexpr int darkThemeId = static_cast<int>(Theme::dark);
 
+constexpr auto settingsSchemaKey = "settings.schema";
+constexpr auto themeKey = "global.theme";
+constexpr auto audioStateKey = "audio.deviceState";
+constexpr auto tunerEasingKey = "tuner.easing";
+constexpr auto tunerAveragingKey = "tuner.averaging";
+constexpr auto tunerThresholdKey = "tuner.noteSwitch";
+constexpr auto tunerDropoutKey = "tuner.dropout";
+constexpr auto tunerDurationKey = "tuner.graphDuration";
+constexpr auto tunerBoundsKey = "layout.tuner";
+constexpr auto spectrogramBoundsKey = "layout.spectrogram";
+constexpr auto settingsBoundsKey = "layout.settings";
+
 // Window close handlers delete their owning unique_ptr. Running the callback
 // asynchronously prevents a window from deleting itself inside its own close
 // button callback.
@@ -103,8 +115,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         Content(juce::AudioDeviceManager& audioDeviceManager, Theme initialTheme,
                 std::function<void(Theme)> appearanceHandler,
                 std::function<void(AppDefaults::Preset)> presetHandler,
-                std::function<void()> resetToolHandler, std::function<void()> resetAudioHandler,
-                std::function<void()> resetLayoutHandler, std::function<void()> resetAllHandler)
+                std::function<void()> saveHandler, std::function<void()> resetToolHandler,
+                std::function<void()> resetAudioHandler, std::function<void()> resetLayoutHandler,
+                std::function<void()> resetAllHandler)
             : deviceSelector(audioDeviceManager, 1, 2, 0, 0, false, false, false, true),
               onAppearanceChanged(std::move(appearanceHandler)), onPreset(std::move(presetHandler))
         {
@@ -141,6 +154,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             addAndMakeVisible(presetBox);
 
             configureHeading(resetHeading, "Reset");
+            saveButton.setButtonText("Save settings");
+            saveButton.onClick = std::move(saveHandler);
+            addAndMakeVisible(saveButton);
             configureResetButton(resetToolButton, "Current tool", std::move(resetToolHandler));
             configureResetButton(resetAudioButton, "Audio", std::move(resetAudioHandler));
             configureResetButton(resetLayoutButton, "Layout", std::move(resetLayoutHandler));
@@ -166,7 +182,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             bounds.removeFromTop(24);
             audioHeading.setBounds(bounds.removeFromTop(30));
             bounds.removeFromTop(8);
-            auto resetArea = bounds.removeFromBottom(144);
+            auto resetArea = bounds.removeFromBottom(186);
             auto presetArea = bounds.removeFromBottom(92);
             deviceSelector.setBounds(bounds);
 
@@ -176,6 +192,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
             resetHeading.setBounds(resetArea.removeFromTop(30));
             resetArea.removeFromTop(6);
+            saveButton.setBounds(resetArea.removeFromTop(34).removeFromLeft(180));
+            resetArea.removeFromTop(8);
             auto firstRow = resetArea.removeFromTop(34);
             resetToolButton.setBounds(firstRow.removeFromLeft(150));
             firstRow.removeFromLeft(8);
@@ -230,6 +248,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         juce::Label presetsHeading;
         juce::ComboBox presetBox;
         juce::Label resetHeading;
+        juce::TextButton saveButton;
         juce::TextButton resetToolButton;
         juce::TextButton resetAudioButton;
         juce::TextButton resetLayoutButton;
@@ -241,7 +260,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
     SettingsWindow(juce::AudioDeviceManager& audioDeviceManager, Theme initialTheme,
                    std::function<void(Theme)> appearanceHandler,
                    std::function<void(AppDefaults::Preset)> presetHandler,
-                   std::function<void()> resetToolHandler, std::function<void()> resetAudioHandler,
+                   std::function<void()> saveHandler, std::function<void()> resetToolHandler,
+                   std::function<void()> resetAudioHandler,
                    std::function<void()> resetLayoutHandler, std::function<void()> resetAllHandler,
                    std::function<void()> closeHandler)
         : DocumentWindow("Settings", juce::Colours::darkgrey, juce::DocumentWindow::allButtons),
@@ -249,9 +269,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
     {
         setUsingNativeTitleBar(true);
         setContentOwned(new Content(audioDeviceManager, initialTheme, std::move(appearanceHandler),
-                                    std::move(presetHandler), std::move(resetToolHandler),
-                                    std::move(resetAudioHandler), std::move(resetLayoutHandler),
-                                    std::move(resetAllHandler)),
+                                    std::move(presetHandler), std::move(saveHandler),
+                                    std::move(resetToolHandler), std::move(resetAudioHandler),
+                                    std::move(resetLayoutHandler), std::move(resetAllHandler)),
                         true);
         setResizable(true, true);
         setResizeLimits(620, 500, 1300, 1000);
@@ -400,6 +420,15 @@ MainComponent::MainComponent()
     setOpaque(true);
     audioInputService.addChangeListener(this);
 
+    juce::PropertiesFile::Options storageOptions;
+    storageOptions.applicationName = "PracticeTakes";
+    storageOptions.filenameSuffix = ".settings";
+    storageOptions.folderName = "PracticeTakes";
+    storageOptions.osxLibrarySubFolder = "Application Support";
+    storageOptions.commonToAllUsers = false;
+    applicationProperties.setStorageParameters(storageOptions);
+    loadSettings();
+
     configureTopButtons();
     createMicrophoneWarning();
     applyAppearance();
@@ -416,6 +445,8 @@ MainComponent::~MainComponent()
     spectrogramWindow.reset();
     tunerWindow.reset();
     microphoneWarning.reset();
+
+    applicationProperties.closeFiles();
 
     setLookAndFeel(nullptr);
 }
@@ -536,6 +567,10 @@ void MainComponent::openTool(ToolType tool)
     window = std::make_unique<ToolWindow>(toolName(tool), createToolComponent(tool),
                                           preferredToolWindowSize(tool), closeHandler);
 
+    const auto savedBounds = tool == ToolType::tuner ? savedTunerBounds : savedSpectrogramBounds;
+    if (!savedBounds.isEmpty())
+        window->setBounds(savedBounds);
+
     const auto palette = appPaletteFor(currentTheme);
     window->applyAppearance(&appLookAndFeel, palette.background, currentTheme);
     window->toFront(true);
@@ -551,6 +586,7 @@ std::unique_ptr<juce::Component> MainComponent::createToolComponent(ToolType too
     if (tool == ToolType::tuner)
     {
         auto tuner = std::make_unique<TunerComponent>(audioInputService);
+        tuner->applySettings(savedTunerSettings);
         tuner->setTheme(currentTheme);
         return tuner;
     }
@@ -602,6 +638,11 @@ void MainComponent::showSettings()
         [safeThis]
         {
             if (safeThis != nullptr)
+                safeThis->saveSettings();
+        },
+        [safeThis]
+        {
+            if (safeThis != nullptr)
                 safeThis->resetCurrentTool();
         },
         [safeThis]
@@ -629,6 +670,8 @@ void MainComponent::showSettings()
 
     const auto palette = appPaletteFor(currentTheme);
     settingsWindow->applyAppearance(&appLookAndFeel, palette.background, currentTheme);
+    if (!savedSettingsBounds.isEmpty())
+        settingsWindow->setBounds(savedSettingsBounds);
     settingsWindow->toFront(true);
 }
 
@@ -684,6 +727,63 @@ void MainComponent::applyPreset(AppDefaults::Preset preset)
 
     if (auto* tuner = dynamic_cast<TunerComponent*>(tunerWindow->getContentComponent()))
         tuner->applyPreset(preset);
+}
+
+void MainComponent::saveSettings()
+{
+    auto* settingsFile = applicationProperties.getUserSettings();
+    if (settingsFile == nullptr)
+        return;
+
+    if (tunerWindow != nullptr)
+        if (auto* tuner = dynamic_cast<TunerComponent*>(tunerWindow->getContentComponent()))
+            savedTunerSettings = tuner->settings();
+
+    settingsFile->setValue(settingsSchemaKey, AppDefaults::schemaVersion);
+    settingsFile->setValue(themeKey, static_cast<int>(currentTheme));
+    settingsFile->setValue(tunerEasingKey, savedTunerSettings.easing);
+    settingsFile->setValue(tunerAveragingKey, savedTunerSettings.averaging);
+    settingsFile->setValue(tunerThresholdKey, savedTunerSettings.noteSwitchSemitones);
+    settingsFile->setValue(tunerDropoutKey, savedTunerSettings.dropoutFrames);
+    settingsFile->setValue(tunerDurationKey, savedTunerSettings.graphDurationSeconds);
+
+    if (const auto audioState = audioInputService.createDeviceState())
+        settingsFile->setValue(audioStateKey, audioState->toString());
+
+    if (tunerWindow != nullptr)
+        settingsFile->setValue(tunerBoundsKey, tunerWindow->getBounds().toString());
+    if (spectrogramWindow != nullptr)
+        settingsFile->setValue(spectrogramBoundsKey, spectrogramWindow->getBounds().toString());
+    if (settingsWindow != nullptr)
+        settingsFile->setValue(settingsBoundsKey, settingsWindow->getBounds().toString());
+
+    settingsFile->saveIfNeeded();
+}
+
+void MainComponent::loadSettings()
+{
+    auto* settingsFile = applicationProperties.getUserSettings();
+    if (settingsFile == nullptr ||
+        settingsFile->getIntValue(settingsSchemaKey, 0) > AppDefaults::schemaVersion)
+        return;
+
+    currentTheme = static_cast<Theme>(
+        settingsFile->getIntValue(themeKey, static_cast<int>(AppDefaults::theme)));
+    savedTunerSettings = {
+        settingsFile->getDoubleValue(tunerEasingKey, AppDefaults::Tuner::easing),
+        settingsFile->getDoubleValue(tunerAveragingKey, AppDefaults::Tuner::averaging),
+        settingsFile->getDoubleValue(tunerThresholdKey, AppDefaults::Tuner::noteSwitchSemitones),
+        settingsFile->getDoubleValue(tunerDropoutKey, AppDefaults::Tuner::dropoutFrames),
+        settingsFile->getDoubleValue(tunerDurationKey, AppDefaults::Tuner::graphDurationSeconds)};
+
+    if (const auto xml = juce::parseXML(settingsFile->getValue(audioStateKey)); xml != nullptr)
+        audioInputService.applySavedDeviceState(*xml);
+
+    savedTunerBounds = juce::Rectangle<int>::fromString(settingsFile->getValue(tunerBoundsKey));
+    savedSpectrogramBounds =
+        juce::Rectangle<int>::fromString(settingsFile->getValue(spectrogramBoundsKey));
+    savedSettingsBounds =
+        juce::Rectangle<int>::fromString(settingsFile->getValue(settingsBoundsKey));
 }
 
 void MainComponent::closeSettings()

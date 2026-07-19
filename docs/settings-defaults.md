@@ -4,6 +4,11 @@ Settings schema version: **1**. Presets are identified by stable names and
 resolved through the current schema, so future preset revisions do not change
 or corrupt previously stored explicit values.
 
+Changes remain session-only until **Save settings** is pressed. Saving records
+the theme, selected audio-device setup, tuner controls, and the bounds of open
+tool and Settings windows in JUCE's platform-appropriate per-user settings
+directory. Those values are restored on the next launch.
+
 ## Global defaults
 
 - Theme: Light

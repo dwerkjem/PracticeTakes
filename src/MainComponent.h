@@ -45,6 +45,8 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     void resetLayout();
     void resetAll();
     void applyPreset(AppDefaults::Preset preset);
+    void saveSettings();
+    void loadSettings();
 
     [[nodiscard]] std::unique_ptr<juce::Component> createToolComponent(ToolType tool);
     [[nodiscard]] juce::String toolName(ToolType tool) const;
@@ -66,6 +68,7 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
 
     // One audio device manager is shared by every open analysis tool.
     AudioInputService audioInputService;
+    juce::ApplicationProperties applicationProperties;
     juce::LookAndFeel_V4 appLookAndFeel;
 
     juce::TextButton fileButton{"File"};
@@ -80,6 +83,10 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     juce::Rectangle<int> menuBarBounds;
     Theme currentTheme = Theme::light;
     ToolType currentTool = ToolType::tuner;
+    AppDefaults::TunerSettings savedTunerSettings = AppDefaults::tunerDefaults();
+    juce::Rectangle<int> savedTunerBounds;
+    juce::Rectangle<int> savedSpectrogramBounds;
+    juce::Rectangle<int> savedSettingsBounds;
     bool isMicrophoneWarningDismissed = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)

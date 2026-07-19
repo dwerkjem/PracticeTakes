@@ -115,7 +115,11 @@ void TunerComponent::resetToDefaults()
 
 void TunerComponent::applyPreset(AppDefaults::Preset preset)
 {
-    const auto values = AppDefaults::tunerPreset(preset);
+    applySettings(AppDefaults::tunerPreset(preset));
+}
+
+void TunerComponent::applySettings(const AppDefaults::TunerSettings& values)
+{
     easingSlider.setValue(values.easing);
     averagingSlider.setValue(values.averaging);
     thresholdSlider.setValue(values.noteSwitchSemitones);
@@ -124,6 +128,12 @@ void TunerComponent::applyPreset(AppDefaults::Preset preset)
     graphHistory.clear();
     resetPitchTracking();
     repaint();
+}
+
+AppDefaults::TunerSettings TunerComponent::settings() const
+{
+    return {easingSlider.getValue(), averagingSlider.getValue(), thresholdSlider.getValue(),
+            dropoutSlider.getValue(), durationSlider.getValue()};
 }
 
 //==============================================================================
