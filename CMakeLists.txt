@@ -86,6 +86,8 @@ endif()
 target_sources(PracticeTakes
     PRIVATE
         src/main.cpp
+        src/audio/AudioInputService.cpp
+        src/AudioInputService.h
         src/app/MainComponent.cpp
         src/MainComponent.h
         src/spectrogram/SpectrogramComponent.cpp

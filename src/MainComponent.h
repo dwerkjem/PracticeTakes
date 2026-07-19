@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 
+#include "AudioInputService.h"
 #include "Theme.h"
 
 #include <memory>
@@ -30,7 +31,6 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
 
     // Initial setup ---------------------------------------------------------
     void configureTopButtons();
-    void initialiseAudioDevice();
     void createMicrophoneWarning();
 
     // Tool and settings windows --------------------------------------------
@@ -59,7 +59,7 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     void dismissMicrophoneWarning();
 
     // One audio device manager is shared by every open analysis tool.
-    juce::AudioDeviceManager audioDeviceManager;
+    AudioInputService audioInputService;
     juce::LookAndFeel_V4 appLookAndFeel;
 
     juce::TextButton fileButton{"File"};
