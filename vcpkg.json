@@ -3,6 +3,13 @@
   "version-string": "0.2.7",
   "dependencies": [
     "alsa",
+    {
+      "name": "curl",
+      "default-features": false,
+      "features": [
+        "ssl"
+      ]
+    },
     "fontconfig",
     "freetype",
     "jack2",
