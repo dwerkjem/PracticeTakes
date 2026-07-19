@@ -1,0 +1,11 @@
+{
+  "name": "@practice-takes/services",
+  "private": true,
+  "workspaces": [
+    "feedback-intake"
+  ],
+  "scripts": {
+    "check": "npm run check --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  }
+}

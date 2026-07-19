@@ -52,6 +52,21 @@ compile_commands.json
 *.bak
 *.swp
 
+# JavaScript service dependencies and local Cloudflare state
+node_modules/
+.wrangler/
+services/feedback-intake/wrangler.jsonc
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env.*
+!.env.example
+.npm/
+.eslintcache
+*.tsbuildinfo
+.vitest/
+coverage/
+
 # vcpkg
 /vcpkg_installed/
 
