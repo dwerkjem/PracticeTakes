@@ -324,11 +324,10 @@ class MainComponent::MicrophoneWarning final : public juce::Component
 MainComponent::MainComponent()
 {
     setOpaque(true);
+    audioInputService.addChangeListener(this);
 
     configureTopButtons();
     createMicrophoneWarning();
-    initialiseAudioDevice();
-
     applyAppearance();
     updateMicrophoneWarning();
     setSize(1200, 760);
@@ -336,17 +335,15 @@ MainComponent::MainComponent()
 
 MainComponent::~MainComponent()
 {
-    audioDeviceManager.removeChangeListener(this);
-
-    // Tool components unregister their audio callbacks in their destructors,
-    // so close the windows before shutting down the shared device.
+    audioInputService.removeChangeListener(this);
+    // Tool components unregister from the service in their destructors, so
+    // close the windows before the service is destroyed.
     settingsWindow.reset();
     spectrogramWindow.reset();
     tunerWindow.reset();
     microphoneWarning.reset();
 
     setLookAndFeel(nullptr);
-    audioDeviceManager.closeAudioDevice();
 }
 
 void MainComponent::configureTopButtons()
@@ -369,17 +366,6 @@ void MainComponent::createMicrophoneWarning()
 
     // Start hidden; updateMicrophoneWarning decides whether it is needed.
     addChildComponent(*microphoneWarning);
-}
-
-void MainComponent::initialiseAudioDevice()
-{
-    // Request up to two input channels and no outputs. Starting from an empty
-    // device state prevents JUCE from silently selecting an unwanted output.
-    juce::XmlElement noDeviceState{"DEVICESETUP"};
-    const auto error = audioDeviceManager.initialise(2, 0, &noDeviceState, false);
-    juce::ignoreUnused(error);
-
-    audioDeviceManager.addChangeListener(this);
 }
 
 void MainComponent::paint(juce::Graphics& graphics)
@@ -489,12 +475,12 @@ std::unique_ptr<juce::Component> MainComponent::createToolComponent(ToolType too
 {
     if (tool == ToolType::tuner)
     {
-        auto tuner = std::make_unique<TunerComponent>(audioDeviceManager);
+        auto tuner = std::make_unique<TunerComponent>(audioInputService);
         tuner->setTheme(currentTheme);
         return tuner;
     }
 
-    auto spectrogram = std::make_unique<SpectrogramComponent>(audioDeviceManager);
+    auto spectrogram = std::make_unique<SpectrogramComponent>(audioInputService);
     spectrogram->setTheme(currentTheme);
     return spectrogram;
 }
@@ -525,7 +511,7 @@ void MainComponent::showSettings()
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     settingsWindow = std::make_unique<SettingsWindow>(
-        audioDeviceManager, currentTheme,
+        audioInputService.deviceManager(), currentTheme,
         [safeThis](Theme theme)
         {
             if (safeThis != nullptr)
@@ -653,20 +639,15 @@ void MainComponent::applyAppearanceToOpenWindows()
     }
 }
 
-void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
-{
-    if (source == &audioDeviceManager)
-    {
-        updateMicrophoneWarning();
-    }
-}
-
 bool MainComponent::hasUsableMicrophone() const
 {
-    auto* device = audioDeviceManager.getCurrentAudioDevice();
+    return audioInputService.hasUsableInput();
+}
 
-    return device != nullptr && device->isOpen() &&
-           device->getActiveInputChannels().countNumberOfSetBits() > 0;
+void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
+{
+    if (source == &audioInputService)
+        updateMicrophoneWarning();
 }
 
 void MainComponent::updateMicrophoneWarning()

@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 
+#include "AudioInputService.h"
 #include "Theme.h"
 
 #include <array>
@@ -11,12 +12,11 @@
 // TunerComponent captures microphone samples, estimates their fundamental
 // frequency, smooths the result, and renders it in one of three display modes.
 class TunerComponent final : public juce::Component,
-                             private juce::AudioIODeviceCallback,
-                             private juce::ChangeListener,
+                             private AudioInputService::Listener,
                              private juce::Timer
 {
   public:
-    explicit TunerComponent(juce::AudioDeviceManager& sharedAudioDeviceManager);
+    explicit TunerComponent(AudioInputService& sharedAudioInputService);
     ~TunerComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -39,19 +39,10 @@ class TunerComponent final : public juce::Component,
     static constexpr double referenceFrequencyHz = 440.0;
 
     // Audio capture ---------------------------------------------------------
-    void
-    audioDeviceIOCallbackWithContext(const float* const* inputChannelData, int numInputChannels,
-                                     float* const* outputChannelData, int numOutputChannels,
-                                     int numSamples,
-                                     const juce::AudioIODeviceCallbackContext& context) override;
-    void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
-    void audioDeviceStopped() override;
-    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
-
-    [[nodiscard]] bool hasUsableInputDevice() const;
-    void updateAudioDeviceStatus();
-    void attachAudioCallbackIfPossible();
-    void detachAudioCallback();
+    void audioInputReceived(const float* inputSamples, int numSamples) override;
+    void audioInputAboutToStart(double sampleRate) override;
+    void audioInputStopped() override;
+    void audioInputStateChanged(bool isAvailable) override;
     void writeInputSamplesToFifo(const float* inputSamples, int numSamples);
     void drainAudioFifo();
 
@@ -86,7 +77,7 @@ class TunerComponent final : public juce::Component,
     void drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawSelectedDisplay(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
 
-    juce::AudioDeviceManager& audioDeviceManager;
+    AudioInputService& audioInputService;
 
     juce::Label displayModeLabel;
     juce::ComboBox displayModeBox;
@@ -128,7 +119,6 @@ class TunerComponent final : public juce::Component,
 
     bool hasLockedMidiNote = false;
     bool hasSignal = false;
-    bool isAudioCallbackAttached = false;
     bool areAdvancedSettingsExpanded = false;
     Theme currentTheme = Theme::light;
 

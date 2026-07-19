@@ -8,35 +8,23 @@ namespace
 {
 constexpr std::array<double, 5> frequencyGridLines{100.0, 500.0, 1000.0, 5000.0, 10000.0};
 
-void clearOutputChannels(float* const* outputChannelData, int numOutputChannels, int numSamples)
-{
-    for (int channel = 0; channel < numOutputChannels; ++channel)
-    {
-        if (outputChannelData[channel] != nullptr)
-        {
-            juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
-        }
-    }
-}
 } // namespace
 
 //==============================================================================
-SpectrogramComponent::SpectrogramComponent(juce::AudioDeviceManager& sharedAudioDeviceManager)
-    : audioDeviceManager(sharedAudioDeviceManager)
+SpectrogramComponent::SpectrogramComponent(AudioInputService& sharedAudioInputService)
+    : audioInputService(sharedAudioInputService)
 {
     setOpaque(true);
     spectrogramImage.clear(spectrogramImage.getBounds(), backgroundColour());
 
-    audioDeviceManager.addChangeListener(this);
-    updateAudioDeviceStatus();
+    audioInputService.addListener(this);
     startTimerHz(refreshRateHz);
 }
 
 SpectrogramComponent::~SpectrogramComponent()
 {
     stopTimer();
-    audioDeviceManager.removeChangeListener(this);
-    detachAudioCallback();
+    audioInputService.removeListener(this);
 }
 
 //==============================================================================
@@ -80,20 +68,9 @@ juce::Colour SpectrogramComponent::outlineColour() const
 //==============================================================================
 // Audio capture
 
-void SpectrogramComponent::audioDeviceIOCallbackWithContext(
-    const float* const* inputChannelData, int numInputChannels, float* const* outputChannelData,
-    int numOutputChannels, int numSamples, const juce::AudioIODeviceCallbackContext&)
+void SpectrogramComponent::audioInputReceived(const float* inputSamples, int numSamples)
 {
-    // The tool is input-only. Clearing output avoids accidental feedback if an
-    // output buffer is supplied by a future audio-device configuration.
-    clearOutputChannels(outputChannelData, numOutputChannels, numSamples);
-
-    if (numInputChannels <= 0 || inputChannelData[0] == nullptr)
-    {
-        return;
-    }
-
-    writeInputSamplesToFifo(inputChannelData[0], numSamples);
+    writeInputSamplesToFifo(inputSamples, numSamples);
 }
 
 void SpectrogramComponent::writeInputSamplesToFifo(const float* inputSamples, int numSamples)
@@ -106,65 +83,25 @@ void SpectrogramComponent::writeInputSamplesToFifo(const float* inputSamples, in
                 fifoBuffer.begin() + writeScope.startIndex2);
 }
 
-void SpectrogramComponent::audioDeviceAboutToStart(juce::AudioIODevice* device)
+void SpectrogramComponent::audioInputAboutToStart(double sampleRate)
 {
-    currentSampleRate.store(device != nullptr ? device->getCurrentSampleRate() : 44100.0);
+    currentSampleRate.store(sampleRate);
     audioFifo.reset();
 }
 
-void SpectrogramComponent::audioDeviceStopped()
+void SpectrogramComponent::audioInputStopped()
 {
     audioFifo.reset();
 }
 
-void SpectrogramComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
+void SpectrogramComponent::audioInputStateChanged(bool isAvailable)
 {
-    if (source == &audioDeviceManager)
-    {
-        updateAudioDeviceStatus();
-    }
-}
-
-bool SpectrogramComponent::hasUsableInputDevice() const
-{
-    auto* device = audioDeviceManager.getCurrentAudioDevice();
-
-    return device != nullptr && device->isOpen() &&
-           device->getActiveInputChannels().countNumberOfSetBits() > 0;
-}
-
-void SpectrogramComponent::attachAudioCallbackIfPossible()
-{
-    if (isAudioCallbackAttached || !hasUsableInputDevice())
-    {
-        return;
-    }
-
-    audioDeviceManager.addAudioCallback(this);
-    isAudioCallbackAttached = true;
-}
-
-void SpectrogramComponent::detachAudioCallback()
-{
-    if (!isAudioCallbackAttached)
-    {
-        return;
-    }
-
-    audioDeviceManager.removeAudioCallback(this);
-    isAudioCallbackAttached = false;
-}
-
-void SpectrogramComponent::updateAudioDeviceStatus()
-{
-    if (hasUsableInputDevice())
+    if (isAvailable)
     {
         audioErrorMessage.clear();
-        attachAudioCallbackIfPossible();
     }
     else
     {
-        detachAudioCallback();
         audioErrorMessage = "No microphone input is available.";
     }
 

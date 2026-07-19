@@ -26,21 +26,11 @@ constexpr std::array<const char*, 12> noteNames{"C",  "C#", "D",  "D#", "E",  "F
     return juce::String(noteNames[static_cast<std::size_t>(noteIndex)]) + juce::String(octave);
 }
 
-void clearOutputChannels(float* const* outputChannelData, int numOutputChannels, int numSamples)
-{
-    for (int channel = 0; channel < numOutputChannels; ++channel)
-    {
-        if (outputChannelData[channel] != nullptr)
-        {
-            juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
-        }
-    }
-}
 } // namespace
 
 //==============================================================================
-TunerComponent::TunerComponent(juce::AudioDeviceManager& sharedAudioDeviceManager)
-    : audioDeviceManager(sharedAudioDeviceManager)
+TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService)
+    : audioInputService(sharedAudioInputService)
 {
     setOpaque(true);
 
@@ -95,16 +85,14 @@ TunerComponent::TunerComponent(juce::AudioDeviceManager& sharedAudioDeviceManage
     applyThemeToControls();
     updateAdvancedSettingsVisibility();
 
-    audioDeviceManager.addChangeListener(this);
-    updateAudioDeviceStatus();
+    audioInputService.addListener(this);
     startTimerHz(analysisRefreshRateHz);
 }
 
 TunerComponent::~TunerComponent()
 {
     stopTimer();
-    audioDeviceManager.removeChangeListener(this);
-    detachAudioCallback();
+    audioInputService.removeListener(this);
 }
 
 //==============================================================================
@@ -227,22 +215,9 @@ juce::String TunerComponent::statusText() const
 //==============================================================================
 // Audio capture
 
-void TunerComponent::audioDeviceIOCallbackWithContext(const float* const* inputChannelData,
-                                                      int numInputChannels,
-                                                      float* const* outputChannelData,
-                                                      int numOutputChannels, int numSamples,
-                                                      const juce::AudioIODeviceCallbackContext&)
+void TunerComponent::audioInputReceived(const float* inputSamples, int numSamples)
 {
-    // Practice Takes currently analyzes input only. Always clear any output
-    // buffers supplied by the device manager to avoid accidental feedback.
-    clearOutputChannels(outputChannelData, numOutputChannels, numSamples);
-
-    if (numInputChannels <= 0 || inputChannelData[0] == nullptr)
-    {
-        return;
-    }
-
-    writeInputSamplesToFifo(inputChannelData[0], numSamples);
+    writeInputSamplesToFifo(inputSamples, numSamples);
 }
 
 void TunerComponent::writeInputSamplesToFifo(const float* inputSamples, int numSamples)
@@ -255,66 +230,26 @@ void TunerComponent::writeInputSamplesToFifo(const float* inputSamples, int numS
                 fifoBuffer.begin() + writeScope.startIndex2);
 }
 
-void TunerComponent::audioDeviceAboutToStart(juce::AudioIODevice* device)
+void TunerComponent::audioInputAboutToStart(double sampleRate)
 {
-    currentSampleRate.store(device != nullptr ? device->getCurrentSampleRate() : 44100.0);
+    currentSampleRate.store(sampleRate);
     audioFifo.reset();
     analysisBuffer.fill(0.0f);
 }
 
-void TunerComponent::audioDeviceStopped()
+void TunerComponent::audioInputStopped()
 {
     audioFifo.reset();
 }
 
-void TunerComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
+void TunerComponent::audioInputStateChanged(bool isAvailable)
 {
-    if (source == &audioDeviceManager)
-    {
-        updateAudioDeviceStatus();
-    }
-}
-
-bool TunerComponent::hasUsableInputDevice() const
-{
-    auto* device = audioDeviceManager.getCurrentAudioDevice();
-
-    return device != nullptr && device->isOpen() &&
-           device->getActiveInputChannels().countNumberOfSetBits() > 0;
-}
-
-void TunerComponent::attachAudioCallbackIfPossible()
-{
-    if (isAudioCallbackAttached || !hasUsableInputDevice())
-    {
-        return;
-    }
-
-    audioDeviceManager.addAudioCallback(this);
-    isAudioCallbackAttached = true;
-}
-
-void TunerComponent::detachAudioCallback()
-{
-    if (!isAudioCallbackAttached)
-    {
-        return;
-    }
-
-    audioDeviceManager.removeAudioCallback(this);
-    isAudioCallbackAttached = false;
-}
-
-void TunerComponent::updateAudioDeviceStatus()
-{
-    if (hasUsableInputDevice())
+    if (isAvailable)
     {
         audioErrorMessage.clear();
-        attachAudioCallbackIfPossible();
     }
     else
     {
-        detachAudioCallback();
         audioErrorMessage = "No microphone input is available.";
         resetPitchTracking();
     }
