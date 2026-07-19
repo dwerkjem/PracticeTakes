@@ -6,6 +6,7 @@ PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_TYPE="${BUILD_TYPE:-Debug}"
 BUILD_DIR="${BUILD_DIR:-${PROJECT_ROOT}/build}"
 TARGET_NAME="${TARGET_NAME:-PracticeTakes}"
+BUILD_JOBS="${BUILD_JOBS:-}"
 BUILD_ONLY=false
 CLEAN=false
 INSTALL_DEPENDENCIES=false
@@ -25,6 +26,14 @@ while (( $# > 0 )); do
             INSTALL_DEPENDENCIES=true
             shift
             ;;
+        --jobs)
+            if (( $# < 2 )); then
+                printf 'Error: --jobs requires a positive integer.\n' >&2
+                exit 2
+            fi
+            BUILD_JOBS="$2"
+            shift 2
+            ;;
         --)
             shift
             program_args+=("$@")
@@ -36,6 +45,11 @@ while (( $# > 0 )); do
             ;;
     esac
 done
+
+if [[ -n "$BUILD_JOBS" && ! "$BUILD_JOBS" =~ ^[1-9][0-9]*$ ]]; then
+    printf 'Error: --jobs must be a positive integer, received: %s\n' "$BUILD_JOBS" >&2
+    exit 2
+fi
 
 dependency_check_args=()
 if [[ "$INSTALL_DEPENDENCIES" == true ]]; then
@@ -178,8 +192,21 @@ if [[ -n "${vcpkg_prefix:-}" && "$(uname -s)" == "Linux" ]]; then
     done
 fi
 
-printf 'Building %s...\n' "$TARGET_NAME"
-cmake --build "$BUILD_DIR" --config "$BUILD_TYPE" --target "$TARGET_NAME" --parallel
+build_args=(
+    --build "$BUILD_DIR"
+    --config "$BUILD_TYPE"
+    --target "$TARGET_NAME"
+    --parallel
+)
+
+if [[ -n "$BUILD_JOBS" ]]; then
+    build_args+=("$BUILD_JOBS")
+    printf 'Building %s with %s parallel job(s)...\n' "$TARGET_NAME" "$BUILD_JOBS"
+else
+    printf 'Building %s...\n' "$TARGET_NAME"
+fi
+
+cmake "${build_args[@]}"
 
 if [[ "$BUILD_ONLY" == true ]]; then
     exit 0
