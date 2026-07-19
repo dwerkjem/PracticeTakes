@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://practicetakes.app/contracts/feedback/v1.schema.json",
+  "title": "Practice Takes feedback protocol v1",
+  "$defs": {
+    "client": {
+      "type": "object",
+      "required": ["schemaVersion", "appVersion", "installationId"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "appVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
+        },
+        "installationId": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 128,
+          "pattern": "^[0-9A-Za-z_-]+$"
+        }
+      }
+    },
+    "authorizationRequest": {
+      "allOf": [{ "$ref": "#/$defs/client" }],
+      "unevaluatedProperties": false
+    },
+    "feedbackRequest": {
+      "allOf": [
+        { "$ref": "#/$defs/client" },
+        {
+          "type": "object",
+          "required": ["authorization", "submittedAt", "category", "message"],
+          "properties": {
+            "authorization": { "type": "string", "maxLength": 2048 },
+            "submittedAt": { "type": "string", "format": "date-time" },
+            "category": { "enum": ["bug", "idea", "usability", "other"] },
+            "message": { "type": "string", "minLength": 3, "maxLength": 8000 },
+            "contactEmail": { "type": "string", "format": "email", "maxLength": 254 }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "receiptId"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "receiptId": { "type": "string", "format": "uuid" }
+      }
+    }
+  }
+}
