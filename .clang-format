@@ -1,0 +1,16 @@
+# Practice Takes C++ formatting rules.
+#
+# Keep this file intentionally conservative so it works across commonly
+# available clang-format versions on Windows, Linux, and macOS.
+BasedOnStyle: LLVM
+IndentWidth: 4
+ContinuationIndentWidth: 4
+ColumnLimit: 100
+BreakBeforeBraces: Allman
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+DerivePointerAlignment: false
+PointerAlignment: Left
+SortIncludes: true

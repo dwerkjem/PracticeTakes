@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_TYPE="${BUILD_TYPE:-Debug}"
 BUILD_DIR="${BUILD_DIR:-${PROJECT_ROOT}/build}"
 TARGET_NAME="${TARGET_NAME:-PracticeTakes}"
@@ -48,6 +48,25 @@ cmake_args=(
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 )
 
+# Fetch JUCE before adding vcpkg paths to the build environment. FetchContent's
+# nested Git process can otherwise load target libcurl builds on Linux. A
+# direct shallow clone is reliable and is passed back to FetchContent as an
+# explicit source override.
+juce_source_dir="$BUILD_DIR/_deps/juce-src"
+if [[ ! -f "$juce_source_dir/CMakeLists.txt" ]]; then
+    mkdir -p "$(dirname -- "$juce_source_dir")"
+    git_command="$(command -v git)"
+    if [[ "$(uname -s)" == "Linux" && -x /usr/bin/git ]]; then
+        git_command=/usr/bin/git
+    fi
+    "$git_command" clone --depth 1 --branch 8.0.12 \
+        https://github.com/juce-framework/JUCE.git "$juce_source_dir"
+fi
+
+cmake_args+=(
+    -DFETCHCONTENT_SOURCE_DIR_JUCE="$juce_source_dir"
+)
+
 vcpkg_toolchain=""
 
 if [[ -n "${VCPKG_ROOT:-}" && -f "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" ]]; then
@@ -83,7 +102,7 @@ if [[ -n "$vcpkg_toolchain" ]]; then
     if [[ -n "$vcpkg_triplet" ]]; then
         cmake_args+=(
             -DVCPKG_TARGET_TRIPLET="$vcpkg_triplet"
-            -DVCPKG_OVERLAY_TRIPLETS="$PROJECT_ROOT/triplets"
+            -DVCPKG_OVERLAY_TRIPLETS="$PROJECT_ROOT/cmake/triplets"
         )
 
         if [[ "$(uname -m)" == "x86_64" ]]; then
@@ -109,15 +128,28 @@ if [[ -n "$vcpkg_toolchain" ]]; then
         export CMAKE_LIBRARY_PATH="$vcpkg_prefix/lib${CMAKE_LIBRARY_PATH:+:$CMAKE_LIBRARY_PATH}"
         export CPATH="$vcpkg_prefix/include${CPATH:+:$CPATH}"
         export LIBRARY_PATH="$vcpkg_prefix/lib${LIBRARY_PATH:+:$LIBRARY_PATH}"
-        export LD_LIBRARY_PATH="$vcpkg_prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+        # Do not expose target libraries to host tools. In particular, making
+        # CMake/Git load vcpkg's libcurl can break FetchContent before the app
+        # is built. Apply this path only when launching Practice Takes below.
+        runtime_library_path="$vcpkg_prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
         # JUCE configures juceaide in a nested CMake project that does not
         # inherit the outer project's toolchain settings. Environment flags
         # are inherited by both CMake invocations and by Nix's compiler wrapper.
-        juce_platform_defines="-DJUCE_USE_XCURSOR=0 -DJUCE_WEB_BROWSER=0 -DJUCE_USE_CURL=0"
+        # Do not set JUCE_USE_CURL here: command-line CXXFLAGS appear after
+        # target definitions and would override the app's required value.
+        juce_platform_defines="-DJUCE_USE_XCURSOR=0 -DJUCE_WEB_BROWSER=0"
         export CFLAGS="-I$vcpkg_prefix/include ${CFLAGS:-}"
         export CXXFLAGS="-I$vcpkg_prefix/include $juce_platform_defines ${CXXFLAGS:-}"
         export LDFLAGS="-L$vcpkg_prefix/lib -Wl,-rpath,$vcpkg_prefix/lib ${LDFLAGS:-}"
+        # CMake only initializes these cache entries from the environment on
+        # the first configure. Set them explicitly so changed platform flags
+        # also take effect in an existing build directory.
+        cmake_args+=(
+            -DCMAKE_C_FLAGS="$CFLAGS"
+            -DCMAKE_CXX_FLAGS="$CXXFLAGS"
+            -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS"
+        )
     fi
 fi
 
@@ -163,6 +195,9 @@ fi
 for executable in "${executable_candidates[@]}"; do
     if [[ -x "$executable" ]]; then
         printf 'Running %s...\n' "$executable"
+        if [[ -n "${runtime_library_path:-}" ]]; then
+            export LD_LIBRARY_PATH="$runtime_library_path"
+        fi
         exec "$executable" "${program_args[@]}"
     fi
 done

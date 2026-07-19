@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "practice-takes-feedback-intake",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-18",
+  "workers_dev": false,
+  "vars": {
+    "MINIMUM_APP_VERSION": "0.2.6",
+    "AUTHORIZATIONS_PER_HOUR": "10",
+    "SUBMISSIONS_PER_HOUR": "5"
+  },
+  "d1_databases": [
+    {
+      "binding": "FEEDBACK_DB",
+      "database_name": "practice-takes-feedback",
+      "database_id": "replace-with-database-id",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

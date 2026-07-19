@@ -1,0 +1,21 @@
+{
+  "name": "@practice-takes/feedback-intake",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "db:migrate:local": "wrangler d1 migrations apply practice-takes-feedback --local",
+    "db:migrate:remote": "wrangler d1 migrations apply practice-takes-feedback --remote"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250718.0",
+    "@types/node": "20.17.30",
+    "typescript": "^5.9.2",
+    "vitest": "2.1.9",
+    "wrangler": "4.26.0"
+  }
+}

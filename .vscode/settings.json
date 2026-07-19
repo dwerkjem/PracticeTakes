@@ -1,16 +1,55 @@
 {
+    "cmake.configureOnOpen": true,
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.configureSettings": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+    },
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
+    "C_Cpp.default.cppStandard": "c++20",
+    "C_Cpp.errorSquiggles": "enabled",
+    "C_Cpp.formatting": "clangFormat",
+    "C_Cpp.clang_format_style": "file",
+    "[c]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools",
+        "editor.formatOnSave": true
+    },
+    "[cpp]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools",
+        "editor.formatOnSave": true
+    },
     "cSpell.words": [
+        "Allman",
         "alsa",
+        "bugprone",
+        "clang",
+        "clangtidy",
+        "codz",
+        "darkgrey",
+        "derekrneilson",
         "fontconfig",
         "freetype",
+        "Hann",
         "jlimit",
         "jmap",
+        "jmin",
         "juce",
+        "juceaide",
         "libx",
         "libxcomposite",
         "libxext",
         "libxinerama",
         "libxrandr",
-        "libxrender"
+        "libxrender",
+        "MINSIZEREL",
+        "neighbourhood",
+        "Neilson",
+        "nonmodal",
+        "nullptr",
+        "nyquist",
+        "practicetakes",
+        "RELWITHDEBINFO",
+        "STREQUAL",
+        "XCURSOR"
     ]
 }

@@ -1,0 +1,333 @@
+name: Build desktop packages
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Optional branch, tag, or commit to build
+        required: false
+        default: ""
+        type: string
+      version:
+        description: Optional temporary semantic version for release preparation
+        required: false
+        default: ""
+        type: string
+  workflow_call:
+    inputs:
+      ref:
+        description: Optional branch, tag, or commit to build
+        required: false
+        default: ""
+        type: string
+      version:
+        description: Optional temporary semantic version for release preparation
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  linux:
+    name: Linux ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Apply requested release version
+        if: ${{ inputs.version != '' }}
+        run: python3 scripts/version.py set "${{ inputs.version }}"
+
+      - name: Read application version
+        id: version
+        shell: bash
+        run: echo "version=$(python3 scripts/version.py current)" >> "${GITHUB_OUTPUT}"
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            build-essential \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libasound2-dev \
+            libcurl4-openssl-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libgl1-mesa-dev \
+            libgtk-3-dev \
+            libjack-jackd2-dev \
+            libx11-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Build
+        run: cmake --build build --config "${BUILD_TYPE}" --parallel
+
+      - name: Package
+        run: |
+          artifact_name="PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}"
+          package_dir="dist/${artifact_name}"
+          mkdir -p "${package_dir}"
+          install -m 0755 build/bin/PracticeTakes "${package_dir}/PracticeTakes"
+          cp README.md VERSION "${package_dir}/"
+          tar -C dist -czf "dist/${artifact_name}.tar.gz" "${artifact_name}"
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
+          path: dist/PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  windows:
+    name: Windows ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            arch: x64
+            cmake_arch: x64
+          - runner: windows-11-arm
+            arch: arm64
+            cmake_arch: ARM64
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Apply requested release version
+        if: ${{ inputs.version != '' }}
+        shell: pwsh
+        run: python scripts/version.py set "${{ inputs.version }}"
+
+      - name: Read application version
+        id: version
+        shell: pwsh
+        run: |
+          $version = (python scripts/version.py current).Trim()
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S . -B build `
+            -G "Visual Studio 17 2022" `
+            -A "${{ matrix.cmake_arch }}" `
+            -DCMAKE_CONFIGURATION_TYPES="${env:BUILD_TYPE}"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config "${env:BUILD_TYPE}" --parallel
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $binary = Get-ChildItem -Path build -Recurse -File -Filter PracticeTakes.exe |
+            Select-Object -First 1
+
+          if (-not $binary) {
+            throw "PracticeTakes.exe was not found after the build."
+          }
+
+          $artifactName = "PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}"
+          $packageDir = "dist/$artifactName"
+          New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
+          Copy-Item $binary.FullName "$packageDir/PracticeTakes.exe"
+          Copy-Item README.md, VERSION -Destination $packageDir
+          Compress-Archive -Path "$packageDir/*" `
+            -DestinationPath "dist/$artifactName.zip" `
+            -Force
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}
+          path: dist/PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}.zip
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  macos:
+    name: macOS ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            name: Intel x64
+            arch: x64
+            cmake_arch: x86_64
+          - runner: macos-15
+            name: Apple Silicon ARM64
+            arch: arm64
+            cmake_arch: arm64
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Apply requested release version
+        if: ${{ inputs.version != '' }}
+        run: python3 scripts/version.py set "${{ inputs.version }}"
+
+      - name: Read application version
+        id: version
+        shell: bash
+        run: echo "version=$(python3 scripts/version.py current)" >> "${GITHUB_OUTPUT}"
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
+            -DCMAKE_OSX_ARCHITECTURES="${{ matrix.cmake_arch }}" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
+
+      - name: Build
+        run: cmake --build build --config "${BUILD_TYPE}" --parallel
+
+      - name: Package
+        run: |
+          app_path="$(find build -type d -name 'PracticeTakes.app' -print -quit)"
+
+          if [[ -z "${app_path}" ]]; then
+            echo "PracticeTakes.app was not found after the build." >&2
+            exit 1
+          fi
+
+          artifact_name="PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}"
+          mkdir -p dist
+          codesign --force --deep --sign - "${app_path}"
+          ditto -c -k --sequesterRsrc --keepParent \
+            "${app_path}" \
+            "dist/${artifact_name}.zip"
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}
+          path: dist/PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}.zip
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  release-assets:
+    name: Assemble release artifact bundle
+    needs:
+      - linux
+      - windows
+      - macos
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out build source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Apply requested release version
+        if: ${{ inputs.version != '' }}
+        run: python3 scripts/version.py set "${{ inputs.version }}"
+
+      - name: Read build metadata
+        id: metadata
+        shell: bash
+        run: |
+          echo "version=$(python3 scripts/version.py current)" >> "${GITHUB_OUTPUT}"
+          echo "source_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+
+      - name: Download platform artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: PracticeTakes-${{ steps.metadata.outputs.version }}-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Verify and checksum release assets
+        shell: bash
+        run: |
+          version="${{ steps.metadata.outputs.version }}"
+
+          expected_files=(
+            "PracticeTakes-${version}-linux-x64.tar.gz"
+            "PracticeTakes-${version}-linux-arm64.tar.gz"
+            "PracticeTakes-${version}-windows-x64.zip"
+            "PracticeTakes-${version}-windows-arm64.zip"
+            "PracticeTakes-${version}-macos-x64.zip"
+            "PracticeTakes-${version}-macos-arm64.zip"
+          )
+
+          for file in "${expected_files[@]}"; do
+            if [[ ! -f "release-assets/${file}" ]]; then
+              echo "Missing expected build artifact: ${file}" >&2
+              exit 1
+            fi
+          done
+
+          actual_count="$(find release-assets -maxdepth 1 -type f -name 'PracticeTakes-*' | wc -l)"
+          if [[ "${actual_count}" -ne "${#expected_files[@]}" ]]; then
+            echo "Expected ${#expected_files[@]} platform packages, found ${actual_count}." >&2
+            find release-assets -maxdepth 1 -type f -print >&2
+            exit 1
+          fi
+
+          (
+            cd release-assets
+            sha256sum PracticeTakes-* > SHA256SUMS.txt
+          )
+
+          {
+            echo "Version: ${version}"
+            echo "Source SHA: ${{ steps.metadata.outputs.source_sha }}"
+            echo "Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } > release-assets/BUILD-METADATA.txt
+
+      - name: Upload release artifact bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: PracticeTakes-${{ steps.metadata.outputs.version }}-release-assets
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0

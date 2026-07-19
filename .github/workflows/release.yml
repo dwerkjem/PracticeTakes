@@ -1,0 +1,207 @@
+name: Create Practice Takes release
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('Create {0} release', inputs.bump) || format('Publish {0}', github.ref_name) }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Choose how VERSION should increase
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+  push:
+    tags:
+      - "v[0-9]*.[0-9]*.[0-9]*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: practice-takes-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Calculate release version
+    runs-on: ubuntu-24.04
+    outputs:
+      current_version: ${{ steps.version.outputs.current_version }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      source_sha: ${{ steps.version.outputs.source_sha }}
+
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.ref }}
+
+      - name: Calculate or validate version
+        id: version
+        shell: bash
+        run: |
+          current_version="$(python3 scripts/version.py current)"
+          source_sha="$(git rev-parse HEAD)"
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            version="$(python3 scripts/version.py next '${{ inputs.bump }}')"
+            tag="v${version}"
+
+            if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+              echo "Tag ${tag} already exists." >&2
+              exit 1
+            fi
+          else
+            tag="${GITHUB_REF_NAME}"
+
+            if [[ ! "${tag}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+              echo "Release tags must use vMAJOR.MINOR.PATCH, for example v1.2.0." >&2
+              exit 1
+            fi
+
+            version="${tag#v}"
+
+            if [[ "${current_version}" != "${version}" ]]; then
+              echo "Tag ${tag} does not match VERSION (${current_version})." >&2
+              exit 1
+            fi
+          fi
+
+          echo "current_version=${current_version}" >> "${GITHUB_OUTPUT}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          echo "source_sha=${source_sha}" >> "${GITHUB_OUTPUT}"
+
+          {
+            echo "### Release preparation"
+            echo "- Current version: ${current_version}"
+            echo "- Release version: ${version}"
+            echo "- Tag: ${tag}"
+            echo "- Source commit: ${source_sha}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  build:
+    name: Build release artifacts
+    needs: prepare
+    uses: ./.github/workflows/build-multiplatform.yml
+    with:
+      ref: ${{ needs.prepare.outputs.source_sha }}
+      version: ${{ needs.prepare.outputs.version }}
+
+  finalize-version:
+    name: Update VERSION and create tag
+    needs:
+      - prepare
+      - build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out main
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Commit version and tag
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        run: |
+          expected_sha="${{ needs.prepare.outputs.source_sha }}"
+          actual_sha="$(git rev-parse HEAD)"
+
+          if [[ "${actual_sha}" != "${expected_sha}" ]]; then
+            echo "main changed while the release artifacts were building." >&2
+            echo "Expected ${expected_sha}, but main is now ${actual_sha}. Rerun the release workflow." >&2
+            exit 1
+          fi
+
+          version="${{ needs.prepare.outputs.version }}"
+          tag="${{ needs.prepare.outputs.tag }}"
+          python3 scripts/version.py set "${version}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add VERSION vcpkg.json
+          git commit -m "chore(release): ${tag}"
+          git tag -a "${tag}" -m "Practice Takes ${tag}"
+          git push --atomic origin HEAD:main "refs/tags/${tag}"
+
+      - name: Use existing version tag
+        if: ${{ github.event_name == 'push' }}
+        run: echo "Using existing tag ${{ needs.prepare.outputs.tag }}."
+
+  publish:
+    name: Publish GitHub release from build artifacts
+    needs:
+      - prepare
+      - build
+      - finalize-version
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download release artifact bundle
+        uses: actions/download-artifact@v5
+        with:
+          name: PracticeTakes-${{ needs.prepare.outputs.version }}-release-assets
+          path: release-assets
+
+      - name: Verify downloaded release artifacts
+        shell: bash
+        run: |
+          version="${{ needs.prepare.outputs.version }}"
+          source_sha="${{ needs.prepare.outputs.source_sha }}"
+
+          expected_files=(
+            "PracticeTakes-${version}-linux-x64.tar.gz"
+            "PracticeTakes-${version}-linux-arm64.tar.gz"
+            "PracticeTakes-${version}-windows-x64.zip"
+            "PracticeTakes-${version}-windows-arm64.zip"
+            "PracticeTakes-${version}-macos-x64.zip"
+            "PracticeTakes-${version}-macos-arm64.zip"
+            "SHA256SUMS.txt"
+            "BUILD-METADATA.txt"
+          )
+
+          for file in "${expected_files[@]}"; do
+            if [[ ! -f "release-assets/${file}" ]]; then
+              echo "Missing expected release artifact: ${file}" >&2
+              exit 1
+            fi
+          done
+
+          actual_count="$(find release-assets -maxdepth 1 -type f | wc -l)"
+          if [[ "${actual_count}" -ne "${#expected_files[@]}" ]]; then
+            echo "Expected ${#expected_files[@]} release files, found ${actual_count}." >&2
+            find release-assets -maxdepth 1 -type f -print >&2
+            exit 1
+          fi
+
+          grep -Fx "Version: ${version}" release-assets/BUILD-METADATA.txt
+          grep -Fx "Source SHA: ${source_sha}" release-assets/BUILD-METADATA.txt
+
+          (
+            cd release-assets
+            sha256sum --check SHA256SUMS.txt
+          )
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "${{ needs.prepare.outputs.tag }}" release-assets/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "Practice Takes ${{ needs.prepare.outputs.tag }}" \
+            --generate-notes \
+            --latest \
+            --verify-tag

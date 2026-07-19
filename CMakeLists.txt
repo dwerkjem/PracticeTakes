@@ -1,20 +1,53 @@
 cmake_minimum_required(VERSION 3.25)
 
+set(PRACTICE_TAKES_VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/VERSION")
+
+if(NOT EXISTS "${PRACTICE_TAKES_VERSION_FILE}")
+    message(FATAL_ERROR
+        "Missing VERSION file at ${PRACTICE_TAKES_VERSION_FILE}")
+endif()
+
+file(READ "${PRACTICE_TAKES_VERSION_FILE}" PRACTICE_TAKES_VERSION)
+string(STRIP "${PRACTICE_TAKES_VERSION}" PRACTICE_TAKES_VERSION)
+
+if(NOT PRACTICE_TAKES_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
+    message(FATAL_ERROR
+        "VERSION must use MAJOR.MINOR.PATCH format, for example 1.2.0")
+endif()
+
 project(
     PracticeTakes
-    VERSION 0.1.0
+    VERSION ${PRACTICE_TAKES_VERSION}
     LANGUAGES C CXX
 )
+
+set(PRACTICE_TAKES_FEEDBACK_ENDPOINT
+    "https://practice-takes-feedback-intake.derekrneilson.workers.dev" CACHE STRING
+    "HTTPS base URL for the Practice Takes feedback intake service")
+
+if(PRACTICE_TAKES_FEEDBACK_ENDPOINT STREQUAL "")
+    set(PRACTICE_TAKES_USE_CURL 0)
+else()
+    set(PRACTICE_TAKES_USE_CURL 1)
+endif()
+
+set(PRACTICE_TAKES_JUCE_APP_OPTIONS)
+if(PRACTICE_TAKES_USE_CURL)
+    list(APPEND PRACTICE_TAKES_JUCE_APP_OPTIONS NEEDS_CURL TRUE)
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Generate the compilation database used by clang-tidy and VS Code IntelliSense.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Keep JUCE's optional browser/network dependencies out of this tuner.
 # These directory-level definitions also apply while JUCE builds juceaide.
 add_compile_definitions(
     JUCE_WEB_BROWSER=0
-    JUCE_USE_CURL=0
+    JUCE_USE_CURL=${PRACTICE_TAKES_USE_CURL}
     JUCE_USE_XCURSOR=0
 )
 
@@ -35,6 +68,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 juce_add_gui_app(PracticeTakes
+    ${PRACTICE_TAKES_JUCE_APP_OPTIONS}
+    VERSION ${PROJECT_VERSION}
     PRODUCT_NAME "Practice Takes"
     COMPANY_NAME "Derek R. Neilson"
     BUNDLE_ID "org.derekrneilson.practicetakes"
@@ -67,18 +102,27 @@ endif()
 target_sources(PracticeTakes
     PRIVATE
         src/main.cpp
-        src/MainComponent.cpp
+        src/audio/AudioInputService.cpp
+        src/AudioInputService.h
+        src/feedback/FeedbackComponent.cpp
+        src/FeedbackComponent.h
+        src/AppDefaults.h
+        src/app/MainComponent.cpp
         src/MainComponent.h
-        src/SpectrogramComponent.cpp
+        src/spectrogram/SpectrogramComponent.cpp
         src/SpectrogramComponent.h
-        src/TunerComponent.cpp
+        src/tuner/TunerComponent.cpp
+        src/tuner/TunerDrawing.cpp
         src/TunerComponent.h
+        src/Theme.h
+        src/Theme.cpp
 )
 
 target_compile_definitions(PracticeTakes
     PRIVATE
         JUCE_WEB_BROWSER=0
-        JUCE_USE_CURL=0
+        JUCE_USE_CURL=${PRACTICE_TAKES_USE_CURL}
+        PRACTICE_TAKES_FEEDBACK_ENDPOINT="${PRACTICE_TAKES_FEEDBACK_ENDPOINT}"
 )
 
 target_link_libraries(PracticeTakes
