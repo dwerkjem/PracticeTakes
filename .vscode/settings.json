@@ -42,6 +42,7 @@
         "libxrandr",
         "libxrender",
         "MINSIZEREL",
+        "neighbourhood",
         "Neilson",
         "nonmodal",
         "nullptr",

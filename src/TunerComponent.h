@@ -58,6 +58,7 @@ class TunerComponent final : public juce::Component,
     [[nodiscard]] float calculateInputLevel() const;
     [[nodiscard]] double detectPitch() const;
     [[nodiscard]] double smoothFrequency(double frequency);
+    [[nodiscard]] bool isConfirmedPitch(double frequency);
     [[nodiscard]] double averageRecentMidiPitches() const;
     [[nodiscard]] static double frequencyToMidi(double frequency);
     [[nodiscard]] static double midiToFrequency(double midiPitch);
@@ -120,6 +121,8 @@ class TunerComponent final : public juce::Component,
     float inputLevel = 0.0f;
     int lockedMidiNote = 69;
     int framesWithoutPitch = 0;
+    double pendingJumpMidiNote = 0.0;
+    int pendingJumpFrames = 0;
 
     bool hasLockedMidiNote = false;
     bool hasSignal = false;

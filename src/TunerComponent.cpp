@@ -7,11 +7,14 @@
 
 namespace
 {
-constexpr double minimumDetectableFrequencyHz = 55.0;
-constexpr double maximumDetectableFrequencyHz = 1200.0;
+constexpr double minimumDetectableFrequencyHz = 16.352;
+constexpr double maximumDetectableFrequencyHz = 2500.0;
 constexpr float minimumInputRms = 0.008f;
 constexpr double minimumCorrelationScore = 0.72;
 constexpr double inTuneToleranceCents = 5.0;
+constexpr double immediatePitchJumpSemitones = 5.0;
+constexpr double matchingJumpToleranceSemitones = 1.5;
+constexpr int pitchJumpConfirmationFrames = 4;
 
 struct TunerPalette
 {
@@ -421,8 +424,7 @@ double TunerComponent::detectPitch() const
     const auto maximumLag = std::min(analysisWindowSize / 2,
                                      static_cast<int>(sampleRate / minimumDetectableFrequencyHz));
 
-    int bestLag = 0;
-    double bestCorrelation = 0.0;
+    std::array<double, (analysisWindowSize / 2) + 1> correlations{};
 
     for (int lag = minimumLag; lag <= maximumLag; ++lag)
     {
@@ -443,25 +445,58 @@ double TunerComponent::detectPitch() const
         }
 
         const auto denominator = std::sqrt(firstEnergy * secondEnergy);
-        const auto correlation = denominator > 0.0 ? numerator / denominator : 0.0;
+        correlations[static_cast<std::size_t>(lag)] =
+            denominator > 0.0 ? numerator / denominator : 0.0;
+    }
 
-        if (correlation > bestCorrelation)
+    // The very short lags at the start of an autocorrelation curve are often
+    // highly correlated simply because adjacent audio samples are similar.
+    // Treating that boundary value as a period produces spurious notes near
+    // the upper detection limit. A real period is represented by a local peak
+    // after the initial correlation slope has fallen and risen again.
+    int periodLag = 0;
+    for (int lag = minimumLag + 1; lag < maximumLag; ++lag)
+    {
+        const auto correlation = correlations[static_cast<std::size_t>(lag)];
+        if (correlation >= minimumCorrelationScore &&
+            correlation > correlations[static_cast<std::size_t>(lag - 1)] &&
+            correlation >= correlations[static_cast<std::size_t>(lag + 1)])
         {
-            bestCorrelation = correlation;
-            bestLag = lag;
+            periodLag = lag;
+            break;
         }
     }
 
-    if (bestLag == 0 || bestCorrelation < minimumCorrelationScore)
+    if (periodLag == 0)
     {
         return 0.0;
     }
 
-    return sampleRate / static_cast<double>(bestLag);
+    // Parabolic interpolation reduces quantisation jitter without allowing a
+    // non-peak boundary lag back into the result.
+    const auto left = correlations[static_cast<std::size_t>(periodLag - 1)];
+    const auto centre = correlations[static_cast<std::size_t>(periodLag)];
+    const auto right = correlations[static_cast<std::size_t>(periodLag + 1)];
+    const auto curvature = left - (2.0 * centre) + right;
+    const auto offset = std::abs(curvature) > std::numeric_limits<double>::epsilon()
+                            ? 0.5 * (left - right) / curvature
+                            : 0.0;
+    const auto refinedLag = static_cast<double>(periodLag) + juce::jlimit(-0.5, 0.5, offset);
+
+    return sampleRate / refinedLag;
 }
 
 void TunerComponent::handleDetectedPitch(double frequency)
 {
+    if (!isConfirmedPitch(frequency))
+    {
+        // Do not let a suspected harmonic alter the smoothing history or draw
+        // a line to it in the graph. A real large interval will be admitted
+        // after it remains stable for a few consecutive analysis frames.
+        addHistoryPoint(std::numeric_limits<double>::quiet_NaN());
+        return;
+    }
+
     framesWithoutPitch = 0;
 
     const auto stableFrequency = smoothFrequency(frequency);
@@ -470,8 +505,50 @@ void TunerComponent::handleDetectedPitch(double frequency)
     hasSignal = true;
 }
 
+bool TunerComponent::isConfirmedPitch(double frequency)
+{
+    const auto midiPitch = frequencyToMidi(frequency);
+    if (std::abs(smoothedMidiNote) <= std::numeric_limits<double>::epsilon() ||
+        std::abs(midiPitch - smoothedMidiNote) <= immediatePitchJumpSemitones)
+    {
+        pendingJumpFrames = 0;
+        pendingJumpMidiNote = 0.0;
+        return true;
+    }
+
+    if (pendingJumpFrames == 0 ||
+        std::abs(midiPitch - pendingJumpMidiNote) > matchingJumpToleranceSemitones)
+    {
+        pendingJumpMidiNote = midiPitch;
+        pendingJumpFrames = 1;
+        return false;
+    }
+
+    // Follow a genuine glide while requiring all confirming frames to remain
+    // in the same small pitch neighbourhood.
+    pendingJumpMidiNote +=
+        (midiPitch - pendingJumpMidiNote) / static_cast<double>(pendingJumpFrames + 1);
+    ++pendingJumpFrames;
+
+    if (pendingJumpFrames < pitchJumpConfirmationFrames)
+    {
+        return false;
+    }
+
+    // Begin a fresh smoothing segment at the confirmed note. Otherwise the
+    // old pitch would keep making the newly accepted note look like a jump.
+    smoothedMidiNote = midiPitch;
+    recentPitchCount = 0;
+    recentPitchWriteIndex = 0;
+    pendingJumpFrames = 0;
+    pendingJumpMidiNote = 0.0;
+    return true;
+}
+
 void TunerComponent::handleMissingPitch()
 {
+    pendingJumpFrames = 0;
+    pendingJumpMidiNote = 0.0;
     ++framesWithoutPitch;
     addHistoryPoint(std::numeric_limits<double>::quiet_NaN());
 
@@ -492,7 +569,7 @@ double TunerComponent::smoothFrequency(double frequency)
     const auto averagedMidiPitch = averageRecentMidiPitches();
     const auto easing = easingSlider.getValue();
 
-    smoothedMidiNote = smoothedMidiNote == 0.0
+    smoothedMidiNote = std::abs(smoothedMidiNote) <= std::numeric_limits<double>::epsilon()
                            ? averagedMidiPitch
                            : smoothedMidiNote + easing * (averagedMidiPitch - smoothedMidiNote);
 
@@ -569,6 +646,8 @@ void TunerComponent::resetPitchTracking()
     recentPitchWriteIndex = 0;
     smoothedMidiNote = 0.0;
     framesWithoutPitch = 0;
+    pendingJumpFrames = 0;
+    pendingJumpMidiNote = 0.0;
     hasLockedMidiNote = false;
     hasSignal = false;
     displayedFrequency = 0.0;
