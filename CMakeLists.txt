@@ -21,6 +21,21 @@ project(
     LANGUAGES C CXX
 )
 
+set(PRACTICE_TAKES_FEEDBACK_ENDPOINT
+    "https://practice-takes-feedback-intake.derekrneilson.workers.dev" CACHE STRING
+    "HTTPS base URL for the Practice Takes feedback intake service")
+
+if(PRACTICE_TAKES_FEEDBACK_ENDPOINT STREQUAL "")
+    set(PRACTICE_TAKES_USE_CURL 0)
+else()
+    set(PRACTICE_TAKES_USE_CURL 1)
+endif()
+
+set(PRACTICE_TAKES_JUCE_APP_OPTIONS)
+if(PRACTICE_TAKES_USE_CURL)
+    list(APPEND PRACTICE_TAKES_JUCE_APP_OPTIONS NEEDS_CURL TRUE)
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -32,7 +47,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # These directory-level definitions also apply while JUCE builds juceaide.
 add_compile_definitions(
     JUCE_WEB_BROWSER=0
-    JUCE_USE_CURL=0
+    JUCE_USE_CURL=${PRACTICE_TAKES_USE_CURL}
     JUCE_USE_XCURSOR=0
 )
 
@@ -53,6 +68,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 juce_add_gui_app(PracticeTakes
+    ${PRACTICE_TAKES_JUCE_APP_OPTIONS}
     VERSION ${PROJECT_VERSION}
     PRODUCT_NAME "Practice Takes"
     COMPANY_NAME "Derek R. Neilson"
@@ -88,6 +104,8 @@ target_sources(PracticeTakes
         src/main.cpp
         src/audio/AudioInputService.cpp
         src/AudioInputService.h
+        src/feedback/FeedbackComponent.cpp
+        src/FeedbackComponent.h
         src/AppDefaults.h
         src/app/MainComponent.cpp
         src/MainComponent.h
@@ -103,7 +121,8 @@ target_sources(PracticeTakes
 target_compile_definitions(PracticeTakes
     PRIVATE
         JUCE_WEB_BROWSER=0
-        JUCE_USE_CURL=0
+        JUCE_USE_CURL=${PRACTICE_TAKES_USE_CURL}
+        PRACTICE_TAKES_FEEDBACK_ENDPOINT="${PRACTICE_TAKES_FEEDBACK_ENDPOINT}"
 )
 
 target_link_libraries(PracticeTakes

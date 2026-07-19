@@ -12,12 +12,14 @@ constexpr int menuBarHeight = 40;
 constexpr int menuButtonWidth = 96;
 constexpr int menuButtonGap = 4;
 constexpr int toolsMenuWidth = 190;
+constexpr int helpMenuWidth = 190;
 
 constexpr int microphoneWarningWidth = 470;
 constexpr int microphoneWarningHeight = 118;
 
 constexpr int tunerMenuItemId = 1;
 constexpr int spectrogramMenuItemId = 2;
+constexpr int sendFeedbackMenuItemId = 1;
 constexpr int lightThemeId = static_cast<int>(Theme::light);
 constexpr int darkThemeId = static_cast<int>(Theme::dark);
 
@@ -115,9 +117,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         Content(juce::AudioDeviceManager& audioDeviceManager, Theme initialTheme,
                 std::function<void(Theme)> appearanceHandler,
                 std::function<void(AppDefaults::Preset)> presetHandler,
-                std::function<void()> saveHandler, std::function<void()> resetToolHandler,
-                std::function<void()> resetAudioHandler, std::function<void()> resetLayoutHandler,
-                std::function<void()> resetAllHandler)
+                std::function<void()> saveHandler, std::function<void()> feedbackHandler,
+                std::function<void()> resetToolHandler, std::function<void()> resetAudioHandler,
+                std::function<void()> resetLayoutHandler, std::function<void()> resetAllHandler)
             : deviceSelector(audioDeviceManager, 1, 2, 0, 0, false, false, false, true),
               onAppearanceChanged(std::move(appearanceHandler)), onPreset(std::move(presetHandler))
         {
@@ -157,6 +159,10 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             saveButton.setButtonText("Save settings");
             saveButton.onClick = std::move(saveHandler);
             addAndMakeVisible(saveButton);
+            feedbackButton.setButtonText("Send feedback");
+            feedbackButton.setTitle("Open the feedback form");
+            feedbackButton.onClick = std::move(feedbackHandler);
+            addAndMakeVisible(feedbackButton);
             configureResetButton(resetToolButton, "Current tool", std::move(resetToolHandler));
             configureResetButton(resetAudioButton, "Audio", std::move(resetAudioHandler));
             configureResetButton(resetLayoutButton, "Layout", std::move(resetLayoutHandler));
@@ -191,6 +197,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             presetBox.setBounds(presetArea.removeFromTop(34).removeFromLeft(260));
 
             resetHeading.setBounds(resetArea.removeFromTop(30));
+            feedbackButton.setBounds(resetHeading.getRight() - 150, resetHeading.getY(), 150, 30);
             resetArea.removeFromTop(6);
             saveButton.setBounds(resetArea.removeFromTop(34).removeFromLeft(180));
             resetArea.removeFromTop(8);
@@ -249,6 +256,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         juce::ComboBox presetBox;
         juce::Label resetHeading;
         juce::TextButton saveButton;
+        juce::TextButton feedbackButton;
         juce::TextButton resetToolButton;
         juce::TextButton resetAudioButton;
         juce::TextButton resetLayoutButton;
@@ -260,8 +268,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
     SettingsWindow(juce::AudioDeviceManager& audioDeviceManager, Theme initialTheme,
                    std::function<void(Theme)> appearanceHandler,
                    std::function<void(AppDefaults::Preset)> presetHandler,
-                   std::function<void()> saveHandler, std::function<void()> resetToolHandler,
-                   std::function<void()> resetAudioHandler,
+                   std::function<void()> saveHandler, std::function<void()> feedbackHandler,
+                   std::function<void()> resetToolHandler, std::function<void()> resetAudioHandler,
                    std::function<void()> resetLayoutHandler, std::function<void()> resetAllHandler,
                    std::function<void()> closeHandler)
         : DocumentWindow("Settings", juce::Colours::darkgrey, juce::DocumentWindow::allButtons),
@@ -270,8 +278,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         setUsingNativeTitleBar(true);
         setContentOwned(new Content(audioDeviceManager, initialTheme, std::move(appearanceHandler),
                                     std::move(presetHandler), std::move(saveHandler),
-                                    std::move(resetToolHandler), std::move(resetAudioHandler),
-                                    std::move(resetLayoutHandler), std::move(resetAllHandler)),
+                                    std::move(feedbackHandler), std::move(resetToolHandler),
+                                    std::move(resetAudioHandler), std::move(resetLayoutHandler),
+                                    std::move(resetAllHandler)),
                         true);
         setResizable(true, true);
         setResizeLimits(620, 500, 1300, 1000);
@@ -302,6 +311,33 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
         sendLookAndFeelChange();
         repaint();
+    }
+
+  private:
+    std::function<void()> onClose;
+};
+
+//==============================================================================
+class MainComponent::FeedbackWindow final : public juce::DocumentWindow
+{
+  public:
+    FeedbackWindow(juce::PropertiesFile& propertiesFile, std::function<void()> closeHandler)
+        : DocumentWindow("Send feedback", juce::Colours::darkgrey,
+                         juce::DocumentWindow::allButtons),
+          onClose(std::move(closeHandler))
+    {
+        setUsingNativeTitleBar(true);
+        setContentOwned(new FeedbackComponent(propertiesFile), true);
+        setResizable(true, true);
+        setResizeLimits(620, 700, 1200, 1100);
+        centreWithSize(760, 780);
+        setVisible(true);
+    }
+
+    void closeButtonPressed() override
+    {
+        setVisible(false);
+        invokeLater(onClose);
     }
 
   private:
@@ -442,6 +478,7 @@ MainComponent::~MainComponent()
     // Tool components unregister from the service in their destructors, so
     // close the windows before the service is destroyed.
     settingsWindow.reset();
+    feedbackWindow.reset();
     spectrogramWindow.reset();
     tunerWindow.reset();
     microphoneWarning.reset();
@@ -456,12 +493,14 @@ void MainComponent::configureTopButtons()
     addAndMakeVisible(fileButton);
     addAndMakeVisible(settingsButton);
     addAndMakeVisible(toolsButton);
+    addAndMakeVisible(helpButton);
 
     // File is intentionally present but inactive while the project/file model
     // is still being designed.
     fileButton.setTooltip("File actions will be added later.");
     settingsButton.onClick = [this] { showSettings(); };
     toolsButton.onClick = [this] { showToolsMenu(); };
+    helpButton.onClick = [this] { showHelpMenu(); };
 }
 
 void MainComponent::createMicrophoneWarning()
@@ -503,6 +542,8 @@ void MainComponent::resized()
     settingsButton.setBounds(menuBounds.removeFromLeft(menuButtonWidth));
     menuBounds.removeFromLeft(menuButtonGap);
     toolsButton.setBounds(menuBounds.removeFromLeft(menuButtonWidth));
+    menuBounds.removeFromLeft(menuButtonGap);
+    helpButton.setBounds(menuBounds.removeFromLeft(menuButtonWidth));
 
     if (microphoneWarning != nullptr)
     {
@@ -541,6 +582,51 @@ void MainComponent::showToolsMenu()
                                safeThis->openTool(ToolType::spectrogram);
                            }
                        });
+}
+
+void MainComponent::showHelpMenu()
+{
+    juce::PopupMenu menu;
+    menu.setLookAndFeel(&appLookAndFeel);
+    menu.addItem(sendFeedbackMenuItemId, "Send feedback");
+
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    menu.showMenuAsync(
+        juce::PopupMenu::Options().withTargetComponent(&helpButton).withMinimumWidth(helpMenuWidth),
+        [safeThis](int selectedItemId)
+        {
+            if (safeThis != nullptr && selectedItemId == sendFeedbackMenuItemId)
+                safeThis->showFeedback();
+        });
+}
+
+void MainComponent::showFeedback()
+{
+    if (feedbackWindow != nullptr)
+    {
+        feedbackWindow->setVisible(true);
+        feedbackWindow->toFront(true);
+        return;
+    }
+
+    auto* settingsFile = applicationProperties.getUserSettings();
+    if (settingsFile == nullptr)
+        return;
+
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    feedbackWindow = std::make_unique<FeedbackWindow>(*settingsFile,
+                                                      [safeThis]
+                                                      {
+                                                          if (safeThis != nullptr)
+                                                              safeThis->closeFeedback();
+                                                      });
+    feedbackWindow->setLookAndFeel(&appLookAndFeel);
+    feedbackWindow->toFront(true);
+}
+
+void MainComponent::closeFeedback()
+{
+    feedbackWindow.reset();
 }
 
 void MainComponent::openTool(ToolType tool)
@@ -639,6 +725,11 @@ void MainComponent::showSettings()
         {
             if (safeThis != nullptr)
                 safeThis->saveSettings();
+        },
+        [safeThis]
+        {
+            if (safeThis != nullptr)
+                safeThis->showFeedback();
         },
         [safeThis]
         {
@@ -859,7 +950,7 @@ void MainComponent::applyAppearanceToTopButtons()
 {
     const auto palette = appPaletteFor(currentTheme);
 
-    for (auto* button : {&fileButton, &settingsButton, &toolsButton})
+    for (auto* button : {&fileButton, &settingsButton, &toolsButton, &helpButton})
     {
         button->setColour(juce::TextButton::buttonColourId, palette.button);
         button->setColour(juce::TextButton::buttonOnColourId, palette.buttonHover);
@@ -890,6 +981,13 @@ void MainComponent::applyAppearanceToOpenWindows()
     if (settingsWindow != nullptr)
     {
         settingsWindow->applyAppearance(&appLookAndFeel, palette.background, currentTheme);
+    }
+
+    if (feedbackWindow != nullptr)
+    {
+        feedbackWindow->setLookAndFeel(&appLookAndFeel);
+        feedbackWindow->sendLookAndFeelChange();
+        feedbackWindow->repaint();
     }
 }
 
