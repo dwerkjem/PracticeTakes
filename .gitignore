@@ -55,6 +55,7 @@ compile_commands.json
 # JavaScript service dependencies and local Cloudflare state
 node_modules/
 .wrangler/
+services/feedback-intake/wrangler.jsonc
 .dev.vars
 .dev.vars.*
 !.dev.vars.example

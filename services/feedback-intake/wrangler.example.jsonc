@@ -13,7 +13,7 @@
     {
       "binding": "FEEDBACK_DB",
       "database_name": "practice-takes-feedback",
-      "database_id": "replace-with-production-database-id",
+      "database_id": "replace-with-database-id",
       "migrations_dir": "migrations"
     }
   ]

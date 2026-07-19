@@ -14,11 +14,15 @@ Worker's runtime binding.
 
 1. Install Node.js and npm, then run `npm install` in this directory.
 2. Create the database with `npx wrangler d1 create practice-takes-feedback`.
-3. Copy its ID into `wrangler.jsonc`. Do not commit account IDs, tokens, or secret values.
-4. Generate at least 32 random bytes and configure the signing key:
-   `npx wrangler secret put SUBMISSION_SIGNING_KEY`.
-5. Apply migrations with `npm run db:migrate:remote`.
-6. Configure a custom HTTPS route in the Cloudflare dashboard and run `npm run deploy`.
+3. Copy `wrangler.example.jsonc` to the ignored local file `wrangler.jsonc`, then copy the
+   database ID into it. Do not commit account IDs, tokens, or secret values.
+4. Apply migrations with `npm run db:migrate:remote`.
+5. Run `npm run deploy` once to create the Worker. With `workers_dev` disabled and no custom
+   route configured yet, this initial deployment is not publicly reachable.
+6. Generate and configure the production signing key:
+   `openssl rand -hex 32 | npx wrangler secret put SUBMISSION_SIGNING_KEY`.
+7. Confirm it with `npx wrangler secret list`, then configure a custom HTTPS route in the
+   Cloudflare dashboard.
 
 `workers_dev` is disabled so deployment requires an intentional route. Cloudflare API credentials
 used for deployment should be scoped to this Worker and D1 database. The runtime receives only the
