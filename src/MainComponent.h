@@ -4,6 +4,7 @@
 
 #include "AppDefaults.h"
 #include "AudioInputService.h"
+#include "FeedbackComponent.h"
 #include "Theme.h"
 
 #include <memory>
@@ -28,6 +29,7 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
 
     class ToolWindow;
     class SettingsWindow;
+    class FeedbackWindow;
     class MicrophoneWarning;
 
     // Initial setup ---------------------------------------------------------
@@ -40,6 +42,9 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     void closeTool(ToolType tool);
     void showSettings();
     void closeSettings();
+    void showHelpMenu();
+    void showFeedback();
+    void closeFeedback();
     void resetCurrentTool();
     void resetAudio();
     void resetLayout();
@@ -74,10 +79,12 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     juce::TextButton fileButton{"File"};
     juce::TextButton settingsButton{"Settings"};
     juce::TextButton toolsButton{"Tools"};
+    juce::TextButton helpButton{"Help"};
 
     std::unique_ptr<ToolWindow> tunerWindow;
     std::unique_ptr<ToolWindow> spectrogramWindow;
     std::unique_ptr<SettingsWindow> settingsWindow;
+    std::unique_ptr<FeedbackWindow> feedbackWindow;
     std::unique_ptr<MicrophoneWarning> microphoneWarning;
 
     juce::Rectangle<int> menuBarBounds;
