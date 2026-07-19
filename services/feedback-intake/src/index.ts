@@ -206,7 +206,7 @@ function validateAuthorizationRequest(value: unknown, minimumVersion: string):
 function validateFeedbackRequest(value: unknown, minimumVersion: string):
   { value: FeedbackRequest; error?: never } | { value?: never; error: Response } {
   const base = validateAuthorizationRequest(value, minimumVersion);
-  if (base.error) return base;
+  if (base.error) return { error: base.error };
   if (!isRecord(value) || typeof value.authorization !== "string" ||
       typeof value.submittedAt !== "string" || typeof value.category !== "string" ||
       typeof value.message !== "string") {

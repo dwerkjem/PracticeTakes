@@ -97,6 +97,16 @@ A successful response has status `201` and contains a `receiptId`. Repeating the
 submission must return `409 duplicate_submission`. Stop Wrangler with Ctrl-C. The `.dev.vars`
 secret and `.wrangler` local database state are ignored by Git.
 
+Run the automated acceptance checks from the `services` directory with:
+
+```bash
+npm install
+npm test
+```
+
+The suite covers valid receipts, request validation, expiration, replay protection, request-size
+limits, rate limiting, HTTPS enforcement, and the absence of public read operations.
+
 ## Current abuse controls
 
 - 16 KiB request limit and field-specific size checks
