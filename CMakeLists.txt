@@ -88,6 +88,7 @@ target_sources(PracticeTakes
         src/main.cpp
         src/audio/AudioInputService.cpp
         src/AudioInputService.h
+        src/AppDefaults.h
         src/app/MainComponent.cpp
         src/MainComponent.h
         src/spectrogram/SpectrogramComponent.cpp

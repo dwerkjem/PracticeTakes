@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 
+#include "AppDefaults.h"
 #include "AudioInputService.h"
 #include "Theme.h"
 
@@ -22,6 +23,8 @@ class TunerComponent final : public juce::Component,
     void paint(juce::Graphics& graphics) override;
     void resized() override;
     void setTheme(Theme theme);
+    void resetToDefaults();
+    void applyPreset(AppDefaults::Preset preset);
 
   private:
     enum class DisplayMode

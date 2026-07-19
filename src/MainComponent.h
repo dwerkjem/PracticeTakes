@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 
+#include "AppDefaults.h"
 #include "AudioInputService.h"
 #include "Theme.h"
 
@@ -39,6 +40,11 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     void closeTool(ToolType tool);
     void showSettings();
     void closeSettings();
+    void resetCurrentTool();
+    void resetAudio();
+    void resetLayout();
+    void resetAll();
+    void applyPreset(AppDefaults::Preset preset);
 
     [[nodiscard]] std::unique_ptr<juce::Component> createToolComponent(ToolType tool);
     [[nodiscard]] juce::String toolName(ToolType tool) const;
@@ -73,6 +79,7 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
 
     juce::Rectangle<int> menuBarBounds;
     Theme currentTheme = Theme::light;
+    ToolType currentTool = ToolType::tuner;
     bool isMicrophoneWarningDismissed = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)

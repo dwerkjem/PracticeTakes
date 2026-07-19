@@ -27,6 +27,14 @@ SpectrogramComponent::~SpectrogramComponent()
     audioInputService.removeListener(this);
 }
 
+void SpectrogramComponent::resetToDefaults()
+{
+    audioFifo.reset();
+    fftData.fill(0.0f);
+    spectrogramImage.clear(spectrogramImage.getBounds(), backgroundColour());
+    repaint();
+}
+
 //==============================================================================
 // Appearance
 

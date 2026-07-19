@@ -49,6 +49,15 @@ bool AudioInputService::hasUsableInput() const
            device->getActiveInputChannels().countNumberOfSetBits() > 0;
 }
 
+void AudioInputService::resetToDefaultInput()
+{
+    recovering = true;
+    manager.closeAudioDevice();
+    juce::ignoreUnused(manager.initialise(2, 0, nullptr, true));
+    recovering = false;
+    publishState();
+}
+
 void AudioInputService::audioDeviceIOCallbackWithContext(const float* const* inputChannelData,
                                                          int numInputChannels,
                                                          float* const* outputChannelData,
