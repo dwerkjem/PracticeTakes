@@ -8,6 +8,7 @@ BUILD_DIR="${BUILD_DIR:-${PROJECT_ROOT}/build}"
 TARGET_NAME="${TARGET_NAME:-PracticeTakes}"
 BUILD_ONLY=false
 CLEAN=false
+INSTALL_DEPENDENCIES=false
 program_args=()
 
 while (( $# > 0 )); do
@@ -18,6 +19,10 @@ while (( $# > 0 )); do
             ;;
         --clean)
             CLEAN=true
+            shift
+            ;;
+        --install-dependencies)
+            INSTALL_DEPENDENCIES=true
             shift
             ;;
         --)
@@ -31,6 +36,13 @@ while (( $# > 0 )); do
             ;;
     esac
 done
+
+dependency_check_args=()
+if [[ "$INSTALL_DEPENDENCIES" == true ]]; then
+    dependency_check_args+=(--install)
+fi
+
+bash "$PROJECT_ROOT/scripts/check-linux-build-dependencies.sh" "${dependency_check_args[@]}"
 
 if [[ "$CLEAN" == true ]]; then
     rm -rf -- "$BUILD_DIR"
@@ -160,7 +172,7 @@ if [[ -n "${vcpkg_prefix:-}" && "$(uname -s)" == "Linux" ]]; then
     for library_pattern in 'libX11.so*' 'libXext.so*'; do
         if ! compgen -G "$vcpkg_prefix/lib/$library_pattern" >/dev/null; then
             printf 'Error: vcpkg did not install shared %s libraries.\n' "$library_pattern" >&2
-            printf 'Run ./build-and-run.sh --clean after pulling the latest triplet.\n' >&2
+            printf 'Run ./scripts/build-and-run.sh --clean after pulling the latest triplet.\n' >&2
             exit 1
         fi
     done
