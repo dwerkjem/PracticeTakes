@@ -113,6 +113,7 @@ function createEnvironment(database = new MemoryD1(), overrides: Record<string, 
     MINIMUM_APP_VERSION: "0.2.6",
     AUTHORIZATIONS_PER_HOUR: "10",
     SUBMISSIONS_PER_HOUR: "5",
+    ADMIN_EMAILS: "developer@example.com",
     ...overrides,
   };
 }

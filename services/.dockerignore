@@ -1,0 +1,8 @@
+node_modules
+feedback-intake/node_modules
+feedback-intake/.wrangler
+feedback-intake/.dev.vars
+feedback-intake/.env
+feedback-intake/wrangler.jsonc
+**/*.log
+

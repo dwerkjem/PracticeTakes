@@ -1,9 +1,12 @@
+import { handleAdminRequest } from "./admin";
+
 interface Env {
   FEEDBACK_DB: D1Database;
   SUBMISSION_SIGNING_KEY: string;
   MINIMUM_APP_VERSION: string;
   AUTHORIZATIONS_PER_HOUR: string;
   SUBMISSIONS_PER_HOUR: string;
+  ADMIN_EMAILS: string;
 }
 
 interface AuthorizationRequest {
@@ -45,13 +48,17 @@ export default {
         return errorResponse(400, "https_required", "Feedback must be submitted over HTTPS.");
       }
 
+      const pathname = new URL(request.url).pathname;
+      if (pathname === "/admin" || pathname.startsWith("/v1/admin/")) {
+        return await handleAdminRequest(request, env);
+      }
+
       if (request.method !== "POST") {
         return errorResponse(405, "method_not_allowed", "Only POST is supported.", {
           allow: "POST",
         });
       }
 
-      const pathname = new URL(request.url).pathname;
       if (pathname === "/v1/authorizations") {
         return await createAuthorization(request, env);
       }
