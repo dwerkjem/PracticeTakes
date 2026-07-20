@@ -13,8 +13,14 @@ The administrative interface is protected by Cloudflare Access and an applicatio
 allowlist. Administrative responses always include `Cache-Control: no-store`.
 
 - `GET /admin` serves the feedback inbox.
+- `GET /admin/audit` serves the administrator action receipt history.
+- `POST /v1/admin/submissions` creates an administrative feedback record.
 - `GET /v1/admin/submissions` searches and filters submissions.
-- `PATCH /v1/admin/submissions/:receiptId` updates triage metadata.
+- `GET /v1/admin/submissions/:receiptId` returns one submission.
+- `PATCH /v1/admin/submissions/:receiptId` updates feedback and triage metadata.
+- `DELETE /v1/admin/submissions/:receiptId` deletes a submission after confirmation.
+- `POST /v1/admin/submissions/batch-delete` deletes selected submissions in one request.
+- `GET /v1/admin/audit` lists administrator action receipts.
 - `GET /v1/admin/export?id=...` exports selected records as CSV.
 
 ## Feedback triage
@@ -25,6 +31,15 @@ statuses New, Needs review, Planned, Duplicate, Resolved, and Declined, plus dev
 priority, tags, a resulting GitHub issue URL, and a duplicate target receipt. Associating a
 duplicate preserves both original records and marks the referring report Duplicate.
 
+Every administrative create, update, and delete writes an append-only action receipt containing
+the administrator email, action, affected receipt ID, changed fields, and timestamp. These receipts
+are available on the separate **Admin receipts** page. Delete receipts also preserve the feedback
+title so the removed record remains identifiable after its content is gone.
+
+The selection checkboxes support exporting or deleting multiple records. **Save all** persists
+every feedback card currently visible in the inbox, while each card retains its individual save
+button for focused edits.
+
 The client includes its environment at the end of each message. The administrative API presents
 that value separately as `diagnosticContext` and leaves the user-authored content in
 `userFeedback`. Selected inbox records can be downloaded as CSV for backup or offline analysis.
@@ -33,6 +48,8 @@ that value separately as `diagnosticContext` and leaves the user-authored conten
 
 - `src/index.ts` handles authorization and feedback submission.
 - `src/admin.ts` provides the private inbox and administrative API.
+- `src/admin.html`, `src/admin.css`, and `src/dashboard.js` contain the dashboard structure,
+  styling, and browser-side behavior.
 - `migrations/` contains the D1 schema migrations.
 - `test/` contains the intake and administration test suites.
 - [`contracts/feedback/v1.schema.json`](../../contracts/feedback/v1.schema.json) defines the wire

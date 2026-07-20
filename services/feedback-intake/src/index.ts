@@ -49,7 +49,9 @@ export default {
       }
 
       const pathname = new URL(request.url).pathname;
-      if (pathname === "/admin" || pathname.startsWith("/v1/admin/")) {
+      if (pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/admin.css" ||
+          pathname === "/admin.js" || pathname === "/audit.js" ||
+          pathname.startsWith("/v1/admin/")) {
         return await handleAdminRequest(request, env);
       }
 

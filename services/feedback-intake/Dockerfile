@@ -10,16 +10,14 @@ COPY feedback-intake/src feedback-intake/src
 COPY feedback-intake/tsconfig.json feedback-intake/tsconfig.json
 
 RUN cd feedback-intake \
-    && ../node_modules/.bin/tsc \
-      --outDir dist \
-      --noEmit false \
-      --module NodeNext \
-      --moduleResolution NodeNext \
-      --target ES2022 \
-      --lib ESNext \
-      --types node,@cloudflare/workers-types \
-      --skipLibCheck \
-      src/admin.ts src/docker-server.ts
+    && ./node_modules/.bin/esbuild src/docker-server.ts \
+      --bundle \
+      --platform=node \
+      --format=esm \
+      --loader:.html=text \
+      --loader:.css=text \
+      --loader:.js=text \
+      --outfile=dist/docker-server.js
 
 FROM node:20-bookworm-slim AS runtime
 

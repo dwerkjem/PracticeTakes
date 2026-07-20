@@ -4,6 +4,13 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-07-18",
   "workers_dev": false,
+  "rules": [
+    {
+      "type": "Text",
+      "globs": ["**/*.html", "**/*.css", "**/dashboard.js", "**/audit.js"],
+      "fallthrough": true
+    }
+  ],
   "vars": {
     "MINIMUM_APP_VERSION": "0.2.6",
     "AUTHORIZATIONS_PER_HOUR": "10",
