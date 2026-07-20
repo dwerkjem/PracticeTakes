@@ -1,0 +1,18 @@
+services:
+  feedback-dashboard:
+    build:
+      context: ..
+      dockerfile: feedback-intake/Dockerfile
+    image: practice-takes-feedback-dashboard:local
+    restart: unless-stopped
+    environment:
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:?Set CLOUDFLARE_ACCOUNT_ID in .env}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:?Set CLOUDFLARE_API_TOKEN in .env}
+      D1_DATABASE_ID: ${D1_DATABASE_ID:?Set D1_DATABASE_ID in .env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      PORT: 8787
+    ports:
+      - "127.0.0.1:${FEEDBACK_PORT:-8787}:8787"
+    init: true
+    stop_grace_period: 20s
