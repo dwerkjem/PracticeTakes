@@ -1,4 +1,4 @@
-#include "../TunerComponent.h"
+#include "TunerComponent.h"
 
 #include <algorithm>
 #include <cmath>

@@ -1,7 +1,7 @@
-#include "../MainComponent.h"
+#include "MainComponent.h"
 
-#include "../SpectrogramComponent.h"
-#include "../TunerComponent.h"
+#include "../spectrogram/SpectrogramComponent.h"
+#include "../tuner/TunerComponent.h"
 
 #include <functional>
 #include <utility>

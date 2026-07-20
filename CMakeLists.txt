@@ -103,18 +103,18 @@ target_sources(PracticeTakes
     PRIVATE
         src/main.cpp
         src/audio/AudioInputService.cpp
-        src/AudioInputService.h
+        src/audio/AudioInputService.h
         src/feedback/FeedbackComponent.cpp
-        src/FeedbackComponent.h
-        src/AppDefaults.h
+        src/feedback/FeedbackComponent.h
+        src/app/AppDefaults.h
         src/app/MainComponent.cpp
-        src/MainComponent.h
+        src/app/MainComponent.h
         src/spectrogram/SpectrogramComponent.cpp
-        src/SpectrogramComponent.h
+        src/spectrogram/SpectrogramComponent.h
         src/tuner/TunerComponent.cpp
         src/tuner/TunerDrawing.cpp
-        src/TunerComponent.h
-        src/Theme.h
+        src/tuner/TunerComponent.h
+        src/app/Theme.h
         src/Theme.cpp
 )
 

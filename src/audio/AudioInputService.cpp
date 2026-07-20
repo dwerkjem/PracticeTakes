@@ -1,4 +1,4 @@
-#include "../AudioInputService.h"
+#include "AudioInputService.h"
 
 AudioInputService::AudioInputService()
 {

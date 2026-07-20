@@ -1,4 +1,4 @@
-#include "../FeedbackComponent.h"
+#include "FeedbackComponent.h"
 
 namespace
 {

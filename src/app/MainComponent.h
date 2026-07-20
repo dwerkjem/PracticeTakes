@@ -2,9 +2,9 @@
 
 #include <JuceHeader.h>
 
+#include "../audio/AudioInputService.h"
+#include "../feedback/FeedbackComponent.h"
 #include "AppDefaults.h"
-#include "AudioInputService.h"
-#include "FeedbackComponent.h"
 #include "Theme.h"
 
 #include <memory>

@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "MainComponent.h"
+#include "app/MainComponent.h"
 
 // JUCE owns the application object for the lifetime of the process. This class
 // creates the main window during startup and releases it during shutdown.

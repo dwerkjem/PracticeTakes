@@ -2,9 +2,9 @@
 
 #include <JuceHeader.h>
 
-#include "AppDefaults.h"
-#include "AudioInputService.h"
-#include "Theme.h"
+#include "../app/AppDefaults.h"
+#include "../app/Theme.h"
+#include "../audio/AudioInputService.h"
 
 #include <array>
 #include <atomic>

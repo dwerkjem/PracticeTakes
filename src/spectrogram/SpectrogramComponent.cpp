@@ -1,4 +1,4 @@
-#include "../SpectrogramComponent.h"
+#include "SpectrogramComponent.h"
 
 #include <algorithm>
 #include <array>
