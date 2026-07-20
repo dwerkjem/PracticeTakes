@@ -107,8 +107,10 @@ target_sources(PracticeTakes
         src/feedback/FeedbackComponent.cpp
         src/feedback/FeedbackComponent.h
         src/app/AppDefaults.h
+        src/app/AppWindows.h
         src/app/MainComponent.cpp
         src/app/MainComponent.h
+        src/app/MicrophoneWarning.h
         src/spectrogram/SpectrogramComponent.cpp
         src/spectrogram/SpectrogramComponent.h
         src/tuner/TunerComponent.cpp
