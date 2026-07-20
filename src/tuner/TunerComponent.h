@@ -47,7 +47,7 @@ class TunerComponent final : public juce::Component,
     void audioInputReceived(const float* inputSamples, int numSamples) override;
     void audioInputAboutToStart(double sampleRate) override;
     void audioInputStopped() override;
-    void audioInputStateChanged(bool isAvailable) override;
+    void audioInputStateChanged(AudioInputService::InputState state) override;
     void writeInputSamplesToFifo(const float* inputSamples, int numSamples);
     void drainAudioFifo();
 

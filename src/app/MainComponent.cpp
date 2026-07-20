@@ -11,6 +11,7 @@ namespace
 constexpr int menuBarHeight = 40;
 constexpr int menuButtonWidth = 96;
 constexpr int menuButtonGap = 4;
+constexpr int microphoneButtonWidth = 190;
 constexpr int toolsMenuWidth = 190;
 constexpr int helpMenuWidth = 190;
 
@@ -111,16 +112,17 @@ class MainComponent::ToolWindow final : public juce::DocumentWindow
 class MainComponent::SettingsWindow final : public juce::DocumentWindow
 {
   public:
-    class Content final : public juce::Component
+    class Content final : public juce::Component, private juce::ChangeListener
     {
       public:
-        Content(juce::AudioDeviceManager& audioDeviceManager, Theme initialTheme,
+        Content(AudioInputService& inputService, Theme initialTheme,
                 std::function<void(Theme)> appearanceHandler,
                 std::function<void(AppDefaults::Preset)> presetHandler,
                 std::function<void()> saveHandler, std::function<void()> feedbackHandler,
                 std::function<void()> resetToolHandler, std::function<void()> resetAudioHandler,
                 std::function<void()> resetLayoutHandler, std::function<void()> resetAllHandler)
-            : deviceSelector(audioDeviceManager, 1, 2, 0, 0, false, false, false, true),
+            : audioInputService(inputService),
+              deviceSelector(inputService.deviceManager(), 1, 2, 0, 0, false, false, false, true),
               onAppearanceChanged(std::move(appearanceHandler)), onPreset(std::move(presetHandler))
         {
             configureHeading(appearanceHeading, "Appearance");
@@ -141,6 +143,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             addAndMakeVisible(appearanceBox);
 
             configureHeading(audioHeading, "Audio");
+            microphoneButton.onClick = [this] { audioInputService.toggleMuted(); };
+            microphoneButton.setTitle("Microphone mute control");
+            addAndMakeVisible(microphoneButton);
+            audioInputService.addChangeListener(this);
+            updateMicrophoneControl();
             addAndMakeVisible(deviceSelector);
 
             configureHeading(presetsHeading, "Practice preset");
@@ -169,6 +176,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             configureResetButton(resetAllButton, "All settings", std::move(resetAllHandler));
         }
 
+        ~Content() override
+        {
+            audioInputService.removeChangeListener(this);
+        }
+
         void paint(juce::Graphics& graphics) override
         {
             graphics.fillAll(findColour(juce::ResizableWindow::backgroundColourId));
@@ -190,6 +202,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             bounds.removeFromTop(8);
             auto resetArea = bounds.removeFromBottom(186);
             auto presetArea = bounds.removeFromBottom(92);
+            microphoneButton.setBounds(bounds.removeFromTop(34).removeFromLeft(260));
+            bounds.removeFromTop(8);
             deviceSelector.setBounds(bounds);
 
             presetsHeading.setBounds(presetArea.removeFromTop(30));
@@ -220,6 +234,20 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         }
 
       private:
+        void changeListenerCallback(juce::ChangeBroadcaster* source) override
+        {
+            if (source == &audioInputService)
+                updateMicrophoneControl();
+        }
+
+        void updateMicrophoneControl()
+        {
+            const auto isMuted = audioInputService.isMuted();
+            microphoneButton.setButtonText(isMuted ? "Unmute microphone" : "Mute microphone");
+            microphoneButton.setTooltip(isMuted ? "Resume audio analysis using the selected input"
+                                                : "Pause microphone audio for every analysis tool");
+        }
+
         void configureHeading(juce::Label& heading, const juce::String& text)
         {
             heading.setText(text, juce::dontSendNotification);
@@ -251,6 +279,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         juce::Label appearanceLabel;
         juce::ComboBox appearanceBox;
         juce::Label audioHeading;
+        AudioInputService& audioInputService;
+        juce::TextButton microphoneButton;
         juce::AudioDeviceSelectorComponent deviceSelector;
         juce::Label presetsHeading;
         juce::ComboBox presetBox;
@@ -265,7 +295,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         std::function<void(AppDefaults::Preset)> onPreset;
     };
 
-    SettingsWindow(juce::AudioDeviceManager& audioDeviceManager, Theme initialTheme,
+    SettingsWindow(AudioInputService& audioInputService, Theme initialTheme,
                    std::function<void(Theme)> appearanceHandler,
                    std::function<void(AppDefaults::Preset)> presetHandler,
                    std::function<void()> saveHandler, std::function<void()> feedbackHandler,
@@ -276,7 +306,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
           onClose(std::move(closeHandler))
     {
         setUsingNativeTitleBar(true);
-        setContentOwned(new Content(audioDeviceManager, initialTheme, std::move(appearanceHandler),
+        setContentOwned(new Content(audioInputService, initialTheme, std::move(appearanceHandler),
                                     std::move(presetHandler), std::move(saveHandler),
                                     std::move(feedbackHandler), std::move(resetToolHandler),
                                     std::move(resetAudioHandler), std::move(resetLayoutHandler),
@@ -468,6 +498,7 @@ MainComponent::MainComponent()
     configureTopButtons();
     createMicrophoneWarning();
     applyAppearance();
+    updateMicrophoneStateControl();
     updateMicrophoneWarning();
     setSize(1200, 760);
 }
@@ -494,6 +525,7 @@ void MainComponent::configureTopButtons()
     addAndMakeVisible(settingsButton);
     addAndMakeVisible(toolsButton);
     addAndMakeVisible(helpButton);
+    addAndMakeVisible(microphoneButton);
 
     // File is intentionally present but inactive while the project/file model
     // is still being designed.
@@ -501,6 +533,8 @@ void MainComponent::configureTopButtons()
     settingsButton.onClick = [this] { showSettings(); };
     toolsButton.onClick = [this] { showToolsMenu(); };
     helpButton.onClick = [this] { showHelpMenu(); };
+    microphoneButton.setTitle("Global microphone mute control");
+    microphoneButton.onClick = [this] { audioInputService.toggleMuted(); };
 }
 
 void MainComponent::createMicrophoneWarning()
@@ -544,6 +578,7 @@ void MainComponent::resized()
     toolsButton.setBounds(menuBounds.removeFromLeft(menuButtonWidth));
     menuBounds.removeFromLeft(menuButtonGap);
     helpButton.setBounds(menuBounds.removeFromLeft(menuButtonWidth));
+    microphoneButton.setBounds(menuBounds.removeFromRight(microphoneButtonWidth));
 
     if (microphoneWarning != nullptr)
     {
@@ -708,7 +743,7 @@ void MainComponent::showSettings()
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     settingsWindow = std::make_unique<SettingsWindow>(
-        audioInputService.deviceManager(), currentTheme,
+        audioInputService, currentTheme,
         [safeThis](Theme theme)
         {
             if (safeThis != nullptr)
@@ -957,6 +992,8 @@ void MainComponent::applyAppearanceToTopButtons()
         button->setColour(juce::TextButton::textColourOffId, palette.foreground);
         button->setColour(juce::TextButton::textColourOnId, palette.foreground);
     }
+
+    updateMicrophoneStateControl();
 }
 
 void MainComponent::applyAppearanceToOpenWindows()
@@ -999,7 +1036,48 @@ bool MainComponent::hasUsableMicrophone() const
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
     if (source == &audioInputService)
+    {
+        updateMicrophoneStateControl();
         updateMicrophoneWarning();
+    }
+}
+
+void MainComponent::updateMicrophoneStateControl()
+{
+    const auto palette = appPaletteFor(currentTheme);
+    auto colour = palette.accent;
+    juce::String text;
+    juce::String tooltip;
+
+    switch (audioInputService.inputState())
+    {
+    case AudioInputService::InputState::disconnected:
+        text = "Mic disconnected";
+        tooltip = "No microphone is available; open Settings to choose an input";
+        colour = palette.muted;
+        break;
+    case AudioInputService::InputState::muted:
+        text = "Mic muted - Unmute";
+        tooltip = "Resume audio analysis using the selected microphone";
+        colour = palette.warning;
+        break;
+    case AudioInputService::InputState::clipping:
+        text = "Mic clipping - Mute";
+        tooltip = "The microphone level is clipping; click to mute all analysis tools";
+        colour = juce::Colours::red;
+        break;
+    case AudioInputService::InputState::active:
+        text = "Mic active - Mute";
+        tooltip = "Mute the microphone for every analysis tool";
+        break;
+    }
+
+    microphoneButton.setButtonText(text);
+    microphoneButton.setTooltip(tooltip);
+    microphoneButton.setColour(juce::TextButton::buttonColourId, colour.withAlpha(0.75f));
+    microphoneButton.setColour(juce::TextButton::buttonOnColourId, colour);
+    microphoneButton.setColour(juce::TextButton::textColourOffId, palette.foreground);
+    microphoneButton.setColour(juce::TextButton::textColourOnId, palette.foreground);
 }
 
 void MainComponent::updateMicrophoneWarning()

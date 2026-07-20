@@ -68,6 +68,7 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     // Microphone state ------------------------------------------------------
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
     [[nodiscard]] bool hasUsableMicrophone() const;
+    void updateMicrophoneStateControl();
     void updateMicrophoneWarning();
     void dismissMicrophoneWarning();
 
@@ -80,6 +81,7 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     juce::TextButton settingsButton{"Settings"};
     juce::TextButton toolsButton{"Tools"};
     juce::TextButton helpButton{"Help"};
+    juce::TextButton microphoneButton;
 
     std::unique_ptr<ToolWindow> tunerWindow;
     std::unique_ptr<ToolWindow> spectrogramWindow;
