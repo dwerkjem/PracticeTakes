@@ -76,6 +76,9 @@ jobs:
       - name: Build
         run: cmake --build build --config "${BUILD_TYPE}" --parallel
 
+      - name: Test
+        run: ctest --test-dir build --build-config "${BUILD_TYPE}" --output-on-failure
+
       - name: Package
         run: |
           artifact_name="PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}"
@@ -137,6 +140,10 @@ jobs:
       - name: Build
         shell: pwsh
         run: cmake --build build --config "${env:BUILD_TYPE}" --parallel
+
+      - name: Test
+        shell: pwsh
+        run: ctest --test-dir build --build-config "${env:BUILD_TYPE}" --output-on-failure
 
       - name: Package
         shell: pwsh
@@ -206,6 +213,9 @@ jobs:
 
       - name: Build
         run: cmake --build build --config "${BUILD_TYPE}" --parallel
+
+      - name: Test
+        run: ctest --test-dir build --build-config "${BUILD_TYPE}" --output-on-failure
 
       - name: Package
         run: |
@@ -311,4 +321,3 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
-
