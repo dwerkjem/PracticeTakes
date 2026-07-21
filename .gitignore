@@ -294,3 +294,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Build helper scripts are source files, not generated build output.
+!/scripts/build/

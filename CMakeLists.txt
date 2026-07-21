@@ -52,6 +52,7 @@ add_compile_definitions(
 )
 
 include(FetchContent)
+include(CTest)
 
 FetchContent_Declare(
     JUCE
@@ -61,6 +62,17 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(JUCE)
+
+if(BUILD_TESTING)
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v3.8.1
+        GIT_SHALLOW TRUE
+    )
+
+    FetchContent_MakeAvailable(Catch2)
+endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PatchJuceAlsaChannelMismatch.cmake")
@@ -112,6 +124,7 @@ target_sources(PracticeTakes
         src/app/MainComponent.h
         src/app/MainTitleBar.h
         src/app/MicrophoneWarning.h
+        src/app/ThemeType.h
         src/spectrogram/SpectrogramComponent.cpp
         src/spectrogram/SpectrogramComponent.h
         src/tuner/TunerComponent.cpp
@@ -137,3 +150,22 @@ target_link_libraries(PracticeTakes
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags
 )
+
+if(BUILD_TESTING)
+    add_executable(PracticeTakesTests
+        tests/AppDefaultsTests.cpp
+    )
+
+    target_include_directories(PracticeTakesTests
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    )
+
+    target_link_libraries(PracticeTakesTests
+        PRIVATE
+            Catch2::Catch2WithMain
+    )
+
+    include(Catch)
+    catch_discover_tests(PracticeTakesTests)
+endif()

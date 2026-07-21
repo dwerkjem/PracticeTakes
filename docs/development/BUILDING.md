@@ -17,17 +17,17 @@ through the repository's `vcpkg.json` manifest and custom triplets.
 The simplest supported local workflow on Linux is:
 
 ```bash
-./scripts/build-and-run.sh
+./scripts/build/build-and-run.sh
 ```
 
 Useful options:
 
 ```bash
-./scripts/build-and-run.sh --build-only
-./scripts/build-and-run.sh --clean
-BUILD_TYPE=Release ./scripts/build-and-run.sh
-./scripts/build-and-run.sh --install-dependencies
-./scripts/build-and-run.sh --jobs 2
+./scripts/build/build-and-run.sh --build-only
+./scripts/build/build-and-run.sh --clean
+BUILD_TYPE=Release ./scripts/build/build-and-run.sh
+./scripts/build/build-and-run.sh --install-dependencies
+./scripts/build/build-and-run.sh --jobs 2
 ```
 
 On Debian and Ubuntu, the script first checks every required system package.

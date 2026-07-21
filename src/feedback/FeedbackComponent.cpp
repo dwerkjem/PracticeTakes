@@ -55,6 +55,34 @@ bool looksLikeEmail(const juce::String& email)
     const auto at = email.indexOfChar('@');
     return at > 0 && email.indexOfChar(at + 1, '.') > at + 1 && !email.containsAnyOf(" \t\r\n");
 }
+
+class FeedbackPreview final : public juce::Component
+{
+  public:
+    FeedbackPreview(const juce::String& preview, const juce::Image& screenshot)
+    {
+        previewText.setMultiLine(true);
+        previewText.setReadOnly(true);
+        previewText.setText(preview, false);
+        addAndMakeVisible(previewText);
+        screenshotView.setImage(screenshot, juce::RectanglePlacement::centred |
+                                                juce::RectanglePlacement::onlyReduceInSize);
+        addAndMakeVisible(screenshotView);
+        setSize(900, 700);
+    }
+
+    void resized() override
+    {
+        auto bounds = getLocalBounds().reduced(14);
+        previewText.setBounds(bounds.removeFromTop(230));
+        bounds.removeFromTop(12);
+        screenshotView.setBounds(bounds);
+    }
+
+  private:
+    juce::TextEditor previewText;
+    juce::ImageComponent screenshotView;
+};
 } // namespace
 
 FeedbackComponent::FeedbackComponent(juce::PropertiesFile& propertiesFile)
@@ -92,11 +120,17 @@ FeedbackComponent::FeedbackComponent(juce::PropertiesFile& propertiesFile)
     reproductionEditor.setInputRestrictions(maximumReproductionLength);
     emailEditor.setInputRestrictions(maximumEmailLength);
 
-    environmentLabel.setText("Practice Takes " + juce::String(ProjectInfo::versionString) + " | " +
-                                 juce::SystemStats::getOperatingSystemName(),
+    environmentLabel.setText("Optional diagnostics (disabled by default; select for this report)",
                              juce::dontSendNotification);
-    environmentLabel.setTitle("Automatically included environment");
+    environmentLabel.setTitle("Optional diagnostic information");
     addAndMakeVisible(environmentLabel);
+    versionDiagnostic.setTitle("Include application version in this submission");
+    operatingSystemDiagnostic.setTitle("Include operating system in this submission");
+    screenshotDiagnostic.setTitle(
+        "Capture all open Practice Takes windows except this feedback window");
+    addAndMakeVisible(versionDiagnostic);
+    addAndMakeVisible(operatingSystemDiagnostic);
+    addAndMakeVisible(screenshotDiagnostic);
 
     validationLabel.setColour(juce::Label::textColourId, juce::Colours::orange);
     validationLabel.setTitle("Submission status");
@@ -154,6 +188,10 @@ void FeedbackComponent::resized()
     place(reproductionLabel, reproductionEditor, 88);
     place(emailLabel, emailEditor, 34);
     environmentLabel.setBounds(bounds.removeFromTop(26));
+    auto diagnosticRow = bounds.removeFromTop(30);
+    versionDiagnostic.setBounds(diagnosticRow.removeFromLeft(190));
+    operatingSystemDiagnostic.setBounds(diagnosticRow.removeFromLeft(190));
+    screenshotDiagnostic.setBounds(diagnosticRow.removeFromLeft(230));
     validationLabel.setBounds(bounds.removeFromTop(30));
     auto buttons = bounds.removeFromTop(36);
     submitButton.setBounds(buttons.removeFromRight(160));
@@ -163,9 +201,16 @@ void FeedbackComponent::resized()
 
 FeedbackComponent::Draft FeedbackComponent::currentDraft() const
 {
-    return {typeBox.getSelectedId(), titleEditor.getText().trim(),
-            descriptionEditor.getText().trim(), reproductionEditor.getText().trim(),
-            emailEditor.getText().trim()};
+    return {typeBox.getSelectedId(),
+            titleEditor.getText().trim(),
+            descriptionEditor.getText().trim(),
+            reproductionEditor.getText().trim(),
+            emailEditor.getText().trim(),
+            versionDiagnostic.getToggleState(),
+            operatingSystemDiagnostic.getToggleState(),
+            screenshotDiagnostic.getToggleState(),
+            {},
+            {}};
 }
 
 juce::String FeedbackComponent::validate() const
@@ -194,9 +239,71 @@ juce::String FeedbackComponent::previewText(const Draft& draft) const
         text += "\n\nReproduction steps:\n" + draft.reproductionSteps;
     text += "\n\nContact: " +
             (draft.contactEmail.isEmpty() ? juce::String("Not provided") : draft.contactEmail);
-    text += "\nEnvironment: Practice Takes " + juce::String(ProjectInfo::versionString) + " | " +
-            juce::SystemStats::getOperatingSystemName();
+    if (draft.includeVersion || draft.includeOperatingSystem)
+    {
+        text += "\n\nOptional diagnostics (included with consent):";
+        if (draft.includeVersion)
+            text += "\nApplication version: " + juce::String(ProjectInfo::versionString);
+        if (draft.includeOperatingSystem)
+            text += "\nOperating system: " + juce::SystemStats::getOperatingSystemName();
+    }
+    if (draft.includeScreenshot)
+        text += "\n\nAttachment: screenshot of all visible Practice Takes windows "
+                "except this feedback window";
     return text;
+}
+
+juce::String FeedbackComponent::captureApplicationScreenshot() const
+{
+    auto* feedbackWindow = getTopLevelComponent();
+    auto& desktop = juce::Desktop::getInstance();
+    juce::Array<juce::Component*> windows;
+    juce::Rectangle<int> capturedBounds;
+
+    for (int index = 0; index < desktop.getNumComponents(); ++index)
+    {
+        auto* window = desktop.getComponent(index);
+        if (window == nullptr || window == feedbackWindow || !window->isVisible() ||
+            window->getWidth() <= 0 || window->getHeight() <= 0)
+            continue;
+
+        windows.add(window);
+        capturedBounds = capturedBounds.isEmpty()
+                             ? window->getScreenBounds()
+                             : capturedBounds.getUnion(window->getScreenBounds());
+    }
+
+    if (windows.isEmpty() || capturedBounds.isEmpty())
+        return {};
+
+    constexpr float maximumWidth = 1280.0f;
+    constexpr float maximumHeight = 720.0f;
+    const auto scale =
+        juce::jmin(1.0f, maximumWidth / static_cast<float>(capturedBounds.getWidth()),
+                   maximumHeight / static_cast<float>(capturedBounds.getHeight()));
+    const auto imageWidth = juce::jmax(1, juce::roundToInt(capturedBounds.getWidth() * scale));
+    const auto imageHeight = juce::jmax(1, juce::roundToInt(capturedBounds.getHeight() * scale));
+    juce::Image image(juce::Image::RGB, imageWidth, imageHeight, true);
+    juce::Graphics graphics(image);
+    graphics.fillAll(juce::Colours::black);
+
+    for (auto* window : windows)
+    {
+        const auto snapshot =
+            window->createComponentSnapshot(window->getLocalBounds(), true, scale);
+        const auto screenBounds = window->getScreenBounds();
+        const auto x = juce::roundToInt((screenBounds.getX() - capturedBounds.getX()) * scale);
+        const auto y = juce::roundToInt((screenBounds.getY() - capturedBounds.getY()) * scale);
+        graphics.drawImageAt(snapshot, x, y);
+    }
+
+    juce::MemoryOutputStream output;
+    juce::JPEGImageFormat jpeg;
+    jpeg.setQuality(0.72f);
+    if (!jpeg.writeImageToStream(image, output))
+        return {};
+
+    return juce::Base64::toBase64(output.getData(), output.getDataSize());
 }
 
 void FeedbackComponent::preview()
@@ -207,8 +314,34 @@ void FeedbackComponent::preview()
         setSubmissionState(SubmissionState::failed, error);
         return;
     }
-    juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon, "Feedback preview",
-                                           previewText(currentDraft()));
+    auto draft = currentDraft();
+    if (!draft.includeScreenshot)
+    {
+        juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,
+                                               "Feedback preview", previewText(draft));
+        return;
+    }
+
+    draft.screenshotBase64 = captureApplicationScreenshot();
+    juce::MemoryOutputStream decoded;
+    if (draft.screenshotBase64.isEmpty() ||
+        !juce::Base64::convertFromBase64(decoded, draft.screenshotBase64))
+    {
+        setSubmissionState(SubmissionState::failed,
+                           "The application screenshot could not be previewed.");
+        return;
+    }
+
+    const auto screenshot =
+        juce::ImageFileFormat::loadFrom(decoded.getData(), decoded.getDataSize());
+    juce::DialogWindow::LaunchOptions options;
+    options.content.setOwned(new FeedbackPreview(previewText(draft), screenshot));
+    options.dialogTitle = "Feedback preview";
+    options.dialogBackgroundColour = findColour(juce::ResizableWindow::backgroundColourId);
+    options.escapeKeyTriggersCloseButton = true;
+    options.useNativeTitleBar = true;
+    options.resizable = true;
+    options.launchAsync();
 }
 
 void FeedbackComponent::submit()
@@ -222,6 +355,17 @@ void FeedbackComponent::submit()
     if (isThreadRunning())
         return;
     pendingDraft = currentDraft();
+    pendingDraft.clientSubmissionId = juce::Uuid().toDashedString();
+    if (pendingDraft.includeScreenshot)
+    {
+        pendingDraft.screenshotBase64 = captureApplicationScreenshot();
+        if (pendingDraft.screenshotBase64.isEmpty())
+        {
+            setSubmissionState(SubmissionState::failed,
+                               "The application screenshot could not be captured.");
+            return;
+        }
+    }
     saveDraft(pendingDraft);
     setSubmissionState(SubmissionState::submitting, "Submitting feedback...");
     startThread();
@@ -259,6 +403,9 @@ void FeedbackComponent::restoreDraft()
     descriptionEditor.setText(properties.getValue(draftDescriptionKey), false);
     reproductionEditor.setText(properties.getValue(draftReproductionKey), false);
     emailEditor.setText(properties.getValue(draftEmailKey), false);
+    versionDiagnostic.setToggleState(false, juce::dontSendNotification);
+    operatingSystemDiagnostic.setToggleState(false, juce::dontSendNotification);
+    screenshotDiagnostic.setToggleState(false, juce::dontSendNotification);
 }
 
 void FeedbackComponent::run()
@@ -322,10 +469,16 @@ void FeedbackComponent::run()
     submissionObject->setProperty("submittedAt", juce::Time::getCurrentTime().toISO8601(true));
     submissionObject->setProperty("appVersion", appVersion);
     submissionObject->setProperty("installationId", installationId);
+    submissionObject->setProperty("clientSubmissionId", pendingDraft.clientSubmissionId);
     submissionObject->setProperty("category", contractCategory(pendingDraft.type));
     submissionObject->setProperty("message", previewText(pendingDraft));
     if (pendingDraft.contactEmail.isNotEmpty())
         submissionObject->setProperty("contactEmail", pendingDraft.contactEmail);
+    if (pendingDraft.screenshotBase64.isNotEmpty())
+    {
+        submissionObject->setProperty("screenshotMimeType", "image/jpeg");
+        submissionObject->setProperty("screenshotBase64", pendingDraft.screenshotBase64);
+    }
 
     int submissionStatus = 0;
     const auto submissionResponse =
@@ -335,9 +488,14 @@ void FeedbackComponent::run()
                 juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
                     .withExtraHeaders("Content-Type: application/json\r\n")
                     .withStatusCode(&submissionStatus));
-    juce::ignoreUnused(submissionResponse);
+    juce::String submissionError;
+    if (submissionResponse != nullptr && submissionStatus != 201)
+    {
+        const auto responseJson = juce::JSON::parse(submissionResponse->readEntireStreamAsString());
+        submissionError = responseJson.getProperty("message", {}).toString();
+    }
     juce::MessageManager::callAsync(
-        [safe = juce::Component::SafePointer(this), submissionStatus]
+        [safe = juce::Component::SafePointer(this), submissionStatus, submissionError]
         {
             if (safe == nullptr)
                 return;
@@ -348,13 +506,19 @@ void FeedbackComponent::run()
                 safe->descriptionEditor.clear();
                 safe->reproductionEditor.clear();
                 safe->emailEditor.clear();
+                safe->versionDiagnostic.setToggleState(false, juce::dontSendNotification);
+                safe->operatingSystemDiagnostic.setToggleState(false, juce::dontSendNotification);
+                safe->screenshotDiagnostic.setToggleState(false, juce::dontSendNotification);
                 safe->setSubmissionState(SubmissionState::succeeded,
                                          "Feedback submitted successfully. Thank you.");
             }
             else
             {
-                safe->setSubmissionState(SubmissionState::failed,
-                                         "Submission failed. Your draft has been preserved.");
+                auto detail = "Submission failed (HTTP " + juce::String(submissionStatus) + ").";
+                if (submissionError.isNotEmpty())
+                    detail += " " + submissionError;
+                detail += " Your draft has been preserved.";
+                safe->setSubmissionState(SubmissionState::failed, detail);
             }
         });
 }

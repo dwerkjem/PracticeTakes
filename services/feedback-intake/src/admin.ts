@@ -23,6 +23,7 @@ interface SubmissionRow {
   tags_json: string;
   github_issue_url: string | null;
   duplicate_of: string | null;
+  screenshot_mime_type: string | null;
 }
 
 const statuses = new Set(["new", "needs_review", "planned", "duplicate", "resolved", "declined"]);
@@ -72,6 +73,12 @@ export async function handleAdminRequest(request: Request, env: AdminEnv): Promi
   if (url.pathname === "/v1/admin/export" && request.method === "GET") {
     return exportSubmissions(url, env.FEEDBACK_DB);
   }
+  const screenshotMatch = url.pathname.match(
+    /^\/v1\/admin\/submissions\/([0-9a-f-]{36})\/screenshot$/i,
+  );
+  if (screenshotMatch && request.method === "GET") {
+    return getSubmissionScreenshot(screenshotMatch[1], env.FEEDBACK_DB);
+  }
   const match = url.pathname.match(/^\/v1\/admin\/submissions\/([0-9a-f-]{36})$/i);
   if (match && request.method === "PATCH") {
     return updateSubmission(match[1], request, env.FEEDBACK_DB, user);
@@ -96,7 +103,8 @@ async function listSubmissions(url: URL, db: D1Database): Promise<Response> {
   const limit = Math.min(Math.max(Number.parseInt(url.searchParams.get("limit") ?? "100", 10) || 100, 1), 250);
   const result = await db.prepare(
     `SELECT receipt_id, submitted_at, received_at, app_version, category, message, contact_email,
-            status, developer_notes, priority, tags_json, github_issue_url, duplicate_of
+            status, developer_notes, priority, tags_json, github_issue_url, duplicate_of,
+            screenshot_mime_type
        FROM feedback_submissions ${where} ORDER BY received_at DESC LIMIT ?`,
   ).bind(...values, limit).all<SubmissionRow>();
   return jsonResponse(200, { submissions: (result.results ?? []).map(presentSubmission) });
@@ -105,13 +113,36 @@ async function listSubmissions(url: URL, db: D1Database): Promise<Response> {
 async function getSubmission(receiptId: string, db: D1Database): Promise<Response> {
   const result = await db.prepare(
     `SELECT receipt_id, submitted_at, received_at, app_version, category, message, contact_email,
-            status, developer_notes, priority, tags_json, github_issue_url, duplicate_of
+            status, developer_notes, priority, tags_json, github_issue_url, duplicate_of,
+            screenshot_mime_type
        FROM feedback_submissions WHERE receipt_id = ? LIMIT 1`,
   ).bind(receiptId).all<SubmissionRow>();
   const submission = result.results?.[0];
   return submission
     ? jsonResponse(200, { submission: presentSubmission(submission) })
     : jsonResponse(404, { error: { code: "not_found", message: "Submission not found." } });
+}
+
+async function getSubmissionScreenshot(receiptId: string, db: D1Database): Promise<Response> {
+  const result = await db.prepare(
+    `SELECT screenshot_mime_type, screenshot_base64
+       FROM feedback_submissions WHERE receipt_id = ? LIMIT 1`,
+  ).bind(receiptId).all<{ screenshot_mime_type: string | null; screenshot_base64: string | null }>();
+  const screenshot = result.results?.[0];
+  if (!screenshot?.screenshot_mime_type || !screenshot.screenshot_base64) {
+    return jsonResponse(404, { error: { code: "screenshot_not_found", message: "Screenshot not found." } });
+  }
+
+  const binary = atob(screenshot.screenshot_base64);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return new Response(bytes, {
+    headers: {
+      "cache-control": "no-store",
+      "content-disposition": `inline; filename="feedback-${receiptId}.jpg"`,
+      "content-type": screenshot.screenshot_mime_type,
+      "x-content-type-options": "nosniff",
+    },
+  });
 }
 
 async function createSubmission(request: Request, db: D1Database, adminEmail: string): Promise<Response> {
@@ -374,6 +405,7 @@ function presentSubmission(row: SubmissionRow) {
     receiptId: row.receipt_id, submittedAt: row.submitted_at,
     receivedAt: new Date(row.received_at * 1000).toISOString(), appVersion: row.app_version,
     category: row.category, userFeedback, diagnosticContext, contactEmail: row.contact_email,
+    hasScreenshot: Boolean(row.screenshot_mime_type),
     feedbackType: structuredFeedback.type, title: structuredFeedback.title,
     description: structuredFeedback.description, contactSummary: structuredFeedback.contact,
     status: row.status, developerNotes: row.developer_notes, priority: row.priority, tags,
@@ -418,7 +450,8 @@ function assetResponse(body: string, contentType: string): Response {
 function htmlResponse(body: string): Response {
   return new Response(body, { headers: {
     "cache-control": "no-store",
-    "content-security-policy": "default-src 'self'; style-src 'self'; script-src 'self'; frame-ancestors 'none'",
+    "content-security-policy":
+      "default-src 'self'; img-src 'self' blob:; style-src 'self'; script-src 'self'; frame-ancestors 'none'",
     "content-type": "text/html; charset=utf-8", "x-content-type-options": "nosniff",
   } });
 }

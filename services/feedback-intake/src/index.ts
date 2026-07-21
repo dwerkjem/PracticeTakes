@@ -21,6 +21,9 @@ interface FeedbackRequest extends AuthorizationRequest {
   category: "bug" | "idea" | "usability" | "other";
   message: string;
   contactEmail?: string;
+  screenshotMimeType?: "image/png" | "image/jpeg";
+  screenshotBase64?: string;
+  clientSubmissionId: string;
 }
 
 interface TokenClaims {
@@ -33,7 +36,8 @@ interface TokenClaims {
 }
 
 const jsonHeaders = { "content-type": "application/json; charset=utf-8" };
-const maximumBodyBytes = 16 * 1024;
+const maximumBodyBytes = 1536 * 1024;
+const maximumScreenshotBase64Length = 1400 * 1024;
 const authorizationLifetimeSeconds = 5 * 60;
 const oneHourSeconds = 60 * 60;
 const versionPattern = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
@@ -159,13 +163,23 @@ async function createSubmission(request: Request, env: Env): Promise<Response> {
       env.FEEDBACK_DB.prepare(
         `INSERT INTO feedback_submissions
          (receipt_id, schema_version, submitted_at, received_at, app_version,
-          installation_hash, client_hash, category, message, contact_email)
-         VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          installation_hash, client_hash, category, message, contact_email,
+          screenshot_mime_type, screenshot_base64, client_submission_id)
+         VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).bind(receiptId, input.submittedAt, now, input.appVersion, installationHash,
-             clientHash, input.category, input.message, input.contactEmail ?? null),
+             clientHash, input.category, input.message, input.contactEmail ?? null,
+             input.screenshotMimeType ?? null, input.screenshotBase64 ?? null,
+             input.clientSubmissionId),
     ]);
   } catch (error) {
     if (isUniqueConstraintError(error)) {
+      const existing = await env.FEEDBACK_DB.prepare(
+        `SELECT receipt_id FROM feedback_submissions
+           WHERE installation_hash = ? AND client_submission_id = ? LIMIT 1`,
+      ).bind(installationHash, input.clientSubmissionId).first<{ receipt_id: string }>();
+      if (existing?.receipt_id) {
+        return jsonResponse(200, { schemaVersion: 1, receiptId: existing.receipt_id, duplicate: true });
+      }
       return errorResponse(409, "duplicate_submission", "This authorization has already been used.");
     }
     throw error;
@@ -218,13 +232,16 @@ function validateFeedbackRequest(value: unknown, minimumVersion: string):
   if (base.error) return { error: base.error };
   if (!isRecord(value) || typeof value.authorization !== "string" ||
       typeof value.submittedAt !== "string" || typeof value.category !== "string" ||
-      typeof value.message !== "string") {
+      typeof value.message !== "string" || typeof value.clientSubmissionId !== "string") {
     return { error: errorResponse(400, "invalid_request", "Feedback request fields are invalid.") };
   }
   if (value.authorization.length > 2048 || !allowedCategories.has(value.category)) {
     return { error: errorResponse(400, "invalid_request", "Authorization or category is invalid.") };
   }
   const message = value.message.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(value.clientSubmissionId)) {
+    return { error: errorResponse(400, "invalid_submission_id", "Submission identifier is invalid.") };
+  }
   if (message.length < 3 || message.length > 8000) {
     return { error: errorResponse(400, "invalid_message", "Message must contain 3 to 8000 characters.") };
   }
@@ -236,6 +253,16 @@ function validateFeedbackRequest(value: unknown, minimumVersion: string):
       (typeof value.contactEmail !== "string" || value.contactEmail.length > 254 ||
        !emailPattern.test(value.contactEmail))) {
     return { error: errorResponse(400, "invalid_contact_email", "Contact email is invalid.") };
+  }
+  const hasScreenshot = value.screenshotBase64 !== undefined || value.screenshotMimeType !== undefined;
+  if (hasScreenshot &&
+      ((value.screenshotMimeType !== "image/png" && value.screenshotMimeType !== "image/jpeg") ||
+       typeof value.screenshotBase64 !== "string" ||
+       value.screenshotBase64.length < 16 ||
+       value.screenshotBase64.length > maximumScreenshotBase64Length ||
+       !/^[A-Za-z0-9+/]+={0,2}$/.test(value.screenshotBase64))) {
+    return { error: errorResponse(400, "invalid_screenshot",
+      "Screenshot must be a bounded base64-encoded PNG or JPEG attachment.") };
   }
   return { value: { ...value, message } as unknown as FeedbackRequest };
 }

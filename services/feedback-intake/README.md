@@ -117,14 +117,14 @@ export CLOUDFLARE_ACCOUNT_ID='...'
 export CLOUDFLARE_API_TOKEN='...'
 export D1_DATABASE_ID='...'
 export ADMIN_EMAIL='developer@example.com'
-./scripts/setup-feedback-dashboard-daemon.sh
+./scripts/feedback/setup-dashboard-daemon.sh
 ```
 
 The script creates a mode-`0600` `.env` file and generates the dashboard password. Rebuild and
 restart the daemon after changing the checkout with:
 
 ```bash
-./scripts/update-feedback-dashboard-daemon.sh
+./scripts/feedback/update-dashboard-daemon.sh
 ```
 
 Pass `--pull-source` to perform a fast-forward-only `git pull` before rebuilding.
@@ -201,7 +201,9 @@ linking, and CSV export.
 
 ## Security and abuse controls
 
-- 16 KiB request limit and field-specific size checks
+- 1.5 MiB request limit with an independently bounded optional PNG or JPEG screenshot
+- Screenshots require explicit per-submission consent, contain visible Practice Takes windows,
+  and explicitly exclude the feedback form itself
 - configurable minimum supported semantic application version
 - timestamps constrained to a ten-minute window
 - five-minute HMAC authorizations with unique token IDs
