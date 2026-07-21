@@ -127,10 +127,14 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         {
             setFullScreen(shouldBeFullscreen);
             if (!shouldBeFullscreen)
+            {
                 setResizable(true, false);
+            }
 
             if (titleBar != nullptr)
+            {
                 titleBar->setFullscreen(shouldBeFullscreen);
+            }
         }
 
         std::unique_ptr<MainTitleBar> titleBar;

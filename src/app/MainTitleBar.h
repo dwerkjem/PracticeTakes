@@ -16,7 +16,9 @@ class MainTitleBar final : public juce::Component
     {
         for (auto* button :
              {&fileButton, &settingsButton, &toolsButton, &helpButton, &microphoneButton})
+        {
             addAndMakeVisible(button);
+        }
 
         hamburgerButton.setButtonText("Menu");
         hamburgerButton.setTooltip("Show application menu");
@@ -76,7 +78,9 @@ class MainTitleBar final : public juce::Component
         hamburgerButton.setVisible(useCollapsedMenu);
         for (auto* button :
              {&fileButton, &settingsButton, &toolsButton, &helpButton, &microphoneButton})
+        {
             button->setVisible(!useCollapsedMenu);
+        }
 
         if (useCollapsedMenu)
         {
@@ -103,20 +107,26 @@ class MainTitleBar final : public juce::Component
     void mouseDown(const juce::MouseEvent& event) override
     {
         if (auto* window = findParentComponentOfClass<juce::DocumentWindow>())
+        {
             windowDragger.startDraggingComponent(window, event);
+        }
     }
 
     void mouseDrag(const juce::MouseEvent& event) override
     {
         if (auto* window = findParentComponentOfClass<juce::DocumentWindow>();
             window != nullptr && !window->isFullScreen())
+        {
             windowDragger.dragComponent(window, event, nullptr);
+        }
     }
 
     void mouseDoubleClick(const juce::MouseEvent&) override
     {
         if (onFullscreen)
+        {
             onFullscreen();
+        }
     }
 
   private:
@@ -145,7 +155,9 @@ class MainTitleBar final : public juce::Component
             [safeThis](int selectedItemId)
             {
                 if (safeThis == nullptr)
+                {
                     return;
+                }
 
                 switch (selectedItemId)
                 {
