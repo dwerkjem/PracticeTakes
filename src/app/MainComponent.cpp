@@ -4,14 +4,11 @@
 #include "../tuner/TunerComponent.h"
 
 #include "AppWindows.h"
+#include "MainTitleBar.h"
 #include "MicrophoneWarning.h"
 
 namespace
 {
-constexpr int menuBarHeight = 40;
-constexpr int menuButtonWidth = 96;
-constexpr int menuButtonGap = 4;
-constexpr int microphoneButtonWidth = 190;
 constexpr int toolsMenuWidth = 190;
 constexpr int helpMenuWidth = 190;
 
@@ -21,6 +18,10 @@ constexpr int microphoneWarningHeight = 118;
 constexpr int tunerMenuItemId = 1;
 constexpr int spectrogramMenuItemId = 2;
 constexpr int sendFeedbackMenuItemId = 1;
+constexpr int openSettingsMenuItemId = 1;
+constexpr int lightSettingsMenuItemId = 2;
+constexpr int darkSettingsMenuItemId = 3;
+constexpr int muteSettingsMenuItemId = 4;
 constexpr auto settingsSchemaKey = "settings.schema";
 constexpr auto themeKey = "global.theme";
 constexpr auto audioStateKey = "audio.deviceState";
@@ -76,20 +77,24 @@ MainComponent::~MainComponent()
 
 void MainComponent::configureTopButtons()
 {
-    addAndMakeVisible(fileButton);
-    addAndMakeVisible(settingsButton);
-    addAndMakeVisible(toolsButton);
-    addAndMakeVisible(helpButton);
-    addAndMakeVisible(microphoneButton);
-
     // File is intentionally present but inactive while the project/file model
     // is still being designed.
     fileButton.setTooltip("File actions will be added later.");
-    settingsButton.onClick = [this] { showSettings(); };
+    settingsButton.onClick = [this] { showSettingsMenu(); };
     toolsButton.onClick = [this] { showToolsMenu(); };
     helpButton.onClick = [this] { showHelpMenu(); };
     microphoneButton.setTitle("Global microphone mute control");
     microphoneButton.onClick = [this] { audioInputService.toggleMuted(); };
+}
+
+std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(const juce::String& title,
+                                                            std::function<void()> minimiseHandler,
+                                                            std::function<void()> fullscreenHandler,
+                                                            std::function<void()> closeHandler)
+{
+    return std::make_unique<MainTitleBar>(title, fileButton, settingsButton, toolsButton,
+                                          helpButton, microphoneButton, std::move(minimiseHandler),
+                                          std::move(fullscreenHandler), std::move(closeHandler));
 }
 
 void MainComponent::createMicrophoneWarning()
@@ -105,35 +110,11 @@ void MainComponent::paint(juce::Graphics& graphics)
 {
     const auto palette = appPaletteFor(currentTheme);
     graphics.fillAll(palette.background);
-
-    juce::ColourGradient menuGradient(
-        palette.menuBarTop, static_cast<float>(menuBarBounds.getCentreX()),
-        static_cast<float>(menuBarBounds.getY()), palette.menuBarBottom,
-        static_cast<float>(menuBarBounds.getCentreX()),
-        static_cast<float>(menuBarBounds.getBottom()), false);
-
-    graphics.setGradientFill(menuGradient);
-    graphics.fillRect(menuBarBounds);
-
-    graphics.setColour(palette.outline.withAlpha(0.7f));
-    graphics.drawHorizontalLine(menuBarBounds.getBottom() - 1, 0.0f,
-                                static_cast<float>(getWidth()));
 }
 
 void MainComponent::resized()
 {
     auto remainingBounds = getLocalBounds();
-    menuBarBounds = remainingBounds.removeFromTop(menuBarHeight);
-
-    auto menuBounds = menuBarBounds.reduced(4, 5);
-    fileButton.setBounds(menuBounds.removeFromLeft(menuButtonWidth));
-    menuBounds.removeFromLeft(menuButtonGap);
-    settingsButton.setBounds(menuBounds.removeFromLeft(menuButtonWidth));
-    menuBounds.removeFromLeft(menuButtonGap);
-    toolsButton.setBounds(menuBounds.removeFromLeft(menuButtonWidth));
-    menuBounds.removeFromLeft(menuButtonGap);
-    helpButton.setBounds(menuBounds.removeFromLeft(menuButtonWidth));
-    microphoneButton.setBounds(menuBounds.removeFromRight(microphoneButtonWidth));
 
     if (microphoneWarning != nullptr)
     {
@@ -172,6 +153,49 @@ void MainComponent::showToolsMenu()
                                safeThis->openTool(ToolType::spectrogram);
                            }
                        });
+}
+
+void MainComponent::showSettingsMenu()
+{
+    juce::PopupMenu appearanceMenu;
+    appearanceMenu.addItem(lightSettingsMenuItemId, "Light theme", true,
+                           currentTheme == Theme::light);
+    appearanceMenu.addItem(darkSettingsMenuItemId, "Dark theme", true, currentTheme == Theme::dark);
+
+    juce::PopupMenu menu;
+    menu.setLookAndFeel(&appLookAndFeel);
+    menu.addSubMenu("Appearance", appearanceMenu);
+    menu.addItem(muteSettingsMenuItemId,
+                 audioInputService.isMuted() ? "Unmute microphone" : "Mute microphone");
+    menu.addSeparator();
+    menu.addItem(openSettingsMenuItemId, "Open full settings...");
+
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    menu.showMenuAsync(
+        juce::PopupMenu::Options().withTargetComponent(&settingsButton).withMinimumWidth(230),
+        [safeThis](int selectedItemId)
+        {
+            if (safeThis == nullptr)
+                return;
+
+            switch (selectedItemId)
+            {
+            case openSettingsMenuItemId:
+                safeThis->showSettings();
+                break;
+            case lightSettingsMenuItemId:
+                safeThis->setTheme(Theme::light);
+                break;
+            case darkSettingsMenuItemId:
+                safeThis->setTheme(Theme::dark);
+                break;
+            case muteSettingsMenuItemId:
+                safeThis->audioInputService.toggleMuted();
+                break;
+            default:
+                break;
+            }
+        });
 }
 
 void MainComponent::showHelpMenu()
@@ -381,7 +405,7 @@ void MainComponent::resetLayout()
     if (spectrogramWindow != nullptr)
         spectrogramWindow->centreWithSize(980, 650);
     if (settingsWindow != nullptr)
-        settingsWindow->centreWithSize(760, 650);
+        settingsWindow->centreWithSize(900, 760);
 }
 
 void MainComponent::resetAll()

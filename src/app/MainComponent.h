@@ -7,7 +7,10 @@
 #include "AppDefaults.h"
 #include "Theme.h"
 
+#include <functional>
 #include <memory>
+
+class MainTitleBar;
 
 // MainComponent is the application's central coordinator. It owns the shared
 // audio device, the top-level controls, and the independent tool windows.
@@ -19,6 +22,9 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
+    [[nodiscard]] std::unique_ptr<MainTitleBar>
+    createTitleBar(const juce::String& title, std::function<void()> minimiseHandler,
+                   std::function<void()> fullscreenHandler, std::function<void()> closeHandler);
 
   private:
     enum class ToolType
@@ -38,6 +44,7 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
 
     // Tool and settings windows --------------------------------------------
     void showToolsMenu();
+    void showSettingsMenu();
     void openTool(ToolType tool);
     void closeTool(ToolType tool);
     void showSettings();
@@ -89,7 +96,6 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     std::unique_ptr<FeedbackWindow> feedbackWindow;
     std::unique_ptr<MicrophoneWarning> microphoneWarning;
 
-    juce::Rectangle<int> menuBarBounds;
     Theme currentTheme = Theme::light;
     ToolType currentTool = ToolType::tuner;
     AppDefaults::TunerSettings savedTunerSettings = AppDefaults::tunerDefaults();

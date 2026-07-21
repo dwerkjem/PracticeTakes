@@ -110,6 +110,7 @@ target_sources(PracticeTakes
         src/app/AppWindows.h
         src/app/MainComponent.cpp
         src/app/MainComponent.h
+        src/app/MainTitleBar.h
         src/app/MicrophoneWarning.h
         src/spectrogram/SpectrogramComponent.cpp
         src/spectrogram/SpectrogramComponent.h

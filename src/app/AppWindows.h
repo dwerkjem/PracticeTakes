@@ -268,8 +268,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                                     std::move(resetAllHandler)),
                         true);
         setResizable(true, true);
-        setResizeLimits(620, 500, 1300, 1000);
-        centreWithSize(760, 650);
+        setResizeLimits(760, 620, 1600, 1200);
+        centreWithSize(900, 760);
         setVisible(true);
     }
 
