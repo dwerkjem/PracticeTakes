@@ -23,6 +23,7 @@ interface FeedbackRequest extends AuthorizationRequest {
   contactEmail?: string;
   screenshotMimeType?: "image/png" | "image/jpeg";
   screenshotBase64?: string;
+  clientSubmissionId: string;
 }
 
 interface TokenClaims {
@@ -163,14 +164,22 @@ async function createSubmission(request: Request, env: Env): Promise<Response> {
         `INSERT INTO feedback_submissions
          (receipt_id, schema_version, submitted_at, received_at, app_version,
           installation_hash, client_hash, category, message, contact_email,
-          screenshot_mime_type, screenshot_base64)
-         VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          screenshot_mime_type, screenshot_base64, client_submission_id)
+         VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).bind(receiptId, input.submittedAt, now, input.appVersion, installationHash,
              clientHash, input.category, input.message, input.contactEmail ?? null,
-             input.screenshotMimeType ?? null, input.screenshotBase64 ?? null),
+             input.screenshotMimeType ?? null, input.screenshotBase64 ?? null,
+             input.clientSubmissionId),
     ]);
   } catch (error) {
     if (isUniqueConstraintError(error)) {
+      const existing = await env.FEEDBACK_DB.prepare(
+        `SELECT receipt_id FROM feedback_submissions
+           WHERE installation_hash = ? AND client_submission_id = ? LIMIT 1`,
+      ).bind(installationHash, input.clientSubmissionId).first<{ receipt_id: string }>();
+      if (existing?.receipt_id) {
+        return jsonResponse(200, { schemaVersion: 1, receiptId: existing.receipt_id, duplicate: true });
+      }
       return errorResponse(409, "duplicate_submission", "This authorization has already been used.");
     }
     throw error;
@@ -223,13 +232,16 @@ function validateFeedbackRequest(value: unknown, minimumVersion: string):
   if (base.error) return { error: base.error };
   if (!isRecord(value) || typeof value.authorization !== "string" ||
       typeof value.submittedAt !== "string" || typeof value.category !== "string" ||
-      typeof value.message !== "string") {
+      typeof value.message !== "string" || typeof value.clientSubmissionId !== "string") {
     return { error: errorResponse(400, "invalid_request", "Feedback request fields are invalid.") };
   }
   if (value.authorization.length > 2048 || !allowedCategories.has(value.category)) {
     return { error: errorResponse(400, "invalid_request", "Authorization or category is invalid.") };
   }
   const message = value.message.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(value.clientSubmissionId)) {
+    return { error: errorResponse(400, "invalid_submission_id", "Submission identifier is invalid.") };
+  }
   if (message.length < 3 || message.length > 8000) {
     return { error: errorResponse(400, "invalid_message", "Message must contain 3 to 8000 characters.") };
   }

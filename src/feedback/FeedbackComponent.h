@@ -32,6 +32,7 @@ class FeedbackComponent final : public juce::Component, private juce::Thread
         bool includeOperatingSystem = false;
         bool includeScreenshot = false;
         juce::String screenshotBase64;
+        juce::String clientSubmissionId;
     };
 
     void configureEditor(juce::TextEditor& editor, const juce::String& accessibleName,

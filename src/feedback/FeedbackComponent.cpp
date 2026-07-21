@@ -209,6 +209,7 @@ FeedbackComponent::Draft FeedbackComponent::currentDraft() const
             versionDiagnostic.getToggleState(),
             operatingSystemDiagnostic.getToggleState(),
             screenshotDiagnostic.getToggleState(),
+            {},
             {}};
 }
 
@@ -354,6 +355,7 @@ void FeedbackComponent::submit()
     if (isThreadRunning())
         return;
     pendingDraft = currentDraft();
+    pendingDraft.clientSubmissionId = juce::Uuid().toDashedString();
     if (pendingDraft.includeScreenshot)
     {
         pendingDraft.screenshotBase64 = captureApplicationScreenshot();
@@ -467,6 +469,7 @@ void FeedbackComponent::run()
     submissionObject->setProperty("submittedAt", juce::Time::getCurrentTime().toISO8601(true));
     submissionObject->setProperty("appVersion", appVersion);
     submissionObject->setProperty("installationId", installationId);
+    submissionObject->setProperty("clientSubmissionId", pendingDraft.clientSubmissionId);
     submissionObject->setProperty("category", contractCategory(pendingDraft.type));
     submissionObject->setProperty("message", previewText(pendingDraft));
     if (pendingDraft.contactEmail.isNotEmpty())

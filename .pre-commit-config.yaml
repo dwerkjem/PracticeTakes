@@ -3,6 +3,6 @@ repos:
     hooks:
       - id: clang-format
         name: Format C++ with clang-format
-        entry: python scripts/run_clang_format.py
+        entry: python scripts/quality/run_clang_format.py
         language: python
         files: '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$'

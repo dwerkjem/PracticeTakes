@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 BUILD_TYPE="${BUILD_TYPE:-Debug}"
 BUILD_DIR="${BUILD_DIR:-${PROJECT_ROOT}/build}"
 TARGET_NAME="${TARGET_NAME:-PracticeTakes}"
@@ -71,7 +71,7 @@ if [[ "$BUILD_ONLY" == true ]]; then
     if [[ ! -f "$BUILD_DIR/CMakeCache.txt" ]]; then
         printf 'Error: --build-only requires an existing configured build at %s.\n' \
             "$BUILD_DIR" >&2
-        printf 'Run ./scripts/build-and-run.sh once without --build-only.\n' >&2
+        printf 'Run ./scripts/build/build-and-run.sh once without --build-only.\n' >&2
         exit 1
     fi
 
@@ -98,7 +98,7 @@ if [[ "$INSTALL_DEPENDENCIES" == true ]]; then
     dependency_check_args+=(--install)
 fi
 
-bash "$PROJECT_ROOT/scripts/check-linux-build-dependencies.sh" "${dependency_check_args[@]}"
+bash "$PROJECT_ROOT/scripts/build/check-linux-build-dependencies.sh" "${dependency_check_args[@]}"
 
 if [[ "$CLEAN" == true ]]; then
     rm -rf -- "$BUILD_DIR"
@@ -224,7 +224,7 @@ if [[ -n "${vcpkg_prefix:-}" && "$(uname -s)" == "Linux" ]]; then
     for library_pattern in 'libX11.so*' 'libXext.so*'; do
         if ! compgen -G "$vcpkg_prefix/lib/$library_pattern" >/dev/null; then
             printf 'Error: vcpkg did not install shared %s libraries.\n' "$library_pattern" >&2
-            printf 'Run ./scripts/build-and-run.sh --clean after pulling the latest triplet.\n' >&2
+            printf 'Run ./scripts/build/build-and-run.sh --clean after pulling the latest triplet.\n' >&2
             exit 1
         fi
     done

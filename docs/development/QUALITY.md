@@ -81,20 +81,20 @@ The build step is required because JUCE generates `JuceHeader.h` during the buil
 Run without modifying files:
 
 ```bash
-python scripts/run_clang_tidy.py src/*.cpp
+python scripts/quality/run_clang_tidy.py src/*.cpp
 ```
 
 Run with supported fixes enabled:
 
 ```bash
-python scripts/run_clang_tidy.py --fix src/*.cpp
-python scripts/run_clang_format.py src/*.cpp src/*.h
+python scripts/quality/run_clang_tidy.py --fix src/*.cpp
+python scripts/quality/run_clang_format.py src/*.cpp src/*.h
 ```
 
 Use a different build directory with:
 
 ```bash
-CLANG_TIDY_BUILD_DIR=out/dev python scripts/run_clang_tidy.py src/*.cpp
+CLANG_TIDY_BUILD_DIR=out/dev python scripts/quality/run_clang_tidy.py src/*.cpp
 ```
 
 Set explicit executable paths when LLVM tools are not on `PATH`:
@@ -102,7 +102,7 @@ Set explicit executable paths when LLVM tools are not on `PATH`:
 ```bash
 CLANG_FORMAT=/path/to/clang-format \
 CLANG_TIDY=/path/to/clang-tidy \
-python scripts/run_clang_tidy.py --fix src/*.cpp
+python scripts/quality/run_clang_tidy.py --fix src/*.cpp
 ```
 
 ## Resolving VS Code errors
@@ -128,6 +128,6 @@ When configuration succeeds but stale diagnostics remain, run **C/C++: Reset Int
 - `.clang-tidy` defines static-analysis checks.
 - `.pre-commit-config.yaml` runs clang-format before local commits.
 - `.github/workflows/clang-tidy-main.yml` fixes and verifies C++ after changes land on `main`.
-- `scripts/run_clang_format.py` locates and invokes clang-format.
-- `scripts/run_clang_tidy.py` locates and invokes clang-tidy with the build directory and optional safe fixes.
+- `scripts/quality/run_clang_format.py` locates and invokes clang-format.
+- `scripts/quality/run_clang_tidy.py` locates and invokes clang-tidy with the build directory and optional safe fixes.
 - `.vscode/settings.json` connects VS Code to CMake Tools and the compilation database.

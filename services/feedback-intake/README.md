@@ -117,14 +117,14 @@ export CLOUDFLARE_ACCOUNT_ID='...'
 export CLOUDFLARE_API_TOKEN='...'
 export D1_DATABASE_ID='...'
 export ADMIN_EMAIL='developer@example.com'
-./scripts/setup-feedback-dashboard-daemon.sh
+./scripts/feedback/setup-dashboard-daemon.sh
 ```
 
 The script creates a mode-`0600` `.env` file and generates the dashboard password. Rebuild and
 restart the daemon after changing the checkout with:
 
 ```bash
-./scripts/update-feedback-dashboard-daemon.sh
+./scripts/feedback/update-dashboard-daemon.sh
 ```
 
 Pass `--pull-source` to perform a fast-forward-only `git pull` before rebuilding.

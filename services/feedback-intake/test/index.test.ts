@@ -152,6 +152,7 @@ function feedback(authorization: string) {
     submittedAt: new Date().toISOString(),
     appVersion: "0.2.6",
     installationId,
+    clientSubmissionId: crypto.randomUUID(),
     category: "bug",
     message: "The tuner displayed an incorrect octave.",
   };
