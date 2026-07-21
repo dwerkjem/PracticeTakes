@@ -47,6 +47,7 @@ readonly apt_packages=(
     cmake
     curl
     dpkg-dev
+    file
     git
     ninja-build
     pkg-config

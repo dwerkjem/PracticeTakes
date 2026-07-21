@@ -87,6 +87,7 @@ jobs:
         run: ctest --test-dir build --build-config "${BUILD_TYPE}" --output-on-failure
 
       - name: Package
+        shell: bash
         run: |
           artifact_name="PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}"
           package_path="dist/${artifact_name}.deb"
