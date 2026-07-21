@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 from typing import Final
 
-PROJECT_ROOT: Final = Path(__file__).resolve().parents[1]
+PROJECT_ROOT: Final = Path(__file__).resolve().parents[2]
 VERSION_FILE: Final = PROJECT_ROOT / "VERSION"
 VCPKG_MANIFEST_FILE: Final = PROJECT_ROOT / "vcpkg.json"
 VERSION_PATTERN: Final = re.compile(

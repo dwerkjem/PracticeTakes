@@ -10,9 +10,9 @@ on:
       - ".clang-tidy"
       - "CMakeLists.txt"
       - "cmake/**"
-      - "scripts/run_clang_format.py"
-      - "scripts/run_clang_tidy.py"
-      - "scripts/check-linux-build-dependencies.sh"
+      - "scripts/quality/run_clang_format.py"
+      - "scripts/quality/run_clang_tidy.py"
+      - "scripts/build/check-linux-build-dependencies.sh"
 
 permissions:
   contents: write
@@ -32,7 +32,7 @@ jobs:
 
       - name: Install analysis dependencies
         run: |
-          bash scripts/check-linux-build-dependencies.sh --install
+          bash scripts/build/check-linux-build-dependencies.sh --install
           sudo apt-get install --yes clang-format clang-tidy
 
       - name: Configure compilation database
@@ -49,15 +49,15 @@ jobs:
         run: |
           # clang-tidy can return a non-zero status while still applying valid
           # fix-its. Preserve those edits and verify unresolved findings later.
-          python3 scripts/run_clang_tidy.py --fix src/*.cpp || true
+          python3 scripts/quality/run_clang_tidy.py --fix src/*.cpp || true
 
       - name: Format automatic edits
-        run: python3 scripts/run_clang_format.py src/*.cpp src/*.h
+        run: python3 scripts/quality/run_clang_format.py src/*.cpp src/*.h
 
       - name: Validate automatic edits
         run: |
           cmake --build build --target PracticeTakes --parallel
-          python3 scripts/run_clang_tidy.py src/*.cpp
+          python3 scripts/quality/run_clang_tidy.py src/*.cpp
 
       - name: Commit automatic fixes
         shell: bash

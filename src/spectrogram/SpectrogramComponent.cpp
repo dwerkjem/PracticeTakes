@@ -1,4 +1,4 @@
-#include "../SpectrogramComponent.h"
+#include "SpectrogramComponent.h"
 
 #include <algorithm>
 #include <array>
@@ -102,15 +102,24 @@ void SpectrogramComponent::audioInputStopped()
     audioFifo.reset();
 }
 
-void SpectrogramComponent::audioInputStateChanged(bool isAvailable)
+void SpectrogramComponent::audioInputStateChanged(AudioInputService::InputState state)
 {
-    if (isAvailable)
+    audioFifo.reset();
+
+    switch (state)
     {
+    case AudioInputService::InputState::disconnected:
+        audioErrorMessage = "Microphone disconnected.";
+        break;
+    case AudioInputService::InputState::muted:
+        audioErrorMessage = "Microphone muted.";
+        break;
+    case AudioInputService::InputState::clipping:
+        audioErrorMessage = "Microphone input is clipping.";
+        break;
+    case AudioInputService::InputState::active:
         audioErrorMessage.clear();
-    }
-    else
-    {
-        audioErrorMessage = "No microphone input is available.";
+        break;
     }
 
     repaint();

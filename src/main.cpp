@@ -2,7 +2,8 @@
 
 #include <iostream>
 
-#include "MainComponent.h"
+#include "app/MainComponent.h"
+#include "app/MainTitleBar.h"
 
 // JUCE owns the application object for the lifetime of the process. This class
 // creates the main window during startup and releases it during shutdown.
@@ -65,9 +66,21 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             : DocumentWindow(title, juce::Colour::fromRGB(18, 20, 27),
                              juce::DocumentWindow::allButtons)
         {
-            setUsingNativeTitleBar(true);
-            setContentOwned(new MainComponent(), true);
-            setResizable(true, true);
+            setUsingNativeTitleBar(false);
+
+            auto* content = new MainComponent();
+            setContentOwned(content, true);
+
+            auto customTitleBar = content->createTitleBar(
+                title, [this] { setMinimised(true); }, [this] { toggleFullscreen(); },
+                [this] { closeButtonPressed(); });
+            setTitleBarHeight(42);
+            setTitleBarButtonsRequired(0, false);
+            titleBar = std::move(customTitleBar);
+            addAndMakeVisible(titleBar.get());
+            // Use a resizable border so every window edge and corner can be
+            // dragged, even though the application supplies its own title bar.
+            setResizable(true, false);
             centreWithSize(getWidth(), getHeight());
             setVisible(true);
         }
@@ -76,6 +89,55 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         {
             juce::JUCEApplication::getInstance()->systemRequestedQuit();
         }
+
+        void resized() override
+        {
+            DocumentWindow::resized();
+            if (titleBar != nullptr)
+            {
+                titleBar->setBounds(0, 0, getWidth(), getTitleBarHeight());
+                titleBar->toFront(false);
+            }
+        }
+
+        bool keyPressed(const juce::KeyPress& key) override
+        {
+            if (key.getKeyCode() == juce::KeyPress::F11Key)
+            {
+                toggleFullscreen();
+                return true;
+            }
+
+            if (key == juce::KeyPress::escapeKey && isFullScreen())
+            {
+                setFullscreen(false);
+                return true;
+            }
+
+            return DocumentWindow::keyPressed(key);
+        }
+
+      private:
+        void toggleFullscreen()
+        {
+            setFullscreen(!isFullScreen());
+        }
+
+        void setFullscreen(bool shouldBeFullscreen)
+        {
+            setFullScreen(shouldBeFullscreen);
+            if (!shouldBeFullscreen)
+            {
+                setResizable(true, false);
+            }
+
+            if (titleBar != nullptr)
+            {
+                titleBar->setFullscreen(shouldBeFullscreen);
+            }
+        }
+
+        std::unique_ptr<MainTitleBar> titleBar;
     };
 
     std::unique_ptr<MainWindow> mainWindow;

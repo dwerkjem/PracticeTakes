@@ -75,18 +75,18 @@ public promise.
 The same version calculation is available locally:
 
 ```bash
-python3 scripts/version.py current
-python3 scripts/version.py next patch
-python3 scripts/version.py next minor
-python3 scripts/version.py next major
+python3 scripts/release/version.py current
+python3 scripts/release/version.py next patch
+python3 scripts/release/version.py next minor
+python3 scripts/release/version.py next major
 ```
 
 To update the local `VERSION` file and synchronize `vcpkg.json`:
 
 ```bash
-python3 scripts/version.py bump patch
-python3 scripts/version.py bump minor
-python3 scripts/version.py bump major
+python3 scripts/release/version.py bump patch
+python3 scripts/release/version.py bump minor
+python3 scripts/release/version.py bump major
 ```
 
 The automated workflow is preferred for published releases because it builds

@@ -2,9 +2,9 @@
 
 #include <JuceHeader.h>
 
-#include "AppDefaults.h"
-#include "AudioInputService.h"
-#include "Theme.h"
+#include "../app/AppDefaults.h"
+#include "../app/Theme.h"
+#include "../audio/AudioInputService.h"
 
 #include <array>
 #include <atomic>
@@ -47,7 +47,7 @@ class TunerComponent final : public juce::Component,
     void audioInputReceived(const float* inputSamples, int numSamples) override;
     void audioInputAboutToStart(double sampleRate) override;
     void audioInputStopped() override;
-    void audioInputStateChanged(bool isAvailable) override;
+    void audioInputStateChanged(AudioInputService::InputState state) override;
     void writeInputSamplesToFifo(const float* inputSamples, int numSamples);
     void drainAudioFifo();
 

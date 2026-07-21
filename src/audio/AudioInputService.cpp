@@ -1,4 +1,4 @@
-#include "../AudioInputService.h"
+#include "AudioInputService.h"
 
 AudioInputService::AudioInputService()
 {
@@ -12,7 +12,7 @@ AudioInputService::AudioInputService()
     if (auto* device = manager.getCurrentAudioDevice())
         lastDeviceName = device->getName();
 
-    lastAvailable = hasUsableInput();
+    lastState = inputState();
     startTimer(1500);
 }
 
@@ -27,7 +27,7 @@ AudioInputService::~AudioInputService()
 void AudioInputService::addListener(Listener* listener)
 {
     listeners.add(listener);
-    listener->audioInputStateChanged(hasUsableInput());
+    listener->audioInputStateChanged(inputState());
     if (auto* device = manager.getCurrentAudioDevice(); device != nullptr && device->isOpen())
         listener->audioInputAboutToStart(device->getCurrentSampleRate());
 }
@@ -47,6 +47,35 @@ bool AudioInputService::hasUsableInput() const
     auto* device = manager.getCurrentAudioDevice();
     return device != nullptr && device->isOpen() &&
            device->getActiveInputChannels().countNumberOfSetBits() > 0;
+}
+
+AudioInputService::InputState AudioInputService::inputState() const
+{
+    if (!hasUsableInput())
+        return InputState::disconnected;
+    if (muted.load())
+        return InputState::muted;
+    return clippingHoldTicks > 0 ? InputState::clipping : InputState::active;
+}
+
+bool AudioInputService::isMuted() const noexcept
+{
+    return muted.load();
+}
+
+void AudioInputService::setMuted(bool shouldBeMuted)
+{
+    if (muted.exchange(shouldBeMuted) == shouldBeMuted)
+        return;
+
+    clippingDetected.store(false);
+    clippingHoldTicks = 0;
+    publishState();
+}
+
+void AudioInputService::toggleMuted()
+{
+    setMuted(!isMuted());
 }
 
 void AudioInputService::resetToDefaultInput()
@@ -82,8 +111,17 @@ void AudioInputService::audioDeviceIOCallbackWithContext(const float* const* inp
         if (outputChannelData[channel] != nullptr)
             juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
 
-    if (numInputChannels > 0 && inputChannelData[0] != nullptr)
-        listeners.call(&Listener::audioInputReceived, inputChannelData[0], numSamples);
+    if (numInputChannels <= 0 || inputChannelData[0] == nullptr || muted.load())
+        return;
+
+    const auto sampleRange =
+        juce::FloatVectorOperations::findMinAndMax(inputChannelData[0], numSamples);
+    const auto peakLevel =
+        juce::jmax(std::abs(sampleRange.getStart()), std::abs(sampleRange.getEnd()));
+    if (peakLevel >= 0.99f)
+        clippingDetected.store(true);
+
+    listeners.call(&Listener::audioInputReceived, inputChannelData[0], numSamples);
 }
 
 void AudioInputService::audioDeviceAboutToStart(juce::AudioIODevice* device)
@@ -110,6 +148,11 @@ void AudioInputService::changeListenerCallback(juce::ChangeBroadcaster*)
 
 void AudioInputService::timerCallback()
 {
+    if (clippingDetected.exchange(false))
+        clippingHoldTicks = 2;
+    else if (clippingHoldTicks > 0)
+        --clippingHoldTicks;
+
     // Device backends refresh their lists when scanned. If the active device
     // vanished, restart the last setup; JUCE falls back to the system default
     // when that setup is no longer available. Repeated scans also recover a
@@ -144,11 +187,11 @@ void AudioInputService::timerCallback()
 
 void AudioInputService::publishState()
 {
-    const auto available = hasUsableInput();
-    if (available == lastAvailable)
+    const auto state = inputState();
+    if (state == lastState)
         return;
 
-    lastAvailable = available;
-    listeners.call(&Listener::audioInputStateChanged, available);
+    lastState = state;
+    listeners.call(&Listener::audioInputStateChanged, state);
     sendChangeMessage();
 }

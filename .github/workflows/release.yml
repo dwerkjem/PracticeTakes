@@ -45,11 +45,11 @@ jobs:
         id: version
         shell: bash
         run: |
-          current_version="$(python3 scripts/version.py current)"
+          current_version="$(python3 scripts/release/version.py current)"
           source_sha="$(git rev-parse HEAD)"
 
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            version="$(python3 scripts/version.py next '${{ inputs.bump }}')"
+            version="$(python3 scripts/release/version.py next '${{ inputs.bump }}')"
             tag="v${version}"
 
             if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
@@ -125,7 +125,7 @@ jobs:
 
           version="${{ needs.prepare.outputs.version }}"
           tag="${{ needs.prepare.outputs.tag }}"
-          python3 scripts/version.py set "${version}"
+          python3 scripts/release/version.py set "${version}"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

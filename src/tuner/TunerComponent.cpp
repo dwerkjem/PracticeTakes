@@ -1,4 +1,4 @@
-#include "../TunerComponent.h"
+#include "TunerComponent.h"
 
 #include <algorithm>
 #include <cmath>
@@ -283,16 +283,25 @@ void TunerComponent::audioInputStopped()
     audioFifo.reset();
 }
 
-void TunerComponent::audioInputStateChanged(bool isAvailable)
+void TunerComponent::audioInputStateChanged(AudioInputService::InputState state)
 {
-    if (isAvailable)
+    audioFifo.reset();
+    resetPitchTracking();
+
+    switch (state)
     {
+    case AudioInputService::InputState::disconnected:
+        audioErrorMessage = "Microphone disconnected.";
+        break;
+    case AudioInputService::InputState::muted:
+        audioErrorMessage = "Microphone muted.";
+        break;
+    case AudioInputService::InputState::clipping:
+        audioErrorMessage = "Microphone input is clipping.";
+        break;
+    case AudioInputService::InputState::active:
         audioErrorMessage.clear();
-    }
-    else
-    {
-        audioErrorMessage = "No microphone input is available.";
-        resetPitchTracking();
+        break;
     }
 
     repaint();

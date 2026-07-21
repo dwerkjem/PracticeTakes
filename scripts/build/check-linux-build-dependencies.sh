@@ -72,6 +72,11 @@ missing_packages=()
 
 for package in "${apt_packages[@]}"; do
     status="$(dpkg-query --show --showformat='${Status}' "$package" 2>/dev/null || true)"
+    if [[ "$package" == libfreetype6-dev && "$status" != "install ok installed" ]]; then
+        # Debian 13 renamed the development package while retaining
+        # libfreetype6-dev as an apt compatibility alias.
+        status="$(dpkg-query --show --showformat='${Status}' libfreetype-dev 2>/dev/null || true)"
+    fi
     if [[ "$status" != "install ok installed" ]]; then
         missing_packages+=("$package")
     fi
@@ -125,4 +130,3 @@ fi
 "${apt_command[@]}" install --yes "${missing_packages[@]}"
 
 printf 'Linux build dependencies installed successfully.\n'
-

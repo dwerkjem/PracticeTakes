@@ -57,15 +57,15 @@ jobs:
 
       - name: Apply requested release version
         if: ${{ inputs.version != '' }}
-        run: python3 scripts/version.py set "${{ inputs.version }}"
+        run: python3 scripts/release/version.py set "${{ inputs.version }}"
 
       - name: Read application version
         id: version
         shell: bash
-        run: echo "version=$(python3 scripts/version.py current)" >> "${GITHUB_OUTPUT}"
+        run: echo "version=$(python3 scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
 
       - name: Install Linux build dependencies
-        run: bash scripts/check-linux-build-dependencies.sh --install
+        run: bash scripts/build/check-linux-build-dependencies.sh --install
 
       - name: Configure
         run: |
@@ -75,6 +75,9 @@ jobs:
 
       - name: Build
         run: cmake --build build --config "${BUILD_TYPE}" --parallel
+
+      - name: Test
+        run: ctest --test-dir build --build-config "${BUILD_TYPE}" --output-on-failure
 
       - name: Package
         run: |
@@ -117,13 +120,13 @@ jobs:
       - name: Apply requested release version
         if: ${{ inputs.version != '' }}
         shell: pwsh
-        run: python scripts/version.py set "${{ inputs.version }}"
+        run: python scripts/release/version.py set "${{ inputs.version }}"
 
       - name: Read application version
         id: version
         shell: pwsh
         run: |
-          $version = (python scripts/version.py current).Trim()
+          $version = (python scripts/release/version.py current).Trim()
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Configure
@@ -137,6 +140,10 @@ jobs:
       - name: Build
         shell: pwsh
         run: cmake --build build --config "${env:BUILD_TYPE}" --parallel
+
+      - name: Test
+        shell: pwsh
+        run: ctest --test-dir build --build-config "${env:BUILD_TYPE}" --output-on-failure
 
       - name: Package
         shell: pwsh
@@ -190,12 +197,12 @@ jobs:
 
       - name: Apply requested release version
         if: ${{ inputs.version != '' }}
-        run: python3 scripts/version.py set "${{ inputs.version }}"
+        run: python3 scripts/release/version.py set "${{ inputs.version }}"
 
       - name: Read application version
         id: version
         shell: bash
-        run: echo "version=$(python3 scripts/version.py current)" >> "${GITHUB_OUTPUT}"
+        run: echo "version=$(python3 scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
 
       - name: Configure
         run: |
@@ -206,6 +213,9 @@ jobs:
 
       - name: Build
         run: cmake --build build --config "${BUILD_TYPE}" --parallel
+
+      - name: Test
+        run: ctest --test-dir build --build-config "${BUILD_TYPE}" --output-on-failure
 
       - name: Package
         run: |
@@ -248,13 +258,13 @@ jobs:
 
       - name: Apply requested release version
         if: ${{ inputs.version != '' }}
-        run: python3 scripts/version.py set "${{ inputs.version }}"
+        run: python3 scripts/release/version.py set "${{ inputs.version }}"
 
       - name: Read build metadata
         id: metadata
         shell: bash
         run: |
-          echo "version=$(python3 scripts/version.py current)" >> "${GITHUB_OUTPUT}"
+          echo "version=$(python3 scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
           echo "source_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
 
       - name: Download platform artifacts
@@ -311,4 +321,3 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
-

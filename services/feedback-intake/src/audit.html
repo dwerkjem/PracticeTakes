@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Admin action receipts — Practice Takes</title>
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+  <header>
+    <strong>Admin action receipts</strong>
+    <span>{{ADMIN_USER}}</span>
+  </header>
+  <main>
+    <nav class="actions">
+      <a class="button-link" href="/admin">Back to feedback</a>
+      <button id="refresh-audit" type="button">Refresh</button>
+    </nav>
+    <section id="audit-panel">
+      <p id="audit-status">Loading…</p>
+      <div id="audit"></div>
+    </section>
+  </main>
+  <script src="/audit.js" defer></script>
+</body>
+</html>
