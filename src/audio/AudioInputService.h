@@ -10,6 +10,14 @@ class AudioInputService final : public juce::ChangeBroadcaster,
                                 private juce::Timer
 {
   public:
+    enum class InputState
+    {
+        disconnected,
+        muted,
+        active,
+        clipping
+    };
+
     class Listener
     {
       public:
@@ -17,7 +25,7 @@ class AudioInputService final : public juce::ChangeBroadcaster,
         virtual void audioInputAboutToStart(double sampleRate) = 0;
         virtual void audioInputReceived(const float* samples, int numSamples) = 0;
         virtual void audioInputStopped() = 0;
-        virtual void audioInputStateChanged(bool isAvailable) = 0;
+        virtual void audioInputStateChanged(InputState state) = 0;
     };
 
     AudioInputService();
@@ -28,6 +36,10 @@ class AudioInputService final : public juce::ChangeBroadcaster,
 
     [[nodiscard]] juce::AudioDeviceManager& deviceManager() noexcept;
     [[nodiscard]] bool hasUsableInput() const;
+    [[nodiscard]] InputState inputState() const;
+    [[nodiscard]] bool isMuted() const noexcept;
+    void setMuted(bool shouldBeMuted);
+    void toggleMuted();
     void resetToDefaultInput();
     void applySavedDeviceState(const juce::XmlElement& state);
     [[nodiscard]] std::unique_ptr<juce::XmlElement> createDeviceState() const;
@@ -46,7 +58,10 @@ class AudioInputService final : public juce::ChangeBroadcaster,
     juce::AudioDeviceManager manager;
     juce::ListenerList<Listener, juce::Array<Listener*, juce::CriticalSection>> listeners;
     juce::String lastDeviceName;
-    bool lastAvailable = false;
+    InputState lastState = InputState::disconnected;
+    std::atomic<bool> muted{false};
+    std::atomic<bool> clippingDetected{false};
+    int clippingHoldTicks = 0;
     bool recovering = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioInputService)

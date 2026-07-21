@@ -3,14 +3,12 @@
 #include "../spectrogram/SpectrogramComponent.h"
 #include "../tuner/TunerComponent.h"
 
-#include <functional>
-#include <utility>
+#include "AppWindows.h"
+#include "MainTitleBar.h"
+#include "MicrophoneWarning.h"
 
 namespace
 {
-constexpr int menuBarHeight = 40;
-constexpr int menuButtonWidth = 96;
-constexpr int menuButtonGap = 4;
 constexpr int toolsMenuWidth = 190;
 constexpr int helpMenuWidth = 190;
 
@@ -20,9 +18,10 @@ constexpr int microphoneWarningHeight = 118;
 constexpr int tunerMenuItemId = 1;
 constexpr int spectrogramMenuItemId = 2;
 constexpr int sendFeedbackMenuItemId = 1;
-constexpr int lightThemeId = static_cast<int>(Theme::light);
-constexpr int darkThemeId = static_cast<int>(Theme::dark);
-
+constexpr int openSettingsMenuItemId = 1;
+constexpr int lightSettingsMenuItemId = 2;
+constexpr int darkSettingsMenuItemId = 3;
+constexpr int muteSettingsMenuItemId = 4;
 constexpr auto settingsSchemaKey = "settings.schema";
 constexpr auto themeKey = "global.theme";
 constexpr auto audioStateKey = "audio.deviceState";
@@ -35,420 +34,7 @@ constexpr auto tunerBoundsKey = "layout.tuner";
 constexpr auto spectrogramBoundsKey = "layout.spectrogram";
 constexpr auto settingsBoundsKey = "layout.settings";
 
-// Window close handlers delete their owning unique_ptr. Running the callback
-// asynchronously prevents a window from deleting itself inside its own close
-// button callback.
-void invokeLater(std::function<void()> callback)
-{
-    juce::MessageManager::callAsync(
-        [callback = std::move(callback)]() mutable
-        {
-            if (callback)
-            {
-                callback();
-            }
-        });
-}
 } // namespace
-
-//==============================================================================
-// Generic host window used by all analysis tools.
-class MainComponent::ToolWindow final : public juce::DocumentWindow
-{
-  public:
-    ToolWindow(const juce::String& title, std::unique_ptr<juce::Component> content,
-               juce::Point<int> preferredSize, std::function<void()> closeHandler)
-        : DocumentWindow(title, juce::Colours::darkgrey, juce::DocumentWindow::allButtons),
-          onClose(std::move(closeHandler))
-    {
-        setUsingNativeTitleBar(true);
-        setContentOwned(content.release(), true);
-        setResizable(true, true);
-        setResizeLimits(520, 420, 2400, 1600);
-        centreWithSize(preferredSize.x, preferredSize.y);
-        setVisible(true);
-    }
-
-    ~ToolWindow() override
-    {
-        setLookAndFeel(nullptr);
-    }
-
-    void closeButtonPressed() override
-    {
-        setVisible(false);
-        invokeLater(onClose);
-    }
-
-    void applyAppearance(juce::LookAndFeel* lookAndFeel, juce::Colour background, Theme theme)
-    {
-        setLookAndFeel(lookAndFeel);
-        setBackgroundColour(background);
-
-        // Tool components draw their own graphs and panels, so they receive
-        // the selected appearance in addition to the shared LookAndFeel.
-        if (auto* tuner = dynamic_cast<TunerComponent*>(getContentComponent()))
-        {
-            tuner->setTheme(theme);
-        }
-
-        if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(getContentComponent()))
-        {
-            spectrogram->setTheme(theme);
-        }
-
-        sendLookAndFeelChange();
-        repaint();
-    }
-
-  private:
-    std::function<void()> onClose;
-};
-
-//==============================================================================
-// Settings remains separate from the main window so it can grow without
-// crowding the top-level application shell.
-class MainComponent::SettingsWindow final : public juce::DocumentWindow
-{
-  public:
-    class Content final : public juce::Component
-    {
-      public:
-        Content(juce::AudioDeviceManager& audioDeviceManager, Theme initialTheme,
-                std::function<void(Theme)> appearanceHandler,
-                std::function<void(AppDefaults::Preset)> presetHandler,
-                std::function<void()> saveHandler, std::function<void()> feedbackHandler,
-                std::function<void()> resetToolHandler, std::function<void()> resetAudioHandler,
-                std::function<void()> resetLayoutHandler, std::function<void()> resetAllHandler)
-            : deviceSelector(audioDeviceManager, 1, 2, 0, 0, false, false, false, true),
-              onAppearanceChanged(std::move(appearanceHandler)), onPreset(std::move(presetHandler))
-        {
-            configureHeading(appearanceHeading, "Appearance");
-
-            appearanceLabel.setText("Theme", juce::dontSendNotification);
-            addAndMakeVisible(appearanceLabel);
-
-            appearanceBox.addItem("Light", lightThemeId);
-            appearanceBox.addItem("Dark", darkThemeId);
-            appearanceBox.setSelectedId(static_cast<int>(initialTheme), juce::dontSendNotification);
-            appearanceBox.onChange = [this]
-            {
-                if (onAppearanceChanged)
-                {
-                    onAppearanceChanged(static_cast<Theme>(appearanceBox.getSelectedId()));
-                }
-            };
-            addAndMakeVisible(appearanceBox);
-
-            configureHeading(audioHeading, "Audio");
-            addAndMakeVisible(deviceSelector);
-
-            configureHeading(presetsHeading, "Practice preset");
-            presetBox.addItem("Voice practice", static_cast<int>(AppDefaults::Preset::voice));
-            presetBox.addItem("General instrument",
-                              static_cast<int>(AppDefaults::Preset::generalInstrument));
-            presetBox.setTextWhenNothingSelected("Choose a preset");
-            presetBox.onChange = [this]
-            {
-                if (onPreset)
-                    onPreset(static_cast<AppDefaults::Preset>(presetBox.getSelectedId()));
-            };
-            addAndMakeVisible(presetBox);
-
-            configureHeading(resetHeading, "Reset");
-            saveButton.setButtonText("Save settings");
-            saveButton.onClick = std::move(saveHandler);
-            addAndMakeVisible(saveButton);
-            feedbackButton.setButtonText("Send feedback");
-            feedbackButton.setTitle("Open the feedback form");
-            feedbackButton.onClick = std::move(feedbackHandler);
-            addAndMakeVisible(feedbackButton);
-            configureResetButton(resetToolButton, "Current tool", std::move(resetToolHandler));
-            configureResetButton(resetAudioButton, "Audio", std::move(resetAudioHandler));
-            configureResetButton(resetLayoutButton, "Layout", std::move(resetLayoutHandler));
-            configureResetButton(resetAllButton, "All settings", std::move(resetAllHandler));
-        }
-
-        void paint(juce::Graphics& graphics) override
-        {
-            graphics.fillAll(findColour(juce::ResizableWindow::backgroundColourId));
-        }
-
-        void resized() override
-        {
-            auto bounds = getLocalBounds().reduced(22);
-
-            appearanceHeading.setBounds(bounds.removeFromTop(30));
-            bounds.removeFromTop(8);
-
-            auto appearanceRow = bounds.removeFromTop(34);
-            appearanceLabel.setBounds(appearanceRow.removeFromLeft(130));
-            appearanceBox.setBounds(appearanceRow.removeFromLeft(220));
-
-            bounds.removeFromTop(24);
-            audioHeading.setBounds(bounds.removeFromTop(30));
-            bounds.removeFromTop(8);
-            auto resetArea = bounds.removeFromBottom(186);
-            auto presetArea = bounds.removeFromBottom(92);
-            deviceSelector.setBounds(bounds);
-
-            presetsHeading.setBounds(presetArea.removeFromTop(30));
-            presetArea.removeFromTop(6);
-            presetBox.setBounds(presetArea.removeFromTop(34).removeFromLeft(260));
-
-            resetHeading.setBounds(resetArea.removeFromTop(30));
-            feedbackButton.setBounds(resetHeading.getRight() - 150, resetHeading.getY(), 150, 30);
-            resetArea.removeFromTop(6);
-            saveButton.setBounds(resetArea.removeFromTop(34).removeFromLeft(180));
-            resetArea.removeFromTop(8);
-            auto firstRow = resetArea.removeFromTop(34);
-            resetToolButton.setBounds(firstRow.removeFromLeft(150));
-            firstRow.removeFromLeft(8);
-            resetAudioButton.setBounds(firstRow.removeFromLeft(150));
-            resetArea.removeFromTop(8);
-            auto secondRow = resetArea.removeFromTop(34);
-            resetLayoutButton.setBounds(secondRow.removeFromLeft(150));
-            secondRow.removeFromLeft(8);
-            resetAllButton.setBounds(secondRow.removeFromLeft(150));
-        }
-
-        void setTheme(Theme theme)
-        {
-            appearanceBox.setSelectedId(static_cast<int>(theme), juce::dontSendNotification);
-            sendLookAndFeelChange();
-            repaint();
-        }
-
-      private:
-        void configureHeading(juce::Label& heading, const juce::String& text)
-        {
-            heading.setText(text, juce::dontSendNotification);
-            heading.setFont(juce::FontOptions(18.0f, juce::Font::bold));
-            addAndMakeVisible(heading);
-        }
-
-        void configureResetButton(juce::TextButton& button, const juce::String& text,
-                                  std::function<void()> action)
-        {
-            button.setButtonText(text);
-            button.onClick = [action = std::move(action), text]
-            {
-                juce::AlertWindow::showOkCancelBox(
-                    juce::MessageBoxIconType::WarningIcon, "Confirm reset",
-                    "Reset " + text.toLowerCase() + "? This cannot be undone.", "Reset", "Cancel",
-                    nullptr,
-                    juce::ModalCallbackFunction::create(
-                        [action](int result)
-                        {
-                            if (result != 0 && action)
-                                action();
-                        }));
-            };
-            addAndMakeVisible(button);
-        }
-
-        juce::Label appearanceHeading;
-        juce::Label appearanceLabel;
-        juce::ComboBox appearanceBox;
-        juce::Label audioHeading;
-        juce::AudioDeviceSelectorComponent deviceSelector;
-        juce::Label presetsHeading;
-        juce::ComboBox presetBox;
-        juce::Label resetHeading;
-        juce::TextButton saveButton;
-        juce::TextButton feedbackButton;
-        juce::TextButton resetToolButton;
-        juce::TextButton resetAudioButton;
-        juce::TextButton resetLayoutButton;
-        juce::TextButton resetAllButton;
-        std::function<void(Theme)> onAppearanceChanged;
-        std::function<void(AppDefaults::Preset)> onPreset;
-    };
-
-    SettingsWindow(juce::AudioDeviceManager& audioDeviceManager, Theme initialTheme,
-                   std::function<void(Theme)> appearanceHandler,
-                   std::function<void(AppDefaults::Preset)> presetHandler,
-                   std::function<void()> saveHandler, std::function<void()> feedbackHandler,
-                   std::function<void()> resetToolHandler, std::function<void()> resetAudioHandler,
-                   std::function<void()> resetLayoutHandler, std::function<void()> resetAllHandler,
-                   std::function<void()> closeHandler)
-        : DocumentWindow("Settings", juce::Colours::darkgrey, juce::DocumentWindow::allButtons),
-          onClose(std::move(closeHandler))
-    {
-        setUsingNativeTitleBar(true);
-        setContentOwned(new Content(audioDeviceManager, initialTheme, std::move(appearanceHandler),
-                                    std::move(presetHandler), std::move(saveHandler),
-                                    std::move(feedbackHandler), std::move(resetToolHandler),
-                                    std::move(resetAudioHandler), std::move(resetLayoutHandler),
-                                    std::move(resetAllHandler)),
-                        true);
-        setResizable(true, true);
-        setResizeLimits(620, 500, 1300, 1000);
-        centreWithSize(760, 650);
-        setVisible(true);
-    }
-
-    ~SettingsWindow() override
-    {
-        setLookAndFeel(nullptr);
-    }
-
-    void closeButtonPressed() override
-    {
-        setVisible(false);
-        invokeLater(onClose);
-    }
-
-    void applyAppearance(juce::LookAndFeel* lookAndFeel, juce::Colour background, Theme theme)
-    {
-        setLookAndFeel(lookAndFeel);
-        setBackgroundColour(background);
-
-        if (auto* content = dynamic_cast<Content*>(getContentComponent()))
-        {
-            content->setTheme(theme);
-        }
-
-        sendLookAndFeelChange();
-        repaint();
-    }
-
-  private:
-    std::function<void()> onClose;
-};
-
-//==============================================================================
-class MainComponent::FeedbackWindow final : public juce::DocumentWindow
-{
-  public:
-    FeedbackWindow(juce::PropertiesFile& propertiesFile, std::function<void()> closeHandler)
-        : DocumentWindow("Send feedback", juce::Colours::darkgrey,
-                         juce::DocumentWindow::allButtons),
-          onClose(std::move(closeHandler))
-    {
-        setUsingNativeTitleBar(true);
-        setContentOwned(new FeedbackComponent(propertiesFile), true);
-        setResizable(true, true);
-        setResizeLimits(620, 700, 1200, 1100);
-        centreWithSize(760, 780);
-        setVisible(true);
-    }
-
-    void closeButtonPressed() override
-    {
-        setVisible(false);
-        invokeLater(onClose);
-    }
-
-  private:
-    std::function<void()> onClose;
-};
-
-//==============================================================================
-// A custom, nonmodal warning card. It stays inside the main window so missing
-// audio hardware does not interrupt the user with a native modal dialog.
-class MainComponent::MicrophoneWarning final : public juce::Component
-{
-  public:
-    MicrophoneWarning(std::function<void()> settingsHandler, std::function<void()> dismissHandler)
-        : onOpenSettings(std::move(settingsHandler)), onDismiss(std::move(dismissHandler))
-    {
-        setInterceptsMouseClicks(true, true);
-
-        title.setText("No microphone detected", juce::dontSendNotification);
-        title.setFont(juce::FontOptions(16.0f, juce::Font::bold));
-        addAndMakeVisible(title);
-
-        message.setText("Choose an input device in Settings to use the tuner and "
-                        "spectrogram.",
-                        juce::dontSendNotification);
-        message.setFont(juce::FontOptions(13.0f));
-        message.setJustificationType(juce::Justification::centredLeft);
-        addAndMakeVisible(message);
-
-        settingsButton.setButtonText("Open Settings");
-        settingsButton.onClick = [this]
-        {
-            if (onOpenSettings)
-            {
-                onOpenSettings();
-            }
-        };
-        addAndMakeVisible(settingsButton);
-
-        dismissButton.setButtonText("Dismiss");
-        dismissButton.onClick = [this]
-        {
-            if (onDismiss)
-            {
-                onDismiss();
-            }
-        };
-        addAndMakeVisible(dismissButton);
-    }
-
-    void setTheme(Theme theme)
-    {
-        currentTheme = theme;
-        const auto palette = appPaletteFor(currentTheme);
-
-        title.setColour(juce::Label::textColourId, palette.foreground);
-        message.setColour(juce::Label::textColourId, palette.muted);
-        repaint();
-    }
-
-    void paint(juce::Graphics& graphics) override
-    {
-        const auto palette = appPaletteFor(currentTheme);
-        const auto card = getLocalBounds().toFloat().reduced(6.0f);
-
-        // A subtle shadow and rounded panel make the warning visible without
-        // blocking or visually dominating the application.
-        graphics.setColour(
-            juce::Colours::black.withAlpha(isDarkTheme(currentTheme) ? 0.35f : 0.14f));
-        graphics.fillRoundedRectangle(card.translated(0.0f, 3.0f), 13.0f);
-
-        graphics.setColour(palette.panel);
-        graphics.fillRoundedRectangle(card, 13.0f);
-
-        graphics.setColour(palette.warning.withAlpha(0.95f));
-        graphics.fillRoundedRectangle(card.withWidth(5.0f), 3.0f);
-
-        graphics.setColour(palette.outline.withAlpha(0.85f));
-        graphics.drawRoundedRectangle(card, 13.0f, 1.0f);
-
-        graphics.setColour(palette.warning);
-        graphics.fillEllipse(20.0f, 23.0f, 24.0f, 24.0f);
-
-        graphics.setColour(isDarkTheme(currentTheme) ? juce::Colour::fromRGB(35, 29, 18)
-                                                     : juce::Colours::white);
-        graphics.setFont(juce::FontOptions(17.0f, juce::Font::bold));
-        graphics.drawText("!", 20, 22, 24, 25, juce::Justification::centred);
-    }
-
-    void resized() override
-    {
-        auto bounds = getLocalBounds().reduced(18, 14);
-        bounds.removeFromLeft(42); // Reserve room for the warning icon.
-
-        auto buttons = bounds.removeFromBottom(30);
-        dismissButton.setBounds(buttons.removeFromRight(88));
-        buttons.removeFromRight(8);
-        settingsButton.setBounds(buttons.removeFromRight(122));
-
-        title.setBounds(bounds.removeFromTop(24));
-        message.setBounds(bounds);
-    }
-
-  private:
-    juce::Label title;
-    juce::Label message;
-    juce::TextButton settingsButton;
-    juce::TextButton dismissButton;
-    std::function<void()> onOpenSettings;
-    std::function<void()> onDismiss;
-    Theme currentTheme = Theme::light;
-};
 
 //==============================================================================
 MainComponent::MainComponent()
@@ -468,6 +54,7 @@ MainComponent::MainComponent()
     configureTopButtons();
     createMicrophoneWarning();
     applyAppearance();
+    updateMicrophoneStateControl();
     updateMicrophoneWarning();
     setSize(1200, 760);
 }
@@ -490,17 +77,24 @@ MainComponent::~MainComponent()
 
 void MainComponent::configureTopButtons()
 {
-    addAndMakeVisible(fileButton);
-    addAndMakeVisible(settingsButton);
-    addAndMakeVisible(toolsButton);
-    addAndMakeVisible(helpButton);
-
     // File is intentionally present but inactive while the project/file model
     // is still being designed.
     fileButton.setTooltip("File actions will be added later.");
-    settingsButton.onClick = [this] { showSettings(); };
+    settingsButton.onClick = [this] { showSettingsMenu(); };
     toolsButton.onClick = [this] { showToolsMenu(); };
     helpButton.onClick = [this] { showHelpMenu(); };
+    microphoneButton.setTitle("Global microphone mute control");
+    microphoneButton.onClick = [this] { audioInputService.toggleMuted(); };
+}
+
+std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(const juce::String& title,
+                                                            std::function<void()> minimiseHandler,
+                                                            std::function<void()> fullscreenHandler,
+                                                            std::function<void()> closeHandler)
+{
+    return std::make_unique<MainTitleBar>(title, fileButton, settingsButton, toolsButton,
+                                          helpButton, microphoneButton, std::move(minimiseHandler),
+                                          std::move(fullscreenHandler), std::move(closeHandler));
 }
 
 void MainComponent::createMicrophoneWarning()
@@ -516,34 +110,11 @@ void MainComponent::paint(juce::Graphics& graphics)
 {
     const auto palette = appPaletteFor(currentTheme);
     graphics.fillAll(palette.background);
-
-    juce::ColourGradient menuGradient(
-        palette.menuBarTop, static_cast<float>(menuBarBounds.getCentreX()),
-        static_cast<float>(menuBarBounds.getY()), palette.menuBarBottom,
-        static_cast<float>(menuBarBounds.getCentreX()),
-        static_cast<float>(menuBarBounds.getBottom()), false);
-
-    graphics.setGradientFill(menuGradient);
-    graphics.fillRect(menuBarBounds);
-
-    graphics.setColour(palette.outline.withAlpha(0.7f));
-    graphics.drawHorizontalLine(menuBarBounds.getBottom() - 1, 0.0f,
-                                static_cast<float>(getWidth()));
 }
 
 void MainComponent::resized()
 {
     auto remainingBounds = getLocalBounds();
-    menuBarBounds = remainingBounds.removeFromTop(menuBarHeight);
-
-    auto menuBounds = menuBarBounds.reduced(4, 5);
-    fileButton.setBounds(menuBounds.removeFromLeft(menuButtonWidth));
-    menuBounds.removeFromLeft(menuButtonGap);
-    settingsButton.setBounds(menuBounds.removeFromLeft(menuButtonWidth));
-    menuBounds.removeFromLeft(menuButtonGap);
-    toolsButton.setBounds(menuBounds.removeFromLeft(menuButtonWidth));
-    menuBounds.removeFromLeft(menuButtonGap);
-    helpButton.setBounds(menuBounds.removeFromLeft(menuButtonWidth));
 
     if (microphoneWarning != nullptr)
     {
@@ -582,6 +153,49 @@ void MainComponent::showToolsMenu()
                                safeThis->openTool(ToolType::spectrogram);
                            }
                        });
+}
+
+void MainComponent::showSettingsMenu()
+{
+    juce::PopupMenu appearanceMenu;
+    appearanceMenu.addItem(lightSettingsMenuItemId, "Light theme", true,
+                           currentTheme == Theme::light);
+    appearanceMenu.addItem(darkSettingsMenuItemId, "Dark theme", true, currentTheme == Theme::dark);
+
+    juce::PopupMenu menu;
+    menu.setLookAndFeel(&appLookAndFeel);
+    menu.addSubMenu("Appearance", appearanceMenu);
+    menu.addItem(muteSettingsMenuItemId,
+                 audioInputService.isMuted() ? "Unmute microphone" : "Mute microphone");
+    menu.addSeparator();
+    menu.addItem(openSettingsMenuItemId, "Open full settings...");
+
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    menu.showMenuAsync(
+        juce::PopupMenu::Options().withTargetComponent(&settingsButton).withMinimumWidth(230),
+        [safeThis](int selectedItemId)
+        {
+            if (safeThis == nullptr)
+                return;
+
+            switch (selectedItemId)
+            {
+            case openSettingsMenuItemId:
+                safeThis->showSettings();
+                break;
+            case lightSettingsMenuItemId:
+                safeThis->setTheme(Theme::light);
+                break;
+            case darkSettingsMenuItemId:
+                safeThis->setTheme(Theme::dark);
+                break;
+            case muteSettingsMenuItemId:
+                safeThis->audioInputService.toggleMuted();
+                break;
+            default:
+                break;
+            }
+        });
 }
 
 void MainComponent::showHelpMenu()
@@ -708,7 +322,7 @@ void MainComponent::showSettings()
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     settingsWindow = std::make_unique<SettingsWindow>(
-        audioInputService.deviceManager(), currentTheme,
+        audioInputService, currentTheme,
         [safeThis](Theme theme)
         {
             if (safeThis != nullptr)
@@ -791,7 +405,7 @@ void MainComponent::resetLayout()
     if (spectrogramWindow != nullptr)
         spectrogramWindow->centreWithSize(980, 650);
     if (settingsWindow != nullptr)
-        settingsWindow->centreWithSize(760, 650);
+        settingsWindow->centreWithSize(900, 760);
 }
 
 void MainComponent::resetAll()
@@ -957,6 +571,8 @@ void MainComponent::applyAppearanceToTopButtons()
         button->setColour(juce::TextButton::textColourOffId, palette.foreground);
         button->setColour(juce::TextButton::textColourOnId, palette.foreground);
     }
+
+    updateMicrophoneStateControl();
 }
 
 void MainComponent::applyAppearanceToOpenWindows()
@@ -999,7 +615,48 @@ bool MainComponent::hasUsableMicrophone() const
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
     if (source == &audioInputService)
+    {
+        updateMicrophoneStateControl();
         updateMicrophoneWarning();
+    }
+}
+
+void MainComponent::updateMicrophoneStateControl()
+{
+    const auto palette = appPaletteFor(currentTheme);
+    auto colour = palette.accent;
+    juce::String text;
+    juce::String tooltip;
+
+    switch (audioInputService.inputState())
+    {
+    case AudioInputService::InputState::disconnected:
+        text = "Mic disconnected";
+        tooltip = "No microphone is available; open Settings to choose an input";
+        colour = palette.muted;
+        break;
+    case AudioInputService::InputState::muted:
+        text = "Mic muted - Unmute";
+        tooltip = "Resume audio analysis using the selected microphone";
+        colour = palette.warning;
+        break;
+    case AudioInputService::InputState::clipping:
+        text = "Mic clipping - Mute";
+        tooltip = "The microphone level is clipping; click to mute all analysis tools";
+        colour = juce::Colours::red;
+        break;
+    case AudioInputService::InputState::active:
+        text = "Mic active - Mute";
+        tooltip = "Mute the microphone for every analysis tool";
+        break;
+    }
+
+    microphoneButton.setButtonText(text);
+    microphoneButton.setTooltip(tooltip);
+    microphoneButton.setColour(juce::TextButton::buttonColourId, colour.withAlpha(0.75f));
+    microphoneButton.setColour(juce::TextButton::buttonOnColourId, colour);
+    microphoneButton.setColour(juce::TextButton::textColourOffId, palette.foreground);
+    microphoneButton.setColour(juce::TextButton::textColourOnId, palette.foreground);
 }
 
 void MainComponent::updateMicrophoneWarning()
