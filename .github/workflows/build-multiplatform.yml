@@ -48,8 +48,14 @@ jobs:
           - runner: ubuntu-24.04-arm
             arch: arm64
     runs-on: ${{ matrix.runner }}
+    container: debian:13
 
     steps:
+      - name: Bootstrap Debian runner
+        run: |
+          apt-get update
+          apt-get install --yes ca-certificates git python3
+
       - name: Check out repository
         uses: actions/checkout@v6
         with:
@@ -71,7 +77,8 @@ jobs:
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DPRACTICE_TAKES_PACKAGE_FILE_NAME="PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}"
 
       - name: Build
         run: cmake --build build --config "${BUILD_TYPE}" --parallel
@@ -80,19 +87,46 @@ jobs:
         run: ctest --test-dir build --build-config "${BUILD_TYPE}" --output-on-failure
 
       - name: Package
+        shell: bash
         run: |
           artifact_name="PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}"
-          package_dir="dist/${artifact_name}"
-          mkdir -p "${package_dir}"
-          install -m 0755 build/bin/PracticeTakes "${package_dir}/PracticeTakes"
-          cp README.md VERSION "${package_dir}/"
-          tar -C dist -czf "dist/${artifact_name}.tar.gz" "${artifact_name}"
+          package_path="dist/${artifact_name}.deb"
+          expected_architecture="${{ matrix.arch }}"
+
+          if [[ "${expected_architecture}" == "x64" ]]; then
+            expected_architecture=amd64
+          fi
+
+          cpack --config build/CPackConfig.cmake \
+            -G DEB \
+            -B dist
+
+          if [[ ! -f "${package_path}" ]]; then
+            echo "Expected Debian package was not created: ${package_path}" >&2
+            exit 1
+          fi
+
+          actual_architecture="$(dpkg-deb --field "${package_path}" Architecture)"
+          if [[ "${actual_architecture}" != "${expected_architecture}" ]]; then
+            echo "Expected ${expected_architecture} package, got ${actual_architecture}." >&2
+            exit 1
+          fi
+
+          dependencies="$(dpkg-deb --field "${package_path}" Depends)"
+          if [[ -z "${dependencies}" ]]; then
+            echo "The Debian package has no generated runtime dependencies." >&2
+            exit 1
+          fi
+
+          dpkg-deb --contents "${package_path}" | grep -F "./usr/bin/PracticeTakes"
+          dpkg-deb --contents "${package_path}" | \
+            grep -F "./usr/share/applications/org.derekrneilson.practicetakes.desktop"
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
-          path: dist/PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.tar.gz
+          path: dist/PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.deb
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
@@ -129,13 +163,18 @@ jobs:
           $version = (python scripts/release/version.py current).Trim()
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
+      - name: Install Windows packaging tools
+        shell: pwsh
+        run: choco install nsis --yes --no-progress
+
       - name: Configure
         shell: pwsh
         run: |
           cmake -S . -B build `
             -G "Visual Studio 17 2022" `
             -A "${{ matrix.cmake_arch }}" `
-            -DCMAKE_CONFIGURATION_TYPES="${env:BUILD_TYPE}"
+            -DCMAKE_CONFIGURATION_TYPES="${env:BUILD_TYPE}" `
+            -DPRACTICE_TAKES_PACKAGE_FILE_NAME="PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}"
 
       - name: Build
         shell: pwsh
@@ -148,27 +187,35 @@ jobs:
       - name: Package
         shell: pwsh
         run: |
-          $binary = Get-ChildItem -Path build -Recurse -File -Filter PracticeTakes.exe |
-            Select-Object -First 1
+          $artifactName = "PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}"
+          $installerPath = "dist/$artifactName.exe"
 
-          if (-not $binary) {
-            throw "PracticeTakes.exe was not found after the build."
+          cpack --config build/CPackConfig.cmake `
+            -G NSIS `
+            -B dist `
+            -C "${env:BUILD_TYPE}"
+
+          if (-not (Test-Path -LiteralPath $installerPath -PathType Leaf)) {
+            throw "Expected Windows installer was not created: $installerPath"
           }
 
-          $artifactName = "PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}"
-          $packageDir = "dist/$artifactName"
-          New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
-          Copy-Item $binary.FullName "$packageDir/PracticeTakes.exe"
-          Copy-Item README.md, VERSION -Destination $packageDir
-          Compress-Archive -Path "$packageDir/*" `
-            -DestinationPath "dist/$artifactName.zip" `
-            -Force
+          $nsisScript = Get-ChildItem -Path dist -Recurse -File -Filter *.nsi |
+            Select-Object -First 1
+          if (-not $nsisScript) {
+            throw "CPack did not leave an NSIS script for shortcut verification."
+          }
+
+          $nsisContent = Get-Content -LiteralPath $nsisScript.FullName -Raw
+          if ($nsisContent -notmatch [regex]::Escape("Practice Takes.lnk") -or
+              $nsisContent -notmatch [regex]::Escape("PracticeTakes.exe")) {
+            throw "The Windows installer does not create the Practice Takes Start Menu shortcut."
+          }
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}
-          path: dist/PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}.zip
+          path: dist/PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}.exe
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
@@ -228,16 +275,23 @@ jobs:
 
           artifact_name="PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}"
           mkdir -p dist
+          cp README.md LICENSE "${app_path}/Contents/Resources/"
           codesign --force --deep --sign - "${app_path}"
-          ditto -c -k --sequesterRsrc --keepParent \
-            "${app_path}" \
-            "dist/${artifact_name}.zip"
+          pkgbuild \
+            --component "${app_path}" \
+            --identifier org.derekrneilson.practicetakes.pkg \
+            --version "${{ steps.version.outputs.version }}" \
+            --install-location /Applications \
+            "dist/${artifact_name}.pkg"
+
+          pkgutil --payload-files "dist/${artifact_name}.pkg" | \
+            grep -F "PracticeTakes.app/Contents/MacOS/PracticeTakes"
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}
-          path: dist/PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}.zip
+          path: dist/PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}.pkg
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
@@ -280,12 +334,12 @@ jobs:
           version="${{ steps.metadata.outputs.version }}"
 
           expected_files=(
-            "PracticeTakes-${version}-linux-x64.tar.gz"
-            "PracticeTakes-${version}-linux-arm64.tar.gz"
-            "PracticeTakes-${version}-windows-x64.zip"
-            "PracticeTakes-${version}-windows-arm64.zip"
-            "PracticeTakes-${version}-macos-x64.zip"
-            "PracticeTakes-${version}-macos-arm64.zip"
+            "PracticeTakes-${version}-linux-x64.deb"
+            "PracticeTakes-${version}-linux-arm64.deb"
+            "PracticeTakes-${version}-windows-x64.exe"
+            "PracticeTakes-${version}-windows-arm64.exe"
+            "PracticeTakes-${version}-macos-x64.pkg"
+            "PracticeTakes-${version}-macos-arm64.pkg"
           )
 
           for file in "${expected_files[@]}"; do
@@ -299,6 +353,16 @@ jobs:
           if [[ "${actual_count}" -ne "${#expected_files[@]}" ]]; then
             echo "Expected ${#expected_files[@]} platform packages, found ${actual_count}." >&2
             find release-assets -maxdepth 1 -type f -print >&2
+            exit 1
+          fi
+
+          if [[ "$(dpkg-deb --field "release-assets/PracticeTakes-${version}-linux-x64.deb" Architecture)" != "amd64" ]]; then
+            echo "The Linux x64 artifact is not an amd64 Debian package." >&2
+            exit 1
+          fi
+
+          if [[ "$(dpkg-deb --field "release-assets/PracticeTakes-${version}-linux-arm64.deb" Architecture)" != "arm64" ]]; then
+            echo "The Linux ARM64 artifact is not an arm64 Debian package." >&2
             exit 1
           fi
 

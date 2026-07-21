@@ -106,3 +106,30 @@ The pull-request workflow builds and packages six targets:
 
 A successful CI build confirms compilation and packaging. It does not replace
 interactive testing of audio devices, window behavior, or platform appearance.
+
+## Native installers
+
+The shared build workflow creates a native installer for each architecture:
+
+- CPack's DEB generator creates Debian `.deb` packages on Debian 13. It runs
+  `dpkg-shlibdeps` against the finished executable so the package's `Depends`
+  field is derived from the libraries that binary actually uses. The package
+  also installs the desktop entry under `/usr/share/applications`. The package
+  can be installed by Debian and compatible Ubuntu releases through APT.
+- CPack's NSIS generator creates Windows `.exe` installers. CMake includes the
+  required MSVC runtime libraries, and the installer creates a Practice Takes
+  Start Menu shortcut.
+- Apple's `pkgbuild` creates macOS `.pkg` installers that install the JUCE
+  application bundle in `/Applications`.
+
+The package file name can be controlled during configuration without changing
+the application version:
+
+```bash
+cmake -S . -B build \
+  -DPRACTICE_TAKES_PACKAGE_FILE_NAME=PracticeTakes-0.4.0-linux-x64
+cmake --build build --config Release
+cpack --config build/CPackConfig.cmake -G DEB -B dist
+```
+
+Ordinary development builds do not need to run CPack.

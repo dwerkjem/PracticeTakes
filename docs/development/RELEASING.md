@@ -36,12 +36,17 @@ patch, minor, and major releases.
 
 The shared build workflow produces these release packages:
 
-- `PracticeTakes-VERSION-linux-x64.tar.gz`
-- `PracticeTakes-VERSION-linux-arm64.tar.gz`
-- `PracticeTakes-VERSION-windows-x64.zip`
-- `PracticeTakes-VERSION-windows-arm64.zip`
-- `PracticeTakes-VERSION-macos-x64.zip`
-- `PracticeTakes-VERSION-macos-arm64.zip`
+- `PracticeTakes-VERSION-linux-x64.deb`
+- `PracticeTakes-VERSION-linux-arm64.deb`
+- `PracticeTakes-VERSION-windows-x64.exe`
+- `PracticeTakes-VERSION-windows-arm64.exe`
+- `PracticeTakes-VERSION-macos-x64.pkg`
+- `PracticeTakes-VERSION-macos-arm64.pkg`
+
+The Linux packages declare their runtime dependencies for APT and install a
+desktop Applications-menu entry. The Windows installers bundle the compiler
+runtime and create a Start Menu shortcut. The macOS packages install the
+application bundle in `/Applications`.
 
 It also adds:
 

@@ -162,12 +162,12 @@ jobs:
           source_sha="${{ needs.prepare.outputs.source_sha }}"
 
           expected_files=(
-            "PracticeTakes-${version}-linux-x64.tar.gz"
-            "PracticeTakes-${version}-linux-arm64.tar.gz"
-            "PracticeTakes-${version}-windows-x64.zip"
-            "PracticeTakes-${version}-windows-arm64.zip"
-            "PracticeTakes-${version}-macos-x64.zip"
-            "PracticeTakes-${version}-macos-arm64.zip"
+            "PracticeTakes-${version}-linux-x64.deb"
+            "PracticeTakes-${version}-linux-arm64.deb"
+            "PracticeTakes-${version}-windows-x64.exe"
+            "PracticeTakes-${version}-windows-arm64.exe"
+            "PracticeTakes-${version}-macos-x64.pkg"
+            "PracticeTakes-${version}-macos-arm64.pkg"
             "SHA256SUMS.txt"
             "BUILD-METADATA.txt"
           )

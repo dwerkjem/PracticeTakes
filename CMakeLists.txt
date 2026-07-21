@@ -169,3 +169,5 @@ if(BUILD_TESTING)
     include(Catch)
     catch_discover_tests(PracticeTakesTests)
 endif()
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Packaging.cmake")
