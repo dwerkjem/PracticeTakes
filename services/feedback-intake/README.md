@@ -202,7 +202,8 @@ linking, and CSV export.
 ## Security and abuse controls
 
 - 1.5 MiB request limit with an independently bounded optional PNG or JPEG screenshot
-- Screenshots require explicit per-submission consent and contain only the Practice Takes window
+- Screenshots require explicit per-submission consent, contain visible Practice Takes windows,
+  and explicitly exclude the feedback form itself
 - configurable minimum supported semantic application version
 - timestamps constrained to a ten-minute window
 - five-minute HMAC authorizations with unique token IDs

@@ -127,7 +127,7 @@ FeedbackComponent::FeedbackComponent(juce::PropertiesFile& propertiesFile)
     versionDiagnostic.setTitle("Include application version in this submission");
     operatingSystemDiagnostic.setTitle("Include operating system in this submission");
     screenshotDiagnostic.setTitle(
-        "Capture and include the Practice Takes window for this submission only");
+        "Capture all open Practice Takes windows except this feedback window");
     addAndMakeVisible(versionDiagnostic);
     addAndMakeVisible(operatingSystemDiagnostic);
     addAndMakeVisible(screenshotDiagnostic);
@@ -247,22 +247,55 @@ juce::String FeedbackComponent::previewText(const Draft& draft) const
             text += "\nOperating system: " + juce::SystemStats::getOperatingSystemName();
     }
     if (draft.includeScreenshot)
-        text += "\n\nAttachment: screenshot of the Practice Takes application window";
+        text += "\n\nAttachment: screenshot of all visible Practice Takes windows "
+                "except this feedback window";
     return text;
 }
 
 juce::String FeedbackComponent::captureApplicationScreenshot() const
 {
-    auto* window = getTopLevelComponent();
-    if (window == nullptr)
+    auto* feedbackWindow = getTopLevelComponent();
+    auto& desktop = juce::Desktop::getInstance();
+    juce::Array<juce::Component*> windows;
+    juce::Rectangle<int> capturedBounds;
+
+    for (int index = 0; index < desktop.getNumComponents(); ++index)
+    {
+        auto* window = desktop.getComponent(index);
+        if (window == nullptr || window == feedbackWindow || !window->isVisible() ||
+            window->getWidth() <= 0 || window->getHeight() <= 0)
+            continue;
+
+        windows.add(window);
+        capturedBounds = capturedBounds.isEmpty()
+                             ? window->getScreenBounds()
+                             : capturedBounds.getUnion(window->getScreenBounds());
+    }
+
+    if (windows.isEmpty() || capturedBounds.isEmpty())
         return {};
 
-    const auto windowBounds = window->getLocalBounds();
     constexpr float maximumWidth = 1280.0f;
     constexpr float maximumHeight = 720.0f;
-    const auto scale = juce::jmin(1.0f, maximumWidth / static_cast<float>(windowBounds.getWidth()),
-                                  maximumHeight / static_cast<float>(windowBounds.getHeight()));
-    const auto image = window->createComponentSnapshot(windowBounds, true, scale);
+    const auto scale =
+        juce::jmin(1.0f, maximumWidth / static_cast<float>(capturedBounds.getWidth()),
+                   maximumHeight / static_cast<float>(capturedBounds.getHeight()));
+    const auto imageWidth = juce::jmax(1, juce::roundToInt(capturedBounds.getWidth() * scale));
+    const auto imageHeight = juce::jmax(1, juce::roundToInt(capturedBounds.getHeight() * scale));
+    juce::Image image(juce::Image::RGB, imageWidth, imageHeight, true);
+    juce::Graphics graphics(image);
+    graphics.fillAll(juce::Colours::black);
+
+    for (auto* window : windows)
+    {
+        const auto snapshot =
+            window->createComponentSnapshot(window->getLocalBounds(), true, scale);
+        const auto screenBounds = window->getScreenBounds();
+        const auto x = juce::roundToInt((screenBounds.getX() - capturedBounds.getX()) * scale);
+        const auto y = juce::roundToInt((screenBounds.getY() - capturedBounds.getY()) * scale);
+        graphics.drawImageAt(snapshot, x, y);
+    }
+
     juce::MemoryOutputStream output;
     juce::JPEGImageFormat jpeg;
     jpeg.setQuality(0.72f);

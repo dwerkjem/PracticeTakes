@@ -10,6 +10,7 @@ BUILD_JOBS="${BUILD_JOBS:-}"
 BUILD_ONLY=false
 CLEAN=false
 INSTALL_DEPENDENCIES=false
+USE_VCPKG="${USE_VCPKG:-false}"
 program_args=()
 
 while (( $# > 0 )); do
@@ -49,6 +50,16 @@ done
 if [[ -n "$BUILD_JOBS" && ! "$BUILD_JOBS" =~ ^[1-9][0-9]*$ ]]; then
     printf 'Error: --jobs must be a positive integer, received: %s\n' "$BUILD_JOBS" >&2
     exit 2
+fi
+
+# A Nix compiler combined with Debian pkg-config libraries produces binaries
+# whose Nix dynamic loader cannot reliably resolve system dependencies. The
+# default non-vcpkg Linux build must use the matching system toolchain.
+if [[ "$(uname -s)" == "Linux" && "$USE_VCPKG" != true ]]; then
+    if [[ -x /usr/bin/gcc && -x /usr/bin/g++ ]]; then
+        export CC=/usr/bin/gcc
+        export CXX=/usr/bin/g++
+    fi
 fi
 
 if [[ "$BUILD_ONLY" == true ]]; then
@@ -126,9 +137,10 @@ cmake_args+=(
 
 vcpkg_toolchain=""
 
-if [[ -n "${VCPKG_ROOT:-}" && -f "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" ]]; then
+if [[ "$USE_VCPKG" == true && -n "${VCPKG_ROOT:-}" && \
+      -f "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" ]]; then
     vcpkg_toolchain="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
-elif command -v vcpkg >/dev/null 2>&1; then
+elif [[ "$USE_VCPKG" == true ]] && command -v vcpkg >/dev/null 2>&1; then
     detected_vcpkg_root="$(cd -- "$(dirname -- "$(command -v vcpkg)")" && pwd)"
 
     if [[ -f "$detected_vcpkg_root/scripts/buildsystems/vcpkg.cmake" ]]; then
@@ -185,11 +197,6 @@ if [[ -n "$vcpkg_toolchain" ]]; then
         export CMAKE_LIBRARY_PATH="$vcpkg_prefix/lib${CMAKE_LIBRARY_PATH:+:$CMAKE_LIBRARY_PATH}"
         export CPATH="$vcpkg_prefix/include${CPATH:+:$CPATH}"
         export LIBRARY_PATH="$vcpkg_prefix/lib${LIBRARY_PATH:+:$LIBRARY_PATH}"
-        # Do not expose target libraries to host tools. In particular, making
-        # CMake/Git load vcpkg's libcurl can break FetchContent before the app
-        # is built. Apply this path only when launching Practice Takes below.
-        runtime_library_path="$vcpkg_prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-
         # JUCE configures juceaide in a nested CMake project that does not
         # inherit the outer project's toolchain settings. Environment flags
         # are inherited by both CMake invocations and by Nix's compiler wrapper.
@@ -265,10 +272,7 @@ fi
 for executable in "${executable_candidates[@]}"; do
     if [[ -x "$executable" ]]; then
         printf 'Running %s...\n' "$executable"
-        if [[ -n "${runtime_library_path:-}" ]]; then
-            export LD_LIBRARY_PATH="$runtime_library_path"
-        fi
-        exec "$executable" "${program_args[@]}"
+        exec env -u LD_LIBRARY_PATH "$executable" "${program_args[@]}"
     fi
 done
 
