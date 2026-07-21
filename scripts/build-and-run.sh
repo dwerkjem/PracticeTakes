@@ -51,6 +51,37 @@ if [[ -n "$BUILD_JOBS" && ! "$BUILD_JOBS" =~ ^[1-9][0-9]*$ ]]; then
     exit 2
 fi
 
+if [[ "$BUILD_ONLY" == true ]]; then
+    if [[ "$CLEAN" == true ]]; then
+        printf 'Error: --build-only cannot be combined with --clean.\n' >&2
+        exit 2
+    fi
+
+    if [[ ! -f "$BUILD_DIR/CMakeCache.txt" ]]; then
+        printf 'Error: --build-only requires an existing configured build at %s.\n' \
+            "$BUILD_DIR" >&2
+        printf 'Run ./scripts/build-and-run.sh once without --build-only.\n' >&2
+        exit 1
+    fi
+
+    build_only_args=(
+        --build "$BUILD_DIR"
+        --config "$BUILD_TYPE"
+        --target "$TARGET_NAME"
+        --parallel
+    )
+
+    if [[ -n "$BUILD_JOBS" ]]; then
+        build_only_args+=("$BUILD_JOBS")
+        printf 'Building %s with %s parallel job(s)...\n' "$TARGET_NAME" "$BUILD_JOBS"
+    else
+        printf 'Building %s...\n' "$TARGET_NAME"
+    fi
+
+    cmake "${build_only_args[@]}"
+    exit 0
+fi
+
 dependency_check_args=()
 if [[ "$INSTALL_DEPENDENCIES" == true ]]; then
     dependency_check_args+=(--install)
