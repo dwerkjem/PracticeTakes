@@ -91,6 +91,7 @@ function feedbackCard(feedback) {
         </div>
 
         <div class="card-actions">
+          ${feedback.hasScreenshot ? '<button class="view-screenshot" type="button">View screenshot</button>' : ""}
           <button class="save" type="button">Save changes</button>
           <button class="delete danger" type="button">Delete</button>
           <span class="card-status"></span>
@@ -116,6 +117,29 @@ async function loadFeedback() {
   } catch (error) {
     results.innerHTML = `<p class="empty error">${escapeHtml(error.message)}</p>`;
   }
+}
+
+async function viewScreenshot(card) {
+  const response = await fetch(`/v1/admin/submissions/${card.dataset.id}/screenshot`);
+  if (!response.ok) throw new Error("The screenshot could not be loaded.");
+  const imageUrl = URL.createObjectURL(await response.blob());
+  const dialog = document.createElement("dialog");
+  dialog.className = "screenshot-viewer";
+  dialog.innerHTML = `
+    <div class="screenshot-toolbar">
+      <strong>Feedback screenshot</strong>
+      <button type="button">Close</button>
+    </div>
+    <img alt="Screenshot attached to feedback ${escapeHtml(card.dataset.id)}">
+  `;
+  dialog.querySelector("img").src = imageUrl;
+  dialog.querySelector("button").addEventListener("click", () => dialog.close());
+  dialog.addEventListener("close", () => {
+    URL.revokeObjectURL(imageUrl);
+    dialog.remove();
+  });
+  document.body.append(dialog);
+  dialog.showModal();
 }
 
 function feedbackUpdateFromCard(card) {
@@ -191,6 +215,12 @@ results.addEventListener("click", async (event) => {
     await deleteFeedback(card);
   } else if (event.target.classList.contains("save")) {
     await saveFeedback(card, event.target);
+  } else if (event.target.classList.contains("view-screenshot")) {
+    try {
+      await viewScreenshot(card);
+    } catch (error) {
+      card.querySelector(".card-status").textContent = error.message;
+    }
   }
 });
 

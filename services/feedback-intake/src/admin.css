@@ -294,3 +294,17 @@ summary {
   color: #f0f6fc;
   font-weight: 650;
 }
+
+.screenshot-viewer {
+  width: min(92vw, 1400px);
+  max-height: 92vh;
+  padding: 0;
+  border: 1px solid #394150;
+  border-radius: 10px;
+  background: #11161e;
+  color: #f2f5f8;
+}
+
+.screenshot-viewer::backdrop { background: rgb(0 0 0 / 75%); }
+.screenshot-viewer img { display: block; max-width: 100%; max-height: 82vh; margin: auto; }
+.screenshot-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; }

@@ -221,7 +221,7 @@ describe("feedback intake worker", () => {
   it("rejects oversized requests before authorization processing", async () => {
     const response = await send("/v1/submissions", {
       ...feedback("not-a-real-token"),
-      message: "x".repeat(17_000),
+      message: "x".repeat(1_600_000),
     }, createEnvironment());
 
     expect(response.status).toBe(413);

@@ -28,6 +28,10 @@ class FeedbackComponent final : public juce::Component, private juce::Thread
         juce::String description;
         juce::String reproductionSteps;
         juce::String contactEmail;
+        bool includeVersion = false;
+        bool includeOperatingSystem = false;
+        bool includeScreenshot = false;
+        juce::String screenshotBase64;
     };
 
     void configureEditor(juce::TextEditor& editor, const juce::String& accessibleName,
@@ -37,6 +41,7 @@ class FeedbackComponent final : public juce::Component, private juce::Thread
     [[nodiscard]] juce::String validate() const;
     [[nodiscard]] Draft currentDraft() const;
     [[nodiscard]] juce::String previewText(const Draft& draft) const;
+    [[nodiscard]] juce::String captureApplicationScreenshot() const;
     void saveDraft(const Draft& draft);
     void clearDraft();
     void restoreDraft();
@@ -55,6 +60,9 @@ class FeedbackComponent final : public juce::Component, private juce::Thread
     juce::Label emailLabel;
     juce::TextEditor emailEditor;
     juce::Label environmentLabel;
+    juce::ToggleButton versionDiagnostic{"Application version"};
+    juce::ToggleButton operatingSystemDiagnostic{"Operating system"};
+    juce::ToggleButton screenshotDiagnostic{"Application screenshot"};
     juce::Label validationLabel;
     juce::TextButton previewButton{"Preview"};
     juce::TextButton submitButton{"Submit feedback"};
