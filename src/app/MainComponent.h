@@ -5,6 +5,7 @@
 #include "../audio/AudioInputService.h"
 #include "../feedback/FeedbackComponent.h"
 #include "AppDefaults.h"
+#include "SettingsPersistence.h"
 #include "Theme.h"
 
 #include <functional>
@@ -22,9 +23,11 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
-    [[nodiscard]] std::unique_ptr<MainTitleBar>
-    createTitleBar(const juce::String& title, std::function<void()> minimiseHandler,
-                   std::function<void()> fullscreenHandler, std::function<void()> closeHandler);
+    [[nodiscard]] std::unique_ptr<MainTitleBar> createTitleBar(
+        const juce::String& title,
+        std::function<void()> minimiseHandler,
+        std::function<void()> fullscreenHandler,
+        std::function<void()> closeHandler);
 
   private:
     enum class ToolType
@@ -50,15 +53,20 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     void showSettings();
     void closeSettings();
     void showHelpMenu();
-    void showFeedback();
+    void showFeedback(const juce::String& context = {});
+    void recordSuccessfulToolUse();
+    void maybeOfferFeedbackInvitation();
+    void setFeedbackInvitationsDisabled(bool disabled);
+    [[nodiscard]] bool feedbackInvitationsDisabled();
     void closeFeedback();
     void resetCurrentTool();
     void resetAudio();
     void resetLayout();
     void resetAll();
     void applyPreset(AppDefaults::Preset preset);
-    void saveSettings();
+    void saveSettings(bool explicitSave = false);
     void loadSettings();
+    [[nodiscard]] AppSettings::State captureSettingsState();
 
     [[nodiscard]] std::unique_ptr<juce::Component> createToolComponent(ToolType tool);
     [[nodiscard]] juce::String toolName(ToolType tool) const;
@@ -103,6 +111,7 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     juce::Rectangle<int> savedSpectrogramBounds;
     juce::Rectangle<int> savedSettingsBounds;
     bool isMicrophoneWarningDismissed = false;
+    bool automaticSettingsSaveEnabled = true;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

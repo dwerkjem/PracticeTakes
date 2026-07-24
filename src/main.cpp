@@ -63,8 +63,10 @@ class PracticeTakesApplication final : public juce::JUCEApplication
     {
       public:
         explicit MainWindow(const juce::String& title)
-            : DocumentWindow(title, juce::Colour::fromRGB(18, 20, 27),
-                             juce::DocumentWindow::allButtons)
+            : DocumentWindow(
+                  title,
+                  juce::Colour::fromRGB(18, 20, 27),
+                  juce::DocumentWindow::allButtons)
         {
             setUsingNativeTitleBar(false);
 
@@ -77,7 +79,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             setTitleBarHeight(42);
             setTitleBarButtonsRequired(0, false);
             titleBar = std::move(customTitleBar);
-            addAndMakeVisible(titleBar.get());
+            juce::Component::addAndMakeVisible(titleBar.get());
             // Use a resizable border so every window edge and corner can be
             // dragged, even though the application supplies its own title bar.
             setResizable(true, false);

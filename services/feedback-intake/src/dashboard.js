@@ -2,6 +2,7 @@ const results = document.querySelector("#results");
 const resultCount = document.querySelector("#count");
 const filterForm = document.querySelector("#filters");
 const createForm = document.querySelector("#create");
+const operationsSummary = document.querySelector("#operations-summary");
 
 function escapeHtml(value) {
   const entities = {
@@ -72,6 +73,7 @@ function feedbackCard(feedback) {
           <label>Tags<input class="tags" value="${escapeHtml(tags.join(", "))}" placeholder="Comma separated"></label>
           <label>GitHub issue<input class="github" value="${escapeHtml(feedback.githubIssueUrl)}" placeholder="Issue URL"></label>
           <label>Duplicate<input class="duplicate" value="${escapeHtml(feedback.duplicateOf)}" placeholder="Receipt ID"></label>
+          <label>Quarantine<input class="quarantine" value="${escapeHtml(feedback.quarantineReason)}" placeholder="Not quarantined"></label>
         </div>
 
         <div class="feedback-summary">
@@ -86,6 +88,7 @@ function feedbackCard(feedback) {
         </label>
 
         <div class="secondary-content">
+          <label>Feature context<textarea class="context-tag">${escapeHtml(feedback.contextTag)}</textarea></label>
           <label>Diagnostic context<textarea class="diagnostic">${escapeHtml(feedback.diagnosticContext)}</textarea></label>
           <label>Developer notes<textarea class="notes">${escapeHtml(feedback.developerNotes)}</textarea></label>
         </div>
@@ -147,6 +150,7 @@ function feedbackUpdateFromCard(card) {
   const title = card.querySelector(".title").value.trim();
   const description = card.querySelector(".feedback").value.trim();
   const contact = card.querySelector(".contact-summary").value.trim();
+  const contextTag = card.querySelector(".context-tag").value.trim();
   const diagnosticContext = card.querySelector(".diagnostic").value.trim();
   const structuredMessage = feedbackType || title || contact
     ? `Type: ${feedbackType}\nTitle: ${title}\n\nDescription:\n${description}\n\nContact: ${contact}`
@@ -154,19 +158,48 @@ function feedbackUpdateFromCard(card) {
   const message = diagnosticContext
     ? `${structuredMessage}\nEnvironment: ${diagnosticContext}`
     : structuredMessage;
+  const messageWithContext = contextTag
+    ? `${message}\n\nFeedback context (user-editable):\n${contextTag}`
+    : message;
 
   return {
     category: card.querySelector(".category").value,
     appVersion: card.querySelector(".version").value.trim(),
     contactEmail: card.querySelector(".email").value.trim() || null,
-    message,
+    message: messageWithContext,
     status: card.querySelector(".status").value,
     priority: card.querySelector(".priority").value || null,
     tags: card.querySelector(".tags").value.split(",").map((tag) => tag.trim()).filter(Boolean),
     githubIssueUrl: card.querySelector(".github").value.trim() || null,
     duplicateOf: card.querySelector(".duplicate").value.trim() || null,
+    quarantineReason: card.querySelector(".quarantine").value.trim() || null,
     developerNotes: card.querySelector(".notes").value,
   };
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+}
+
+async function loadOperations() {
+  try {
+    const { operations } = await requestJson("/v1/admin/operations");
+    const availability = operations.availabilityPercent === null
+      ? "No requests recorded"
+      : `${operations.availabilityPercent.toFixed(2)}% availability`;
+    operationsSummary.textContent =
+      `${availability}; ${operations.failures} failures; ` +
+      `${operations.averageResponseMs.toFixed(0)} ms average response; ` +
+      `${operations.storedSubmissions} stored (${formatBytes(operations.estimatedStoredBytes)}); ` +
+      `${operations.quarantinedSubmissions} quarantined; ` +
+      `last retention ${operations.lastRetentionAt
+        ? new Date(operations.lastRetentionAt).toLocaleString()
+        : "not yet recorded"}`;
+  } catch (error) {
+    operationsSummary.textContent = error.message;
+  }
 }
 
 async function deleteFeedback(card) {
@@ -311,4 +344,23 @@ document.querySelector("#export").addEventListener("click", () => {
   }
 });
 
+document.querySelector("#run-retention").addEventListener("click", async (event) => {
+  const status = document.querySelector("#retention-status");
+  event.target.disabled = true;
+  status.textContent = "Running…";
+  try {
+    const { retention } = await requestJson("/v1/admin/maintenance/retention", {
+      method: "POST",
+    });
+    const deleted = retention.resolved + retention.duplicates + retention.declined;
+    status.textContent = `Complete: ${deleted} feedback records expired`;
+    await Promise.all([loadFeedback(), loadOperations()]);
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    event.target.disabled = false;
+  }
+});
+
 loadFeedback();
+loadOperations();

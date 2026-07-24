@@ -4,8 +4,13 @@
 
 namespace AppDefaults
 {
-inline constexpr int schemaVersion = 1;
+inline constexpr int schemaVersion = 2;
 inline constexpr Theme theme = Theme::light;
+
+namespace Audio
+{
+inline constexpr double inputGain = 1.0;
+} // namespace Audio
 
 namespace Tuner
 {
@@ -25,6 +30,7 @@ enum class Preset
 
 struct TunerSettings
 {
+    int displayMode;
     double easing;
     double averaging;
     double noteSwitchSemitones;
@@ -36,11 +42,11 @@ struct TunerSettings
 {
     if (preset == Preset::voice)
     {
-        return {0.25, 7.0, 0.45, 7.0, 30.0};
+        return {Tuner::displayMode, 0.25, 7.0, 0.45, 7.0, 30.0};
     }
 
-    return {Tuner::easing, Tuner::averaging, Tuner::noteSwitchSemitones, Tuner::dropoutFrames,
-            Tuner::graphDurationSeconds};
+    return {Tuner::displayMode,         Tuner::easing,        Tuner::averaging,
+            Tuner::noteSwitchSemitones, Tuner::dropoutFrames, Tuner::graphDurationSeconds};
 }
 
 [[nodiscard]] constexpr TunerSettings tunerDefaults()

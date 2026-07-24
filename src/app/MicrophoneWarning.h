@@ -17,9 +17,10 @@ class MainComponent::MicrophoneWarning final : public juce::Component
         title.setFont(juce::FontOptions(16.0f, juce::Font::bold));
         addAndMakeVisible(title);
 
-        message.setText("Choose an input device in Settings to use the tuner and "
-                        "spectrogram.",
-                        juce::dontSendNotification);
+        message.setText(
+            "Choose an input device in Settings to use the tuner and "
+            "spectrogram.",
+            juce::dontSendNotification);
         message.setFont(juce::FontOptions(13.0f));
         message.setJustificationType(juce::Justification::centredLeft);
         addAndMakeVisible(message);
@@ -78,8 +79,8 @@ class MainComponent::MicrophoneWarning final : public juce::Component
         graphics.setColour(palette.warning);
         graphics.fillEllipse(20.0f, 23.0f, 24.0f, 24.0f);
 
-        graphics.setColour(isDarkTheme(currentTheme) ? juce::Colour::fromRGB(35, 29, 18)
-                                                     : juce::Colours::white);
+        graphics.setColour(
+            isDarkTheme(currentTheme) ? juce::Colour::fromRGB(35, 29, 18) : juce::Colours::white);
         graphics.setFont(juce::FontOptions(17.0f, juce::Font::bold));
         graphics.drawText("!", 20, 22, 24, 25, juce::Justification::centred);
     }

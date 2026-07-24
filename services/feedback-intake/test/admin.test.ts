@@ -19,6 +19,9 @@ const row = {
   tags_json: "[]",
   github_issue_url: null,
   duplicate_of: null,
+  screenshot_mime_type: null,
+  quarantine_reason: null,
+  quarantined_at: null,
 };
 
 class AdminStatement {
@@ -41,6 +44,27 @@ class AdminStatement {
            details_json: '{"fields":["status"]}', created_at: 1_768_788_000 }]
       : [row];
     return { success: true, results: results as T[], meta: {} } as D1Result<T>;
+  }
+
+  async first<T>(): Promise<T | null> {
+    this.database.lastSql = this.sql;
+    this.database.sqlHistory.push(this.sql);
+    if (this.sql.includes("FROM request_metrics")) {
+      return {
+        requests: 20,
+        failures: 1,
+        rejected: 2,
+        total_duration_ms: 1000,
+        maximum_duration_ms: 150,
+      } as T;
+    }
+    if (this.sql.includes("strftime")) {
+      return { average_seconds: 2, maximum_seconds: 5 } as T;
+    }
+    if (this.sql.includes("FROM maintenance_runs")) {
+      return { completed_at: 1_768_788_000, details_json: '{"resolved":1}' } as T;
+    }
+    return { count: 10, bytes: 4096, quarantined: 1 } as T;
   }
 
   async run(): Promise<D1Result> {
@@ -197,6 +221,31 @@ describe("feedback administration", () => {
     const body = await response.json() as { actions: Array<{ adminEmail: string; action: string }> };
     expect(response.status).toBe(200);
     expect(body.actions[0]).toMatchObject({ adminEmail: email, action: "update" });
+  });
+
+  it("reports protected service operations", async () => {
+    const response = await handleAdminRequest(
+      adminRequest("/v1/admin/operations"), environment(),
+    );
+    const body = await response.json() as {
+      operations: { availabilityPercent: number; quarantinedSubmissions: number };
+    };
+    expect(response.status).toBe(200);
+    expect(body.operations.availabilityPercent).toBe(95);
+    expect(body.operations.quarantinedSubmissions).toBe(1);
+  });
+
+  it("runs retention on demand and records the maintenance result", async () => {
+    const database = new AdminD1();
+    const response = await handleAdminRequest(
+      adminRequest("/v1/admin/maintenance/retention", { method: "POST" }),
+      environment(database),
+    );
+    expect(response.status).toBe(200);
+    expect(database.sqlHistory.some((sql) =>
+      sql.includes("DELETE FROM feedback_submissions WHERE status = 'resolved'"))).toBe(true);
+    expect(database.sqlHistory.some((sql) =>
+      sql.includes("INSERT INTO maintenance_runs"))).toBe(true);
   });
 
   it("rejects malformed GitHub issue links", async () => {

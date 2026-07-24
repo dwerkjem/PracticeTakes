@@ -3,10 +3,16 @@ import adminStyles from "./admin.css";
 import adminScript from "./dashboard.js";
 import auditPageTemplate from "./audit.html";
 import auditScript from "./audit.js";
+import { operationalReport, retentionPolicy, runRetention } from "./operations";
 
 export interface AdminEnv {
   FEEDBACK_DB: D1Database;
   ADMIN_EMAILS: string;
+  RESOLVED_RETENTION_DAYS?: string;
+  DUPLICATE_RETENTION_DAYS?: string;
+  DECLINED_RETENTION_DAYS?: string;
+  TELEMETRY_RETENTION_DAYS?: string;
+  AUDIT_RETENTION_DAYS?: string;
 }
 
 interface SubmissionRow {
@@ -24,6 +30,8 @@ interface SubmissionRow {
   github_issue_url: string | null;
   duplicate_of: string | null;
   screenshot_mime_type: string | null;
+  quarantine_reason: string | null;
+  quarantined_at: number | null;
 }
 
 const statuses = new Set(["new", "needs_review", "planned", "duplicate", "resolved", "declined"]);
@@ -67,6 +75,13 @@ export async function handleAdminRequest(request: Request, env: AdminEnv): Promi
   if (url.pathname === "/v1/admin/audit" && request.method === "GET") {
     return listAdminActions(url, env.FEEDBACK_DB);
   }
+  if (url.pathname === "/v1/admin/operations" && request.method === "GET") {
+    return jsonResponse(200, { operations: await operationalReport(env.FEEDBACK_DB) });
+  }
+  if (url.pathname === "/v1/admin/maintenance/retention" && request.method === "POST") {
+    const result = await runRetention(env.FEEDBACK_DB, retentionPolicy(env), user);
+    return jsonResponse(200, { retention: result });
+  }
   if (url.pathname === "/v1/admin/submissions/batch-delete" && request.method === "POST") {
     return deleteSubmissions(request, env.FEEDBACK_DB, user);
   }
@@ -104,7 +119,7 @@ async function listSubmissions(url: URL, db: D1Database): Promise<Response> {
   const result = await db.prepare(
     `SELECT receipt_id, submitted_at, received_at, app_version, category, message, contact_email,
             status, developer_notes, priority, tags_json, github_issue_url, duplicate_of,
-            screenshot_mime_type
+            screenshot_mime_type, quarantine_reason, quarantined_at
        FROM feedback_submissions ${where} ORDER BY received_at DESC LIMIT ?`,
   ).bind(...values, limit).all<SubmissionRow>();
   return jsonResponse(200, { submissions: (result.results ?? []).map(presentSubmission) });
@@ -114,7 +129,7 @@ async function getSubmission(receiptId: string, db: D1Database): Promise<Respons
   const result = await db.prepare(
     `SELECT receipt_id, submitted_at, received_at, app_version, category, message, contact_email,
             status, developer_notes, priority, tags_json, github_issue_url, duplicate_of,
-            screenshot_mime_type
+            screenshot_mime_type, quarantine_reason, quarantined_at
        FROM feedback_submissions WHERE receipt_id = ? LIMIT 1`,
   ).bind(receiptId).all<SubmissionRow>();
   const submission = result.results?.[0];
@@ -184,6 +199,9 @@ function filters(url: URL): { where: string; values: unknown[] } {
   addExact("appVersion", "app_version");
   addExact("status", "status");
   addExact("priority", "priority");
+  if (url.searchParams.get("quarantined") === "true") {
+    clauses.push("quarantine_reason IS NOT NULL");
+  }
   const query = url.searchParams.get("q")?.trim();
   if (query) {
     clauses.push("(message LIKE ? OR developer_notes LIKE ? OR tags_json LIKE ? OR contact_email LIKE ?)");
@@ -263,6 +281,19 @@ async function updateSubmission(receiptId: string, request: Request, db: D1Datab
     }
     set("duplicate_of", input.duplicateOf);
     if (input.duplicateOf) set("status", "duplicate");
+  }
+  if (input.quarantineReason !== undefined) {
+    if (input.quarantineReason !== null &&
+        (typeof input.quarantineReason !== "string" ||
+         input.quarantineReason.trim().length < 1 || input.quarantineReason.length > 120)) {
+      return invalid("Quarantine reason must contain 1 to 120 characters.");
+    }
+    const reason = typeof input.quarantineReason === "string"
+      ? input.quarantineReason.trim()
+      : null;
+    set("quarantine_reason", reason);
+    set("quarantined_at", reason ? Math.floor(Date.now() / 1000) : null);
+    if (reason) set("status", "needs_review");
   }
   if (!updates.length) return invalid("No supported fields were supplied.");
 
@@ -380,11 +411,13 @@ async function exportSubmissions(url: URL, db: D1Database): Promise<Response> {
   const placeholders = ids.map(() => "?").join(",");
   const result = await db.prepare(
     `SELECT receipt_id, submitted_at, received_at, app_version, category, message, contact_email,
-            status, developer_notes, priority, tags_json, github_issue_url, duplicate_of
+            status, developer_notes, priority, tags_json, github_issue_url, duplicate_of,
+            quarantine_reason, quarantined_at
        FROM feedback_submissions WHERE receipt_id IN (${placeholders}) ORDER BY received_at DESC`,
   ).bind(...ids).all<SubmissionRow>();
   const columns: (keyof SubmissionRow)[] = ["receipt_id", "submitted_at", "received_at", "app_version", "category",
-    "message", "contact_email", "status", "developer_notes", "priority", "tags_json", "github_issue_url", "duplicate_of"];
+    "message", "contact_email", "status", "developer_notes", "priority", "tags_json",
+    "github_issue_url", "duplicate_of", "quarantine_reason", "quarantined_at"];
   const csv = [columns.join(","), ...(result.results ?? []).map((row) =>
     columns.map((column) => csvCell(row[column])).join(","))].join("\r\n");
   return new Response(csv, { headers: {
@@ -394,10 +427,20 @@ async function exportSubmissions(url: URL, db: D1Database): Promise<Response> {
 }
 
 function presentSubmission(row: SubmissionRow) {
+  const contextMarker = "\n\nFeedback context (user-editable):\n";
+  const contextIndex = row.message.lastIndexOf(contextMarker);
+  const contextTag = contextIndex < 0
+    ? null
+    : row.message.slice(contextIndex + contextMarker.length).trim();
+  const messageWithoutContext = contextIndex < 0 ? row.message : row.message.slice(0, contextIndex);
   const marker = "\nEnvironment: ";
-  const markerIndex = row.message.lastIndexOf(marker);
-  const userFeedback = markerIndex < 0 ? row.message : row.message.slice(0, markerIndex);
-  const diagnosticContext = markerIndex < 0 ? null : row.message.slice(markerIndex + marker.length).trim();
+  const markerIndex = messageWithoutContext.lastIndexOf(marker);
+  const userFeedback = markerIndex < 0
+    ? messageWithoutContext
+    : messageWithoutContext.slice(0, markerIndex);
+  const diagnosticContext = markerIndex < 0
+    ? null
+    : messageWithoutContext.slice(markerIndex + marker.length).trim();
   const structuredFeedback = parseStructuredFeedback(userFeedback);
   let tags: unknown = [];
   try { tags = JSON.parse(row.tags_json); } catch { /* preserve an empty list for malformed legacy data */ }
@@ -405,11 +448,14 @@ function presentSubmission(row: SubmissionRow) {
     receiptId: row.receipt_id, submittedAt: row.submitted_at,
     receivedAt: new Date(row.received_at * 1000).toISOString(), appVersion: row.app_version,
     category: row.category, userFeedback, diagnosticContext, contactEmail: row.contact_email,
+    contextTag,
     hasScreenshot: Boolean(row.screenshot_mime_type),
     feedbackType: structuredFeedback.type, title: structuredFeedback.title,
     description: structuredFeedback.description, contactSummary: structuredFeedback.contact,
     status: row.status, developerNotes: row.developer_notes, priority: row.priority, tags,
     githubIssueUrl: row.github_issue_url, duplicateOf: row.duplicate_of,
+    quarantineReason: row.quarantine_reason,
+    quarantinedAt: row.quarantined_at ? new Date(row.quarantined_at * 1000).toISOString() : null,
   };
 }
 

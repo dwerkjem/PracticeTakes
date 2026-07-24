@@ -1,5 +1,6 @@
 #include "MainComponent.h"
 
+#include "../feedback/FeedbackInvitationPolicy.h"
 #include "../spectrogram/SpectrogramComponent.h"
 #include "../tuner/TunerComponent.h"
 
@@ -18,22 +19,27 @@ constexpr int microphoneWarningHeight = 118;
 constexpr int tunerMenuItemId = 1;
 constexpr int spectrogramMenuItemId = 2;
 constexpr int sendFeedbackMenuItemId = 1;
+constexpr int feedbackInvitationsMenuItemId = 2;
 constexpr int openSettingsMenuItemId = 1;
 constexpr int lightSettingsMenuItemId = 2;
 constexpr int darkSettingsMenuItemId = 3;
 constexpr int muteSettingsMenuItemId = 4;
-constexpr auto settingsSchemaKey = "settings.schema";
-constexpr auto themeKey = "global.theme";
-constexpr auto audioStateKey = "audio.deviceState";
-constexpr auto tunerEasingKey = "tuner.easing";
-constexpr auto tunerAveragingKey = "tuner.averaging";
-constexpr auto tunerThresholdKey = "tuner.noteSwitch";
-constexpr auto tunerDropoutKey = "tuner.dropout";
-constexpr auto tunerDurationKey = "tuner.graphDuration";
-constexpr auto tunerBoundsKey = "layout.tuner";
-constexpr auto spectrogramBoundsKey = "layout.spectrogram";
-constexpr auto settingsBoundsKey = "layout.settings";
+constexpr auto feedbackSuccessfulUsesKey = "feedback.successfulToolUses";
+constexpr auto feedbackInvitationShownKey = "feedback.invitationShown";
+constexpr auto feedbackInvitationsDisabledKey = "feedback.invitationsDisabled";
 
+[[nodiscard]] juce::Rectangle<int> validWindowBounds(const juce::String& storedBounds)
+{
+    const auto bounds = juce::Rectangle<int>::fromString(storedBounds);
+    constexpr int minimumWindowSize = 300;
+    constexpr int maximumWindowSize = 10000;
+    if (bounds.getWidth() < minimumWindowSize || bounds.getHeight() < minimumWindowSize ||
+        bounds.getWidth() > maximumWindowSize || bounds.getHeight() > maximumWindowSize)
+    {
+        return {};
+    }
+    return bounds;
+}
 } // namespace
 
 //==============================================================================
@@ -48,6 +54,11 @@ MainComponent::MainComponent()
     storageOptions.folderName = "PracticeTakes";
     storageOptions.osxLibrarySubFolder = "Application Support";
     storageOptions.commonToAllUsers = false;
+    // PropertiesFile writes through a temporary sibling and atomically replaces
+    // the destination. Keep writes explicit so a complete snapshot is flushed
+    // instead of serialising each individual field.
+    storageOptions.millisecondsBeforeSaving = -1;
+    storageOptions.storageFormat = juce::PropertiesFile::storeAsXML;
     applicationProperties.setStorageParameters(storageOptions);
     loadSettings();
 
@@ -61,6 +72,7 @@ MainComponent::MainComponent()
 
 MainComponent::~MainComponent()
 {
+    saveSettings();
     audioInputService.removeChangeListener(this);
     // Tool components unregister from the service in their destructors, so
     // close the windows before the service is destroyed.
@@ -87,20 +99,21 @@ void MainComponent::configureTopButtons()
     microphoneButton.onClick = [this] { audioInputService.toggleMuted(); };
 }
 
-std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(const juce::String& title,
-                                                            std::function<void()> minimiseHandler,
-                                                            std::function<void()> fullscreenHandler,
-                                                            std::function<void()> closeHandler)
+std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(
+    const juce::String& title,
+    std::function<void()> minimiseHandler,
+    std::function<void()> fullscreenHandler,
+    std::function<void()> closeHandler)
 {
-    return std::make_unique<MainTitleBar>(title, fileButton, settingsButton, toolsButton,
-                                          helpButton, microphoneButton, std::move(minimiseHandler),
-                                          std::move(fullscreenHandler), std::move(closeHandler));
+    return std::make_unique<MainTitleBar>(
+        title, fileButton, settingsButton, toolsButton, helpButton, microphoneButton,
+        std::move(minimiseHandler), std::move(fullscreenHandler), std::move(closeHandler));
 }
 
 void MainComponent::createMicrophoneWarning()
 {
-    microphoneWarning = std::make_unique<MicrophoneWarning>([this] { showSettings(); },
-                                                            [this] { dismissMicrophoneWarning(); });
+    microphoneWarning = std::make_unique<MicrophoneWarning>(
+        [this] { showSettings(); }, [this] { dismissMicrophoneWarning(); });
 
     // Start hidden; updateMicrophoneWarning decides whether it is needed.
     addChildComponent(*microphoneWarning);
@@ -134,39 +147,41 @@ void MainComponent::showToolsMenu()
     menu.addItem(spectrogramMenuItemId, "Spectrogram", true, spectrogramWindow != nullptr);
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
-    menu.showMenuAsync(juce::PopupMenu::Options()
-                           .withTargetComponent(&toolsButton)
-                           .withMinimumWidth(toolsMenuWidth),
-                       [safeThis](int selectedItemId)
-                       {
-                           if (safeThis == nullptr)
-                           {
-                               return;
-                           }
+    menu.showMenuAsync(
+        juce::PopupMenu::Options()
+            .withTargetComponent(&toolsButton)
+            .withMinimumWidth(toolsMenuWidth),
+        [safeThis](int selectedItemId)
+        {
+            if (safeThis == nullptr)
+            {
+                return;
+            }
 
-                           if (selectedItemId == tunerMenuItemId)
-                           {
-                               safeThis->openTool(ToolType::tuner);
-                           }
-                           else if (selectedItemId == spectrogramMenuItemId)
-                           {
-                               safeThis->openTool(ToolType::spectrogram);
-                           }
-                       });
+            if (selectedItemId == tunerMenuItemId)
+            {
+                safeThis->openTool(ToolType::tuner);
+            }
+            else if (selectedItemId == spectrogramMenuItemId)
+            {
+                safeThis->openTool(ToolType::spectrogram);
+            }
+        });
 }
 
 void MainComponent::showSettingsMenu()
 {
     juce::PopupMenu appearanceMenu;
-    appearanceMenu.addItem(lightSettingsMenuItemId, "Light theme", true,
-                           currentTheme == Theme::light);
+    appearanceMenu.addItem(
+        lightSettingsMenuItemId, "Light theme", true, currentTheme == Theme::light);
     appearanceMenu.addItem(darkSettingsMenuItemId, "Dark theme", true, currentTheme == Theme::dark);
 
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
     menu.addSubMenu("Appearance", appearanceMenu);
-    menu.addItem(muteSettingsMenuItemId,
-                 audioInputService.isMuted() ? "Unmute microphone" : "Mute microphone");
+    menu.addItem(
+        muteSettingsMenuItemId,
+        audioInputService.isMuted() ? "Unmute microphone" : "Mute microphone");
     menu.addSeparator();
     menu.addItem(openSettingsMenuItemId, "Open full settings...");
 
@@ -203,21 +218,32 @@ void MainComponent::showHelpMenu()
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
     menu.addItem(sendFeedbackMenuItemId, "Send feedback");
+    menu.addSeparator();
+    menu.addItem(
+        feedbackInvitationsMenuItemId,
+        feedbackInvitationsDisabled() ? "Enable feedback invitations"
+                                      : "Disable feedback invitations");
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(
         juce::PopupMenu::Options().withTargetComponent(&helpButton).withMinimumWidth(helpMenuWidth),
         [safeThis](int selectedItemId)
         {
-            if (safeThis != nullptr && selectedItemId == sendFeedbackMenuItemId)
+            if (safeThis == nullptr)
+                return;
+            if (selectedItemId == sendFeedbackMenuItemId)
                 safeThis->showFeedback();
+            else if (selectedItemId == feedbackInvitationsMenuItemId)
+                safeThis->setFeedbackInvitationsDisabled(!safeThis->feedbackInvitationsDisabled());
         });
 }
 
-void MainComponent::showFeedback()
+void MainComponent::showFeedback(const juce::String& context)
 {
     if (feedbackWindow != nullptr)
     {
+        if (context.isNotEmpty())
+            feedbackWindow->setContextTag(context);
         feedbackWindow->setVisible(true);
         feedbackWindow->toFront(true);
         return;
@@ -228,12 +254,13 @@ void MainComponent::showFeedback()
         return;
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
-    feedbackWindow = std::make_unique<FeedbackWindow>(*settingsFile,
-                                                      [safeThis]
-                                                      {
-                                                          if (safeThis != nullptr)
-                                                              safeThis->closeFeedback();
-                                                      });
+    feedbackWindow = std::make_unique<FeedbackWindow>(
+        *settingsFile, context,
+        [safeThis]
+        {
+            if (safeThis != nullptr)
+                safeThis->closeFeedback();
+        });
     feedbackWindow->setLookAndFeel(&appLookAndFeel);
     feedbackWindow->toFront(true);
 }
@@ -264,8 +291,8 @@ void MainComponent::openTool(ToolType tool)
         }
     };
 
-    window = std::make_unique<ToolWindow>(toolName(tool), createToolComponent(tool),
-                                          preferredToolWindowSize(tool), closeHandler);
+    window = std::make_unique<ToolWindow>(
+        toolName(tool), createToolComponent(tool), preferredToolWindowSize(tool), closeHandler);
 
     const auto savedBounds = tool == ToolType::tuner ? savedTunerBounds : savedSpectrogramBounds;
     if (!savedBounds.isEmpty())
@@ -278,22 +305,110 @@ void MainComponent::openTool(ToolType tool)
 
 void MainComponent::closeTool(ToolType tool)
 {
-    windowFor(tool).reset();
+    auto& window = windowFor(tool);
+    const auto wasOpen = window != nullptr;
+    if (window != nullptr)
+    {
+        if (tool == ToolType::tuner)
+        {
+            savedTunerBounds = window->getBounds();
+        }
+        else
+        {
+            savedSpectrogramBounds = window->getBounds();
+        }
+
+        if (auto* tuner = dynamic_cast<TunerComponent*>(window->getContentComponent()))
+        {
+            savedTunerSettings = tuner->settings();
+        }
+    }
+    window.reset();
+    if (wasOpen)
+        recordSuccessfulToolUse();
 }
 
 std::unique_ptr<juce::Component> MainComponent::createToolComponent(ToolType tool)
 {
     if (tool == ToolType::tuner)
     {
-        auto tuner = std::make_unique<TunerComponent>(audioInputService);
+        auto tuner = std::make_unique<TunerComponent>(
+            audioInputService, [this] { showFeedback(toolName(ToolType::tuner)); });
         tuner->applySettings(savedTunerSettings);
         tuner->setTheme(currentTheme);
         return tuner;
     }
 
-    auto spectrogram = std::make_unique<SpectrogramComponent>(audioInputService);
+    auto spectrogram = std::make_unique<SpectrogramComponent>(
+        audioInputService, [this] { showFeedback(toolName(ToolType::spectrogram)); });
     spectrogram->setTheme(currentTheme);
     return spectrogram;
+}
+
+void MainComponent::recordSuccessfulToolUse()
+{
+    auto* settingsFile = applicationProperties.getUserSettings();
+    if (settingsFile == nullptr)
+        return;
+
+    const auto uses = settingsFile->getIntValue(feedbackSuccessfulUsesKey, 0) + 1;
+    settingsFile->setValue(feedbackSuccessfulUsesKey, uses);
+    settingsFile->saveIfNeeded();
+    maybeOfferFeedbackInvitation();
+}
+
+void MainComponent::maybeOfferFeedbackInvitation()
+{
+    auto* settingsFile = applicationProperties.getUserSettings();
+    if (settingsFile == nullptr)
+        return;
+
+    const FeedbackInvitationPolicy::State state{
+        settingsFile->getIntValue(feedbackSuccessfulUsesKey, 0),
+        settingsFile->getBoolValue(feedbackInvitationShownKey, false),
+        settingsFile->getBoolValue(feedbackInvitationsDisabledKey, false)};
+    const auto isLiveSessionActive = tunerWindow != nullptr || spectrogramWindow != nullptr;
+    if (!FeedbackInvitationPolicy::shouldInvite(state, isLiveSessionActive))
+        return;
+
+    // Mark the one-time invitation before displaying it so closing the dialog
+    // is also respected and never causes a repeated interruption.
+    settingsFile->setValue(feedbackInvitationShownKey, true);
+    settingsFile->saveIfNeeded();
+
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    juce::AlertWindow::showYesNoCancelBox(
+        juce::MessageBoxIconType::QuestionIcon, "Help improve Practice Takes",
+        "Would you like to share feedback about the tools you have tried?", "Give feedback",
+        "Not now", "Never ask again", nullptr,
+        juce::ModalCallbackFunction::create(
+            [safeThis](int result)
+            {
+                if (safeThis == nullptr)
+                    return;
+                if (result == 1)
+                    safeThis->showFeedback("Early tester experience");
+                else if (result == 0)
+                    safeThis->setFeedbackInvitationsDisabled(true);
+            }));
+}
+
+void MainComponent::setFeedbackInvitationsDisabled(bool disabled)
+{
+    if (auto* settingsFile = applicationProperties.getUserSettings())
+    {
+        settingsFile->setValue(feedbackInvitationsDisabledKey, disabled);
+        if (!disabled)
+            settingsFile->setValue(feedbackInvitationShownKey, false);
+        settingsFile->saveIfNeeded();
+    }
+}
+
+bool MainComponent::feedbackInvitationsDisabled()
+{
+    if (auto* settingsFile = applicationProperties.getUserSettings())
+        return settingsFile->getBoolValue(feedbackInvitationsDisabledKey, false);
+    return false;
 }
 
 juce::String MainComponent::toolName(ToolType tool) const
@@ -338,7 +453,7 @@ void MainComponent::showSettings()
         [safeThis]
         {
             if (safeThis != nullptr)
-                safeThis->saveSettings();
+                safeThis->saveSettings(true);
         },
         [safeThis]
         {
@@ -394,12 +509,17 @@ void MainComponent::resetCurrentTool()
 
 void MainComponent::resetAudio()
 {
+    audioInputService.setMuted(false);
     audioInputService.resetToDefaultInput();
     updateMicrophoneWarning();
 }
 
 void MainComponent::resetLayout()
 {
+    savedTunerBounds = {};
+    savedSpectrogramBounds = {};
+    savedSettingsBounds = {};
+
     if (tunerWindow != nullptr)
         tunerWindow->centreWithSize(920, 760);
     if (spectrogramWindow != nullptr)
@@ -412,6 +532,8 @@ void MainComponent::resetAll()
 {
     setTheme(AppDefaults::theme);
     resetAudio();
+    savedTunerSettings = AppDefaults::tunerDefaults();
+    currentTool = ToolType::tuner;
 
     if (tunerWindow != nullptr)
         if (auto* tuner = dynamic_cast<TunerComponent*>(tunerWindow->getContentComponent()))
@@ -434,65 +556,119 @@ void MainComponent::applyPreset(AppDefaults::Preset preset)
         tuner->applyPreset(preset);
 }
 
-void MainComponent::saveSettings()
+AppSettings::State MainComponent::captureSettingsState()
 {
-    auto* settingsFile = applicationProperties.getUserSettings();
-    if (settingsFile == nullptr)
-        return;
-
     if (tunerWindow != nullptr)
+    {
+        savedTunerBounds = tunerWindow->getBounds();
         if (auto* tuner = dynamic_cast<TunerComponent*>(tunerWindow->getContentComponent()))
+        {
             savedTunerSettings = tuner->settings();
+        }
+    }
+    if (spectrogramWindow != nullptr)
+    {
+        savedSpectrogramBounds = spectrogramWindow->getBounds();
+    }
+    if (settingsWindow != nullptr)
+    {
+        savedSettingsBounds = settingsWindow->getBounds();
+    }
 
-    settingsFile->setValue(settingsSchemaKey, AppDefaults::schemaVersion);
-    settingsFile->setValue(themeKey, static_cast<int>(currentTheme));
-    settingsFile->setValue(tunerEasingKey, savedTunerSettings.easing);
-    settingsFile->setValue(tunerAveragingKey, savedTunerSettings.averaging);
-    settingsFile->setValue(tunerThresholdKey, savedTunerSettings.noteSwitchSemitones);
-    settingsFile->setValue(tunerDropoutKey, savedTunerSettings.dropoutFrames);
-    settingsFile->setValue(tunerDurationKey, savedTunerSettings.graphDurationSeconds);
+    AppSettings::State state;
+    state.theme = currentTheme;
+    state.microphoneMuted = audioInputService.isMuted();
+    state.inputGain = audioInputService.inputGain();
+    state.tuner = savedTunerSettings;
+    state.tunerBounds = savedTunerBounds.toString();
+    state.spectrogramBounds = savedSpectrogramBounds.toString();
+    state.settingsBounds = savedSettingsBounds.toString();
+    state.recentTool = currentTool == ToolType::tuner ? AppSettings::RecentTool::tuner
+                                                      : AppSettings::RecentTool::spectrogram;
 
     if (const auto audioState = audioInputService.createDeviceState())
-        settingsFile->setValue(audioStateKey, audioState->toString());
+    {
+        state.audioDeviceState = audioState->toString();
+    }
+    return state;
+}
 
-    if (tunerWindow != nullptr)
-        settingsFile->setValue(tunerBoundsKey, tunerWindow->getBounds().toString());
-    if (spectrogramWindow != nullptr)
-        settingsFile->setValue(spectrogramBoundsKey, spectrogramWindow->getBounds().toString());
-    if (settingsWindow != nullptr)
-        settingsFile->setValue(settingsBoundsKey, settingsWindow->getBounds().toString());
+void MainComponent::saveSettings(bool explicitSave)
+{
+    if (!automaticSettingsSaveEnabled && !explicitSave)
+    {
+        return;
+    }
 
+    auto* settingsFile = applicationProperties.getUserSettings();
+    if (settingsFile == nullptr)
+    {
+        return;
+    }
+
+    if (explicitSave && !automaticSettingsSaveEnabled)
+    {
+        AppSettings::clearOwnedValues(*settingsFile);
+        automaticSettingsSaveEnabled = true;
+    }
+
+    AppSettings::store(*settingsFile, captureSettingsState());
     settingsFile->saveIfNeeded();
 }
 
 void MainComponent::loadSettings()
 {
     auto* settingsFile = applicationProperties.getUserSettings();
-    if (settingsFile == nullptr ||
-        settingsFile->getIntValue(settingsSchemaKey, 0) > AppDefaults::schemaVersion)
+    if (settingsFile == nullptr)
+    {
         return;
+    }
 
-    currentTheme = static_cast<Theme>(
-        settingsFile->getIntValue(themeKey, static_cast<int>(AppDefaults::theme)));
-    savedTunerSettings = {
-        settingsFile->getDoubleValue(tunerEasingKey, AppDefaults::Tuner::easing),
-        settingsFile->getDoubleValue(tunerAveragingKey, AppDefaults::Tuner::averaging),
-        settingsFile->getDoubleValue(tunerThresholdKey, AppDefaults::Tuner::noteSwitchSemitones),
-        settingsFile->getDoubleValue(tunerDropoutKey, AppDefaults::Tuner::dropoutFrames),
-        settingsFile->getDoubleValue(tunerDurationKey, AppDefaults::Tuner::graphDurationSeconds)};
+    const auto loaded = AppSettings::load(*settingsFile);
+    automaticSettingsSaveEnabled = loaded.status != AppSettings::LoadStatus::newerSchema;
+    currentTheme = loaded.state.theme;
+    audioInputService.setMuted(loaded.state.microphoneMuted);
+    audioInputService.setInputGain(static_cast<float>(loaded.state.inputGain));
+    savedTunerSettings = loaded.state.tuner;
+    currentTool = loaded.state.recentTool == AppSettings::RecentTool::spectrogram
+                      ? ToolType::spectrogram
+                      : ToolType::tuner;
 
-    if (const auto xml = juce::parseXML(settingsFile->getValue(audioStateKey)); xml != nullptr)
+    if (const auto xml = juce::parseXML(loaded.state.audioDeviceState); xml != nullptr)
+    {
         audioInputService.applySavedDeviceState(*xml);
+    }
 
-    savedTunerBounds = juce::Rectangle<int>::fromString(settingsFile->getValue(tunerBoundsKey));
-    savedSpectrogramBounds =
-        juce::Rectangle<int>::fromString(settingsFile->getValue(spectrogramBoundsKey));
-    savedSettingsBounds =
-        juce::Rectangle<int>::fromString(settingsFile->getValue(settingsBoundsKey));
+    savedTunerBounds = validWindowBounds(loaded.state.tunerBounds);
+    savedSpectrogramBounds = validWindowBounds(loaded.state.spectrogramBounds);
+    savedSettingsBounds = validWindowBounds(loaded.state.settingsBounds);
+
+    if (loaded.status == AppSettings::LoadStatus::recoveredFromCorruption)
+    {
+        const auto settingsPath = settingsFile->getFile();
+        if (settingsPath.existsAsFile())
+        {
+            const auto backup = settingsPath.getSiblingFile(settingsPath.getFileName() + ".corrupt")
+                                    .getNonexistentSibling();
+            juce::ignoreUnused(settingsPath.moveFileTo(backup));
+        }
+        settingsFile->clear();
+    }
+
+    if (loaded.status == AppSettings::LoadStatus::migrated ||
+        loaded.status == AppSettings::LoadStatus::recoveredFromCorruption)
+    {
+        AppSettings::store(*settingsFile, loaded.state);
+        settingsFile->saveIfNeeded();
+    }
 }
 
 void MainComponent::closeSettings()
 {
+    if (settingsWindow != nullptr)
+    {
+        savedSettingsBounds = settingsWindow->getBounds();
+    }
     settingsWindow.reset();
     updateMicrophoneWarning();
 }
@@ -542,8 +718,8 @@ void MainComponent::configureLookAndFeelColours()
     appLookAndFeel.setColour(juce::PopupMenu::backgroundColourId, palette.panel);
     appLookAndFeel.setColour(juce::PopupMenu::textColourId, palette.foreground);
     appLookAndFeel.setColour(juce::PopupMenu::headerTextColourId, palette.muted);
-    appLookAndFeel.setColour(juce::PopupMenu::highlightedBackgroundColourId,
-                             palette.accent.withAlpha(0.7f));
+    appLookAndFeel.setColour(
+        juce::PopupMenu::highlightedBackgroundColourId, palette.accent.withAlpha(0.7f));
     appLookAndFeel.setColour(juce::PopupMenu::highlightedTextColourId, palette.foreground);
 
     appLookAndFeel.setColour(juce::Slider::backgroundColourId, palette.panel);

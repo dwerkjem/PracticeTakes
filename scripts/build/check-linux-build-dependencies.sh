@@ -46,6 +46,8 @@ readonly apt_packages=(
     ca-certificates
     cmake
     curl
+    dpkg-dev
+    file
     git
     ninja-build
     pkg-config

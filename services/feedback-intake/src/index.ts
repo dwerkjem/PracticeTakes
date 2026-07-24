@@ -1,4 +1,14 @@
 import { handleAdminRequest } from "./admin";
+import {
+  checkStorageCapacity,
+  estimatedStoredBytes,
+  recordRequestMetric,
+  retentionPolicy,
+  runRetention,
+  storageLimits,
+  suspiciousSubmissionReason,
+  verifyDatabaseAvailability,
+} from "./operations";
 
 interface Env {
   FEEDBACK_DB: D1Database;
@@ -6,7 +16,18 @@ interface Env {
   MINIMUM_APP_VERSION: string;
   AUTHORIZATIONS_PER_HOUR: string;
   SUBMISSIONS_PER_HOUR: string;
+  MAX_AUTHORIZATIONS_PER_HOUR?: string;
+  MAX_SUBMISSIONS_PER_HOUR?: string;
   ADMIN_EMAILS: string;
+  ADMIN_ROUTES_ENABLED?: string;
+  MAX_STORED_SUBMISSIONS?: string;
+  MAX_STORED_BYTES?: string;
+  MAX_SUBMISSIONS_PER_INSTALLATION?: string;
+  RESOLVED_RETENTION_DAYS?: string;
+  DUPLICATE_RETENTION_DAYS?: string;
+  DECLINED_RETENTION_DAYS?: string;
+  TELEMETRY_RETENTION_DAYS?: string;
+  AUDIT_RETENTION_DAYS?: string;
 }
 
 interface AuthorizationRequest {
@@ -47,38 +68,87 @@ const allowedCategories = new Set(["bug", "idea", "usability", "other"]);
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    try {
-      if (new URL(request.url).protocol !== "https:") {
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+    const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/") ||
+      pathname === "/admin.css" || pathname === "/admin.js" || pathname === "/audit.js" ||
+      pathname.startsWith("/v1/admin/");
+
+    if (isAdminRoute) {
+      if (env.ADMIN_ROUTES_ENABLED !== "true") {
+        return errorResponse(404, "not_found", "Route not found.");
+      }
+      if (url.protocol !== "https:") {
         return errorResponse(400, "https_required", "Feedback must be submitted over HTTPS.");
       }
-
-      const pathname = new URL(request.url).pathname;
-      if (pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/admin.css" ||
-          pathname === "/admin.js" || pathname === "/audit.js" ||
-          pathname.startsWith("/v1/admin/")) {
+      try {
         return await handleAdminRequest(request, env);
+      } catch (error) {
+        console.error("Unhandled feedback administration error", error);
+        return errorResponse(
+          500, "internal_error", "The feedback service could not process the request.",
+        );
       }
+    }
 
-      if (request.method !== "POST") {
-        return errorResponse(405, "method_not_allowed", "Only POST is supported.", {
-          allow: "POST",
-        });
-      }
-
-      if (pathname === "/v1/authorizations") {
-        return await createAuthorization(request, env);
-      }
-      if (pathname === "/v1/submissions") {
-        return await createSubmission(request, env);
-      }
-
-      return errorResponse(404, "not_found", "Route not found.");
+    const startedAt = Date.now();
+    let response: Response;
+    try {
+      response = await handlePublicRequest(request, env);
     } catch (error) {
       console.error("Unhandled feedback intake error", error);
-      return errorResponse(500, "internal_error", "The feedback service could not process the request.");
+      response = errorResponse(
+        500, "internal_error", "The feedback service could not process the request.",
+      );
     }
+
+    const metricRoute = pathname === "/v1/authorizations" ? "authorizations"
+      : pathname === "/v1/submissions" ? "submissions" : null;
+    if (metricRoute) {
+      try {
+        await recordRequestMetric(env.FEEDBACK_DB, metricRoute, response.status,
+                                  Date.now() - startedAt);
+      } catch (error) {
+        console.error("Unable to record feedback request metric", error);
+      }
+    }
+    return response;
+  },
+
+  async scheduled(_controller: ScheduledController, env: Env, context: ExecutionContext) {
+    context.waitUntil(
+      runRetention(env.FEEDBACK_DB, retentionPolicy(env), "scheduled")
+        .catch((error) => console.error("Scheduled feedback retention failed", error)),
+    );
   },
 } satisfies ExportedHandler<Env>;
+
+async function handlePublicRequest(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  if (url.protocol !== "https:") {
+    return errorResponse(400, "https_required", "Feedback must be submitted over HTTPS.");
+  }
+
+  if (url.pathname === "/v1/health" && request.method === "GET") {
+    return await verifyDatabaseAvailability(env.FEEDBACK_DB)
+      ? jsonResponse(200, { status: "ok" })
+      : errorResponse(503, "service_unavailable", "The feedback service database is unavailable.");
+  }
+
+  if (request.method !== "POST") {
+    return errorResponse(405, "method_not_allowed", "Only POST is supported.", {
+      allow: "POST",
+    });
+  }
+
+  if (url.pathname === "/v1/authorizations") {
+    return createAuthorization(request, env);
+  }
+  if (url.pathname === "/v1/submissions") {
+    return createSubmission(request, env);
+  }
+  return errorResponse(404, "not_found", "Route not found.");
+}
 
 async function createAuthorization(request: Request, env: Env): Promise<Response> {
   const parsed = await readJson(request);
@@ -96,6 +166,16 @@ async function createAuthorization(request: Request, env: Env): Promise<Response
     return errorResponse(429, "rate_limited", "Too many authorization requests. Try again later.", {
       "retry-after": "3600",
     });
+  }
+  const globalAuthorizationLimit =
+    positiveInteger(env.MAX_AUTHORIZATIONS_PER_HOUR ?? "", 5000);
+  if (await isGlobalRateLimited(
+    env.FEEDBACK_DB, "authorization_requests", now, globalAuthorizationLimit,
+  )) {
+    return errorResponse(429, "service_rate_limited",
+      "The feedback service is receiving too many requests. Try again later.", {
+        "retry-after": "3600",
+      });
   }
 
   await env.FEEDBACK_DB.prepare(
@@ -153,8 +233,40 @@ async function createSubmission(request: Request, env: Env): Promise<Response> {
       "retry-after": "3600",
     });
   }
+  const globalSubmissionLimit = positiveInteger(env.MAX_SUBMISSIONS_PER_HOUR ?? "", 500);
+  if (await isGlobalRateLimited(
+    env.FEEDBACK_DB, "feedback_submissions", now, globalSubmissionLimit,
+  )) {
+    return errorResponse(429, "service_rate_limited",
+      "The feedback service is receiving too many submissions. Try again later.", {
+        "retry-after": "3600",
+      });
+  }
+
+  const capacity = await checkStorageCapacity(
+    env.FEEDBACK_DB,
+    installationHash,
+    estimatedStoredBytes(input),
+    storageLimits(env),
+  );
+  if (!capacity.allowed) {
+    if (capacity.reason === "installation_count") {
+      return errorResponse(
+        429,
+        "installation_storage_limit",
+        "This installation has reached its feedback storage limit.",
+      );
+    }
+    return errorResponse(
+      503,
+      "storage_capacity_reached",
+      "Feedback storage is temporarily at capacity. Please try again later.",
+      { "retry-after": "86400" },
+    );
+  }
 
   const receiptId = crypto.randomUUID();
+  const quarantineReason = suspiciousSubmissionReason(input.message);
   try {
     await env.FEEDBACK_DB.batch([
       env.FEEDBACK_DB.prepare(
@@ -164,12 +276,14 @@ async function createSubmission(request: Request, env: Env): Promise<Response> {
         `INSERT INTO feedback_submissions
          (receipt_id, schema_version, submitted_at, received_at, app_version,
           installation_hash, client_hash, category, message, contact_email,
-          screenshot_mime_type, screenshot_base64, client_submission_id)
-         VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          screenshot_mime_type, screenshot_base64, client_submission_id, status,
+          quarantine_reason, quarantined_at)
+         VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).bind(receiptId, input.submittedAt, now, input.appVersion, installationHash,
              clientHash, input.category, input.message, input.contactEmail ?? null,
              input.screenshotMimeType ?? null, input.screenshotBase64 ?? null,
-             input.clientSubmissionId),
+             input.clientSubmissionId, quarantineReason ? "needs_review" : "new",
+             quarantineReason, quarantineReason ? now : null),
     ]);
   } catch (error) {
     if (isUniqueConstraintError(error)) {
@@ -275,6 +389,19 @@ async function isRateLimited(db: D1Database, table: string, column: string, valu
   const row = await db.prepare(
     `SELECT COUNT(*) AS count FROM ${table} WHERE ${column} = ? AND ${table === "authorization_requests" ? "requested_at" : "received_at"} >= ?`,
   ).bind(value, now - oneHourSeconds).first<{ count: number }>();
+  return Number(row?.count ?? 0) >= limit;
+}
+
+async function isGlobalRateLimited(
+  db: D1Database,
+  table: "authorization_requests" | "feedback_submissions",
+  now: number,
+  limit: number,
+): Promise<boolean> {
+  const timeColumn = table === "authorization_requests" ? "requested_at" : "received_at";
+  const row = await db.prepare(
+    `SELECT COUNT(*) AS count FROM ${table} WHERE ${timeColumn} >= ?`,
+  ).bind(now - oneHourSeconds).first<{ count: number }>();
   return Number(row?.count ?? 0) >= limit;
 }
 

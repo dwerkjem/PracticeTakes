@@ -12,6 +12,7 @@ CLEAN=false
 INSTALL_DEPENDENCIES=false
 USE_VCPKG="${USE_VCPKG:-false}"
 program_args=()
+system_toolchain_args=()
 
 while (( $# > 0 )); do
     case "$1" in
@@ -59,6 +60,14 @@ if [[ "$(uname -s)" == "Linux" && "$USE_VCPKG" != true ]]; then
     if [[ -x /usr/bin/gcc && -x /usr/bin/g++ ]]; then
         export CC=/usr/bin/gcc
         export CXX=/usr/bin/g++
+        system_toolchain_args=(
+            -DCMAKE_C_COMPILER=/usr/bin/gcc
+            -DCMAKE_CXX_COMPILER=/usr/bin/g++
+        )
+
+        if [[ -x /usr/bin/ld ]]; then
+            system_toolchain_args+=(-DCMAKE_LINKER=/usr/bin/ld)
+        fi
     fi
 fi
 
@@ -114,6 +123,7 @@ cmake_args=(
     -B "$BUILD_DIR"
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    "${system_toolchain_args[@]}"
 )
 
 # Fetch JUCE before adding vcpkg paths to the build environment. FetchContent's
@@ -133,6 +143,21 @@ fi
 
 cmake_args+=(
     -DFETCHCONTENT_SOURCE_DIR_JUCE="$juce_source_dir"
+)
+
+catch2_source_dir="$BUILD_DIR/_deps/catch2-src"
+if [[ ! -f "$catch2_source_dir/CMakeLists.txt" ]]; then
+    mkdir -p "$(dirname -- "$catch2_source_dir")"
+    git_command="$(command -v git)"
+    if [[ "$(uname -s)" == "Linux" && -x /usr/bin/git ]]; then
+        git_command=/usr/bin/git
+    fi
+    "$git_command" clone --depth 1 --branch v3.8.1 \
+        https://github.com/catchorg/Catch2.git "$catch2_source_dir"
+fi
+
+cmake_args+=(
+    -DFETCHCONTENT_SOURCE_DIR_CATCH2="$catch2_source_dir"
 )
 
 vcpkg_toolchain=""

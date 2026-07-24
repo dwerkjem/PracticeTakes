@@ -7,15 +7,19 @@
 
 #include <array>
 #include <atomic>
+#include <functional>
 
 // SpectrogramComponent converts microphone audio into a scrolling frequency
 // image. Audio capture and FFT processing are deliberately kept separate.
-class SpectrogramComponent final : public juce::Component,
-                                   private AudioInputService::Listener,
-                                   private juce::Timer
+class SpectrogramComponent final
+    : public juce::Component,
+      private AudioInputService::Listener,
+      private juce::Timer
 {
   public:
-    explicit SpectrogramComponent(AudioInputService& sharedAudioInputService);
+    explicit SpectrogramComponent(
+        AudioInputService& sharedAudioInputService,
+        std::function<void()> feedbackHandler = {});
     ~SpectrogramComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -37,11 +41,9 @@ class SpectrogramComponent final : public juce::Component,
     static constexpr float visibleDecibelFloor = -90.0f;
 
     // Audio capture ---------------------------------------------------------
-    void audioInputReceived(const float* inputSamples, int numSamples) override;
-    void audioInputAboutToStart(double sampleRate) override;
+    void audioInputAboutToStart(double sampleRate, int inputChannels) override;
     void audioInputStopped() override;
     void audioInputStateChanged(AudioInputService::InputState state) override;
-    void writeInputSamplesToFifo(const float* inputSamples, int numSamples);
 
     // FFT and image generation ---------------------------------------------
     void timerCallback() override;
@@ -64,15 +66,13 @@ class SpectrogramComponent final : public juce::Component,
     AudioInputService& audioInputService;
     juce::Rectangle<int> spectrogramBounds;
 
-    // Samples are written on the audio thread and read on the timer thread.
-    juce::AbstractFifo audioFifo{fifoCapacity};
-    std::array<float, fifoCapacity> fifoBuffer{};
     std::array<float, fftSize * 2> fftData{};
 
     juce::dsp::FFT forwardFFT{fftOrder};
-    juce::dsp::WindowingFunction<float> hannWindow{fftSize,
-                                                   juce::dsp::WindowingFunction<float>::hann};
+    juce::dsp::WindowingFunction<float> hannWindow{
+        fftSize, juce::dsp::WindowingFunction<float>::hann};
     juce::Image spectrogramImage{juce::Image::RGB, imageWidth, imageHeight, true};
+    juce::TextButton feedbackButton{"Give feedback on this tool"};
 
     std::atomic<double> currentSampleRate{44100.0};
     Theme currentTheme = Theme::light;

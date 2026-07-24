@@ -31,11 +31,15 @@ over time.
 The main window provides three top-level controls:
 
 - **File** — reserved for future project and audio-file commands
-- **Settings** — microphone selection and light/dark appearance
+- **Settings** — microphone selection, mute, input volume, live level and
+  buffering status, and light/dark appearance
 - **Tools** — opens the tuner and spectrogram
 
 Each tool opens in its own resizable window. The tuner and spectrogram can
 remain open at the same time and share the microphone selected in Settings.
+Input volume is a shared software gain from 0–200%, so the same adjusted
+signal reaches every analysis tool without changing the operating-system
+microphone setting.
 
 When no usable microphone is available, the main window shows a dismissible
 warning with a shortcut to Settings.
@@ -48,7 +52,14 @@ Automated packages are built for:
 - Linux x64 and ARM64
 - macOS Intel and Apple Silicon
 
-Published versions, when available, are provided through GitHub Releases.
+Published versions, when available, are provided through GitHub Releases as
+native installers:
+
+- Debian/Ubuntu `.deb` packages that install runtime dependencies through APT
+  and add Practice Takes to the desktop Applications menu
+- Windows `.exe` installers that bundle the required runtime libraries and add
+  Practice Takes to the Start Menu
+- macOS `.pkg` installers that place Practice Takes in `/Applications`
 
 ## Development
 

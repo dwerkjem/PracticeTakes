@@ -10,6 +10,9 @@
     "C_Cpp.errorSquiggles": "enabled",
     "C_Cpp.formatting": "clangFormat",
     "C_Cpp.clang_format_style": "file",
+    "files.associations": {
+        "**/services/feedback-intake/.dev.vars*": "plaintext"
+    },
     "[c]": {
         "editor.defaultFormatter": "ms-vscode.cpptools",
         "editor.formatOnSave": true

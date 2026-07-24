@@ -11,11 +11,16 @@ constexpr std::array<double, 5> frequencyGridLines{100.0, 500.0, 1000.0, 5000.0,
 } // namespace
 
 //==============================================================================
-SpectrogramComponent::SpectrogramComponent(AudioInputService& sharedAudioInputService)
+SpectrogramComponent::SpectrogramComponent(
+    AudioInputService& sharedAudioInputService,
+    std::function<void()> feedbackHandler)
     : audioInputService(sharedAudioInputService)
 {
     setOpaque(true);
     spectrogramImage.clear(spectrogramImage.getBounds(), backgroundColour());
+    feedbackButton.setTitle("Give feedback about the Spectrogram");
+    feedbackButton.onClick = std::move(feedbackHandler);
+    addAndMakeVisible(feedbackButton);
 
     audioInputService.addListener(this);
     startTimerHz(refreshRateHz);
@@ -29,7 +34,7 @@ SpectrogramComponent::~SpectrogramComponent()
 
 void SpectrogramComponent::resetToDefaults()
 {
-    audioFifo.reset();
+    audioInputService.discardPendingSamples(this);
     fftData.fill(0.0f);
     spectrogramImage.clear(spectrogramImage.getBounds(), backgroundColour());
     repaint();
@@ -76,35 +81,21 @@ juce::Colour SpectrogramComponent::outlineColour() const
 //==============================================================================
 // Audio capture
 
-void SpectrogramComponent::audioInputReceived(const float* inputSamples, int numSamples)
+void SpectrogramComponent::audioInputAboutToStart(double sampleRate, int inputChannels)
 {
-    writeInputSamplesToFifo(inputSamples, numSamples);
-}
-
-void SpectrogramComponent::writeInputSamplesToFifo(const float* inputSamples, int numSamples)
-{
-    const auto writableSamples = std::min(numSamples, audioFifo.getFreeSpace());
-    const auto writeScope = audioFifo.write(writableSamples);
-
-    std::copy_n(inputSamples, writeScope.blockSize1, fifoBuffer.begin() + writeScope.startIndex1);
-    std::copy_n(inputSamples + writeScope.blockSize1, writeScope.blockSize2,
-                fifoBuffer.begin() + writeScope.startIndex2);
-}
-
-void SpectrogramComponent::audioInputAboutToStart(double sampleRate)
-{
+    juce::ignoreUnused(inputChannels);
     currentSampleRate.store(sampleRate);
-    audioFifo.reset();
+    audioInputService.discardPendingSamples(this);
 }
 
 void SpectrogramComponent::audioInputStopped()
 {
-    audioFifo.reset();
+    audioInputService.discardPendingSamples(this);
 }
 
 void SpectrogramComponent::audioInputStateChanged(AudioInputService::InputState state)
 {
-    audioFifo.reset();
+    audioInputService.discardPendingSamples(this);
 
     switch (state)
     {
@@ -132,7 +123,7 @@ void SpectrogramComponent::timerCallback()
 {
     // Process every complete FFT frame that has accumulated since the previous
     // timer tick. Partial frames remain in the FIFO for the next tick.
-    while (audioFifo.getNumReady() >= fftSize)
+    while (audioInputService.availableSamples(this) >= fftSize)
     {
         calculateNextColumn();
     }
@@ -143,11 +134,9 @@ void SpectrogramComponent::timerCallback()
 void SpectrogramComponent::calculateNextColumn()
 {
     fftData.fill(0.0f);
-    const auto readScope = audioFifo.read(fftSize);
-
-    std::copy_n(fifoBuffer.begin() + readScope.startIndex1, readScope.blockSize1, fftData.begin());
-    std::copy_n(fifoBuffer.begin() + readScope.startIndex2, readScope.blockSize2,
-                fftData.begin() + readScope.blockSize1);
+    const auto samplesRead = audioInputService.readSamples(this, fftData.data(), fftSize);
+    if (samplesRead != fftSize)
+        return;
 
     // The Hann window reduces spectral leakage before the FFT.
     hannWindow.multiplyWithWindowingTable(fftData.data(), fftSize);
@@ -218,9 +207,10 @@ float SpectrogramComponent::yForFrequency(double frequency) const
     const auto logarithmicPosition = std::log(frequency / minimumDisplayedFrequencyHz) /
                                      std::log(maximumFrequency / minimumDisplayedFrequencyHz);
 
-    return juce::jmap(static_cast<float>(logarithmicPosition), 0.0f, 1.0f,
-                      static_cast<float>(spectrogramBounds.getBottom()),
-                      static_cast<float>(spectrogramBounds.getY()));
+    return juce::jmap(
+        static_cast<float>(logarithmicPosition), 0.0f, 1.0f,
+        static_cast<float>(spectrogramBounds.getBottom()),
+        static_cast<float>(spectrogramBounds.getY()));
 }
 
 juce::String SpectrogramComponent::frequencyLabel(double frequency) const
@@ -247,11 +237,12 @@ void SpectrogramComponent::drawFrequencyGrid(juce::Graphics& graphics) const
         }
 
         const auto y = yForFrequency(frequency);
-        graphics.drawHorizontalLine(static_cast<int>(y),
-                                    static_cast<float>(spectrogramBounds.getX()),
-                                    static_cast<float>(spectrogramBounds.getRight()));
-        graphics.drawText(frequencyLabel(frequency), spectrogramBounds.getX() + 6,
-                          static_cast<int>(y) - 14, 60, 14, juce::Justification::centredLeft);
+        graphics.drawHorizontalLine(
+            static_cast<int>(y), static_cast<float>(spectrogramBounds.getX()),
+            static_cast<float>(spectrogramBounds.getRight()));
+        graphics.drawText(
+            frequencyLabel(frequency), spectrogramBounds.getX() + 6, static_cast<int>(y) - 14, 60,
+            14, juce::Justification::centredLeft);
     }
 }
 
@@ -264,15 +255,15 @@ void SpectrogramComponent::paint(juce::Graphics& graphics)
 
     if (audioErrorMessage.isEmpty())
     {
-        graphics.drawImage(spectrogramImage, spectrogramBounds.toFloat(),
-                           juce::RectanglePlacement::stretchToFit);
+        graphics.drawImage(
+            spectrogramImage, spectrogramBounds.toFloat(), juce::RectanglePlacement::stretchToFit);
     }
     else
     {
         graphics.setColour(mutedColour());
         graphics.setFont(juce::FontOptions(17.0f));
-        graphics.drawFittedText(audioErrorMessage, spectrogramBounds.reduced(20),
-                                juce::Justification::centred, 2);
+        graphics.drawFittedText(
+            audioErrorMessage, spectrogramBounds.reduced(20), juce::Justification::centred, 2);
     }
 
     graphics.setColour(outlineColour());
@@ -283,5 +274,8 @@ void SpectrogramComponent::paint(juce::Graphics& graphics)
 
 void SpectrogramComponent::resized()
 {
-    spectrogramBounds = getLocalBounds().reduced(18);
+    auto bounds = getLocalBounds().reduced(18);
+    feedbackButton.setBounds(bounds.removeFromTop(34).removeFromRight(220));
+    bounds.removeFromTop(8);
+    spectrogramBounds = bounds;
 }

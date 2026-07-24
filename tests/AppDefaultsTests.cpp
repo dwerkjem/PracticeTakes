@@ -8,12 +8,14 @@ TEST_CASE("General instrument preset matches the tuner defaults", "[defaults][tu
     const auto defaults = AppDefaults::tunerDefaults();
     const auto generalInstrument = AppDefaults::tunerPreset(AppDefaults::Preset::generalInstrument);
 
+    CHECK(defaults.displayMode == AppDefaults::Tuner::displayMode);
     CHECK(defaults.easing == Catch::Approx(AppDefaults::Tuner::easing));
     CHECK(defaults.averaging == Catch::Approx(AppDefaults::Tuner::averaging));
     CHECK(defaults.noteSwitchSemitones == Catch::Approx(AppDefaults::Tuner::noteSwitchSemitones));
     CHECK(defaults.dropoutFrames == Catch::Approx(AppDefaults::Tuner::dropoutFrames));
     CHECK(defaults.graphDurationSeconds == Catch::Approx(AppDefaults::Tuner::graphDurationSeconds));
 
+    CHECK(generalInstrument.displayMode == defaults.displayMode);
     CHECK(generalInstrument.easing == Catch::Approx(defaults.easing));
     CHECK(generalInstrument.averaging == Catch::Approx(defaults.averaging));
     CHECK(generalInstrument.noteSwitchSemitones == Catch::Approx(defaults.noteSwitchSemitones));
@@ -26,6 +28,7 @@ TEST_CASE("Voice preset favors steadier pitch tracking", "[defaults][tuner]")
     const auto voice = AppDefaults::tunerPreset(AppDefaults::Preset::voice);
     const auto generalInstrument = AppDefaults::tunerDefaults();
 
+    CHECK(voice.displayMode == generalInstrument.displayMode);
     CHECK(voice.easing < generalInstrument.easing);
     CHECK(voice.averaging > generalInstrument.averaging);
     CHECK(voice.noteSwitchSemitones < generalInstrument.noteSwitchSemitones);
@@ -37,4 +40,9 @@ TEST_CASE("Dark-theme detection distinguishes both themes", "[defaults][theme]")
 {
     CHECK_FALSE(isDarkTheme(Theme::light));
     CHECK(isDarkTheme(Theme::dark));
+}
+
+TEST_CASE("Microphone analysis gain defaults to unity", "[defaults][audio]")
+{
+    CHECK(AppDefaults::Audio::inputGain == Catch::Approx(1.0));
 }

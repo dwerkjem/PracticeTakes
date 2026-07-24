@@ -5,19 +5,24 @@
 #include "../app/AppDefaults.h"
 #include "../app/Theme.h"
 #include "../audio/AudioInputService.h"
+#include "PitchDetector.h"
 
 #include <array>
 #include <atomic>
+#include <functional>
 #include <vector>
 
 // TunerComponent captures microphone samples, estimates their fundamental
 // frequency, smooths the result, and renders it in one of three display modes.
-class TunerComponent final : public juce::Component,
-                             private AudioInputService::Listener,
-                             private juce::Timer
+class TunerComponent final
+    : public juce::Component,
+      private AudioInputService::Listener,
+      private juce::Timer
 {
   public:
-    explicit TunerComponent(AudioInputService& sharedAudioInputService);
+    explicit TunerComponent(
+        AudioInputService& sharedAudioInputService,
+        std::function<void()> feedbackHandler = {});
     ~TunerComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -37,24 +42,20 @@ class TunerComponent final : public juce::Component,
     };
 
     static constexpr int fifoCapacity = 65536;
-    static constexpr int analysisWindowSize = 4096;
+    static constexpr int analysisWindowSize = PitchDetector::windowSize;
     static constexpr int maximumAverageWindow = 15;
     static constexpr int maximumGraphPoints = 1200;
     static constexpr int analysisRefreshRateHz = 20;
     static constexpr double referenceFrequencyHz = 440.0;
 
     // Audio capture ---------------------------------------------------------
-    void audioInputReceived(const float* inputSamples, int numSamples) override;
-    void audioInputAboutToStart(double sampleRate) override;
+    void audioInputAboutToStart(double sampleRate, int inputChannels) override;
     void audioInputStopped() override;
     void audioInputStateChanged(AudioInputService::InputState state) override;
-    void writeInputSamplesToFifo(const float* inputSamples, int numSamples);
-    void drainAudioFifo();
+    [[nodiscard]] bool drainAudioFifo();
 
     // Pitch analysis --------------------------------------------------------
     void timerCallback() override;
-    [[nodiscard]] float calculateInputLevel() const;
-    [[nodiscard]] double detectPitch() const;
     [[nodiscard]] double smoothFrequency(double frequency);
     [[nodiscard]] bool isConfirmedPitch(double frequency);
     [[nodiscard]] double averageRecentMidiPitches() const;
@@ -68,8 +69,13 @@ class TunerComponent final : public juce::Component,
     void addHistoryPoint(double midiPitch);
 
     // Controls and appearance ----------------------------------------------
-    void configureSlider(juce::Slider& slider, double minimum, double maximum, double interval,
-                         double initialValue, const juce::String& suffix);
+    void configureSlider(
+        juce::Slider& slider,
+        double minimum,
+        double maximum,
+        double interval,
+        double initialValue,
+        const juce::String& suffix);
     void updateAdvancedSettingsVisibility();
     void updateGraphControlAvailability();
     void applyThemeToControls();
@@ -98,11 +104,13 @@ class TunerComponent final : public juce::Component,
     juce::Slider dropoutSlider;
     juce::Slider durationSlider;
     juce::TextButton clearGraphButton{"Clear graph"};
+    juce::TextButton feedbackButton{"Give feedback on this tool"};
 
-    // Audio arrives on the device thread and is consumed on the UI timer.
-    juce::AbstractFifo audioFifo{fifoCapacity};
-    std::array<float, fifoCapacity> fifoBuffer{};
+    // The shared service fills this tool's bounded FIFO. The timer drains it
+    // into preallocated storage before analysis.
+    std::array<float, fifoCapacity> drainBuffer{};
     std::array<float, analysisWindowSize> analysisBuffer{};
+    PitchDetector pitchDetector;
 
     // A short circular history stabilizes the pitch before display easing.
     std::array<double, maximumAverageWindow> recentMidiPitches{};

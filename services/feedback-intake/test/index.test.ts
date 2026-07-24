@@ -21,6 +21,8 @@ interface StoredSubmission {
   category: string;
   message: string;
   contactEmail: string | null;
+  status: string;
+  quarantineReason: string | null;
 }
 
 class MemoryStatement {
@@ -38,17 +40,37 @@ class MemoryStatement {
     const [value, cutoff] = this.parameters as [string, number];
     let count = 0;
 
-    if (this.sql.includes("FROM authorization_requests")) {
-      count = this.database.authorizationRequests.filter(
-        (request) => request.clientHash === value && request.requestedAt >= cutoff,
-      ).length;
+    if (this.sql.includes("SELECT 1 AS available")) {
+      return { available: 1 } as T;
+    } else if (this.sql.includes("COALESCE(SUM(LENGTH(message)")) {
+      return {
+        count: this.database.submissions.length,
+        bytes: this.database.submissions.reduce(
+          (total, submission) => total + 512 + submission.message.length +
+            (submission.contactEmail?.length ?? 0),
+          0,
+        ),
+      } as T;
+    } else if (this.sql.includes("FROM authorization_requests")) {
+      count = this.sql.includes("client_hash = ?")
+        ? this.database.authorizationRequests.filter(
+          (request) => request.clientHash === value && request.requestedAt >= cutoff,
+        ).length
+        : this.database.authorizationRequests.filter(
+          (request) => request.requestedAt >= Number(value),
+        ).length;
     } else if (this.sql.includes("installation_hash")) {
       count = this.database.submissions.filter(
-        (submission) => submission.installationHash === value && submission.receivedAt >= cutoff,
+        (submission) => submission.installationHash === value &&
+          (cutoff === undefined || submission.receivedAt >= cutoff),
       ).length;
     } else if (this.sql.includes("client_hash")) {
       count = this.database.submissions.filter(
         (submission) => submission.clientHash === value && submission.receivedAt >= cutoff,
+      ).length;
+    } else if (this.sql.includes("FROM feedback_submissions")) {
+      count = this.database.submissions.filter(
+        (submission) => submission.receivedAt >= Number(value),
       ).length;
     }
 
@@ -98,10 +120,12 @@ class MemoryD1 {
 
     if (statement.sql.includes("INSERT INTO feedback_submissions")) {
       const [receiptId, submittedAt, receivedAt, appVersion, installationHash, clientHash,
-        category, message, contactEmail] = statement.parameters as
-        [string, string, number, string, string, string, string, string, string | null];
+        category, message, contactEmail, , , , status, quarantineReason] = statement.parameters as
+        [string, string, number, string, string, string, string, string, string | null,
+         string | null, string | null, string, string, string | null];
       this.submissions.push({ receiptId, submittedAt, receivedAt, appVersion, installationHash,
-                              clientHash, category, message, contactEmail });
+                              clientHash, category, message, contactEmail, status,
+                              quarantineReason });
     }
   }
 }
@@ -171,6 +195,24 @@ describe("feedback intake worker", () => {
 
   afterEach(() => vi.useRealTimers());
 
+  it("keeps hosted administration disabled unless Access-backed routes are explicitly enabled",
+     async () => {
+       const headers = new Headers({
+         "cf-access-authenticated-user-email": "developer@example.com",
+       });
+       const disabled = await worker.fetch(
+         new Request("https://feedback.example.test/admin", { headers }),
+         createEnvironment() as never,
+       );
+       const enabled = await worker.fetch(
+         new Request("https://feedback.example.test/admin", { headers }),
+         createEnvironment(undefined, { ADMIN_ROUTES_ENABLED: "true" }) as never,
+       );
+
+       expect(disabled.status).toBe(404);
+       expect(enabled.status).toBe(200);
+     });
+
   it("accepts a valid report and returns a receipt", async () => {
     const database = new MemoryD1();
     const environment = createEnvironment(database);
@@ -239,6 +281,56 @@ describe("feedback intake worker", () => {
 
     expect(response.status).toBe(429);
     expect(await errorCode(response)).toBe("rate_limited");
+  });
+
+  it("caps authorization traffic across all clients", async () => {
+    const environment = createEnvironment(new MemoryD1(), {
+      MAX_AUTHORIZATIONS_PER_HOUR: "1",
+    });
+    expect((await send("/v1/authorizations", {
+      schemaVersion: 1, appVersion: "0.2.6", installationId,
+    }, environment)).status).toBe(201);
+
+    const response = await send("/v1/authorizations", {
+      schemaVersion: 1, appVersion: "0.2.6", installationId,
+    }, environment);
+    expect(response.status).toBe(429);
+    expect(await errorCode(response)).toBe("service_rate_limited");
+  });
+
+  it("enforces the global storage ceiling before consuming another report", async () => {
+    const environment = createEnvironment(new MemoryD1(), {
+      MAX_STORED_SUBMISSIONS: "1",
+      SUBMISSIONS_PER_HOUR: "5",
+    });
+    const firstAuthorization = await authorize(environment);
+    expect((await send("/v1/submissions", feedback(firstAuthorization), environment)).status).toBe(201);
+
+    const secondAuthorization = await authorize(environment);
+    const response = await send("/v1/submissions", feedback(secondAuthorization), environment);
+
+    expect(response.status).toBe(503);
+    expect(await errorCode(response)).toBe("storage_capacity_reached");
+  });
+
+  it("quarantines suspicious link-heavy reports for manual review", async () => {
+    const database = new MemoryD1();
+    const environment = createEnvironment(database);
+    const authorization = await authorize(environment);
+    const report = feedback(authorization);
+    report.message = "Review https://one.test https://two.test and https://three.test";
+
+    expect((await send("/v1/submissions", report, environment)).status).toBe(201);
+    expect(database.submissions[0]).toMatchObject({
+      status: "needs_review",
+      quarantineReason: "multiple_external_links",
+    });
+  });
+
+  it("provides a data-free availability probe", async () => {
+    const response = await send("/v1/health", {}, createEnvironment(), "GET");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "ok" });
   });
 
   it("exposes no read route", async () => {

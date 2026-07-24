@@ -17,31 +17,46 @@ Do not copy the version into `CMakeLists.txt` or C++ source files.
 5. Choose `patch`, `minor`, or `major`.
 6. Select **Run workflow** again.
 
-The workflow calculates the next version and calls the shared multiplatform
-build workflow. That workflow builds Windows, Linux, and macOS packages for x64
-and ARM64, uploads each package as an artifact, then assembles one verified
+The workflow calculates the next version, commits the version files, and
+creates the version tag before calling the shared multiplatform build workflow.
+The tag makes the release source immutable, so later changes to `main` cannot
+change or invalidate a build already in progress. The build workflow checks out
+that exact release commit, builds Windows, Linux, and macOS packages for x64 and
+ARM64, uploads each package as an artifact, then assembles one verified
 release-artifact bundle.
+
+Release and Clang-Tidy auto-fix runs share a FIFO queue. If Clang-Tidy is
+already running or waiting after a relevant push to `main`, a newly requested
+release waits for it to finish before selecting the source commit and starting
+the package builds. Queued runs are not canceled when another run joins the
+queue.
 
 The release workflow does not rebuild those packages during publishing. It
 downloads the bundle produced by the build workflow, verifies the version,
 source commit, expected six package files, and SHA-256 checksums, then publishes
 those exact files to the GitHub Release.
 
-After all six builds and artifact verification pass, the workflow changes
-`VERSION`, synchronizes the vcpkg manifest, commits both changes, creates the
-version tag, and publishes the release. The same artifact path is used for
-patch, minor, and major releases.
+After creating the immutable release commit and tag, the workflow builds and
+verifies all six packages, then publishes the release. If a build or publishing
+step fails, use **Re-run failed jobs** on the same workflow run so it continues
+to use the same tagged commit. The same artifact path is used for patch, minor,
+and major releases.
 
 ## Release artifact bundle
 
 The shared build workflow produces these release packages:
 
-- `PracticeTakes-VERSION-linux-x64.tar.gz`
-- `PracticeTakes-VERSION-linux-arm64.tar.gz`
-- `PracticeTakes-VERSION-windows-x64.zip`
-- `PracticeTakes-VERSION-windows-arm64.zip`
-- `PracticeTakes-VERSION-macos-x64.zip`
-- `PracticeTakes-VERSION-macos-arm64.zip`
+- `PracticeTakes-VERSION-linux-x64.deb`
+- `PracticeTakes-VERSION-linux-arm64.deb`
+- `PracticeTakes-VERSION-windows-x64.exe`
+- `PracticeTakes-VERSION-windows-arm64.exe`
+- `PracticeTakes-VERSION-macos-x64.pkg`
+- `PracticeTakes-VERSION-macos-arm64.pkg`
+
+The Linux packages declare their runtime dependencies for APT and install a
+desktop Applications-menu entry. The Windows installers bundle the compiler
+runtime and create a Start Menu shortcut. The macOS packages install the
+application bundle in `/Applications`.
 
 It also adds:
 
