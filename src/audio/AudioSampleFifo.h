@@ -21,7 +21,9 @@ template <std::size_t Capacity> class AudioSampleFifo
     [[nodiscard]] bool push(const float* source, std::size_t count, float gain = 1.0f) noexcept
     {
         if (source == nullptr || count == 0)
+        {
             return true;
+        }
 
         const auto write = writePosition.load(std::memory_order_relaxed);
         const auto read = readPosition.load(std::memory_order_acquire);
@@ -34,7 +36,9 @@ template <std::size_t Capacity> class AudioSampleFifo
         }
 
         for (std::size_t index = 0; index < count; ++index)
+        {
             samples[(write + index) % Capacity] = source[index] * gain;
+        }
 
         writePosition.store(write + count, std::memory_order_release);
         return true;
@@ -43,14 +47,18 @@ template <std::size_t Capacity> class AudioSampleFifo
     [[nodiscard]] std::size_t pop(float* destination, std::size_t maximumCount) noexcept
     {
         if (destination == nullptr || maximumCount == 0)
+        {
             return 0;
+        }
 
         const auto read = readPosition.load(std::memory_order_relaxed);
         const auto write = writePosition.load(std::memory_order_acquire);
         const auto count = std::min(maximumCount, write - read);
 
         for (std::size_t index = 0; index < count; ++index)
+        {
             destination[index] = samples[(read + index) % Capacity];
+        }
 
         readPosition.store(read + count, std::memory_order_release);
         return count;
