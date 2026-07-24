@@ -66,6 +66,13 @@ atomically by the device callbacks and delivered to consumers on the service
 timer. Consumers discard pending samples when the format changes, preventing
 frames from different formats from being analyzed together.
 
+The device-running callbacks, rather than the backend's active-channel bitset,
+define whether an input is usable. This matters on ALSA, where an open device
+can deliver input while reporting an empty or mismatched channel mask. Healthy
+devices are rescanned every 15 seconds; disconnected devices are rescanned
+every 2 seconds. Recovery never replaces a backend that still reports itself
+open, avoiding a race with its capture thread.
+
 The Settings input-volume control applies a shared 0–200% software gain before
 fan-out. The live level meter displays the post-gain peak, and the clipping
 state is held briefly so it remains visible without requiring UI work in the
@@ -77,11 +84,16 @@ The tuner:
 
 1. copies recent microphone samples into a fixed analysis window
 2. calculates RMS input level
-3. estimates pitch using normalized autocorrelation
+3. estimates pitch using zero-padded FFT normalized autocorrelation
 4. converts frequency to a fractional MIDI-note value
 5. averages and eases the result to reduce visual jitter
 6. applies note-switch hysteresis, so the displayed note does not chatter
 7. stores recent values for the history graph
+
+The FFT reduces each analysis frame from quadratic to `O(N log N)` work while
+preserving the tuner's original peak selection and normalization. Its scratch
+buffers are preallocated, and the timer skips analysis when no new microphone
+samples have arrived.
 
 The user can display the result as a history graph, horizontal bar, or meter.
 

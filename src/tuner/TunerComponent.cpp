@@ -3,14 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <numeric>
 
 namespace
 {
-constexpr double minimumDetectableFrequencyHz = 16.352;
-constexpr double maximumDetectableFrequencyHz = 2500.0;
-constexpr float minimumInputRms = 0.008f;
-constexpr double minimumCorrelationScore = 0.72;
 constexpr double immediatePitchJumpSemitones = 5.0;
 constexpr double matchingJumpToleranceSemitones = 1.5;
 constexpr int pitchJumpConfirmationFrames = 4;
@@ -123,13 +118,14 @@ void TunerComponent::applyPreset(AppDefaults::Preset preset)
     applySettings(AppDefaults::tunerPreset(preset));
 }
 
-void TunerComponent::applySettings(const AppDefaults::TunerSettings& values)
+void TunerComponent::applySettings(const AppDefaults::TunerSettings& settings)
 {
-    easingSlider.setValue(values.easing);
-    averagingSlider.setValue(values.averaging);
-    thresholdSlider.setValue(values.noteSwitchSemitones);
-    dropoutSlider.setValue(values.dropoutFrames);
-    durationSlider.setValue(values.graphDurationSeconds);
+    displayModeBox.setSelectedId(settings.displayMode, juce::sendNotificationSync);
+    easingSlider.setValue(settings.easing);
+    averagingSlider.setValue(settings.averaging);
+    thresholdSlider.setValue(settings.noteSwitchSemitones);
+    dropoutSlider.setValue(settings.dropoutFrames);
+    durationSlider.setValue(settings.graphDurationSeconds);
     graphHistory.clear();
     resetPitchTracking();
     repaint();
@@ -137,9 +133,8 @@ void TunerComponent::applySettings(const AppDefaults::TunerSettings& values)
 
 AppDefaults::TunerSettings TunerComponent::settings() const
 {
-    return {
-        easingSlider.getValue(), averagingSlider.getValue(), thresholdSlider.getValue(),
-        dropoutSlider.getValue(), durationSlider.getValue()};
+    return {displayModeBox.getSelectedId(), easingSlider.getValue(),  averagingSlider.getValue(),
+            thresholdSlider.getValue(),     dropoutSlider.getValue(), durationSlider.getValue()};
 }
 
 //==============================================================================
@@ -304,19 +299,21 @@ void TunerComponent::audioInputStateChanged(AudioInputService::InputState state)
     repaint();
 }
 
-void TunerComponent::drainAudioFifo()
+bool TunerComponent::drainAudioFifo()
 {
     const auto availableSamples =
         std::min(audioInputService.availableSamples(this), drainBuffer.size());
     if (availableSamples == 0)
     {
-        return;
+        return false;
     }
 
     const auto samplesRead =
         audioInputService.readSamples(this, drainBuffer.data(), availableSamples);
     if (samplesRead == 0)
-        return;
+    {
+        return false;
+    }
 
     if (samplesRead >= analysisWindowSize)
     {
@@ -324,13 +321,14 @@ void TunerComponent::drainAudioFifo()
         std::copy_n(
             drainBuffer.begin() + static_cast<std::ptrdiff_t>(samplesRead - analysisWindowSize),
             analysisWindowSize, analysisBuffer.begin());
-        return;
+        return true;
     }
 
     // Shift older samples left and append the newly captured samples.
     const auto sampleCount = static_cast<std::ptrdiff_t>(samplesRead);
     std::move(analysisBuffer.begin() + sampleCount, analysisBuffer.end(), analysisBuffer.begin());
     std::copy_n(drainBuffer.begin(), sampleCount, analysisBuffer.end() - sampleCount);
+    return true;
 }
 
 //==============================================================================
@@ -338,13 +336,16 @@ void TunerComponent::drainAudioFifo()
 
 void TunerComponent::timerCallback()
 {
-    drainAudioFifo();
-    inputLevel = calculateInputLevel();
-
-    const auto detectedFrequency = detectPitch();
-    if (detectedFrequency > 0.0)
+    if (!drainAudioFifo())
     {
-        handleDetectedPitch(detectedFrequency);
+        return;
+    }
+
+    const auto analysis = pitchDetector.detect(analysisBuffer, currentSampleRate.load());
+    inputLevel = analysis.inputLevel;
+    if (analysis.frequency > 0.0)
+    {
+        handleDetectedPitch(analysis.frequency);
     }
     else
     {
@@ -352,91 +353,6 @@ void TunerComponent::timerCallback()
     }
 
     repaint();
-}
-
-float TunerComponent::calculateInputLevel() const
-{
-    const auto squareSum = std::inner_product(
-        analysisBuffer.begin(), analysisBuffer.end(), analysisBuffer.begin(), 0.0);
-
-    return static_cast<float>(std::sqrt(squareSum / static_cast<double>(analysisWindowSize)));
-}
-
-double TunerComponent::detectPitch() const
-{
-    const auto sampleRate = currentSampleRate.load();
-    if (inputLevel < minimumInputRms || sampleRate <= 0.0)
-    {
-        return 0.0;
-    }
-
-    // Autocorrelation compares the analysis window with delayed copies of
-    // itself. The delay with the strongest similarity represents one period.
-    const auto minimumLag =
-        std::max(2, static_cast<int>(sampleRate / maximumDetectableFrequencyHz));
-    const auto maximumLag = std::min(
-        analysisWindowSize / 2, static_cast<int>(sampleRate / minimumDetectableFrequencyHz));
-
-    std::array<double, (analysisWindowSize / 2) + 1> correlations{};
-
-    for (int lag = minimumLag; lag <= maximumLag; ++lag)
-    {
-        double numerator = 0.0;
-        double firstEnergy = 0.0;
-        double secondEnergy = 0.0;
-
-        for (int index = 0; index < analysisWindowSize - lag; ++index)
-        {
-            const auto firstSample =
-                static_cast<double>(analysisBuffer[static_cast<std::size_t>(index)]);
-            const auto delayedSample =
-                static_cast<double>(analysisBuffer[static_cast<std::size_t>(index + lag)]);
-
-            numerator += firstSample * delayedSample;
-            firstEnergy += firstSample * firstSample;
-            secondEnergy += delayedSample * delayedSample;
-        }
-
-        const auto denominator = std::sqrt(firstEnergy * secondEnergy);
-        correlations[static_cast<std::size_t>(lag)] =
-            denominator > 0.0 ? numerator / denominator : 0.0;
-    }
-
-    // The very short lags at the start of an autocorrelation curve are often
-    // highly correlated simply because adjacent audio samples are similar.
-    // Treating that boundary value as a period produces spurious notes near
-    // the upper detection limit. A real period is represented by a local peak
-    // after the initial correlation slope has fallen and risen again.
-    int periodLag = 0;
-    for (int lag = minimumLag + 1; lag < maximumLag; ++lag)
-    {
-        const auto correlation = correlations[static_cast<std::size_t>(lag)];
-        if (correlation >= minimumCorrelationScore &&
-            correlation > correlations[static_cast<std::size_t>(lag - 1)] &&
-            correlation >= correlations[static_cast<std::size_t>(lag + 1)])
-        {
-            periodLag = lag;
-            break;
-        }
-    }
-
-    if (periodLag == 0)
-    {
-        return 0.0;
-    }
-
-    // Parabolic interpolation reduces quantisation jitter without allowing a
-    // non-peak boundary lag back into the result.
-    const auto left = correlations[static_cast<std::size_t>(periodLag - 1)];
-    const auto centre = correlations[static_cast<std::size_t>(periodLag)];
-    const auto right = correlations[static_cast<std::size_t>(periodLag + 1)];
-    const auto curvature = left - (2.0 * centre) + right;
-    const auto offset = std::abs(curvature) > std::numeric_limits<double>::epsilon()
-                            ? 0.5 * (left - right) / curvature
-                            : 0.0;
-    const auto refinedLag = static_cast<double>(periodLag) + juce::jlimit(-0.5, 0.5, offset);
-
-    return sampleRate / refinedLag;
 }
 
 void TunerComponent::handleDetectedPitch(double frequency)

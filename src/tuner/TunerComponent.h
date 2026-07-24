@@ -5,6 +5,7 @@
 #include "../app/AppDefaults.h"
 #include "../app/Theme.h"
 #include "../audio/AudioInputService.h"
+#include "PitchDetector.h"
 
 #include <array>
 #include <atomic>
@@ -41,7 +42,7 @@ class TunerComponent final
     };
 
     static constexpr int fifoCapacity = 65536;
-    static constexpr int analysisWindowSize = 4096;
+    static constexpr int analysisWindowSize = PitchDetector::windowSize;
     static constexpr int maximumAverageWindow = 15;
     static constexpr int maximumGraphPoints = 1200;
     static constexpr int analysisRefreshRateHz = 20;
@@ -51,12 +52,10 @@ class TunerComponent final
     void audioInputAboutToStart(double sampleRate, int inputChannels) override;
     void audioInputStopped() override;
     void audioInputStateChanged(AudioInputService::InputState state) override;
-    void drainAudioFifo();
+    [[nodiscard]] bool drainAudioFifo();
 
     // Pitch analysis --------------------------------------------------------
     void timerCallback() override;
-    [[nodiscard]] float calculateInputLevel() const;
-    [[nodiscard]] double detectPitch() const;
     [[nodiscard]] double smoothFrequency(double frequency);
     [[nodiscard]] bool isConfirmedPitch(double frequency);
     [[nodiscard]] double averageRecentMidiPitches() const;
@@ -111,6 +110,7 @@ class TunerComponent final
     // into preallocated storage before analysis.
     std::array<float, fifoCapacity> drainBuffer{};
     std::array<float, analysisWindowSize> analysisBuffer{};
+    PitchDetector pitchDetector;
 
     // A short circular history stabilizes the pitch before display easing.
     std::array<double, maximumAverageWindow> recentMidiPitches{};

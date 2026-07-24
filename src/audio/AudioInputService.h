@@ -68,7 +68,8 @@ class AudioInputService final
     static constexpr std::size_t maximumConsumers = 8;
     static constexpr std::size_t consumerFifoCapacity = 65536;
     static constexpr int serviceRefreshRateHz = 20;
-    static constexpr int deviceScanIntervalTicks = serviceRefreshRateHz * 3 / 2;
+    static constexpr int disconnectedDeviceScanIntervalTicks = serviceRefreshRateHz * 2;
+    static constexpr int connectedDeviceScanIntervalTicks = serviceRefreshRateHz * 15;
 
     struct ConsumerSlot
     {
@@ -116,7 +117,7 @@ class AudioInputService final
     std::uint64_t deliveredFormatVersion = 0;
     std::uint64_t lastReportedDroppedBlocks = 0;
     int clippingHoldTicks = 0;
-    int ticksUntilDeviceScan = deviceScanIntervalTicks;
+    int ticksUntilDeviceScan = disconnectedDeviceScanIntervalTicks;
     bool recovering = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioInputService)

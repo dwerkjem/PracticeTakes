@@ -116,6 +116,7 @@ target_sources(PracticeTakes
         src/main.cpp
         src/audio/AudioInputService.cpp
         src/audio/AudioInputService.h
+        src/audio/AudioRecoveryPolicy.h
         src/audio/AudioSampleFifo.h
         src/feedback/FeedbackComponent.cpp
         src/feedback/FeedbackComponent.h
@@ -126,12 +127,16 @@ target_sources(PracticeTakes
         src/app/MainComponent.h
         src/app/MainTitleBar.h
         src/app/MicrophoneWarning.h
+        src/app/SettingsPersistence.cpp
+        src/app/SettingsPersistence.h
         src/app/ThemeType.h
         src/spectrogram/SpectrogramComponent.cpp
         src/spectrogram/SpectrogramComponent.h
         src/tuner/TunerComponent.cpp
         src/tuner/TunerDrawing.cpp
         src/tuner/TunerComponent.h
+        src/tuner/PitchDetector.cpp
+        src/tuner/PitchDetector.h
         src/app/Theme.h
         src/Theme.cpp
 )
@@ -156,8 +161,13 @@ target_link_libraries(PracticeTakes
 if(BUILD_TESTING)
     add_executable(PracticeTakesTests
         tests/AppDefaultsTests.cpp
+        tests/AudioRecoveryPolicyTests.cpp
         tests/AudioSampleFifoTests.cpp
         tests/FeedbackInvitationPolicyTests.cpp
+        tests/PitchDetectorTests.cpp
+        tests/SettingsPersistenceTests.cpp
+        src/app/SettingsPersistence.cpp
+        src/tuner/PitchDetector.cpp
     )
 
     target_include_directories(PracticeTakesTests
@@ -168,7 +178,13 @@ if(BUILD_TESTING)
     target_link_libraries(PracticeTakesTests
         PRIVATE
             Catch2::Catch2WithMain
+            juce::juce_data_structures
+            juce::juce_dsp
     )
+
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND PRACTICE_TAKES_USE_CURL)
+        target_link_libraries(PracticeTakesTests PRIVATE juce::pkgconfig_JUCE_CURL_LINUX_DEPS)
+    endif()
 
     include(Catch)
     catch_discover_tests(PracticeTakesTests)

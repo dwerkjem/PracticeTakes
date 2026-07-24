@@ -1,5 +1,7 @@
 #include "AudioInputService.h"
 
+#include "AudioRecoveryPolicy.h"
+
 #include <cmath>
 
 namespace
@@ -52,6 +54,8 @@ AudioInputService::AudioInputService()
         lastDeviceName = device->getName();
 
     lastState = inputState();
+    ticksUntilDeviceScan =
+        hasUsableInput() ? connectedDeviceScanIntervalTicks : disconnectedDeviceScanIntervalTicks;
     startTimerHz(serviceRefreshRateHz);
 }
 
@@ -156,8 +160,11 @@ juce::AudioDeviceManager& AudioInputService::deviceManager() noexcept
 bool AudioInputService::hasUsableInput() const
 {
     auto* device = manager.getCurrentAudioDevice();
-    return device != nullptr && device->isOpen() &&
-           device->getActiveInputChannels().countNumberOfSetBits() > 0;
+    // ALSA may report an empty active-channel bitset for a device that is open
+    // and already delivering input callbacks. audioDeviceAboutToStart/stopped
+    // is the authoritative lifecycle signal and avoids repeatedly reopening a
+    // live device because of that backend reporting mismatch.
+    return device != nullptr && device->isOpen() && deviceRunning.load(std::memory_order_acquire);
 }
 
 AudioInputService::InputState AudioInputService::inputState() const
@@ -239,6 +246,9 @@ void AudioInputService::applySavedDeviceState(const juce::XmlElement& state)
 {
     recovering = true;
     manager.closeAudioDevice();
+    // JUCE retains this explicit state even when the named input is absent and
+    // opens the system default as a temporary fallback. createDeviceState()
+    // will therefore keep the user's preference for a later reconnect/save.
     juce::ignoreUnused(manager.initialise(2, 0, &state, true));
     recovering = false;
     publishState();
@@ -320,6 +330,12 @@ void AudioInputService::changeListenerCallback(juce::ChangeBroadcaster*)
         if (auto* device = manager.getCurrentAudioDevice())
             lastDeviceName = device->getName();
         recovering = false;
+        ticksUntilDeviceScan = connectedDeviceScanIntervalTicks;
+    }
+    else
+    {
+        ticksUntilDeviceScan =
+            juce::jmin(ticksUntilDeviceScan, disconnectedDeviceScanIntervalTicks);
     }
     publishState();
 }
@@ -344,8 +360,9 @@ void AudioInputService::timerCallback()
 
     if (--ticksUntilDeviceScan <= 0)
     {
-        ticksUntilDeviceScan = deviceScanIntervalTicks;
         scanForDeviceChanges();
+        ticksUntilDeviceScan = hasUsableInput() ? connectedDeviceScanIntervalTicks
+                                                : disconnectedDeviceScanIntervalTicks;
     }
 
     publishState();
@@ -381,7 +398,9 @@ AudioInputService::listenerSnapshot() const
     const juce::ScopedLock lock(consumerLock);
     for (std::size_t index = 0; index < consumers.size(); ++index)
         snapshot[index] = consumers[index].listener;
-    return snapshot;
+    // Copying nullable pointer values does not dereference them. The analyzer
+    // can otherwise misdiagnose std::array's return copy as a null dereference.
+    return snapshot; // NOLINT(clang-analyzer-core.NullDereference)
 }
 
 void AudioInputService::deliverFormatChange()
@@ -417,12 +436,23 @@ void AudioInputService::scanForDeviceChanges()
         hasEnumeratedInput = hasEnumeratedInput || !type->getDeviceNames(true).isEmpty();
     }
 
-    if (!hasUsableInput() && !recovering)
+    auto* currentDevice = manager.getCurrentAudioDevice();
+    if (AudioRecoveryPolicy::shouldAttemptRecovery(
+            hasUsableInput(), currentDevice != nullptr,
+            currentDevice != nullptr && currentDevice->isOpen(), hasEnumeratedInput) &&
+        !recovering)
     {
+        // Never tear down a device while its backend still considers it open.
+        // In particular, closing a live ALSA mmap reader here can race its
+        // capture thread. Wait for audioDeviceStopped/isOpen() to confirm that
+        // the backend has finished before attempting recovery.
         recovering = true;
 
         juce::AudioDeviceManager::AudioDeviceSetup setup;
         manager.getAudioDeviceSetup(setup);
+
+        if (manager.getCurrentAudioDevice() != nullptr)
+            manager.closeAudioDevice();
 
         if (setup.inputDeviceName.isNotEmpty() || setup.outputDeviceName.isNotEmpty())
             manager.restartLastAudioDevice();
