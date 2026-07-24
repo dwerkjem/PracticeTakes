@@ -13,6 +13,7 @@ broader music-practice and digital-audio workstation application.
 - [Architecture](ARCHITECTURE.md) — application ownership, audio flow, and UI structure
 - [Code style](CODE_STYLE.md) — readability and real-time audio guidelines
 - [Code quality](QUALITY.md) — clang-format, clang-tidy, pre-commit, and VS Code diagnostics
+- [SOPS secrets](SECRETS.md) — encrypted secret mirrors, synchronization, and conflict resolution
 - [Releasing](RELEASING.md) — semantic versions and GitHub release automation
 
 ## Main technologies

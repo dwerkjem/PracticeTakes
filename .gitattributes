@@ -1,0 +1,3 @@
+# SOPS ciphertext must be resolved through scripts/secrets/secrets_manager.py.
+# Treating it as binary preserves all three Git stages for plaintext merging.
+.secrets/** -diff -merge
