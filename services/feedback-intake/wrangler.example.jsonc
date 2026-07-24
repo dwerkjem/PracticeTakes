@@ -3,7 +3,9 @@
   "name": "practice-takes-feedback-intake",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-18",
-  "workers_dev": false,
+  // Public feedback intake stays on workers.dev. Cloudflare Access protects
+  // only the private paths, and the Worker verifies every Access JWT again.
+  "workers_dev": true,
   "rules": [
     {
       "type": "Text",
@@ -25,12 +27,16 @@
     "DECLINED_RETENTION_DAYS": "30",
     "TELEMETRY_RETENTION_DAYS": "90",
     "AUDIT_RETENTION_DAYS": "730",
-    "ADMIN_ROUTES_ENABLED": "false",
-    "ADMIN_EMAILS": "developer@example.com"
+    "ADMIN_ROUTES_ENABLED": "true"
   },
   "triggers": {
-    "crons": ["17 3 * * *"]
+    "crons": ["17 3 * * *", "17 11 * * *", "17 19 * * *"]
   },
+  "send_email": [
+    {
+      "name": "FEEDBACK_EMAIL"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "FEEDBACK_DB",
