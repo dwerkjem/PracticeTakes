@@ -24,22 +24,22 @@ constexpr int openSettingsMenuItemId = 1;
 constexpr int lightSettingsMenuItemId = 2;
 constexpr int darkSettingsMenuItemId = 3;
 constexpr int muteSettingsMenuItemId = 4;
-constexpr auto settingsSchemaKey = "settings.schema";
-constexpr auto themeKey = "global.theme";
-constexpr auto audioStateKey = "audio.deviceState";
-constexpr auto audioInputGainKey = "audio.inputGain";
-constexpr auto tunerEasingKey = "tuner.easing";
-constexpr auto tunerAveragingKey = "tuner.averaging";
-constexpr auto tunerThresholdKey = "tuner.noteSwitch";
-constexpr auto tunerDropoutKey = "tuner.dropout";
-constexpr auto tunerDurationKey = "tuner.graphDuration";
-constexpr auto tunerBoundsKey = "layout.tuner";
-constexpr auto spectrogramBoundsKey = "layout.spectrogram";
-constexpr auto settingsBoundsKey = "layout.settings";
 constexpr auto feedbackSuccessfulUsesKey = "feedback.successfulToolUses";
 constexpr auto feedbackInvitationShownKey = "feedback.invitationShown";
 constexpr auto feedbackInvitationsDisabledKey = "feedback.invitationsDisabled";
 
+[[nodiscard]] juce::Rectangle<int> validWindowBounds(const juce::String& storedBounds)
+{
+    const auto bounds = juce::Rectangle<int>::fromString(storedBounds);
+    constexpr int minimumWindowSize = 300;
+    constexpr int maximumWindowSize = 10000;
+    if (bounds.getWidth() < minimumWindowSize || bounds.getHeight() < minimumWindowSize ||
+        bounds.getWidth() > maximumWindowSize || bounds.getHeight() > maximumWindowSize)
+    {
+        return {};
+    }
+    return bounds;
+}
 } // namespace
 
 //==============================================================================
@@ -54,6 +54,11 @@ MainComponent::MainComponent()
     storageOptions.folderName = "PracticeTakes";
     storageOptions.osxLibrarySubFolder = "Application Support";
     storageOptions.commonToAllUsers = false;
+    // PropertiesFile writes through a temporary sibling and atomically replaces
+    // the destination. Keep writes explicit so a complete snapshot is flushed
+    // instead of serialising each individual field.
+    storageOptions.millisecondsBeforeSaving = -1;
+    storageOptions.storageFormat = juce::PropertiesFile::storeAsXML;
     applicationProperties.setStorageParameters(storageOptions);
     loadSettings();
 
@@ -67,6 +72,7 @@ MainComponent::MainComponent()
 
 MainComponent::~MainComponent()
 {
+    saveSettings();
     audioInputService.removeChangeListener(this);
     // Tool components unregister from the service in their destructors, so
     // close the windows before the service is destroyed.
@@ -301,6 +307,22 @@ void MainComponent::closeTool(ToolType tool)
 {
     auto& window = windowFor(tool);
     const auto wasOpen = window != nullptr;
+    if (window != nullptr)
+    {
+        if (tool == ToolType::tuner)
+        {
+            savedTunerBounds = window->getBounds();
+        }
+        else
+        {
+            savedSpectrogramBounds = window->getBounds();
+        }
+
+        if (auto* tuner = dynamic_cast<TunerComponent*>(window->getContentComponent()))
+        {
+            savedTunerSettings = tuner->settings();
+        }
+    }
     window.reset();
     if (wasOpen)
         recordSuccessfulToolUse();
@@ -431,7 +453,7 @@ void MainComponent::showSettings()
         [safeThis]
         {
             if (safeThis != nullptr)
-                safeThis->saveSettings();
+                safeThis->saveSettings(true);
         },
         [safeThis]
         {
@@ -487,12 +509,17 @@ void MainComponent::resetCurrentTool()
 
 void MainComponent::resetAudio()
 {
+    audioInputService.setMuted(false);
     audioInputService.resetToDefaultInput();
     updateMicrophoneWarning();
 }
 
 void MainComponent::resetLayout()
 {
+    savedTunerBounds = {};
+    savedSpectrogramBounds = {};
+    savedSettingsBounds = {};
+
     if (tunerWindow != nullptr)
         tunerWindow->centreWithSize(920, 760);
     if (spectrogramWindow != nullptr)
@@ -505,6 +532,8 @@ void MainComponent::resetAll()
 {
     setTheme(AppDefaults::theme);
     resetAudio();
+    savedTunerSettings = AppDefaults::tunerDefaults();
+    currentTool = ToolType::tuner;
 
     if (tunerWindow != nullptr)
         if (auto* tuner = dynamic_cast<TunerComponent*>(tunerWindow->getContentComponent()))
@@ -527,69 +556,119 @@ void MainComponent::applyPreset(AppDefaults::Preset preset)
         tuner->applyPreset(preset);
 }
 
-void MainComponent::saveSettings()
+AppSettings::State MainComponent::captureSettingsState()
 {
-    auto* settingsFile = applicationProperties.getUserSettings();
-    if (settingsFile == nullptr)
-        return;
-
     if (tunerWindow != nullptr)
+    {
+        savedTunerBounds = tunerWindow->getBounds();
         if (auto* tuner = dynamic_cast<TunerComponent*>(tunerWindow->getContentComponent()))
+        {
             savedTunerSettings = tuner->settings();
+        }
+    }
+    if (spectrogramWindow != nullptr)
+    {
+        savedSpectrogramBounds = spectrogramWindow->getBounds();
+    }
+    if (settingsWindow != nullptr)
+    {
+        savedSettingsBounds = settingsWindow->getBounds();
+    }
 
-    settingsFile->setValue(settingsSchemaKey, AppDefaults::schemaVersion);
-    settingsFile->setValue(themeKey, static_cast<int>(currentTheme));
-    settingsFile->setValue(audioInputGainKey, audioInputService.inputGain());
-    settingsFile->setValue(tunerEasingKey, savedTunerSettings.easing);
-    settingsFile->setValue(tunerAveragingKey, savedTunerSettings.averaging);
-    settingsFile->setValue(tunerThresholdKey, savedTunerSettings.noteSwitchSemitones);
-    settingsFile->setValue(tunerDropoutKey, savedTunerSettings.dropoutFrames);
-    settingsFile->setValue(tunerDurationKey, savedTunerSettings.graphDurationSeconds);
+    AppSettings::State state;
+    state.theme = currentTheme;
+    state.microphoneMuted = audioInputService.isMuted();
+    state.inputGain = audioInputService.inputGain();
+    state.tuner = savedTunerSettings;
+    state.tunerBounds = savedTunerBounds.toString();
+    state.spectrogramBounds = savedSpectrogramBounds.toString();
+    state.settingsBounds = savedSettingsBounds.toString();
+    state.recentTool = currentTool == ToolType::tuner ? AppSettings::RecentTool::tuner
+                                                      : AppSettings::RecentTool::spectrogram;
 
     if (const auto audioState = audioInputService.createDeviceState())
-        settingsFile->setValue(audioStateKey, audioState->toString());
+    {
+        state.audioDeviceState = audioState->toString();
+    }
+    return state;
+}
 
-    if (tunerWindow != nullptr)
-        settingsFile->setValue(tunerBoundsKey, tunerWindow->getBounds().toString());
-    if (spectrogramWindow != nullptr)
-        settingsFile->setValue(spectrogramBoundsKey, spectrogramWindow->getBounds().toString());
-    if (settingsWindow != nullptr)
-        settingsFile->setValue(settingsBoundsKey, settingsWindow->getBounds().toString());
+void MainComponent::saveSettings(bool explicitSave)
+{
+    if (!automaticSettingsSaveEnabled && !explicitSave)
+    {
+        return;
+    }
 
+    auto* settingsFile = applicationProperties.getUserSettings();
+    if (settingsFile == nullptr)
+    {
+        return;
+    }
+
+    if (explicitSave && !automaticSettingsSaveEnabled)
+    {
+        AppSettings::clearOwnedValues(*settingsFile);
+        automaticSettingsSaveEnabled = true;
+    }
+
+    AppSettings::store(*settingsFile, captureSettingsState());
     settingsFile->saveIfNeeded();
 }
 
 void MainComponent::loadSettings()
 {
     auto* settingsFile = applicationProperties.getUserSettings();
-    if (settingsFile == nullptr ||
-        settingsFile->getIntValue(settingsSchemaKey, 0) > AppDefaults::schemaVersion)
+    if (settingsFile == nullptr)
+    {
         return;
+    }
 
-    currentTheme = static_cast<Theme>(
-        settingsFile->getIntValue(themeKey, static_cast<int>(AppDefaults::theme)));
-    audioInputService.setInputGain(
-        static_cast<float>(
-            settingsFile->getDoubleValue(audioInputGainKey, AppDefaults::Audio::inputGain)));
-    savedTunerSettings = {
-        settingsFile->getDoubleValue(tunerEasingKey, AppDefaults::Tuner::easing),
-        settingsFile->getDoubleValue(tunerAveragingKey, AppDefaults::Tuner::averaging),
-        settingsFile->getDoubleValue(tunerThresholdKey, AppDefaults::Tuner::noteSwitchSemitones),
-        settingsFile->getDoubleValue(tunerDropoutKey, AppDefaults::Tuner::dropoutFrames),
-        settingsFile->getDoubleValue(tunerDurationKey, AppDefaults::Tuner::graphDurationSeconds)};
+    const auto loaded = AppSettings::load(*settingsFile);
+    automaticSettingsSaveEnabled = loaded.status != AppSettings::LoadStatus::newerSchema;
+    currentTheme = loaded.state.theme;
+    audioInputService.setMuted(loaded.state.microphoneMuted);
+    audioInputService.setInputGain(static_cast<float>(loaded.state.inputGain));
+    savedTunerSettings = loaded.state.tuner;
+    currentTool = loaded.state.recentTool == AppSettings::RecentTool::spectrogram
+                      ? ToolType::spectrogram
+                      : ToolType::tuner;
 
-    if (const auto xml = juce::parseXML(settingsFile->getValue(audioStateKey)); xml != nullptr)
+    if (const auto xml = juce::parseXML(loaded.state.audioDeviceState); xml != nullptr)
+    {
         audioInputService.applySavedDeviceState(*xml);
+    }
 
-    savedTunerBounds = juce::Rectangle<int>::fromString(settingsFile->getValue(tunerBoundsKey));
-    savedSpectrogramBounds =
-        juce::Rectangle<int>::fromString(settingsFile->getValue(spectrogramBoundsKey));
-    savedSettingsBounds =
-        juce::Rectangle<int>::fromString(settingsFile->getValue(settingsBoundsKey));
+    savedTunerBounds = validWindowBounds(loaded.state.tunerBounds);
+    savedSpectrogramBounds = validWindowBounds(loaded.state.spectrogramBounds);
+    savedSettingsBounds = validWindowBounds(loaded.state.settingsBounds);
+
+    if (loaded.status == AppSettings::LoadStatus::recoveredFromCorruption)
+    {
+        const auto settingsPath = settingsFile->getFile();
+        if (settingsPath.existsAsFile())
+        {
+            const auto backup = settingsPath.getSiblingFile(settingsPath.getFileName() + ".corrupt")
+                                    .getNonexistentSibling();
+            juce::ignoreUnused(settingsPath.moveFileTo(backup));
+        }
+        settingsFile->clear();
+    }
+
+    if (loaded.status == AppSettings::LoadStatus::migrated ||
+        loaded.status == AppSettings::LoadStatus::recoveredFromCorruption)
+    {
+        AppSettings::store(*settingsFile, loaded.state);
+        settingsFile->saveIfNeeded();
+    }
 }
 
 void MainComponent::closeSettings()
 {
+    if (settingsWindow != nullptr)
+    {
+        savedSettingsBounds = settingsWindow->getBounds();
+    }
     settingsWindow.reset();
     updateMicrophoneWarning();
 }

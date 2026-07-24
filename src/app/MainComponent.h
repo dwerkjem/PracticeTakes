@@ -5,6 +5,7 @@
 #include "../audio/AudioInputService.h"
 #include "../feedback/FeedbackComponent.h"
 #include "AppDefaults.h"
+#include "SettingsPersistence.h"
 #include "Theme.h"
 
 #include <functional>
@@ -63,8 +64,9 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     void resetLayout();
     void resetAll();
     void applyPreset(AppDefaults::Preset preset);
-    void saveSettings();
+    void saveSettings(bool explicitSave = false);
     void loadSettings();
+    [[nodiscard]] AppSettings::State captureSettingsState();
 
     [[nodiscard]] std::unique_ptr<juce::Component> createToolComponent(ToolType tool);
     [[nodiscard]] juce::String toolName(ToolType tool) const;
@@ -109,6 +111,7 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     juce::Rectangle<int> savedSpectrogramBounds;
     juce::Rectangle<int> savedSettingsBounds;
     bool isMicrophoneWarningDismissed = false;
+    bool automaticSettingsSaveEnabled = true;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
