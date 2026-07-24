@@ -44,6 +44,25 @@ describe("Cloudflare Access authentication", () => {
     expect(verifier).toHaveBeenCalledOnce();
   });
 
+  it("normalizes an adversarially long trailing-slash suffix in linear time", async () => {
+    const verifier = vi.fn(async (
+      _token: string,
+      issuer: string,
+    ) => {
+      expect(issuer).toBe(teamDomain);
+      return { email };
+    });
+
+    await expect(
+      authenticatedAccessUser(
+        accessRequest(),
+        environment({ ACCESS_TEAM_DOMAIN: `${teamDomain}${"/".repeat(100_000)}` }),
+        verifier,
+      ),
+    ).resolves.toBe(email);
+    expect(verifier).toHaveBeenCalledOnce();
+  });
+
   it("does not trust a caller-supplied identity header without an Access JWT", async () => {
     const verifier = vi.fn(async () => ({ email }));
 

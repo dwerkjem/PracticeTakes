@@ -65,7 +65,12 @@ export async function authenticatedAccessUser(
 }
 
 function normalizedTeamDomain(value: string | undefined): string | null {
-  const candidate = value?.trim().replace(/\/+$/, "");
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+
+  let end = trimmed.length;
+  while (end > 0 && trimmed.charCodeAt(end - 1) === 47) end -= 1;
+  const candidate = trimmed.slice(0, end);
   if (!candidate) return null;
 
   try {
