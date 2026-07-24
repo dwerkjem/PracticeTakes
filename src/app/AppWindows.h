@@ -306,17 +306,24 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 class MainComponent::FeedbackWindow final : public juce::DocumentWindow
 {
   public:
-    FeedbackWindow(juce::PropertiesFile& propertiesFile, std::function<void()> closeHandler)
+    FeedbackWindow(juce::PropertiesFile& propertiesFile, const juce::String& initialContext,
+                   std::function<void()> closeHandler)
         : DocumentWindow("Send feedback", juce::Colours::darkgrey,
                          juce::DocumentWindow::allButtons),
           onClose(std::move(closeHandler))
     {
         setUsingNativeTitleBar(true);
-        setContentOwned(new FeedbackComponent(propertiesFile), true);
+        setContentOwned(new FeedbackComponent(propertiesFile, initialContext), true);
         setResizable(true, true);
-        setResizeLimits(620, 700, 1200, 1100);
-        centreWithSize(760, 780);
+        setResizeLimits(620, 760, 1200, 1200);
+        centreWithSize(760, 900);
         setVisible(true);
+    }
+
+    void setContextTag(const juce::String& context)
+    {
+        if (auto* feedback = dynamic_cast<FeedbackComponent*>(getContentComponent()))
+            feedback->setContextTag(context);
     }
 
     void closeButtonPressed() override

@@ -50,7 +50,11 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     void showSettings();
     void closeSettings();
     void showHelpMenu();
-    void showFeedback();
+    void showFeedback(const juce::String& context = {});
+    void recordSuccessfulToolUse();
+    void maybeOfferFeedbackInvitation();
+    void setFeedbackInvitationsDisabled(bool disabled);
+    [[nodiscard]] bool feedbackInvitationsDisabled();
     void closeFeedback();
     void resetCurrentTool();
     void resetAudio();

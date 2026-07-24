@@ -24,6 +24,11 @@ class RemoteStatement {
     return { success: true, results: result.results ?? [], meta: result.meta ?? {} } as D1Result<T>;
   }
 
+  async first<T>(): Promise<T | null> {
+    const result = await this.database.query<T>(this.sql, this.parameters);
+    return result.results?.[0] ?? null;
+  }
+
   async run(): Promise<D1Result> {
     const result = await this.database.query(this.sql, this.parameters);
     return { success: true, results: result.results ?? [], meta: result.meta ?? {} } as D1Result;
@@ -72,6 +77,15 @@ const database = new RemoteD1(
 );
 const port = Number.parseInt(process.env.PORT ?? "8787", 10);
 
+function dashboardFailureMessage(error: unknown): string {
+  const detail = error instanceof Error ? error.message : "";
+  if (/no such (?:table|column):/i.test(detail)) {
+    return "The hosted feedback database schema is out of date. " +
+      "Run migrate-feedback-database.sh --remote.";
+  }
+  return "The dashboard could not reach Cloudflare D1.";
+}
+
 function authorized(header: string | undefined): boolean {
   if (!header?.startsWith("Basic ")) return false;
   try {
@@ -118,7 +132,7 @@ createServer(async (incoming, outgoing) => {
   } catch (error) {
     console.error(error);
     outgoing.writeHead(502, { "cache-control": "no-store", "content-type": "text/plain; charset=utf-8" });
-    outgoing.end("The dashboard could not reach Cloudflare D1.");
+    outgoing.end(dashboardFailureMessage(error));
   }
 }).listen(port, "0.0.0.0", () => {
   console.log(`Practice Takes feedback dashboard listening on port ${port}`);
