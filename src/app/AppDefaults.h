@@ -44,8 +44,9 @@ struct TunerSettings
         return {0.25, 7.0, 0.45, 7.0, 30.0};
     }
 
-    return {Tuner::easing, Tuner::averaging, Tuner::noteSwitchSemitones, Tuner::dropoutFrames,
-            Tuner::graphDurationSeconds};
+    return {
+        Tuner::easing, Tuner::averaging, Tuner::noteSwitchSemitones, Tuner::dropoutFrames,
+        Tuner::graphDurationSeconds};
 }
 
 [[nodiscard]] constexpr TunerSettings tunerDefaults()

@@ -28,8 +28,8 @@ template <std::size_t Capacity> class AudioSampleFifo
         if (count > Capacity - (write - read))
         {
             droppedBlockCount.fetch_add(1, std::memory_order_relaxed);
-            droppedSampleCount.fetch_add(static_cast<std::uint64_t>(count),
-                                         std::memory_order_relaxed);
+            droppedSampleCount.fetch_add(
+                static_cast<std::uint64_t>(count), std::memory_order_relaxed);
             return false;
         }
 
@@ -65,8 +65,8 @@ template <std::size_t Capacity> class AudioSampleFifo
 
     void discardPending() noexcept
     {
-        readPosition.store(writePosition.load(std::memory_order_acquire),
-                           std::memory_order_release);
+        readPosition.store(
+            writePosition.load(std::memory_order_acquire), std::memory_order_release);
     }
 
     // Reset is only valid while the producer is inactive and the consumer is

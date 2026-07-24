@@ -11,8 +11,9 @@ constexpr std::array<double, 5> frequencyGridLines{100.0, 500.0, 1000.0, 5000.0,
 } // namespace
 
 //==============================================================================
-SpectrogramComponent::SpectrogramComponent(AudioInputService& sharedAudioInputService,
-                                           std::function<void()> feedbackHandler)
+SpectrogramComponent::SpectrogramComponent(
+    AudioInputService& sharedAudioInputService,
+    std::function<void()> feedbackHandler)
     : audioInputService(sharedAudioInputService)
 {
     setOpaque(true);
@@ -206,9 +207,10 @@ float SpectrogramComponent::yForFrequency(double frequency) const
     const auto logarithmicPosition = std::log(frequency / minimumDisplayedFrequencyHz) /
                                      std::log(maximumFrequency / minimumDisplayedFrequencyHz);
 
-    return juce::jmap(static_cast<float>(logarithmicPosition), 0.0f, 1.0f,
-                      static_cast<float>(spectrogramBounds.getBottom()),
-                      static_cast<float>(spectrogramBounds.getY()));
+    return juce::jmap(
+        static_cast<float>(logarithmicPosition), 0.0f, 1.0f,
+        static_cast<float>(spectrogramBounds.getBottom()),
+        static_cast<float>(spectrogramBounds.getY()));
 }
 
 juce::String SpectrogramComponent::frequencyLabel(double frequency) const
@@ -235,11 +237,12 @@ void SpectrogramComponent::drawFrequencyGrid(juce::Graphics& graphics) const
         }
 
         const auto y = yForFrequency(frequency);
-        graphics.drawHorizontalLine(static_cast<int>(y),
-                                    static_cast<float>(spectrogramBounds.getX()),
-                                    static_cast<float>(spectrogramBounds.getRight()));
-        graphics.drawText(frequencyLabel(frequency), spectrogramBounds.getX() + 6,
-                          static_cast<int>(y) - 14, 60, 14, juce::Justification::centredLeft);
+        graphics.drawHorizontalLine(
+            static_cast<int>(y), static_cast<float>(spectrogramBounds.getX()),
+            static_cast<float>(spectrogramBounds.getRight()));
+        graphics.drawText(
+            frequencyLabel(frequency), spectrogramBounds.getX() + 6, static_cast<int>(y) - 14, 60,
+            14, juce::Justification::centredLeft);
     }
 }
 
@@ -252,15 +255,15 @@ void SpectrogramComponent::paint(juce::Graphics& graphics)
 
     if (audioErrorMessage.isEmpty())
     {
-        graphics.drawImage(spectrogramImage, spectrogramBounds.toFloat(),
-                           juce::RectanglePlacement::stretchToFit);
+        graphics.drawImage(
+            spectrogramImage, spectrogramBounds.toFloat(), juce::RectanglePlacement::stretchToFit);
     }
     else
     {
         graphics.setColour(mutedColour());
         graphics.setFont(juce::FontOptions(17.0f));
-        graphics.drawFittedText(audioErrorMessage, spectrogramBounds.reduced(20),
-                                juce::Justification::centred, 2);
+        graphics.drawFittedText(
+            audioErrorMessage, spectrogramBounds.reduced(20), juce::Justification::centred, 2);
     }
 
     graphics.setColour(outlineColour());

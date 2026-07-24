@@ -14,8 +14,9 @@ class FeedbackComponent final : public juce::Component, private juce::Thread
         failed
     };
 
-    explicit FeedbackComponent(juce::PropertiesFile& propertiesFile,
-                               const juce::String& initialContext = {});
+    explicit FeedbackComponent(
+        juce::PropertiesFile& propertiesFile,
+        const juce::String& initialContext = {});
     ~FeedbackComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -38,8 +39,11 @@ class FeedbackComponent final : public juce::Component, private juce::Thread
         juce::String clientSubmissionId;
     };
 
-    void configureEditor(juce::TextEditor& editor, const juce::String& accessibleName,
-                         int focusOrder, bool multiline);
+    void configureEditor(
+        juce::TextEditor& editor,
+        const juce::String& accessibleName,
+        int focusOrder,
+        bool multiline);
     void preview();
     void submit();
     [[nodiscard]] juce::String validate() const;

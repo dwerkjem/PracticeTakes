@@ -12,10 +12,11 @@
 // Owns the application's only microphone callback and fans captured input into
 // one bounded SPSC FIFO per analysis tool. Tools pull from their own FIFO on
 // the message thread; no tool code runs in the device callback.
-class AudioInputService final : public juce::ChangeBroadcaster,
-                                private juce::AudioIODeviceCallback,
-                                private juce::ChangeListener,
-                                private juce::Timer
+class AudioInputService final
+    : public juce::ChangeBroadcaster,
+      private juce::AudioIODeviceCallback,
+      private juce::ChangeListener,
+      private juce::Timer
 {
   public:
     enum class InputState
@@ -42,8 +43,8 @@ class AudioInputService final : public juce::ChangeBroadcaster,
     void removeListener(Listener* listener);
 
     [[nodiscard]] std::size_t availableSamples(Listener* listener) const;
-    [[nodiscard]] std::size_t readSamples(Listener* listener, float* destination,
-                                          std::size_t maximumSamples);
+    [[nodiscard]] std::size_t
+    readSamples(Listener* listener, float* destination, std::size_t maximumSamples);
     void discardPendingSamples(Listener* listener);
 
     [[nodiscard]] juce::AudioDeviceManager& deviceManager() noexcept;
@@ -76,10 +77,13 @@ class AudioInputService final : public juce::ChangeBroadcaster,
         std::atomic<bool> active{false};
     };
 
-    void audioDeviceIOCallbackWithContext(const float* const* inputChannelData,
-                                          int numInputChannels, float* const* outputChannelData,
-                                          int numOutputChannels, int numSamples,
-                                          const juce::AudioIODeviceCallbackContext&) override;
+    void audioDeviceIOCallbackWithContext(
+        const float* const* inputChannelData,
+        int numInputChannels,
+        float* const* outputChannelData,
+        int numOutputChannels,
+        int numSamples,
+        const juce::AudioIODeviceCallbackContext&) override;
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
     void audioDeviceStopped() override;
     void changeListenerCallback(juce::ChangeBroadcaster*) override;

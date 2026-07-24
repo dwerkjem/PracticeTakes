@@ -7,10 +7,16 @@
 class MainTitleBar final : public juce::Component
 {
   public:
-    MainTitleBar(const juce::String& windowTitle, juce::TextButton& file,
-                 juce::TextButton& settings, juce::TextButton& tools, juce::TextButton& help,
-                 juce::TextButton& microphone, std::function<void()> minimiseHandler,
-                 std::function<void()> fullscreenHandler, std::function<void()> closeHandler)
+    MainTitleBar(
+        const juce::String& windowTitle,
+        juce::TextButton& file,
+        juce::TextButton& settings,
+        juce::TextButton& tools,
+        juce::TextButton& help,
+        juce::TextButton& microphone,
+        std::function<void()> minimiseHandler,
+        std::function<void()> fullscreenHandler,
+        std::function<void()> closeHandler)
         : title(windowTitle), fileButton(file), settingsButton(settings), toolsButton(tools),
           helpButton(help), microphoneButton(microphone), onFullscreen(std::move(fullscreenHandler))
     {
@@ -45,8 +51,8 @@ class MainTitleBar final : public juce::Component
     void setFullscreen(bool isFullscreen)
     {
         fullscreenButton.setButtonText(isFullscreen ? "Restore" : "Fullscreen");
-        fullscreenButton.setTooltip(isFullscreen ? "Exit fullscreen (F11 or Escape)"
-                                                 : "Enter fullscreen (F11)");
+        fullscreenButton.setTooltip(
+            isFullscreen ? "Exit fullscreen (F11 or Escape)" : "Enter fullscreen (F11)");
     }
 
     void paint(juce::Graphics& graphics) override

@@ -22,9 +22,11 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
-    [[nodiscard]] std::unique_ptr<MainTitleBar>
-    createTitleBar(const juce::String& title, std::function<void()> minimiseHandler,
-                   std::function<void()> fullscreenHandler, std::function<void()> closeHandler);
+    [[nodiscard]] std::unique_ptr<MainTitleBar> createTitleBar(
+        const juce::String& title,
+        std::function<void()> minimiseHandler,
+        std::function<void()> fullscreenHandler,
+        std::function<void()> closeHandler);
 
   private:
     enum class ToolType

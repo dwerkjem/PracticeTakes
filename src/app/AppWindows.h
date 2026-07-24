@@ -12,8 +12,11 @@
 class MainComponent::ToolWindow final : public juce::DocumentWindow
 {
   public:
-    ToolWindow(const juce::String& title, std::unique_ptr<juce::Component> content,
-               juce::Point<int> preferredSize, std::function<void()> closeHandler)
+    ToolWindow(
+        const juce::String& title,
+        std::unique_ptr<juce::Component> content,
+        juce::Point<int> preferredSize,
+        std::function<void()> closeHandler)
         : DocumentWindow(title, juce::Colours::darkgrey, juce::DocumentWindow::allButtons),
           onClose(std::move(closeHandler))
     {
@@ -101,8 +104,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 : onAppearanceChanged(std::move(appearanceHandler))
             {
                 configureHeading(heading, "Appearance");
-                configureDescription(description,
-                                     "Choose the application theme used by every open window.");
+                configureDescription(
+                    description, "Choose the application theme used by every open window.");
 
                 themeLabel.setText("Theme", juce::dontSendNotification);
                 addAndMakeVisible(themeLabel);
@@ -148,8 +151,16 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
           public:
             explicit AudioPanel(AudioInputService& inputService)
                 : audioInputService(inputService),
-                  deviceSelector(inputService.deviceManager(), 1, 2, 0, 0, false, false, false,
-                                 true)
+                  deviceSelector(
+                      inputService.deviceManager(),
+                      1,
+                      2,
+                      0,
+                      0,
+                      false,
+                      false,
+                      false,
+                      true)
             {
                 configureHeading(heading, "Audio");
                 configureDescription(
@@ -166,8 +177,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 inputGainSlider.setSliderStyle(juce::Slider::LinearHorizontal);
                 inputGainSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 72, 22);
                 inputGainSlider.setTextValueSuffix("%");
-                inputGainSlider.setValue(inputService.inputGain() * 100.0,
-                                         juce::dontSendNotification);
+                inputGainSlider.setValue(
+                    inputService.inputGain() * 100.0, juce::dontSendNotification);
                 inputGainSlider.setTooltip(
                     "Adjust the software gain used by every analysis tool; 100% preserves the "
                     "captured microphone level");
@@ -240,11 +251,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             {
                 const auto isMuted = audioInputService.isMuted();
                 microphoneButton.setButtonText(isMuted ? "Unmute microphone" : "Mute microphone");
-                microphoneButton.setTooltip(isMuted
-                                                ? "Resume audio analysis using the selected input"
-                                                : "Pause microphone audio for every analysis tool");
-                inputGainSlider.setValue(audioInputService.inputGain() * 100.0,
-                                         juce::dontSendNotification);
+                microphoneButton.setTooltip(
+                    isMuted ? "Resume audio analysis using the selected input"
+                            : "Pause microphone audio for every analysis tool");
+                inputGainSlider.setValue(
+                    audioInputService.inputGain() * 100.0, juce::dontSendNotification);
                 inputLevelProgress = audioInputService.inputLevel();
                 inputLevelMeter.repaint();
 
@@ -285,8 +296,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 presetLabel.setText("Practice preset", juce::dontSendNotification);
                 addAndMakeVisible(presetLabel);
                 presetBox.addItem("Voice practice", static_cast<int>(AppDefaults::Preset::voice));
-                presetBox.addItem("General instrument",
-                                  static_cast<int>(AppDefaults::Preset::generalInstrument));
+                presetBox.addItem(
+                    "General instrument", static_cast<int>(AppDefaults::Preset::generalInstrument));
                 presetBox.setTextWhenNothingSelected("Choose a preset");
                 presetBox.onChange = [this]
                 {
@@ -319,11 +330,12 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         class ResetPanel final : public CategoryPanel
         {
           public:
-            ResetPanel(std::function<void()> feedbackHandler,
-                       std::function<void()> resetToolHandler,
-                       std::function<void()> resetAudioHandler,
-                       std::function<void()> resetLayoutHandler,
-                       std::function<void()> resetAllHandler)
+            ResetPanel(
+                std::function<void()> feedbackHandler,
+                std::function<void()> resetToolHandler,
+                std::function<void()> resetAudioHandler,
+                std::function<void()> resetLayoutHandler,
+                std::function<void()> resetAllHandler)
             {
                 configureHeading(heading, "Reset & support");
                 configureDescription(
@@ -373,8 +385,10 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             }
 
           private:
-            void configureResetButton(juce::TextButton& button, const juce::String& text,
-                                      std::function<void()> action)
+            void configureResetButton(
+                juce::TextButton& button,
+                const juce::String& text,
+                std::function<void()> action)
             {
                 button.setButtonText(text);
                 button.onClick = [action = std::move(action), text]
@@ -405,25 +419,33 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         };
 
       public:
-        Content(AudioInputService& inputService, Theme initialTheme,
-                std::function<void(Theme)> appearanceHandler,
-                std::function<void(AppDefaults::Preset)> presetHandler,
-                std::function<void()> saveHandler, std::function<void()> feedbackHandler,
-                std::function<void()> resetToolHandler, std::function<void()> resetAudioHandler,
-                std::function<void()> resetLayoutHandler, std::function<void()> resetAllHandler)
+        Content(
+            AudioInputService& inputService,
+            Theme initialTheme,
+            std::function<void(Theme)> appearanceHandler,
+            std::function<void(AppDefaults::Preset)> presetHandler,
+            std::function<void()> saveHandler,
+            std::function<void()> feedbackHandler,
+            std::function<void()> resetToolHandler,
+            std::function<void()> resetAudioHandler,
+            std::function<void()> resetLayoutHandler,
+            std::function<void()> resetAllHandler)
             : appearancePanel(initialTheme, std::move(appearanceHandler)), audioPanel(inputService),
               practicePanel(std::move(presetHandler)),
-              resetPanel(std::move(feedbackHandler), std::move(resetToolHandler),
-                         std::move(resetAudioHandler), std::move(resetLayoutHandler),
-                         std::move(resetAllHandler))
+              resetPanel(
+                  std::move(feedbackHandler),
+                  std::move(resetToolHandler),
+                  std::move(resetAudioHandler),
+                  std::move(resetLayoutHandler),
+                  std::move(resetAllHandler))
         {
             categoryTabs.setTabBarDepth(42);
-            categoryTabs.addTab("Appearance", juce::Colours::transparentBlack, &appearancePanel,
-                                false);
+            categoryTabs.addTab(
+                "Appearance", juce::Colours::transparentBlack, &appearancePanel, false);
             categoryTabs.addTab("Audio", juce::Colours::transparentBlack, &audioPanel, false);
             categoryTabs.addTab("Practice", juce::Colours::transparentBlack, &practicePanel, false);
-            categoryTabs.addTab("Reset & support", juce::Colours::transparentBlack, &resetPanel,
-                                false);
+            categoryTabs.addTab(
+                "Reset & support", juce::Colours::transparentBlack, &resetPanel, false);
             addAndMakeVisible(categoryTabs);
 
             saveButton.setButtonText("Save settings");
@@ -462,23 +484,29 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         juce::TabbedComponent categoryTabs{juce::TabbedButtonBar::TabsAtTop};
     };
 
-    SettingsWindow(AudioInputService& audioInputService, Theme initialTheme,
-                   std::function<void(Theme)> appearanceHandler,
-                   std::function<void(AppDefaults::Preset)> presetHandler,
-                   std::function<void()> saveHandler, std::function<void()> feedbackHandler,
-                   std::function<void()> resetToolHandler, std::function<void()> resetAudioHandler,
-                   std::function<void()> resetLayoutHandler, std::function<void()> resetAllHandler,
-                   std::function<void()> closeHandler)
+    SettingsWindow(
+        AudioInputService& audioInputService,
+        Theme initialTheme,
+        std::function<void(Theme)> appearanceHandler,
+        std::function<void(AppDefaults::Preset)> presetHandler,
+        std::function<void()> saveHandler,
+        std::function<void()> feedbackHandler,
+        std::function<void()> resetToolHandler,
+        std::function<void()> resetAudioHandler,
+        std::function<void()> resetLayoutHandler,
+        std::function<void()> resetAllHandler,
+        std::function<void()> closeHandler)
         : DocumentWindow("Settings", juce::Colours::darkgrey, juce::DocumentWindow::allButtons),
           onClose(std::move(closeHandler))
     {
         setUsingNativeTitleBar(true);
-        setContentOwned(new Content(audioInputService, initialTheme, std::move(appearanceHandler),
-                                    std::move(presetHandler), std::move(saveHandler),
-                                    std::move(feedbackHandler), std::move(resetToolHandler),
-                                    std::move(resetAudioHandler), std::move(resetLayoutHandler),
-                                    std::move(resetAllHandler)),
-                        true);
+        setContentOwned(
+            new Content(
+                audioInputService, initialTheme, std::move(appearanceHandler),
+                std::move(presetHandler), std::move(saveHandler), std::move(feedbackHandler),
+                std::move(resetToolHandler), std::move(resetAudioHandler),
+                std::move(resetLayoutHandler), std::move(resetAllHandler)),
+            true);
         setResizable(true, true);
         setResizeLimits(760, 620, 1600, 1200);
         centreWithSize(900, 760);
@@ -518,10 +546,14 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 class MainComponent::FeedbackWindow final : public juce::DocumentWindow
 {
   public:
-    FeedbackWindow(juce::PropertiesFile& propertiesFile, const juce::String& initialContext,
-                   std::function<void()> closeHandler)
-        : DocumentWindow("Send feedback", juce::Colours::darkgrey,
-                         juce::DocumentWindow::allButtons),
+    FeedbackWindow(
+        juce::PropertiesFile& propertiesFile,
+        const juce::String& initialContext,
+        std::function<void()> closeHandler)
+        : DocumentWindow(
+              "Send feedback",
+              juce::Colours::darkgrey,
+              juce::DocumentWindow::allButtons),
           onClose(std::move(closeHandler))
     {
         setUsingNativeTitleBar(true);
