@@ -1,0 +1,10 @@
+# Copy this file to .sops.yaml through the secrets manager:
+#
+#   python scripts/secrets/secrets_manager.py init \
+#     --age-recipient age1...
+#
+# The age recipient is a public key and is safe to commit. Never put the
+# corresponding AGE-SECRET-KEY value in this repository.
+creation_rules:
+  - path_regex: ^\.secrets/.*\.sops$
+    age: REPLACE_WITH_AN_AGE_PUBLIC_RECIPIENT

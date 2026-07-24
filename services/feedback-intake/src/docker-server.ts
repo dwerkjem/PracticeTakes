@@ -117,16 +117,16 @@ createServer(async (incoming, outgoing) => {
     for (const [name, value] of Object.entries(incoming.headers)) {
       if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(", ") : value);
     }
-    headers.set("cf-access-authenticated-user-email", adminEmail);
     const request = new Request(`http://localhost:${port}${incoming.url ?? "/"}`, {
       method: incoming.method,
       headers,
       body: chunks.length ? Buffer.concat(chunks) : undefined,
     });
-    const response = await handleAdminRequest(request, {
-      FEEDBACK_DB: database as unknown as D1Database,
-      ADMIN_EMAILS: adminEmail,
-    });
+    const response = await handleAdminRequest(
+      request,
+      { FEEDBACK_DB: database as unknown as D1Database },
+      adminEmail,
+    );
     outgoing.writeHead(response.status, Object.fromEntries(response.headers));
     outgoing.end(Buffer.from(await response.arrayBuffer()));
   } catch (error) {

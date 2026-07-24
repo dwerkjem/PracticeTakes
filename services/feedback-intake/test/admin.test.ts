@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { handleAdminRequest } from "../src/admin";
+import { handleAdminRequest as handleAdminRequestWithIdentity } from "../src/admin";
 
 const email = "developer@example.com";
 const receiptId = "11111111-1111-4111-8111-111111111111";
@@ -87,13 +87,24 @@ class AdminD1 {
 }
 
 function environment(database = new AdminD1()) {
-  return { FEEDBACK_DB: database as unknown as D1Database, ADMIN_EMAILS: email };
+  return { FEEDBACK_DB: database as unknown as D1Database };
 }
 
 function adminRequest(path: string, init: RequestInit = {}, authenticated = true): Request {
   const headers = new Headers(init.headers);
   if (authenticated) headers.set("cf-access-authenticated-user-email", email);
   return new Request(`https://feedback.example.test${path}`, { ...init, headers });
+}
+
+function handleAdminRequest(
+  request: Request,
+  env: ReturnType<typeof environment>,
+): Promise<Response> {
+  return handleAdminRequestWithIdentity(
+    request,
+    env,
+    request.headers.get("cf-access-authenticated-user-email"),
+  );
 }
 
 describe("feedback administration", () => {

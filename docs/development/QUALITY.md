@@ -2,6 +2,7 @@
 
 Practice Takes separates fast local formatting from slower repository-wide static analysis:
 
+- The SOPS secrets hook encrypts and stages configured secret mirrors before every local commit.
 - `clang-format` rewrites C and C++ files to match `.clang-format` before every local commit.
 - `clang-tidy` runs after relevant changes land on `main`, applies supported safe fixes, and commits those source changes back to `main`.
 - VS Code uses CMake's compilation database, so editor diagnostics match the actual project configuration.
@@ -27,6 +28,11 @@ pre-commit install
 ```
 
 Every commit runs `clang-format` against staged C and C++ files. When formatting changes a file, the commit stops so the result can be reviewed and staged. Run the commit again after staging the formatted files.
+
+The same hook run protects files selected by `secret-patterns`. It removes
+newly added plaintext secrets from the index and stages only their encrypted
+mirrors below `.secrets/`. See [SOPS secret management](SECRETS.md) for setup,
+synchronization, and conflict resolution.
 
 Run the formatter manually across the repository with:
 
@@ -132,6 +138,8 @@ When configuration succeeds but stale diagnostics remain, run **C/C++: Reset Int
 - `.clang-format` defines source formatting.
 - `.clang-tidy` defines static-analysis checks.
 - `.pre-commit-config.yaml` runs clang-format before local commits.
+- `secret-patterns` selects plaintext files managed by the SOPS pre-commit hook.
+- `scripts/secrets/secrets_manager.py` encrypts, synchronizes, and resolves conflicts for secrets.
 - `.github/workflows/clang-tidy-main.yml` fixes and verifies C++ after changes land on `main`.
 - `scripts/quality/run_clang_format.py` locates and invokes clang-format.
 - `scripts/quality/run_clang_tidy.py` locates and invokes clang-tidy with the build directory and optional safe fixes.

@@ -7,7 +7,6 @@ import { operationalReport, retentionPolicy, runRetention } from "./operations";
 
 export interface AdminEnv {
   FEEDBACK_DB: D1Database;
-  ADMIN_EMAILS: string;
   RESOLVED_RETENTION_DAYS?: string;
   DUPLICATE_RETENTION_DAYS?: string;
   DECLINED_RETENTION_DAYS?: string;
@@ -41,8 +40,11 @@ const versionPattern = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const jsonHeaders = { "content-type": "application/json; charset=utf-8" };
 
-export async function handleAdminRequest(request: Request, env: AdminEnv): Promise<Response> {
-  const user = authenticatedUser(request, env.ADMIN_EMAILS);
+export async function handleAdminRequest(
+  request: Request,
+  env: AdminEnv,
+  user: string | null,
+): Promise<Response> {
   if (!user) {
     return new Response("Administrative access requires an authorized Cloudflare Access identity.", {
       status: 401,
@@ -105,12 +107,6 @@ export async function handleAdminRequest(request: Request, env: AdminEnv): Promi
     return deleteSubmission(match[1], env.FEEDBACK_DB, user);
   }
   return jsonResponse(404, { error: { code: "not_found", message: "Administrative route not found." } });
-}
-
-function authenticatedUser(request: Request, configuredEmails: string): string | null {
-  const email = request.headers.get("cf-access-authenticated-user-email")?.trim().toLowerCase();
-  const allowed = configuredEmails.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
-  return email && allowed.includes(email) ? email : null;
 }
 
 async function listSubmissions(url: URL, db: D1Database): Promise<Response> {

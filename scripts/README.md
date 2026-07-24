@@ -7,6 +7,7 @@ Scripts are grouped by their purpose:
 - `quality/` runs source-formatting and static-analysis checks.
 - `release/` manages application versions.
 - `roadmap/` sets up the roadmap tooling.
+- `secrets/` encrypts, synchronizes, and resolves configured SOPS secrets.
 - `practice_takes_roadmap/` contains the roadmap Python package.
 
 Run scripts from the repository root unless a script says otherwise. For
@@ -15,5 +16,6 @@ example:
 ```bash
 ./scripts/build/build-and-run.sh
 ./scripts/feedback/migrate-feedback-database.sh --remote
+./scripts/feedback/configure-cloudflare-access.sh
 ./scripts/feedback/run-recovery-drill.py
 ```

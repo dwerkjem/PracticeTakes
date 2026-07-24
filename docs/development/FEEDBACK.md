@@ -13,9 +13,15 @@ cmake -S . -B build \
 The value must be the HTTPS origin without a trailing slash. The client first
 requests `/v1/authorizations`, then sends the feedback to `/v1/submissions`.
 
-The production `workers.dev` endpoint exposes only those public intake routes and the data-free
-health probe. Hosted administration remains disabled until a custom hostname is protected by
-Cloudflare Access; use the locally authenticated Docker dashboard in the meantime.
+The production `workers.dev` endpoint keeps those intake routes and the data-free health probe
+public. Only the dashboard assets and administrative API paths are protected by a path-scoped
+Cloudflare Access application. The Worker also validates the signed Access JWT against one exact
+administrator address before returning any private data.
+
+Accepted reports are stored in D1 immediately. Three scheduled runs per UTC day email every queued
+report to the administrator, combining reports only when needed to stay within the three-email
+limit. The queue balances the current backlog across the remaining daily sends and retries failed
+batches; email availability never determines whether the client receives a submission receipt.
 
 The Tuner and Spectrogram each provide **Give feedback on this tool**. That action opens the same
 form with an editable context field containing only the tool name and application version. Clearing

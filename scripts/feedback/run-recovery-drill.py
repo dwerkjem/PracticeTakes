@@ -8,8 +8,27 @@ import tempfile
 from pathlib import Path
 
 
+def insert_fixture(database: sqlite3.Connection) -> None:
+    database.execute(
+        """
+        INSERT INTO feedback_submissions
+            (receipt_id, schema_version, submitted_at, received_at, app_version,
+             installation_hash, client_hash, category, message, contact_email,
+             client_submission_id)
+        VALUES
+            ('11111111-1111-4111-8111-111111111111', 1,
+             '2026-07-23T12:00:00.000Z', 1784808000, '0.4.1',
+             'recovery-installation', 'recovery-client', 'bug',
+             'Recovery drill fixture', NULL,
+             '22222222-2222-4222-8222-222222222222')
+        """
+    )
+
+
 def apply_migrations(database: sqlite3.Connection, migrations: Path) -> None:
     for migration in sorted(migrations.glob("*.sql")):
+        if migration.name == "0007_email_notification_limits.sql":
+            insert_fixture(database)
         database.executescript(migration.read_text(encoding="utf-8"))
 
 
@@ -24,20 +43,6 @@ def main() -> None:
         with sqlite3.connect(source_path) as source:
             source.execute("PRAGMA foreign_keys = ON")
             apply_migrations(source, migrations)
-            source.execute(
-                """
-                INSERT INTO feedback_submissions
-                    (receipt_id, schema_version, submitted_at, received_at, app_version,
-                     installation_hash, client_hash, category, message, contact_email,
-                     client_submission_id)
-                VALUES
-                    ('11111111-1111-4111-8111-111111111111', 1,
-                     '2026-07-23T12:00:00.000Z', 1784808000, '0.4.1',
-                     'recovery-installation', 'recovery-client', 'bug',
-                     'Recovery drill fixture', NULL,
-                     '22222222-2222-4222-8222-222222222222')
-                """
-            )
             source.commit()
             with sqlite3.connect(restored_path) as restored:
                 source.backup(restored)
@@ -47,17 +52,24 @@ def main() -> None:
             record = restored.execute(
                 "SELECT receipt_id, message FROM feedback_submissions"
             ).fetchone()
+            queued = restored.execute(
+                "SELECT receipt_id, message FROM feedback_email_queue"
+            ).fetchone()
 
         expected = (
             "11111111-1111-4111-8111-111111111111",
             "Recovery drill fixture",
         )
-        if integrity != ("ok",) or record != expected:
+        if integrity != ("ok",) or record != expected or queued != expected:
             raise RuntimeError(
-                f"Recovery verification failed: integrity={integrity!r}, record={record!r}"
+                "Recovery verification failed: "
+                f"integrity={integrity!r}, record={record!r}, queued={queued!r}"
             )
 
-    print("Feedback recovery drill passed: schema, backup integrity, and fixture verified.")
+    print(
+        "Feedback recovery drill passed: schema, email outbox backfill, "
+        "backup integrity, and fixture verified."
+    )
 
 
 if __name__ == "__main__":
