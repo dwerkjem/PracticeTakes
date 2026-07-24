@@ -31,11 +31,15 @@ over time.
 The main window provides three top-level controls:
 
 - **File** — reserved for future project and audio-file commands
-- **Settings** — microphone selection and light/dark appearance
+- **Settings** — microphone selection, mute, input volume, live level and
+  buffering status, and light/dark appearance
 - **Tools** — opens the tuner and spectrogram
 
 Each tool opens in its own resizable window. The tuner and spectrogram can
 remain open at the same time and share the microphone selected in Settings.
+Input volume is a shared software gain from 0–200%, so the same adjusted
+signal reaches every analysis tool without changing the operating-system
+microphone setting.
 
 When no usable microphone is available, the main window shows a dismissible
 warning with a shortcut to Settings.

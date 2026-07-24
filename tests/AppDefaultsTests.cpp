@@ -38,3 +38,8 @@ TEST_CASE("Dark-theme detection distinguishes both themes", "[defaults][theme]")
     CHECK_FALSE(isDarkTheme(Theme::light));
     CHECK(isDarkTheme(Theme::dark));
 }
+
+TEST_CASE("Microphone analysis gain defaults to unity", "[defaults][audio]")
+{
+    CHECK(AppDefaults::Audio::inputGain == Catch::Approx(1.0));
+}

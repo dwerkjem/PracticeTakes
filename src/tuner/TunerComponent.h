@@ -46,11 +46,9 @@ class TunerComponent final : public juce::Component,
     static constexpr double referenceFrequencyHz = 440.0;
 
     // Audio capture ---------------------------------------------------------
-    void audioInputReceived(const float* inputSamples, int numSamples) override;
-    void audioInputAboutToStart(double sampleRate) override;
+    void audioInputAboutToStart(double sampleRate, int inputChannels) override;
     void audioInputStopped() override;
     void audioInputStateChanged(AudioInputService::InputState state) override;
-    void writeInputSamplesToFifo(const float* inputSamples, int numSamples);
     void drainAudioFifo();
 
     // Pitch analysis --------------------------------------------------------
@@ -102,9 +100,9 @@ class TunerComponent final : public juce::Component,
     juce::TextButton clearGraphButton{"Clear graph"};
     juce::TextButton feedbackButton{"Give feedback on this tool"};
 
-    // Audio arrives on the device thread and is consumed on the UI timer.
-    juce::AbstractFifo audioFifo{fifoCapacity};
-    std::array<float, fifoCapacity> fifoBuffer{};
+    // The shared service fills this tool's bounded FIFO. The timer drains it
+    // into preallocated storage before analysis.
+    std::array<float, fifoCapacity> drainBuffer{};
     std::array<float, analysisWindowSize> analysisBuffer{};
 
     // A short circular history stabilizes the pitch before display easing.

@@ -33,7 +33,7 @@ SpectrogramComponent::~SpectrogramComponent()
 
 void SpectrogramComponent::resetToDefaults()
 {
-    audioFifo.reset();
+    audioInputService.discardPendingSamples(this);
     fftData.fill(0.0f);
     spectrogramImage.clear(spectrogramImage.getBounds(), backgroundColour());
     repaint();
@@ -80,35 +80,21 @@ juce::Colour SpectrogramComponent::outlineColour() const
 //==============================================================================
 // Audio capture
 
-void SpectrogramComponent::audioInputReceived(const float* inputSamples, int numSamples)
+void SpectrogramComponent::audioInputAboutToStart(double sampleRate, int inputChannels)
 {
-    writeInputSamplesToFifo(inputSamples, numSamples);
-}
-
-void SpectrogramComponent::writeInputSamplesToFifo(const float* inputSamples, int numSamples)
-{
-    const auto writableSamples = std::min(numSamples, audioFifo.getFreeSpace());
-    const auto writeScope = audioFifo.write(writableSamples);
-
-    std::copy_n(inputSamples, writeScope.blockSize1, fifoBuffer.begin() + writeScope.startIndex1);
-    std::copy_n(inputSamples + writeScope.blockSize1, writeScope.blockSize2,
-                fifoBuffer.begin() + writeScope.startIndex2);
-}
-
-void SpectrogramComponent::audioInputAboutToStart(double sampleRate)
-{
+    juce::ignoreUnused(inputChannels);
     currentSampleRate.store(sampleRate);
-    audioFifo.reset();
+    audioInputService.discardPendingSamples(this);
 }
 
 void SpectrogramComponent::audioInputStopped()
 {
-    audioFifo.reset();
+    audioInputService.discardPendingSamples(this);
 }
 
 void SpectrogramComponent::audioInputStateChanged(AudioInputService::InputState state)
 {
-    audioFifo.reset();
+    audioInputService.discardPendingSamples(this);
 
     switch (state)
     {
@@ -136,7 +122,7 @@ void SpectrogramComponent::timerCallback()
 {
     // Process every complete FFT frame that has accumulated since the previous
     // timer tick. Partial frames remain in the FIFO for the next tick.
-    while (audioFifo.getNumReady() >= fftSize)
+    while (audioInputService.availableSamples(this) >= fftSize)
     {
         calculateNextColumn();
     }
@@ -147,11 +133,9 @@ void SpectrogramComponent::timerCallback()
 void SpectrogramComponent::calculateNextColumn()
 {
     fftData.fill(0.0f);
-    const auto readScope = audioFifo.read(fftSize);
-
-    std::copy_n(fifoBuffer.begin() + readScope.startIndex1, readScope.blockSize1, fftData.begin());
-    std::copy_n(fifoBuffer.begin() + readScope.startIndex2, readScope.blockSize2,
-                fftData.begin() + readScope.blockSize1);
+    const auto samplesRead = audioInputService.readSamples(this, fftData.data(), fftSize);
+    if (samplesRead != fftSize)
+        return;
 
     // The Hann window reduces spectral leakage before the FFT.
     hannWindow.multiplyWithWindowingTable(fftData.data(), fftSize);

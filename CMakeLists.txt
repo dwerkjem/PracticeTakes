@@ -116,6 +116,7 @@ target_sources(PracticeTakes
         src/main.cpp
         src/audio/AudioInputService.cpp
         src/audio/AudioInputService.h
+        src/audio/AudioSampleFifo.h
         src/feedback/FeedbackComponent.cpp
         src/feedback/FeedbackComponent.h
         src/feedback/FeedbackInvitationPolicy.h
@@ -155,6 +156,7 @@ target_link_libraries(PracticeTakes
 if(BUILD_TESTING)
     add_executable(PracticeTakesTests
         tests/AppDefaultsTests.cpp
+        tests/AudioSampleFifoTests.cpp
         tests/FeedbackInvitationPolicyTests.cpp
     )
 

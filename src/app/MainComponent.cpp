@@ -27,6 +27,7 @@ constexpr int muteSettingsMenuItemId = 4;
 constexpr auto settingsSchemaKey = "settings.schema";
 constexpr auto themeKey = "global.theme";
 constexpr auto audioStateKey = "audio.deviceState";
+constexpr auto audioInputGainKey = "audio.inputGain";
 constexpr auto tunerEasingKey = "tuner.easing";
 constexpr auto tunerAveragingKey = "tuner.averaging";
 constexpr auto tunerThresholdKey = "tuner.noteSwitch";
@@ -533,6 +534,7 @@ void MainComponent::saveSettings()
 
     settingsFile->setValue(settingsSchemaKey, AppDefaults::schemaVersion);
     settingsFile->setValue(themeKey, static_cast<int>(currentTheme));
+    settingsFile->setValue(audioInputGainKey, audioInputService.inputGain());
     settingsFile->setValue(tunerEasingKey, savedTunerSettings.easing);
     settingsFile->setValue(tunerAveragingKey, savedTunerSettings.averaging);
     settingsFile->setValue(tunerThresholdKey, savedTunerSettings.noteSwitchSemitones);
@@ -561,6 +563,8 @@ void MainComponent::loadSettings()
 
     currentTheme = static_cast<Theme>(
         settingsFile->getIntValue(themeKey, static_cast<int>(AppDefaults::theme)));
+    audioInputService.setInputGain(static_cast<float>(
+        settingsFile->getDoubleValue(audioInputGainKey, AppDefaults::Audio::inputGain)));
     savedTunerSettings = {
         settingsFile->getDoubleValue(tunerEasingKey, AppDefaults::Tuner::easing),
         settingsFile->getDoubleValue(tunerAveragingKey, AppDefaults::Tuner::averaging),

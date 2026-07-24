@@ -77,7 +77,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             setTitleBarHeight(42);
             setTitleBarButtonsRequired(0, false);
             titleBar = std::move(customTitleBar);
-            addAndMakeVisible(titleBar.get());
+            juce::Component::addAndMakeVisible(titleBar.get());
             // Use a resizable border so every window edge and corner can be
             // dragged, even though the application supplies its own title bar.
             setResizable(true, false);

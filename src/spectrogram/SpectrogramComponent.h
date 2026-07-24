@@ -39,11 +39,9 @@ class SpectrogramComponent final : public juce::Component,
     static constexpr float visibleDecibelFloor = -90.0f;
 
     // Audio capture ---------------------------------------------------------
-    void audioInputReceived(const float* inputSamples, int numSamples) override;
-    void audioInputAboutToStart(double sampleRate) override;
+    void audioInputAboutToStart(double sampleRate, int inputChannels) override;
     void audioInputStopped() override;
     void audioInputStateChanged(AudioInputService::InputState state) override;
-    void writeInputSamplesToFifo(const float* inputSamples, int numSamples);
 
     // FFT and image generation ---------------------------------------------
     void timerCallback() override;
@@ -66,9 +64,6 @@ class SpectrogramComponent final : public juce::Component,
     AudioInputService& audioInputService;
     juce::Rectangle<int> spectrogramBounds;
 
-    // Samples are written on the audio thread and read on the timer thread.
-    juce::AbstractFifo audioFifo{fifoCapacity};
-    std::array<float, fifoCapacity> fifoBuffer{};
     std::array<float, fftSize * 2> fftData{};
 
     juce::dsp::FFT forwardFFT{fftOrder};

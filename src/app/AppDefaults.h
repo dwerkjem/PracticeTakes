@@ -7,6 +7,11 @@ namespace AppDefaults
 inline constexpr int schemaVersion = 1;
 inline constexpr Theme theme = Theme::light;
 
+namespace Audio
+{
+inline constexpr double inputGain = 1.0;
+} // namespace Audio
+
 namespace Tuner
 {
 inline constexpr int displayMode = 1;

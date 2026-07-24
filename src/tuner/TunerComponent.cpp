@@ -260,36 +260,22 @@ juce::String TunerComponent::statusText() const
 //==============================================================================
 // Audio capture
 
-void TunerComponent::audioInputReceived(const float* inputSamples, int numSamples)
+void TunerComponent::audioInputAboutToStart(double sampleRate, int inputChannels)
 {
-    writeInputSamplesToFifo(inputSamples, numSamples);
-}
-
-void TunerComponent::writeInputSamplesToFifo(const float* inputSamples, int numSamples)
-{
-    const auto writableSamples = std::min(numSamples, audioFifo.getFreeSpace());
-    const auto writeScope = audioFifo.write(writableSamples);
-
-    std::copy_n(inputSamples, writeScope.blockSize1, fifoBuffer.begin() + writeScope.startIndex1);
-    std::copy_n(inputSamples + writeScope.blockSize1, writeScope.blockSize2,
-                fifoBuffer.begin() + writeScope.startIndex2);
-}
-
-void TunerComponent::audioInputAboutToStart(double sampleRate)
-{
+    juce::ignoreUnused(inputChannels);
     currentSampleRate.store(sampleRate);
-    audioFifo.reset();
+    audioInputService.discardPendingSamples(this);
     analysisBuffer.fill(0.0f);
 }
 
 void TunerComponent::audioInputStopped()
 {
-    audioFifo.reset();
+    audioInputService.discardPendingSamples(this);
 }
 
 void TunerComponent::audioInputStateChanged(AudioInputService::InputState state)
 {
-    audioFifo.reset();
+    audioInputService.discardPendingSamples(this);
     resetPitchTracking();
 
     switch (state)
@@ -313,31 +299,31 @@ void TunerComponent::audioInputStateChanged(AudioInputService::InputState state)
 
 void TunerComponent::drainAudioFifo()
 {
-    const auto availableSamples = audioFifo.getNumReady();
-    if (availableSamples <= 0)
+    const auto availableSamples =
+        std::min(audioInputService.availableSamples(this), drainBuffer.size());
+    if (availableSamples == 0)
     {
         return;
     }
 
-    std::vector<float> newSamples(static_cast<std::size_t>(availableSamples));
-    const auto readScope = audioFifo.read(availableSamples);
+    const auto samplesRead =
+        audioInputService.readSamples(this, drainBuffer.data(), availableSamples);
+    if (samplesRead == 0)
+        return;
 
-    std::copy_n(fifoBuffer.begin() + readScope.startIndex1, readScope.blockSize1,
-                newSamples.begin());
-    std::copy_n(fifoBuffer.begin() + readScope.startIndex2, readScope.blockSize2,
-                newSamples.begin() + readScope.blockSize1);
-
-    if (availableSamples >= analysisWindowSize)
+    if (samplesRead >= analysisWindowSize)
     {
         // Keep only the newest complete analysis window.
-        std::copy(newSamples.end() - analysisWindowSize, newSamples.end(), analysisBuffer.begin());
+        std::copy_n(drainBuffer.begin() +
+                        static_cast<std::ptrdiff_t>(samplesRead - analysisWindowSize),
+                    analysisWindowSize, analysisBuffer.begin());
         return;
     }
 
     // Shift older samples left and append the newly captured samples.
-    std::move(analysisBuffer.begin() + availableSamples, analysisBuffer.end(),
-              analysisBuffer.begin());
-    std::copy(newSamples.begin(), newSamples.end(), analysisBuffer.end() - availableSamples);
+    const auto sampleCount = static_cast<std::ptrdiff_t>(samplesRead);
+    std::move(analysisBuffer.begin() + sampleCount, analysisBuffer.end(), analysisBuffer.begin());
+    std::copy_n(drainBuffer.begin(), sampleCount, analysisBuffer.end() - sampleCount);
 }
 
 //==============================================================================
