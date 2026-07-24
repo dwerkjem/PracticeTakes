@@ -235,6 +235,12 @@ ENV/
 env.bak/
 venv.bak/
 
+# SOPS plaintext is selected by secret-patterns and also copied into each
+# clone's .git/info/exclude by scripts/secrets/secrets_manager.py. Encrypted
+# mirrors below .secrets/ are intentionally tracked.
+!.secrets/
+!.secrets/**
+
 # Spyder project settings
 .spyderproject
 .spyproject
