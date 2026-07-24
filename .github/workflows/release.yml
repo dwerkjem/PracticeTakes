@@ -86,44 +86,26 @@ jobs:
             echo "- Source commit: ${source_sha}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
-  build:
-    name: Build release artifacts
+  create-release-ref:
+    name: Create immutable release commit and tag
     needs: prepare
-    uses: ./.github/workflows/build-multiplatform.yml
-    with:
-      ref: ${{ needs.prepare.outputs.source_sha }}
-      version: ${{ needs.prepare.outputs.version }}
-
-  finalize-version:
-    name: Update VERSION and create tag
-    needs:
-      - prepare
-      - build
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+    outputs:
+      source_sha: ${{ steps.source.outputs.source_sha }}
 
     steps:
-      - name: Check out main
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+      - name: Check out selected release source
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: main
+          ref: ${{ needs.prepare.outputs.source_sha }}
 
       - name: Commit version and tag
         if: ${{ github.event_name == 'workflow_dispatch' }}
         shell: bash
         run: |
-          expected_sha="${{ needs.prepare.outputs.source_sha }}"
-          actual_sha="$(git rev-parse HEAD)"
-
-          if [[ "${actual_sha}" != "${expected_sha}" ]]; then
-            echo "main changed while the release artifacts were building." >&2
-            echo "Expected ${expected_sha}, but main is now ${actual_sha}. Rerun the release workflow." >&2
-            exit 1
-          fi
-
           version="${{ needs.prepare.outputs.version }}"
           tag="${{ needs.prepare.outputs.tag }}"
           python3 scripts/release/version.py set "${version}"
@@ -139,12 +121,30 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         run: echo "Using existing tag ${{ needs.prepare.outputs.tag }}."
 
+      - name: Record immutable release source
+        id: source
+        shell: bash
+        run: |
+          source_sha="$(git rev-parse HEAD)"
+          echo "source_sha=${source_sha}" >> "${GITHUB_OUTPUT}"
+          echo "- Immutable release commit: ${source_sha}" >> "${GITHUB_STEP_SUMMARY}"
+
+  build:
+    name: Build release artifacts
+    needs:
+      - prepare
+      - create-release-ref
+    uses: ./.github/workflows/build-multiplatform.yml
+    with:
+      ref: ${{ needs.create-release-ref.outputs.source_sha }}
+      version: ${{ needs.prepare.outputs.version }}
+
   publish:
     name: Publish GitHub release from build artifacts
     needs:
       - prepare
+      - create-release-ref
       - build
-      - finalize-version
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -160,7 +160,7 @@ jobs:
         shell: bash
         run: |
           version="${{ needs.prepare.outputs.version }}"
-          source_sha="${{ needs.prepare.outputs.source_sha }}"
+          source_sha="${{ needs.create-release-ref.outputs.source_sha }}"
 
           expected_files=(
             "PracticeTakes-${version}-linux-x64.deb"

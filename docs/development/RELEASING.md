@@ -17,9 +17,12 @@ Do not copy the version into `CMakeLists.txt` or C++ source files.
 5. Choose `patch`, `minor`, or `major`.
 6. Select **Run workflow** again.
 
-The workflow calculates the next version and calls the shared multiplatform
-build workflow. That workflow builds Windows, Linux, and macOS packages for x64
-and ARM64, uploads each package as an artifact, then assembles one verified
+The workflow calculates the next version, commits the version files, and
+creates the version tag before calling the shared multiplatform build workflow.
+The tag makes the release source immutable, so later changes to `main` cannot
+change or invalidate a build already in progress. The build workflow checks out
+that exact release commit, builds Windows, Linux, and macOS packages for x64 and
+ARM64, uploads each package as an artifact, then assembles one verified
 release-artifact bundle.
 
 Release and Clang-Tidy auto-fix runs share a FIFO queue. If Clang-Tidy is
@@ -33,10 +36,11 @@ downloads the bundle produced by the build workflow, verifies the version,
 source commit, expected six package files, and SHA-256 checksums, then publishes
 those exact files to the GitHub Release.
 
-After all six builds and artifact verification pass, the workflow changes
-`VERSION`, synchronizes the vcpkg manifest, commits both changes, creates the
-version tag, and publishes the release. The same artifact path is used for
-patch, minor, and major releases.
+After creating the immutable release commit and tag, the workflow builds and
+verifies all six packages, then publishes the release. If a build or publishing
+step fails, use **Re-run failed jobs** on the same workflow run so it continues
+to use the same tagged commit. The same artifact path is used for patch, minor,
+and major releases.
 
 ## Release artifact bundle
 

@@ -235,12 +235,30 @@ jobs:
             arch: arm64
             cmake_arch: arm64
     runs-on: ${{ matrix.runner }}
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
+
+      - name: Restore macOS compiler cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-${{ runner.os }}-${{ matrix.arch }}-${{ inputs.ref || github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ matrix.arch }}-
+
+      - name: Install ccache
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+        run: |
+          brew install ccache
+          ccache --max-size=1G
+          ccache --zero-stats
 
       - name: Apply requested release version
         if: ${{ inputs.version != '' }}
@@ -253,13 +271,18 @@ jobs:
 
       - name: Configure
         run: |
-          cmake -S . -B build \
+          cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_OSX_ARCHITECTURES="${{ matrix.cmake_arch }}" \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
 
       - name: Build
         run: cmake --build build --config "${BUILD_TYPE}" --parallel
+
+      - name: Report compiler cache performance
+        run: ccache --show-stats
 
       - name: Test
         run: ctest --test-dir build --build-config "${BUILD_TYPE}" --output-on-failure
