@@ -49,17 +49,32 @@ jobs:
             arch: arm64
     runs-on: ${{ matrix.runner }}
     container: debian:13
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
 
     steps:
       - name: Bootstrap Debian runner
         run: |
           apt-get update
-          apt-get install --yes ca-certificates git python3
+          apt-get install --yes ca-certificates ccache git python3
 
       - name: Check out repository
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
+
+      - name: Restore Linux compiler cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-${{ runner.os }}-${{ matrix.arch }}-${{ inputs.ref || github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ matrix.arch }}-
+
+      - name: Configure ccache
+        run: |
+          ccache --max-size=1G
+          ccache --zero-stats
 
       - name: Apply requested release version
         if: ${{ inputs.version != '' }}
@@ -77,11 +92,16 @@ jobs:
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
             -DPRACTICE_TAKES_PACKAGE_FILE_NAME="PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}"
 
       - name: Build
         run: cmake --build build --config "${BUILD_TYPE}" --parallel
+
+      - name: Report compiler cache performance
+        run: ccache --show-stats
 
       - name: Test
         run: ctest --test-dir build --build-config "${BUILD_TYPE}" --output-on-failure
@@ -139,17 +159,27 @@ jobs:
         include:
           - runner: windows-2022
             arch: x64
-            cmake_arch: x64
+            msvc_arch: amd64
           - runner: windows-11-arm
             arch: arm64
-            cmake_arch: ARM64
+            msvc_arch: arm64
     runs-on: ${{ matrix.runner }}
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
+
+      - name: Restore Windows compiler cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-${{ runner.os }}-${{ matrix.arch }}-${{ inputs.ref || github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ matrix.arch }}-
 
       - name: Apply requested release version
         if: ${{ inputs.version != '' }}
@@ -163,22 +193,44 @@ jobs:
           $version = (python scripts/release/version.py current).Trim()
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-      - name: Install Windows packaging tools
+      - name: Install Windows build tools
         shell: pwsh
-        run: choco install nsis --yes --no-progress
+        run: |
+          choco install ccache nsis --yes --no-progress
+          ccache --max-size=1G
+          ccache --zero-stats
 
       - name: Configure
         shell: pwsh
         run: |
-          cmake -S . -B build `
-            -G "Visual Studio 17 2022" `
-            -A "${{ matrix.cmake_arch }}" `
-            -DCMAKE_CONFIGURATION_TYPES="${env:BUILD_TYPE}" `
+          $vsInstallPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+            -latest -products * -property installationPath
+          & "$vsInstallPath\Common7\Tools\Launch-VsDevShell.ps1" `
+            -Arch "${{ matrix.msvc_arch }}" `
+            -HostArch amd64 `
+            -SkipAutomaticLocation
+
+          cmake -S . -B build -G Ninja `
+            -DCMAKE_BUILD_TYPE="${env:BUILD_TYPE}" `
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache `
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache `
             -DPRACTICE_TAKES_PACKAGE_FILE_NAME="PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}"
 
       - name: Build
         shell: pwsh
-        run: cmake --build build --config "${env:BUILD_TYPE}" --parallel
+        run: |
+          $vsInstallPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+            -latest -products * -property installationPath
+          & "$vsInstallPath\Common7\Tools\Launch-VsDevShell.ps1" `
+            -Arch "${{ matrix.msvc_arch }}" `
+            -HostArch amd64 `
+            -SkipAutomaticLocation
+
+          cmake --build build --config "${env:BUILD_TYPE}" --parallel
+
+      - name: Report compiler cache performance
+        shell: pwsh
+        run: ccache --show-stats
 
       - name: Test
         shell: pwsh
