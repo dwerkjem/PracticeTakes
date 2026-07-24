@@ -104,8 +104,12 @@ The pull-request workflow builds and packages six targets:
 - macOS Intel x64
 - macOS Apple Silicon ARM64
 
-A successful CI build confirms compilation and packaging. It does not replace
-interactive testing of audio devices, window behavior, or platform appearance.
+The platform-independent unit test suite runs once on Linux x64. Every other
+matrix job disables the test target so it can concentrate on architecture
+compilation and native packaging without rebuilding Catch2 five more times.
+A successful CI build confirms compilation, unit tests, and packaging. It does
+not replace interactive testing of audio devices, window behavior, or platform
+appearance.
 
 ## Native installers
 
