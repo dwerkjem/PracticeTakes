@@ -5,6 +5,7 @@ set -euo pipefail
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo_dir=$(cd -- "${script_dir}/../.." && pwd)
 service_dir=${repo_dir}/services/feedback-intake
+environment_file=${service_dir}/.env
 wrangler=${service_dir}/node_modules/wrangler/bin/wrangler.js
 application_name="Practice Takes feedback dashboard"
 api_base=https://api.cloudflare.com/client/v4
@@ -18,11 +19,17 @@ feedback dashboard. The resulting JWT audience, team domain, and single
 administrator and notification email settings are stored as encrypted Worker
 secrets.
 
-Required environment variables:
+Configuration is loaded from services/feedback-intake/.env. Variables already
+exported by the caller take precedence over values in the file.
+
+Required values:
   CLOUDFLARE_ACCOUNT_ID  Account containing the Worker and Zero Trust team
-  CLOUDFLARE_API_TOKEN   Token with Access Apps/Policies Write and Workers
-                         Scripts Write for this account
-  ACCESS_HOSTNAME        Worker hostname without a scheme or path
+  CLOUDFLARE_SETUP_API_TOKEN
+                         Short-lived token with Access Apps/Policies Write and
+                         Workers Scripts Write for this account. Falls back to
+                         CLOUDFLARE_API_TOKEN for compatibility.
+  ACCESS_HOSTNAME        Worker hostname without a scheme or path (defaults to
+                         the production Practice Takes Worker)
   ADMIN_EMAIL            The only identity allowed to use the dashboard
   FEEDBACK_NOTIFICATION_FROM
                          Sender on a domain enabled in Cloudflare Email Service
@@ -38,8 +45,44 @@ if (( $# > 0 )); then
     exit 2
 fi
 
+if [[ ! -f ${environment_file} ]]; then
+    printf 'Error: environment file not found: %s\n' "${environment_file}" >&2
+    echo "Copy services/feedback-intake/.env.example to .env and configure it." >&2
+    exit 1
+fi
+
+while IFS= read -r environment_line || [[ -n ${environment_line} ]]; do
+    environment_line=${environment_line%$'\r'}
+    if [[ -z ${environment_line} || ${environment_line} =~ ^[[:space:]]*# ]]; then
+        continue
+    fi
+    if [[ ${environment_line} == export[[:space:]]* ]]; then
+        environment_line=${environment_line#export }
+    fi
+    if [[ ${environment_line} != *=* ]]; then
+        echo "Error: invalid entry in ${environment_file}; expected NAME=VALUE." >&2
+        exit 2
+    fi
+    environment_name=${environment_line%%=*}
+    environment_value=${environment_line#*=}
+    if [[ ! ${environment_name} =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+        echo "Error: invalid variable name in ${environment_file}." >&2
+        exit 2
+    fi
+    if [[ ! -v ${environment_name} ]]; then
+        printf -v "${environment_name}" '%s' "${environment_value}"
+        export "${environment_name}"
+    fi
+done < "${environment_file}"
+
+ACCESS_HOSTNAME=${ACCESS_HOSTNAME:-practice-takes-feedback-intake.derekrneilson.workers.dev}
+if [[ -n ${CLOUDFLARE_SETUP_API_TOKEN:-} ]]; then
+    CLOUDFLARE_API_TOKEN=${CLOUDFLARE_SETUP_API_TOKEN}
+    export CLOUDFLARE_API_TOKEN
+fi
+
 : "${CLOUDFLARE_ACCOUNT_ID:?Set CLOUDFLARE_ACCOUNT_ID before running setup}"
-: "${CLOUDFLARE_API_TOKEN:?Set CLOUDFLARE_API_TOKEN before running setup}"
+: "${CLOUDFLARE_API_TOKEN:?Set CLOUDFLARE_SETUP_API_TOKEN before running setup}"
 : "${ACCESS_HOSTNAME:?Set ACCESS_HOSTNAME before running setup}"
 : "${ADMIN_EMAIL:?Set ADMIN_EMAIL before running setup}"
 : "${FEEDBACK_NOTIFICATION_FROM:?Set FEEDBACK_NOTIFICATION_FROM before running setup}"

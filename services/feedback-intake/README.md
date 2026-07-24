@@ -166,15 +166,21 @@ Pass `--pull-source` to perform a fast-forward-only `git pull` before rebuilding
    one-time PIN provider is sufficient for a single administrator.
 7. Enable Cloudflare Email Service for the sender domain and verify the administrator address as
    a permitted destination. The notification sender must use that onboarded domain.
-8. Create a short-lived setup token scoped to **Access: Apps and Policies Write** and **Workers
-   Scripts Write** for this account, then run the idempotent setup:
+8. Put a short-lived setup token scoped to **Access: Apps and Policies Write** and **Workers
+   Scripts Write** in the ignored `services/feedback-intake/.env` file. Configure the following
+   values there, then run the idempotent setup:
 
    ```bash
-   export CLOUDFLARE_ACCOUNT_ID='...'
-   export CLOUDFLARE_API_TOKEN='...'
-   export ACCESS_HOSTNAME='practice-takes-feedback-intake.example.workers.dev'
-   export ADMIN_EMAIL='developer@example.com'
-   export FEEDBACK_NOTIFICATION_FROM='feedback@example.com'
+   CLOUDFLARE_ACCOUNT_ID=...
+   CLOUDFLARE_SETUP_API_TOKEN=...
+   ACCESS_HOSTNAME=practice-takes-feedback-intake.derekrneilson.workers.dev
+   ADMIN_EMAIL=developer@example.com
+   FEEDBACK_NOTIFICATION_FROM=feedback@example.com
+   ```
+
+   From the repository root:
+
+   ```bash
    ./scripts/feedback/configure-cloudflare-access.sh
    ```
 
@@ -182,8 +188,9 @@ Pass `--pull-source` to perform a fast-forward-only `git pull` before rebuilding
    policy for `/admin*`, `/audit.js`, and `/v1/admin*`. It stores `ACCESS_TEAM_DOMAIN`,
    `ACCESS_AUD`, the single `ADMIN_EMAILS` value, and the notification addresses as encrypted
    Worker secrets. The public `/v1/authorizations`, `/v1/submissions`, and `/v1/health` routes
-   remain outside Access.
-9. Deploy the current Worker code, revoke the setup token, and verify:
+   remain outside Access. Existing exported variables override matching `.env` values.
+9. Remove `CLOUDFLARE_SETUP_API_TOKEN` from `.env`, revoke that setup token, deploy the current
+   Worker code, and verify:
    - an unauthenticated `/admin` request is redirected to Access or denied
    - the configured email can sign in and load the inbox
    - another identity is denied
