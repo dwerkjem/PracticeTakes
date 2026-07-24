@@ -25,7 +25,7 @@ Keep the `AGE-SECRET-KEY-...` identity private. Use the printed `age1...`
 public recipient to configure this repository:
 
 ```bash
-python scripts/secrets/secrets_manager.py init --age-recipient age1...
+python3 scripts/secrets/secrets_manager.py init --age-recipient age1...
 pre-commit install
 ```
 
