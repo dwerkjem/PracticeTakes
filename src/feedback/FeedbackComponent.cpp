@@ -66,8 +66,9 @@ class FeedbackPreview final : public juce::Component
         previewText.setReadOnly(true);
         previewText.setText(preview, false);
         addAndMakeVisible(previewText);
-        screenshotView.setImage(screenshot, juce::RectanglePlacement::centred |
-                                                juce::RectanglePlacement::onlyReduceInSize);
+        screenshotView.setImage(
+            screenshot,
+            juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize);
         addAndMakeVisible(screenshotView);
         setSize(900, 700);
     }
@@ -86,8 +87,9 @@ class FeedbackPreview final : public juce::Component
 };
 } // namespace
 
-FeedbackComponent::FeedbackComponent(juce::PropertiesFile& propertiesFile,
-                                     const juce::String& initialContext)
+FeedbackComponent::FeedbackComponent(
+    juce::PropertiesFile& propertiesFile,
+    const juce::String& initialContext)
     : Thread("Feedback submission"), properties(propertiesFile)
 {
     setTitle("Send feedback form");
@@ -95,23 +97,23 @@ FeedbackComponent::FeedbackComponent(juce::PropertiesFile& propertiesFile,
 
     typeLabel.setText("Feedback type (required)", juce::dontSendNotification);
     addAndMakeVisible(typeLabel);
-    for (const auto& item :
-         std::array<juce::String, 6>{"Bug", "Usability problem", "Feature request", "Audio problem",
-                                     "Notation/MIDI problem", "Other"})
+    for (const auto& item : std::array<juce::String, 6>{
+             "Bug", "Usability problem", "Feature request", "Audio problem",
+             "Notation/MIDI problem", "Other"})
         typeBox.addItem(item, typeBox.getNumItems() + 1);
     typeBox.setSelectedId(1, juce::dontSendNotification);
     typeBox.setTitle("Feedback type, required");
     typeBox.setExplicitFocusOrder(1);
     addAndMakeVisible(typeBox);
 
-    titleLabel.setText("Short title (required, 120 characters maximum)",
-                       juce::dontSendNotification);
-    descriptionLabel.setText("Detailed description (required, 6,500 characters maximum)",
-                             juce::dontSendNotification);
+    titleLabel.setText(
+        "Short title (required, 120 characters maximum)", juce::dontSendNotification);
+    descriptionLabel.setText(
+        "Detailed description (required, 6,500 characters maximum)", juce::dontSendNotification);
     reproductionLabel.setText("Reproduction steps (optional)", juce::dontSendNotification);
     emailLabel.setText("Contact email (optional)", juce::dontSendNotification);
-    contextLabel.setText("Feature context (optional and fully editable)",
-                         juce::dontSendNotification);
+    contextLabel.setText(
+        "Feature context (optional and fully editable)", juce::dontSendNotification);
     for (auto* label :
          {&titleLabel, &descriptionLabel, &reproductionLabel, &emailLabel, &contextLabel})
         addAndMakeVisible(label);
@@ -126,8 +128,9 @@ FeedbackComponent::FeedbackComponent(juce::PropertiesFile& propertiesFile,
     reproductionEditor.setInputRestrictions(maximumReproductionLength);
     emailEditor.setInputRestrictions(maximumEmailLength);
 
-    environmentLabel.setText("Optional diagnostics (disabled by default; select for this report)",
-                             juce::dontSendNotification);
+    environmentLabel.setText(
+        "Optional diagnostics (disabled by default; select for this report)",
+        juce::dontSendNotification);
     environmentLabel.setTitle("Optional diagnostic information");
     addAndMakeVisible(environmentLabel);
     versionDiagnostic.setTitle("Include application version in this submission");
@@ -164,9 +167,11 @@ FeedbackComponent::~FeedbackComponent()
     stopThread(3000);
 }
 
-void FeedbackComponent::configureEditor(juce::TextEditor& editor,
-                                        const juce::String& accessibleName, int focusOrder,
-                                        bool multiline)
+void FeedbackComponent::configureEditor(
+    juce::TextEditor& editor,
+    const juce::String& accessibleName,
+    int focusOrder,
+    bool multiline)
 {
     editor.setMultiLine(multiline);
     editor.setReturnKeyStartsNewLine(multiline);
@@ -210,17 +215,18 @@ void FeedbackComponent::resized()
 
 FeedbackComponent::Draft FeedbackComponent::currentDraft() const
 {
-    return {typeBox.getSelectedId(),
-            titleEditor.getText().trim(),
-            descriptionEditor.getText().trim(),
-            reproductionEditor.getText().trim(),
-            emailEditor.getText().trim(),
-            contextEditor.getText().trim(),
-            versionDiagnostic.getToggleState(),
-            operatingSystemDiagnostic.getToggleState(),
-            screenshotDiagnostic.getToggleState(),
-            {},
-            {}};
+    return {
+        typeBox.getSelectedId(),
+        titleEditor.getText().trim(),
+        descriptionEditor.getText().trim(),
+        reproductionEditor.getText().trim(),
+        emailEditor.getText().trim(),
+        contextEditor.getText().trim(),
+        versionDiagnostic.getToggleState(),
+        operatingSystemDiagnostic.getToggleState(),
+        screenshotDiagnostic.getToggleState(),
+        {},
+        {}};
 }
 
 juce::String FeedbackComponent::validate() const
@@ -267,9 +273,10 @@ juce::String FeedbackComponent::previewText(const Draft& draft) const
 
 void FeedbackComponent::setContextTag(const juce::String& toolOrWorkflowName)
 {
-    contextEditor.setText("Tool or workflow: " + toolOrWorkflowName +
-                              "\nApplication version: " + juce::String(ProjectInfo::versionString),
-                          false);
+    contextEditor.setText(
+        "Tool or workflow: " + toolOrWorkflowName +
+            "\nApplication version: " + juce::String(ProjectInfo::versionString),
+        false);
     contextEditor.grabKeyboardFocus();
 }
 
@@ -298,9 +305,9 @@ juce::String FeedbackComponent::captureApplicationScreenshot() const
 
     constexpr float maximumWidth = 1280.0f;
     constexpr float maximumHeight = 720.0f;
-    const auto scale =
-        juce::jmin(1.0f, maximumWidth / static_cast<float>(capturedBounds.getWidth()),
-                   maximumHeight / static_cast<float>(capturedBounds.getHeight()));
+    const auto scale = juce::jmin(
+        1.0f, maximumWidth / static_cast<float>(capturedBounds.getWidth()),
+        maximumHeight / static_cast<float>(capturedBounds.getHeight()));
     const auto imageWidth = juce::jmax(1, juce::roundToInt(capturedBounds.getWidth() * scale));
     const auto imageHeight = juce::jmax(1, juce::roundToInt(capturedBounds.getHeight() * scale));
     juce::Image image(juce::Image::RGB, imageWidth, imageHeight, true);
@@ -337,8 +344,8 @@ void FeedbackComponent::preview()
     auto draft = currentDraft();
     if (!draft.includeScreenshot)
     {
-        juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,
-                                               "Feedback preview", previewText(draft));
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::MessageBoxIconType::InfoIcon, "Feedback preview", previewText(draft));
         return;
     }
 
@@ -347,8 +354,8 @@ void FeedbackComponent::preview()
     if (draft.screenshotBase64.isEmpty() ||
         !juce::Base64::convertFromBase64(decoded, draft.screenshotBase64))
     {
-        setSubmissionState(SubmissionState::failed,
-                           "The application screenshot could not be previewed.");
+        setSubmissionState(
+            SubmissionState::failed, "The application screenshot could not be previewed.");
         return;
     }
 
@@ -381,8 +388,8 @@ void FeedbackComponent::submit()
         pendingDraft.screenshotBase64 = captureApplicationScreenshot();
         if (pendingDraft.screenshotBase64.isEmpty())
         {
-            setSubmissionState(SubmissionState::failed,
-                               "The application screenshot could not be captured.");
+            setSubmissionState(
+                SubmissionState::failed, "The application screenshot could not be captured.");
             return;
         }
     }
@@ -411,8 +418,9 @@ void FeedbackComponent::saveDraft(const Draft& draft)
 
 void FeedbackComponent::clearDraft()
 {
-    for (const auto* key : {draftTypeKey, draftTitleKey, draftDescriptionKey, draftReproductionKey,
-                            draftEmailKey, draftContextKey})
+    for (const auto* key :
+         {draftTypeKey, draftTitleKey, draftDescriptionKey, draftReproductionKey, draftEmailKey,
+          draftContextKey})
         properties.removeValue(key);
     properties.saveIfNeeded();
 }
@@ -476,8 +484,9 @@ void FeedbackComponent::run()
             [safe = juce::Component::SafePointer(this)]
             {
                 if (safe != nullptr)
-                    safe->setSubmissionState(SubmissionState::queued,
-                                             "Queued locally; submission will need to be retried.");
+                    safe->setSubmissionState(
+                        SubmissionState::queued,
+                        "Queued locally; submission will need to be retried.");
             });
         return;
     }
@@ -535,8 +544,8 @@ void FeedbackComponent::run()
                 safe->versionDiagnostic.setToggleState(false, juce::dontSendNotification);
                 safe->operatingSystemDiagnostic.setToggleState(false, juce::dontSendNotification);
                 safe->screenshotDiagnostic.setToggleState(false, juce::dontSendNotification);
-                safe->setSubmissionState(SubmissionState::succeeded,
-                                         "Feedback submitted successfully. Thank you.");
+                safe->setSubmissionState(
+                    SubmissionState::succeeded, "Feedback submitted successfully. Thank you.");
             }
             else
             {

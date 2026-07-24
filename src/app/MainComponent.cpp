@@ -93,20 +93,21 @@ void MainComponent::configureTopButtons()
     microphoneButton.onClick = [this] { audioInputService.toggleMuted(); };
 }
 
-std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(const juce::String& title,
-                                                            std::function<void()> minimiseHandler,
-                                                            std::function<void()> fullscreenHandler,
-                                                            std::function<void()> closeHandler)
+std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(
+    const juce::String& title,
+    std::function<void()> minimiseHandler,
+    std::function<void()> fullscreenHandler,
+    std::function<void()> closeHandler)
 {
-    return std::make_unique<MainTitleBar>(title, fileButton, settingsButton, toolsButton,
-                                          helpButton, microphoneButton, std::move(minimiseHandler),
-                                          std::move(fullscreenHandler), std::move(closeHandler));
+    return std::make_unique<MainTitleBar>(
+        title, fileButton, settingsButton, toolsButton, helpButton, microphoneButton,
+        std::move(minimiseHandler), std::move(fullscreenHandler), std::move(closeHandler));
 }
 
 void MainComponent::createMicrophoneWarning()
 {
-    microphoneWarning = std::make_unique<MicrophoneWarning>([this] { showSettings(); },
-                                                            [this] { dismissMicrophoneWarning(); });
+    microphoneWarning = std::make_unique<MicrophoneWarning>(
+        [this] { showSettings(); }, [this] { dismissMicrophoneWarning(); });
 
     // Start hidden; updateMicrophoneWarning decides whether it is needed.
     addChildComponent(*microphoneWarning);
@@ -140,39 +141,41 @@ void MainComponent::showToolsMenu()
     menu.addItem(spectrogramMenuItemId, "Spectrogram", true, spectrogramWindow != nullptr);
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
-    menu.showMenuAsync(juce::PopupMenu::Options()
-                           .withTargetComponent(&toolsButton)
-                           .withMinimumWidth(toolsMenuWidth),
-                       [safeThis](int selectedItemId)
-                       {
-                           if (safeThis == nullptr)
-                           {
-                               return;
-                           }
+    menu.showMenuAsync(
+        juce::PopupMenu::Options()
+            .withTargetComponent(&toolsButton)
+            .withMinimumWidth(toolsMenuWidth),
+        [safeThis](int selectedItemId)
+        {
+            if (safeThis == nullptr)
+            {
+                return;
+            }
 
-                           if (selectedItemId == tunerMenuItemId)
-                           {
-                               safeThis->openTool(ToolType::tuner);
-                           }
-                           else if (selectedItemId == spectrogramMenuItemId)
-                           {
-                               safeThis->openTool(ToolType::spectrogram);
-                           }
-                       });
+            if (selectedItemId == tunerMenuItemId)
+            {
+                safeThis->openTool(ToolType::tuner);
+            }
+            else if (selectedItemId == spectrogramMenuItemId)
+            {
+                safeThis->openTool(ToolType::spectrogram);
+            }
+        });
 }
 
 void MainComponent::showSettingsMenu()
 {
     juce::PopupMenu appearanceMenu;
-    appearanceMenu.addItem(lightSettingsMenuItemId, "Light theme", true,
-                           currentTheme == Theme::light);
+    appearanceMenu.addItem(
+        lightSettingsMenuItemId, "Light theme", true, currentTheme == Theme::light);
     appearanceMenu.addItem(darkSettingsMenuItemId, "Dark theme", true, currentTheme == Theme::dark);
 
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
     menu.addSubMenu("Appearance", appearanceMenu);
-    menu.addItem(muteSettingsMenuItemId,
-                 audioInputService.isMuted() ? "Unmute microphone" : "Mute microphone");
+    menu.addItem(
+        muteSettingsMenuItemId,
+        audioInputService.isMuted() ? "Unmute microphone" : "Mute microphone");
     menu.addSeparator();
     menu.addItem(openSettingsMenuItemId, "Open full settings...");
 
@@ -210,9 +213,10 @@ void MainComponent::showHelpMenu()
     menu.setLookAndFeel(&appLookAndFeel);
     menu.addItem(sendFeedbackMenuItemId, "Send feedback");
     menu.addSeparator();
-    menu.addItem(feedbackInvitationsMenuItemId, feedbackInvitationsDisabled()
-                                                    ? "Enable feedback invitations"
-                                                    : "Disable feedback invitations");
+    menu.addItem(
+        feedbackInvitationsMenuItemId,
+        feedbackInvitationsDisabled() ? "Enable feedback invitations"
+                                      : "Disable feedback invitations");
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(
@@ -244,12 +248,13 @@ void MainComponent::showFeedback(const juce::String& context)
         return;
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
-    feedbackWindow = std::make_unique<FeedbackWindow>(*settingsFile, context,
-                                                      [safeThis]
-                                                      {
-                                                          if (safeThis != nullptr)
-                                                              safeThis->closeFeedback();
-                                                      });
+    feedbackWindow = std::make_unique<FeedbackWindow>(
+        *settingsFile, context,
+        [safeThis]
+        {
+            if (safeThis != nullptr)
+                safeThis->closeFeedback();
+        });
     feedbackWindow->setLookAndFeel(&appLookAndFeel);
     feedbackWindow->toFront(true);
 }
@@ -280,8 +285,8 @@ void MainComponent::openTool(ToolType tool)
         }
     };
 
-    window = std::make_unique<ToolWindow>(toolName(tool), createToolComponent(tool),
-                                          preferredToolWindowSize(tool), closeHandler);
+    window = std::make_unique<ToolWindow>(
+        toolName(tool), createToolComponent(tool), preferredToolWindowSize(tool), closeHandler);
 
     const auto savedBounds = tool == ToolType::tuner ? savedTunerBounds : savedSpectrogramBounds;
     if (!savedBounds.isEmpty())
@@ -305,8 +310,8 @@ std::unique_ptr<juce::Component> MainComponent::createToolComponent(ToolType too
 {
     if (tool == ToolType::tuner)
     {
-        auto tuner = std::make_unique<TunerComponent>(audioInputService, [this]
-                                                      { showFeedback(toolName(ToolType::tuner)); });
+        auto tuner = std::make_unique<TunerComponent>(
+            audioInputService, [this] { showFeedback(toolName(ToolType::tuner)); });
         tuner->applySettings(savedTunerSettings);
         tuner->setTheme(currentTheme);
         return tuner;
@@ -563,8 +568,9 @@ void MainComponent::loadSettings()
 
     currentTheme = static_cast<Theme>(
         settingsFile->getIntValue(themeKey, static_cast<int>(AppDefaults::theme)));
-    audioInputService.setInputGain(static_cast<float>(
-        settingsFile->getDoubleValue(audioInputGainKey, AppDefaults::Audio::inputGain)));
+    audioInputService.setInputGain(
+        static_cast<float>(
+            settingsFile->getDoubleValue(audioInputGainKey, AppDefaults::Audio::inputGain)));
     savedTunerSettings = {
         settingsFile->getDoubleValue(tunerEasingKey, AppDefaults::Tuner::easing),
         settingsFile->getDoubleValue(tunerAveragingKey, AppDefaults::Tuner::averaging),
@@ -633,8 +639,8 @@ void MainComponent::configureLookAndFeelColours()
     appLookAndFeel.setColour(juce::PopupMenu::backgroundColourId, palette.panel);
     appLookAndFeel.setColour(juce::PopupMenu::textColourId, palette.foreground);
     appLookAndFeel.setColour(juce::PopupMenu::headerTextColourId, palette.muted);
-    appLookAndFeel.setColour(juce::PopupMenu::highlightedBackgroundColourId,
-                             palette.accent.withAlpha(0.7f));
+    appLookAndFeel.setColour(
+        juce::PopupMenu::highlightedBackgroundColourId, palette.accent.withAlpha(0.7f));
     appLookAndFeel.setColour(juce::PopupMenu::highlightedTextColourId, palette.foreground);
 
     appLookAndFeel.setColour(juce::Slider::backgroundColourId, palette.panel);

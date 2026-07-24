@@ -13,13 +13,15 @@
 
 // TunerComponent captures microphone samples, estimates their fundamental
 // frequency, smooths the result, and renders it in one of three display modes.
-class TunerComponent final : public juce::Component,
-                             private AudioInputService::Listener,
-                             private juce::Timer
+class TunerComponent final
+    : public juce::Component,
+      private AudioInputService::Listener,
+      private juce::Timer
 {
   public:
-    explicit TunerComponent(AudioInputService& sharedAudioInputService,
-                            std::function<void()> feedbackHandler = {});
+    explicit TunerComponent(
+        AudioInputService& sharedAudioInputService,
+        std::function<void()> feedbackHandler = {});
     ~TunerComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -68,8 +70,13 @@ class TunerComponent final : public juce::Component,
     void addHistoryPoint(double midiPitch);
 
     // Controls and appearance ----------------------------------------------
-    void configureSlider(juce::Slider& slider, double minimum, double maximum, double interval,
-                         double initialValue, const juce::String& suffix);
+    void configureSlider(
+        juce::Slider& slider,
+        double minimum,
+        double maximum,
+        double interval,
+        double initialValue,
+        const juce::String& suffix);
     void updateAdvancedSettingsVisibility();
     void updateGraphControlAvailability();
     void applyThemeToControls();

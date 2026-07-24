@@ -40,12 +40,14 @@ SpectrogramPalette spectrogramPaletteFor(Theme theme)
 {
     if (isDarkTheme(theme))
     {
-        return {juce::Colour::fromRGB(18, 20, 27), juce::Colour::fromRGB(25, 28, 37),
-                juce::Colour::fromRGB(188, 194, 207), juce::Colour::fromRGB(58, 65, 82)};
+        return {
+            juce::Colour::fromRGB(18, 20, 27), juce::Colour::fromRGB(25, 28, 37),
+            juce::Colour::fromRGB(188, 194, 207), juce::Colour::fromRGB(58, 65, 82)};
     }
 
-    return {juce::Colour::fromRGB(235, 236, 238), juce::Colour::fromRGB(250, 250, 251),
-            juce::Colour::fromRGB(82, 88, 99), juce::Colour::fromRGB(165, 169, 178)};
+    return {
+        juce::Colour::fromRGB(235, 236, 238), juce::Colour::fromRGB(250, 250, 251),
+        juce::Colour::fromRGB(82, 88, 99), juce::Colour::fromRGB(165, 169, 178)};
 }
 
 juce::Colour spectrogramColourForLevel(Theme theme, float level)
@@ -53,9 +55,10 @@ juce::Colour spectrogramColourForLevel(Theme theme, float level)
     const auto clippedLevel = juce::jlimit(0.0f, 1.0f, level);
     if (isDarkTheme(theme))
     {
-        return juce::Colour::fromHSV(juce::jmap(clippedLevel, 0.0f, 1.0f, 0.72f, 0.0f),
-                                     juce::jmap(clippedLevel, 0.0f, 1.0f, 0.45f, 1.0f),
-                                     juce::jmap(clippedLevel, 0.0f, 1.0f, 0.08f, 1.0f), 1.0f);
+        return juce::Colour::fromHSV(
+            juce::jmap(clippedLevel, 0.0f, 1.0f, 0.72f, 0.0f),
+            juce::jmap(clippedLevel, 0.0f, 1.0f, 0.45f, 1.0f),
+            juce::jmap(clippedLevel, 0.0f, 1.0f, 0.08f, 1.0f), 1.0f);
     }
 
     const auto quiet = juce::Colour::fromRGB(246, 248, 252);

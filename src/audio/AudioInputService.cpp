@@ -94,8 +94,9 @@ void AudioInputService::addListener(Listener* listener)
     listener->audioInputStateChanged(inputState());
     if (deviceRunning.load(std::memory_order_acquire))
     {
-        listener->audioInputAboutToStart(currentSampleRate.load(std::memory_order_acquire),
-                                         currentInputChannels.load(std::memory_order_acquire));
+        listener->audioInputAboutToStart(
+            currentSampleRate.load(std::memory_order_acquire),
+            currentInputChannels.load(std::memory_order_acquire));
     }
 }
 
@@ -131,8 +132,8 @@ std::size_t AudioInputService::availableSamples(Listener* listener) const
     return 0;
 }
 
-std::size_t AudioInputService::readSamples(Listener* listener, float* destination,
-                                           std::size_t maximumSamples)
+std::size_t
+AudioInputService::readSamples(Listener* listener, float* destination, std::size_t maximumSamples)
 {
     const juce::ScopedLock lock(consumerLock);
     if (auto* consumer = findConsumer(listener))
@@ -248,11 +249,13 @@ std::unique_ptr<juce::XmlElement> AudioInputService::createDeviceState() const
     return manager.createStateXml();
 }
 
-void AudioInputService::audioDeviceIOCallbackWithContext(const float* const* inputChannelData,
-                                                         int numInputChannels,
-                                                         float* const* outputChannelData,
-                                                         int numOutputChannels, int numSamples,
-                                                         const juce::AudioIODeviceCallbackContext&)
+void AudioInputService::audioDeviceIOCallbackWithContext(
+    const float* const* inputChannelData,
+    int numInputChannels,
+    float* const* outputChannelData,
+    int numOutputChannels,
+    int numSamples,
+    const juce::AudioIODeviceCallbackContext&)
 {
     AudioCallbackScope callbackScope(callbacksInProgress);
 
@@ -295,8 +298,8 @@ void AudioInputService::audioDeviceIOCallbackWithContext(const float* const* inp
 
 void AudioInputService::audioDeviceAboutToStart(juce::AudioIODevice* device)
 {
-    currentSampleRate.store(device != nullptr ? device->getCurrentSampleRate() : 44100.0,
-                            std::memory_order_release);
+    currentSampleRate.store(
+        device != nullptr ? device->getCurrentSampleRate() : 44100.0, std::memory_order_release);
     currentInputChannels.store(
         device != nullptr ? device->getActiveInputChannels().countNumberOfSetBits() : 0,
         std::memory_order_release);
@@ -324,9 +327,10 @@ void AudioInputService::changeListenerCallback(juce::ChangeBroadcaster*)
 void AudioInputService::timerCallback()
 {
     const auto previousLevel = displayedInputLevel.load(std::memory_order_relaxed);
-    const auto capturedPeak = muted.load(std::memory_order_relaxed)
-                                  ? 0.0f
-                                  : peakSinceLastTimer.exchange(0.0f, std::memory_order_relaxed);
+    const auto capturedPeak =
+        muted.load(std::memory_order_relaxed)
+            ? 0.0f
+            : peakSinceLastTimer.exchange(0.0f, std::memory_order_relaxed);
     const auto nextLevel = juce::jmax(capturedPeak, previousLevel * 0.72f);
     displayedInputLevel.store(nextLevel, std::memory_order_relaxed);
 

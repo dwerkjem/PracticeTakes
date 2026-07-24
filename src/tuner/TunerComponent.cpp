@@ -15,8 +15,8 @@ constexpr double immediatePitchJumpSemitones = 5.0;
 constexpr double matchingJumpToleranceSemitones = 1.5;
 constexpr int pitchJumpConfirmationFrames = 4;
 
-constexpr std::array<const char*, 12> noteNames{"C",  "C#", "D",  "D#", "E",  "F",
-                                                "F#", "G",  "G#", "A",  "A#", "B"};
+constexpr std::array<const char*, 12> noteNames{
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
 [[nodiscard]] juce::String noteNameForMidi(int midiNote)
 {
@@ -29,8 +29,9 @@ constexpr std::array<const char*, 12> noteNames{"C",  "C#", "D",  "D#", "E",  "F
 } // namespace
 
 //==============================================================================
-TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService,
-                               std::function<void()> feedbackHandler)
+TunerComponent::TunerComponent(
+    AudioInputService& sharedAudioInputService,
+    std::function<void()> feedbackHandler)
     : audioInputService(sharedAudioInputService)
 {
     setOpaque(true);
@@ -72,11 +73,11 @@ TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService,
 
     configureSlider(easingSlider, 0.02, 1.0, 0.01, AppDefaults::Tuner::easing, "");
     configureSlider(averagingSlider, 1.0, 15.0, 1.0, AppDefaults::Tuner::averaging, " samples");
-    configureSlider(thresholdSlider, 0.1, 1.5, 0.05, AppDefaults::Tuner::noteSwitchSemitones,
-                    " st");
+    configureSlider(
+        thresholdSlider, 0.1, 1.5, 0.05, AppDefaults::Tuner::noteSwitchSemitones, " st");
     configureSlider(dropoutSlider, 1.0, 20.0, 1.0, AppDefaults::Tuner::dropoutFrames, " frames");
-    configureSlider(durationSlider, 5.0, 60.0, 1.0, AppDefaults::Tuner::graphDurationSeconds,
-                    " sec");
+    configureSlider(
+        durationSlider, 5.0, 60.0, 1.0, AppDefaults::Tuner::graphDurationSeconds, " sec");
 
     clearGraphButton.onClick = [this]
     {
@@ -136,8 +137,9 @@ void TunerComponent::applySettings(const AppDefaults::TunerSettings& values)
 
 AppDefaults::TunerSettings TunerComponent::settings() const
 {
-    return {easingSlider.getValue(), averagingSlider.getValue(), thresholdSlider.getValue(),
-            dropoutSlider.getValue(), durationSlider.getValue()};
+    return {
+        easingSlider.getValue(), averagingSlider.getValue(), thresholdSlider.getValue(),
+        dropoutSlider.getValue(), durationSlider.getValue()};
 }
 
 //==============================================================================
@@ -159,8 +161,9 @@ void TunerComponent::applyThemeToControls()
 {
     const auto palette = tunerPaletteFor(currentTheme);
 
-    for (auto* label : {&displayModeLabel, &easingLabel, &averagingLabel, &thresholdLabel,
-                        &dropoutLabel, &durationLabel})
+    for (auto* label :
+         {&displayModeLabel, &easingLabel, &averagingLabel, &thresholdLabel, &dropoutLabel,
+          &durationLabel})
     {
         label->setColour(juce::Label::textColourId, palette.muted);
     }
@@ -192,9 +195,13 @@ void TunerComponent::applyThemeToControls()
     sendLookAndFeelChange();
 }
 
-void TunerComponent::configureSlider(juce::Slider& slider, double minimum, double maximum,
-                                     double interval, double initialValue,
-                                     const juce::String& suffix)
+void TunerComponent::configureSlider(
+    juce::Slider& slider,
+    double minimum,
+    double maximum,
+    double interval,
+    double initialValue,
+    const juce::String& suffix)
 {
     slider.setRange(minimum, maximum, interval);
     slider.setValue(initialValue, juce::dontSendNotification);
@@ -206,8 +213,8 @@ void TunerComponent::configureSlider(juce::Slider& slider, double minimum, doubl
 
 void TunerComponent::updateAdvancedSettingsVisibility()
 {
-    advancedSettingsButton.setButtonText(areAdvancedSettingsExpanded ? "Advanced settings  v"
-                                                                     : "Advanced settings  >");
+    advancedSettingsButton.setButtonText(
+        areAdvancedSettingsExpanded ? "Advanced settings  v" : "Advanced settings  >");
 
     for (auto* component : std::array<juce::Component*, 10>{
              &easingLabel, &easingSlider, &averagingLabel, &averagingSlider, &thresholdLabel,
@@ -314,9 +321,9 @@ void TunerComponent::drainAudioFifo()
     if (samplesRead >= analysisWindowSize)
     {
         // Keep only the newest complete analysis window.
-        std::copy_n(drainBuffer.begin() +
-                        static_cast<std::ptrdiff_t>(samplesRead - analysisWindowSize),
-                    analysisWindowSize, analysisBuffer.begin());
+        std::copy_n(
+            drainBuffer.begin() + static_cast<std::ptrdiff_t>(samplesRead - analysisWindowSize),
+            analysisWindowSize, analysisBuffer.begin());
         return;
     }
 
@@ -349,8 +356,8 @@ void TunerComponent::timerCallback()
 
 float TunerComponent::calculateInputLevel() const
 {
-    const auto squareSum = std::inner_product(analysisBuffer.begin(), analysisBuffer.end(),
-                                              analysisBuffer.begin(), 0.0);
+    const auto squareSum = std::inner_product(
+        analysisBuffer.begin(), analysisBuffer.end(), analysisBuffer.begin(), 0.0);
 
     return static_cast<float>(std::sqrt(squareSum / static_cast<double>(analysisWindowSize)));
 }
@@ -367,8 +374,8 @@ double TunerComponent::detectPitch() const
     // itself. The delay with the strongest similarity represents one period.
     const auto minimumLag =
         std::max(2, static_cast<int>(sampleRate / maximumDetectableFrequencyHz));
-    const auto maximumLag = std::min(analysisWindowSize / 2,
-                                     static_cast<int>(sampleRate / minimumDetectableFrequencyHz));
+    const auto maximumLag = std::min(
+        analysisWindowSize / 2, static_cast<int>(sampleRate / minimumDetectableFrequencyHz));
 
     std::array<double, (analysisWindowSize / 2) + 1> correlations{};
 
@@ -574,9 +581,9 @@ void TunerComponent::addHistoryPoint(double midiPitch)
 {
     graphHistory.push_back(midiPitch);
 
-    const auto desiredPointCount =
-        juce::jlimit(100, maximumGraphPoints,
-                     static_cast<int>(durationSlider.getValue() * analysisRefreshRateHz));
+    const auto desiredPointCount = juce::jlimit(
+        100, maximumGraphPoints,
+        static_cast<int>(durationSlider.getValue() * analysisRefreshRateHz));
 
     const auto excessPointCount = static_cast<int>(graphHistory.size()) - desiredPointCount;
     if (excessPointCount > 0)
