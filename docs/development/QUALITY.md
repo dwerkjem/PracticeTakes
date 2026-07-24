@@ -63,6 +63,11 @@ The workflow:
 
 The workflow ignores pushes made by `github-actions[bot]`, preventing its own fix commit from starting another auto-fix cycle.
 
+Clang-Tidy auto-fix and release runs share a FIFO queue. This serializes
+auto-fix runs and ensures that a release requested after a relevant `main` push
+does not select its source commit until the pending analysis and any automatic
+fix commit have finished.
+
 Automatic fixes use ordinary clang-tidy `--fix` behavior, not `--fix-errors`. Clang-tidy only applies replacements supplied by enabled checks; ambiguous or unsupported findings remain visible in the final verification step.
 
 Repositories with branch protection must allow GitHub Actions to push the automatic fix commit to `main`. Otherwise the analysis can run, but the push step will fail.

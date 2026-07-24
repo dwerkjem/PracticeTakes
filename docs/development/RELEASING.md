@@ -22,6 +22,12 @@ build workflow. That workflow builds Windows, Linux, and macOS packages for x64
 and ARM64, uploads each package as an artifact, then assembles one verified
 release-artifact bundle.
 
+Release and Clang-Tidy auto-fix runs share a FIFO queue. If Clang-Tidy is
+already running or waiting after a relevant push to `main`, a newly requested
+release waits for it to finish before selecting the source commit and starting
+the package builds. Queued runs are not canceled when another run joins the
+queue.
+
 The release workflow does not rebuild those packages during publishing. It
 downloads the bundle produced by the build workflow, verifies the version,
 source commit, expected six package files, and SHA-256 checksums, then publishes
