@@ -42,6 +42,10 @@ class MemoryStatement {
 
     if (this.sql.includes("SELECT 1 AS available")) {
       return { available: 1 } as T;
+    } else if (this.sql.includes("feedback_notification_days")) {
+      if (this.database.notificationCount >= 3) return null;
+      this.database.notificationCount += 1;
+      return { sent_count: this.database.notificationCount } as T;
     } else if (this.sql.includes("COALESCE(SUM(LENGTH(message)")) {
       return {
         count: this.database.submissions.length,
@@ -87,6 +91,8 @@ class MemoryD1 {
   readonly authorizationRequests: StoredAuthorizationRequest[] = [];
   readonly consumedTokenIds = new Set<string>();
   readonly submissions: StoredSubmission[] = [];
+  readonly emailQueue = new Set<string>();
+  notificationCount = 0;
 
   prepare(sql: string): D1PreparedStatement {
     return new MemoryStatement(this, sql) as unknown as D1PreparedStatement;
@@ -126,11 +132,16 @@ class MemoryD1 {
       this.submissions.push({ receiptId, submittedAt, receivedAt, appVersion, installationHash,
                               clientHash, category, message, contactEmail, status,
                               quarantineReason });
+      return;
+    }
+
+    if (statement.sql.includes("INSERT INTO feedback_email_queue")) {
+      this.emailQueue.add(statement.parameters[0] as string);
     }
   }
 }
 
-function createEnvironment(database = new MemoryD1(), overrides: Record<string, string> = {}) {
+function createEnvironment(database = new MemoryD1(), overrides: Record<string, unknown> = {}) {
   return {
     FEEDBACK_DB: database as unknown as D1Database,
     SUBMISSION_SIGNING_KEY: signingKey,
@@ -153,9 +164,40 @@ function request(path: string, body: unknown, method = "POST"): Request {
   });
 }
 
+function executionContext(): {
+  context: ExecutionContext;
+  completed: () => Promise<void>;
+} {
+  const pending: Promise<unknown>[] = [];
+  return {
+    context: {
+      passThroughOnException() {},
+      waitUntil(promise: Promise<unknown>) {
+        pending.push(promise);
+      },
+    } as ExecutionContext,
+    async completed() {
+      await Promise.all(pending);
+    },
+  };
+}
+
+async function fetchWorker(
+  workerRequest: Request,
+  environment: ReturnType<typeof createEnvironment>,
+): Promise<Response> {
+  const background = executionContext();
+  const response = await worker.fetch(
+    workerRequest,
+    environment as never,
+  );
+  await background.completed();
+  return response;
+}
+
 async function send(path: string, body: unknown, environment: ReturnType<typeof createEnvironment>,
                     method = "POST"): Promise<Response> {
-  return worker.fetch(request(path, body, method), environment as never);
+  return fetchWorker(request(path, body, method), environment);
 }
 
 async function authorize(environment: ReturnType<typeof createEnvironment>): Promise<string> {
@@ -195,22 +237,22 @@ describe("feedback intake worker", () => {
 
   afterEach(() => vi.useRealTimers());
 
-  it("keeps hosted administration disabled unless Access-backed routes are explicitly enabled",
+  it("keeps hosted administration disabled and rejects spoofed Access identity headers",
      async () => {
        const headers = new Headers({
          "cf-access-authenticated-user-email": "developer@example.com",
        });
-       const disabled = await worker.fetch(
+       const disabled = await fetchWorker(
          new Request("https://feedback.example.test/admin", { headers }),
-         createEnvironment() as never,
+         createEnvironment(),
        );
-       const enabled = await worker.fetch(
+       const enabled = await fetchWorker(
          new Request("https://feedback.example.test/admin", { headers }),
-         createEnvironment(undefined, { ADMIN_ROUTES_ENABLED: "true" }) as never,
+         createEnvironment(undefined, { ADMIN_ROUTES_ENABLED: "true" }),
        );
 
        expect(disabled.status).toBe(404);
-       expect(enabled.status).toBe(200);
+       expect(enabled.status).toBe(401);
      });
 
   it("accepts a valid report and returns a receipt", async () => {
@@ -226,6 +268,31 @@ describe("feedback intake worker", () => {
     expect(body.receiptId).toMatch(/^[0-9a-f-]{36}$/);
     expect(database.submissions).toHaveLength(1);
     expect(database.submissions[0]?.message).toBe("The tuner displayed an incorrect octave.");
+  });
+
+  it("stores every report without depending on email delivery", async () => {
+    const database = new MemoryD1();
+    const sendEmail = vi.fn(async () => ({ messageId: crypto.randomUUID() }));
+    const environment = createEnvironment(database, {
+      FEEDBACK_EMAIL: { send: sendEmail },
+      FEEDBACK_NOTIFICATION_FROM: "feedback@practicetakes.app",
+      FEEDBACK_NOTIFICATION_TO: "developer@example.com",
+      FEEDBACK_DASHBOARD_URL: "https://feedback.example.test/admin",
+    });
+
+    for (let index = 0; index < 5; index += 1) {
+      const authorization = await authorize(environment);
+      const response = await send(
+        "/v1/submissions",
+        feedback(authorization),
+        environment,
+      );
+      expect(response.status).toBe(201);
+    }
+
+    expect(database.submissions).toHaveLength(5);
+    expect(database.emailQueue.size).toBe(5);
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 
   it("rejects unsupported application versions", async () => {
@@ -346,7 +413,7 @@ describe("feedback intake worker", () => {
       body: JSON.stringify({ schemaVersion: 1, appVersion: "0.2.6", installationId }),
     });
 
-    const response = await worker.fetch(insecureRequest, createEnvironment() as never);
+    const response = await fetchWorker(insecureRequest, createEnvironment());
     expect(response.status).toBe(400);
     expect(await errorCode(response)).toBe("https_required");
   });

@@ -1,4 +1,9 @@
 import { handleAdminRequest } from "./admin";
+import { authenticatedAccessUser, type AccessEnv } from "./access";
+import {
+  sendPendingFeedbackBatch,
+  type NotificationEnv,
+} from "./notifications";
 import {
   checkStorageCapacity,
   estimatedStoredBytes,
@@ -10,7 +15,7 @@ import {
   verifyDatabaseAvailability,
 } from "./operations";
 
-interface Env {
+interface Env extends AccessEnv, NotificationEnv {
   FEEDBACK_DB: D1Database;
   SUBMISSION_SIGNING_KEY: string;
   MINIMUM_APP_VERSION: string;
@@ -18,7 +23,6 @@ interface Env {
   SUBMISSIONS_PER_HOUR: string;
   MAX_AUTHORIZATIONS_PER_HOUR?: string;
   MAX_SUBMISSIONS_PER_HOUR?: string;
-  ADMIN_EMAILS: string;
   ADMIN_ROUTES_ENABLED?: string;
   MAX_STORED_SUBMISSIONS?: string;
   MAX_STORED_BYTES?: string;
@@ -82,7 +86,8 @@ export default {
         return errorResponse(400, "https_required", "Feedback must be submitted over HTTPS.");
       }
       try {
-        return await handleAdminRequest(request, env);
+        const user = await authenticatedAccessUser(request, env);
+        return await handleAdminRequest(request, env, user);
       } catch (error) {
         console.error("Unhandled feedback administration error", error);
         return errorResponse(
@@ -115,15 +120,24 @@ export default {
     return response;
   },
 
-  async scheduled(_controller: ScheduledController, env: Env, context: ExecutionContext) {
+  async scheduled(controller: ScheduledController, env: Env, context: ExecutionContext) {
     context.waitUntil(
-      runRetention(env.FEEDBACK_DB, retentionPolicy(env), "scheduled")
-        .catch((error) => console.error("Scheduled feedback retention failed", error)),
+      sendPendingFeedbackBatch(env.FEEDBACK_DB, env)
+        .catch((error) => console.error("Scheduled feedback email failed", error)),
     );
+    if (controller.cron === "17 3 * * *") {
+      context.waitUntil(
+        runRetention(env.FEEDBACK_DB, retentionPolicy(env), "scheduled")
+          .catch((error) => console.error("Scheduled feedback retention failed", error)),
+      );
+    }
   },
 } satisfies ExportedHandler<Env>;
 
-async function handlePublicRequest(request: Request, env: Env): Promise<Response> {
+async function handlePublicRequest(
+  request: Request,
+  env: Env,
+): Promise<Response> {
   const url = new URL(request.url);
   if (url.protocol !== "https:") {
     return errorResponse(400, "https_required", "Feedback must be submitted over HTTPS.");
@@ -198,7 +212,10 @@ async function createAuthorization(request: Request, env: Env): Promise<Response
   });
 }
 
-async function createSubmission(request: Request, env: Env): Promise<Response> {
+async function createSubmission(
+  request: Request,
+  env: Env,
+): Promise<Response> {
   const parsed = await readJson(request);
   if (parsed instanceof Response) return parsed;
 
@@ -284,6 +301,13 @@ async function createSubmission(request: Request, env: Env): Promise<Response> {
              input.screenshotMimeType ?? null, input.screenshotBase64 ?? null,
              input.clientSubmissionId, quarantineReason ? "needs_review" : "new",
              quarantineReason, quarantineReason ? now : null),
+      env.FEEDBACK_DB.prepare(
+        `INSERT INTO feedback_email_queue
+         (receipt_id, received_at, app_version, category, message, contact_email,
+          screenshot_mime_type)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(receiptId, now, input.appVersion, input.category, input.message,
+             input.contactEmail ?? null, input.screenshotMimeType ?? null),
     ]);
   } catch (error) {
     if (isUniqueConstraintError(error)) {

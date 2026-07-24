@@ -9,8 +9,19 @@ The public API is write-only:
 - `POST /v1/authorizations` issues a five-minute, installation- and client-bound authorization.
 - `POST /v1/submissions` consumes that authorization once and returns a receipt identifier.
 
-The administrative interface is protected by Cloudflare Access and an application-level email
-allowlist. Administrative responses always include `Cache-Control: no-store`.
+Every accepted submission is stored before the client receives its receipt. Email is a separate,
+scheduled delivery path: D1 retains all unemailed reports, and the Worker sends at most three
+emails per UTC day. At each of the three schedules it divides the current backlog by the remaining
+daily email slots, so five queued reports are sent as batches of two, two, and one instead of one
+large digest. Reports received after the third email remain queued for the next UTC day. Failed
+email batches are released back to the queue and retried later. A single email contains at most 100
+reports so the complete messages remain safely below the provider's message-size limit; larger
+backlogs continue on following days without dropping records.
+
+The administrative interface is protected by a path-scoped Cloudflare Access application for one
+email address. The Worker independently verifies the Access JWT signature, issuer, audience, and
+email before serving any page, asset, or API response. Administrative responses always include
+`Cache-Control: no-store`.
 
 - `GET /admin` serves the feedback inbox.
 - `GET /admin/audit` serves the administrator action receipt history.
@@ -26,9 +37,10 @@ allowlist. Administrative responses always include `Cache-Control: no-store`.
   retention status.
 - `POST /v1/admin/maintenance/retention` runs the configured retention policy immediately.
 
-Hosted administration is disabled unless `ADMIN_ROUTES_ENABLED` is exactly `true`. Keep it false
-for `workers.dev` deployments and use the authenticated local Docker dashboard. Enable it only
-after Cloudflare Access protects every admin page, asset, and API path on the deployed hostname.
+Hosted administration is disabled unless `ADMIN_ROUTES_ENABLED` is exactly `true`. Even when it is
+enabled, missing or invalid `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, `ADMIN_EMAILS`, or Access JWT values
+fail closed. `ADMIN_EMAILS` must contain exactly one address. A caller-supplied
+`Cf-Access-Authenticated-User-Email` header is never sufficient on its own.
 
 `GET /v1/health` is a data-free availability probe. It verifies that the Worker can query D1 and
 returns no feedback, configuration, capacity, or account information.
@@ -57,6 +69,7 @@ that value separately as `diagnosticContext` and leaves the user-authored conten
 ## Project layout
 
 - `src/index.ts` handles authorization and feedback submission.
+- `src/notifications.ts` delivers the durable feedback email queue in balanced batches.
 - `src/admin.ts` provides the private inbox and administrative API.
 - `src/admin.html`, `src/admin.css`, and `src/dashboard.js` contain the dashboard structure,
   styling, and browser-side behavior.
@@ -144,25 +157,49 @@ Pass `--pull-source` to perform a fast-forward-only `git pull` before rebuilding
 1. Create the database with `npx wrangler d1 create practice-takes-feedback`.
 2. Copy `wrangler.example.jsonc` to the ignored local file `wrangler.jsonc`, then copy the
    database ID into it. Do not commit account IDs, tokens, or secret values.
-3. Set `ADMIN_EMAILS` in `wrangler.jsonc` to a comma-separated allowlist of administrator email
-   addresses. This is an additional application check, not a replacement for Access.
-4. Apply migrations with `npm run db:migrate:remote`.
-5. Run `npm run deploy` once to create the Worker. With `workers_dev` disabled and no custom
-   route configured yet, this initial deployment is not publicly reachable.
-6. Generate and configure the production signing key:
+3. Apply migrations with `npm run db:migrate:remote`.
+4. Run `npm run deploy` once to create the Worker. Administrative routes fail closed until the
+   three Access bindings below have been configured.
+5. Generate and configure the production signing key:
    `openssl rand -hex 32 | npx wrangler secret put SUBMISSION_SIGNING_KEY`.
-7. Confirm it with `npx wrangler secret list`, then configure a custom HTTPS route in the
-   Cloudflare dashboard.
-8. Create a Cloudflare Access self-hosted application covering `/admin` and `/v1/admin/*` on that
-   route. Its allow policy must contain the same people configured in `ADMIN_EMAILS`. Verify an
-   unauthenticated request receives an Access login or denial before sharing the URL.
-9. Set `ADMIN_ROUTES_ENABLED` to `true`, deploy again, and verify the Worker rejects an identity
-   outside `ADMIN_EMAILS`. Leave this setting false when the public intake API uses `workers.dev`.
+6. Ensure the account has a Cloudflare Zero Trust team and an identity provider. Cloudflare's
+   one-time PIN provider is sufficient for a single administrator.
+7. Enable Cloudflare Email Service for the sender domain and verify the administrator address as
+   a permitted destination. The notification sender must use that onboarded domain.
+8. Put a short-lived setup token scoped to **Access: Apps and Policies Write** and **Workers
+   Scripts Write** in the ignored `services/feedback-intake/.env` file. Configure the following
+   values there, then run the idempotent setup:
 
-`workers_dev` is disabled so deployment requires an intentional route. Cloudflare API credentials
-used for deployment should be scoped to this Worker and D1 database. The runtime receives only the
-application configuration, `FEEDBACK_DB` binding, and signing secret; it does not receive
-account-level administration tokens.
+   ```bash
+   CLOUDFLARE_ACCOUNT_ID=...
+   CLOUDFLARE_SETUP_API_TOKEN=...
+   ACCESS_HOSTNAME=practice-takes-feedback-intake.derekrneilson.workers.dev
+   ADMIN_EMAIL=developer@example.com
+   FEEDBACK_NOTIFICATION_FROM=feedback@example.com
+   ```
+
+   From the repository root:
+
+   ```bash
+   ./scripts/feedback/configure-cloudflare-access.sh
+   ```
+
+   The script creates or updates one default-deny Access application with an exact-email Allow
+   policy for `/admin*`, `/audit.js`, and `/v1/admin*`. It stores `ACCESS_TEAM_DOMAIN`,
+   `ACCESS_AUD`, the single `ADMIN_EMAILS` value, and the notification addresses as encrypted
+   Worker secrets. The public `/v1/authorizations`, `/v1/submissions`, and `/v1/health` routes
+   remain outside Access. Existing exported variables override matching `.env` values.
+9. Remove `CLOUDFLARE_SETUP_API_TOKEN` from `.env`, revoke that setup token, deploy the current
+   Worker code, and verify:
+   - an unauthenticated `/admin` request is redirected to Access or denied
+   - the configured email can sign in and load the inbox
+   - another identity is denied
+   - the desktop application can still submit feedback without Access credentials
+   - three scheduled email invocations in one UTC day drain a test backlog without a fourth email
+
+Deployment credentials should be limited to this Worker, its D1 database, and the brief Access
+setup operation. The Worker runtime receives only its D1 binding, application configuration, and
+encrypted secrets; it never receives the account-level setup token.
 
 ## Submission protocol
 
@@ -241,7 +278,8 @@ Reports containing three or more external links or long repeated-character runs 
 `needs_review` status and a quarantine reason. They remain visible only in the authenticated inbox
 and can be released there by clearing that reason.
 
-The daily scheduled retention job applies these defaults:
+The 03:17 UTC scheduled run performs retention after attempting its email batch. The 11:17 and
+19:17 UTC runs only process queued email. Retention applies these defaults:
 
 | Data | Retention |
 | --- | ---: |
@@ -283,14 +321,14 @@ fixture database, restores it, and verifies integrity and content:
 ./scripts/feedback/run-recovery-drill.py
 ```
 
-The local drill passed on 2026-07-23 after migration `0006_operations.sql` was added. Run it again
-after schema changes and perform a staging D1 restore at least quarterly.
+Run the local drill after schema changes and perform a staging D1 restore at least quarterly.
 
 ## Credential rotation
 
-No runtime or deployment credential belongs in source control. The signing key is a Wrangler
-secret; Cloudflare Access and the administrator allowlist protect the inbox; the optional dashboard
-container reads its scoped D1 token and login from the ignored mode-`0600` `.env` file.
+No runtime or deployment credential belongs in source control. The signing key, Access audience,
+team domain, and one administrator email are Wrangler secrets. Cloudflare Access and Worker-side
+JWT validation protect the inbox; the optional dashboard container reads its scoped D1 token and
+login from the ignored mode-`0600` `.env` file.
 
 Rotate `SUBMISSION_SIGNING_KEY` with `wrangler secret put` at least every 90 days and immediately
 after suspected exposure. Existing five-minute authorizations naturally expire after rotation.
