@@ -22,7 +22,7 @@ const maximumDailyEmails = 3;
 // Service's 5 MiB total-message limit after headers and formatting.
 const maximumFeedbackPerEmail = 100;
 const staleClaimSeconds = 30 * 60;
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const maximumEmailAddressLength = 254;
 
 export async function sendPendingFeedbackBatch(
   db: D1Database,
@@ -163,8 +163,8 @@ function notificationConfiguration(env: NotificationEnv): {
     .filter(Boolean);
   if (
     !env.FEEDBACK_EMAIL ||
-    !emailPattern.test(from) ||
-    !emailPattern.test(to) ||
+    !isEmailAddress(from) ||
+    !isEmailAddress(to) ||
     administrators.length !== 1 ||
     administrators[0] !== to
   ) {
@@ -188,4 +188,24 @@ function notificationConfiguration(env: NotificationEnv): {
   } catch {
     return null;
   }
+}
+
+function isEmailAddress(value: string): boolean {
+  if (value.length === 0 || value.length > maximumEmailAddressLength) {
+    return false;
+  }
+
+  let atIndex = -1;
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index] ?? "";
+    if (character.trim() === "") return false;
+    if (character === "@") {
+      if (atIndex !== -1) return false;
+      atIndex = index;
+    }
+  }
+
+  if (atIndex <= 0 || atIndex >= value.length - 1) return false;
+  const firstDomainDot = value.indexOf(".", atIndex + 1);
+  return firstDomainDot > atIndex + 1 && firstDomainDot < value.length - 1;
 }

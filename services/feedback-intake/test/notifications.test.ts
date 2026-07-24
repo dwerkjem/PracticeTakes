@@ -127,6 +127,28 @@ function environment(send: (message: unknown) => Promise<void>) {
 }
 
 describe("feedback email batching", () => {
+  it.each([
+    "FEEDBACK_NOTIFICATION_FROM",
+    "FEEDBACK_NOTIFICATION_TO",
+  ] as const)("rejects oversized adversarial %s values before querying the queue",
+              async (field) => {
+                const database = new NotificationDatabase();
+                database.add("adversarial-address", 1);
+                const send = vi.fn(async (_message: unknown) => undefined);
+                const env = {
+                  ...environment(send),
+                  [field]: `!@!.${"!.".repeat(10_000)}`,
+                };
+
+                expect(await sendPendingFeedbackBatch(
+                  database as unknown as D1Database,
+                  env,
+                  new Date("2026-07-24T03:17:00Z"),
+                )).toBe(0);
+                expect(send).not.toHaveBeenCalled();
+                expect(database.reports).toHaveLength(1);
+              });
+
   it("fails closed when the email recipient is not the one Access administrator", async () => {
     const database = new NotificationDatabase();
     database.add("private-recipient", 1);
