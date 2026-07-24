@@ -97,13 +97,31 @@ button.danger:hover {
   background: #f85149;
 }
 
-.card, .create-panel, #audit-panel {
+.card, .create-panel, .operations-panel, #audit-panel {
   padding: 1.5rem;
   margin: 1.25rem 0;
   background: #161b22;
   border: 1px solid #30363d;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 22%);
+}
+
+.operations-panel {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0;
+}
+
+.operations-panel div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.operations-panel span {
+  color: #8b949e;
 }
 
 .card {

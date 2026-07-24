@@ -303,6 +303,8 @@ void TunerComponent::paint(juce::Graphics& graphics)
 void TunerComponent::resized()
 {
     auto bounds = getLocalBounds().reduced(18);
+    feedbackButton.setBounds(bounds.removeFromTop(34).removeFromRight(220));
+    bounds = getLocalBounds().reduced(18);
     bounds.removeFromTop(142);
 
     const auto preferredDisplayHeight = std::max(90, bounds.getHeight() - controlAreaHeight() - 8);

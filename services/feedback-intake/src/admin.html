@@ -12,6 +12,14 @@
     <span>{{ADMIN_USER}}</span>
   </header>
   <main>
+    <section class="operations-panel" aria-labelledby="operations-title">
+      <div>
+        <strong id="operations-title">Service operations (last 24 hours)</strong>
+        <span id="operations-summary">Loading operational status…</span>
+      </div>
+      <button id="run-retention" type="button">Run retention now</button>
+      <span id="retention-status"></span>
+    </section>
     <details class="create-panel">
       <summary>Add feedback</summary>
       <form id="create" class="create-form">
@@ -51,6 +59,10 @@
         <option value="duplicate">Duplicate</option>
         <option value="resolved">Resolved</option>
         <option value="declined">Declined</option>
+      </select>
+      <select name="quarantined">
+        <option value="">All review states</option>
+        <option value="true">Quarantined only</option>
       </select>
       <button>Search</button>
     </form>

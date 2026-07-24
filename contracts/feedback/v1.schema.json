@@ -29,13 +29,31 @@
         { "$ref": "#/$defs/client" },
         {
           "type": "object",
-          "required": ["authorization", "submittedAt", "category", "message"],
+          "required": [
+            "authorization",
+            "submittedAt",
+            "category",
+            "message",
+            "clientSubmissionId"
+          ],
           "properties": {
             "authorization": { "type": "string", "maxLength": 2048 },
             "submittedAt": { "type": "string", "format": "date-time" },
             "category": { "enum": ["bug", "idea", "usability", "other"] },
             "message": { "type": "string", "minLength": 3, "maxLength": 8000 },
-            "contactEmail": { "type": "string", "format": "email", "maxLength": 254 }
+            "contactEmail": { "type": "string", "format": "email", "maxLength": 254 },
+            "clientSubmissionId": { "type": "string", "format": "uuid" },
+            "screenshotMimeType": { "enum": ["image/png", "image/jpeg"] },
+            "screenshotBase64": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 1433600,
+              "contentEncoding": "base64"
+            }
+          },
+          "dependentRequired": {
+            "screenshotMimeType": ["screenshotBase64"],
+            "screenshotBase64": ["screenshotMimeType"]
           }
         }
       ],

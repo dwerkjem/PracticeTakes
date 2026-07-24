@@ -12,6 +12,7 @@ constexpr auto draftTitleKey = "feedback.draft.title";
 constexpr auto draftDescriptionKey = "feedback.draft.description";
 constexpr auto draftReproductionKey = "feedback.draft.reproduction";
 constexpr auto draftEmailKey = "feedback.draft.email";
+constexpr auto draftContextKey = "feedback.draft.context";
 constexpr auto installationIdKey = "feedback.installationId";
 
 #ifndef PRACTICE_TAKES_FEEDBACK_ENDPOINT
@@ -85,7 +86,8 @@ class FeedbackPreview final : public juce::Component
 };
 } // namespace
 
-FeedbackComponent::FeedbackComponent(juce::PropertiesFile& propertiesFile)
+FeedbackComponent::FeedbackComponent(juce::PropertiesFile& propertiesFile,
+                                     const juce::String& initialContext)
     : Thread("Feedback submission"), properties(propertiesFile)
 {
     setTitle("Send feedback form");
@@ -108,13 +110,17 @@ FeedbackComponent::FeedbackComponent(juce::PropertiesFile& propertiesFile)
                              juce::dontSendNotification);
     reproductionLabel.setText("Reproduction steps (optional)", juce::dontSendNotification);
     emailLabel.setText("Contact email (optional)", juce::dontSendNotification);
-    for (auto* label : {&titleLabel, &descriptionLabel, &reproductionLabel, &emailLabel})
+    contextLabel.setText("Feature context (optional and fully editable)",
+                         juce::dontSendNotification);
+    for (auto* label :
+         {&titleLabel, &descriptionLabel, &reproductionLabel, &emailLabel, &contextLabel})
         addAndMakeVisible(label);
 
     configureEditor(titleEditor, "Short title, required", 2, false);
     configureEditor(descriptionEditor, "Detailed description, required", 3, true);
     configureEditor(reproductionEditor, "Reproduction steps, optional", 4, true);
     configureEditor(emailEditor, "Contact email, optional", 5, false);
+    configureEditor(contextEditor, "Feature context, optional and removable", 6, true);
     titleEditor.setInputRestrictions(maximumTitleLength);
     descriptionEditor.setInputRestrictions(maximumDescriptionLength);
     reproductionEditor.setInputRestrictions(maximumReproductionLength);
@@ -137,17 +143,19 @@ FeedbackComponent::FeedbackComponent(juce::PropertiesFile& propertiesFile)
     validationLabel.setDescription("Feedback validation and submission status");
     addAndMakeVisible(validationLabel);
 
-    previewButton.setExplicitFocusOrder(6);
+    previewButton.setExplicitFocusOrder(7);
     previewButton.setTitle("Preview feedback submission");
     previewButton.onClick = [this] { preview(); };
     addAndMakeVisible(previewButton);
 
-    submitButton.setExplicitFocusOrder(7);
+    submitButton.setExplicitFocusOrder(8);
     submitButton.setTitle("Submit feedback");
     submitButton.onClick = [this] { submit(); };
     addAndMakeVisible(submitButton);
 
     restoreDraft();
+    if (initialContext.isNotEmpty())
+        setContextTag(initialContext);
 }
 
 FeedbackComponent::~FeedbackComponent()
@@ -187,6 +195,7 @@ void FeedbackComponent::resized()
     place(descriptionLabel, descriptionEditor, 132);
     place(reproductionLabel, reproductionEditor, 88);
     place(emailLabel, emailEditor, 34);
+    place(contextLabel, contextEditor, 52);
     environmentLabel.setBounds(bounds.removeFromTop(26));
     auto diagnosticRow = bounds.removeFromTop(30);
     versionDiagnostic.setBounds(diagnosticRow.removeFromLeft(190));
@@ -206,6 +215,7 @@ FeedbackComponent::Draft FeedbackComponent::currentDraft() const
             descriptionEditor.getText().trim(),
             reproductionEditor.getText().trim(),
             emailEditor.getText().trim(),
+            contextEditor.getText().trim(),
             versionDiagnostic.getToggleState(),
             operatingSystemDiagnostic.getToggleState(),
             screenshotDiagnostic.getToggleState(),
@@ -250,7 +260,17 @@ juce::String FeedbackComponent::previewText(const Draft& draft) const
     if (draft.includeScreenshot)
         text += "\n\nAttachment: screenshot of all visible Practice Takes windows "
                 "except this feedback window";
+    if (draft.contextTag.isNotEmpty())
+        text += "\n\nFeedback context (user-editable):\n" + draft.contextTag;
     return text;
+}
+
+void FeedbackComponent::setContextTag(const juce::String& toolOrWorkflowName)
+{
+    contextEditor.setText("Tool or workflow: " + toolOrWorkflowName +
+                              "\nApplication version: " + juce::String(ProjectInfo::versionString),
+                          false);
+    contextEditor.grabKeyboardFocus();
 }
 
 juce::String FeedbackComponent::captureApplicationScreenshot() const
@@ -385,13 +405,14 @@ void FeedbackComponent::saveDraft(const Draft& draft)
     properties.setValue(draftDescriptionKey, draft.description);
     properties.setValue(draftReproductionKey, draft.reproductionSteps);
     properties.setValue(draftEmailKey, draft.contactEmail);
+    properties.setValue(draftContextKey, draft.contextTag);
     properties.saveIfNeeded();
 }
 
 void FeedbackComponent::clearDraft()
 {
-    for (const auto* key :
-         {draftTypeKey, draftTitleKey, draftDescriptionKey, draftReproductionKey, draftEmailKey})
+    for (const auto* key : {draftTypeKey, draftTitleKey, draftDescriptionKey, draftReproductionKey,
+                            draftEmailKey, draftContextKey})
         properties.removeValue(key);
     properties.saveIfNeeded();
 }
@@ -403,6 +424,7 @@ void FeedbackComponent::restoreDraft()
     descriptionEditor.setText(properties.getValue(draftDescriptionKey), false);
     reproductionEditor.setText(properties.getValue(draftReproductionKey), false);
     emailEditor.setText(properties.getValue(draftEmailKey), false);
+    contextEditor.setText(properties.getValue(draftContextKey), false);
     versionDiagnostic.setToggleState(false, juce::dontSendNotification);
     operatingSystemDiagnostic.setToggleState(false, juce::dontSendNotification);
     screenshotDiagnostic.setToggleState(false, juce::dontSendNotification);
@@ -489,23 +511,27 @@ void FeedbackComponent::run()
                     .withExtraHeaders("Content-Type: application/json\r\n")
                     .withStatusCode(&submissionStatus));
     juce::String submissionError;
-    if (submissionResponse != nullptr && submissionStatus != 201)
+    const auto submissionSucceeded = submissionStatus == 200 || submissionStatus == 201;
+    if (submissionResponse != nullptr && !submissionSucceeded)
     {
         const auto responseJson = juce::JSON::parse(submissionResponse->readEntireStreamAsString());
-        submissionError = responseJson.getProperty("message", {}).toString();
+        const auto errorJson = responseJson.getProperty("error", {});
+        submissionError = errorJson.getProperty("message", {}).toString();
     }
     juce::MessageManager::callAsync(
-        [safe = juce::Component::SafePointer(this), submissionStatus, submissionError]
+        [safe = juce::Component::SafePointer(this), submissionStatus, submissionError,
+         submissionSucceeded]
         {
             if (safe == nullptr)
                 return;
-            if (submissionStatus == 201)
+            if (submissionSucceeded)
             {
                 safe->clearDraft();
                 safe->titleEditor.clear();
                 safe->descriptionEditor.clear();
                 safe->reproductionEditor.clear();
                 safe->emailEditor.clear();
+                safe->contextEditor.clear();
                 safe->versionDiagnostic.setToggleState(false, juce::dontSendNotification);
                 safe->operatingSystemDiagnostic.setToggleState(false, juce::dontSendNotification);
                 safe->screenshotDiagnostic.setToggleState(false, juce::dontSendNotification);

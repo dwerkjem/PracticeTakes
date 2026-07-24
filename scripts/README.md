@@ -15,4 +15,5 @@ example:
 ```bash
 ./scripts/build/build-and-run.sh
 ./scripts/feedback/migrate-feedback-database.sh --remote
+./scripts/feedback/run-recovery-drill.py
 ```

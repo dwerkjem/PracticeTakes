@@ -22,6 +22,16 @@ allowlist. Administrative responses always include `Cache-Control: no-store`.
 - `POST /v1/admin/submissions/batch-delete` deletes selected submissions in one request.
 - `GET /v1/admin/audit` lists administrator action receipts.
 - `GET /v1/admin/export?id=...` exports selected records as CSV.
+- `GET /v1/admin/operations` reports bounded 24-hour telemetry, storage, quarantine, delay, and
+  retention status.
+- `POST /v1/admin/maintenance/retention` runs the configured retention policy immediately.
+
+Hosted administration is disabled unless `ADMIN_ROUTES_ENABLED` is exactly `true`. Keep it false
+for `workers.dev` deployments and use the authenticated local Docker dashboard. Enable it only
+after Cloudflare Access protects every admin page, asset, and API path on the deployed hostname.
+
+`GET /v1/health` is a data-free availability probe. It verifies that the Worker can query D1 and
+returns no feedback, configuration, capacity, or account information.
 
 ## Feedback triage
 
@@ -146,6 +156,8 @@ Pass `--pull-source` to perform a fast-forward-only `git pull` before rebuilding
 8. Create a Cloudflare Access self-hosted application covering `/admin` and `/v1/admin/*` on that
    route. Its allow policy must contain the same people configured in `ADMIN_EMAILS`. Verify an
    unauthenticated request receives an Access login or denial before sharing the URL.
+9. Set `ADMIN_ROUTES_ENABLED` to `true`, deploy again, and verify the Worker rejects an identity
+   outside `ADMIN_EMAILS`. Leave this setting false when the public intake API uses `workers.dev`.
 
 `workers_dev` is disabled so deployment requires an intentional route. Cloudflare API credentials
 used for deployment should be scoped to this Worker and D1 database. The runtime receives only the
@@ -212,3 +224,76 @@ linking, and CSV export.
 
 Rate-limit defaults live in `wrangler.jsonc`. Cloudflare WAF rules may add an outer IP limit without
 changing the application protocol.
+
+## Operations, retention, and recovery
+
+The Worker aggregates authorization and submission outcomes into hourly buckets rather than
+retaining a request log. The private inbox displays the last 24 hours of availability, failures,
+rejections, response time, client-to-service delay, estimated storage, quarantined records, and the
+last retention run. Alert the developer when the health probe fails, any 5xx count is non-zero, the
+24-hour availability is below 99%, processing delay rises above five minutes, or storage reaches
+80% of either configured ceiling.
+
+The default hard ceilings are 5,000 feedback records, 500 MB of estimated feedback content, and 250
+records per installation. These are enforced in addition to request-size and hourly frequency
+limits, including service-wide caps of 5,000 authorization requests and 500 submissions per hour.
+Reports containing three or more external links or long repeated-character runs are stored with
+`needs_review` status and a quarantine reason. They remain visible only in the authenticated inbox
+and can be released there by clearing that reason.
+
+The daily scheduled retention job applies these defaults:
+
+| Data | Retention |
+| --- | ---: |
+| Declined feedback | 30 days |
+| Duplicate feedback | 90 days |
+| Resolved feedback | 365 days |
+| Hourly operational telemetry | 90 days |
+| Authorization and consumed-token rows | 2 days |
+| Administrative receipts and maintenance history | 730 days |
+| New, needs-review, planned, and quarantined feedback | Until triaged or manually deleted |
+
+Override the feedback and telemetry periods with the `*_RETENTION_DAYS` Worker variables. Manual
+deletion is available per record or in batches and leaves a minimal administrative receipt with the
+record identifier and title. Selected records can be exported as CSV from the inbox before deletion.
+
+For a complete D1 backup, use a date-stamped SQL export and retain it in encrypted storage outside
+the repository:
+
+```bash
+npx wrangler d1 export practice-takes-feedback --remote \
+  --output "practice-takes-feedback-$(date -u +%Y%m%dT%H%M%SZ).sql"
+```
+
+Recovery must first target a separate staging database. Apply the migrations, import the export,
+run `PRAGMA integrity_check`, compare record counts and several receipt IDs, and only then schedule
+a production restore window:
+
+```bash
+npx wrangler d1 migrations apply practice-takes-feedback-recovery --remote
+npx wrangler d1 execute practice-takes-feedback-recovery --remote --file backup.sql
+npx wrangler d1 execute practice-takes-feedback-recovery --remote \
+  --command "PRAGMA integrity_check; SELECT COUNT(*) FROM feedback_submissions;"
+```
+
+The repository includes a credential-free local drill that applies every migration, backs up a
+fixture database, restores it, and verifies integrity and content:
+
+```bash
+./scripts/feedback/run-recovery-drill.py
+```
+
+The local drill passed on 2026-07-23 after migration `0006_operations.sql` was added. Run it again
+after schema changes and perform a staging D1 restore at least quarterly.
+
+## Credential rotation
+
+No runtime or deployment credential belongs in source control. The signing key is a Wrangler
+secret; Cloudflare Access and the administrator allowlist protect the inbox; the optional dashboard
+container reads its scoped D1 token and login from the ignored mode-`0600` `.env` file.
+
+Rotate `SUBMISSION_SIGNING_KEY` with `wrangler secret put` at least every 90 days and immediately
+after suspected exposure. Existing five-minute authorizations naturally expire after rotation.
+Rotate the dashboard D1 token and password independently, update the host secret file, restart the
+container, verify the operations endpoint, and revoke the previous credentials. Deployment tokens
+should be limited to the Worker and its D1 database.

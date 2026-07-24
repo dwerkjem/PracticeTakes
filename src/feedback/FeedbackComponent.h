@@ -14,11 +14,13 @@ class FeedbackComponent final : public juce::Component, private juce::Thread
         failed
     };
 
-    explicit FeedbackComponent(juce::PropertiesFile& propertiesFile);
+    explicit FeedbackComponent(juce::PropertiesFile& propertiesFile,
+                               const juce::String& initialContext = {});
     ~FeedbackComponent() override;
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
+    void setContextTag(const juce::String& toolOrWorkflowName);
 
   private:
     struct Draft
@@ -28,6 +30,7 @@ class FeedbackComponent final : public juce::Component, private juce::Thread
         juce::String description;
         juce::String reproductionSteps;
         juce::String contactEmail;
+        juce::String contextTag;
         bool includeVersion = false;
         bool includeOperatingSystem = false;
         bool includeScreenshot = false;
@@ -60,6 +63,8 @@ class FeedbackComponent final : public juce::Component, private juce::Thread
     juce::TextEditor reproductionEditor;
     juce::Label emailLabel;
     juce::TextEditor emailEditor;
+    juce::Label contextLabel;
+    juce::TextEditor contextEditor;
     juce::Label environmentLabel;
     juce::ToggleButton versionDiagnostic{"Application version"};
     juce::ToggleButton operatingSystemDiagnostic{"Operating system"};

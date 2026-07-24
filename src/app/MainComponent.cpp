@@ -1,5 +1,6 @@
 #include "MainComponent.h"
 
+#include "../feedback/FeedbackInvitationPolicy.h"
 #include "../spectrogram/SpectrogramComponent.h"
 #include "../tuner/TunerComponent.h"
 
@@ -18,6 +19,7 @@ constexpr int microphoneWarningHeight = 118;
 constexpr int tunerMenuItemId = 1;
 constexpr int spectrogramMenuItemId = 2;
 constexpr int sendFeedbackMenuItemId = 1;
+constexpr int feedbackInvitationsMenuItemId = 2;
 constexpr int openSettingsMenuItemId = 1;
 constexpr int lightSettingsMenuItemId = 2;
 constexpr int darkSettingsMenuItemId = 3;
@@ -33,6 +35,9 @@ constexpr auto tunerDurationKey = "tuner.graphDuration";
 constexpr auto tunerBoundsKey = "layout.tuner";
 constexpr auto spectrogramBoundsKey = "layout.spectrogram";
 constexpr auto settingsBoundsKey = "layout.settings";
+constexpr auto feedbackSuccessfulUsesKey = "feedback.successfulToolUses";
+constexpr auto feedbackInvitationShownKey = "feedback.invitationShown";
+constexpr auto feedbackInvitationsDisabledKey = "feedback.invitationsDisabled";
 
 } // namespace
 
@@ -203,21 +208,31 @@ void MainComponent::showHelpMenu()
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
     menu.addItem(sendFeedbackMenuItemId, "Send feedback");
+    menu.addSeparator();
+    menu.addItem(feedbackInvitationsMenuItemId, feedbackInvitationsDisabled()
+                                                    ? "Enable feedback invitations"
+                                                    : "Disable feedback invitations");
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(
         juce::PopupMenu::Options().withTargetComponent(&helpButton).withMinimumWidth(helpMenuWidth),
         [safeThis](int selectedItemId)
         {
-            if (safeThis != nullptr && selectedItemId == sendFeedbackMenuItemId)
+            if (safeThis == nullptr)
+                return;
+            if (selectedItemId == sendFeedbackMenuItemId)
                 safeThis->showFeedback();
+            else if (selectedItemId == feedbackInvitationsMenuItemId)
+                safeThis->setFeedbackInvitationsDisabled(!safeThis->feedbackInvitationsDisabled());
         });
 }
 
-void MainComponent::showFeedback()
+void MainComponent::showFeedback(const juce::String& context)
 {
     if (feedbackWindow != nullptr)
     {
+        if (context.isNotEmpty())
+            feedbackWindow->setContextTag(context);
         feedbackWindow->setVisible(true);
         feedbackWindow->toFront(true);
         return;
@@ -228,7 +243,7 @@ void MainComponent::showFeedback()
         return;
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
-    feedbackWindow = std::make_unique<FeedbackWindow>(*settingsFile,
+    feedbackWindow = std::make_unique<FeedbackWindow>(*settingsFile, context,
                                                       [safeThis]
                                                       {
                                                           if (safeThis != nullptr)
@@ -278,22 +293,94 @@ void MainComponent::openTool(ToolType tool)
 
 void MainComponent::closeTool(ToolType tool)
 {
-    windowFor(tool).reset();
+    auto& window = windowFor(tool);
+    const auto wasOpen = window != nullptr;
+    window.reset();
+    if (wasOpen)
+        recordSuccessfulToolUse();
 }
 
 std::unique_ptr<juce::Component> MainComponent::createToolComponent(ToolType tool)
 {
     if (tool == ToolType::tuner)
     {
-        auto tuner = std::make_unique<TunerComponent>(audioInputService);
+        auto tuner = std::make_unique<TunerComponent>(audioInputService, [this]
+                                                      { showFeedback(toolName(ToolType::tuner)); });
         tuner->applySettings(savedTunerSettings);
         tuner->setTheme(currentTheme);
         return tuner;
     }
 
-    auto spectrogram = std::make_unique<SpectrogramComponent>(audioInputService);
+    auto spectrogram = std::make_unique<SpectrogramComponent>(
+        audioInputService, [this] { showFeedback(toolName(ToolType::spectrogram)); });
     spectrogram->setTheme(currentTheme);
     return spectrogram;
+}
+
+void MainComponent::recordSuccessfulToolUse()
+{
+    auto* settingsFile = applicationProperties.getUserSettings();
+    if (settingsFile == nullptr)
+        return;
+
+    const auto uses = settingsFile->getIntValue(feedbackSuccessfulUsesKey, 0) + 1;
+    settingsFile->setValue(feedbackSuccessfulUsesKey, uses);
+    settingsFile->saveIfNeeded();
+    maybeOfferFeedbackInvitation();
+}
+
+void MainComponent::maybeOfferFeedbackInvitation()
+{
+    auto* settingsFile = applicationProperties.getUserSettings();
+    if (settingsFile == nullptr)
+        return;
+
+    const FeedbackInvitationPolicy::State state{
+        settingsFile->getIntValue(feedbackSuccessfulUsesKey, 0),
+        settingsFile->getBoolValue(feedbackInvitationShownKey, false),
+        settingsFile->getBoolValue(feedbackInvitationsDisabledKey, false)};
+    const auto isLiveSessionActive = tunerWindow != nullptr || spectrogramWindow != nullptr;
+    if (!FeedbackInvitationPolicy::shouldInvite(state, isLiveSessionActive))
+        return;
+
+    // Mark the one-time invitation before displaying it so closing the dialog
+    // is also respected and never causes a repeated interruption.
+    settingsFile->setValue(feedbackInvitationShownKey, true);
+    settingsFile->saveIfNeeded();
+
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    juce::AlertWindow::showYesNoCancelBox(
+        juce::MessageBoxIconType::QuestionIcon, "Help improve Practice Takes",
+        "Would you like to share feedback about the tools you have tried?", "Give feedback",
+        "Not now", "Never ask again", nullptr,
+        juce::ModalCallbackFunction::create(
+            [safeThis](int result)
+            {
+                if (safeThis == nullptr)
+                    return;
+                if (result == 1)
+                    safeThis->showFeedback("Early tester experience");
+                else if (result == 0)
+                    safeThis->setFeedbackInvitationsDisabled(true);
+            }));
+}
+
+void MainComponent::setFeedbackInvitationsDisabled(bool disabled)
+{
+    if (auto* settingsFile = applicationProperties.getUserSettings())
+    {
+        settingsFile->setValue(feedbackInvitationsDisabledKey, disabled);
+        if (!disabled)
+            settingsFile->setValue(feedbackInvitationShownKey, false);
+        settingsFile->saveIfNeeded();
+    }
+}
+
+bool MainComponent::feedbackInvitationsDisabled()
+{
+    if (auto* settingsFile = applicationProperties.getUserSettings())
+        return settingsFile->getBoolValue(feedbackInvitationsDisabledKey, false);
+    return false;
 }
 
 juce::String MainComponent::toolName(ToolType tool) const
