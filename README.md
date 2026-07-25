@@ -55,7 +55,8 @@ Automated packages are built for:
 Published versions, when available, are provided through GitHub Releases as
 native installers:
 
-- Debian/Ubuntu `.deb` packages that install runtime dependencies through APT
+- Debian 12+ and compatible Ubuntu `.deb` packages that install runtime
+  dependencies through APT
   and add Practice Takes to the desktop Applications menu
 - Windows `.exe` installers that bundle the required runtime libraries and add
   Practice Takes to the Start Menu

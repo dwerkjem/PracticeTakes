@@ -50,7 +50,11 @@ jobs:
             arch: arm64
             run_tests: false
     runs-on: ${{ matrix.runner }}
-    container: debian:13
+    # Build on the oldest supported Linux release. Dynamically linked binaries
+    # inherit the build system's glibc, libstdc++, and library package names, so
+    # using a newer Debian release makes the resulting .deb uninstallable on
+    # Debian 12 (for example, by requiring the newer t64 library packages).
+    container: debian:12
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
 
@@ -145,6 +149,10 @@ jobs:
           dpkg-deb --contents "${package_path}" | grep -F "./usr/bin/PracticeTakes"
           dpkg-deb --contents "${package_path}" | \
             grep -F "./usr/share/applications/org.derekrneilson.practicetakes.desktop"
+
+          # Exercise the same local-package APT path users follow. This catches
+          # dependency metadata that cannot be satisfied on the support baseline.
+          apt-get install --yes "./${package_path}"
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
@@ -383,10 +391,102 @@ jobs:
           retention-days: 14
           compression-level: 0
 
+  linux-compatibility:
+    name: Install Linux ${{ matrix.arch }} package on ${{ matrix.name }}
+    needs:
+      - linux
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x64
+            dpkg_arch: amd64
+            name: Debian 12
+            container: debian:12
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            dpkg_arch: arm64
+            name: Debian 12
+            container: debian:12
+          - runner: ubuntu-24.04
+            arch: x64
+            dpkg_arch: amd64
+            name: Debian 13
+            container: debian:13
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            dpkg_arch: arm64
+            name: Debian 13
+            container: debian:13
+          - runner: ubuntu-24.04
+            arch: x64
+            dpkg_arch: amd64
+            name: Ubuntu 22.04
+            container: ubuntu:22.04
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            dpkg_arch: arm64
+            name: Ubuntu 22.04
+            container: ubuntu:22.04
+          - runner: ubuntu-24.04
+            arch: x64
+            dpkg_arch: amd64
+            name: Ubuntu 24.04
+            container: ubuntu:24.04
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            dpkg_arch: arm64
+            name: Ubuntu 24.04
+            container: ubuntu:24.04
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
+
+    steps:
+      - name: Bootstrap package test
+        run: |
+          apt-get update
+          apt-get install --yes ca-certificates
+
+      - name: Download Linux package
+        uses: actions/download-artifact@v5
+        with:
+          pattern: PracticeTakes-*-linux-${{ matrix.arch }}
+          path: dist
+          merge-multiple: true
+
+      - name: Install and verify Linux package
+        shell: bash
+        run: |
+          mapfile -t packages < <(find dist -maxdepth 1 -type f -name '*.deb')
+
+          if [[ "${#packages[@]}" -ne 1 ]]; then
+            echo "Expected exactly one .deb, found ${#packages[@]}." >&2
+            exit 1
+          fi
+
+          package_path="${packages[0]}"
+          actual_architecture="$(dpkg-deb --field "${package_path}" Architecture)"
+
+          if [[ "${actual_architecture}" != "${{ matrix.dpkg_arch }}" ]]; then
+            echo "Expected ${{ matrix.dpkg_arch }} package, got ${actual_architecture}." >&2
+            exit 1
+          fi
+
+          apt-get install --yes --no-install-recommends "./${package_path}"
+          dpkg-query --show --showformat='${Status}\n' practice-takes | \
+            grep -Fx "install ok installed"
+
+          if ldd /usr/bin/PracticeTakes | grep -F "not found"; then
+            echo "Practice Takes has unresolved shared-library dependencies." >&2
+            exit 1
+          fi
+
   release-assets:
     name: Assemble release artifact bundle
     needs:
       - linux
+      - linux-compatibility
       - windows
       - macos
     runs-on: ubuntu-24.04

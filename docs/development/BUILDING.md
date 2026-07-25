@@ -115,11 +115,17 @@ appearance.
 
 The shared build workflow creates a native installer for each architecture:
 
-- CPack's DEB generator creates Debian `.deb` packages on Debian 13. It runs
+- CPack's DEB generator creates Debian `.deb` packages on Debian 12, the oldest
+  supported Linux release. Building on that compatibility baseline prevents the
+  package from inheriting newer glibc, libstdc++, or `t64` package requirements.
+  It runs
   `dpkg-shlibdeps` against the finished executable so the package's `Depends`
   field is derived from the libraries that binary actually uses. The package
   also installs the desktop entry under `/usr/share/applications`. The package
-  can be installed by Debian and compatible Ubuntu releases through APT.
+  is installed inside the build container, then tested again on Debian 12,
+  Debian 13, Ubuntu 22.04, and Ubuntu 24.04 for both x64 and ARM64. These checks
+  verify APT dependency resolution and ensure every linked runtime library is
+  present.
 - CPack's NSIS generator creates Windows `.exe` installers. CMake includes the
   required MSVC runtime libraries, and the installer creates a Practice Takes
   Start Menu shortcut.
