@@ -1,5 +1,6 @@
 #include "../../MainComponent.h"
 
+#include "../../../../features/analysis/harmonics/HarmonicAnalyzerComponent.h"
 #include "../../../../features/analysis/spectrogram/SpectrogramComponent.h"
 #include "../../../../features/analysis/tuner/TunerComponent.h"
 #include "DockedToolPanel.h"
@@ -79,7 +80,9 @@ void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation 
             toolName(tool), *component, preferredToolWindowSize(tool), dragHandler, dockHandler,
             feedbackHandler, closeHandler);
         const auto savedBounds =
-            tool == ToolType::tuner ? savedTunerBounds : savedSpectrogramBounds;
+            tool == ToolType::tuner
+                ? savedTunerBounds
+                : (tool == ToolType::spectrogram ? savedSpectrogramBounds : savedHarmonicBounds);
         if (!savedBounds.isEmpty())
             window->setBounds(savedBounds);
     }
@@ -111,8 +114,10 @@ void MainComponent::closeTool(ToolType tool)
     {
         if (tool == ToolType::tuner)
             savedTunerBounds = window->getBounds();
-        else
+        else if (tool == ToolType::spectrogram)
             savedSpectrogramBounds = window->getBounds();
+        else
+            savedHarmonicBounds = window->getBounds();
     }
     if (auto* tuner = dynamic_cast<TunerComponent*>(componentFor(tool).get()))
         savedTunerSettings = tuner->settings();
@@ -134,19 +139,30 @@ std::unique_ptr<juce::Component> MainComponent::createToolComponent(ToolType too
         return tuner;
     }
 
-    auto spectrogram = std::make_unique<SpectrogramComponent>(audioInputService);
-    spectrogram->setTheme(currentTheme);
-    return spectrogram;
+    if (tool == ToolType::spectrogram)
+    {
+        auto spectrogram = std::make_unique<SpectrogramComponent>(audioInputService);
+        spectrogram->setTheme(currentTheme);
+        return spectrogram;
+    }
+
+    auto harmonics = std::make_unique<HarmonicAnalyzerComponent>(audioInputService);
+    harmonics->setTheme(currentTheme);
+    return harmonics;
 }
 
 juce::String MainComponent::toolName(ToolType tool) const
 {
-    return tool == ToolType::tuner ? "Tuner" : "Spectrogram";
+    if (tool == ToolType::tuner)
+        return "Tuner";
+    return tool == ToolType::spectrogram ? "Spectrogram" : "Harmonic Analyzer";
 }
 
 juce::Point<int> MainComponent::preferredToolWindowSize(ToolType tool) const
 {
-    return tool == ToolType::tuner ? juce::Point<int>{920, 760} : juce::Point<int>{980, 650};
+    if (tool == ToolType::tuner)
+        return {920, 760};
+    return tool == ToolType::spectrogram ? juce::Point<int>{980, 650} : juce::Point<int>{980, 700};
 }
 
 bool MainComponent::toolIsOpen(ToolType tool) const
@@ -156,27 +172,37 @@ bool MainComponent::toolIsOpen(ToolType tool) const
 
 WorkspaceToolState& MainComponent::stateFor(ToolType tool)
 {
-    return tool == ToolType::tuner ? tunerState : spectrogramState;
+    if (tool == ToolType::tuner)
+        return tunerState;
+    return tool == ToolType::spectrogram ? spectrogramState : harmonicState;
 }
 
 const WorkspaceToolState& MainComponent::stateFor(ToolType tool) const
 {
-    return tool == ToolType::tuner ? tunerState : spectrogramState;
+    if (tool == ToolType::tuner)
+        return tunerState;
+    return tool == ToolType::spectrogram ? spectrogramState : harmonicState;
 }
 
 std::unique_ptr<juce::Component>& MainComponent::componentFor(ToolType tool)
 {
-    return tool == ToolType::tuner ? tunerComponent : spectrogramComponent;
+    if (tool == ToolType::tuner)
+        return tunerComponent;
+    return tool == ToolType::spectrogram ? spectrogramComponent : harmonicComponent;
 }
 
 std::unique_ptr<MainComponent::ToolWindow>& MainComponent::windowFor(ToolType tool)
 {
-    return tool == ToolType::tuner ? tunerWindow : spectrogramWindow;
+    if (tool == ToolType::tuner)
+        return tunerWindow;
+    return tool == ToolType::spectrogram ? spectrogramWindow : harmonicWindow;
 }
 
 std::unique_ptr<MainComponent::DockedToolPanel>& MainComponent::dockFor(ToolType tool)
 {
-    return tool == ToolType::tuner ? tunerDock : spectrogramDock;
+    if (tool == ToolType::tuner)
+        return tunerDock;
+    return tool == ToolType::spectrogram ? spectrogramDock : harmonicDock;
 }
 
 void MainComponent::detachToolPresentation(ToolType tool)
@@ -185,8 +211,10 @@ void MainComponent::detachToolPresentation(ToolType tool)
     {
         if (tool == ToolType::tuner)
             savedTunerBounds = window->getBounds();
-        else
+        else if (tool == ToolType::spectrogram)
             savedSpectrogramBounds = window->getBounds();
+        else
+            savedHarmonicBounds = window->getBounds();
         window->releaseContent();
         window.reset();
     }
@@ -223,4 +251,6 @@ void MainComponent::applyAppearanceToTool(ToolType tool)
         tuner->setTheme(currentTheme);
     if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(componentFor(tool).get()))
         spectrogram->setTheme(currentTheme);
+    if (auto* harmonics = dynamic_cast<HarmonicAnalyzerComponent*>(componentFor(tool).get()))
+        harmonics->setTheme(currentTheme);
 }

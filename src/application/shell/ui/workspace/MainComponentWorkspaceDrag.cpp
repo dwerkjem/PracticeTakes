@@ -4,6 +4,7 @@ namespace
 {
 constexpr auto tunerDragDescription = "workspace-tool:tuner";
 constexpr auto spectrogramDragDescription = "workspace-tool:spectrogram";
+constexpr auto harmonicDragDescription = "workspace-tool:harmonics";
 
 [[nodiscard]] juce::Rectangle<int>
 dropZoneBounds(WorkspaceLayoutState::DropZone zone, juce::Rectangle<int> workspace)
@@ -62,7 +63,10 @@ void MainComponent::beginToolDrag(ToolType tool, juce::Component& source)
 {
     activeDropZone = WorkspaceLayoutState::DropZone::none;
     const auto description =
-        tool == ToolType::tuner ? tunerDragDescription : spectrogramDragDescription;
+        tool == ToolType::tuner
+            ? tunerDragDescription
+            : (tool == ToolType::spectrogram ? spectrogramDragDescription
+                                             : harmonicDragDescription);
     startDragging(description, &source, juce::ScaledImage(), true);
 }
 
@@ -74,6 +78,8 @@ MainComponent::draggedTool(const juce::DragAndDropTarget::SourceDetails& details
         return ToolType::tuner;
     if (description == spectrogramDragDescription)
         return ToolType::spectrogram;
+    if (description == harmonicDragDescription)
+        return ToolType::harmonics;
     return std::nullopt;
 }
 
@@ -120,6 +126,16 @@ void MainComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& de
     repaint();
     if (!tool.has_value() || zone == WorkspaceLayoutState::DropZone::none)
         return;
+
+    if (*tool == ToolType::harmonics)
+    {
+        presentTool(
+            *tool, zone == WorkspaceLayoutState::DropZone::floating
+                       ? WorkspaceToolState::Presentation::floating
+                       : WorkspaceToolState::Presentation::docked);
+        rebuildWorkspaceContainer();
+        return;
+    }
 
     const auto other = *tool == ToolType::tuner ? ToolType::spectrogram : ToolType::tuner;
     const auto otherIsDocked =

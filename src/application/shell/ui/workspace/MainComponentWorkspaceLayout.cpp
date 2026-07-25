@@ -16,6 +16,8 @@ void MainComponent::setWorkspaceLayout(WorkspaceLayoutState::Layout layout)
         presentTool(ToolType::tuner, WorkspaceToolState::Presentation::docked);
     if (spectrogramState.isOpen())
         presentTool(ToolType::spectrogram, WorkspaceToolState::Presentation::docked);
+    if (harmonicState.isOpen())
+        presentTool(ToolType::harmonics, WorkspaceToolState::Presentation::docked);
     rebuildWorkspaceContainer();
 }
 
@@ -35,7 +37,7 @@ void MainComponent::rebuildWorkspaceContainer()
         workspaceDivider.reset();
     }
 
-    for (auto* dock : {tunerDock.get(), spectrogramDock.get()})
+    for (auto* dock : {tunerDock.get(), spectrogramDock.get(), harmonicDock.get()})
     {
         if (dock != nullptr && dock->getParentComponent() == this)
             removeChildComponent(dock);
@@ -47,14 +49,20 @@ void MainComponent::rebuildWorkspaceContainer()
     const auto spectrogramIsDocked =
         spectrogramState.presentation() == WorkspaceToolState::Presentation::docked &&
         spectrogramDock != nullptr;
-    if (!tunerIsDocked && !spectrogramIsDocked)
+    const auto harmonicIsDocked =
+        harmonicState.presentation() == WorkspaceToolState::Presentation::docked &&
+        harmonicDock != nullptr;
+    const auto dockedCount =
+        static_cast<int>(tunerIsDocked) + static_cast<int>(spectrogramIsDocked) +
+        static_cast<int>(harmonicIsDocked);
+    if (dockedCount == 0)
     {
         resized();
         return;
     }
 
-    if (tunerIsDocked && spectrogramIsDocked &&
-        workspaceLayoutState.layout() == WorkspaceLayoutState::Layout::tabbed)
+    if (dockedCount > 1 &&
+        (harmonicIsDocked || workspaceLayoutState.layout() == WorkspaceLayoutState::Layout::tabbed))
     {
         workspaceTabs = std::make_unique<juce::TabbedComponent>(juce::TabbedButtonBar::TabsAtTop);
         workspaceTabs->setTabBarDepth(38);
@@ -66,11 +74,18 @@ void MainComponent::rebuildWorkspaceContainer()
             auto* dock = dockFor(tool).get();
             workspaceTabs->addTab(toolName(tool), appPaletteFor(currentTheme).panel, dock, false);
         };
-        const auto first = toolType(workspaceLayoutState.first());
-        addTab(first);
-        addTab(first == ToolType::tuner ? ToolType::spectrogram : ToolType::tuner);
-        workspaceTabs->setCurrentTabIndex(
-            workspaceLayoutState.active() == workspaceLayoutState.first() ? 0 : 1);
+        int activeIndex = 0;
+        int nextIndex = 0;
+        for (const auto tool : {ToolType::tuner, ToolType::spectrogram, ToolType::harmonics})
+        {
+            if (stateFor(tool).presentation() != WorkspaceToolState::Presentation::docked)
+                continue;
+            if (tool == currentTool)
+                activeIndex = nextIndex;
+            addTab(tool);
+            ++nextIndex;
+        }
+        workspaceTabs->setCurrentTabIndex(activeIndex);
     }
     else
     {
@@ -78,6 +93,8 @@ void MainComponent::rebuildWorkspaceContainer()
             addAndMakeVisible(*tunerDock);
         if (spectrogramIsDocked)
             addAndMakeVisible(*spectrogramDock);
+        if (harmonicIsDocked)
+            addAndMakeVisible(*harmonicDock);
 
         if (tunerIsDocked && spectrogramIsDocked)
         {
@@ -112,6 +129,9 @@ void MainComponent::layoutWorkspace(juce::Rectangle<int> bounds)
     const auto spectrogramIsDocked =
         spectrogramState.presentation() == WorkspaceToolState::Presentation::docked &&
         spectrogramDock != nullptr;
+    const auto harmonicIsDocked =
+        harmonicState.presentation() == WorkspaceToolState::Presentation::docked &&
+        harmonicDock != nullptr;
     if (tunerIsDocked && spectrogramIsDocked && workspaceDivider != nullptr)
     {
         auto* firstDock = dockFor(toolType(workspaceLayoutState.first())).get();
@@ -129,6 +149,10 @@ void MainComponent::layoutWorkspace(juce::Rectangle<int> bounds)
     else if (spectrogramIsDocked)
     {
         spectrogramDock->setBounds(bounds);
+    }
+    else if (harmonicIsDocked)
+    {
+        harmonicDock->setBounds(bounds);
     }
 }
 

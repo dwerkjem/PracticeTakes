@@ -41,7 +41,8 @@ class MainComponent final
     enum class ToolType
     {
         tuner,
-        spectrogram
+        spectrogram,
+        harmonics
     };
 
     class ToolWindow;
@@ -134,12 +135,15 @@ class MainComponent final
 
     std::unique_ptr<ToolWindow> tunerWindow;
     std::unique_ptr<ToolWindow> spectrogramWindow;
+    std::unique_ptr<ToolWindow> harmonicWindow;
     std::unique_ptr<DockedToolPanel> tunerDock;
     std::unique_ptr<DockedToolPanel> spectrogramDock;
+    std::unique_ptr<DockedToolPanel> harmonicDock;
     std::unique_ptr<juce::TabbedComponent> workspaceTabs;
     std::unique_ptr<juce::StretchableLayoutResizerBar> workspaceDivider;
     std::unique_ptr<juce::Component> tunerComponent;
     std::unique_ptr<juce::Component> spectrogramComponent;
+    std::unique_ptr<juce::Component> harmonicComponent;
     std::unique_ptr<SettingsWindow> settingsWindow;
     std::unique_ptr<FeedbackWindow> feedbackWindow;
     std::unique_ptr<MicrophoneWarning> microphoneWarning;
@@ -148,6 +152,7 @@ class MainComponent final
     ToolType currentTool = ToolType::tuner;
     WorkspaceToolState tunerState;
     WorkspaceToolState spectrogramState;
+    WorkspaceToolState harmonicState;
     WorkspaceLayoutState workspaceLayoutState;
     juce::StretchableLayoutManager workspaceLayoutManager;
     WorkspaceLayoutState::DropZone activeDropZone = WorkspaceLayoutState::DropZone::none;
@@ -155,6 +160,7 @@ class MainComponent final
     AppSettings::FullscreenMode selectedFullscreenMode = AppSettings::FullscreenMode::normal;
     juce::Rectangle<int> savedTunerBounds;
     juce::Rectangle<int> savedSpectrogramBounds;
+    juce::Rectangle<int> savedHarmonicBounds;
     juce::Rectangle<int> savedSettingsBounds;
     bool isMicrophoneWarningDismissed = false;
     bool automaticSettingsSaveEnabled = true;

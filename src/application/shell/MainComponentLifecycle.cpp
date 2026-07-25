@@ -47,9 +47,12 @@ MainComponent::~MainComponent()
     workspaceDivider.reset();
     tunerDock.reset();
     spectrogramDock.reset();
+    harmonicDock.reset();
+    harmonicWindow.reset();
     spectrogramWindow.reset();
     tunerWindow.reset();
     spectrogramComponent.reset();
+    harmonicComponent.reset();
     tunerComponent.reset();
     microphoneWarning.reset();
     applicationProperties.closeFiles();

@@ -43,6 +43,7 @@ TEST_CASE("normal settings survive an atomic file round trip", "[settings][persi
     expected.tuner = {3, 0.4, 8.0, 0.7, 6.0, 25.0};
     expected.tunerBounds = "10 20 920 760";
     expected.spectrogramBounds = "30 40 980 650";
+    expected.harmonicBounds = "40 50 980 700";
     expected.settingsBounds = "50 60 900 760";
     expected.recentTool = AppSettings::RecentTool::spectrogram;
     expected.fullscreenMode = AppSettings::FullscreenMode::kiosk;
@@ -73,6 +74,7 @@ TEST_CASE("normal settings survive an atomic file round trip", "[settings][persi
         Catch::Approx(expected.tuner.graphDurationSeconds));
     CHECK(loaded.state.tunerBounds == expected.tunerBounds);
     CHECK(loaded.state.spectrogramBounds == expected.spectrogramBounds);
+    CHECK(loaded.state.harmonicBounds == expected.harmonicBounds);
     CHECK(loaded.state.settingsBounds == expected.settingsBounds);
     CHECK(loaded.state.recentTool == expected.recentTool);
     CHECK(loaded.state.fullscreenMode == expected.fullscreenMode);

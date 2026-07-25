@@ -1,5 +1,6 @@
 #include "../../MainComponent.h"
 
+#include "../../../../features/analysis/harmonics/HarmonicAnalyzerComponent.h"
 #include "../../../../features/analysis/spectrogram/SpectrogramComponent.h"
 #include "../../../../features/analysis/tuner/TunerComponent.h"
 #include "../workspace/ToolWindow.h"
@@ -162,6 +163,8 @@ void MainComponent::resetCurrentTool()
         tuner->resetToDefaults();
     else if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(component.get()))
         spectrogram->resetToDefaults();
+    else if (auto* harmonics = dynamic_cast<HarmonicAnalyzerComponent*>(component.get()))
+        harmonics->resetToDefaults();
 }
 
 void MainComponent::resetAudio()
@@ -181,6 +184,8 @@ void MainComponent::resetLayout()
         tunerWindow->centreWithSize(920, 760);
     if (spectrogramState.presentation() == WorkspaceToolState::Presentation::floating)
         spectrogramWindow->centreWithSize(980, 650);
+    if (harmonicState.presentation() == WorkspaceToolState::Presentation::floating)
+        harmonicWindow->centreWithSize(980, 700);
     if (settingsWindow != nullptr)
         settingsWindow->centreWithSize(900, 760);
 }
@@ -197,6 +202,8 @@ void MainComponent::resetAll()
         tuner->resetToDefaults();
     if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(spectrogramComponent.get()))
         spectrogram->resetToDefaults();
+    if (auto* harmonics = dynamic_cast<HarmonicAnalyzerComponent*>(harmonicComponent.get()))
+        harmonics->resetToDefaults();
     resetLayout();
 }
 
@@ -216,6 +223,8 @@ AppSettings::State MainComponent::captureSettingsState()
         savedTunerSettings = tuner->settings();
     if (spectrogramWindow != nullptr)
         savedSpectrogramBounds = spectrogramWindow->getBounds();
+    if (harmonicWindow != nullptr)
+        savedHarmonicBounds = harmonicWindow->getBounds();
     if (settingsWindow != nullptr)
         savedSettingsBounds = settingsWindow->getBounds();
 
@@ -226,9 +235,14 @@ AppSettings::State MainComponent::captureSettingsState()
     state.tuner = savedTunerSettings;
     state.tunerBounds = savedTunerBounds.toString();
     state.spectrogramBounds = savedSpectrogramBounds.toString();
+    state.harmonicBounds = savedHarmonicBounds.toString();
     state.settingsBounds = savedSettingsBounds.toString();
-    state.recentTool = currentTool == ToolType::tuner ? AppSettings::RecentTool::tuner
-                                                      : AppSettings::RecentTool::spectrogram;
+    if (currentTool == ToolType::tuner)
+        state.recentTool = AppSettings::RecentTool::tuner;
+    else if (currentTool == ToolType::spectrogram)
+        state.recentTool = AppSettings::RecentTool::spectrogram;
+    else
+        state.recentTool = AppSettings::RecentTool::harmonics;
     state.fullscreenMode = selectedFullscreenMode;
     if (const auto audioState = audioInputService.createDeviceState())
         state.audioDeviceState = audioState->toString();
@@ -265,9 +279,12 @@ void MainComponent::loadSettings()
     audioInputService.setMuted(loaded.state.microphoneMuted);
     audioInputService.setInputGain(static_cast<float>(loaded.state.inputGain));
     savedTunerSettings = loaded.state.tuner;
-    currentTool = loaded.state.recentTool == AppSettings::RecentTool::spectrogram
-                      ? ToolType::spectrogram
-                      : ToolType::tuner;
+    if (loaded.state.recentTool == AppSettings::RecentTool::spectrogram)
+        currentTool = ToolType::spectrogram;
+    else if (loaded.state.recentTool == AppSettings::RecentTool::harmonics)
+        currentTool = ToolType::harmonics;
+    else
+        currentTool = ToolType::tuner;
     selectedFullscreenMode = loaded.state.fullscreenMode;
 
     if (const auto xml = juce::parseXML(loaded.state.audioDeviceState); xml != nullptr)
@@ -275,6 +292,7 @@ void MainComponent::loadSettings()
 
     savedTunerBounds = validWindowBounds(loaded.state.tunerBounds);
     savedSpectrogramBounds = validWindowBounds(loaded.state.spectrogramBounds);
+    savedHarmonicBounds = validWindowBounds(loaded.state.harmonicBounds);
     savedSettingsBounds = validWindowBounds(loaded.state.settingsBounds);
 
     if (loaded.status == AppSettings::LoadStatus::recoveredFromCorruption)

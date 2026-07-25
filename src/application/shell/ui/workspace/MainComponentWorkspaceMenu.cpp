@@ -11,6 +11,10 @@ constexpr int closeTunerMenuItemId = 13;
 constexpr int dockSpectrogramMenuItemId = 21;
 constexpr int floatSpectrogramMenuItemId = 22;
 constexpr int closeSpectrogramMenuItemId = 23;
+constexpr int harmonicMenuItemId = 3;
+constexpr int dockHarmonicMenuItemId = 41;
+constexpr int floatHarmonicMenuItemId = 42;
+constexpr int closeHarmonicMenuItemId = 43;
 constexpr int horizontalLayoutMenuItemId = 31;
 constexpr int verticalLayoutMenuItemId = 32;
 constexpr int tabbedLayoutMenuItemId = 33;
@@ -48,6 +52,19 @@ void MainComponent::showToolsMenu()
     menu.setLookAndFeel(&appLookAndFeel);
     menu.addSubMenu("Tuner", tunerMenu);
     menu.addSubMenu("Spectrogram", spectrogramMenu);
+
+    const auto harmonicPresentation = harmonicState.presentation();
+    juce::PopupMenu harmonicMenu;
+    harmonicMenu.addItem(harmonicMenuItemId, "Open or focus", true, harmonicState.isOpen());
+    harmonicMenu.addItem(
+        dockHarmonicMenuItemId, "Dock in workspace", true,
+        harmonicPresentation == WorkspaceToolState::Presentation::docked);
+    harmonicMenu.addItem(
+        floatHarmonicMenuItemId, "Float in window", true,
+        harmonicPresentation == WorkspaceToolState::Presentation::floating);
+    harmonicMenu.addSeparator();
+    harmonicMenu.addItem(closeHarmonicMenuItemId, "Close", harmonicState.isOpen());
+    menu.addSubMenu("Harmonic Analyzer", harmonicMenu);
 
     const auto canArrange = tunerState.isOpen() && spectrogramState.isOpen();
     juce::PopupMenu layoutMenu;
@@ -91,6 +108,16 @@ void MainComponent::showToolsMenu()
                     ToolType::spectrogram, WorkspaceToolState::Presentation::floating);
             else if (selectedItemId == closeSpectrogramMenuItemId)
                 safeThis->closeTool(ToolType::spectrogram);
+            else if (selectedItemId == harmonicMenuItemId)
+                safeThis->openTool(ToolType::harmonics);
+            else if (selectedItemId == dockHarmonicMenuItemId)
+                safeThis->presentTool(
+                    ToolType::harmonics, WorkspaceToolState::Presentation::docked);
+            else if (selectedItemId == floatHarmonicMenuItemId)
+                safeThis->presentTool(
+                    ToolType::harmonics, WorkspaceToolState::Presentation::floating);
+            else if (selectedItemId == closeHarmonicMenuItemId)
+                safeThis->closeTool(ToolType::harmonics);
             else if (selectedItemId == horizontalLayoutMenuItemId)
                 safeThis->setWorkspaceLayout(WorkspaceLayoutState::Layout::horizontal);
             else if (selectedItemId == verticalLayoutMenuItemId)

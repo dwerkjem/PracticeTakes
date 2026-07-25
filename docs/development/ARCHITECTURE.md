@@ -86,6 +86,14 @@ open settings or tool window. Tool components also maintain their own small
 palette because their custom graphics are drawn directly rather than entirely
 through JUCE controls.
 
+The Harmonic Analyzer shares the same `AudioInputService` as the tuner and
+spectrogram. Each 4096-sample frame is pitch-tracked, transformed with a Hann
+window, and sampled around the first eight expected harmonics. Amplitudes are
+normalized to the strongest partial so weak fundamentals remain readable.
+Harmonic energy and peak alignment produce a confidence indicator; unpitched
+or noisy frames are shown as uncertain rather than assigned a timbre score.
+Spectral centroid is presented only as a descriptive brightness measure.
+
 ## Audio-thread boundary
 
 JUCE calls `AudioInputService::audioDeviceIOCallbackWithContext` on the

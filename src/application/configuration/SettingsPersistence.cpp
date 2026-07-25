@@ -17,14 +17,28 @@ constexpr auto tunerDropoutKey = "tuner.dropout";
 constexpr auto tunerDurationKey = "tuner.graphDuration";
 constexpr auto tunerBoundsKey = "layout.tuner";
 constexpr auto spectrogramBoundsKey = "layout.spectrogram";
+constexpr auto harmonicBoundsKey = "layout.harmonics";
 constexpr auto settingsBoundsKey = "layout.settings";
 constexpr auto recentToolKey = "layout.recentTool";
 constexpr auto fullscreenModeKey = "window.fullscreenMode";
 
 constexpr const char* ownedKeys[] = {
-    schemaKey,           themeKey,       microphoneMutedKey,   audioStateKey,     audioInputGainKey,
-    tunerDisplayModeKey, tunerEasingKey, tunerAveragingKey,    tunerThresholdKey, tunerDropoutKey,
-    tunerDurationKey,    tunerBoundsKey, spectrogramBoundsKey, settingsBoundsKey, recentToolKey,
+    schemaKey,
+    themeKey,
+    microphoneMutedKey,
+    audioStateKey,
+    audioInputGainKey,
+    tunerDisplayModeKey,
+    tunerEasingKey,
+    tunerAveragingKey,
+    tunerThresholdKey,
+    tunerDropoutKey,
+    tunerDurationKey,
+    tunerBoundsKey,
+    spectrogramBoundsKey,
+    harmonicBoundsKey,
+    settingsBoundsKey,
+    recentToolKey,
     fullscreenModeKey};
 
 [[nodiscard]] bool hasOwnedSettings(const juce::PropertySet& properties)
@@ -61,9 +75,11 @@ constexpr const char* ownedKeys[] = {
 {
     const auto value =
         properties.getIntValue(recentToolKey, static_cast<int>(AppSettings::RecentTool::tuner));
-    return value == static_cast<int>(AppSettings::RecentTool::spectrogram)
-               ? AppSettings::RecentTool::spectrogram
-               : AppSettings::RecentTool::tuner;
+    if (value == static_cast<int>(AppSettings::RecentTool::spectrogram))
+        return AppSettings::RecentTool::spectrogram;
+    if (value == static_cast<int>(AppSettings::RecentTool::harmonics))
+        return AppSettings::RecentTool::harmonics;
+    return AppSettings::RecentTool::tuner;
 }
 
 [[nodiscard]] AppSettings::FullscreenMode loadFullscreenMode(const juce::PropertySet& properties)
@@ -129,6 +145,7 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
             properties, tunerDurationKey, AppDefaults::Tuner::graphDurationSeconds, 5.0, 60.0)};
     result.state.tunerBounds = properties.getValue(tunerBoundsKey);
     result.state.spectrogramBounds = properties.getValue(spectrogramBoundsKey);
+    result.state.harmonicBounds = properties.getValue(harmonicBoundsKey);
     result.state.settingsBounds = properties.getValue(settingsBoundsKey);
     result.state.recentTool = loadRecentTool(properties);
     result.state.fullscreenMode = loadFullscreenMode(properties);
@@ -150,6 +167,7 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(tunerDurationKey, state.tuner.graphDurationSeconds);
     properties.setValue(tunerBoundsKey, state.tunerBounds);
     properties.setValue(spectrogramBoundsKey, state.spectrogramBounds);
+    properties.setValue(harmonicBoundsKey, state.harmonicBounds);
     properties.setValue(settingsBoundsKey, state.settingsBounds);
     properties.setValue(recentToolKey, static_cast<int>(state.recentTool));
     properties.setValue(fullscreenModeKey, static_cast<int>(state.fullscreenMode));

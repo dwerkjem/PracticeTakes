@@ -97,6 +97,8 @@ void MainComponent::applyAppearanceToOpenWindows()
         applyAppearanceToTool(ToolType::tuner);
     if (spectrogramState.isOpen())
         applyAppearanceToTool(ToolType::spectrogram);
+    if (harmonicState.isOpen())
+        applyAppearanceToTool(ToolType::harmonics);
     if (settingsWindow != nullptr)
         settingsWindow->applyAppearance(&appLookAndFeel, palette.background, currentTheme);
     if (feedbackWindow != nullptr)
