@@ -1,4 +1,4 @@
-#include "app/Theme.h"
+#include "Theme.h"
 
 AppPalette appPaletteFor(Theme theme)
 {

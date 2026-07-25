@@ -2,8 +2,8 @@
 
 #include <JuceHeader.h>
 
-#include "../app/Theme.h"
-#include "../audio/AudioInputService.h"
+#include "../../../application/theme/Theme.h"
+#include "../../../services/audio/AudioInputService.h"
 
 #include <array>
 #include <atomic>

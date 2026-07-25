@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../MainComponent.h"
+#include "../../MainComponent.h"
+#include "ToolDragHandle.h"
 
 #include <functional>
 #include <utility>
@@ -11,13 +12,15 @@ class MainComponent::DockedToolPanel final : public juce::Component
     DockedToolPanel(
         const juce::String& title,
         juce::Component& toolContent,
+        std::function<void(juce::Component&)> dragHandler,
         std::function<void()> floatHandler,
         std::function<void()> closeHandler)
-        : content(&toolContent)
+        : content(&toolContent), dragHandle(std::move(dragHandler))
     {
         titleLabel.setText(title, juce::dontSendNotification);
         titleLabel.setFont(juce::FontOptions(18.0f, juce::Font::bold));
         addAndMakeVisible(titleLabel);
+        addAndMakeVisible(dragHandle);
 
         floatButton.setButtonText("Float");
         floatButton.setTooltip("Move this tool to an independent window");
@@ -61,6 +64,8 @@ class MainComponent::DockedToolPanel final : public juce::Component
         closeButton.setBounds(header.removeFromRight(86));
         header.removeFromRight(6);
         floatButton.setBounds(header.removeFromRight(86));
+        header.removeFromRight(6);
+        dragHandle.setBounds(header.removeFromRight(72));
         titleLabel.setBounds(header);
         bounds.removeFromTop(6);
         if (content != nullptr)
@@ -70,6 +75,7 @@ class MainComponent::DockedToolPanel final : public juce::Component
   private:
     juce::Component* content;
     juce::Label titleLabel;
+    ToolDragHandle dragHandle;
     juce::TextButton floatButton;
     juce::TextButton closeButton;
 };

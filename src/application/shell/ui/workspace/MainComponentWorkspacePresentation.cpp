@@ -1,86 +1,9 @@
-#include "../MainComponent.h"
+#include "../../MainComponent.h"
 
-#include "../../spectrogram/SpectrogramComponent.h"
-#include "../../tuner/TunerComponent.h"
+#include "../../../../features/analysis/spectrogram/SpectrogramComponent.h"
+#include "../../../../features/analysis/tuner/TunerComponent.h"
 #include "DockedToolPanel.h"
 #include "ToolWindow.h"
-
-namespace
-{
-constexpr int toolsMenuWidth = 190;
-constexpr int tunerMenuItemId = 1;
-constexpr int spectrogramMenuItemId = 2;
-constexpr int dockTunerMenuItemId = 11;
-constexpr int floatTunerMenuItemId = 12;
-constexpr int closeTunerMenuItemId = 13;
-constexpr int dockSpectrogramMenuItemId = 21;
-constexpr int floatSpectrogramMenuItemId = 22;
-constexpr int closeSpectrogramMenuItemId = 23;
-} // namespace
-
-void MainComponent::showToolsMenu()
-{
-    const auto tunerPresentation = tunerState.presentation();
-    const auto spectrogramPresentation = spectrogramState.presentation();
-
-    juce::PopupMenu tunerMenu;
-    tunerMenu.addItem(tunerMenuItemId, "Open or focus", true, tunerState.isOpen());
-    tunerMenu.addItem(
-        dockTunerMenuItemId, "Dock in workspace", true,
-        tunerPresentation == WorkspaceToolState::Presentation::docked);
-    tunerMenu.addItem(
-        floatTunerMenuItemId, "Float in window", true,
-        tunerPresentation == WorkspaceToolState::Presentation::floating);
-    tunerMenu.addSeparator();
-    tunerMenu.addItem(closeTunerMenuItemId, "Close", tunerState.isOpen());
-
-    juce::PopupMenu spectrogramMenu;
-    spectrogramMenu.addItem(
-        spectrogramMenuItemId, "Open or focus", true, spectrogramState.isOpen());
-    spectrogramMenu.addItem(
-        dockSpectrogramMenuItemId, "Dock in workspace", true,
-        spectrogramPresentation == WorkspaceToolState::Presentation::docked);
-    spectrogramMenu.addItem(
-        floatSpectrogramMenuItemId, "Float in window", true,
-        spectrogramPresentation == WorkspaceToolState::Presentation::floating);
-    spectrogramMenu.addSeparator();
-    spectrogramMenu.addItem(closeSpectrogramMenuItemId, "Close", spectrogramState.isOpen());
-
-    juce::PopupMenu menu;
-    menu.setLookAndFeel(&appLookAndFeel);
-    menu.addSubMenu("Tuner", tunerMenu);
-    menu.addSubMenu("Spectrogram", spectrogramMenu);
-
-    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
-    menu.showMenuAsync(
-        juce::PopupMenu::Options()
-            .withTargetComponent(&toolsButton)
-            .withMinimumWidth(toolsMenuWidth),
-        [safeThis](int selectedItemId)
-        {
-            if (safeThis == nullptr)
-                return;
-
-            if (selectedItemId == tunerMenuItemId)
-                safeThis->openTool(ToolType::tuner);
-            else if (selectedItemId == spectrogramMenuItemId)
-                safeThis->openTool(ToolType::spectrogram);
-            else if (selectedItemId == dockTunerMenuItemId)
-                safeThis->presentTool(ToolType::tuner, WorkspaceToolState::Presentation::docked);
-            else if (selectedItemId == floatTunerMenuItemId)
-                safeThis->presentTool(ToolType::tuner, WorkspaceToolState::Presentation::floating);
-            else if (selectedItemId == closeTunerMenuItemId)
-                safeThis->closeTool(ToolType::tuner);
-            else if (selectedItemId == dockSpectrogramMenuItemId)
-                safeThis->presentTool(
-                    ToolType::spectrogram, WorkspaceToolState::Presentation::docked);
-            else if (selectedItemId == floatSpectrogramMenuItemId)
-                safeThis->presentTool(
-                    ToolType::spectrogram, WorkspaceToolState::Presentation::floating);
-            else if (selectedItemId == closeSpectrogramMenuItemId)
-                safeThis->closeTool(ToolType::spectrogram);
-        });
-}
 
 void MainComponent::openTool(ToolType tool, WorkspaceToolState::Presentation presentation)
 {
@@ -122,6 +45,11 @@ void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation 
         if (safeThis != nullptr)
             safeThis->closeTool(tool);
     };
+    const auto dragHandler = [safeThis, tool](juce::Component& source)
+    {
+        if (safeThis != nullptr)
+            safeThis->beginToolDrag(tool, source);
+    };
 
     if (presentation == WorkspaceToolState::Presentation::docked)
     {
@@ -132,21 +60,20 @@ void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation 
         };
         auto& dock = dockFor(tool);
         dock = std::make_unique<DockedToolPanel>(
-            toolName(tool), *component, floatHandler, closeHandler);
-        addAndMakeVisible(*dock);
-        resized();
+            toolName(tool), *component, dragHandler, floatHandler, closeHandler);
     }
     else
     {
         auto& window = windowFor(tool);
         window = std::make_unique<ToolWindow>(
-            toolName(tool), *component, preferredToolWindowSize(tool), closeHandler);
+            toolName(tool), *component, preferredToolWindowSize(tool), dragHandler, closeHandler);
         const auto savedBounds =
             tool == ToolType::tuner ? savedTunerBounds : savedSpectrogramBounds;
         if (!savedBounds.isEmpty())
             window->setBounds(savedBounds);
     }
 
+    rebuildWorkspaceContainer();
     applyAppearanceToTool(tool);
     focusTool(tool);
 }
@@ -182,7 +109,7 @@ void MainComponent::closeTool(ToolType tool)
     detachToolPresentation(tool);
     componentFor(tool).reset();
     static_cast<void>(stateFor(tool).close());
-    resized();
+    rebuildWorkspaceContainer();
     recordSuccessfulToolUse();
 }
 
@@ -256,8 +183,17 @@ void MainComponent::detachToolPresentation(ToolType tool)
     }
     if (auto& dock = dockFor(tool); dock != nullptr)
     {
+        if (workspaceTabs != nullptr)
+        {
+            for (int index = workspaceTabs->getNumTabs(); --index >= 0;)
+            {
+                if (workspaceTabs->getTabContentComponent(index) == dock.get())
+                    workspaceTabs->removeTab(index);
+            }
+        }
         dock->releaseContent();
-        removeChildComponent(dock.get());
+        if (dock->getParentComponent() == this)
+            removeChildComponent(dock.get());
         dock.reset();
     }
 }

@@ -2,27 +2,33 @@
 
 #include <JuceHeader.h>
 
-#include "../audio/AudioInputService.h"
-#include "../feedback/FeedbackComponent.h"
-#include "AppDefaults.h"
-#include "SettingsPersistence.h"
-#include "Theme.h"
-#include "WorkspaceToolState.h"
+#include "../../services/audio/AudioInputService.h"
+#include "../configuration/AppDefaults.h"
+#include "../configuration/SettingsPersistence.h"
+#include "../theme/Theme.h"
+#include "ui/workspace/WorkspaceLayoutState.h"
+#include "ui/workspace/WorkspaceToolState.h"
 
 #include <functional>
 #include <memory>
+#include <optional>
 
 class MainTitleBar;
 
 // MainComponent is the application's central coordinator. It owns the shared
 // audio device, the top-level controls, and the docked/floating tool workspace.
-class MainComponent final : public juce::Component, private juce::ChangeListener
+class MainComponent final
+    : public juce::Component,
+      public juce::DragAndDropContainer,
+      public juce::DragAndDropTarget,
+      private juce::ChangeListener
 {
   public:
     MainComponent();
     ~MainComponent() override;
 
     void paint(juce::Graphics& graphics) override;
+    void paintOverChildren(juce::Graphics& graphics) override;
     void resized() override;
     [[nodiscard]] std::unique_ptr<MainTitleBar> createTitleBar(
         const juce::String& title,
@@ -85,6 +91,20 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     [[nodiscard]] std::unique_ptr<DockedToolPanel>& dockFor(ToolType tool);
     void detachToolPresentation(ToolType tool);
     void applyAppearanceToTool(ToolType tool);
+    void beginToolDrag(ToolType tool, juce::Component& source);
+    void setWorkspaceLayout(WorkspaceLayoutState::Layout layout);
+    void rebuildWorkspaceContainer();
+    void layoutWorkspace(juce::Rectangle<int> bounds);
+    [[nodiscard]] WorkspaceLayoutState::Tool layoutTool(ToolType tool) const;
+    [[nodiscard]] ToolType toolType(WorkspaceLayoutState::Tool tool) const;
+    [[nodiscard]] std::optional<ToolType>
+    draggedTool(const juce::DragAndDropTarget::SourceDetails& details) const;
+    [[nodiscard]] WorkspaceLayoutState::DropZone dropZoneAt(juce::Point<int> position) const;
+    bool isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails& details) override;
+    void itemDragEnter(const juce::DragAndDropTarget::SourceDetails& details) override;
+    void itemDragMove(const juce::DragAndDropTarget::SourceDetails& details) override;
+    void itemDragExit(const juce::DragAndDropTarget::SourceDetails& details) override;
+    void itemDropped(const juce::DragAndDropTarget::SourceDetails& details) override;
 
     // Appearance ------------------------------------------------------------
     void setTheme(Theme theme);
@@ -115,6 +135,8 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     std::unique_ptr<ToolWindow> spectrogramWindow;
     std::unique_ptr<DockedToolPanel> tunerDock;
     std::unique_ptr<DockedToolPanel> spectrogramDock;
+    std::unique_ptr<juce::TabbedComponent> workspaceTabs;
+    std::unique_ptr<juce::StretchableLayoutResizerBar> workspaceDivider;
     std::unique_ptr<juce::Component> tunerComponent;
     std::unique_ptr<juce::Component> spectrogramComponent;
     std::unique_ptr<SettingsWindow> settingsWindow;
@@ -125,6 +147,9 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     ToolType currentTool = ToolType::tuner;
     WorkspaceToolState tunerState;
     WorkspaceToolState spectrogramState;
+    WorkspaceLayoutState workspaceLayoutState;
+    juce::StretchableLayoutManager workspaceLayoutManager;
+    WorkspaceLayoutState::DropZone activeDropZone = WorkspaceLayoutState::DropZone::none;
     AppDefaults::TunerSettings savedTunerSettings = AppDefaults::tunerDefaults();
     juce::Rectangle<int> savedTunerBounds;
     juce::Rectangle<int> savedSpectrogramBounds;

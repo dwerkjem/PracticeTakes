@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../MainComponent.h"
+#include "../../MainComponent.h"
 
 #include <functional>
 #include <utility>

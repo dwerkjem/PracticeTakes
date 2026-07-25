@@ -1,7 +1,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "audio/AudioSampleFifo.h"
+#include "services/audio/AudioSampleFifo.h"
 
 #include <array>
 
@@ -63,4 +63,78 @@ TEST_CASE("a full consumer does not affect another consumer", "[audio][fifo]")
     REQUIRE(currentConsumer.push(next.data(), next.size()));
     REQUIRE(currentConsumer.pop(output.data(), output.size()) == output.size());
     CHECK(output == next);
+}
+
+TEST_CASE("audio FIFO accepts an exact-capacity block", "[audio][fifo]")
+{
+    AudioSampleFifo<4> fifo;
+    const std::array input{1.0f, 2.0f, 3.0f, 4.0f};
+    std::array<float, 4> output{};
+
+    REQUIRE(fifo.push(input.data(), input.size()));
+    CHECK(fifo.available() == input.size());
+    REQUIRE(fifo.pop(output.data(), output.size()) == output.size());
+    CHECK(output == input);
+    CHECK(fifo.available() == 0);
+}
+
+TEST_CASE("audio FIFO supports partial reads", "[audio][fifo]")
+{
+    AudioSampleFifo<5> fifo;
+    const std::array input{1.0f, 2.0f, 3.0f, 4.0f};
+    std::array<float, 3> output{};
+
+    REQUIRE(fifo.push(input.data(), input.size()));
+    REQUIRE(fifo.pop(output.data(), 2) == 2);
+    CHECK(output[0] == Catch::Approx(1.0f));
+    CHECK(output[1] == Catch::Approx(2.0f));
+    CHECK(fifo.available() == 2);
+
+    REQUIRE(fifo.pop(output.data(), output.size()) == 2);
+    CHECK(output[0] == Catch::Approx(3.0f));
+    CHECK(output[1] == Catch::Approx(4.0f));
+}
+
+TEST_CASE("discarding pending audio preserves drop diagnostics", "[audio][fifo]")
+{
+    AudioSampleFifo<2> fifo;
+    const std::array queued{1.0f, 2.0f};
+    const std::array overflow{3.0f};
+
+    REQUIRE(fifo.push(queued.data(), queued.size()));
+    REQUIRE_FALSE(fifo.push(overflow.data(), overflow.size()));
+    fifo.discardPending();
+
+    CHECK(fifo.available() == 0);
+    CHECK(fifo.droppedBlocks() == 1);
+    CHECK(fifo.droppedSamples() == 1);
+}
+
+TEST_CASE("reset clears buffered audio and drop diagnostics", "[audio][fifo]")
+{
+    AudioSampleFifo<2> fifo;
+    const std::array queued{1.0f, 2.0f};
+    const std::array overflow{3.0f};
+
+    REQUIRE(fifo.push(queued.data(), queued.size()));
+    REQUIRE_FALSE(fifo.push(overflow.data(), overflow.size()));
+    fifo.reset();
+
+    CHECK(fifo.available() == 0);
+    CHECK(fifo.droppedBlocks() == 0);
+    CHECK(fifo.droppedSamples() == 0);
+}
+
+TEST_CASE("null and empty FIFO operations are harmless", "[audio][fifo]")
+{
+    AudioSampleFifo<2> fifo;
+    const std::array input{1.0f};
+    std::array<float, 1> output{};
+
+    CHECK(fifo.push(nullptr, 1));
+    CHECK(fifo.push(input.data(), 0));
+    CHECK(fifo.pop(nullptr, 1) == 0);
+    CHECK(fifo.pop(output.data(), 0) == 0);
+    CHECK(fifo.available() == 0);
+    CHECK(fifo.droppedBlocks() == 0);
 }

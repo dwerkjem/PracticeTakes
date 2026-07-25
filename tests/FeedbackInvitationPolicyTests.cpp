@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "feedback/FeedbackInvitationPolicy.h"
+#include "features/feedback/FeedbackInvitationPolicy.h"
 
 TEST_CASE("feedback invitations wait for several successful uses")
 {
@@ -23,4 +23,19 @@ TEST_CASE("dismissed and disabled invitations remain suppressed")
 
     CHECK_FALSE(shouldInvite({successfulUsesBeforeInvitation, true, false}, false));
     CHECK_FALSE(shouldInvite({successfulUsesBeforeInvitation, false, true}, false));
+}
+
+TEST_CASE("feedback invitation remains eligible after the minimum use count")
+{
+    using namespace FeedbackInvitationPolicy;
+
+    CHECK(shouldInvite({successfulUsesBeforeInvitation + 20, false, false}, false));
+}
+
+TEST_CASE("feedback invitation suppression conditions compose")
+{
+    using namespace FeedbackInvitationPolicy;
+
+    CHECK_FALSE(shouldInvite({successfulUsesBeforeInvitation + 1, true, true}, true));
+    CHECK_FALSE(shouldInvite({0, true, true}, false));
 }

@@ -2,9 +2,9 @@
 
 #include <JuceHeader.h>
 
-#include "../app/AppDefaults.h"
-#include "../app/Theme.h"
-#include "../audio/AudioInputService.h"
+#include "../../../application/configuration/AppDefaults.h"
+#include "../../../application/theme/Theme.h"
+#include "../../../services/audio/AudioInputService.h"
 #include "PitchDetector.h"
 
 #include <array>

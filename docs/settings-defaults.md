@@ -28,6 +28,8 @@ fallback while retaining the saved setup for future recovery.
 - Theme: Light
 - Audio input: operating-system default input device
 - Tools: docked in the main workspace when first opened
+- Multiple docked tools: horizontal side-by-side layout
+- Split divider: equal initial allocation, resizable within tool minimum sizes
 - Floating tool windows: centered at their preferred size
 - Tuner window: 920 x 760
 - Spectrogram window: 980 x 650

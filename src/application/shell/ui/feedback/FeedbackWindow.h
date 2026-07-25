@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../feedback/FeedbackComponent.h"
-#include "../MainComponent.h"
+#include "../../../../features/feedback/FeedbackComponent.h"
+#include "../../MainComponent.h"
 
 #include <functional>
 #include <utility>

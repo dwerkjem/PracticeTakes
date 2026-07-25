@@ -113,37 +113,46 @@ endif()
 
 target_sources(PracticeTakes
     PRIVATE
-        src/main.cpp
-        src/audio/AudioInputService.cpp
-        src/audio/AudioInputService.h
-        src/audio/AudioRecoveryPolicy.h
-        src/audio/AudioSampleFifo.h
-        src/feedback/FeedbackComponent.cpp
-        src/feedback/FeedbackComponent.h
-        src/feedback/FeedbackInvitationPolicy.h
-        src/app/AppDefaults.h
-        src/app/MainComponent.cpp
-        src/app/MainComponent.h
-        src/app/MainTitleBar.h
-        src/app/MicrophoneWarning.h
-        src/app/SettingsPersistence.cpp
-        src/app/SettingsPersistence.h
-        src/app/ThemeType.h
-        src/app/WorkspaceToolState.h
-        src/app/settings/SettingsWindow.h
-        src/app/support/FeedbackWindow.h
-        src/app/workspace/DockedToolPanel.h
-        src/app/workspace/MainComponentWorkspace.cpp
-        src/app/workspace/ToolWindow.h
-        src/spectrogram/SpectrogramComponent.cpp
-        src/spectrogram/SpectrogramComponent.h
-        src/tuner/TunerComponent.cpp
-        src/tuner/TunerDrawing.cpp
-        src/tuner/TunerComponent.h
-        src/tuner/PitchDetector.cpp
-        src/tuner/PitchDetector.h
-        src/app/Theme.h
-        src/Theme.cpp
+        src/bootstrap/main.cpp
+        src/application/configuration/AppDefaults.h
+        src/application/configuration/SettingsPersistence.cpp
+        src/application/configuration/SettingsPersistence.h
+        src/application/shell/MainComponent.h
+        src/application/shell/MainComponentLifecycle.cpp
+        src/application/shell/state/appearance/MainComponentAppearance.cpp
+        src/application/shell/state/audio/MainComponentAudioState.cpp
+        src/application/shell/ui/chrome/MainTitleBar.h
+        src/application/shell/ui/chrome/MicrophoneWarning.h
+        src/application/shell/ui/feedback/FeedbackWindow.h
+        src/application/shell/ui/feedback/MainComponentFeedback.cpp
+        src/application/shell/ui/settings/MainComponentSettings.cpp
+        src/application/shell/ui/settings/SettingsWindow.h
+        src/application/shell/ui/workspace/DockedToolPanel.h
+        src/application/shell/ui/workspace/MainComponentWorkspaceDrag.cpp
+        src/application/shell/ui/workspace/MainComponentWorkspaceLayout.cpp
+        src/application/shell/ui/workspace/MainComponentWorkspaceMenu.cpp
+        src/application/shell/ui/workspace/MainComponentWorkspacePresentation.cpp
+        src/application/shell/ui/workspace/ToolDragHandle.h
+        src/application/shell/ui/workspace/ToolWindow.h
+        src/application/shell/ui/workspace/WorkspaceLayoutState.h
+        src/application/shell/ui/workspace/WorkspaceToolState.h
+        src/application/theme/Theme.cpp
+        src/application/theme/Theme.h
+        src/application/theme/ThemeType.h
+        src/features/analysis/spectrogram/SpectrogramComponent.cpp
+        src/features/analysis/spectrogram/SpectrogramComponent.h
+        src/features/analysis/tuner/PitchDetector.cpp
+        src/features/analysis/tuner/PitchDetector.h
+        src/features/analysis/tuner/TunerComponent.cpp
+        src/features/analysis/tuner/TunerComponent.h
+        src/features/analysis/tuner/TunerDrawing.cpp
+        src/features/feedback/FeedbackComponent.cpp
+        src/features/feedback/FeedbackComponent.h
+        src/features/feedback/FeedbackInvitationPolicy.h
+        src/services/audio/AudioInputService.cpp
+        src/services/audio/AudioInputService.h
+        src/services/audio/AudioRecoveryPolicy.h
+        src/services/audio/AudioSampleFifo.h
 )
 
 target_compile_definitions(PracticeTakes
@@ -171,9 +180,12 @@ if(BUILD_TESTING)
         tests/FeedbackInvitationPolicyTests.cpp
         tests/PitchDetectorTests.cpp
         tests/SettingsPersistenceTests.cpp
+        tests/ThemeContrastTests.cpp
+        tests/WorkspaceLayoutStateTests.cpp
         tests/WorkspaceToolStateTests.cpp
-        src/app/SettingsPersistence.cpp
-        src/tuner/PitchDetector.cpp
+        src/application/configuration/SettingsPersistence.cpp
+        src/application/theme/Theme.cpp
+        src/features/analysis/tuner/PitchDetector.cpp
     )
 
     target_include_directories(PracticeTakesTests
@@ -186,6 +198,7 @@ if(BUILD_TESTING)
             Catch2::Catch2WithMain
             juce::juce_data_structures
             juce::juce_dsp
+            juce::juce_graphics
     )
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND PRACTICE_TAKES_USE_CURL)

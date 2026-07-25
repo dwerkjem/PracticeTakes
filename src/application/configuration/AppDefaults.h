@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ThemeType.h"
+#include "../theme/ThemeType.h"
 
 namespace AppDefaults
 {
