@@ -7,7 +7,6 @@
 
 #include <array>
 #include <atomic>
-#include <functional>
 
 // SpectrogramComponent converts microphone audio into a scrolling frequency
 // image. Audio capture and FFT processing are deliberately kept separate.
@@ -17,9 +16,7 @@ class SpectrogramComponent final
       private juce::Timer
 {
   public:
-    explicit SpectrogramComponent(
-        AudioInputService& sharedAudioInputService,
-        std::function<void()> feedbackHandler = {});
+    explicit SpectrogramComponent(AudioInputService& sharedAudioInputService);
     ~SpectrogramComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -72,7 +69,6 @@ class SpectrogramComponent final
     juce::dsp::WindowingFunction<float> hannWindow{
         fftSize, juce::dsp::WindowingFunction<float>::hann};
     juce::Image spectrogramImage{juce::Image::RGB, imageWidth, imageHeight, true};
-    juce::TextButton feedbackButton{"Give feedback on this tool"};
 
     std::atomic<double> currentSampleRate{44100.0};
     Theme currentTheme = Theme::light;

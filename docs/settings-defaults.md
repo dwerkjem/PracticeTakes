@@ -1,19 +1,18 @@
 # Settings defaults
 
-Settings schema version: **2**. Presets are identified by stable names and
+Settings schema version: **3**. Presets are identified by stable names and
 resolved through the current schema, so future preset revisions do not change
 or corrupt previously stored explicit values.
 
 Settings are saved when **Save settings** is pressed and again during a normal
 application shutdown. Saving records the theme, global mute and gain state,
-selected audio-device setup, tuner controls, most recently used tool, and the
+selected audio-device setup, tuner controls, fullscreen mode, most recently used tool, and the
 bounds of tool and Settings windows in JUCE's platform-appropriate per-user
 settings directory. Window state is retained even after a window is closed.
 Those values are restored on the next launch.
 
-Writes use a temporary sibling file followed by atomic replacement. Schema-1
-settings are migrated to schema 2 with safe defaults for the new mute, tuner
-display, and recent-tool fields. Invalid individual values fall back to their
+Writes use a temporary sibling file followed by atomic replacement. Older
+settings are migrated to schema 3 with safe defaults for newer fields. Invalid individual values fall back to their
 documented defaults. If the complete settings file is corrupt, it is renamed
 with a `.corrupt` suffix and replaced with defaults. A file from a newer schema
 is not automatically overwritten; pressing **Save settings** explicitly resets
@@ -26,6 +25,7 @@ fallback while retaining the saved setup for future recovery.
 ## Global defaults
 
 - Theme: Light
+- Fullscreen mode: Normal fullscreen
 - Audio input: operating-system default input device
 - Tools: docked in the main workspace when first opened
 - Multiple docked tools: horizontal side-by-side layout
@@ -34,6 +34,11 @@ fallback while retaining the saved setup for future recovery.
 - Tuner window: 920 x 760
 - Spectrogram window: 980 x 650
 - Settings window: 760 x 650
+
+Normal fullscreen keeps the Practice Takes title bar visible. Kiosk fullscreen
+hides the title bar for an immersive view and reveals it when the pointer reaches
+the top edge of the screen. Both modes ask the operating system to hide its
+desktop bars while fullscreen is active.
 
 ## Tuner defaults
 

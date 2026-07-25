@@ -1,6 +1,6 @@
 #include "../../MainComponent.h"
 
-#include "../../ui/chrome/MicrophoneWarning.h"
+#include "../../ui/main_window/MicrophoneWarning.h"
 
 bool MainComponent::hasUsableMicrophone() const
 {

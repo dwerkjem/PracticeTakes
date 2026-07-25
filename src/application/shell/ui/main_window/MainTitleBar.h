@@ -121,7 +121,7 @@ class MainTitleBar final : public juce::Component
     void mouseDrag(const juce::MouseEvent& event) override
     {
         if (auto* window = findParentComponentOfClass<juce::DocumentWindow>();
-            window != nullptr && !window->isFullScreen())
+            window != nullptr && !window->isFullScreen() && !window->isKioskMode())
         {
             windowDragger.dragComponent(window, event, nullptr);
         }

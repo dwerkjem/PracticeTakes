@@ -9,7 +9,6 @@
 
 #include <array>
 #include <atomic>
-#include <functional>
 #include <vector>
 
 // TunerComponent captures microphone samples, estimates their fundamental
@@ -20,9 +19,7 @@ class TunerComponent final
       private juce::Timer
 {
   public:
-    explicit TunerComponent(
-        AudioInputService& sharedAudioInputService,
-        std::function<void()> feedbackHandler = {});
+    explicit TunerComponent(AudioInputService& sharedAudioInputService);
     ~TunerComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -104,7 +101,6 @@ class TunerComponent final
     juce::Slider dropoutSlider;
     juce::Slider durationSlider;
     juce::TextButton clearGraphButton{"Clear graph"};
-    juce::TextButton feedbackButton{"Give feedback on this tool"};
 
     // The shared service fills this tool's bounded FIFO. The timer drains it
     // into preallocated storage before analysis.

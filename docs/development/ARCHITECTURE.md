@@ -14,7 +14,7 @@ The source tree groups code first by architectural role, then by feature:
 - `src/features` contains user-facing analysis and feedback features.
 - `src/services` contains shared infrastructure such as microphone capture.
 
-Shell UI helpers are nested under `shell/ui/chrome`, `feedback`, `settings`,
+Shell UI helpers are nested under `shell/ui/main_window`, `feedback`, `settings`,
 and `workspace`; appearance and audio state live under `shell/state`. This
 keeps each directory focused and avoids a single broad application folder.
 

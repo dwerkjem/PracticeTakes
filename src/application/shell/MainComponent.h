@@ -35,6 +35,7 @@ class MainComponent final
         std::function<void()> minimiseHandler,
         std::function<void()> fullscreenHandler,
         std::function<void()> closeHandler);
+    [[nodiscard]] AppSettings::FullscreenMode fullscreenMode() const noexcept;
 
   private:
     enum class ToolType
@@ -151,6 +152,7 @@ class MainComponent final
     juce::StretchableLayoutManager workspaceLayoutManager;
     WorkspaceLayoutState::DropZone activeDropZone = WorkspaceLayoutState::DropZone::none;
     AppDefaults::TunerSettings savedTunerSettings = AppDefaults::tunerDefaults();
+    AppSettings::FullscreenMode selectedFullscreenMode = AppSettings::FullscreenMode::normal;
     juce::Rectangle<int> savedTunerBounds;
     juce::Rectangle<int> savedSpectrogramBounds;
     juce::Rectangle<int> savedSettingsBounds;

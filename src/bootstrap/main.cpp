@@ -1,9 +1,52 @@
+#if defined(__linux__)
+#include <X11/Xatom.h>
+#include <X11/Xlib.h>
+#undef KeyPress
+#undef None
+#endif
+
 #include <JuceHeader.h>
 
+#include <cstdint>
 #include <iostream>
 
 #include "../application/shell/MainComponent.h"
-#include "../application/shell/ui/chrome/MainTitleBar.h"
+#include "../application/shell/ui/main_window/MainTitleBar.h"
+
+namespace
+{
+void setOperatingSystemFullscreen(juce::Component& component, bool shouldBeFullscreen)
+{
+#if JUCE_LINUX
+    auto* display = XOpenDisplay(nullptr);
+    if (display == nullptr || component.getWindowHandle() == nullptr)
+    {
+        if (display != nullptr)
+            XCloseDisplay(display);
+        return;
+    }
+
+    const auto window =
+        static_cast<::Window>(reinterpret_cast<std::uintptr_t>(component.getWindowHandle()));
+    XEvent event{};
+    event.xclient.type = ClientMessage;
+    event.xclient.window = window;
+    event.xclient.message_type = XInternAtom(display, "_NET_WM_STATE", False);
+    event.xclient.format = 32;
+    event.xclient.data.l[0] = shouldBeFullscreen ? 1 : 0;
+    event.xclient.data.l[1] =
+        static_cast<long>(XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", False));
+    event.xclient.data.l[3] = 1;
+
+    XSendEvent(
+        display, DefaultRootWindow(display), False,
+        SubstructureRedirectMask | SubstructureNotifyMask, &event);
+    XCloseDisplay(display);
+#else
+    juce::ignoreUnused(component, shouldBeFullscreen);
+#endif
+}
+} // namespace
 
 // JUCE owns the application object for the lifetime of the process. This class
 // creates the main window during startup and releases it during shutdown.
@@ -59,7 +102,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
   private:
     // The top-level window owns MainComponent and therefore all shared audio,
     // settings, warning, and tool-window state.
-    class MainWindow final : public juce::DocumentWindow
+    class MainWindow final : public juce::DocumentWindow, private juce::Timer
     {
       public:
         explicit MainWindow(const juce::String& title)
@@ -70,7 +113,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         {
             setUsingNativeTitleBar(false);
 
-            auto* content = new MainComponent();
+            content = new MainComponent();
             setContentOwned(content, true);
 
             auto customTitleBar = content->createTitleBar(
@@ -86,6 +129,12 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             setResizeLimits(980, 600, 3200, 2200);
             centreWithSize(getWidth(), getHeight());
             setVisible(true);
+        }
+
+        ~MainWindow() override
+        {
+            if (fullscreenActive)
+                setFullscreen(false);
         }
 
         void closeButtonPressed() override
@@ -111,7 +160,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
                 return true;
             }
 
-            if (key == juce::KeyPress::escapeKey && isFullScreen())
+            if (key == juce::KeyPress::escapeKey && fullscreenActive)
             {
                 setFullscreen(false);
                 return true;
@@ -123,24 +172,81 @@ class PracticeTakesApplication final : public juce::JUCEApplication
       private:
         void toggleFullscreen()
         {
-            setFullscreen(!isFullScreen());
+            setFullscreen(!fullscreenActive);
         }
 
         void setFullscreen(bool shouldBeFullscreen)
         {
-            setFullScreen(shouldBeFullscreen);
-            if (!shouldBeFullscreen)
+            auto& desktop = juce::Desktop::getInstance();
+
+            if (shouldBeFullscreen)
             {
+                activeFullscreenMode = content != nullptr ? content->fullscreenMode()
+                                                          : AppSettings::FullscreenMode::normal;
+                fullscreenActive = true;
+
+                if (activeFullscreenMode == AppSettings::FullscreenMode::kiosk)
+                {
+                    desktop.setKioskModeComponent(this, false);
+                    startTimerHz(30);
+                }
+                else
+                {
+                    setFullScreen(true);
+                }
+
+                setOperatingSystemFullscreen(*this, true);
+            }
+            else
+            {
+                fullscreenActive = false;
+                stopTimer();
+                setOperatingSystemFullscreen(*this, false);
+
+                if (activeFullscreenMode == AppSettings::FullscreenMode::kiosk)
+                {
+                    desktop.setKioskModeComponent(nullptr, false);
+                }
+                else
+                {
+                    setFullScreen(false);
+                }
+
                 setResizable(true, false);
             }
 
             if (titleBar != nullptr)
             {
                 titleBar->setFullscreen(shouldBeFullscreen);
+                titleBar->setVisible(
+                    !shouldBeFullscreen ||
+                    activeFullscreenMode == AppSettings::FullscreenMode::normal);
             }
         }
 
+        void timerCallback() override
+        {
+            if (!fullscreenActive || activeFullscreenMode != AppSettings::FullscreenMode::kiosk ||
+                titleBar == nullptr)
+            {
+                return;
+            }
+
+            const auto pointer = getMouseXYRelative();
+            const auto pointerIsInside = getLocalBounds().contains(pointer);
+            constexpr int revealDistance = 5;
+            constexpr int hideDistanceBelowTitleBar = 10;
+            const auto visibleLimit = getTitleBarHeight() + hideDistanceBelowTitleBar;
+            const auto shouldShow =
+                pointerIsInside &&
+                (titleBar->isVisible() ? pointer.y <= visibleLimit : pointer.y <= revealDistance);
+            titleBar->setVisible(shouldShow);
+        }
+
+        MainComponent* content = nullptr;
         std::unique_ptr<MainTitleBar> titleBar;
+        AppSettings::FullscreenMode activeFullscreenMode = AppSettings::FullscreenMode::normal;
+        bool fullscreenActive = false;
     };
 
     std::unique_ptr<MainWindow> mainWindow;

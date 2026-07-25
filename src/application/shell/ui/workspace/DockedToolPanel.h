@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../MainComponent.h"
-#include "ToolDragHandle.h"
+#include "ToolOptionsButton.h"
 
 #include <functional>
 #include <utility>
@@ -14,25 +14,24 @@ class MainComponent::DockedToolPanel final : public juce::Component
         juce::Component& toolContent,
         std::function<void(juce::Component&)> dragHandler,
         std::function<void()> floatHandler,
+        std::function<void()> feedbackHandler,
         std::function<void()> closeHandler)
-        : content(&toolContent), dragHandle(std::move(dragHandler))
+        : content(&toolContent), onDrag(std::move(dragHandler)),
+          optionsButton(
+              "Float in window",
+              std::move(floatHandler),
+              std::move(feedbackHandler),
+              std::move(closeHandler))
     {
         titleLabel.setText(title, juce::dontSendNotification);
         titleLabel.setFont(juce::FontOptions(18.0f, juce::Font::bold));
+        titleLabel.setInterceptsMouseClicks(false, false);
         addAndMakeVisible(titleLabel);
-        addAndMakeVisible(dragHandle);
-
-        floatButton.setButtonText("Float");
-        floatButton.setTooltip("Move this tool to an independent window");
-        floatButton.onClick = std::move(floatHandler);
-        addAndMakeVisible(floatButton);
-
-        closeButton.setButtonText("Close");
-        closeButton.setTooltip("Close this tool");
-        closeButton.onClick = std::move(closeHandler);
-        addAndMakeVisible(closeButton);
+        addAndMakeVisible(optionsButton);
 
         addAndMakeVisible(toolContent);
+        toolContent.addMouseListener(this, false);
+        setMouseCursor(juce::MouseCursor::DraggingHandCursor);
     }
 
     ~DockedToolPanel() override
@@ -44,6 +43,7 @@ class MainComponent::DockedToolPanel final : public juce::Component
     {
         if (content != nullptr)
         {
+            content->removeMouseListener(this);
             removeChildComponent(content);
             content = nullptr;
         }
@@ -59,23 +59,55 @@ class MainComponent::DockedToolPanel final : public juce::Component
 
     void resized() override
     {
-        auto bounds = getLocalBounds().reduced(8);
-        auto header = bounds.removeFromTop(38);
-        closeButton.setBounds(header.removeFromRight(86));
-        header.removeFromRight(6);
-        floatButton.setBounds(header.removeFromRight(86));
-        header.removeFromRight(6);
-        dragHandle.setBounds(header.removeFromRight(72));
+        auto bounds = getLocalBounds().reduced(6);
+        auto header = bounds.removeFromTop(32);
+        optionsButton.setBounds(header.removeFromRight(38));
+        header.removeFromRight(4);
         titleLabel.setBounds(header);
-        bounds.removeFromTop(6);
+        bounds.removeFromTop(4);
         if (content != nullptr)
             content->setBounds(bounds);
     }
 
+    void mouseDown(const juce::MouseEvent& event) override
+    {
+        dragStarted = false;
+        dragArmed = canStartDrag(event);
+    }
+
+    void mouseDrag(const juce::MouseEvent& event) override
+    {
+        if (dragArmed && !dragStarted && event.getDistanceFromDragStart() >= 5)
+        {
+            dragStarted = true;
+            if (onDrag)
+                onDrag(*this);
+        }
+    }
+
+    void mouseUp(const juce::MouseEvent&) override
+    {
+        dragStarted = false;
+        dragArmed = false;
+    }
+
   private:
+    [[nodiscard]] bool canStartDrag(const juce::MouseEvent& event) const
+    {
+        if (event.originalComponent == this)
+            return true;
+        if (content == nullptr || event.originalComponent != content)
+            return false;
+
+        constexpr int innerPadding = 14;
+        const auto point = event.getEventRelativeTo(content).getPosition();
+        return !content->getLocalBounds().reduced(innerPadding).contains(point);
+    }
+
     juce::Component* content;
     juce::Label titleLabel;
-    ToolDragHandle dragHandle;
-    juce::TextButton floatButton;
-    juce::TextButton closeButton;
+    std::function<void(juce::Component&)> onDrag;
+    ToolOptionsButton optionsButton;
+    bool dragStarted = false;
+    bool dragArmed = false;
 };

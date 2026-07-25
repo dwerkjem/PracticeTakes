@@ -11,6 +11,8 @@ constexpr int openSettingsMenuItemId = 1;
 constexpr int lightSettingsMenuItemId = 2;
 constexpr int darkSettingsMenuItemId = 3;
 constexpr int muteSettingsMenuItemId = 4;
+constexpr int normalFullscreenMenuItemId = 5;
+constexpr int kioskFullscreenMenuItemId = 6;
 
 [[nodiscard]] juce::Rectangle<int> validWindowBounds(const juce::String& storedBounds)
 {
@@ -31,9 +33,18 @@ void MainComponent::showSettingsMenu()
         lightSettingsMenuItemId, "Light theme", true, currentTheme == Theme::light);
     appearanceMenu.addItem(darkSettingsMenuItemId, "Dark theme", true, currentTheme == Theme::dark);
 
+    juce::PopupMenu fullscreenMenu;
+    fullscreenMenu.addItem(
+        normalFullscreenMenuItemId, "Normal fullscreen", true,
+        selectedFullscreenMode == AppSettings::FullscreenMode::normal);
+    fullscreenMenu.addItem(
+        kioskFullscreenMenuItemId, "Kiosk fullscreen", true,
+        selectedFullscreenMode == AppSettings::FullscreenMode::kiosk);
+
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
     menu.addSubMenu("Appearance", appearanceMenu);
+    menu.addSubMenu("Fullscreen mode", fullscreenMenu);
     menu.addItem(
         muteSettingsMenuItemId,
         audioInputService.isMuted() ? "Unmute microphone" : "Mute microphone");
@@ -61,6 +72,14 @@ void MainComponent::showSettingsMenu()
                 break;
             case muteSettingsMenuItemId:
                 safeThis->audioInputService.toggleMuted();
+                break;
+            case normalFullscreenMenuItemId:
+                safeThis->selectedFullscreenMode = AppSettings::FullscreenMode::normal;
+                safeThis->saveSettings();
+                break;
+            case kioskFullscreenMenuItemId:
+                safeThis->selectedFullscreenMode = AppSettings::FullscreenMode::kiosk;
+                safeThis->saveSettings();
                 break;
             default:
                 break;
@@ -169,6 +188,7 @@ void MainComponent::resetLayout()
 void MainComponent::resetAll()
 {
     setTheme(AppDefaults::theme);
+    selectedFullscreenMode = AppSettings::FullscreenMode::normal;
     resetAudio();
     savedTunerSettings = AppDefaults::tunerDefaults();
     currentTool = ToolType::tuner;
@@ -209,6 +229,7 @@ AppSettings::State MainComponent::captureSettingsState()
     state.settingsBounds = savedSettingsBounds.toString();
     state.recentTool = currentTool == ToolType::tuner ? AppSettings::RecentTool::tuner
                                                       : AppSettings::RecentTool::spectrogram;
+    state.fullscreenMode = selectedFullscreenMode;
     if (const auto audioState = audioInputService.createDeviceState())
         state.audioDeviceState = audioState->toString();
     return state;
@@ -247,6 +268,7 @@ void MainComponent::loadSettings()
     currentTool = loaded.state.recentTool == AppSettings::RecentTool::spectrogram
                       ? ToolType::spectrogram
                       : ToolType::tuner;
+    selectedFullscreenMode = loaded.state.fullscreenMode;
 
     if (const auto xml = juce::parseXML(loaded.state.audioDeviceState); xml != nullptr)
         audioInputService.applySavedDeviceState(*xml);

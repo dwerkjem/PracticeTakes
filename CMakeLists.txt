@@ -121,8 +121,8 @@ target_sources(PracticeTakes
         src/application/shell/MainComponentLifecycle.cpp
         src/application/shell/state/appearance/MainComponentAppearance.cpp
         src/application/shell/state/audio/MainComponentAudioState.cpp
-        src/application/shell/ui/chrome/MainTitleBar.h
-        src/application/shell/ui/chrome/MicrophoneWarning.h
+        src/application/shell/ui/main_window/MainTitleBar.h
+        src/application/shell/ui/main_window/MicrophoneWarning.h
         src/application/shell/ui/feedback/FeedbackWindow.h
         src/application/shell/ui/feedback/MainComponentFeedback.cpp
         src/application/shell/ui/settings/MainComponentSettings.cpp
@@ -133,6 +133,7 @@ target_sources(PracticeTakes
         src/application/shell/ui/workspace/MainComponentWorkspaceMenu.cpp
         src/application/shell/ui/workspace/MainComponentWorkspacePresentation.cpp
         src/application/shell/ui/workspace/ToolDragHandle.h
+        src/application/shell/ui/workspace/ToolOptionsButton.h
         src/application/shell/ui/workspace/ToolWindow.h
         src/application/shell/ui/workspace/WorkspaceLayoutState.h
         src/application/shell/ui/workspace/WorkspaceToolState.h
@@ -171,6 +172,11 @@ target_link_libraries(PracticeTakes
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags
 )
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(X11 REQUIRED)
+    target_link_libraries(PracticeTakes PRIVATE X11::X11)
+endif()
 
 if(BUILD_TESTING)
     add_executable(PracticeTakesTests

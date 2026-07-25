@@ -24,9 +24,7 @@ constexpr std::array<const char*, 12> noteNames{
 } // namespace
 
 //==============================================================================
-TunerComponent::TunerComponent(
-    AudioInputService& sharedAudioInputService,
-    std::function<void()> feedbackHandler)
+TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService)
     : audioInputService(sharedAudioInputService)
 {
     setOpaque(true);
@@ -80,9 +78,6 @@ TunerComponent::TunerComponent(
         repaint(displayBounds);
     };
     addAndMakeVisible(clearGraphButton);
-    feedbackButton.setTitle("Give feedback about the Tuner");
-    feedbackButton.onClick = std::move(feedbackHandler);
-    addAndMakeVisible(feedbackButton);
 
     applyThemeToControls();
     updateAdvancedSettingsVisibility();
@@ -163,7 +158,7 @@ void TunerComponent::applyThemeToControls()
         label->setColour(juce::Label::textColourId, palette.muted);
     }
 
-    for (auto* button : {&advancedSettingsButton, &clearGraphButton, &feedbackButton})
+    for (auto* button : {&advancedSettingsButton, &clearGraphButton})
     {
         button->setColour(juce::TextButton::buttonColourId, palette.control);
         button->setColour(juce::TextButton::buttonOnColourId, palette.accent.withAlpha(0.75f));

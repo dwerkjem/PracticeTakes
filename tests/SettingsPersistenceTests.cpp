@@ -45,6 +45,7 @@ TEST_CASE("normal settings survive an atomic file round trip", "[settings][persi
     expected.spectrogramBounds = "30 40 980 650";
     expected.settingsBounds = "50 60 900 760";
     expected.recentTool = AppSettings::RecentTool::spectrogram;
+    expected.fullscreenMode = AppSettings::FullscreenMode::kiosk;
 
     {
         juce::PropertiesFile writer(temporary.path, settingsOptions());
@@ -74,6 +75,7 @@ TEST_CASE("normal settings survive an atomic file round trip", "[settings][persi
     CHECK(loaded.state.spectrogramBounds == expected.spectrogramBounds);
     CHECK(loaded.state.settingsBounds == expected.settingsBounds);
     CHECK(loaded.state.recentTool == expected.recentTool);
+    CHECK(loaded.state.fullscreenMode == expected.fullscreenMode);
 }
 
 TEST_CASE("schema one settings migrate with safe defaults for new fields", "[settings][migration]")
@@ -127,6 +129,7 @@ TEST_CASE("invalid individual values fall back without rejecting the file", "[se
         invalid.setValue("tuner.displayMode", -1);
         invalid.setValue("tuner.easing", "not-a-number");
         invalid.setValue("tuner.averaging", 100.0);
+        invalid.setValue("window.fullscreenMode", 99);
         REQUIRE(invalid.saveIfNeeded());
     }
 
@@ -139,6 +142,7 @@ TEST_CASE("invalid individual values fall back without rejecting the file", "[se
     CHECK(loaded.state.tuner.displayMode == AppDefaults::Tuner::displayMode);
     CHECK(loaded.state.tuner.easing == Catch::Approx(AppDefaults::Tuner::easing));
     CHECK(loaded.state.tuner.averaging == Catch::Approx(AppDefaults::Tuner::averaging));
+    CHECK(loaded.state.fullscreenMode == AppSettings::FullscreenMode::normal);
 }
 
 TEST_CASE("newer settings schemas are left untouched", "[settings][migration]")
@@ -241,14 +245,17 @@ TEST_CASE("clearing settings removes only Practice Takes owned values", "[settin
     properties.setValue("another.application.value", "keep me");
     AppSettings::State state;
     state.theme = Theme::dark;
+    state.fullscreenMode = AppSettings::FullscreenMode::kiosk;
     AppSettings::store(properties, state);
 
     REQUIRE(properties.containsKey("settings.schema"));
     REQUIRE(properties.containsKey("global.theme"));
+    REQUIRE(properties.containsKey("window.fullscreenMode"));
 
     AppSettings::clearOwnedValues(properties);
 
     CHECK_FALSE(properties.containsKey("settings.schema"));
     CHECK_FALSE(properties.containsKey("global.theme"));
+    CHECK_FALSE(properties.containsKey("window.fullscreenMode"));
     CHECK(properties.getValue("another.application.value") == "keep me");
 }

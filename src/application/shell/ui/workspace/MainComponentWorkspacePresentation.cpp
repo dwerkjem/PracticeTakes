@@ -50,6 +50,11 @@ void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation 
         if (safeThis != nullptr)
             safeThis->beginToolDrag(tool, source);
     };
+    const auto feedbackHandler = [safeThis, tool]
+    {
+        if (safeThis != nullptr)
+            safeThis->showFeedback(safeThis->toolName(tool));
+    };
 
     if (presentation == WorkspaceToolState::Presentation::docked)
     {
@@ -60,13 +65,19 @@ void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation 
         };
         auto& dock = dockFor(tool);
         dock = std::make_unique<DockedToolPanel>(
-            toolName(tool), *component, dragHandler, floatHandler, closeHandler);
+            toolName(tool), *component, dragHandler, floatHandler, feedbackHandler, closeHandler);
     }
     else
     {
+        const auto dockHandler = [safeThis, tool]
+        {
+            if (safeThis != nullptr)
+                safeThis->presentTool(tool, WorkspaceToolState::Presentation::docked);
+        };
         auto& window = windowFor(tool);
         window = std::make_unique<ToolWindow>(
-            toolName(tool), *component, preferredToolWindowSize(tool), dragHandler, closeHandler);
+            toolName(tool), *component, preferredToolWindowSize(tool), dragHandler, dockHandler,
+            feedbackHandler, closeHandler);
         const auto savedBounds =
             tool == ToolType::tuner ? savedTunerBounds : savedSpectrogramBounds;
         if (!savedBounds.isEmpty())
@@ -117,15 +128,13 @@ std::unique_ptr<juce::Component> MainComponent::createToolComponent(ToolType too
 {
     if (tool == ToolType::tuner)
     {
-        auto tuner = std::make_unique<TunerComponent>(
-            audioInputService, [this] { showFeedback(toolName(ToolType::tuner)); });
+        auto tuner = std::make_unique<TunerComponent>(audioInputService);
         tuner->applySettings(savedTunerSettings);
         tuner->setTheme(currentTheme);
         return tuner;
     }
 
-    auto spectrogram = std::make_unique<SpectrogramComponent>(
-        audioInputService, [this] { showFeedback(toolName(ToolType::spectrogram)); });
+    auto spectrogram = std::make_unique<SpectrogramComponent>(audioInputService);
     spectrogram->setTheme(currentTheme);
     return spectrogram;
 }

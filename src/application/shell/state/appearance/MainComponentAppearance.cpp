@@ -1,7 +1,7 @@
 #include "../../MainComponent.h"
 
-#include "../../ui/chrome/MicrophoneWarning.h"
 #include "../../ui/feedback/FeedbackWindow.h"
+#include "../../ui/main_window/MicrophoneWarning.h"
 #include "../../ui/settings/SettingsWindow.h"
 
 void MainComponent::setTheme(Theme theme)

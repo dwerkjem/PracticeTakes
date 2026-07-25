@@ -1,8 +1,8 @@
 #include "MainComponent.h"
 
-#include "ui/chrome/MainTitleBar.h"
-#include "ui/chrome/MicrophoneWarning.h"
 #include "ui/feedback/FeedbackWindow.h"
+#include "ui/main_window/MainTitleBar.h"
+#include "ui/main_window/MicrophoneWarning.h"
 #include "ui/settings/SettingsWindow.h"
 #include "ui/workspace/DockedToolPanel.h"
 #include "ui/workspace/ToolWindow.h"
@@ -75,6 +75,11 @@ std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(
     return std::make_unique<MainTitleBar>(
         title, fileButton, settingsButton, toolsButton, helpButton, microphoneButton,
         std::move(minimiseHandler), std::move(fullscreenHandler), std::move(closeHandler));
+}
+
+AppSettings::FullscreenMode MainComponent::fullscreenMode() const noexcept
+{
+    return selectedFullscreenMode;
 }
 
 void MainComponent::createMicrophoneWarning()

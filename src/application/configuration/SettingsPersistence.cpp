@@ -19,11 +19,13 @@ constexpr auto tunerBoundsKey = "layout.tuner";
 constexpr auto spectrogramBoundsKey = "layout.spectrogram";
 constexpr auto settingsBoundsKey = "layout.settings";
 constexpr auto recentToolKey = "layout.recentTool";
+constexpr auto fullscreenModeKey = "window.fullscreenMode";
 
 constexpr const char* ownedKeys[] = {
     schemaKey,           themeKey,       microphoneMutedKey,   audioStateKey,     audioInputGainKey,
     tunerDisplayModeKey, tunerEasingKey, tunerAveragingKey,    tunerThresholdKey, tunerDropoutKey,
-    tunerDurationKey,    tunerBoundsKey, spectrogramBoundsKey, settingsBoundsKey, recentToolKey};
+    tunerDurationKey,    tunerBoundsKey, spectrogramBoundsKey, settingsBoundsKey, recentToolKey,
+    fullscreenModeKey};
 
 [[nodiscard]] bool hasOwnedSettings(const juce::PropertySet& properties)
 {
@@ -62,6 +64,15 @@ constexpr const char* ownedKeys[] = {
     return value == static_cast<int>(AppSettings::RecentTool::spectrogram)
                ? AppSettings::RecentTool::spectrogram
                : AppSettings::RecentTool::tuner;
+}
+
+[[nodiscard]] AppSettings::FullscreenMode loadFullscreenMode(const juce::PropertySet& properties)
+{
+    const auto value = properties.getIntValue(
+        fullscreenModeKey, static_cast<int>(AppSettings::FullscreenMode::normal));
+    return value == static_cast<int>(AppSettings::FullscreenMode::kiosk)
+               ? AppSettings::FullscreenMode::kiosk
+               : AppSettings::FullscreenMode::normal;
 }
 
 [[nodiscard]] int loadDisplayMode(const juce::PropertySet& properties)
@@ -120,6 +131,7 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
     result.state.spectrogramBounds = properties.getValue(spectrogramBoundsKey);
     result.state.settingsBounds = properties.getValue(settingsBoundsKey);
     result.state.recentTool = loadRecentTool(properties);
+    result.state.fullscreenMode = loadFullscreenMode(properties);
     return result;
 }
 
@@ -140,6 +152,7 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(spectrogramBoundsKey, state.spectrogramBounds);
     properties.setValue(settingsBoundsKey, state.settingsBounds);
     properties.setValue(recentToolKey, static_cast<int>(state.recentTool));
+    properties.setValue(fullscreenModeKey, static_cast<int>(state.fullscreenMode));
 }
 
 void AppSettings::clearOwnedValues(juce::PropertySet& properties)

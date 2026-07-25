@@ -13,6 +13,12 @@ enum class RecentTool
     spectrogram
 };
 
+enum class FullscreenMode
+{
+    normal = 1,
+    kiosk
+};
+
 enum class LoadStatus
 {
     loaded,
@@ -33,6 +39,7 @@ struct State
     juce::String spectrogramBounds;
     juce::String settingsBounds;
     RecentTool recentTool = RecentTool::tuner;
+    FullscreenMode fullscreenMode = FullscreenMode::normal;
 };
 
 struct LoadResult

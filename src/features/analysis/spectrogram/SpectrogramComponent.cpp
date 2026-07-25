@@ -11,16 +11,11 @@ constexpr std::array<double, 5> frequencyGridLines{100.0, 500.0, 1000.0, 5000.0,
 } // namespace
 
 //==============================================================================
-SpectrogramComponent::SpectrogramComponent(
-    AudioInputService& sharedAudioInputService,
-    std::function<void()> feedbackHandler)
+SpectrogramComponent::SpectrogramComponent(AudioInputService& sharedAudioInputService)
     : audioInputService(sharedAudioInputService)
 {
     setOpaque(true);
     spectrogramImage.clear(spectrogramImage.getBounds(), backgroundColour());
-    feedbackButton.setTitle("Give feedback about the Spectrogram");
-    feedbackButton.onClick = std::move(feedbackHandler);
-    addAndMakeVisible(feedbackButton);
 
     audioInputService.addListener(this);
     startTimerHz(refreshRateHz);
@@ -275,7 +270,5 @@ void SpectrogramComponent::paint(juce::Graphics& graphics)
 void SpectrogramComponent::resized()
 {
     auto bounds = getLocalBounds().reduced(18);
-    feedbackButton.setBounds(bounds.removeFromTop(34).removeFromRight(220));
-    bounds.removeFromTop(8);
     spectrogramBounds = bounds;
 }
