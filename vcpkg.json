@@ -1,6 +1,6 @@
 {
   "name": "practice-takes",
-  "version-string": "0.4.5",
+  "version-string": "0.4.6",
   "dependencies": [
     "alsa",
     {
