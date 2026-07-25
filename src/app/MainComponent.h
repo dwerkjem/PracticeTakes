@@ -7,6 +7,7 @@
 #include "AppDefaults.h"
 #include "SettingsPersistence.h"
 #include "Theme.h"
+#include "WorkspaceToolState.h"
 
 #include <functional>
 #include <memory>
@@ -14,7 +15,7 @@
 class MainTitleBar;
 
 // MainComponent is the application's central coordinator. It owns the shared
-// audio device, the top-level controls, and the independent tool windows.
+// audio device, the top-level controls, and the docked/floating tool workspace.
 class MainComponent final : public juce::Component, private juce::ChangeListener
 {
   public:
@@ -37,6 +38,7 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     };
 
     class ToolWindow;
+    class DockedToolPanel;
     class SettingsWindow;
     class FeedbackWindow;
     class MicrophoneWarning;
@@ -48,7 +50,11 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     // Tool and settings windows --------------------------------------------
     void showToolsMenu();
     void showSettingsMenu();
-    void openTool(ToolType tool);
+    void openTool(
+        ToolType tool,
+        WorkspaceToolState::Presentation presentation = WorkspaceToolState::Presentation::docked);
+    void presentTool(ToolType tool, WorkspaceToolState::Presentation presentation);
+    void focusTool(ToolType tool);
     void closeTool(ToolType tool);
     void showSettings();
     void closeSettings();
@@ -71,7 +77,14 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
     [[nodiscard]] std::unique_ptr<juce::Component> createToolComponent(ToolType tool);
     [[nodiscard]] juce::String toolName(ToolType tool) const;
     [[nodiscard]] juce::Point<int> preferredToolWindowSize(ToolType tool) const;
+    [[nodiscard]] bool toolIsOpen(ToolType tool) const;
+    [[nodiscard]] WorkspaceToolState& stateFor(ToolType tool);
+    [[nodiscard]] const WorkspaceToolState& stateFor(ToolType tool) const;
+    [[nodiscard]] std::unique_ptr<juce::Component>& componentFor(ToolType tool);
     [[nodiscard]] std::unique_ptr<ToolWindow>& windowFor(ToolType tool);
+    [[nodiscard]] std::unique_ptr<DockedToolPanel>& dockFor(ToolType tool);
+    void detachToolPresentation(ToolType tool);
+    void applyAppearanceToTool(ToolType tool);
 
     // Appearance ------------------------------------------------------------
     void setTheme(Theme theme);
@@ -100,12 +113,18 @@ class MainComponent final : public juce::Component, private juce::ChangeListener
 
     std::unique_ptr<ToolWindow> tunerWindow;
     std::unique_ptr<ToolWindow> spectrogramWindow;
+    std::unique_ptr<DockedToolPanel> tunerDock;
+    std::unique_ptr<DockedToolPanel> spectrogramDock;
+    std::unique_ptr<juce::Component> tunerComponent;
+    std::unique_ptr<juce::Component> spectrogramComponent;
     std::unique_ptr<SettingsWindow> settingsWindow;
     std::unique_ptr<FeedbackWindow> feedbackWindow;
     std::unique_ptr<MicrophoneWarning> microphoneWarning;
 
     Theme currentTheme = Theme::light;
     ToolType currentTool = ToolType::tuner;
+    WorkspaceToolState tunerState;
+    WorkspaceToolState spectrogramState;
     AppDefaults::TunerSettings savedTunerSettings = AppDefaults::tunerDefaults();
     juce::Rectangle<int> savedTunerBounds;
     juce::Rectangle<int> savedSpectrogramBounds;

@@ -4,20 +4,20 @@
 #include "../spectrogram/SpectrogramComponent.h"
 #include "../tuner/TunerComponent.h"
 
-#include "AppWindows.h"
 #include "MainTitleBar.h"
 #include "MicrophoneWarning.h"
+#include "settings/SettingsWindow.h"
+#include "support/FeedbackWindow.h"
+#include "workspace/DockedToolPanel.h"
+#include "workspace/ToolWindow.h"
 
 namespace
 {
-constexpr int toolsMenuWidth = 190;
 constexpr int helpMenuWidth = 190;
 
 constexpr int microphoneWarningWidth = 470;
 constexpr int microphoneWarningHeight = 118;
 
-constexpr int tunerMenuItemId = 1;
-constexpr int spectrogramMenuItemId = 2;
 constexpr int sendFeedbackMenuItemId = 1;
 constexpr int feedbackInvitationsMenuItemId = 2;
 constexpr int openSettingsMenuItemId = 1;
@@ -74,12 +74,16 @@ MainComponent::~MainComponent()
 {
     saveSettings();
     audioInputService.removeChangeListener(this);
-    // Tool components unregister from the service in their destructors, so
-    // close the windows before the service is destroyed.
+    // Presentations do not own their tool components. Detach them before
+    // destroying the components that unregister from the shared audio service.
     settingsWindow.reset();
     feedbackWindow.reset();
+    tunerDock.reset();
+    spectrogramDock.reset();
     spectrogramWindow.reset();
     tunerWindow.reset();
+    spectrogramComponent.reset();
+    tunerComponent.reset();
     microphoneWarning.reset();
 
     applicationProperties.closeFiles();
@@ -129,6 +133,26 @@ void MainComponent::resized()
 {
     auto remainingBounds = getLocalBounds();
 
+    auto workspaceBounds = remainingBounds.reduced(18);
+    const auto hasTunerDock = tunerDock != nullptr;
+    const auto hasSpectrogramDock = spectrogramDock != nullptr;
+    if (hasTunerDock && hasSpectrogramDock)
+    {
+        constexpr int gap = 10;
+        const auto firstWidth = (workspaceBounds.getWidth() - gap) / 2;
+        tunerDock->setBounds(workspaceBounds.removeFromLeft(firstWidth));
+        workspaceBounds.removeFromLeft(gap);
+        spectrogramDock->setBounds(workspaceBounds);
+    }
+    else if (hasTunerDock)
+    {
+        tunerDock->setBounds(workspaceBounds);
+    }
+    else if (hasSpectrogramDock)
+    {
+        spectrogramDock->setBounds(workspaceBounds);
+    }
+
     if (microphoneWarning != nullptr)
     {
         auto warningArea = remainingBounds.reduced(18);
@@ -136,37 +160,9 @@ void MainComponent::resized()
 
         microphoneWarning->setBounds(
             warningArea.removeFromTop(microphoneWarningHeight).removeFromRight(availableWidth));
+        if (microphoneWarning->isVisible())
+            microphoneWarning->toFront(false);
     }
-}
-
-void MainComponent::showToolsMenu()
-{
-    juce::PopupMenu menu;
-    menu.setLookAndFeel(&appLookAndFeel);
-    menu.addItem(tunerMenuItemId, "Tuner", true, tunerWindow != nullptr);
-    menu.addItem(spectrogramMenuItemId, "Spectrogram", true, spectrogramWindow != nullptr);
-
-    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
-    menu.showMenuAsync(
-        juce::PopupMenu::Options()
-            .withTargetComponent(&toolsButton)
-            .withMinimumWidth(toolsMenuWidth),
-        [safeThis](int selectedItemId)
-        {
-            if (safeThis == nullptr)
-            {
-                return;
-            }
-
-            if (selectedItemId == tunerMenuItemId)
-            {
-                safeThis->openTool(ToolType::tuner);
-            }
-            else if (selectedItemId == spectrogramMenuItemId)
-            {
-                safeThis->openTool(ToolType::spectrogram);
-            }
-        });
 }
 
 void MainComponent::showSettingsMenu()
@@ -270,81 +266,6 @@ void MainComponent::closeFeedback()
     feedbackWindow.reset();
 }
 
-void MainComponent::openTool(ToolType tool)
-{
-    currentTool = tool;
-    auto& window = windowFor(tool);
-
-    if (window != nullptr)
-    {
-        window->setVisible(true);
-        window->toFront(true);
-        return;
-    }
-
-    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
-    const auto closeHandler = [safeThis, tool]
-    {
-        if (safeThis != nullptr)
-        {
-            safeThis->closeTool(tool);
-        }
-    };
-
-    window = std::make_unique<ToolWindow>(
-        toolName(tool), createToolComponent(tool), preferredToolWindowSize(tool), closeHandler);
-
-    const auto savedBounds = tool == ToolType::tuner ? savedTunerBounds : savedSpectrogramBounds;
-    if (!savedBounds.isEmpty())
-        window->setBounds(savedBounds);
-
-    const auto palette = appPaletteFor(currentTheme);
-    window->applyAppearance(&appLookAndFeel, palette.background, currentTheme);
-    window->toFront(true);
-}
-
-void MainComponent::closeTool(ToolType tool)
-{
-    auto& window = windowFor(tool);
-    const auto wasOpen = window != nullptr;
-    if (window != nullptr)
-    {
-        if (tool == ToolType::tuner)
-        {
-            savedTunerBounds = window->getBounds();
-        }
-        else
-        {
-            savedSpectrogramBounds = window->getBounds();
-        }
-
-        if (auto* tuner = dynamic_cast<TunerComponent*>(window->getContentComponent()))
-        {
-            savedTunerSettings = tuner->settings();
-        }
-    }
-    window.reset();
-    if (wasOpen)
-        recordSuccessfulToolUse();
-}
-
-std::unique_ptr<juce::Component> MainComponent::createToolComponent(ToolType tool)
-{
-    if (tool == ToolType::tuner)
-    {
-        auto tuner = std::make_unique<TunerComponent>(
-            audioInputService, [this] { showFeedback(toolName(ToolType::tuner)); });
-        tuner->applySettings(savedTunerSettings);
-        tuner->setTheme(currentTheme);
-        return tuner;
-    }
-
-    auto spectrogram = std::make_unique<SpectrogramComponent>(
-        audioInputService, [this] { showFeedback(toolName(ToolType::spectrogram)); });
-    spectrogram->setTheme(currentTheme);
-    return spectrogram;
-}
-
 void MainComponent::recordSuccessfulToolUse()
 {
     auto* settingsFile = applicationProperties.getUserSettings();
@@ -367,7 +288,7 @@ void MainComponent::maybeOfferFeedbackInvitation()
         settingsFile->getIntValue(feedbackSuccessfulUsesKey, 0),
         settingsFile->getBoolValue(feedbackInvitationShownKey, false),
         settingsFile->getBoolValue(feedbackInvitationsDisabledKey, false)};
-    const auto isLiveSessionActive = tunerWindow != nullptr || spectrogramWindow != nullptr;
+    const auto isLiveSessionActive = tunerState.isOpen() || spectrogramState.isOpen();
     if (!FeedbackInvitationPolicy::shouldInvite(state, isLiveSessionActive))
         return;
 
@@ -409,21 +330,6 @@ bool MainComponent::feedbackInvitationsDisabled()
     if (auto* settingsFile = applicationProperties.getUserSettings())
         return settingsFile->getBoolValue(feedbackInvitationsDisabledKey, false);
     return false;
-}
-
-juce::String MainComponent::toolName(ToolType tool) const
-{
-    return tool == ToolType::tuner ? "Tuner" : "Spectrogram";
-}
-
-juce::Point<int> MainComponent::preferredToolWindowSize(ToolType tool) const
-{
-    return tool == ToolType::tuner ? juce::Point<int>{920, 760} : juce::Point<int>{980, 650};
-}
-
-std::unique_ptr<MainComponent::ToolWindow>& MainComponent::windowFor(ToolType tool)
-{
-    return tool == ToolType::tuner ? tunerWindow : spectrogramWindow;
 }
 
 void MainComponent::showSettings()
@@ -497,13 +403,13 @@ void MainComponent::showSettings()
 
 void MainComponent::resetCurrentTool()
 {
-    auto& window = windowFor(currentTool);
-    if (window == nullptr)
+    auto& component = componentFor(currentTool);
+    if (component == nullptr)
         return;
 
-    if (auto* tuner = dynamic_cast<TunerComponent*>(window->getContentComponent()))
+    if (auto* tuner = dynamic_cast<TunerComponent*>(component.get()))
         tuner->resetToDefaults();
-    else if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(window->getContentComponent()))
+    else if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(component.get()))
         spectrogram->resetToDefaults();
 }
 
@@ -520,9 +426,9 @@ void MainComponent::resetLayout()
     savedSpectrogramBounds = {};
     savedSettingsBounds = {};
 
-    if (tunerWindow != nullptr)
+    if (tunerState.presentation() == WorkspaceToolState::Presentation::floating)
         tunerWindow->centreWithSize(920, 760);
-    if (spectrogramWindow != nullptr)
+    if (spectrogramState.presentation() == WorkspaceToolState::Presentation::floating)
         spectrogramWindow->centreWithSize(980, 650);
     if (settingsWindow != nullptr)
         settingsWindow->centreWithSize(900, 760);
@@ -535,24 +441,21 @@ void MainComponent::resetAll()
     savedTunerSettings = AppDefaults::tunerDefaults();
     currentTool = ToolType::tuner;
 
-    if (tunerWindow != nullptr)
-        if (auto* tuner = dynamic_cast<TunerComponent*>(tunerWindow->getContentComponent()))
-            tuner->resetToDefaults();
+    if (auto* tuner = dynamic_cast<TunerComponent*>(tunerComponent.get()))
+        tuner->resetToDefaults();
 
-    if (spectrogramWindow != nullptr)
-        if (auto* spectrogram =
-                dynamic_cast<SpectrogramComponent*>(spectrogramWindow->getContentComponent()))
-            spectrogram->resetToDefaults();
+    if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(spectrogramComponent.get()))
+        spectrogram->resetToDefaults();
 
     resetLayout();
 }
 
 void MainComponent::applyPreset(AppDefaults::Preset preset)
 {
-    if (tunerWindow == nullptr)
+    if (!tunerState.isOpen())
         openTool(ToolType::tuner);
 
-    if (auto* tuner = dynamic_cast<TunerComponent*>(tunerWindow->getContentComponent()))
+    if (auto* tuner = dynamic_cast<TunerComponent*>(tunerComponent.get()))
         tuner->applyPreset(preset);
 }
 
@@ -561,11 +464,9 @@ AppSettings::State MainComponent::captureSettingsState()
     if (tunerWindow != nullptr)
     {
         savedTunerBounds = tunerWindow->getBounds();
-        if (auto* tuner = dynamic_cast<TunerComponent*>(tunerWindow->getContentComponent()))
-        {
-            savedTunerSettings = tuner->settings();
-        }
     }
+    if (auto* tuner = dynamic_cast<TunerComponent*>(tunerComponent.get()))
+        savedTunerSettings = tuner->settings();
     if (spectrogramWindow != nullptr)
     {
         savedSpectrogramBounds = spectrogramWindow->getBounds();
@@ -760,15 +661,10 @@ void MainComponent::applyAppearanceToOpenWindows()
         microphoneWarning->setTheme(currentTheme);
     }
 
-    if (tunerWindow != nullptr)
-    {
-        tunerWindow->applyAppearance(&appLookAndFeel, palette.background, currentTheme);
-    }
-
-    if (spectrogramWindow != nullptr)
-    {
-        spectrogramWindow->applyAppearance(&appLookAndFeel, palette.background, currentTheme);
-    }
+    if (tunerState.isOpen())
+        applyAppearanceToTool(ToolType::tuner);
+    if (spectrogramState.isOpen())
+        applyAppearanceToTool(ToolType::spectrogram);
 
     if (settingsWindow != nullptr)
     {

@@ -27,7 +27,8 @@ fallback while retaining the saved setup for future recovery.
 
 - Theme: Light
 - Audio input: operating-system default input device
-- Tool windows: centered at their preferred size when first opened
+- Tools: docked in the main workspace when first opened
+- Floating tool windows: centered at their preferred size
 - Tuner window: 920 x 760
 - Spectrogram window: 980 x 650
 - Settings window: 760 x 650
@@ -65,5 +66,5 @@ Uses the tuner defaults listed above.
   transient analysis history.
 - **Audio:** unmutes the microphone, restores unity gain, and selects the
   current operating-system default input device.
-- **Layout:** re-centers open tool and Settings windows at their preferred size.
+- **Layout:** re-centers floating tool and Settings windows at their preferred size.
 - **All:** restores the theme, audio input, all open tools, and window layout.

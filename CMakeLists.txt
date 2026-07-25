@@ -122,7 +122,6 @@ target_sources(PracticeTakes
         src/feedback/FeedbackComponent.h
         src/feedback/FeedbackInvitationPolicy.h
         src/app/AppDefaults.h
-        src/app/AppWindows.h
         src/app/MainComponent.cpp
         src/app/MainComponent.h
         src/app/MainTitleBar.h
@@ -130,6 +129,12 @@ target_sources(PracticeTakes
         src/app/SettingsPersistence.cpp
         src/app/SettingsPersistence.h
         src/app/ThemeType.h
+        src/app/WorkspaceToolState.h
+        src/app/settings/SettingsWindow.h
+        src/app/support/FeedbackWindow.h
+        src/app/workspace/DockedToolPanel.h
+        src/app/workspace/MainComponentWorkspace.cpp
+        src/app/workspace/ToolWindow.h
         src/spectrogram/SpectrogramComponent.cpp
         src/spectrogram/SpectrogramComponent.h
         src/tuner/TunerComponent.cpp
@@ -166,6 +171,7 @@ if(BUILD_TESTING)
         tests/FeedbackInvitationPolicyTests.cpp
         tests/PitchDetectorTests.cpp
         tests/SettingsPersistenceTests.cpp
+        tests/WorkspaceToolStateTests.cpp
         src/app/SettingsPersistence.cpp
         src/tuner/PitchDetector.cpp
     )

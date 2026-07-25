@@ -11,13 +11,14 @@ services.
 - one `AudioDeviceManager`
 - the application `LookAndFeel`
 - the Settings window
-- one optional window for each open tool
+- one live component for each open tool
+- a docked panel or floating window that presents each live tool component
 - the nonmodal microphone warning card
 
 Keeping one shared `AudioDeviceManager` avoids opening the same microphone
 separately for every tool. `AudioInputService` owns the one hardware callback;
 the tuner and spectrogram register as consumers of that service while their
-windows are open.
+tool components are open.
 
 ## Main window
 
@@ -26,11 +27,22 @@ provide:
 
 - `File`, currently reserved for future commands
 - `Settings`, which opens global appearance and audio-device controls
-- `Tools`, which opens individual analysis windows
+- `Tools`, which opens, docks, floats, and focuses analysis tools
 
-Tools are not embedded inside the main window. Each tool owns a resizable
-`DocumentWindow`, allowing the tuner and spectrogram to remain visible at the
-same time.
+## Tool workspace
+
+`MainComponent` owns each live tuner or spectrogram component. Presentation
+containers never own tool components:
+
+- `DockedToolPanel` embeds a tool in the main workspace.
+- `ToolWindow` presents the same tool in an independent resizable window.
+
+Moving between these modes detaches and reparents the existing component, so
+its analysis buffers, controls, and shared-audio registration stay intact.
+Closing a tool destroys its component deterministically; closing or moving a
+presentation container cannot destroy the application-level audio service.
+One instance of each current tool is supported. Opening an already-live tool
+focuses its existing dock or window.
 
 ## Theme propagation
 
