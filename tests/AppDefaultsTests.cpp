@@ -1,7 +1,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "app/AppDefaults.h"
+#include "application/configuration/AppDefaults.h"
 
 TEST_CASE("General instrument preset matches the tuner defaults", "[defaults][tuner]")
 {

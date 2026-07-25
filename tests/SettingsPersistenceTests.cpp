@@ -1,7 +1,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "app/SettingsPersistence.h"
+#include "application/configuration/SettingsPersistence.h"
 
 namespace
 {
@@ -156,4 +156,99 @@ TEST_CASE("newer settings schemas are left untouched", "[settings][migration]")
 
     CHECK(loaded.status == AppSettings::LoadStatus::newerSchema);
     CHECK(loaded.state.theme == AppDefaults::theme);
+}
+
+TEST_CASE("negative settings schemas recover as corruption", "[settings][recovery]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile invalid(temporary.path, settingsOptions());
+        invalid.setValue("settings.schema", -1);
+        REQUIRE(invalid.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    CHECK(loaded.status == AppSettings::LoadStatus::recoveredFromCorruption);
+    CHECK(loaded.state.theme == AppDefaults::theme);
+}
+
+TEST_CASE("unowned properties do not turn defaults into a migration", "[settings][migration]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile unrelated(temporary.path, settingsOptions());
+        unrelated.setValue("another.application.value", "keep me");
+        REQUIRE(unrelated.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    CHECK(loaded.status == AppSettings::LoadStatus::defaults);
+}
+
+TEST_CASE("validation accepts every documented tuner boundary", "[settings][validation]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile boundary(temporary.path, settingsOptions());
+        boundary.setValue("settings.schema", AppDefaults::schemaVersion);
+        boundary.setValue("audio.inputGain", 0.0);
+        boundary.setValue("tuner.displayMode", 3);
+        boundary.setValue("tuner.easing", 0.02);
+        boundary.setValue("tuner.averaging", 15.0);
+        boundary.setValue("tuner.noteSwitch", 0.1);
+        boundary.setValue("tuner.dropout", 20.0);
+        boundary.setValue("tuner.graphDuration", 60.0);
+        REQUIRE(boundary.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    REQUIRE(loaded.status == AppSettings::LoadStatus::loaded);
+    CHECK(loaded.state.inputGain == Catch::Approx(0.0));
+    CHECK(loaded.state.tuner.displayMode == 3);
+    CHECK(loaded.state.tuner.easing == Catch::Approx(0.02));
+    CHECK(loaded.state.tuner.averaging == Catch::Approx(15.0));
+    CHECK(loaded.state.tuner.noteSwitchSemitones == Catch::Approx(0.1));
+    CHECK(loaded.state.tuner.dropoutFrames == Catch::Approx(20.0));
+    CHECK(loaded.state.tuner.graphDurationSeconds == Catch::Approx(60.0));
+}
+
+TEST_CASE("invalid recent-tool values fall back to the tuner", "[settings][validation]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile invalid(temporary.path, settingsOptions());
+        invalid.setValue("settings.schema", AppDefaults::schemaVersion);
+        invalid.setValue("layout.recentTool", 99);
+        REQUIRE(invalid.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    REQUIRE(loaded.status == AppSettings::LoadStatus::loaded);
+    CHECK(loaded.state.recentTool == AppSettings::RecentTool::tuner);
+}
+
+TEST_CASE("clearing settings removes only Practice Takes owned values", "[settings][persistence]")
+{
+    juce::PropertySet properties;
+    properties.setValue("another.application.value", "keep me");
+    AppSettings::State state;
+    state.theme = Theme::dark;
+    AppSettings::store(properties, state);
+
+    REQUIRE(properties.containsKey("settings.schema"));
+    REQUIRE(properties.containsKey("global.theme"));
+
+    AppSettings::clearOwnedValues(properties);
+
+    CHECK_FALSE(properties.containsKey("settings.schema"));
+    CHECK_FALSE(properties.containsKey("global.theme"));
+    CHECK(properties.getValue("another.application.value") == "keep me");
 }

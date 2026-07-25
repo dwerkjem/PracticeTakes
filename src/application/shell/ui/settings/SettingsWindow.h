@@ -1,70 +1,10 @@
 #pragma once
 
-#include "MainComponent.h"
-
-#include "../feedback/FeedbackComponent.h"
-#include "../spectrogram/SpectrogramComponent.h"
-#include "../tuner/TunerComponent.h"
+#include "../../MainComponent.h"
 
 #include <functional>
 #include <utility>
 
-class MainComponent::ToolWindow final : public juce::DocumentWindow
-{
-  public:
-    ToolWindow(
-        const juce::String& title,
-        std::unique_ptr<juce::Component> content,
-        juce::Point<int> preferredSize,
-        std::function<void()> closeHandler)
-        : DocumentWindow(title, juce::Colours::darkgrey, juce::DocumentWindow::allButtons),
-          onClose(std::move(closeHandler))
-    {
-        setUsingNativeTitleBar(true);
-        setContentOwned(content.release(), true);
-        setResizable(true, true);
-        setResizeLimits(520, 420, 2400, 1600);
-        centreWithSize(preferredSize.x, preferredSize.y);
-        setVisible(true);
-    }
-
-    ~ToolWindow() override
-    {
-        setLookAndFeel(nullptr);
-    }
-
-    void closeButtonPressed() override
-    {
-        setVisible(false);
-        juce::MessageManager::callAsync(onClose);
-    }
-
-    void applyAppearance(juce::LookAndFeel* lookAndFeel, juce::Colour background, Theme theme)
-    {
-        setLookAndFeel(lookAndFeel);
-        setBackgroundColour(background);
-
-        // Tool components draw their own graphs and panels, so they receive
-        // the selected appearance in addition to the shared LookAndFeel.
-        if (auto* tuner = dynamic_cast<TunerComponent*>(getContentComponent()))
-        {
-            tuner->setTheme(theme);
-        }
-
-        if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(getContentComponent()))
-        {
-            spectrogram->setTheme(theme);
-        }
-
-        sendLookAndFeelChange();
-        repaint();
-    }
-
-  private:
-    std::function<void()> onClose;
-};
-
-//==============================================================================
 // Settings remains separate from the main window so it can grow without
 // crowding the top-level application shell.
 class MainComponent::SettingsWindow final : public juce::DocumentWindow
@@ -524,9 +464,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         juce::MessageManager::callAsync(onClose);
     }
 
-    void applyAppearance(juce::LookAndFeel* lookAndFeel, juce::Colour background, Theme theme)
+    void applyAppearance(juce::LookAndFeel* appearance, juce::Colour background, Theme theme)
     {
-        setLookAndFeel(lookAndFeel);
+        setLookAndFeel(appearance);
         setBackgroundColour(background);
 
         if (auto* content = dynamic_cast<Content*>(getContentComponent()))
@@ -536,44 +476,6 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
         sendLookAndFeelChange();
         repaint();
-    }
-
-  private:
-    std::function<void()> onClose;
-};
-
-//==============================================================================
-class MainComponent::FeedbackWindow final : public juce::DocumentWindow
-{
-  public:
-    FeedbackWindow(
-        juce::PropertiesFile& propertiesFile,
-        const juce::String& initialContext,
-        std::function<void()> closeHandler)
-        : DocumentWindow(
-              "Send feedback",
-              juce::Colours::darkgrey,
-              juce::DocumentWindow::allButtons),
-          onClose(std::move(closeHandler))
-    {
-        setUsingNativeTitleBar(true);
-        setContentOwned(new FeedbackComponent(propertiesFile, initialContext), true);
-        setResizable(true, true);
-        setResizeLimits(620, 760, 1200, 1200);
-        centreWithSize(760, 900);
-        setVisible(true);
-    }
-
-    void setContextTag(const juce::String& context)
-    {
-        if (auto* feedback = dynamic_cast<FeedbackComponent*>(getContentComponent()))
-            feedback->setContextTag(context);
-    }
-
-    void closeButtonPressed() override
-    {
-        setVisible(false);
-        juce::MessageManager::callAsync(onClose);
     }
 
   private:
