@@ -2,8 +2,8 @@
 
 #include <iostream>
 
-#include "app/MainComponent.h"
-#include "app/MainTitleBar.h"
+#include "../application/shell/MainComponent.h"
+#include "../application/shell/ui/chrome/MainTitleBar.h"
 
 // JUCE owns the application object for the lifetime of the process. This class
 // creates the main window during startup and releases it during shutdown.
@@ -83,6 +83,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             // Use a resizable border so every window edge and corner can be
             // dragged, even though the application supplies its own title bar.
             setResizable(true, false);
+            setResizeLimits(980, 600, 3200, 2200);
             centreWithSize(getWidth(), getHeight());
             setVisible(true);
         }

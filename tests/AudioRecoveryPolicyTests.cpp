@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "audio/AudioRecoveryPolicy.h"
+#include "services/audio/AudioRecoveryPolicy.h"
 
 TEST_CASE("audio recovery never replaces an open backend", "[audio][recovery]")
 {
@@ -18,4 +18,28 @@ TEST_CASE("audio recovery retries only after the backend stops", "[audio][recove
 {
     CHECK(AudioRecoveryPolicy::shouldAttemptRecovery(false, true, false, true));
     CHECK(AudioRecoveryPolicy::shouldAttemptRecovery(false, false, false, true));
+}
+
+TEST_CASE("audio recovery policy matches its complete input state table", "[audio][recovery]")
+{
+    for (const auto hasUsableInput : {false, true})
+    {
+        for (const auto hasCurrentDevice : {false, true})
+        {
+            for (const auto isCurrentDeviceOpen : {false, true})
+            {
+                for (const auto hasEnumeratedInput : {false, true})
+                {
+                    CAPTURE(
+                        hasUsableInput, hasCurrentDevice, isCurrentDeviceOpen, hasEnumeratedInput);
+                    const auto expected = !hasUsableInput && hasEnumeratedInput &&
+                                          (!hasCurrentDevice || !isCurrentDeviceOpen);
+                    CHECK(
+                        AudioRecoveryPolicy::shouldAttemptRecovery(
+                            hasUsableInput, hasCurrentDevice, isCurrentDeviceOpen,
+                            hasEnumeratedInput) == expected);
+                }
+            }
+        }
+    }
 }

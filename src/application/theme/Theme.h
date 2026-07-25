@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ThemeType.h"
-#include <JuceHeader.h>
+#include <juce_graphics/juce_graphics.h>
 
 struct AppPalette
 {

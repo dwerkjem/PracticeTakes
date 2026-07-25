@@ -35,8 +35,16 @@ The main window provides three top-level controls:
   buffering status, and light/dark appearance
 - **Tools** — opens the tuner and spectrogram
 
-Each tool opens in its own resizable window. The tuner and spectrogram can
-remain open at the same time and share the microphone selected in Settings.
+Each tool can run inside the main workspace or in its own resizable floating
+window. Use **Tools → Tuner/Spectrogram → Dock in workspace** or **Float in
+window** to move a live tool without restarting its analysis. The tuner and
+spectrogram can remain open at the same time and share the microphone selected
+in Settings.
+
+Drag the **Drag** handle on a docked or floating tool into the main workspace.
+Visible targets tile it left, right, top, or bottom, group it as a tab, or move
+it back to a floating window. Split dividers are resizable. The equivalent
+**Tools → Arrange workspace** commands provide a keyboard-accessible path.
 Input volume is a shared software gain from 0–200%, so the same adjusted
 signal reaches every analysis tool without changing the operating-system
 microphone setting.

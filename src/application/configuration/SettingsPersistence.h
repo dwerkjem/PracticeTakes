@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../theme/ThemeType.h"
 #include "AppDefaults.h"
-#include "ThemeType.h"
 
 #include <juce_data_structures/juce_data_structures.h>
 

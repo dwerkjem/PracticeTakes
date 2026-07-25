@@ -1,5 +1,23 @@
 # Practice Takes architecture
 
+## Source organization
+
+The source tree groups code first by architectural role, then by feature:
+
+- `src/bootstrap` starts the JUCE application and owns the top-level window.
+- `src/application/configuration` persists settings and defines defaults.
+- `src/application/theme` owns shared palettes and look-and-feel behavior.
+- `src/application/shell` coordinates windows, menus, audio state, appearance,
+  and workspace layout. Its `ui` and `state` branches keep immediate folder
+  fan-out small. `MainComponent` implementations live beside the shell
+  responsibility they implement instead of in one monolithic source file.
+- `src/features` contains user-facing analysis and feedback features.
+- `src/services` contains shared infrastructure such as microphone capture.
+
+Shell UI helpers are nested under `shell/ui/chrome`, `feedback`, `settings`,
+and `workspace`; appearance and audio state live under `shell/state`. This
+keeps each directory focused and avoids a single broad application folder.
+
 ## Application ownership
 
 `PracticeTakesApplication` owns the main `DocumentWindow`. The main window owns
@@ -11,13 +29,14 @@ services.
 - one `AudioDeviceManager`
 - the application `LookAndFeel`
 - the Settings window
-- one optional window for each open tool
+- one live component for each open tool
+- a docked panel or floating window that presents each live tool component
 - the nonmodal microphone warning card
 
 Keeping one shared `AudioDeviceManager` avoids opening the same microphone
 separately for every tool. `AudioInputService` owns the one hardware callback;
 the tuner and spectrogram register as consumers of that service while their
-windows are open.
+tool components are open.
 
 ## Main window
 
@@ -26,11 +45,38 @@ provide:
 
 - `File`, currently reserved for future commands
 - `Settings`, which opens global appearance and audio-device controls
-- `Tools`, which opens individual analysis windows
+- `Tools`, which opens, docks, floats, and focuses analysis tools
 
-Tools are not embedded inside the main window. Each tool owns a resizable
-`DocumentWindow`, allowing the tuner and spectrogram to remain visible at the
-same time.
+## Tool workspace
+
+`MainComponent` owns each live tuner or spectrogram component. Presentation
+containers never own tool components:
+
+- `DockedToolPanel` embeds a tool in the main workspace.
+- `ToolWindow` presents the same tool in an independent resizable window.
+
+Moving between these modes detaches and reparents the existing component, so
+its analysis buffers, controls, and shared-audio registration stay intact.
+Closing a tool destroys its component deterministically; closing or moving a
+presentation container cannot destroy the application-level audio service.
+One instance of each current tool is supported. Opening an already-live tool
+focuses its existing dock or window.
+
+`MainComponent` is also the cross-window drag container and workspace drop
+target. A drag changes no ownership or layout state until a valid target is
+dropped, so leaving the workspace or cancelling restores the original
+presentation automatically. Edge targets choose horizontal or vertical tiling,
+the centre target creates a tab group, and the floating target detaches the
+tool. `StretchableLayoutManager` enforces 480-pixel horizontal and 280-pixel
+vertical minimum tool sizes around an 8-pixel divider. The Tools menu exposes
+the same horizontal, vertical, and tabbed operations without pointer dragging.
+
+## Theme contrast
+
+The shared look-and-feel assigns foreground and background colours for labels,
+buttons, tabs, editors, menus, dialogs, tooltips, groups, lists, and sliders.
+Light-theme palette contrast is covered by automated WCAG normal-text checks,
+preventing controls from inheriting low-contrast dark-theme text defaults.
 
 ## Theme propagation
 
