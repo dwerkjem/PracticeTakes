@@ -154,6 +154,8 @@ target_sources(PracticeTakes
         src/features/analysis/tuner/TunerDrawing.cpp
         src/features/performance/BenchmarkRecordCodec.cpp
         src/features/performance/BenchmarkRecordCodec.h
+        src/features/performance/BenchmarkRunner.cpp
+        src/features/performance/BenchmarkRunner.h
         src/features/performance/InTreeOptimizationStrategy.cpp
         src/features/performance/InTreeOptimizationStrategy.h
         src/features/feedback/FeedbackComponent.cpp
@@ -195,6 +197,7 @@ if(BUILD_TESTING)
         tests/BenchmarkFakesTests.cpp
         tests/BenchmarkInterfacesTests.cpp
         tests/BenchmarkRecordCodecTests.cpp
+        tests/BenchmarkRunnerTests.cpp
         tests/BenchmarkTypesTests.cpp
         tests/FeedbackInvitationPolicyTests.cpp
         tests/HarmonicAnalyzerTests.cpp
@@ -209,6 +212,7 @@ if(BUILD_TESTING)
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
         src/features/analysis/tuner/PitchDetector.cpp
         src/features/performance/BenchmarkRecordCodec.cpp
+        src/features/performance/BenchmarkRunner.cpp
         src/features/performance/InTreeOptimizationStrategy.cpp
     )
 

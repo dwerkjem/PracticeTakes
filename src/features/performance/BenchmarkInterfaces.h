@@ -58,6 +58,7 @@ class TelemetryCollector
 
     virtual void beginTrial(std::uint32_t trialIndex) = 0;
     [[nodiscard]] virtual TrialMeasurement endTrial() = 0;
+    virtual void abortTrial() noexcept = 0;
 };
 
 class BenchmarkScenario

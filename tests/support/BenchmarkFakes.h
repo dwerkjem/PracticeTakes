@@ -41,11 +41,16 @@ class FakeTelemetryCollector final : public performance::TelemetryCollector
         result.trialIndex = activeTrialIndex;
         return result;
     }
+    void abortTrial() noexcept override
+    {
+        ++abortCount;
+    }
 
     performance::TrialMeasurement nextMeasurement;
     std::uint32_t activeTrialIndex = 0;
     std::uint32_t beginCount = 0;
     std::uint32_t endCount = 0;
+    std::uint32_t abortCount = 0;
 };
 
 class FakeBenchmarkScenario final : public performance::BenchmarkScenario
@@ -75,6 +80,8 @@ class FakeBenchmarkScenario final : public performance::BenchmarkScenario
     void runTrial() override
     {
         ++runCount;
+        if (throwOnRunNumber.has_value() && runCount == *throwOnRunNumber)
+            throw std::runtime_error("Fake scenario trial failed");
     }
     [[nodiscard]] performance::ValidationResult verifyCorrectness() const override
     {
@@ -93,6 +100,7 @@ class FakeBenchmarkScenario final : public performance::BenchmarkScenario
     std::uint32_t prepareCount = 0;
     std::uint32_t runCount = 0;
     std::uint32_t restoreCount = 0;
+    std::optional<std::uint32_t> throwOnRunNumber;
 };
 
 class FakeOptimizationStrategy final : public performance::OptimizationStrategy

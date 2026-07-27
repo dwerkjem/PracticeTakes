@@ -8,8 +8,8 @@
 
 ## 2. Scenario Runner
 
-- [ ] 2.1 Implement the application-level runner state machine for stabilization, warm-up, measured trials, aggregation, and cleanup
-- [ ] 2.2 Add safe cancellation and failure handling that restores application state and preserves completed trials as incomplete
+- [x] 2.1 Implement the application-level runner state machine for stabilization, warm-up, measured trials, aggregation, and cleanup
+- [x] 2.2 Add safe cancellation and failure handling that restores application state and preserves completed trials as incomplete
 - [ ] 2.3 Implement one representative sustained audio-analysis scenario using semantic application actions and a deterministic fixture
 - [ ] 2.4 Add runner tests covering successful runs, invalid configurations, correctness failures, cancellation, and cleanup
 
