@@ -188,6 +188,7 @@ if(BUILD_TESTING)
         tests/AppDefaultsTests.cpp
         tests/AudioRecoveryPolicyTests.cpp
         tests/AudioSampleFifoTests.cpp
+        tests/BenchmarkFakesTests.cpp
         tests/BenchmarkInterfacesTests.cpp
         tests/BenchmarkTypesTests.cpp
         tests/FeedbackInvitationPolicyTests.cpp

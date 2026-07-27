@@ -2,6 +2,7 @@
 
 #include "BenchmarkTypes.h"
 
+#include <chrono>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -40,6 +41,23 @@ struct ValidationResult
     {
         return {.valid = false, .errors = {std::move(error)}};
     }
+};
+
+class BenchmarkClock
+{
+  public:
+    virtual ~BenchmarkClock() = default;
+
+    [[nodiscard]] virtual std::chrono::steady_clock::time_point now() const noexcept = 0;
+};
+
+class TelemetryCollector
+{
+  public:
+    virtual ~TelemetryCollector() = default;
+
+    virtual void beginTrial(std::uint32_t trialIndex) = 0;
+    [[nodiscard]] virtual TrialMeasurement endTrial() = 0;
 };
 
 class BenchmarkScenario
