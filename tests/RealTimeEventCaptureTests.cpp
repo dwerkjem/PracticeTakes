@@ -3,6 +3,9 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <array>
+#include <atomic>
+#include <thread>
+#include <vector>
 
 TEST_CASE("real-time capture preserves callback events and deadline status")
 {
@@ -55,4 +58,35 @@ TEST_CASE("real-time capture drops newest events when its fixed storage is full"
     REQUIRE(capture.drain(events) == 2);
     REQUIRE(events[0].startedAtNanoseconds == 10);
     REQUIRE(events[1].startedAtNanoseconds == 20);
+}
+
+TEST_CASE("real-time capture remains bounded under concurrent stress")
+{
+    constexpr std::uint64_t attemptCount = 500'000;
+    performance::RealTimeEventCapture<256> capture;
+    std::atomic_bool producerFinished{false};
+    std::vector<performance::AudioCallbackEvent> consumed;
+    consumed.reserve(attemptCount);
+
+    std::thread producer(
+        [&capture, &producerFinished]
+        {
+            for (std::uint64_t attempt = 0; attempt < attemptCount; ++attempt)
+                (void)capture.record(attempt, 10, 20, 1, 2);
+            producerFinished.store(true, std::memory_order_release);
+        });
+
+    std::array<performance::AudioCallbackEvent, 64> batch;
+    while (!producerFinished.load(std::memory_order_acquire) || capture.available() > 0)
+    {
+        const auto count = capture.drain(batch);
+        consumed.insert(consumed.end(), batch.begin(), batch.begin() + count);
+        REQUIRE(capture.available() <= 256);
+        std::this_thread::yield();
+    }
+    producer.join();
+
+    REQUIRE(consumed.size() + capture.droppedEvents() == attemptCount);
+    for (std::size_t index = 1; index < consumed.size(); ++index)
+        REQUIRE(consumed[index - 1].sequence < consumed[index].sequence);
 }
