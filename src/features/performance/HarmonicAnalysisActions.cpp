@@ -21,7 +21,9 @@ void HarmonicAnalysisActions::analyzeFixture(std::size_t frameCount)
     {
         const auto result = analyzer.analyze(fixture, sampleRateHz);
         if (result.isPitched)
+        {
             ++pitchedFrames;
+        }
     }
 }
 

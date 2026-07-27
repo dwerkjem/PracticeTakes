@@ -21,7 +21,9 @@ double median(const std::vector<double>& sortedValues)
 {
     const auto middle = sortedValues.size() / 2;
     if (sortedValues.size() % 2 == 0)
+    {
         return (sortedValues[middle - 1] + sortedValues[middle]) / 2.0;
+    }
     return sortedValues[middle];
 }
 
@@ -50,11 +52,15 @@ TrialAggregation TrialAggregator::aggregate(const std::vector<TrialMeasurement>&
         for (const auto& sample : trial.samples)
         {
             if (!std::isfinite(sample.value))
+            {
                 throw std::invalid_argument("Metric samples must be finite");
+            }
 
             auto& metric = metrics[sample.metricId];
             if (!metric.unit.empty() && metric.unit != sample.unit)
+            {
                 throw std::invalid_argument("Metric units must be consistent");
+            }
             metric.unit = sample.unit;
             metric.values.push_back(sample.value);
         }

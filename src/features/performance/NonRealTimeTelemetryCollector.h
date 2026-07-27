@@ -37,7 +37,7 @@ class NonRealTimeTelemetryCollector final : public TelemetryCollector
   private:
     ProcessMetricsProvider& provider;
     BenchmarkClock& clock;
-    std::chrono::steady_clock::time_point startedAt{};
+    std::chrono::steady_clock::time_point startedAt;
     std::uint32_t activeTrialIndex = 0;
     std::uint64_t completedWork = 0;
     bool active = false;

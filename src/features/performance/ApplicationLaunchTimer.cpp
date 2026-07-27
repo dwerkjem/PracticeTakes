@@ -15,7 +15,9 @@ ApplicationLaunchTimer::ApplicationLaunchTimer(TimePoint processStartIn) noexcep
 void ApplicationLaunchTimer::markMainWindowVisible(TimePoint visibleAt) noexcept
 {
     if (!launchDuration)
+    {
         launchDuration = visibleAt - processStart;
+    }
 }
 
 std::optional<std::chrono::nanoseconds> ApplicationLaunchTimer::duration() const noexcept

@@ -33,7 +33,9 @@ BenchmarkRunnerResult BenchmarkRunner::run(
         validation.errors.emplace_back("Strategy is not compatible with the selected scenario");
     }
     if (!validation.valid)
+    {
         return {.validation = std::move(validation)};
+    }
 
     BenchmarkRunnerResult result;
     result.validation = ValidationResult::success();
@@ -46,9 +48,13 @@ BenchmarkRunnerResult BenchmarkRunner::run(
             RunnerPhase::cleaningUp, static_cast<std::uint32_t>(result.trials.size()),
             configuration.measuredTrialCount);
         if (scenarioPrepared)
+        {
             scenario.restore();
+        }
         if (strategyActive)
+        {
             strategy.deactivate();
+        }
     };
 
     try
@@ -60,7 +66,9 @@ BenchmarkRunnerResult BenchmarkRunner::run(
 
         report(RunnerPhase::stabilizing, 0, configuration.measuredTrialCount);
         if (stabilizer)
+        {
             stabilizer();
+        }
 
         report(RunnerPhase::warmingUp, 0, configuration.warmUpCount);
         for (std::uint32_t trial = 0; trial < configuration.warmUpCount; ++trial)
@@ -105,10 +113,14 @@ BenchmarkRunnerResult BenchmarkRunner::run(
             RunnerPhase::aggregating, configuration.measuredTrialCount,
             configuration.measuredTrialCount);
         if (aggregator)
+        {
             aggregator(result.trials);
+        }
         result.status = result.validation.valid ? RunStatus::completed : RunStatus::failed;
         if (!result.validation.valid)
+        {
             result.statusDetail = "Scenario correctness verification failed";
+        }
     }
     catch (const std::exception& error)
     {
@@ -140,6 +152,8 @@ void BenchmarkRunner::report(
 {
     currentProgress = {phase, completedTrials, totalTrials};
     if (observer)
+    {
         observer(currentProgress);
+    }
 }
 } // namespace performance

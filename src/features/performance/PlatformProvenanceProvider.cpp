@@ -43,7 +43,9 @@ PlatformMetadata JucePlatformMetadataSource::detect() const
     metadata.cpu = knownOrUnknown(juce::SystemStats::getCpuModel());
     const auto memoryMegabytes = juce::SystemStats::getMemorySizeInMegabytes();
     if (memoryMegabytes > 0)
+    {
         metadata.memoryBytes = static_cast<std::uint64_t>(memoryMegabytes) * 1024 * 1024;
+    }
 
     if (audioDeviceManager == nullptr)
     {

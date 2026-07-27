@@ -26,7 +26,9 @@ validateComparability(const BenchmarkRunRecord& baseline, const BenchmarkRunReco
     const auto compare = [&result](std::string field, const auto& left, const auto& right)
     {
         if (left != right)
+        {
             result.mismatches.push_back({std::move(field), display(left), display(right)});
+        }
     };
 
     compare("scenarioId", baseline.configuration.scenarioId, candidate.configuration.scenarioId);

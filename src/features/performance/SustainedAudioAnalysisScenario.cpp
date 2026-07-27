@@ -29,15 +29,25 @@ SustainedAudioAnalysisScenario::validate(const RunConfiguration& configuration) 
 {
     ValidationResult result;
     if (configuration.scenarioId != id())
+    {
         result.errors.emplace_back("Scenario identifier does not match sustained audio analysis");
+    }
     if (configuration.workloadId != workloadId())
+    {
         result.errors.emplace_back("Workload identifier does not match the deterministic fixture");
+    }
     if (configuration.audio.sampleRateHz <= 0.0)
+    {
         result.errors.emplace_back("Audio sample rate must be greater than zero");
+    }
     if (configuration.audio.bufferSizeFrames == 0)
+    {
         result.errors.emplace_back("Audio buffer size must be greater than zero");
+    }
     if (frameCount == 0)
+    {
         result.errors.emplace_back("Analysis frame count must be greater than zero");
+    }
     result.valid = result.errors.empty();
     return result;
 }
@@ -55,7 +65,9 @@ void SustainedAudioAnalysisScenario::runTrial()
 ValidationResult SustainedAudioAnalysisScenario::verifyCorrectness() const
 {
     if (actions.pitchedFrameCount() == 0)
+    {
         return ValidationResult::failure("Deterministic audio fixture produced no pitched frames");
+    }
     return ValidationResult::success();
 }
 

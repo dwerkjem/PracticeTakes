@@ -27,7 +27,9 @@ void PerformanceLabController::setConfiguration(RunConfiguration configuration)
 {
     const std::scoped_lock lock(stateMutex);
     if (currentState.running)
+    {
         return;
+    }
 
     currentState.configuration = std::move(configuration);
     currentState.validation = validator ? validator(currentState.configuration)
@@ -45,7 +47,9 @@ bool PerformanceLabController::startRun()
                       : ValidationResult::failure("Validation is unavailable");
         currentState.error.reset();
         if (currentState.running || !currentState.validation.valid || !executor)
+        {
             return false;
+        }
 
         currentState.running = true;
         currentState.cancellationRequested = false;
@@ -86,14 +90,18 @@ void PerformanceLabController::showConfiguration() noexcept
 {
     const std::scoped_lock lock(stateMutex);
     if (!currentState.running)
+    {
         currentState.view = PerformanceLabView::configuration;
+    }
 }
 
 void PerformanceLabController::showHistory() noexcept
 {
     const std::scoped_lock lock(stateMutex);
     if (!currentState.running)
+    {
         currentState.view = PerformanceLabView::history;
+    }
 }
 
 bool PerformanceLabController::selectResult(std::size_t index)

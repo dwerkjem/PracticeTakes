@@ -31,7 +31,9 @@ namespace
 {
     auto object = std::make_unique<juce::DynamicObject>();
     for (const auto& [key, value] : values)
+    {
         object->setProperty(juce::Identifier(toJuceString(key)), toJuceString(value));
+    }
     return object.release();
 }
 
@@ -39,9 +41,13 @@ namespace
 {
     std::unordered_map<std::string, std::string> result;
     if (const auto* object = value.getDynamicObject())
+    {
         for (const auto& property : object->getProperties())
+        {
             result.emplace(
                 property.name.toString().toStdString(), property.value.toString().toStdString());
+        }
+    }
     return result;
 }
 
@@ -109,9 +115,13 @@ namespace
     {
         const auto encodedStatus = value["instrumentationOverheadStatus"].toString();
         if (encodedStatus == "documented")
+        {
             overheadStatus = InstrumentationOverheadStatus::documented;
+        }
         else if (encodedStatus == "measured")
+        {
             overheadStatus = InstrumentationOverheadStatus::measured;
+        }
     }
     return {
         value["applicationVersion"].toString().toStdString(),
@@ -131,7 +141,9 @@ template <typename Item, typename Encoder>
 {
     juce::Array<juce::var> values;
     for (const auto& item : items)
+    {
         values.add(encodeItem(item));
+    }
     return values;
 }
 
@@ -172,10 +184,14 @@ template <typename Item, typename Encoder>
     trial.duration =
         std::chrono::nanoseconds(static_cast<juce::int64>(value["durationNanoseconds"]));
     if (const auto* samples = value["samples"].getArray())
+    {
         for (const auto& sample : *samples)
+        {
             trial.samples.push_back(
                 {sample["metricId"].toString().toStdString(), static_cast<double>(sample["value"]),
                  sample["unit"].toString().toStdString()});
+        }
+    }
     trial.deadlineMisses =
         static_cast<std::uint64_t>(static_cast<juce::int64>(value["deadlineMisses"]));
     trial.dropouts = static_cast<std::uint64_t>(static_cast<juce::int64>(value["dropouts"]));
@@ -241,15 +257,21 @@ juce::var BenchmarkRecordCodec::encode(const BenchmarkRunRecord& record)
 RecordDecodeResult BenchmarkRecordCodec::decode(const juce::var& value)
 {
     if (value.getDynamicObject() == nullptr)
+    {
         return {.error = "Benchmark record must be an object"};
+    }
 
     const auto schemaVersion = static_cast<int>(value["schemaVersion"]);
     if (schemaVersion > static_cast<int>(benchmarkRecordSchemaVersion))
+    {
         return {
             .status = RecordDecodeStatus::newerSchema,
             .error = "Benchmark record uses a newer schema"};
+    }
     if (schemaVersion <= 0)
+    {
         return {.error = "Benchmark record schema is invalid"};
+    }
 
     BenchmarkRunRecord record;
     record.schemaVersion = static_cast<std::uint32_t>(schemaVersion);
@@ -258,18 +280,32 @@ RecordDecodeResult BenchmarkRecordCodec::decode(const juce::var& value)
     record.configuration = decodeConfiguration(value["configuration"]);
     record.provenance = decodeProvenance(value["provenance"], record.schemaVersion);
     if (const auto* trials = value["trials"].getArray())
+    {
         for (const auto& trial : *trials)
+        {
             record.trials.push_back(decodeTrial(trial));
+        }
+    }
     if (const auto* summaries = value["summaries"].getArray())
+    {
         for (const auto& summary : *summaries)
+        {
             record.summaries.push_back(decodeSummary(summary));
+        }
+    }
     if (const auto* warnings = value["warnings"].getArray())
+    {
         for (const auto& warning : *warnings)
+        {
             record.warnings.push_back(
                 {static_cast<WarningCode>(static_cast<int>(warning["code"])),
                  warning["message"].toString().toStdString()});
+        }
+    }
     if (!value["statusDetail"].isVoid())
+    {
         record.statusDetail = value["statusDetail"].toString().toStdString();
+    }
     return {.status = RecordDecodeStatus::loaded, .record = std::move(record)};
 }
 } // namespace performance
