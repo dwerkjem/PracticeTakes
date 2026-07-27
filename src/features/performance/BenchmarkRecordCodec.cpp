@@ -103,7 +103,7 @@ namespace
 
 [[nodiscard]] RunProvenance decodeProvenance(const juce::var& value, std::uint32_t schemaVersion)
 {
-    const auto memory = value["memoryBytes"];
+    const auto& memory = value["memoryBytes"];
     auto overheadStatus = InstrumentationOverheadStatus::unknown;
     if (schemaVersion >= 2)
     {

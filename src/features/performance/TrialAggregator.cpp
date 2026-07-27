@@ -67,9 +67,9 @@ TrialAggregation TrialAggregator::aggregate(const std::vector<TrialMeasurement>&
             static_cast<std::size_t>(std::ceil(0.95 * static_cast<double>(metric.values.size()))) -
             1;
         result.summaries.push_back(
-            {std::move(metricId), std::move(metric.unit), metric.values.size(),
-             median(metric.values), metric.values[tailIndex], metric.values.front(),
-             metric.values.back(), populationStandardDeviation(metric.values)});
+            {metricId, std::move(metric.unit), metric.values.size(), median(metric.values),
+             metric.values[tailIndex], metric.values.front(), metric.values.back(),
+             populationStandardDeviation(metric.values)});
     }
     return result;
 }
