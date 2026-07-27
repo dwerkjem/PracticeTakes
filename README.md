@@ -28,12 +28,13 @@ over time.
 
 ## Interface
 
-The main window provides three top-level controls:
+The main window provides four top-level controls:
 
 - **File** — reserved for future project and audio-file commands
 - **Settings** — microphone selection, mute, input volume, live level and
   buffering status, and light/dark appearance
 - **Tools** — opens the tuner and spectrogram
+- **Help** — send feedback and manage feedback invitations
 
 Each tool can run inside the main workspace or in its own resizable floating
 window. Use **Tools → Tuner/Spectrogram → Dock in workspace** or **Float in
@@ -51,6 +52,15 @@ microphone setting.
 
 When no usable microphone is available, the main window shows a dismissible
 warning with a shortcut to Settings.
+
+## Feedback
+
+Every tool's options menu offers **Give feedback on this tool**, and the
+**Help** menu can open the same form at any time. Reports are submitted
+online when possible and are kept as a local draft if no connection is
+available. After a few completed tool uses, Practice Takes may also ask once
+whether you would like to share feedback; this invitation can be turned off
+from the **Help** menu at any time.
 
 ## Platforms
 
