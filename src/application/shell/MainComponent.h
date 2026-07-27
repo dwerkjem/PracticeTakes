@@ -113,7 +113,10 @@ class MainComponent final
     [[nodiscard]] std::unique_ptr<DockedToolPanel>& dockFor(ToolType tool);
     void detachToolPresentation(ToolType tool);
     void applyAppearanceToTool(ToolType tool);
-    void beginToolDrag(ToolType tool, juce::Component& source);
+    void beginToolDrag(
+        ToolType tool,
+        juce::Component& source,
+        const juce::ScaledImage& dragImage = juce::ScaledImage());
     void setWorkspaceLayout(WorkspaceLayoutState::Layout layout);
     void rebuildWorkspaceContainer();
     void layoutWorkspace(juce::Rectangle<int> bounds);

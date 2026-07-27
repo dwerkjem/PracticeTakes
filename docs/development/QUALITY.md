@@ -5,6 +5,7 @@ Practice Takes separates fast local formatting from slower repository-wide stati
 - The SOPS secrets hook encrypts and stages configured secret mirrors before every local commit.
 - `clang-format` rewrites C and C++ files to match `.clang-format` before every local commit.
 - `clang-tidy` runs after relevant changes land on `main`, applies supported safe fixes, and commits those source changes back to `main`.
+- Pull requests run a check-only `clang-format`/`clang-tidy` gate across every `.cpp`/`.h` file under `src/`, failing the PR without modifying or committing anything.
 - VS Code uses CMake's compilation database, so editor diagnostics match the actual project configuration.
 
 ## Local pre-commit formatting
@@ -62,10 +63,11 @@ The workflow:
 2. Installs Clang, CMake, Ninja, and the Linux JUCE development dependencies.
 3. Configures `build/compile_commands.json`.
 4. Builds `PracticeTakes` once so JUCE creates `JuceHeader.h` and other generated files required by the compiler commands.
-5. Runs `clang-tidy --fix` against the implementation files.
-6. Runs `clang-format` over the resulting source and header edits.
-7. Rebuilds and runs clang-tidy without fixes, failing when compilation or blocking findings remain.
-8. Commits and pushes changed files under `src/` back to `main` as `github-actions[bot]`.
+5. Recursively discovers every `.cpp`/`.h` file under `src/` with `find` (all real source files live at least one directory below `src/`, so a plain `src/*.cpp` glob never matches) and fails loudly if discovery finds zero files.
+6. Runs `clang-tidy --fix` against the discovered implementation files.
+7. Runs `clang-format` over the resulting source and header edits.
+8. Rebuilds and runs clang-tidy without fixes, failing when compilation or blocking findings remain.
+9. Commits and pushes changed files under `src/` back to `main` as `github-actions[bot]`.
 
 The workflow ignores pushes made by `github-actions[bot]`, preventing its own fix commit from starting another auto-fix cycle.
 
@@ -77,6 +79,21 @@ fix commit have finished.
 Automatic fixes use ordinary clang-tidy `--fix` behavior, not `--fix-errors`. Clang-tidy only applies replacements supplied by enabled checks; ambiguous or unsupported findings remain visible in the final verification step.
 
 Repositories with branch protection must allow GitHub Actions to push the automatic fix commit to `main`. Otherwise the analysis can run, but the push step will fail.
+
+## Pull request quality gate
+
+The `.github/workflows/cpp-quality-check.yml` workflow runs on every pull request that touches `src/**` or the analysis configuration. Unlike the post-merge workflow, it never modifies or commits files - it only reports pass/fail.
+
+The workflow:
+
+1. Checks out the pull request.
+2. Installs Clang, CMake, Ninja, and the Linux JUCE development dependencies.
+3. Configures `build/compile_commands.json` and builds `PracticeTakes` once so JUCE generates `JuceHeader.h`.
+4. Recursively discovers every `.cpp`/`.h` file under `src/` with `find`, the same way the post-merge workflow does, and fails loudly if discovery finds zero files.
+5. Runs `clang-format --dry-run --Werror` against the discovered files, failing the check if any file is not already formatted.
+6. Runs `clang-tidy` (without `--fix`) against the discovered `.cpp` files, failing the check if any finding falls in a `WarningsAsErrors` category (`clang-analyzer-*`, `bugprone-*`, `performance-*`).
+
+This check analyzes the full repository on every run, not just changed lines, so it catches findings anywhere in `src/`, not only in the diff.
 
 ## Manual clang-tidy use
 
@@ -92,20 +109,20 @@ The build step is required because JUCE generates `JuceHeader.h` during the buil
 Run without modifying files:
 
 ```bash
-python scripts/quality/run_clang_tidy.py src/*.cpp
+python scripts/quality/run_clang_tidy.py $(find src -type f -name "*.cpp" | sort)
 ```
 
 Run with supported fixes enabled:
 
 ```bash
-python scripts/quality/run_clang_tidy.py --fix src/*.cpp
-python scripts/quality/run_clang_format.py src/*.cpp src/*.h
+python scripts/quality/run_clang_tidy.py --fix $(find src -type f -name "*.cpp" | sort)
+python scripts/quality/run_clang_format.py $(find src -type f \( -name "*.cpp" -o -name "*.h" \) | sort)
 ```
 
 Use a different build directory with:
 
 ```bash
-CLANG_TIDY_BUILD_DIR=out/dev python scripts/quality/run_clang_tidy.py src/*.cpp
+CLANG_TIDY_BUILD_DIR=out/dev python scripts/quality/run_clang_tidy.py $(find src -type f -name "*.cpp" | sort)
 ```
 
 Set explicit executable paths when LLVM tools are not on `PATH`:
@@ -113,7 +130,7 @@ Set explicit executable paths when LLVM tools are not on `PATH`:
 ```bash
 CLANG_FORMAT=/path/to/clang-format \
 CLANG_TIDY=/path/to/clang-tidy \
-python scripts/quality/run_clang_tidy.py --fix src/*.cpp
+python scripts/quality/run_clang_tidy.py --fix $(find src -type f -name "*.cpp" | sort)
 ```
 
 ## Resolving VS Code errors

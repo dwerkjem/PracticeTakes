@@ -52,17 +52,36 @@ jobs:
       - name: Apply safe clang-tidy fixes
         shell: bash
         run: |
+          mapfile -t cpp_files < <(find src -type f -name "*.cpp" | sort)
+          if [ "${#cpp_files[@]}" -eq 0 ]; then
+            echo "::error::No .cpp files discovered under src/ - refusing to report success on zero analyzed files."
+            exit 1
+          fi
           # clang-tidy can return a non-zero status while still applying valid
           # fix-its. Preserve those edits and verify unresolved findings later.
-          python3 scripts/quality/run_clang_tidy.py --fix src/*.cpp || true
+          python3 scripts/quality/run_clang_tidy.py --fix "${cpp_files[@]}" || true
 
       - name: Format automatic edits
-        run: python3 scripts/quality/run_clang_format.py src/*.cpp src/*.h
+        shell: bash
+        run: |
+          mapfile -t cpp_files < <(find src -type f -name "*.cpp" | sort)
+          mapfile -t header_files < <(find src -type f -name "*.h" | sort)
+          if [ "${#cpp_files[@]}" -eq 0 ]; then
+            echo "::error::No .cpp files discovered under src/ - refusing to report success on zero analyzed files."
+            exit 1
+          fi
+          python3 scripts/quality/run_clang_format.py "${cpp_files[@]}" "${header_files[@]}"
 
       - name: Validate automatic edits
+        shell: bash
         run: |
           cmake --build build --target PracticeTakes --parallel
-          python3 scripts/quality/run_clang_tidy.py src/*.cpp
+          mapfile -t cpp_files < <(find src -type f -name "*.cpp" | sort)
+          if [ "${#cpp_files[@]}" -eq 0 ]; then
+            echo "::error::No .cpp files discovered under src/ - refusing to report success on zero analyzed files."
+            exit 1
+          fi
+          python3 scripts/quality/run_clang_tidy.py "${cpp_files[@]}"
 
       - name: Commit automatic fixes
         shell: bash

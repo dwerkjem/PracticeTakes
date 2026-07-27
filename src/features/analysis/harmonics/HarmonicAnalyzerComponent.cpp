@@ -137,7 +137,8 @@ void HarmonicAnalyzerComponent::paint(juce::Graphics& graphics)
     {
         const auto amplitude = currentResult.relativeAmplitudes[static_cast<std::size_t>(harmonic)];
         const auto height = amplitude * static_cast<float>(currentBarsBounds.getHeight() - 30);
-        const auto x = static_cast<float>(currentBarsBounds.getX()) + harmonic * barWidth + 5.0f;
+        const auto x = static_cast<float>(currentBarsBounds.getX()) +
+                       static_cast<float>(harmonic) * barWidth + 5.0f;
         graphics.setColour(harmonicColour(harmonic));
         graphics.fillRoundedRectangle(
             x, static_cast<float>(currentBarsBounds.getBottom()) - 22.0f - height, barWidth - 10.0f,

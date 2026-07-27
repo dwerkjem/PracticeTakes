@@ -2,6 +2,7 @@
 
 #include "DockedToolPanel.h"
 #include "WorkspaceSplitPane.h"
+#include "WorkspaceTabbedComponent.h"
 
 #include <algorithm>
 #include <utility>
@@ -40,7 +41,7 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
 
     if (node->kind == WorkspaceLayoutState::NodeKind::tabs)
     {
-        auto tabs = std::make_unique<juce::TabbedComponent>(juce::TabbedButtonBar::TabsAtTop);
+        auto tabs = std::make_unique<WorkspaceTabbedComponent>(juce::TabbedButtonBar::TabsAtTop);
         tabs->setTabBarDepth(38);
         tabs->setLookAndFeel(&appLookAndFeel);
 
@@ -52,14 +53,28 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
             std::find(node->tabs.begin(), node->tabs.end(), currentToolAsTool) != node->tabs.end();
         const auto preferredActive = preferCurrentTool ? currentToolAsTool : node->activeTab;
 
+        const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+
         int activeIndex = 0;
         for (size_t index = 0; index < node->tabs.size(); ++index)
         {
             const auto tool = static_cast<ToolType>(node->tabs[index]);
             if (node->tabs[index] == preferredActive)
                 activeIndex = static_cast<int>(index);
-            tabs->addTab(
-                toolName(tool), appPaletteFor(currentTheme).panel, dockFor(tool).get(), false);
+            // Dragging this tab's label is a workspace tool drag like any
+            // other drag source, but with a "picked up" drag image -- a
+            // snapshot of the tab button itself -- instead of the default
+            // empty image the other sources use.
+            const auto dragHandler = [safeThis, tool](juce::Component& source)
+            {
+                if (safeThis != nullptr)
+                    safeThis->beginToolDrag(
+                        tool, source,
+                        juce::ScaledImage(source.createComponentSnapshot(source.getLocalBounds())));
+            };
+            tabs->addToolTab(
+                toolName(tool), appPaletteFor(currentTheme).panel, dockFor(tool).get(),
+                dragHandler);
         }
         tabs->setCurrentTabIndex(activeIndex);
 
