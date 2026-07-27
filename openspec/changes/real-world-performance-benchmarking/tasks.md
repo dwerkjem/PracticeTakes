@@ -23,11 +23,11 @@
 
 ## 4. Strategy Comparison And Storage
 
-- [ ] 4.1 Implement the strategy registry with the production baseline and at least one behavior-equivalent, runtime-selectable optimization fixture that requires no separate branch or build
-- [ ] 4.2 Implement explicit comparability-field validation and tests for every material mismatch
-- [ ] 4.3 Implement immutable local run persistence and loading with schema migration boundaries
-- [ ] 4.4 Implement versioned JSON export containing raw trials, summaries, configuration, provenance, status, warnings, and instrumentation overhead status
-- [ ] 4.5 Add comparison calculations and tests for absolute values, relative changes, missing metrics, zero baselines, and incompatible runs
+- [x] 4.1 Implement the strategy registry with the production baseline and at least one behavior-equivalent, runtime-selectable optimization fixture that requires no separate branch or build
+- [x] 4.2 Implement explicit comparability-field validation and tests for every material mismatch
+- [x] 4.3 Implement immutable local run persistence and loading with schema migration boundaries
+- [x] 4.4 Implement versioned JSON export containing raw trials, summaries, configuration, provenance, status, warnings, and instrumentation overhead status
+- [x] 4.5 Add comparison calculations and tests for absolute values, relative changes, missing metrics, zero baselines, and incompatible runs
 
 ## 5. Performance Lab GUI
 

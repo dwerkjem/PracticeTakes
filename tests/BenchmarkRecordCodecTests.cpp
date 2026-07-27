@@ -23,7 +23,8 @@ TEST_CASE("benchmark records survive a structured serialization round trip")
         "Reference CPU",
         16ULL * 1024ULL * 1024ULL * 1024ULL,
         {"USB Interface", "ALSA", 48000.0, 128},
-        "telemetry-v1"};
+        "telemetry-v1",
+        performance::InstrumentationOverheadStatus::measured};
     original.trials = {
         {3,
          std::chrono::system_clock::time_point(std::chrono::seconds(123)),
@@ -47,11 +48,29 @@ TEST_CASE("benchmark records survive a structured serialization round trip")
         decoded.record->configuration.strategyParameters ==
         original.configuration.strategyParameters);
     REQUIRE(decoded.record->provenance.memoryBytes == original.provenance.memoryBytes);
+    REQUIRE(
+        decoded.record->provenance.instrumentationOverheadStatus ==
+        performance::InstrumentationOverheadStatus::measured);
     REQUIRE(decoded.record->trials.front().startedAt == original.trials.front().startedAt);
     REQUIRE(decoded.record->trials.front().samples.front().value == 12.5);
     REQUIRE(decoded.record->summaries.front().sampleCount == 1);
     REQUIRE(decoded.record->warnings.front().code == performance::WarningCode::ambientLoad);
     REQUIRE(decoded.record->statusDetail == original.statusDetail);
+}
+
+TEST_CASE("benchmark record decoding migrates schema one overhead status")
+{
+    auto encoded = performance::BenchmarkRecordCodec::encode({});
+    encoded.getDynamicObject()->setProperty("schemaVersion", 1);
+    encoded["provenance"].getDynamicObject()->removeProperty("instrumentationOverheadStatus");
+
+    const auto decoded = performance::BenchmarkRecordCodec::decode(encoded);
+
+    REQUIRE(decoded.status == performance::RecordDecodeStatus::loaded);
+    REQUIRE(decoded.record.has_value());
+    REQUIRE(
+        decoded.record->provenance.instrumentationOverheadStatus ==
+        performance::InstrumentationOverheadStatus::unknown);
 }
 
 TEST_CASE("benchmark record decoding rejects a forward schema version")

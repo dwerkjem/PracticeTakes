@@ -84,12 +84,35 @@ namespace
                            : juce::var());
     object->setProperty("audio", encodeAudio(provenance.audio));
     object->setProperty("instrumentationVersion", toJuceString(provenance.instrumentationVersion));
+    const auto overheadStatus = [&provenance]
+    {
+        switch (provenance.instrumentationOverheadStatus)
+        {
+        case InstrumentationOverheadStatus::documented:
+            return "documented";
+        case InstrumentationOverheadStatus::measured:
+            return "measured";
+        case InstrumentationOverheadStatus::unknown:
+            return "unknown";
+        }
+        return "unknown";
+    }();
+    object->setProperty("instrumentationOverheadStatus", overheadStatus);
     return object.release();
 }
 
-[[nodiscard]] RunProvenance decodeProvenance(const juce::var& value)
+[[nodiscard]] RunProvenance decodeProvenance(const juce::var& value, std::uint32_t schemaVersion)
 {
     const auto memory = value["memoryBytes"];
+    auto overheadStatus = InstrumentationOverheadStatus::unknown;
+    if (schemaVersion >= 2)
+    {
+        const auto encodedStatus = value["instrumentationOverheadStatus"].toString();
+        if (encodedStatus == "documented")
+            overheadStatus = InstrumentationOverheadStatus::documented;
+        else if (encodedStatus == "measured")
+            overheadStatus = InstrumentationOverheadStatus::measured;
+    }
     return {
         value["applicationVersion"].toString().toStdString(),
         value["commit"].toString().toStdString(),
@@ -99,7 +122,8 @@ namespace
         memory.isVoid() ? std::nullopt
                         : std::optional<std::uint64_t>(static_cast<juce::int64>(memory)),
         decodeAudio(value["audio"]),
-        value["instrumentationVersion"].toString().toStdString()};
+        value["instrumentationVersion"].toString().toStdString(),
+        overheadStatus};
 }
 
 template <typename Item, typename Encoder>
@@ -231,7 +255,7 @@ RecordDecodeResult BenchmarkRecordCodec::decode(const juce::var& value)
     record.runId = value["runId"].toString().toStdString();
     record.status = static_cast<RunStatus>(static_cast<int>(value["status"]));
     record.configuration = decodeConfiguration(value["configuration"]);
-    record.provenance = decodeProvenance(value["provenance"]);
+    record.provenance = decodeProvenance(value["provenance"], record.schemaVersion);
     if (const auto* trials = value["trials"].getArray())
         for (const auto& trial : *trials)
             record.trials.push_back(decodeTrial(trial));

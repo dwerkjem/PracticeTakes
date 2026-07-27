@@ -10,7 +10,14 @@
 
 namespace performance
 {
-inline constexpr std::uint32_t benchmarkRecordSchemaVersion = 1;
+inline constexpr std::uint32_t benchmarkRecordSchemaVersion = 2;
+
+enum class InstrumentationOverheadStatus
+{
+    unknown,
+    documented,
+    measured
+};
 
 enum class RunStatus
 {
@@ -65,6 +72,8 @@ struct RunProvenance
     std::optional<std::uint64_t> memoryBytes;
     AudioConfiguration audio;
     std::string instrumentationVersion;
+    InstrumentationOverheadStatus instrumentationOverheadStatus =
+        InstrumentationOverheadStatus::unknown;
 };
 
 struct MetricSample

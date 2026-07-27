@@ -165,6 +165,12 @@ target_sources(PracticeTakes
         src/features/analysis/tuner/TunerDrawing.cpp
         src/features/performance/BenchmarkRecordCodec.cpp
         src/features/performance/BenchmarkRecordCodec.h
+        src/features/performance/BenchmarkRecordStore.cpp
+        src/features/performance/BenchmarkRecordStore.h
+        src/features/performance/BenchmarkComparability.cpp
+        src/features/performance/BenchmarkComparability.h
+        src/features/performance/BenchmarkComparison.cpp
+        src/features/performance/BenchmarkComparison.h
         src/features/performance/BenchmarkRunner.cpp
         src/features/performance/BenchmarkRunner.h
         src/features/performance/HarmonicAnalysisActions.cpp
@@ -178,6 +184,8 @@ target_sources(PracticeTakes
         src/features/performance/RealTimeEventCapture.h
         src/features/performance/SustainedAudioAnalysisScenario.cpp
         src/features/performance/SustainedAudioAnalysisScenario.h
+        src/features/performance/StrategyRegistry.cpp
+        src/features/performance/StrategyRegistry.h
         src/features/performance/TrialAggregator.cpp
         src/features/performance/TrialAggregator.h
         src/features/feedback/FeedbackComponent.cpp
@@ -222,7 +230,10 @@ if(BUILD_TESTING)
         tests/AudioSampleFifoTests.cpp
         tests/BenchmarkFakesTests.cpp
         tests/BenchmarkInterfacesTests.cpp
+        tests/BenchmarkComparabilityTests.cpp
+        tests/BenchmarkComparisonTests.cpp
         tests/BenchmarkRecordCodecTests.cpp
+        tests/BenchmarkRecordStoreTests.cpp
         tests/BenchmarkRunnerTests.cpp
         tests/BenchmarkTypesTests.cpp
         tests/FeedbackInvitationPolicyTests.cpp
@@ -233,6 +244,7 @@ if(BUILD_TESTING)
         tests/PlatformProvenanceProviderTests.cpp
         tests/RealTimeEventCaptureTests.cpp
         tests/SettingsPersistenceTests.cpp
+        tests/StrategyRegistryTests.cpp
         tests/SustainedAudioAnalysisScenarioTests.cpp
         tests/ThemeContrastTests.cpp
         tests/TrialAggregatorTests.cpp
@@ -243,12 +255,16 @@ if(BUILD_TESTING)
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
         src/features/analysis/tuner/PitchDetector.cpp
         src/features/performance/BenchmarkRecordCodec.cpp
+        src/features/performance/BenchmarkRecordStore.cpp
+        src/features/performance/BenchmarkComparability.cpp
+        src/features/performance/BenchmarkComparison.cpp
         src/features/performance/BenchmarkRunner.cpp
         src/features/performance/HarmonicAnalysisActions.cpp
         src/features/performance/InTreeOptimizationStrategy.cpp
         src/features/performance/NonRealTimeTelemetryCollector.cpp
         src/features/performance/PlatformProvenanceProvider.cpp
         src/features/performance/SustainedAudioAnalysisScenario.cpp
+        src/features/performance/StrategyRegistry.cpp
         src/features/performance/TrialAggregator.cpp
     )
 
