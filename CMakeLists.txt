@@ -160,6 +160,9 @@ target_sources(PracticeTakes
         src/features/performance/HarmonicAnalysisActions.h
         src/features/performance/InTreeOptimizationStrategy.cpp
         src/features/performance/InTreeOptimizationStrategy.h
+        src/features/performance/NonRealTimeTelemetryCollector.cpp
+        src/features/performance/NonRealTimeTelemetryCollector.h
+        src/features/performance/RealTimeEventCapture.h
         src/features/performance/SustainedAudioAnalysisScenario.cpp
         src/features/performance/SustainedAudioAnalysisScenario.h
         src/features/feedback/FeedbackComponent.cpp
@@ -206,7 +209,9 @@ if(BUILD_TESTING)
         tests/FeedbackInvitationPolicyTests.cpp
         tests/HarmonicAnalyzerTests.cpp
         tests/InTreeOptimizationStrategyTests.cpp
+        tests/NonRealTimeTelemetryCollectorTests.cpp
         tests/PitchDetectorTests.cpp
+        tests/RealTimeEventCaptureTests.cpp
         tests/SettingsPersistenceTests.cpp
         tests/SustainedAudioAnalysisScenarioTests.cpp
         tests/ThemeContrastTests.cpp
@@ -220,6 +225,7 @@ if(BUILD_TESTING)
         src/features/performance/BenchmarkRunner.cpp
         src/features/performance/HarmonicAnalysisActions.cpp
         src/features/performance/InTreeOptimizationStrategy.cpp
+        src/features/performance/NonRealTimeTelemetryCollector.cpp
         src/features/performance/SustainedAudioAnalysisScenario.cpp
     )
 
