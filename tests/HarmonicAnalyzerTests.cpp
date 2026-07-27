@@ -1,3 +1,4 @@
+#include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
@@ -76,4 +77,33 @@ TEST_CASE("noise is marked as uncertain", "[harmonics]")
 
     CHECK_FALSE(result.isPitched);
     CHECK(result.confidence < 0.35f);
+}
+
+TEST_CASE("harmonic analyzer per-frame throughput", "[.benchmark][harmonics][performance]")
+{
+    // Representative pitched signal at 48 kHz — the primary operating sample rate.
+    constexpr double sr48k = 48000.0;
+    const auto signal48k = harmonicSignal({0.8f, 0.4f, 0.2f, 0.1f});
+
+    // Representative pitched signal at 44.1 kHz — common consumer device rate.
+    constexpr double sr441k = 44100.0;
+    std::array<float, HarmonicAnalyzer::windowSize> signal441k{};
+    for (std::size_t i = 0; i < signal441k.size(); ++i)
+    {
+        const auto angle = 2.0 * std::numbers::pi * fundamental * static_cast<double>(i) / sr441k;
+        signal441k[i] = 0.8f * static_cast<float>(std::sin(angle));
+    }
+
+    HarmonicAnalyzer analyzer48k;
+    HarmonicAnalyzer analyzer441k;
+
+    BENCHMARK("analyze @ 48 kHz")
+    {
+        return analyzer48k.analyze(signal48k, sr48k);
+    };
+
+    BENCHMARK("analyze @ 44.1 kHz")
+    {
+        return analyzer441k.analyze(signal441k, sr441k);
+    };
 }

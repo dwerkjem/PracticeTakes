@@ -1,0 +1,77 @@
+name: Performance benchmarks
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "scripts/quality/format_benchmarks.py"
+      - ".github/workflows/benchmarks.yml"
+  schedule:
+    # Every Monday at 04:00 UTC — gives a weekly baseline even without code changes.
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: DSP benchmarks and startup timing
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install build dependencies
+        run: bash scripts/build/check-linux-build-dependencies.sh --install
+
+      - name: Configure
+        run: |
+          /usr/bin/cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON
+
+      - name: Build test binary and application
+        run: |
+          /usr/bin/cmake --build build --target PracticeTakesTests --parallel
+          /usr/bin/cmake --build build --target PracticeTakes --parallel
+
+      - name: Run benchmarks
+        run: |
+          ./build/PracticeTakesTests "[.benchmark]" --reporter XML \
+            --out benchmark.xml
+          echo "Benchmark XML written."
+
+      - name: Measure startup timing
+        run: |
+          # Launch the binary under a 5-second wall-clock timeout.
+          # PracticeTakes will exit non-zero when there is no display/audio
+          # device; we capture the elapsed wall time regardless of exit code.
+          start_ns=$(date +%s%N)
+          timeout 5s ./build/bin/PracticeTakes || true
+          end_ns=$(date +%s%N)
+          launch_ms=$(( (end_ns - start_ns) / 1000000 ))
+          # exit_ms is the same measurement here (process lifetime = startup
+          # + immediate exit due to missing audio/display on CI).
+          echo "{\"launch_ms\": $launch_ms, \"exit_ms\": $launch_ms}" > startup.json
+          echo "Startup probe: ${launch_ms} ms"
+
+      - name: Format and post step summary
+        run: |
+          python3 scripts/quality/format_benchmarks.py \
+            benchmark.xml startup.json \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload raw benchmark results
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: benchmark-results-${{ github.sha }}
+          path: benchmark.xml
+          retention-days: 90
+          if-no-files-found: error
