@@ -28,9 +28,11 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
         explicit Content(
             performance::PerformanceLabController& controllerIn,
             std::function<bool(const performance::BenchmarkRunRecord&)> reopenRecordIn,
-            std::function<void(int)> setCalibrationModeIn)
+            std::function<void(int)> setCalibrationModeIn,
+            std::function<void(bool)> automationCompletedIn = {})
             : controller(controllerIn), reopenRecord(std::move(reopenRecordIn)),
-              setCalibrationMode(std::move(setCalibrationModeIn)), progressValue(0.0),
+              setCalibrationMode(std::move(setCalibrationModeIn)),
+              automationCompleted(std::move(automationCompletedIn)), progressValue(0.0),
               progressBar(progressValue)
         {
             configureNavigation();
@@ -39,6 +41,13 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
             addAndMakeVisible(contentViewport);
             contentViewport.setViewedComponent(&content, false);
             applyConfiguration();
+            if (automationCompleted)
+                juce::MessageManager::callAsync(
+                    [safeThis = SafePointer<Content>(this)]
+                    {
+                        if (safeThis != nullptr)
+                            safeThis->startAutomation();
+                    });
         }
 
         ~Content() override
@@ -376,6 +385,58 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
             startTimerHz(20);
         }
 
+        void startAutomation()
+        {
+            runButton.setEnabled(false);
+            runAllButton.setEnabled(false);
+            calibrateButton.setEnabled(false);
+            workerFinished.store(false, std::memory_order_release);
+            benchmarkThread = std::jthread(
+                [this]
+                {
+                    bool succeeded = true;
+                    const auto run = [this, &succeeded](int mode)
+                    {
+                        setCalibrationMode(mode);
+                        if (!controller.startRun())
+                        {
+                            succeeded = false;
+                            return;
+                        }
+                        const auto state = controller.state();
+                        succeeded =
+                            !state.history.empty() &&
+                            state.history.back().status == performance::RunStatus::completed;
+                    };
+
+                    auto configuration = controller.state().configuration;
+                    configuration.strategyId = "baseline";
+                    configuration.strategyParameters.clear();
+                    controller.setConfiguration(configuration);
+                    run(1);
+                    if (succeeded)
+                        run(2);
+                    if (succeeded)
+                        run(0);
+                    if (succeeded)
+                    {
+                        configuration.strategyId = "parameterized-fixture";
+                        configuration.strategyParameters["batchSize"] = "4";
+                        controller.setConfiguration(std::move(configuration));
+                        run(0);
+                    }
+                    setCalibrationMode(0);
+                    workerFinished.store(true, std::memory_order_release);
+                    juce::MessageManager::callAsync(
+                        [safeThis = SafePointer<Content>(this), succeeded]
+                        {
+                            if (safeThis != nullptr && safeThis->automationCompleted)
+                                safeThis->automationCompleted(succeeded);
+                        });
+                });
+            startTimerHz(20);
+        }
+
         void updateConfiguration(const performance::PerformanceLabState& state)
         {
             const auto visible = state.view == performance::PerformanceLabView::configuration;
@@ -642,6 +703,7 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
         performance::PerformanceLabController& controller;
         std::function<bool(const performance::BenchmarkRunRecord&)> reopenRecord;
         std::function<void(int)> setCalibrationMode;
+        std::function<void(bool)> automationCompleted;
         juce::Component navigation;
         juce::TextButton configurationButton{"Configuration"}, liveButton{"Live"},
             historyButton{"History"}, resultsButton{"Results"}, comparisonButton{"Compare"};
@@ -670,7 +732,9 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
         std::jthread benchmarkThread;
     };
 
-    explicit PerformanceLabWindow(std::function<void()> closeHandler)
+    explicit PerformanceLabWindow(
+        std::function<void()> closeHandler,
+        std::function<void(bool)> automationCompleted = {})
         : DocumentWindow(
               "Performance Lab",
               juce::Colours::darkgrey,
@@ -712,7 +776,8 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
                     pendingReopen = record;
                     return controller.reopen(record.runId);
                 },
-                [this](int mode) { calibrationMode.store(mode, std::memory_order_release); }),
+                [this](int mode) { calibrationMode.store(mode, std::memory_order_release); },
+                std::move(automationCompleted)),
             true);
         setResizable(true, true);
         setResizeLimits(780, 620, 1600, 1200);

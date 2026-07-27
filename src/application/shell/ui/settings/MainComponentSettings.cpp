@@ -310,7 +310,11 @@ AppSettings::State MainComponent::captureSettingsState()
         state.recentTool = AppSettings::RecentTool::harmonics;
     }
     state.fullscreenMode = selectedFullscreenMode;
-    if (const auto audioState = audioInputService.createDeviceState())
+    if (pendingAudioDeviceState != nullptr)
+    {
+        state.audioDeviceState = pendingAudioDeviceState->toString();
+    }
+    else if (const auto audioState = audioInputService.createDeviceState())
     {
         state.audioDeviceState = audioState->toString();
     }
@@ -367,9 +371,9 @@ void MainComponent::loadSettings()
     }
     selectedFullscreenMode = loaded.state.fullscreenMode;
 
-    if (const auto xml = juce::parseXML(loaded.state.audioDeviceState); xml != nullptr)
+    if (auto xml = juce::parseXML(loaded.state.audioDeviceState); xml != nullptr)
     {
-        audioInputService.applySavedDeviceState(*xml);
+        pendingAudioDeviceState = std::move(xml);
     }
 
     savedTunerBounds = validWindowBounds(loaded.state.tunerBounds);

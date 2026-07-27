@@ -37,6 +37,10 @@ class MainComponent final
         std::function<void()> fullscreenHandler,
         std::function<void()> closeHandler);
     [[nodiscard]] AppSettings::FullscreenMode fullscreenMode() const noexcept;
+    void initialiseAudioAfterLaunch();
+#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+    void automatePerformanceLab(std::function<void(bool)> completion);
+#endif
 
   private:
     enum class ToolType
@@ -203,6 +207,7 @@ class MainComponent final
     juce::Rectangle<int> savedSettingsBounds;
     bool isMicrophoneWarningDismissed = false;
     bool automaticSettingsSaveEnabled = true;
+    std::unique_ptr<juce::XmlElement> pendingAudioDeviceState;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

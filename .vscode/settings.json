@@ -21,7 +21,13 @@
         "editor.defaultFormatter": "ms-vscode.cpptools",
         "editor.formatOnSave": true
     },
-    "cSpell.words": [
+        "terminal.integrated.profiles.linux": {
+            "zsh": {
+                "path": "/usr/bin/zsh"
+            }
+        },
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "cSpell.words": [
         "Allman",
         "alsa",
         "bugprone",

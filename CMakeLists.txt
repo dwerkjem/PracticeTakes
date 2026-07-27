@@ -90,7 +90,9 @@ endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PatchJuceAlsaChannelMismatch.cmake")
+    include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PatchJuceAlsaInputStartup.cmake")
     practice_takes_patch_juce_alsa_channel_mismatch("${juce_SOURCE_DIR}")
+    practice_takes_patch_juce_alsa_input_startup("${juce_SOURCE_DIR}")
 endif()
 
 juce_add_gui_app(PracticeTakes

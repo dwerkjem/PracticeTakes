@@ -60,6 +60,7 @@ class AudioInputService final
     [[nodiscard]] std::uint64_t droppedAnalysisBlocks() const noexcept;
     [[nodiscard]] std::uint64_t droppedAnalysisSamples() const noexcept;
 
+    void initialiseDefaultInput();
     void resetToDefaultInput();
     void applySavedDeviceState(const juce::XmlElement& state);
     [[nodiscard]] std::unique_ptr<juce::XmlElement> createDeviceState() const;
@@ -95,6 +96,7 @@ class AudioInputService final
     [[nodiscard]] std::array<Listener*, maximumConsumers> listenerSnapshot() const;
     void deliverFormatChange();
     void scanForDeviceChanges();
+    void initialiseInput(const juce::XmlElement* state, bool force);
     void publishState();
 
     juce::AudioDeviceManager manager;
@@ -119,6 +121,7 @@ class AudioInputService final
     int clippingHoldTicks = 0;
     int ticksUntilDeviceScan = disconnectedDeviceScanIntervalTicks;
     bool recovering = false;
+    bool initialised = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioInputService)
 };
