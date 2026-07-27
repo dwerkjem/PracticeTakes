@@ -3,8 +3,8 @@
 - [x] 1.1 Define versioned types for run configuration, hardware/runtime provenance, raw trial measurements, summaries, warnings, and completion status
 - [x] 1.2 Define scenario and optimization-strategy interfaces with stable identifiers, parameter schemas, compatibility checks, and correctness assertions
 - [x] 1.3 Implement deterministic fake scenarios, strategies, clocks, and telemetry collectors for runner tests
-- [ ] 1.4 Add serialization round-trip and forward-version rejection tests for benchmark records
-- [ ] 1.5 Add a lightweight in-tree strategy adapter and tests proving a parameterized optimization can run against baseline from the same commit and executable
+- [x] 1.4 Add serialization round-trip and forward-version rejection tests for benchmark records.
+- [x] 1.5 Add a lightweight in-tree strategy adapter and tests proving a parameterized optimization can run against baseline from the same commit and executable
 
 ## 2. Scenario Runner
 

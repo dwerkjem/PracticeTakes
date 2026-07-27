@@ -152,6 +152,10 @@ target_sources(PracticeTakes
         src/features/analysis/tuner/TunerComponent.cpp
         src/features/analysis/tuner/TunerComponent.h
         src/features/analysis/tuner/TunerDrawing.cpp
+        src/features/performance/BenchmarkRecordCodec.cpp
+        src/features/performance/BenchmarkRecordCodec.h
+        src/features/performance/InTreeOptimizationStrategy.cpp
+        src/features/performance/InTreeOptimizationStrategy.h
         src/features/feedback/FeedbackComponent.cpp
         src/features/feedback/FeedbackComponent.h
         src/features/feedback/FeedbackInvitationPolicy.h
@@ -190,9 +194,11 @@ if(BUILD_TESTING)
         tests/AudioSampleFifoTests.cpp
         tests/BenchmarkFakesTests.cpp
         tests/BenchmarkInterfacesTests.cpp
+        tests/BenchmarkRecordCodecTests.cpp
         tests/BenchmarkTypesTests.cpp
         tests/FeedbackInvitationPolicyTests.cpp
         tests/HarmonicAnalyzerTests.cpp
+        tests/InTreeOptimizationStrategyTests.cpp
         tests/PitchDetectorTests.cpp
         tests/SettingsPersistenceTests.cpp
         tests/ThemeContrastTests.cpp
@@ -202,6 +208,8 @@ if(BUILD_TESTING)
         src/application/theme/Theme.cpp
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
         src/features/analysis/tuner/PitchDetector.cpp
+        src/features/performance/BenchmarkRecordCodec.cpp
+        src/features/performance/InTreeOptimizationStrategy.cpp
     )
 
     target_include_directories(PracticeTakesTests
