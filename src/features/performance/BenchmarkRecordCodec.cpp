@@ -167,7 +167,8 @@ template <typename Item, typename Encoder>
     TrialMeasurement trial;
     trial.trialIndex = static_cast<std::uint32_t>(static_cast<int>(value["trialIndex"]));
     trial.startedAt = std::chrono::system_clock::time_point(
-        std::chrono::nanoseconds(static_cast<juce::int64>(value["startedAtNanoseconds"])));
+        std::chrono::duration_cast<std::chrono::system_clock::duration>(
+            std::chrono::nanoseconds(static_cast<juce::int64>(value["startedAtNanoseconds"]))));
     trial.duration =
         std::chrono::nanoseconds(static_cast<juce::int64>(value["durationNanoseconds"]));
     if (const auto* samples = value["samples"].getArray())
