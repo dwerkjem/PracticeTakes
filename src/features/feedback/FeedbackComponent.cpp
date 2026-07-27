@@ -308,8 +308,10 @@ juce::String FeedbackComponent::captureApplicationScreenshot() const
     const auto scale = juce::jmin(
         1.0f, maximumWidth / static_cast<float>(capturedBounds.getWidth()),
         maximumHeight / static_cast<float>(capturedBounds.getHeight()));
-    const auto imageWidth = juce::jmax(1, juce::roundToInt(capturedBounds.getWidth() * scale));
-    const auto imageHeight = juce::jmax(1, juce::roundToInt(capturedBounds.getHeight() * scale));
+    const auto imageWidth =
+        juce::jmax(1, juce::roundToInt(static_cast<float>(capturedBounds.getWidth()) * scale));
+    const auto imageHeight =
+        juce::jmax(1, juce::roundToInt(static_cast<float>(capturedBounds.getHeight()) * scale));
     juce::Image image(juce::Image::RGB, imageWidth, imageHeight, true);
     juce::Graphics graphics(image);
     graphics.fillAll(juce::Colours::black);
@@ -319,8 +321,10 @@ juce::String FeedbackComponent::captureApplicationScreenshot() const
         const auto snapshot =
             window->createComponentSnapshot(window->getLocalBounds(), true, scale);
         const auto screenBounds = window->getScreenBounds();
-        const auto x = juce::roundToInt((screenBounds.getX() - capturedBounds.getX()) * scale);
-        const auto y = juce::roundToInt((screenBounds.getY() - capturedBounds.getY()) * scale);
+        const auto x = juce::roundToInt(
+            static_cast<float>(screenBounds.getX() - capturedBounds.getX()) * scale);
+        const auto y = juce::roundToInt(
+            static_cast<float>(screenBounds.getY() - capturedBounds.getY()) * scale);
         graphics.drawImageAt(snapshot, x, y);
     }
 

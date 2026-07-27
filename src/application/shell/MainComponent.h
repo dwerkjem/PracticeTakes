@@ -116,7 +116,7 @@ class MainComponent final
     void beginToolDrag(
         ToolType tool,
         juce::Component& source,
-        juce::ScaledImage dragImage = juce::ScaledImage());
+        const juce::ScaledImage& dragImage = juce::ScaledImage());
     void setWorkspaceLayout(WorkspaceLayoutState::Layout layout);
     void rebuildWorkspaceContainer();
     void layoutWorkspace(juce::Rectangle<int> bounds);

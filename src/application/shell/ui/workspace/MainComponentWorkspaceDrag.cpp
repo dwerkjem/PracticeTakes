@@ -79,7 +79,7 @@ void paintDropZone(
 void MainComponent::beginToolDrag(
     ToolType tool,
     juce::Component& source,
-    juce::ScaledImage dragImage)
+    const juce::ScaledImage& dragImage)
 {
     activeDropTarget = {};
     const auto description =
