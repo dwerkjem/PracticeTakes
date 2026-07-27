@@ -97,13 +97,19 @@ void MainComponent::initialiseAudioAfterLaunch()
         [safeThis]
         {
             if (safeThis == nullptr)
+            {
                 return;
+            }
 
             if (safeThis->pendingAudioDeviceState != nullptr)
+            {
                 safeThis->audioInputService.applySavedDeviceState(
                     *safeThis->pendingAudioDeviceState);
+            }
             else
+            {
                 safeThis->audioInputService.initialiseDefaultInput();
+            }
 
             safeThis->pendingAudioDeviceState.reset();
             safeThis->updateMicrophoneStateControl();

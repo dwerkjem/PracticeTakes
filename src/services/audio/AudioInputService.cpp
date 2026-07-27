@@ -263,7 +263,9 @@ void AudioInputService::initialiseDefaultInput()
 void AudioInputService::initialiseInput(const juce::XmlElement* state, bool force)
 {
     if (initialised && !force)
+    {
         return;
+    }
 
     initialised = true;
     recovering = true;
