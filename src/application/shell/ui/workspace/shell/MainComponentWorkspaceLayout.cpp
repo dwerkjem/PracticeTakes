@@ -57,7 +57,7 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
                 if (safeThis != nullptr)
                 {
                     static_cast<void>(safeThis->workspaceLayoutState.setActiveTab(nodeId, tool));
-                    safeThis->currentTool = static_cast<ToolType>(tool);
+                    safeThis->recordToolFocus(static_cast<ToolType>(tool));
                 }
             });
         tabs->setTabBarDepth(38);
@@ -111,6 +111,7 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
             if (safeThis != nullptr)
             {
                 static_cast<void>(safeThis->workspaceLayoutState.setSplitRatio(nodeId, ratio));
+                safeThis->captureActiveWorkspace();
             }
         });
     auto* rawPane = pane.get();

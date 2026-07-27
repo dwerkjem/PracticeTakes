@@ -13,8 +13,8 @@
 - [x] 2.2 Extend `WorkspaceLayoutState` nodes and commands with split ratios, stable node IDs, selected-tab updates, and validated snapshot replacement
 - [x] 2.3 Add component tests for restoring a divider ratio, reporting a dragged divider, restoring an active tab, and reporting a clicked tab without regressing tab dragging
 - [x] 2.4 Wire `WorkspaceSplitPane` and `WorkspaceTabbedComponent` callbacks to the authoritative model using stable node identities, and rebuild presentation from stored ratios and active tabs
-- [ ] 2.5 Add tests for capturing floating move/resize, focused tool, presentation changes, and tuner settings into the active snapshot
-- [ ] 2.6 Implement shell capture adapters for tool presentation, floating bounds, focus, and supported per-tool settings
+- [x] 2.5 Add tests for capturing floating move/resize, focused tool, presentation changes, and tuner settings into the active snapshot
+- [x] 2.6 Implement shell capture adapters for tool presentation, floating bounds, focus, and supported per-tool settings
 - [ ] 2.7 Add tests that applying a snapshot creates every tool at most once, rebuilds docked and floating presentation once, and preserves global theme, audio, fullscreen, and feedback preferences
 - [ ] 2.8 Implement the coordinated live workspace apply operation with temporary auto-save suppression and one final presentation rebuild
 

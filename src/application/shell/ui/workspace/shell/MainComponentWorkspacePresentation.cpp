@@ -81,6 +81,13 @@ void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation 
             safeThis->showFeedback(safeThis->toolName(tool));
         }
     };
+    const auto focusHandler = [safeThis, tool]
+    {
+        if (safeThis != nullptr)
+        {
+            safeThis->recordToolFocus(tool);
+        }
+    };
 
     if (presentation == WorkspaceToolState::Presentation::docked)
     {
@@ -93,7 +100,8 @@ void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation 
         };
         auto& dock = dockFor(tool);
         dock = std::make_unique<DockedToolPanel>(
-            toolName(tool), *component, dragHandler, floatHandler, feedbackHandler, closeHandler);
+            toolName(tool), *component, dragHandler, floatHandler, feedbackHandler, closeHandler,
+            focusHandler);
     }
     else
     {
@@ -107,7 +115,7 @@ void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation 
         auto& window = windowFor(tool);
         window = std::make_unique<ToolWindow>(
             toolName(tool), *component, preferredToolWindowSize(tool), dragHandler, dockHandler,
-            feedbackHandler, closeHandler);
+            feedbackHandler, closeHandler, focusHandler);
         const auto savedBounds =
             tool == ToolType::tuner
                 ? savedTunerBounds
@@ -134,6 +142,13 @@ void MainComponent::focusTool(ToolType tool)
     {
         dock->grabKeyboardFocus();
     }
+    recordToolFocus(tool);
+}
+
+void MainComponent::recordToolFocus(ToolType tool)
+{
+    currentTool = tool;
+    captureActiveWorkspace();
 }
 
 void MainComponent::closeTool(ToolType tool)
@@ -168,6 +183,7 @@ void MainComponent::closeTool(ToolType tool)
     componentFor(tool).reset();
     static_cast<void>(stateFor(tool).close());
     rebuildWorkspaceContainer();
+    captureActiveWorkspace();
     recordSuccessfulToolUse();
 }
 

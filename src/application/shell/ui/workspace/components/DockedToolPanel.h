@@ -15,8 +15,9 @@ class MainComponent::DockedToolPanel final : public juce::Component
         std::function<void(juce::Component&)> dragHandler,
         std::function<void()> floatHandler,
         std::function<void()> feedbackHandler,
-        std::function<void()> closeHandler)
-        : content(&toolContent), onDrag(std::move(dragHandler)),
+        std::function<void()> closeHandler,
+        std::function<void()> focusHandler)
+        : content(&toolContent), onDrag(std::move(dragHandler)), onFocus(std::move(focusHandler)),
           optionsButton(
               "Float in window",
               std::move(floatHandler),
@@ -30,7 +31,7 @@ class MainComponent::DockedToolPanel final : public juce::Component
         addAndMakeVisible(optionsButton);
 
         addAndMakeVisible(toolContent);
-        toolContent.addMouseListener(this, false);
+        toolContent.addMouseListener(this, true);
         setMouseCursor(juce::MouseCursor::DraggingHandCursor);
     }
 
@@ -73,6 +74,10 @@ class MainComponent::DockedToolPanel final : public juce::Component
 
     void mouseDown(const juce::MouseEvent& event) override
     {
+        if (onFocus)
+        {
+            onFocus();
+        }
         dragStarted = false;
         dragArmed = canStartDrag(event);
     }
@@ -115,6 +120,7 @@ class MainComponent::DockedToolPanel final : public juce::Component
     juce::Component* content;
     juce::Label titleLabel;
     std::function<void(juce::Component&)> onDrag;
+    std::function<void()> onFocus;
     ToolOptionsButton optionsButton;
     bool dragStarted = false;
     bool dragArmed = false;

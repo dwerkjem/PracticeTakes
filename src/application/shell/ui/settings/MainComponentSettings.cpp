@@ -267,6 +267,7 @@ void MainComponent::applyPreset(AppDefaults::Preset preset)
 
 AppSettings::State MainComponent::captureSettingsState()
 {
+    captureActiveWorkspace();
     if (tunerWindow != nullptr)
     {
         savedTunerBounds = tunerWindow->getBounds();

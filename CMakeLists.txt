@@ -155,12 +155,14 @@ target_sources(PracticeTakes
         src/application/shell/ui/workspace/model/WorkspaceDocuments.h
         src/application/shell/ui/workspace/model/WorkspaceLayoutState.h
         src/application/shell/ui/workspace/model/WorkspaceNormalizer.h
+        src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h
         src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h
         src/application/shell/ui/workspace/model/WorkspaceToolState.h
         src/application/shell/ui/workspace/shell/MainComponentWorkspaceDrag.cpp
         src/application/shell/ui/workspace/shell/MainComponentWorkspaceLayout.cpp
         src/application/shell/ui/workspace/shell/MainComponentWorkspaceMenu.cpp
         src/application/shell/ui/workspace/shell/MainComponentWorkspacePresentation.cpp
+        src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp
         src/application/theme/Theme.cpp
         src/application/theme/Theme.h
         src/application/theme/ThemeType.h
@@ -273,6 +275,7 @@ if(BUILD_TESTING)
         tests/WorkspaceRecoveryTests.cpp
         tests/WorkspaceLayoutStateTests.cpp
         tests/WorkspacePresentationComponentsTests.cpp
+        tests/WorkspaceSnapshotCaptureTests.cpp
         tests/WorkspaceToolStateTests.cpp
         src/application/configuration/SettingsPersistence.cpp
         src/application/theme/Theme.cpp

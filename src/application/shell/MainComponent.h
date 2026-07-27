@@ -6,6 +6,7 @@
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
 #include "../theme/Theme.h"
+#include "ui/workspace/model/WorkspaceDocuments.h"
 #include "ui/workspace/model/WorkspaceLayoutState.h"
 #include "ui/workspace/model/WorkspaceToolState.h"
 
@@ -89,6 +90,7 @@ class MainComponent final
         WorkspaceToolState::Presentation presentation = WorkspaceToolState::Presentation::docked);
     void presentTool(ToolType tool, WorkspaceToolState::Presentation presentation);
     void focusTool(ToolType tool);
+    void recordToolFocus(ToolType tool);
     void closeTool(ToolType tool);
     void showSettings();
     void closeSettings();
@@ -111,6 +113,7 @@ class MainComponent final
     void saveSettings(bool explicitSave = false);
     void loadSettings();
     [[nodiscard]] AppSettings::State captureSettingsState();
+    void captureActiveWorkspace();
 
     [[nodiscard]] std::unique_ptr<juce::Component> createToolComponent(ToolType tool);
     [[nodiscard]] juce::String toolName(ToolType tool) const;
@@ -197,6 +200,7 @@ class MainComponent final
     WorkspaceToolState spectrogramState;
     WorkspaceToolState harmonicState;
     WorkspaceLayoutState workspaceLayoutState;
+    WorkspaceSnapshot activeWorkspaceSnapshot;
     DropTarget activeDropTarget;
     AppDefaults::TunerSettings savedTunerSettings = AppDefaults::tunerDefaults();
     AppSettings::FullscreenMode selectedFullscreenMode = AppSettings::FullscreenMode::normal;

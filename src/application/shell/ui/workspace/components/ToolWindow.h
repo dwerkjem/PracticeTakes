@@ -17,7 +17,8 @@ class MainComponent::ToolWindow final : public juce::DocumentWindow
         std::function<void(juce::Component&)> dragHandler,
         std::function<void()> dockHandler,
         std::function<void()> feedbackHandler,
-        std::function<void()> closeHandler)
+        std::function<void()> closeHandler,
+        std::function<void()> focusHandler)
         : DocumentWindow(title, juce::Colours::darkgrey, juce::DocumentWindow::allButtons),
           contentComponent(&content), onDrag(dragHandler), dragHandle(std::move(dragHandler)),
           optionsButton(
@@ -25,7 +26,7 @@ class MainComponent::ToolWindow final : public juce::DocumentWindow
               std::move(dockHandler),
               std::move(feedbackHandler),
               closeHandler),
-          onClose(std::move(closeHandler))
+          onClose(std::move(closeHandler)), onFocus(std::move(focusHandler))
     {
         setUsingNativeTitleBar(true);
         setContentNonOwned(&content, true);
@@ -48,6 +49,14 @@ class MainComponent::ToolWindow final : public juce::DocumentWindow
     {
         setVisible(false);
         juce::MessageManager::callAsync(onClose);
+    }
+
+    void activeWindowStatusChanged() override
+    {
+        if (isActiveWindow() && onFocus)
+        {
+            onFocus();
+        }
     }
 
     void releaseContent()
@@ -121,6 +130,7 @@ class MainComponent::ToolWindow final : public juce::DocumentWindow
     ToolDragHandle dragHandle;
     ToolOptionsButton optionsButton;
     std::function<void()> onClose;
+    std::function<void()> onFocus;
     bool dragStarted = false;
     bool dragArmed = false;
 };
