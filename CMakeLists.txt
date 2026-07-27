@@ -21,6 +21,17 @@ project(
     LANGUAGES C CXX
 )
 
+execute_process(
+    COMMAND git rev-parse --short=12 HEAD
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    OUTPUT_VARIABLE PRACTICE_TAKES_COMMIT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if(PRACTICE_TAKES_COMMIT STREQUAL "")
+    set(PRACTICE_TAKES_COMMIT "unknown")
+endif()
+
 set(PRACTICE_TAKES_FEEDBACK_ENDPOINT
     "https://practice-takes-feedback-intake.derekrneilson.workers.dev" CACHE STRING
     "HTTPS base URL for the Practice Takes feedback intake service")
@@ -162,6 +173,8 @@ target_sources(PracticeTakes
         src/features/performance/InTreeOptimizationStrategy.h
         src/features/performance/NonRealTimeTelemetryCollector.cpp
         src/features/performance/NonRealTimeTelemetryCollector.h
+        src/features/performance/PlatformProvenanceProvider.cpp
+        src/features/performance/PlatformProvenanceProvider.h
         src/features/performance/RealTimeEventCapture.h
         src/features/performance/SustainedAudioAnalysisScenario.cpp
         src/features/performance/SustainedAudioAnalysisScenario.h
@@ -179,6 +192,10 @@ target_compile_definitions(PracticeTakes
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=${PRACTICE_TAKES_USE_CURL}
         PRACTICE_TAKES_FEEDBACK_ENDPOINT="${PRACTICE_TAKES_FEEDBACK_ENDPOINT}"
+        PRACTICE_TAKES_VERSION="${PROJECT_VERSION}"
+        PRACTICE_TAKES_COMMIT="${PRACTICE_TAKES_COMMIT}"
+        PRACTICE_TAKES_BUILD_TYPE="$<CONFIG>"
+        PRACTICE_TAKES_INSTRUMENTATION_VERSION="1"
 )
 
 target_link_libraries(PracticeTakes
@@ -211,6 +228,7 @@ if(BUILD_TESTING)
         tests/InTreeOptimizationStrategyTests.cpp
         tests/NonRealTimeTelemetryCollectorTests.cpp
         tests/PitchDetectorTests.cpp
+        tests/PlatformProvenanceProviderTests.cpp
         tests/RealTimeEventCaptureTests.cpp
         tests/SettingsPersistenceTests.cpp
         tests/SustainedAudioAnalysisScenarioTests.cpp
@@ -226,6 +244,7 @@ if(BUILD_TESTING)
         src/features/performance/HarmonicAnalysisActions.cpp
         src/features/performance/InTreeOptimizationStrategy.cpp
         src/features/performance/NonRealTimeTelemetryCollector.cpp
+        src/features/performance/PlatformProvenanceProvider.cpp
         src/features/performance/SustainedAudioAnalysisScenario.cpp
     )
 
@@ -240,6 +259,14 @@ if(BUILD_TESTING)
             juce::juce_data_structures
             juce::juce_dsp
             juce::juce_graphics
+    )
+
+    target_compile_definitions(PracticeTakesTests
+        PRIVATE
+            PRACTICE_TAKES_VERSION="${PROJECT_VERSION}"
+            PRACTICE_TAKES_COMMIT="${PRACTICE_TAKES_COMMIT}"
+            PRACTICE_TAKES_BUILD_TYPE="$<CONFIG>"
+            PRACTICE_TAKES_INSTRUMENTATION_VERSION="1"
     )
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND PRACTICE_TAKES_USE_CURL)
