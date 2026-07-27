@@ -2,9 +2,24 @@
 
 #include "application/shell/ui/workspace/WorkspaceLayoutState.h"
 
+#include <optional>
+#include <vector>
+
+namespace
+{
+using Tool = WorkspaceLayoutState::Tool;
+using Zone = WorkspaceLayoutState::DropZone;
+using Orientation = WorkspaceLayoutState::Orientation;
+using NodeKind = WorkspaceLayoutState::NodeKind;
+using Node = WorkspaceLayoutState::Node;
+
+constexpr Tool tuner{0};
+constexpr Tool spectrogram{1};
+constexpr Tool harmonics{2};
+} // namespace
+
 TEST_CASE("drop targets cover tiled tabbed and floating destinations", "[workspace][layout]")
 {
-    using Zone = WorkspaceLayoutState::DropZone;
     constexpr int width = 1200;
     constexpr int height = 700;
 
@@ -16,75 +31,8 @@ TEST_CASE("drop targets cover tiled tabbed and floating destinations", "[workspa
     CHECK(WorkspaceLayoutState::dropZoneForPosition(1160, 20, width, height) == Zone::floating);
 }
 
-TEST_CASE("invalid drop positions leave the layout unchanged", "[workspace][layout]")
-{
-    using Tool = WorkspaceLayoutState::Tool;
-
-    WorkspaceLayoutState state;
-    const auto initialLayout = state.layout();
-    const auto initialFirst = state.first();
-
-    const auto result =
-        state.applyDrop(Tool{1}, Tool{0}, WorkspaceLayoutState::DropZone::none, true);
-
-    CHECK(result.destination == WorkspaceLayoutState::Destination::unchanged);
-    CHECK(state.layout() == initialLayout);
-    CHECK(state.first() == initialFirst);
-}
-
-TEST_CASE("edge drops select orientation and ordering", "[workspace][layout]")
-{
-    using Layout = WorkspaceLayoutState::Layout;
-    using Tool = WorkspaceLayoutState::Tool;
-    using Zone = WorkspaceLayoutState::DropZone;
-
-    constexpr Tool tuner{0};
-    constexpr Tool spectrogram{1};
-
-    WorkspaceLayoutState state;
-    CHECK(state.applyDrop(spectrogram, tuner, Zone::left, true).layoutChanged);
-    CHECK(state.layout() == Layout::horizontal);
-    CHECK(state.first() == spectrogram);
-
-    CHECK(state.applyDrop(tuner, spectrogram, Zone::bottom, true).layoutChanged);
-    CHECK(state.layout() == Layout::vertical);
-    CHECK(state.first() == spectrogram);
-}
-
-TEST_CASE("centre drops create a tab group and activate the dragged tool", "[workspace][layout]")
-{
-    using Tool = WorkspaceLayoutState::Tool;
-    constexpr Tool tuner{0};
-    constexpr Tool spectrogram{1};
-
-    WorkspaceLayoutState state;
-    const auto result =
-        state.applyDrop(spectrogram, tuner, WorkspaceLayoutState::DropZone::centre, true);
-
-    CHECK(result.destination == WorkspaceLayoutState::Destination::docked);
-    CHECK(state.layout() == WorkspaceLayoutState::Layout::tabbed);
-    CHECK(state.active() == spectrogram);
-}
-
-TEST_CASE("floating drops do not mutate the tiled layout", "[workspace][layout]")
-{
-    using Tool = WorkspaceLayoutState::Tool;
-
-    WorkspaceLayoutState state;
-    state.setLayout(WorkspaceLayoutState::Layout::vertical);
-
-    const auto result =
-        state.applyDrop(Tool{0}, Tool{1}, WorkspaceLayoutState::DropZone::floating, true);
-
-    CHECK(result.destination == WorkspaceLayoutState::Destination::floating);
-    CHECK_FALSE(result.layoutChanged);
-    CHECK(state.layout() == WorkspaceLayoutState::Layout::vertical);
-}
-
 TEST_CASE("drop target boundaries reject points outside the workspace", "[workspace][layout]")
 {
-    using Zone = WorkspaceLayoutState::DropZone;
-
     CHECK(WorkspaceLayoutState::dropZoneForPosition(-1, 10, 800, 600) == Zone::none);
     CHECK(WorkspaceLayoutState::dropZoneForPosition(10, -1, 800, 600) == Zone::none);
     CHECK(WorkspaceLayoutState::dropZoneForPosition(800, 10, 800, 600) == Zone::none);
@@ -95,7 +43,6 @@ TEST_CASE("drop target boundaries reject points outside the workspace", "[worksp
 
 TEST_CASE("floating target takes precedence over top and right edges", "[workspace][layout]")
 {
-    using Zone = WorkspaceLayoutState::DropZone;
     constexpr int width = 1200;
     constexpr int height = 700;
 
@@ -107,59 +54,352 @@ TEST_CASE("floating target takes precedence over top and right edges", "[workspa
     CHECK(WorkspaceLayoutState::dropZoneForPosition(width - 170, 64, width, height) == Zone::right);
 }
 
-TEST_CASE("a lone tool docks without changing the stored split layout", "[workspace][layout]")
+TEST_CASE("a new tree is empty and contains nothing", "[workspace][layout]")
 {
-    using Layout = WorkspaceLayoutState::Layout;
-    using Tool = WorkspaceLayoutState::Tool;
-    using Zone = WorkspaceLayoutState::DropZone;
-
-    constexpr Tool tuner{0};
-    constexpr Tool spectrogram{1};
-
     WorkspaceLayoutState state;
-    state.setLayout(Layout::vertical);
-    state.setActiveTool(tuner);
-
-    const auto result = state.applyDrop(spectrogram, tuner, Zone::left, false);
-
-    CHECK(result.destination == WorkspaceLayoutState::Destination::docked);
-    CHECK_FALSE(result.layoutChanged);
-    CHECK(state.layout() == Layout::vertical);
-    CHECK(state.active() == spectrogram);
+    CHECK(state.empty());
+    CHECK_FALSE(state.contains(tuner));
+    CHECK(state.rootNode() == nullptr);
 }
 
-TEST_CASE("repeating an established edge layout is idempotent", "[workspace][layout]")
+TEST_CASE("the first tool inserted becomes the sole root pane", "[workspace][layout]")
 {
-    using Tool = WorkspaceLayoutState::Tool;
-    using Zone = WorkspaceLayoutState::DropZone;
-
-    constexpr Tool tuner{0};
-    constexpr Tool spectrogram{1};
-
     WorkspaceLayoutState state;
-    REQUIRE(state.applyDrop(spectrogram, tuner, Zone::left, true).layoutChanged);
+    state.insert(tuner, std::nullopt, Zone::centre);
 
-    const auto repeated = state.applyDrop(spectrogram, tuner, Zone::left, true);
-
-    CHECK(repeated.destination == WorkspaceLayoutState::Destination::docked);
-    CHECK_FALSE(repeated.layoutChanged);
+    REQUIRE_FALSE(state.empty());
+    CHECK(state.contains(tuner));
+    REQUIRE(state.rootNode() != nullptr);
+    CHECK(state.rootNode()->kind == NodeKind::leaf);
+    CHECK(state.rootNode()->tool == tuner);
 }
 
-TEST_CASE("tool identity is opaque so any pair of ids can be tiled", "[workspace][layout]")
+TEST_CASE(
+    "left/right edge drops create a horizontal split with the requested order",
+    "[workspace][layout]")
 {
-    using Layout = WorkspaceLayoutState::Layout;
-    using Tool = WorkspaceLayoutState::Tool;
-    using Zone = WorkspaceLayoutState::DropZone;
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::left);
 
-    // A third, fourth, fifth, ... tool is just another id to this engine --
-    // it has no notion of a fixed two-tool universe.
-    constexpr Tool spectrogram{1};
-    constexpr Tool harmonics{2};
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::split);
+    CHECK(root->orientation == Orientation::horizontal);
+    REQUIRE(root->first != nullptr);
+    REQUIRE(root->second != nullptr);
+    CHECK(root->first->tool == spectrogram);
+    CHECK(root->second->tool == tuner);
+}
+
+TEST_CASE(
+    "top/bottom edge drops create a vertical split with the requested order",
+    "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::bottom);
+
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::split);
+    CHECK(root->orientation == Orientation::vertical);
+    REQUIRE(root->first != nullptr);
+    REQUIRE(root->second != nullptr);
+    CHECK(root->first->tool == tuner);
+    CHECK(root->second->tool == spectrogram);
+}
+
+TEST_CASE("centre drops create a tab group and activate the dropped tool", "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::centre);
+
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::tabs);
+    CHECK(root->tabs == std::vector<Tool>{tuner, spectrogram});
+    CHECK(root->activeTab == spectrogram);
+}
+
+TEST_CASE("a pane keeps subdividing fractally as more tools are tiled", "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::right);
+    // Split whichever pane holds `tuner` again -- the *other* pane
+    // (spectrogram) must be left completely untouched by this.
+    state.insert(harmonics, tuner, Zone::bottom);
+
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::split);
+    CHECK(root->orientation == Orientation::horizontal);
+    REQUIRE(root->first != nullptr);
+    REQUIRE(root->second != nullptr);
+
+    // spectrogram's pane (root->second, since tuner was pushed left) is
+    // untouched: still a plain leaf.
+    CHECK(root->second->kind == NodeKind::leaf);
+    CHECK(root->second->tool == spectrogram);
+
+    // tuner's pane subdivided again into its own nested vertical split.
+    CHECK(root->first->kind == NodeKind::split);
+    CHECK(root->first->orientation == Orientation::vertical);
+    REQUIRE(root->first->first != nullptr);
+    REQUIRE(root->first->second != nullptr);
+    CHECK(root->first->first->tool == tuner);
+    CHECK(root->first->second->tool == harmonics);
+
+    CHECK(state.contains(tuner));
+    CHECK(state.contains(spectrogram));
+    CHECK(state.contains(harmonics));
+}
+
+TEST_CASE(
+    "dropping centre onto a member of a tab group joins the same group",
+    "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::centre);
+    state.insert(harmonics, spectrogram, Zone::centre);
+
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::tabs);
+    CHECK(root->tabs == std::vector<Tool>{tuner, spectrogram, harmonics});
+    CHECK(root->activeTab == harmonics);
+}
+
+TEST_CASE(
+    "tiling a member of a tab group splits the whole group as one unit",
+    "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::centre);
+    state.insert(harmonics, tuner, Zone::right);
+
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::split);
+    REQUIRE(root->first != nullptr);
+    REQUIRE(root->second != nullptr);
+    CHECK(root->second->kind == NodeKind::leaf);
+    CHECK(root->second->tool == harmonics);
+    CHECK(root->first->kind == NodeKind::tabs);
+    CHECK(root->first->tabs == std::vector<Tool>{tuner, spectrogram});
+}
+
+TEST_CASE("dropping a pane onto itself is a no-op", "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(tuner, tuner, Zone::left);
+
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::leaf);
+    CHECK(root->tool == tuner);
+}
+
+TEST_CASE("none and floating zones are not placement requests", "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::none);
+    CHECK_FALSE(state.contains(spectrogram));
+
+    state.insert(spectrogram, tuner, Zone::floating);
+    CHECK_FALSE(state.contains(spectrogram));
+}
+
+TEST_CASE(
+    "removing a leaf from a two-way split promotes its sibling to root",
+    "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::left);
+
+    state.remove(tuner);
+
+    CHECK_FALSE(state.contains(tuner));
+    CHECK(state.contains(spectrogram));
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::leaf);
+    CHECK(root->tool == spectrogram);
+}
+
+TEST_CASE(
+    "removing a leaf deep in a fractal tree only collapses its own level",
+    "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::right);
+    state.insert(harmonics, tuner, Zone::bottom);
+
+    state.remove(harmonics);
+
+    CHECK_FALSE(state.contains(harmonics));
+    CHECK(state.contains(tuner));
+    CHECK(state.contains(spectrogram));
+
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::split);
+    REQUIRE(root->first != nullptr);
+    REQUIRE(root->second != nullptr);
+    // tuner's nested split collapsed back into a plain leaf...
+    CHECK(root->first->kind == NodeKind::leaf);
+    CHECK(root->first->tool == tuner);
+    // ...while spectrogram's untouched sibling pane is unaffected.
+    CHECK(root->second->kind == NodeKind::leaf);
+    CHECK(root->second->tool == spectrogram);
+}
+
+TEST_CASE("removing from a three-way tab group just shrinks it", "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::centre);
+    state.insert(harmonics, tuner, Zone::centre);
+
+    state.remove(spectrogram);
+
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::tabs);
+    CHECK(root->tabs == std::vector<Tool>{tuner, harmonics});
+}
+
+TEST_CASE(
+    "removing from a two-way tab group collapses it back to a plain leaf",
+    "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::centre);
+
+    state.remove(spectrogram);
+
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::leaf);
+    CHECK(root->tool == tuner);
+}
+
+TEST_CASE("removing the last tool empties the tree", "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+
+    state.remove(tuner);
+
+    CHECK(state.empty());
+    CHECK_FALSE(state.contains(tuner));
+}
+
+TEST_CASE(
+    "inserting with no findable target merges at the first pane instead of discarding the "
+    "rest of the tree",
+    "[workspace][layout]")
+{
+    constexpr Tool extra{3};
 
     WorkspaceLayoutState state;
-    const auto result = state.applyDrop(harmonics, spectrogram, Zone::right, true);
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::right);
+    state.insert(harmonics, tuner, Zone::bottom);
 
-    CHECK(result.destination == WorkspaceLayoutState::Destination::docked);
-    CHECK(state.layout() == Layout::horizontal);
-    CHECK(state.first() == spectrogram);
+    // No target supplied even though the tree already has a real shape --
+    // must not blindly replace the root and lose spectrogram/harmonics.
+    state.insert(extra, std::nullopt, Zone::centre);
+
+    CHECK(state.contains(tuner));
+    CHECK(state.contains(spectrogram));
+    CHECK(state.contains(harmonics));
+    CHECK(state.contains(extra));
+}
+
+TEST_CASE(
+    "inserting a tool already in the tree moves it instead of duplicating it",
+    "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::centre);
+    state.insert(harmonics, tuner, Zone::centre);
+
+    // spectrogram is currently tabbed with tuner/harmonics; move it to a
+    // brand new tiled position next to harmonics instead.
+    state.insert(spectrogram, harmonics, Zone::bottom);
+
+    CHECK(state.contains(spectrogram));
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::split);
+    REQUIRE(root->first != nullptr);
+    REQUIRE(root->second != nullptr);
+    // tuner/harmonics remain tabbed together, undisturbed...
+    CHECK(root->first->kind == NodeKind::tabs);
+    CHECK(root->first->tabs == std::vector<Tool>{tuner, harmonics});
+    // ...and spectrogram appears exactly once, at the new split location.
+    CHECK(root->second->kind == NodeKind::leaf);
+    CHECK(root->second->tool == spectrogram);
+}
+
+TEST_CASE(
+    "flattening to tabs collapses an arbitrarily deep tree into one tab group",
+    "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::right);
+    state.insert(harmonics, tuner, Zone::bottom);
+
+    state.applyLayoutCommand(WorkspaceLayoutState::Layout::tabbed);
+
+    CHECK(state.isFlattenedTabs());
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::tabs);
+    CHECK(root->tabs.size() == 3);
+    CHECK(state.contains(tuner));
+    CHECK(state.contains(spectrogram));
+    CHECK(state.contains(harmonics));
+}
+
+TEST_CASE("arrange commands change only the root split's orientation", "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::left);
+
+    CHECK(state.canSplitRoot());
+    CHECK(state.isRootOrientation(Orientation::horizontal));
+
+    state.applyLayoutCommand(WorkspaceLayoutState::Layout::vertical);
+    CHECK(state.isRootOrientation(Orientation::vertical));
+
+    state.applyLayoutCommand(WorkspaceLayoutState::Layout::horizontal);
+    CHECK(state.isRootOrientation(Orientation::horizontal));
+}
+
+TEST_CASE("arrange commands are a no-op when the root isn't a split", "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+
+    CHECK_FALSE(state.canSplitRoot());
+    state.applyLayoutCommand(WorkspaceLayoutState::Layout::vertical);
+
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::leaf);
+    CHECK(root->tool == tuner);
 }

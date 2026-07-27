@@ -43,8 +43,7 @@ MainComponent::~MainComponent()
     audioInputService.removeChangeListener(this);
     settingsWindow.reset();
     feedbackWindow.reset();
-    workspaceTabs.reset();
-    workspaceDivider.reset();
+    workspaceContainers.clear();
     tunerDock.reset();
     spectrogramDock.reset();
     harmonicDock.reset();

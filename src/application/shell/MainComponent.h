@@ -53,8 +53,20 @@ class MainComponent final
     static constexpr ToolType allToolTypes[] = {
         ToolType::tuner, ToolType::spectrogram, ToolType::harmonics};
 
+    // What a drag-and-drop point in the workspace resolves to: a zone, plus
+    // (if the point landed on a specific docked tool's pane rather than open
+    // space) which tool's pane it's relative to. A tiling zone here splits
+    // *that pane* -- this is what lets tools keep subdividing the workspace
+    // fractally instead of only ever affecting one fixed top-level layout.
+    struct DropTarget
+    {
+        WorkspaceLayoutState::DropZone zone = WorkspaceLayoutState::DropZone::none;
+        std::optional<ToolType> pane;
+    };
+
     class ToolWindow;
     class DockedToolPanel;
+    class WorkspaceSplitPane;
     class SettingsWindow;
     class FeedbackWindow;
     class MicrophoneWarning;
@@ -105,11 +117,12 @@ class MainComponent final
     void setWorkspaceLayout(WorkspaceLayoutState::Layout layout);
     void rebuildWorkspaceContainer();
     void layoutWorkspace(juce::Rectangle<int> bounds);
+    [[nodiscard]] juce::Component* buildWorkspaceNode(const WorkspaceLayoutState::Node* node);
     [[nodiscard]] std::vector<ToolType> dockedTools();
-    [[nodiscard]] std::optional<ToolType> otherDockedTool(ToolType exclude);
+    [[nodiscard]] std::optional<ToolType> dockedToolAt(juce::Point<int> position);
+    [[nodiscard]] DropTarget resolveDropTarget(juce::Point<int> position);
     [[nodiscard]] std::optional<ToolType>
     draggedTool(const juce::DragAndDropTarget::SourceDetails& details) const;
-    [[nodiscard]] WorkspaceLayoutState::DropZone dropZoneAt(juce::Point<int> position) const;
     bool isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails& details) override;
     void itemDragEnter(const juce::DragAndDropTarget::SourceDetails& details) override;
     void itemDragMove(const juce::DragAndDropTarget::SourceDetails& details) override;
@@ -147,8 +160,14 @@ class MainComponent final
     std::unique_ptr<DockedToolPanel> tunerDock;
     std::unique_ptr<DockedToolPanel> spectrogramDock;
     std::unique_ptr<DockedToolPanel> harmonicDock;
-    std::unique_ptr<juce::TabbedComponent> workspaceTabs;
-    std::unique_ptr<juce::StretchableLayoutResizerBar> workspaceDivider;
+    // Owns every split-pane/tab-strip container built for the current shape
+    // of workspaceLayoutState's tree; torn down and rebuilt from scratch on
+    // every change. The per-tool docks above are NOT stored here -- they're
+    // independently owned and merely reparented as this tree is rebuilt.
+    std::vector<std::unique_ptr<juce::Component>> workspaceContainers;
+    // Non-owning: whichever single component (a dock, or an entry in
+    // workspaceContainers) is currently the top of the workspace tree.
+    juce::Component* workspaceRoot = nullptr;
     std::unique_ptr<juce::Component> tunerComponent;
     std::unique_ptr<juce::Component> spectrogramComponent;
     std::unique_ptr<juce::Component> harmonicComponent;
@@ -162,8 +181,7 @@ class MainComponent final
     WorkspaceToolState spectrogramState;
     WorkspaceToolState harmonicState;
     WorkspaceLayoutState workspaceLayoutState;
-    juce::StretchableLayoutManager workspaceLayoutManager;
-    WorkspaceLayoutState::DropZone activeDropZone = WorkspaceLayoutState::DropZone::none;
+    DropTarget activeDropTarget;
     AppDefaults::TunerSettings savedTunerSettings = AppDefaults::tunerDefaults();
     AppSettings::FullscreenMode selectedFullscreenMode = AppSettings::FullscreenMode::normal;
     juce::Rectangle<int> savedTunerBounds;

@@ -1,22 +1,14 @@
 #include "../../MainComponent.h"
 
 #include "DockedToolPanel.h"
+#include "WorkspaceSplitPane.h"
 
+#include <algorithm>
 #include <utility>
-
-namespace
-{
-constexpr int minimumHorizontalToolSize = 480;
-constexpr int minimumVerticalToolSize = 280;
-constexpr int dividerSize = 8;
-} // namespace
 
 void MainComponent::setWorkspaceLayout(WorkspaceLayoutState::Layout layout)
 {
-    workspaceLayoutState.setLayout(layout);
-    for (const auto tool : allToolTypes)
-        if (stateFor(tool).isOpen())
-            presentTool(tool, WorkspaceToolState::Presentation::docked);
+    workspaceLayoutState.applyLayoutCommand(layout);
     rebuildWorkspaceContainer();
 }
 
@@ -30,106 +22,109 @@ std::vector<MainComponent::ToolType> MainComponent::dockedTools()
     return docked;
 }
 
+// Recursively turns a WorkspaceLayoutState::Node into the JUCE component(s)
+// that display it, storing any newly created containers in
+// workspaceContainers so they stay alive for as long as this shape of the
+// tree is on screen. A leaf resolves straight to its tool's dock; a tabs
+// node becomes one TabbedComponent; a split node becomes a WorkspaceSplitPane
+// wrapping its two (recursively built) children -- which may themselves be
+// further splits or tab groups, allowing the workspace to subdivide to any
+// depth.
+juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::Node* node)
+{
+    if (node == nullptr)
+        return nullptr;
+
+    if (node->kind == WorkspaceLayoutState::NodeKind::leaf)
+        return dockFor(static_cast<ToolType>(node->tool)).get();
+
+    if (node->kind == WorkspaceLayoutState::NodeKind::tabs)
+    {
+        auto tabs = std::make_unique<juce::TabbedComponent>(juce::TabbedButtonBar::TabsAtTop);
+        tabs->setTabBarDepth(38);
+        tabs->setLookAndFeel(&appLookAndFeel);
+
+        // Prefer showing whichever tab matches the app's globally focused
+        // tool (if this group happens to contain it); otherwise fall back to
+        // this group's own remembered active tab.
+        const auto currentToolAsTool = static_cast<WorkspaceLayoutState::Tool>(currentTool);
+        const auto preferCurrentTool =
+            std::find(node->tabs.begin(), node->tabs.end(), currentToolAsTool) != node->tabs.end();
+        const auto preferredActive = preferCurrentTool ? currentToolAsTool : node->activeTab;
+
+        int activeIndex = 0;
+        for (size_t index = 0; index < node->tabs.size(); ++index)
+        {
+            const auto tool = static_cast<ToolType>(node->tabs[index]);
+            if (node->tabs[index] == preferredActive)
+                activeIndex = static_cast<int>(index);
+            tabs->addTab(
+                toolName(tool), appPaletteFor(currentTheme).panel, dockFor(tool).get(), false);
+        }
+        tabs->setCurrentTabIndex(activeIndex);
+
+        auto* rawTabs = tabs.get();
+        workspaceContainers.push_back(std::move(tabs));
+        return rawTabs;
+    }
+
+    auto* first = buildWorkspaceNode(node->first.get());
+    auto* second = buildWorkspaceNode(node->second.get());
+    if (first == nullptr)
+        return second;
+    if (second == nullptr)
+        return first;
+
+    auto pane = std::make_unique<WorkspaceSplitPane>(
+        *first, *second, node->orientation == WorkspaceLayoutState::Orientation::vertical,
+        appLookAndFeel);
+    auto* rawPane = pane.get();
+    workspaceContainers.push_back(std::move(pane));
+    return rawPane;
+}
+
 void MainComponent::rebuildWorkspaceContainer()
 {
-    if (workspaceTabs != nullptr)
+    if (workspaceRoot != nullptr)
     {
-        while (workspaceTabs->getNumTabs() > 0)
-            workspaceTabs->removeTab(0);
-        removeChildComponent(workspaceTabs.get());
-        workspaceTabs.reset();
+        removeChildComponent(workspaceRoot);
+        workspaceRoot = nullptr;
     }
 
-    if (workspaceDivider != nullptr)
-    {
-        removeChildComponent(workspaceDivider.get());
-        workspaceDivider.reset();
-    }
+    // TabbedComponent needs its tabs explicitly cleared before it's
+    // destroyed, or its content components (owned by the per-tool docks, not
+    // by the tab strip) are left in an inconsistent parented state.
+    for (auto& container : workspaceContainers)
+        if (auto* tabs = dynamic_cast<juce::TabbedComponent*>(container.get()))
+            while (tabs->getNumTabs() > 0)
+                tabs->removeTab(0);
+    workspaceContainers.clear();
 
+    // Belt-and-braces: whatever the previous tree shape was, make sure every
+    // dock is detached from its actual current parent before the tree is
+    // rebuilt from scratch below.
     for (const auto tool : allToolTypes)
     {
         auto& dock = dockFor(tool);
-        if (dock != nullptr && dock->getParentComponent() == this)
-            removeChildComponent(dock.get());
+        if (dock != nullptr)
+            if (auto* parent = dock->getParentComponent())
+                parent->removeChildComponent(dock.get());
     }
 
-    const auto docked = dockedTools();
-    if (docked.empty())
-    {
-        resized();
-        return;
-    }
-
-    // A tile only ever has room for two tools. Three or more docked tools
-    // always share a single tab strip, regardless of which specific tools
-    // they are; this is what lets any number of tools (including ones added
-    // in the future) participate without bespoke handling here.
-    if (docked.size() > 2 || workspaceLayoutState.layout() == WorkspaceLayoutState::Layout::tabbed)
-    {
-        workspaceTabs = std::make_unique<juce::TabbedComponent>(juce::TabbedButtonBar::TabsAtTop);
-        workspaceTabs->setTabBarDepth(38);
-        workspaceTabs->setLookAndFeel(&appLookAndFeel);
-        addAndMakeVisible(*workspaceTabs);
-
-        int activeIndex = 0;
-        for (size_t index = 0; index < docked.size(); ++index)
-        {
-            const auto tool = docked[index];
-            if (tool == currentTool)
-                activeIndex = static_cast<int>(index);
-            workspaceTabs->addTab(
-                toolName(tool), appPaletteFor(currentTheme).panel, dockFor(tool).get(), false);
-        }
-        workspaceTabs->setCurrentTabIndex(activeIndex);
-    }
-    else
-    {
-        for (const auto tool : docked)
-            addAndMakeVisible(*dockFor(tool));
-
-        if (docked.size() == 2)
-        {
-            workspaceLayoutManager.clearAllItems();
-            const auto vertical =
-                workspaceLayoutState.layout() == WorkspaceLayoutState::Layout::vertical;
-            const auto minimumSize = vertical ? minimumVerticalToolSize : minimumHorizontalToolSize;
-            workspaceLayoutManager.setItemLayout(0, minimumSize, -1.0, -0.5);
-            workspaceLayoutManager.setItemLayout(1, dividerSize, dividerSize, dividerSize);
-            workspaceLayoutManager.setItemLayout(2, minimumSize, -1.0, -0.5);
-            workspaceDivider = std::make_unique<juce::StretchableLayoutResizerBar>(
-                &workspaceLayoutManager, 1, !vertical);
-            workspaceDivider->setLookAndFeel(&appLookAndFeel);
-            addAndMakeVisible(*workspaceDivider);
-        }
-    }
+    workspaceRoot = buildWorkspaceNode(workspaceLayoutState.rootNode());
+    if (workspaceRoot != nullptr)
+        addAndMakeVisible(*workspaceRoot);
 
     resized();
 }
 
 void MainComponent::layoutWorkspace(juce::Rectangle<int> bounds)
 {
-    if (workspaceTabs != nullptr)
-    {
-        workspaceTabs->setBounds(bounds);
-        return;
-    }
-
-    const auto docked = dockedTools();
-    if (docked.size() == 2 && workspaceDivider != nullptr)
-    {
-        auto first = docked[0];
-        auto second = docked[1];
-        if (static_cast<ToolType>(workspaceLayoutState.first()) == second)
-            std::swap(first, second);
-
-        juce::Component* components[]{
-            dockFor(first).get(), workspaceDivider.get(), dockFor(second).get()};
-        workspaceLayoutManager.layOutComponents(
-            components, 3, bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(),
-            workspaceLayoutState.layout() == WorkspaceLayoutState::Layout::vertical, true);
-    }
-    else if (docked.size() == 1)
-    {
-        dockFor(docked[0])->setBounds(bounds);
-    }
+    // Recursive layout is handled for free by JUCE: setting the root's
+    // bounds triggers its resized(), which lays out its own direct children
+    // and sets their bounds, which triggers their resized() in turn, and so
+    // on down through however many nested WorkspaceSplitPane/TabbedComponent
+    // levels the current tree has.
+    if (workspaceRoot != nullptr)
+        workspaceRoot->setBounds(bounds);
 }

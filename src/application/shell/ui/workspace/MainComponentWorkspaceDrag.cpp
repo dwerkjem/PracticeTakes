@@ -1,5 +1,7 @@
 #include "../../MainComponent.h"
 
+#include "DockedToolPanel.h"
+
 namespace
 {
 // Tool identity is encoded as an integer suffix so beginToolDrag/draggedTool
@@ -57,11 +59,26 @@ dropZoneBounds(WorkspaceLayoutState::DropZone zone, juce::Rectangle<int> workspa
     }
     return {};
 }
+
+void paintDropZone(
+    juce::Graphics& graphics,
+    juce::Rectangle<int> bounds,
+    const juce::String& label,
+    bool active,
+    const AppPalette& palette)
+{
+    graphics.setColour(active ? palette.accent.withAlpha(0.72f) : palette.panel.withAlpha(0.88f));
+    graphics.fillRoundedRectangle(bounds.toFloat(), 7.0f);
+    graphics.setColour(active ? juce::Colours::white : palette.foreground);
+    graphics.drawRoundedRectangle(bounds.toFloat(), 7.0f, 2.0f);
+    graphics.setFont(juce::FontOptions(16.0f, juce::Font::bold));
+    graphics.drawFittedText(label, bounds.reduced(8), juce::Justification::centred, 1);
+}
 } // namespace
 
 void MainComponent::beginToolDrag(ToolType tool, juce::Component& source)
 {
-    activeDropZone = WorkspaceLayoutState::DropZone::none;
+    activeDropTarget = {};
     const auto description =
         juce::String(workspaceToolDragPrefix) + juce::String(static_cast<int>(tool));
     startDragging(description, &source, juce::ScaledImage(), true);
@@ -82,12 +99,53 @@ MainComponent::draggedTool(const juce::DragAndDropTarget::SourceDetails& details
     return std::nullopt;
 }
 
-WorkspaceLayoutState::DropZone MainComponent::dropZoneAt(juce::Point<int> position) const
+// Hit-tests every currently docked tool's pane (however deeply nested inside
+// split panes/tab groups it is) and returns whichever one contains
+// `position` (in MainComponent's own coordinate space), if any.
+std::optional<MainComponent::ToolType> MainComponent::dockedToolAt(juce::Point<int> position)
+{
+    for (const auto tool : allToolTypes)
+    {
+        auto& dock = dockFor(tool);
+        if (dock == nullptr || dock->getParentComponent() == nullptr || !dock->isVisible())
+            continue;
+        const auto local = dock->getLocalPoint(this, position);
+        if (dock->getLocalBounds().contains(local))
+            return tool;
+    }
+    return std::nullopt;
+}
+
+MainComponent::DropTarget MainComponent::resolveDropTarget(juce::Point<int> position)
 {
     const auto workspace = getLocalBounds().reduced(18);
-    const auto local = position - workspace.getPosition();
-    return WorkspaceLayoutState::dropZoneForPosition(
-        local.x, local.y, workspace.getWidth(), workspace.getHeight());
+    const auto workspaceLocal = position - workspace.getPosition();
+    const auto workspaceZone = WorkspaceLayoutState::dropZoneForPosition(
+        workspaceLocal.x, workspaceLocal.y, workspace.getWidth(), workspace.getHeight());
+
+    // The floating target is a fixed workspace-corner control, independent
+    // of whichever pane happens to be underneath it.
+    if (workspaceZone == WorkspaceLayoutState::DropZone::floating)
+        return {WorkspaceLayoutState::DropZone::floating, std::nullopt};
+
+    if (const auto pane = dockedToolAt(position); pane.has_value())
+    {
+        auto* dock = dockFor(*pane).get();
+        const auto local = dock->getLocalPoint(this, position);
+        auto zone = WorkspaceLayoutState::dropZoneForPosition(
+            local.x, local.y, dock->getWidth(), dock->getHeight());
+        // Floating only means anything at the whole-workspace level (handled
+        // above); a pane-relative "floating" result (e.g. a small pane's own
+        // corner) just means "drop here", i.e. add as a tab.
+        if (zone == WorkspaceLayoutState::DropZone::floating)
+            zone = WorkspaceLayoutState::DropZone::centre;
+        return {zone, pane};
+    }
+
+    // No pane under the pointer (empty workspace, or hovering a divider) --
+    // fall back to whole-workspace edge detection so the very first tool can
+    // still be docked via an edge/centre gesture.
+    return {workspaceZone, std::nullopt};
 }
 
 bool MainComponent::isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails& details)
@@ -97,87 +155,55 @@ bool MainComponent::isInterestedInDragSource(const juce::DragAndDropTarget::Sour
 
 void MainComponent::itemDragEnter(const juce::DragAndDropTarget::SourceDetails& details)
 {
-    activeDropZone = dropZoneAt(details.localPosition);
+    activeDropTarget = resolveDropTarget(details.localPosition);
     repaint();
 }
 
 void MainComponent::itemDragMove(const juce::DragAndDropTarget::SourceDetails& details)
 {
-    const auto zone = dropZoneAt(details.localPosition);
-    if (zone != activeDropZone)
+    const auto target = resolveDropTarget(details.localPosition);
+    if (target.zone != activeDropTarget.zone || target.pane != activeDropTarget.pane)
     {
-        activeDropZone = zone;
+        activeDropTarget = target;
         repaint();
     }
 }
 
 void MainComponent::itemDragExit(const juce::DragAndDropTarget::SourceDetails&)
 {
-    activeDropZone = WorkspaceLayoutState::DropZone::none;
+    activeDropTarget = {};
     repaint();
-}
-
-std::optional<MainComponent::ToolType> MainComponent::otherDockedTool(ToolType exclude)
-{
-    // Prefer the current/active tool as the tiling partner when possible so
-    // the pane the user is already looking at is the one that gets kept;
-    // otherwise fall back to the first other docked tool found.
-    if (currentTool != exclude &&
-        stateFor(currentTool).presentation() == WorkspaceToolState::Presentation::docked)
-        return currentTool;
-    for (const auto candidate : allToolTypes)
-    {
-        if (candidate == exclude)
-            continue;
-        if (stateFor(candidate).presentation() == WorkspaceToolState::Presentation::docked)
-            return candidate;
-    }
-    return std::nullopt;
 }
 
 void MainComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& details)
 {
     const auto tool = draggedTool(details);
-    const auto zone = dropZoneAt(details.localPosition);
-    activeDropZone = WorkspaceLayoutState::DropZone::none;
+    const auto target = resolveDropTarget(details.localPosition);
+    activeDropTarget = {};
     repaint();
-    if (!tool.has_value() || zone == WorkspaceLayoutState::DropZone::none)
+    if (!tool.has_value() || target.zone == WorkspaceLayoutState::DropZone::none)
         return;
 
     const auto draggedType = *tool;
-    const auto partner = otherDockedTool(draggedType);
-    const auto result = workspaceLayoutState.applyDrop(
-        static_cast<WorkspaceLayoutState::Tool>(draggedType),
-        static_cast<WorkspaceLayoutState::Tool>(partner.value_or(draggedType)), zone,
-        partner.has_value());
 
-    if (result.destination == WorkspaceLayoutState::Destination::floating)
+    if (target.zone == WorkspaceLayoutState::DropZone::floating)
     {
+        workspaceLayoutState.remove(static_cast<WorkspaceLayoutState::Tool>(draggedType));
         presentTool(draggedType, WorkspaceToolState::Presentation::floating);
         rebuildWorkspaceContainer();
         return;
     }
 
-    if (result.destination != WorkspaceLayoutState::Destination::docked)
-        return;
-
     if (stateFor(draggedType).presentation() != WorkspaceToolState::Presentation::docked)
         presentTool(draggedType, WorkspaceToolState::Presentation::docked);
 
-    if (zone != WorkspaceLayoutState::DropZone::centre && partner.has_value())
-    {
-        // Only two tools can share a tile. Anything else that was docked has
-        // to leave (float) so the requested split can actually happen -- this
-        // is how any tool, including ones added in the future, escapes a
-        // shared tab group instead of staying silently stuck in it.
-        for (const auto other : allToolTypes)
-        {
-            if (other == draggedType || other == *partner)
-                continue;
-            if (stateFor(other).presentation() == WorkspaceToolState::Presentation::docked)
-                presentTool(other, WorkspaceToolState::Presentation::floating);
-        }
-    }
+    const auto paneTool =
+        target.pane.has_value()
+            ? std::optional<WorkspaceLayoutState::Tool>(
+                  static_cast<WorkspaceLayoutState::Tool>(*target.pane))
+            : std::nullopt;
+    workspaceLayoutState.insert(
+        static_cast<WorkspaceLayoutState::Tool>(draggedType), paneTool, target.zone);
 
     currentTool = draggedType;
     focusTool(draggedType);
@@ -186,26 +212,38 @@ void MainComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& de
 
 void MainComponent::paintOverChildren(juce::Graphics& graphics)
 {
-    if (activeDropZone == WorkspaceLayoutState::DropZone::none)
+    // Nothing is being dragged over the workspace right now -- draw none of
+    // the drop-zone indicators (including the floating target) at all.
+    if (activeDropTarget.zone == WorkspaceLayoutState::DropZone::none)
         return;
 
     const auto palette = appPaletteFor(currentTheme);
     const auto workspace = getLocalBounds().reduced(18);
-    constexpr WorkspaceLayoutState::DropZone zones[]{
-        WorkspaceLayoutState::DropZone::left,   WorkspaceLayoutState::DropZone::right,
-        WorkspaceLayoutState::DropZone::top,    WorkspaceLayoutState::DropZone::bottom,
-        WorkspaceLayoutState::DropZone::centre, WorkspaceLayoutState::DropZone::floating};
-    for (const auto zone : zones)
+
+    // The floating target is shown workspace-relative for the whole
+    // duration of a drag, regardless of whether a pane is currently hovered
+    // underneath it.
+    paintDropZone(
+        graphics, dropZoneBounds(WorkspaceLayoutState::DropZone::floating, workspace).reduced(5),
+        dropZoneLabel(WorkspaceLayoutState::DropZone::floating),
+        activeDropTarget.zone == WorkspaceLayoutState::DropZone::floating, palette);
+
+    if (activeDropTarget.zone == WorkspaceLayoutState::DropZone::floating)
+        return;
+
+    auto paneBounds = workspace;
+    if (activeDropTarget.pane.has_value())
     {
-        const auto bounds = dropZoneBounds(zone, workspace).reduced(5);
-        graphics.setColour(
-            zone == activeDropZone ? palette.accent.withAlpha(0.72f)
-                                   : palette.panel.withAlpha(0.88f));
-        graphics.fillRoundedRectangle(bounds.toFloat(), 7.0f);
-        graphics.setColour(zone == activeDropZone ? juce::Colours::white : palette.foreground);
-        graphics.drawRoundedRectangle(bounds.toFloat(), 7.0f, 2.0f);
-        graphics.setFont(juce::FontOptions(16.0f, juce::Font::bold));
-        graphics.drawFittedText(
-            dropZoneLabel(zone), bounds.reduced(8), juce::Justification::centred, 1);
+        if (auto* dock = dockFor(*activeDropTarget.pane).get())
+            paneBounds = getLocalArea(dock, dock->getLocalBounds());
     }
+
+    constexpr WorkspaceLayoutState::DropZone tilingZones[]{
+        WorkspaceLayoutState::DropZone::left, WorkspaceLayoutState::DropZone::right,
+        WorkspaceLayoutState::DropZone::top, WorkspaceLayoutState::DropZone::bottom,
+        WorkspaceLayoutState::DropZone::centre};
+    for (const auto zone : tilingZones)
+        paintDropZone(
+            graphics, dropZoneBounds(zone, paneBounds).reduced(5), dropZoneLabel(zone),
+            zone == activeDropTarget.zone, palette);
 }

@@ -40,6 +40,21 @@ void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation 
 
     detachToolPresentation(tool);
     static_cast<void>(stateFor(tool).present(presentation));
+
+    // Keep the tiling tree in sync: docking places the tool somewhere in the
+    // tree (auto-tabbing alongside whatever's already there, or becoming the
+    // tree's sole pane if it's currently empty); floating removes it, since
+    // only currently-docked tools are ever tracked by the tree. Drag-driven
+    // docking calls insert() again right after this with a specific
+    // pane/zone, which safely relocates the tool since insert() has move
+    // (remove-then-place) semantics.
+    if (presentation == WorkspaceToolState::Presentation::docked)
+        workspaceLayoutState.insert(
+            static_cast<WorkspaceLayoutState::Tool>(tool), std::nullopt,
+            WorkspaceLayoutState::DropZone::centre);
+    else
+        workspaceLayoutState.remove(static_cast<WorkspaceLayoutState::Tool>(tool));
+
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     const auto closeHandler = [safeThis, tool]
     {
@@ -123,6 +138,7 @@ void MainComponent::closeTool(ToolType tool)
         savedTunerSettings = tuner->settings();
 
     detachToolPresentation(tool);
+    workspaceLayoutState.remove(static_cast<WorkspaceLayoutState::Tool>(tool));
     componentFor(tool).reset();
     static_cast<void>(stateFor(tool).close());
     rebuildWorkspaceContainer();
@@ -220,17 +236,25 @@ void MainComponent::detachToolPresentation(ToolType tool)
     }
     if (auto& dock = dockFor(tool); dock != nullptr)
     {
-        if (workspaceTabs != nullptr)
+        dock->releaseContent();
+        // Detach from whatever the dock's actual current parent is -- a
+        // TabbedComponent needs its tab explicitly removed first (it keeps
+        // its own bookkeeping of tab-index-to-content-component), while any
+        // other parent (WorkspaceSplitPane, or this MainComponent directly
+        // for a lone docked tool) can just have the child removed directly.
+        if (auto* parent = dock->getParentComponent())
         {
-            for (int index = workspaceTabs->getNumTabs(); --index >= 0;)
+            if (auto* tabs = dynamic_cast<juce::TabbedComponent*>(parent))
             {
-                if (workspaceTabs->getTabContentComponent(index) == dock.get())
-                    workspaceTabs->removeTab(index);
+                for (int index = tabs->getNumTabs(); --index >= 0;)
+                    if (tabs->getTabContentComponent(index) == dock.get())
+                        tabs->removeTab(index);
+            }
+            else
+            {
+                parent->removeChildComponent(dock.get());
             }
         }
-        dock->releaseContent();
-        if (dock->getParentComponent() == this)
-            removeChildComponent(dock.get());
         dock.reset();
     }
 }

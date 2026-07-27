@@ -66,19 +66,19 @@ void MainComponent::showToolsMenu()
     harmonicMenu.addItem(closeHarmonicMenuItemId, "Close", harmonicState.isOpen());
     menu.addSubMenu("Harmonic Analyzer", harmonicMenu);
 
-    const auto canArrange = tunerState.isOpen() && spectrogramState.isOpen();
+    const auto dockedCount = dockedTools().size();
+    const auto canArrangeSplit = workspaceLayoutState.canSplitRoot();
     juce::PopupMenu layoutMenu;
     layoutMenu.addItem(
-        horizontalLayoutMenuItemId, "Side by side", canArrange,
-        workspaceLayoutState.layout() == WorkspaceLayoutState::Layout::horizontal);
+        horizontalLayoutMenuItemId, "Side by side", canArrangeSplit,
+        workspaceLayoutState.isRootOrientation(WorkspaceLayoutState::Orientation::horizontal));
     layoutMenu.addItem(
-        verticalLayoutMenuItemId, "Stacked", canArrange,
-        workspaceLayoutState.layout() == WorkspaceLayoutState::Layout::vertical);
+        verticalLayoutMenuItemId, "Stacked", canArrangeSplit,
+        workspaceLayoutState.isRootOrientation(WorkspaceLayoutState::Orientation::vertical));
     layoutMenu.addItem(
-        tabbedLayoutMenuItemId, "Tabbed", canArrange,
-        workspaceLayoutState.layout() == WorkspaceLayoutState::Layout::tabbed);
+        tabbedLayoutMenuItemId, "Tabbed", dockedCount >= 2, workspaceLayoutState.isFlattenedTabs());
     menu.addSeparator();
-    menu.addSubMenu("Arrange workspace", layoutMenu, canArrange);
+    menu.addSubMenu("Arrange workspace", layoutMenu, canArrangeSplit || dockedCount >= 2);
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(

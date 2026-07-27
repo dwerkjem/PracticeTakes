@@ -136,6 +136,7 @@ target_sources(PracticeTakes
         src/application/shell/ui/workspace/ToolOptionsButton.h
         src/application/shell/ui/workspace/ToolWindow.h
         src/application/shell/ui/workspace/WorkspaceLayoutState.h
+        src/application/shell/ui/workspace/WorkspaceSplitPane.h
         src/application/shell/ui/workspace/WorkspaceToolState.h
         src/application/theme/Theme.cpp
         src/application/theme/Theme.h
