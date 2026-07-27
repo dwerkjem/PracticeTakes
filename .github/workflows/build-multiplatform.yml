@@ -48,7 +48,7 @@ jobs:
             run_tests: true
           - runner: ubuntu-24.04-arm
             arch: arm64
-            run_tests: false
+            run_tests: true
     runs-on: ${{ matrix.runner }}
     # Build on the oldest supported Linux release. Dynamically linked binaries
     # inherit the build system's glibc, libstdc++, and library package names, so
@@ -172,11 +172,11 @@ jobs:
           - runner: windows-2022
             arch: x64
             msvc_arch: amd64
-            run_tests: false
+            run_tests: true
           - runner: windows-11-arm
             arch: arm64
             msvc_arch: arm64
-            run_tests: false
+            run_tests: true
     runs-on: ${{ matrix.runner }}
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
