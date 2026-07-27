@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import os
 import shutil
 import subprocess
@@ -30,8 +31,17 @@ def parse_arguments(arguments: list[str]) -> argparse.Namespace:
         action="store_true",
         help="Apply safe fix-it replacements offered by enabled clang-tidy checks.",
     )
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=int(os.environ.get("CLANG_TIDY_JOBS", os.cpu_count() or 1)),
+        help="Number of parallel clang-tidy processes (default: CPU count).",
+    )
     parser.add_argument("files", nargs="*")
-    return parser.parse_args(arguments)
+    options = parser.parse_args(arguments)
+    if options.jobs < 1:
+        parser.error("--jobs must be at least 1")
+    return options
 
 
 def project_uses_generated_juce_header() -> bool:
@@ -133,8 +143,14 @@ def main(arguments: list[str]) -> int:
                 exit_code = result.returncode
         return exit_code
 
-    result = subprocess.run(base_command + list(map(str, source_files)), check=False)
-    return result.returncode
+    def analyze(source_file: Path) -> int:
+        result = subprocess.run(base_command + [str(source_file)], check=False)
+        return result.returncode
+
+    worker_count = min(options.jobs, len(source_files))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=worker_count) as executor:
+        return_codes = executor.map(analyze, source_files)
+        return 1 if any(return_codes) else 0
 
 
 if __name__ == "__main__":
