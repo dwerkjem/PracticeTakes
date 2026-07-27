@@ -2,6 +2,8 @@
 
 #include "DockedToolPanel.h"
 
+#include <utility>
+
 namespace
 {
 constexpr int minimumHorizontalToolSize = 480;
@@ -12,13 +14,20 @@ constexpr int dividerSize = 8;
 void MainComponent::setWorkspaceLayout(WorkspaceLayoutState::Layout layout)
 {
     workspaceLayoutState.setLayout(layout);
-    if (tunerState.isOpen())
-        presentTool(ToolType::tuner, WorkspaceToolState::Presentation::docked);
-    if (spectrogramState.isOpen())
-        presentTool(ToolType::spectrogram, WorkspaceToolState::Presentation::docked);
-    if (harmonicState.isOpen())
-        presentTool(ToolType::harmonics, WorkspaceToolState::Presentation::docked);
+    for (const auto tool : allToolTypes)
+        if (stateFor(tool).isOpen())
+            presentTool(tool, WorkspaceToolState::Presentation::docked);
     rebuildWorkspaceContainer();
+}
+
+std::vector<MainComponent::ToolType> MainComponent::dockedTools()
+{
+    std::vector<ToolType> docked;
+    for (const auto tool : allToolTypes)
+        if (stateFor(tool).presentation() == WorkspaceToolState::Presentation::docked &&
+            dockFor(tool) != nullptr)
+            docked.push_back(tool);
+    return docked;
 }
 
 void MainComponent::rebuildWorkspaceContainer()
@@ -37,66 +46,48 @@ void MainComponent::rebuildWorkspaceContainer()
         workspaceDivider.reset();
     }
 
-    for (auto* dock : {tunerDock.get(), spectrogramDock.get(), harmonicDock.get()})
+    for (const auto tool : allToolTypes)
     {
+        auto& dock = dockFor(tool);
         if (dock != nullptr && dock->getParentComponent() == this)
-            removeChildComponent(dock);
+            removeChildComponent(dock.get());
     }
 
-    const auto tunerIsDocked =
-        tunerState.presentation() == WorkspaceToolState::Presentation::docked &&
-        tunerDock != nullptr;
-    const auto spectrogramIsDocked =
-        spectrogramState.presentation() == WorkspaceToolState::Presentation::docked &&
-        spectrogramDock != nullptr;
-    const auto harmonicIsDocked =
-        harmonicState.presentation() == WorkspaceToolState::Presentation::docked &&
-        harmonicDock != nullptr;
-    const auto dockedCount =
-        static_cast<int>(tunerIsDocked) + static_cast<int>(spectrogramIsDocked) +
-        static_cast<int>(harmonicIsDocked);
-    if (dockedCount == 0)
+    const auto docked = dockedTools();
+    if (docked.empty())
     {
         resized();
         return;
     }
 
-    if (dockedCount > 1 &&
-        (harmonicIsDocked || workspaceLayoutState.layout() == WorkspaceLayoutState::Layout::tabbed))
+    // A tile only ever has room for two tools. Three or more docked tools
+    // always share a single tab strip, regardless of which specific tools
+    // they are; this is what lets any number of tools (including ones added
+    // in the future) participate without bespoke handling here.
+    if (docked.size() > 2 || workspaceLayoutState.layout() == WorkspaceLayoutState::Layout::tabbed)
     {
         workspaceTabs = std::make_unique<juce::TabbedComponent>(juce::TabbedButtonBar::TabsAtTop);
         workspaceTabs->setTabBarDepth(38);
         workspaceTabs->setLookAndFeel(&appLookAndFeel);
         addAndMakeVisible(*workspaceTabs);
 
-        const auto addTab = [this](ToolType tool)
-        {
-            auto* dock = dockFor(tool).get();
-            workspaceTabs->addTab(toolName(tool), appPaletteFor(currentTheme).panel, dock, false);
-        };
         int activeIndex = 0;
-        int nextIndex = 0;
-        for (const auto tool : {ToolType::tuner, ToolType::spectrogram, ToolType::harmonics})
+        for (size_t index = 0; index < docked.size(); ++index)
         {
-            if (stateFor(tool).presentation() != WorkspaceToolState::Presentation::docked)
-                continue;
+            const auto tool = docked[index];
             if (tool == currentTool)
-                activeIndex = nextIndex;
-            addTab(tool);
-            ++nextIndex;
+                activeIndex = static_cast<int>(index);
+            workspaceTabs->addTab(
+                toolName(tool), appPaletteFor(currentTheme).panel, dockFor(tool).get(), false);
         }
         workspaceTabs->setCurrentTabIndex(activeIndex);
     }
     else
     {
-        if (tunerIsDocked)
-            addAndMakeVisible(*tunerDock);
-        if (spectrogramIsDocked)
-            addAndMakeVisible(*spectrogramDock);
-        if (harmonicIsDocked)
-            addAndMakeVisible(*harmonicDock);
+        for (const auto tool : docked)
+            addAndMakeVisible(*dockFor(tool));
 
-        if (tunerIsDocked && spectrogramIsDocked)
+        if (docked.size() == 2)
         {
             workspaceLayoutManager.clearAllItems();
             const auto vertical =
@@ -123,46 +114,22 @@ void MainComponent::layoutWorkspace(juce::Rectangle<int> bounds)
         return;
     }
 
-    const auto tunerIsDocked =
-        tunerState.presentation() == WorkspaceToolState::Presentation::docked &&
-        tunerDock != nullptr;
-    const auto spectrogramIsDocked =
-        spectrogramState.presentation() == WorkspaceToolState::Presentation::docked &&
-        spectrogramDock != nullptr;
-    const auto harmonicIsDocked =
-        harmonicState.presentation() == WorkspaceToolState::Presentation::docked &&
-        harmonicDock != nullptr;
-    if (tunerIsDocked && spectrogramIsDocked && workspaceDivider != nullptr)
+    const auto docked = dockedTools();
+    if (docked.size() == 2 && workspaceDivider != nullptr)
     {
-        auto* firstDock = dockFor(toolType(workspaceLayoutState.first())).get();
-        auto* secondDock =
-            dockFor(toolType(WorkspaceLayoutState::otherTool(workspaceLayoutState.first()))).get();
-        juce::Component* components[]{firstDock, workspaceDivider.get(), secondDock};
+        auto first = docked[0];
+        auto second = docked[1];
+        if (static_cast<ToolType>(workspaceLayoutState.first()) == second)
+            std::swap(first, second);
+
+        juce::Component* components[]{
+            dockFor(first).get(), workspaceDivider.get(), dockFor(second).get()};
         workspaceLayoutManager.layOutComponents(
             components, 3, bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(),
             workspaceLayoutState.layout() == WorkspaceLayoutState::Layout::vertical, true);
     }
-    else if (tunerIsDocked)
+    else if (docked.size() == 1)
     {
-        tunerDock->setBounds(bounds);
+        dockFor(docked[0])->setBounds(bounds);
     }
-    else if (spectrogramIsDocked)
-    {
-        spectrogramDock->setBounds(bounds);
-    }
-    else if (harmonicIsDocked)
-    {
-        harmonicDock->setBounds(bounds);
-    }
-}
-
-WorkspaceLayoutState::Tool MainComponent::layoutTool(ToolType tool) const
-{
-    return tool == ToolType::tuner ? WorkspaceLayoutState::Tool::tuner
-                                   : WorkspaceLayoutState::Tool::spectrogram;
-}
-
-MainComponent::ToolType MainComponent::toolType(WorkspaceLayoutState::Tool tool) const
-{
-    return tool == WorkspaceLayoutState::Tool::tuner ? ToolType::tuner : ToolType::spectrogram;
 }

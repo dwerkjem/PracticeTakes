@@ -18,12 +18,14 @@ TEST_CASE("drop targets cover tiled tabbed and floating destinations", "[workspa
 
 TEST_CASE("invalid drop positions leave the layout unchanged", "[workspace][layout]")
 {
+    using Tool = WorkspaceLayoutState::Tool;
+
     WorkspaceLayoutState state;
     const auto initialLayout = state.layout();
     const auto initialFirst = state.first();
 
-    const auto result = state.applyDrop(
-        WorkspaceLayoutState::Tool::spectrogram, WorkspaceLayoutState::DropZone::none, true);
+    const auto result =
+        state.applyDrop(Tool{1}, Tool{0}, WorkspaceLayoutState::DropZone::none, true);
 
     CHECK(result.destination == WorkspaceLayoutState::Destination::unchanged);
     CHECK(state.layout() == initialLayout);
@@ -36,34 +38,43 @@ TEST_CASE("edge drops select orientation and ordering", "[workspace][layout]")
     using Tool = WorkspaceLayoutState::Tool;
     using Zone = WorkspaceLayoutState::DropZone;
 
-    WorkspaceLayoutState state;
-    CHECK(state.applyDrop(Tool::spectrogram, Zone::left, true).layoutChanged);
-    CHECK(state.layout() == Layout::horizontal);
-    CHECK(state.first() == Tool::spectrogram);
+    constexpr Tool tuner{0};
+    constexpr Tool spectrogram{1};
 
-    CHECK(state.applyDrop(Tool::tuner, Zone::bottom, true).layoutChanged);
+    WorkspaceLayoutState state;
+    CHECK(state.applyDrop(spectrogram, tuner, Zone::left, true).layoutChanged);
+    CHECK(state.layout() == Layout::horizontal);
+    CHECK(state.first() == spectrogram);
+
+    CHECK(state.applyDrop(tuner, spectrogram, Zone::bottom, true).layoutChanged);
     CHECK(state.layout() == Layout::vertical);
-    CHECK(state.first() == Tool::spectrogram);
+    CHECK(state.first() == spectrogram);
 }
 
 TEST_CASE("centre drops create a tab group and activate the dragged tool", "[workspace][layout]")
 {
+    using Tool = WorkspaceLayoutState::Tool;
+    constexpr Tool tuner{0};
+    constexpr Tool spectrogram{1};
+
     WorkspaceLayoutState state;
-    const auto result = state.applyDrop(
-        WorkspaceLayoutState::Tool::spectrogram, WorkspaceLayoutState::DropZone::centre, true);
+    const auto result =
+        state.applyDrop(spectrogram, tuner, WorkspaceLayoutState::DropZone::centre, true);
 
     CHECK(result.destination == WorkspaceLayoutState::Destination::docked);
     CHECK(state.layout() == WorkspaceLayoutState::Layout::tabbed);
-    CHECK(state.active() == WorkspaceLayoutState::Tool::spectrogram);
+    CHECK(state.active() == spectrogram);
 }
 
 TEST_CASE("floating drops do not mutate the tiled layout", "[workspace][layout]")
 {
+    using Tool = WorkspaceLayoutState::Tool;
+
     WorkspaceLayoutState state;
     state.setLayout(WorkspaceLayoutState::Layout::vertical);
 
-    const auto result = state.applyDrop(
-        WorkspaceLayoutState::Tool::tuner, WorkspaceLayoutState::DropZone::floating, true);
+    const auto result =
+        state.applyDrop(Tool{0}, Tool{1}, WorkspaceLayoutState::DropZone::floating, true);
 
     CHECK(result.destination == WorkspaceLayoutState::Destination::floating);
     CHECK_FALSE(result.layoutChanged);
@@ -102,16 +113,19 @@ TEST_CASE("a lone tool docks without changing the stored split layout", "[worksp
     using Tool = WorkspaceLayoutState::Tool;
     using Zone = WorkspaceLayoutState::DropZone;
 
+    constexpr Tool tuner{0};
+    constexpr Tool spectrogram{1};
+
     WorkspaceLayoutState state;
     state.setLayout(Layout::vertical);
-    state.setActiveTool(Tool::tuner);
+    state.setActiveTool(tuner);
 
-    const auto result = state.applyDrop(Tool::spectrogram, Zone::left, false);
+    const auto result = state.applyDrop(spectrogram, tuner, Zone::left, false);
 
     CHECK(result.destination == WorkspaceLayoutState::Destination::docked);
     CHECK_FALSE(result.layoutChanged);
     CHECK(state.layout() == Layout::vertical);
-    CHECK(state.active() == Tool::spectrogram);
+    CHECK(state.active() == spectrogram);
 }
 
 TEST_CASE("repeating an established edge layout is idempotent", "[workspace][layout]")
@@ -119,19 +133,33 @@ TEST_CASE("repeating an established edge layout is idempotent", "[workspace][lay
     using Tool = WorkspaceLayoutState::Tool;
     using Zone = WorkspaceLayoutState::DropZone;
 
-    WorkspaceLayoutState state;
-    REQUIRE(state.applyDrop(Tool::spectrogram, Zone::left, true).layoutChanged);
+    constexpr Tool tuner{0};
+    constexpr Tool spectrogram{1};
 
-    const auto repeated = state.applyDrop(Tool::spectrogram, Zone::left, true);
+    WorkspaceLayoutState state;
+    REQUIRE(state.applyDrop(spectrogram, tuner, Zone::left, true).layoutChanged);
+
+    const auto repeated = state.applyDrop(spectrogram, tuner, Zone::left, true);
 
     CHECK(repeated.destination == WorkspaceLayoutState::Destination::docked);
     CHECK_FALSE(repeated.layoutChanged);
 }
 
-TEST_CASE("workspace tool pairing is symmetric", "[workspace][layout]")
+TEST_CASE("tool identity is opaque so any pair of ids can be tiled", "[workspace][layout]")
 {
+    using Layout = WorkspaceLayoutState::Layout;
     using Tool = WorkspaceLayoutState::Tool;
+    using Zone = WorkspaceLayoutState::DropZone;
 
-    CHECK(WorkspaceLayoutState::otherTool(Tool::tuner) == Tool::spectrogram);
-    CHECK(WorkspaceLayoutState::otherTool(Tool::spectrogram) == Tool::tuner);
+    // A third, fourth, fifth, ... tool is just another id to this engine --
+    // it has no notion of a fixed two-tool universe.
+    constexpr Tool spectrogram{1};
+    constexpr Tool harmonics{2};
+
+    WorkspaceLayoutState state;
+    const auto result = state.applyDrop(harmonics, spectrogram, Zone::right, true);
+
+    CHECK(result.destination == WorkspaceLayoutState::Destination::docked);
+    CHECK(state.layout() == Layout::horizontal);
+    CHECK(state.first() == spectrogram);
 }

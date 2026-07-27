@@ -12,6 +12,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <vector>
 
 class MainTitleBar;
 
@@ -44,6 +45,13 @@ class MainComponent final
         spectrogram,
         harmonics
     };
+
+    // The single place a new tool needs to be registered for the drag/drop
+    // and tab/tile system below to know it exists. Everything else in that
+    // system (rebuildWorkspaceContainer, layoutWorkspace, itemDropped, ...)
+    // loops over this list generically instead of naming tools directly.
+    static constexpr ToolType allToolTypes[] = {
+        ToolType::tuner, ToolType::spectrogram, ToolType::harmonics};
 
     class ToolWindow;
     class DockedToolPanel;
@@ -97,8 +105,8 @@ class MainComponent final
     void setWorkspaceLayout(WorkspaceLayoutState::Layout layout);
     void rebuildWorkspaceContainer();
     void layoutWorkspace(juce::Rectangle<int> bounds);
-    [[nodiscard]] WorkspaceLayoutState::Tool layoutTool(ToolType tool) const;
-    [[nodiscard]] ToolType toolType(WorkspaceLayoutState::Tool tool) const;
+    [[nodiscard]] std::vector<ToolType> dockedTools();
+    [[nodiscard]] std::optional<ToolType> otherDockedTool(ToolType exclude);
     [[nodiscard]] std::optional<ToolType>
     draggedTool(const juce::DragAndDropTarget::SourceDetails& details) const;
     [[nodiscard]] WorkspaceLayoutState::DropZone dropZoneAt(juce::Point<int> position) const;

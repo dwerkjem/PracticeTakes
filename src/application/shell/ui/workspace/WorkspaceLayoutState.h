@@ -5,10 +5,13 @@
 class WorkspaceLayoutState
 {
   public:
-    enum class Tool
+    // Opaque identifier for a workspace tool. This engine has no notion of a
+    // fixed roster of tools or how many exist -- callers map their own tool
+    // enumeration onto these ids (e.g. static_cast<Tool>(ToolType::tuner)),
+    // which is what lets the same two-pane split/tab logic keep working as
+    // more tools are added.
+    enum class Tool : int
     {
-        tuner,
-        spectrogram
     };
 
     enum class Layout
@@ -65,14 +68,20 @@ class WorkspaceLayoutState
         return DropZone::centre;
     }
 
+    // draggedTool is the tool being dropped. pairedTool is whichever other
+    // tool would share a tile with it if a tile is requested; the caller
+    // decides who that is (e.g. the other currently docked tool) and reports
+    // whether it is actually docked via pairedToolIsDocked. When it isn't,
+    // there is nothing to tile against, so the drop simply docks/activates
+    // the dragged tool without changing the stored split layout.
     [[nodiscard]] DropResult
-    applyDrop(Tool draggedTool, DropZone zone, bool otherToolIsDocked) noexcept
+    applyDrop(Tool draggedTool, Tool pairedTool, DropZone zone, bool pairedToolIsDocked) noexcept
     {
         if (zone == DropZone::none)
             return {};
         if (zone == DropZone::floating)
             return {Destination::floating, false};
-        if (!otherToolIsDocked)
+        if (!pairedToolIsDocked)
         {
             activeTool = draggedTool;
             return {Destination::docked, false};
@@ -88,7 +97,7 @@ class WorkspaceLayoutState
             break;
         case DropZone::right:
             currentLayout = Layout::horizontal;
-            firstTool = otherTool(draggedTool);
+            firstTool = pairedTool;
             break;
         case DropZone::top:
             currentLayout = Layout::vertical;
@@ -96,7 +105,7 @@ class WorkspaceLayoutState
             break;
         case DropZone::bottom:
             currentLayout = Layout::vertical;
-            firstTool = otherTool(draggedTool);
+            firstTool = pairedTool;
             break;
         case DropZone::centre:
             currentLayout = Layout::tabbed;
@@ -134,13 +143,8 @@ class WorkspaceLayoutState
         return activeTool;
     }
 
-    [[nodiscard]] static Tool otherTool(Tool tool) noexcept
-    {
-        return tool == Tool::tuner ? Tool::spectrogram : Tool::tuner;
-    }
-
   private:
     Layout currentLayout = Layout::horizontal;
-    Tool firstTool = Tool::tuner;
-    Tool activeTool = Tool::tuner;
+    Tool firstTool{};
+    Tool activeTool{};
 };

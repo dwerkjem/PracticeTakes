@@ -2,9 +2,9 @@
 
 namespace
 {
-constexpr auto tunerDragDescription = "workspace-tool:tuner";
-constexpr auto spectrogramDragDescription = "workspace-tool:spectrogram";
-constexpr auto harmonicDragDescription = "workspace-tool:harmonics";
+// Tool identity is encoded as an integer suffix so beginToolDrag/draggedTool
+// never need a per-tool branch -- adding a new ToolType just works.
+constexpr auto workspaceToolDragPrefix = "workspace-tool:";
 
 [[nodiscard]] juce::Rectangle<int>
 dropZoneBounds(WorkspaceLayoutState::DropZone zone, juce::Rectangle<int> workspace)
@@ -63,10 +63,7 @@ void MainComponent::beginToolDrag(ToolType tool, juce::Component& source)
 {
     activeDropZone = WorkspaceLayoutState::DropZone::none;
     const auto description =
-        tool == ToolType::tuner
-            ? tunerDragDescription
-            : (tool == ToolType::spectrogram ? spectrogramDragDescription
-                                             : harmonicDragDescription);
+        juce::String(workspaceToolDragPrefix) + juce::String(static_cast<int>(tool));
     startDragging(description, &source, juce::ScaledImage(), true);
 }
 
@@ -74,12 +71,14 @@ std::optional<MainComponent::ToolType>
 MainComponent::draggedTool(const juce::DragAndDropTarget::SourceDetails& details) const
 {
     const auto description = details.description.toString();
-    if (description == tunerDragDescription)
-        return ToolType::tuner;
-    if (description == spectrogramDragDescription)
-        return ToolType::spectrogram;
-    if (description == harmonicDragDescription)
-        return ToolType::harmonics;
+    if (!description.startsWith(workspaceToolDragPrefix))
+        return std::nullopt;
+
+    const auto id =
+        description.substring(juce::String(workspaceToolDragPrefix).length()).getIntValue();
+    for (const auto candidate : allToolTypes)
+        if (static_cast<int>(candidate) == id)
+            return candidate;
     return std::nullopt;
 }
 
@@ -118,6 +117,24 @@ void MainComponent::itemDragExit(const juce::DragAndDropTarget::SourceDetails&)
     repaint();
 }
 
+std::optional<MainComponent::ToolType> MainComponent::otherDockedTool(ToolType exclude)
+{
+    // Prefer the current/active tool as the tiling partner when possible so
+    // the pane the user is already looking at is the one that gets kept;
+    // otherwise fall back to the first other docked tool found.
+    if (currentTool != exclude &&
+        stateFor(currentTool).presentation() == WorkspaceToolState::Presentation::docked)
+        return currentTool;
+    for (const auto candidate : allToolTypes)
+    {
+        if (candidate == exclude)
+            continue;
+        if (stateFor(candidate).presentation() == WorkspaceToolState::Presentation::docked)
+            return candidate;
+    }
+    return std::nullopt;
+}
+
 void MainComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& details)
 {
     const auto tool = draggedTool(details);
@@ -127,28 +144,44 @@ void MainComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& de
     if (!tool.has_value() || zone == WorkspaceLayoutState::DropZone::none)
         return;
 
-    if (*tool == ToolType::harmonics)
+    const auto draggedType = *tool;
+    const auto partner = otherDockedTool(draggedType);
+    const auto result = workspaceLayoutState.applyDrop(
+        static_cast<WorkspaceLayoutState::Tool>(draggedType),
+        static_cast<WorkspaceLayoutState::Tool>(partner.value_or(draggedType)), zone,
+        partner.has_value());
+
+    if (result.destination == WorkspaceLayoutState::Destination::floating)
     {
-        presentTool(
-            *tool, zone == WorkspaceLayoutState::DropZone::floating
-                       ? WorkspaceToolState::Presentation::floating
-                       : WorkspaceToolState::Presentation::docked);
+        presentTool(draggedType, WorkspaceToolState::Presentation::floating);
         rebuildWorkspaceContainer();
         return;
     }
 
-    const auto other = *tool == ToolType::tuner ? ToolType::spectrogram : ToolType::tuner;
-    const auto otherIsDocked =
-        stateFor(other).presentation() == WorkspaceToolState::Presentation::docked;
-    const auto result = workspaceLayoutState.applyDrop(layoutTool(*tool), zone, otherIsDocked);
-    if (result.destination == WorkspaceLayoutState::Destination::floating)
-        presentTool(*tool, WorkspaceToolState::Presentation::floating);
-    else if (result.destination == WorkspaceLayoutState::Destination::docked)
+    if (result.destination != WorkspaceLayoutState::Destination::docked)
+        return;
+
+    if (stateFor(draggedType).presentation() != WorkspaceToolState::Presentation::docked)
+        presentTool(draggedType, WorkspaceToolState::Presentation::docked);
+
+    if (zone != WorkspaceLayoutState::DropZone::centre && partner.has_value())
     {
-        if (stateFor(*tool).presentation() != WorkspaceToolState::Presentation::docked)
-            presentTool(*tool, WorkspaceToolState::Presentation::docked);
-        rebuildWorkspaceContainer();
+        // Only two tools can share a tile. Anything else that was docked has
+        // to leave (float) so the requested split can actually happen -- this
+        // is how any tool, including ones added in the future, escapes a
+        // shared tab group instead of staying silently stuck in it.
+        for (const auto other : allToolTypes)
+        {
+            if (other == draggedType || other == *partner)
+                continue;
+            if (stateFor(other).presentation() == WorkspaceToolState::Presentation::docked)
+                presentTool(other, WorkspaceToolState::Presentation::floating);
+        }
     }
+
+    currentTool = draggedType;
+    focusTool(draggedType);
+    rebuildWorkspaceContainer();
 }
 
 void MainComponent::paintOverChildren(juce::Graphics& graphics)
