@@ -86,9 +86,20 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             return;
         }
 
+        const auto automatePerformanceLab = argument == "--automate-performance-lab";
+#if !PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+        if (automatePerformanceLab)
+        {
+            std::cerr << "Performance Lab is disabled; rebuild with "
+                         "-DPRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=ON\n";
+            setApplicationReturnValue(2);
+            quit();
+            return;
+        }
+#endif
         const auto windowTitle = getApplicationName() + " v" + getApplicationVersion();
 
-        mainWindow = std::make_unique<MainWindow>(windowTitle);
+        mainWindow = std::make_unique<MainWindow>(windowTitle, automatePerformanceLab);
     }
 
     void shutdown() override
@@ -108,7 +119,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
     class MainWindow final : public juce::DocumentWindow, private juce::Timer
     {
       public:
-        explicit MainWindow(const juce::String& title)
+        MainWindow(const juce::String& title, bool automatePerformanceLab)
             : DocumentWindow(
                   title,
                   juce::Colour::fromRGB(18, 20, 27),
@@ -133,6 +144,24 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             centreWithSize(getWidth(), getHeight());
             setVisible(true);
             performance::markMainWindowVisible();
+            content->initialiseAudioAfterLaunch();
+#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+            if (automatePerformanceLab)
+            {
+                content->automatePerformanceLab(
+                    [](bool succeeded)
+                    {
+                        std::cout
+                            << (succeeded ? "Performance Lab automation completed\n"
+                                          : "Performance Lab automation failed\n");
+                        auto* application = juce::JUCEApplication::getInstance();
+                        application->setApplicationReturnValue(succeeded ? 0 : 1);
+                        application->quit();
+                    });
+            }
+#else
+            juce::ignoreUnused(automatePerformanceLab);
+#endif
         }
 
         ~MainWindow() override

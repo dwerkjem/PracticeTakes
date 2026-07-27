@@ -191,6 +191,14 @@ void MainComponent::showPerformanceLab()
     }
 }
 
+void MainComponent::automatePerformanceLab(std::function<void(bool)> completion)
+{
+    performanceLabWindow = std::make_unique<PerformanceLabWindow>(
+        [this] { closePerformanceLab(); }, std::move(completion));
+    const auto palette = appPaletteFor(currentTheme);
+    performanceLabWindow->applyAppearance(&appLookAndFeel, palette.background);
+}
+
 void MainComponent::closePerformanceLab()
 {
     performanceLabWindow.reset();

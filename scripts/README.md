@@ -18,4 +18,11 @@ example:
 ./scripts/feedback/migrate-feedback-database.sh --remote
 ./scripts/feedback/configure-cloudflare-access.sh
 ./scripts/feedback/run-recovery-drill.py
+./scripts/quality/run-performance-lab.sh
 ```
+
+The Performance Lab script starts the application, calibrates instrumentation,
+runs the baseline and parameterized strategies, saves each immutable result in
+the normal local and repository result stores, and exits without user input.
+Configure the build with `-DPRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=ON` before
+running it.

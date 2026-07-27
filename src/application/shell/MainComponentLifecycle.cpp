@@ -90,6 +90,27 @@ AppSettings::FullscreenMode MainComponent::fullscreenMode() const noexcept
     return selectedFullscreenMode;
 }
 
+void MainComponent::initialiseAudioAfterLaunch()
+{
+    juce::Component::SafePointer<MainComponent> safeThis(this);
+    juce::MessageManager::callAsync(
+        [safeThis]
+        {
+            if (safeThis == nullptr)
+                return;
+
+            if (safeThis->pendingAudioDeviceState != nullptr)
+                safeThis->audioInputService.applySavedDeviceState(
+                    *safeThis->pendingAudioDeviceState);
+            else
+                safeThis->audioInputService.initialiseDefaultInput();
+
+            safeThis->pendingAudioDeviceState.reset();
+            safeThis->updateMicrophoneStateControl();
+            safeThis->updateMicrophoneWarning();
+        });
+}
+
 void MainComponent::createMicrophoneWarning()
 {
     microphoneWarning = std::make_unique<MicrophoneWarning>(

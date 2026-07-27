@@ -45,19 +45,6 @@ AudioInputService::AudioInputService()
 {
     manager.addChangeListener(this);
     manager.addAudioCallback(this);
-
-    // With no saved preference yet, JUCE selects the current system default.
-    const auto error = manager.initialise(2, 0, nullptr, true);
-    juce::ignoreUnused(error);
-
-    if (auto* device = manager.getCurrentAudioDevice())
-    {
-        lastDeviceName = device->getName();
-    }
-
-    lastState = inputState();
-    ticksUntilDeviceScan =
-        hasUsableInput() ? connectedDeviceScanIntervalTicks : disconnectedDeviceScanIntervalTicks;
     startTimerHz(serviceRefreshRateHz);
 }
 
@@ -265,23 +252,33 @@ std::uint64_t AudioInputService::droppedAnalysisSamples() const noexcept
 void AudioInputService::resetToDefaultInput()
 {
     setInputGain(1.0f);
+    initialiseInput(nullptr, true);
+}
+
+void AudioInputService::initialiseDefaultInput()
+{
+    initialiseInput(nullptr, false);
+}
+
+void AudioInputService::initialiseInput(const juce::XmlElement* state, bool force)
+{
+    if (initialised && !force)
+        return;
+
+    initialised = true;
     recovering = true;
     manager.closeAudioDevice();
-    juce::ignoreUnused(manager.initialise(2, 0, nullptr, true));
+    juce::ignoreUnused(manager.initialise(2, 0, state, true));
     recovering = false;
     publishState();
 }
 
 void AudioInputService::applySavedDeviceState(const juce::XmlElement& state)
 {
-    recovering = true;
-    manager.closeAudioDevice();
     // JUCE retains this explicit state even when the named input is absent and
     // opens the system default as a temporary fallback. createDeviceState()
     // will therefore keep the user's preference for a later reconnect/save.
-    juce::ignoreUnused(manager.initialise(2, 0, &state, true));
-    recovering = false;
-    publishState();
+    initialiseInput(&state, false);
 }
 
 std::unique_ptr<juce::XmlElement> AudioInputService::createDeviceState() const
