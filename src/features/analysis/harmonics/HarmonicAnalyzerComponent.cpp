@@ -72,13 +72,17 @@ void HarmonicAnalyzerComponent::timerCallback()
     while (audioInputService.availableSamples(this) >= samples.size())
     {
         if (audioInputService.readSamples(this, samples.data(), samples.size()) != samples.size())
+        {
             break;
+        }
         currentResult = analyzer.analyze(samples, currentSampleRate.load());
         appendHistory(currentResult);
         analyzedFrame = true;
     }
     if (analyzedFrame)
+    {
         repaint();
+    }
 }
 
 void HarmonicAnalyzerComponent::appendHistory(const HarmonicAnalyzer::Result& result)
@@ -119,14 +123,22 @@ void HarmonicAnalyzerComponent::paint(juce::Graphics& graphics)
     graphics.setFont(juce::FontOptions(14.0f));
     juce::String detail;
     if (audioErrorMessage.isNotEmpty())
+    {
         detail = audioErrorMessage;
+    }
     else if (!currentResult.isPitched)
+    {
         detail = "Uncertain or inharmonic input";
+    }
     else if (currentResult.relativeAmplitudes[0] < 0.2f)
+    {
         detail = "Weak fundamental - profile anchored to the strongest overtone";
+    }
     else
+    {
         detail = "Brightness " + juce::String(currentResult.spectralCentroidHz, 0) +
                  " Hz  |  confidence " + juce::String(currentResult.confidence * 100.0f, 0) + "%";
+    }
     graphics.drawText(detail, status, juce::Justification::centredLeft);
 
     graphics.setColour(palette.panel);
@@ -158,7 +170,9 @@ void HarmonicAnalyzerComponent::paint(juce::Graphics& graphics)
         "Relative harmonic amplitudes over time", historyBounds.reduced(8).removeFromTop(20),
         juce::Justification::centredLeft);
     if (historyCount < 2)
+    {
         return;
+    }
 
     const auto graph = historyBounds.reduced(10).withTrimmedTop(22);
     for (int harmonic = 0; harmonic < HarmonicAnalyzer::harmonicCount; ++harmonic)
@@ -177,9 +191,13 @@ void HarmonicAnalyzerComponent::paint(juce::Graphics& graphics)
                 value, 0.0f, 1.0f, static_cast<float>(graph.getBottom()),
                 static_cast<float>(graph.getY()));
             if (offset == 0)
+            {
                 path.startNewSubPath(x, y);
+            }
             else
+            {
                 path.lineTo(x, y);
+            }
         }
         graphics.setColour(harmonicColour(harmonic).withAlpha(0.85f));
         graphics.strokePath(path, juce::PathStrokeType(1.5f));

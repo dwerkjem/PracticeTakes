@@ -66,7 +66,9 @@ class MainComponent::DockedToolPanel final : public juce::Component
         titleLabel.setBounds(header);
         bounds.removeFromTop(4);
         if (content != nullptr)
+        {
             content->setBounds(bounds);
+        }
     }
 
     void mouseDown(const juce::MouseEvent& event) override
@@ -81,7 +83,9 @@ class MainComponent::DockedToolPanel final : public juce::Component
         {
             dragStarted = true;
             if (onDrag)
+            {
                 onDrag(*this);
+            }
         }
     }
 
@@ -95,9 +99,13 @@ class MainComponent::DockedToolPanel final : public juce::Component
     [[nodiscard]] bool canStartDrag(const juce::MouseEvent& event) const
     {
         if (event.originalComponent == this)
+        {
             return true;
+        }
         if (content == nullptr || event.originalComponent != content)
+        {
             return false;
+        }
 
         constexpr int innerPadding = 14;
         const auto point = event.getEventRelativeTo(content).getPosition();

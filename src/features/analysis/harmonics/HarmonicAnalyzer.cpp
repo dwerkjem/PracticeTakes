@@ -12,7 +12,9 @@ HarmonicAnalyzer::analyze(std::span<const float, windowSize> samples, double sam
     result.fundamentalHz = pitch.frequency;
     result.inputLevel = pitch.inputLevel;
     if (pitch.frequency <= 0.0 || sampleRate <= 0.0)
+    {
         return result;
+    }
 
     std::fill(fftData.begin(), fftData.end(), 0.0f);
     std::copy(samples.begin(), samples.end(), fftData.begin());
@@ -41,7 +43,9 @@ HarmonicAnalyzer::analyze(std::span<const float, windowSize> samples, double sam
     {
         const auto expectedFrequency = pitch.frequency * static_cast<double>(harmonic);
         if (expectedFrequency >= sampleRate * 0.5)
+        {
             break;
+        }
 
         const auto expectedBin = expectedFrequency / binFrequency;
         const auto centreBin = static_cast<int>(std::round(expectedBin));

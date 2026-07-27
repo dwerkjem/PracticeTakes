@@ -131,7 +131,9 @@ void SpectrogramComponent::calculateNextColumn()
     fftData.fill(0.0f);
     const auto samplesRead = audioInputService.readSamples(this, fftData.data(), fftSize);
     if (samplesRead != fftSize)
+    {
         return;
+    }
 
     // The Hann window reduces spectral leakage before the FFT.
     hannWindow.multiplyWithWindowingTable(fftData.data(), fftSize);

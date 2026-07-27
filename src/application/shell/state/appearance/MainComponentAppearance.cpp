@@ -7,7 +7,9 @@
 void MainComponent::setTheme(Theme theme)
 {
     if (currentTheme == theme)
+    {
         return;
+    }
     currentTheme = theme;
     applyAppearance();
 }
@@ -92,15 +94,25 @@ void MainComponent::applyAppearanceToOpenWindows()
 {
     const auto palette = appPaletteFor(currentTheme);
     if (microphoneWarning != nullptr)
+    {
         microphoneWarning->setTheme(currentTheme);
+    }
     if (tunerState.isOpen())
+    {
         applyAppearanceToTool(ToolType::tuner);
+    }
     if (spectrogramState.isOpen())
+    {
         applyAppearanceToTool(ToolType::spectrogram);
+    }
     if (harmonicState.isOpen())
+    {
         applyAppearanceToTool(ToolType::harmonics);
+    }
     if (settingsWindow != nullptr)
+    {
         settingsWindow->applyAppearance(&appLookAndFeel, palette.background, currentTheme);
+    }
     if (feedbackWindow != nullptr)
     {
         feedbackWindow->setLookAndFeel(&appLookAndFeel);

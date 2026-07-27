@@ -30,7 +30,9 @@ class MainComponent::FeedbackWindow final : public juce::DocumentWindow
     void setContextTag(const juce::String& context)
     {
         if (auto* feedback = dynamic_cast<FeedbackComponent*>(getContentComponent()))
+        {
             feedback->setContextTag(context);
+        }
     }
 
     void closeButtonPressed() override

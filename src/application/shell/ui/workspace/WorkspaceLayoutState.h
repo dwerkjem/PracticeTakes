@@ -80,23 +80,35 @@ class WorkspaceLayoutState
     [[nodiscard]] static DropZone dropZoneForPosition(int x, int y, int width, int height) noexcept
     {
         if (x < 0 || y < 0 || x >= width || y >= height || width <= 0 || height <= 0)
+        {
             return DropZone::none;
+        }
 
         constexpr int floatingTargetWidth = 170;
         constexpr int floatingTargetHeight = 64;
         if (x >= std::max(0, width - floatingTargetWidth) && y < floatingTargetHeight)
+        {
             return DropZone::floating;
+        }
 
         const auto horizontalEdge = std::max(100, width / 4);
         const auto verticalEdge = std::max(80, height / 4);
         if (x < horizontalEdge)
+        {
             return DropZone::left;
+        }
         if (x >= width - horizontalEdge)
+        {
             return DropZone::right;
+        }
         if (y < verticalEdge)
+        {
             return DropZone::top;
+        }
         if (y >= height - verticalEdge)
+        {
             return DropZone::bottom;
+        }
         return DropZone::centre;
     }
 
@@ -138,9 +150,13 @@ class WorkspaceLayoutState
     void insert(Tool tool, std::optional<Tool> target, DropZone zone) noexcept
     {
         if (zone == DropZone::none || zone == DropZone::floating)
+        {
             return;
+        }
         if (target.has_value() && *target == tool)
+        {
             return;
+        }
 
         remove(tool);
 
@@ -201,8 +217,10 @@ class WorkspaceLayoutState
             return;
         }
         if (root != nullptr && root->kind == NodeKind::split)
+        {
             root->orientation =
                 command == Layout::vertical ? Orientation::vertical : Orientation::horizontal;
+        }
     }
 
     [[nodiscard]] bool canSplitRoot() const noexcept
@@ -224,23 +242,31 @@ class WorkspaceLayoutState
     [[nodiscard]] static Node* firstLeafOrTabs(Node* node) noexcept
     {
         while (node->kind == NodeKind::split)
+        {
             node = node->first.get();
+        }
         return node;
     }
 
     [[nodiscard]] static Node* find(Node* node, Tool tool) noexcept
     {
         if (node == nullptr)
+        {
             return nullptr;
+        }
         if (node->kind == NodeKind::leaf)
+        {
             return node->tool == tool ? node : nullptr;
+        }
         if (node->kind == NodeKind::tabs)
         {
             const auto found = std::find(node->tabs.begin(), node->tabs.end(), tool);
             return found != node->tabs.end() ? node : nullptr;
         }
         if (auto* hit = find(node->first.get(), tool))
+        {
             return hit;
+        }
         return find(node->second.get(), tool);
     }
 
@@ -271,12 +297,16 @@ class WorkspaceLayoutState
     static RemoveResult removeRec(std::unique_ptr<Node>& node, Tool tool) noexcept
     {
         if (!node)
+        {
             return RemoveResult::notFound;
+        }
 
         if (node->kind == NodeKind::leaf)
         {
             if (node->tool != tool)
+            {
                 return RemoveResult::notFound;
+            }
             node.reset();
             return RemoveResult::removedNodeVanished;
         }
@@ -285,7 +315,9 @@ class WorkspaceLayoutState
         {
             const auto found = std::find(node->tabs.begin(), node->tabs.end(), tool);
             if (found == node->tabs.end())
+            {
                 return RemoveResult::notFound;
+            }
             node->tabs.erase(found);
             if (node->tabs.empty())
             {
@@ -313,7 +345,9 @@ class WorkspaceLayoutState
             return RemoveResult::removedNodeShrunk;
         }
         if (firstResult != RemoveResult::notFound)
+        {
             return RemoveResult::removedNodeShrunk;
+        }
 
         const auto secondResult = removeRec(node->second, tool);
         if (secondResult == RemoveResult::removedNodeVanished)
@@ -322,7 +356,9 @@ class WorkspaceLayoutState
             return RemoveResult::removedNodeShrunk;
         }
         if (secondResult != RemoveResult::notFound)
+        {
             return RemoveResult::removedNodeShrunk;
+        }
 
         return RemoveResult::notFound;
     }
@@ -330,7 +366,9 @@ class WorkspaceLayoutState
     static void collectLeaves(const Node* node, std::vector<Tool>& out) noexcept
     {
         if (node == nullptr)
+        {
             return;
+        }
         if (node->kind == NodeKind::leaf)
         {
             out.push_back(node->tool);
@@ -339,7 +377,9 @@ class WorkspaceLayoutState
         if (node->kind == NodeKind::tabs)
         {
             for (const auto tool : node->tabs)
+            {
                 out.push_back(tool);
+            }
             return;
         }
         collectLeaves(node->first.get(), out);
@@ -349,11 +389,15 @@ class WorkspaceLayoutState
     void flattenToTabs() noexcept
     {
         if (root == nullptr)
+        {
             return;
+        }
         std::vector<Tool> allTools;
         collectLeaves(root.get(), allTools);
         if (allTools.size() <= 1)
+        {
             return;
+        }
 
         auto tabsNode = std::make_unique<Node>();
         tabsNode->kind = NodeKind::tabs;

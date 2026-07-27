@@ -76,9 +76,13 @@ constexpr const char* ownedKeys[] = {
     const auto value =
         properties.getIntValue(recentToolKey, static_cast<int>(AppSettings::RecentTool::tuner));
     if (value == static_cast<int>(AppSettings::RecentTool::spectrogram))
+    {
         return AppSettings::RecentTool::spectrogram;
+    }
     if (value == static_cast<int>(AppSettings::RecentTool::harmonics))
+    {
         return AppSettings::RecentTool::harmonics;
+    }
     return AppSettings::RecentTool::tuner;
 }
 

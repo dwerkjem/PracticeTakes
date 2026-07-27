@@ -17,9 +17,13 @@ std::vector<MainComponent::ToolType> MainComponent::dockedTools()
 {
     std::vector<ToolType> docked;
     for (const auto tool : allToolTypes)
+    {
         if (stateFor(tool).presentation() == WorkspaceToolState::Presentation::docked &&
             dockFor(tool) != nullptr)
+        {
             docked.push_back(tool);
+        }
+    }
     return docked;
 }
 
@@ -34,10 +38,14 @@ std::vector<MainComponent::ToolType> MainComponent::dockedTools()
 juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::Node* node)
 {
     if (node == nullptr)
+    {
         return nullptr;
+    }
 
     if (node->kind == WorkspaceLayoutState::NodeKind::leaf)
+    {
         return dockFor(static_cast<ToolType>(node->tool)).get();
+    }
 
     if (node->kind == WorkspaceLayoutState::NodeKind::tabs)
     {
@@ -60,7 +68,9 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
         {
             const auto tool = static_cast<ToolType>(node->tabs[index]);
             if (node->tabs[index] == preferredActive)
+            {
                 activeIndex = static_cast<int>(index);
+            }
             // Dragging this tab's label is a workspace tool drag like any
             // other drag source, but with a "picked up" drag image -- a
             // snapshot of the tab button itself -- instead of the default
@@ -68,9 +78,11 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
             const auto dragHandler = [safeThis, tool](juce::Component& source)
             {
                 if (safeThis != nullptr)
+                {
                     safeThis->beginToolDrag(
                         tool, source,
                         juce::ScaledImage(source.createComponentSnapshot(source.getLocalBounds())));
+                }
             };
             tabs->addToolTab(
                 toolName(tool), appPaletteFor(currentTheme).panel, dockFor(tool).get(),
@@ -86,9 +98,13 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
     auto* first = buildWorkspaceNode(node->first.get());
     auto* second = buildWorkspaceNode(node->second.get());
     if (first == nullptr)
+    {
         return second;
+    }
     if (second == nullptr)
+    {
         return first;
+    }
 
     auto pane = std::make_unique<WorkspaceSplitPane>(
         *first, *second, node->orientation == WorkspaceLayoutState::Orientation::vertical,
@@ -110,9 +126,15 @@ void MainComponent::rebuildWorkspaceContainer()
     // destroyed, or its content components (owned by the per-tool docks, not
     // by the tab strip) are left in an inconsistent parented state.
     for (auto& container : workspaceContainers)
+    {
         if (auto* tabs = dynamic_cast<juce::TabbedComponent*>(container.get()))
+        {
             while (tabs->getNumTabs() > 0)
+            {
                 tabs->removeTab(0);
+            }
+        }
+    }
     workspaceContainers.clear();
 
     // Belt-and-braces: whatever the previous tree shape was, make sure every
@@ -122,13 +144,19 @@ void MainComponent::rebuildWorkspaceContainer()
     {
         auto& dock = dockFor(tool);
         if (dock != nullptr)
+        {
             if (auto* parent = dock->getParentComponent())
+            {
                 parent->removeChildComponent(dock.get());
+            }
+        }
     }
 
     workspaceRoot = buildWorkspaceNode(workspaceLayoutState.rootNode());
     if (workspaceRoot != nullptr)
+    {
         addAndMakeVisible(*workspaceRoot);
+    }
 
     resized();
 }
@@ -141,5 +169,7 @@ void MainComponent::layoutWorkspace(juce::Rectangle<int> bounds)
     // on down through however many nested WorkspaceSplitPane/TabbedComponent
     // levels the current tree has.
     if (workspaceRoot != nullptr)
+    {
         workspaceRoot->setBounds(bounds);
+    }
 }

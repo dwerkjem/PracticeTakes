@@ -22,7 +22,9 @@ void setOperatingSystemFullscreen(juce::Component& component, bool shouldBeFulls
     if (display == nullptr || component.getWindowHandle() == nullptr)
     {
         if (display != nullptr)
+        {
             XCloseDisplay(display);
+        }
         return;
     }
 
@@ -134,7 +136,9 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         ~MainWindow() override
         {
             if (fullscreenActive)
+            {
                 setFullscreen(false);
+            }
         }
 
         void closeButtonPressed() override

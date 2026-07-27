@@ -33,13 +33,17 @@ class WorkspaceTabBarButton final : public juce::TabBarButton
         // hidden -- gated purely on "is this tab's own drag active", not on
         // hover/highlight state.
         if (isBeingDragged)
+        {
             graphics.beginTransparencyLayer(0.35f);
+        }
 
         juce::TabBarButton::paintButton(
             graphics, shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
 
         if (isBeingDragged)
+        {
             graphics.endTransparencyLayer();
+        }
     }
 
     void mouseDown(const juce::MouseEvent& event) override
@@ -59,12 +63,16 @@ class WorkspaceTabBarButton final : public juce::TabBarButton
             setState(juce::Button::buttonNormal);
             repaint();
             if (onDrag)
+            {
                 onDrag(*this);
+            }
             return;
         }
 
         if (!dragStarted)
+        {
             juce::TabBarButton::mouseDrag(event);
+        }
     }
 
     void mouseUp(const juce::MouseEvent& event) override

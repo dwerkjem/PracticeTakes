@@ -88,41 +88,73 @@ void MainComponent::showToolsMenu()
         [safeThis](int selectedItemId)
         {
             if (safeThis == nullptr)
+            {
                 return;
+            }
 
             if (selectedItemId == tunerMenuItemId)
+            {
                 safeThis->openTool(ToolType::tuner);
+            }
             else if (selectedItemId == spectrogramMenuItemId)
+            {
                 safeThis->openTool(ToolType::spectrogram);
+            }
             else if (selectedItemId == dockTunerMenuItemId)
+            {
                 safeThis->presentTool(ToolType::tuner, WorkspaceToolState::Presentation::docked);
+            }
             else if (selectedItemId == floatTunerMenuItemId)
+            {
                 safeThis->presentTool(ToolType::tuner, WorkspaceToolState::Presentation::floating);
+            }
             else if (selectedItemId == closeTunerMenuItemId)
+            {
                 safeThis->closeTool(ToolType::tuner);
+            }
             else if (selectedItemId == dockSpectrogramMenuItemId)
+            {
                 safeThis->presentTool(
                     ToolType::spectrogram, WorkspaceToolState::Presentation::docked);
+            }
             else if (selectedItemId == floatSpectrogramMenuItemId)
+            {
                 safeThis->presentTool(
                     ToolType::spectrogram, WorkspaceToolState::Presentation::floating);
+            }
             else if (selectedItemId == closeSpectrogramMenuItemId)
+            {
                 safeThis->closeTool(ToolType::spectrogram);
+            }
             else if (selectedItemId == harmonicMenuItemId)
+            {
                 safeThis->openTool(ToolType::harmonics);
+            }
             else if (selectedItemId == dockHarmonicMenuItemId)
+            {
                 safeThis->presentTool(
                     ToolType::harmonics, WorkspaceToolState::Presentation::docked);
+            }
             else if (selectedItemId == floatHarmonicMenuItemId)
+            {
                 safeThis->presentTool(
                     ToolType::harmonics, WorkspaceToolState::Presentation::floating);
+            }
             else if (selectedItemId == closeHarmonicMenuItemId)
+            {
                 safeThis->closeTool(ToolType::harmonics);
+            }
             else if (selectedItemId == horizontalLayoutMenuItemId)
+            {
                 safeThis->setWorkspaceLayout(WorkspaceLayoutState::Layout::horizontal);
+            }
             else if (selectedItemId == verticalLayoutMenuItemId)
+            {
                 safeThis->setWorkspaceLayout(WorkspaceLayoutState::Layout::vertical);
+            }
             else if (selectedItemId == tabbedLayoutMenuItemId)
+            {
                 safeThis->setWorkspaceLayout(WorkspaceLayoutState::Layout::tabbed);
+            }
         });
 }
