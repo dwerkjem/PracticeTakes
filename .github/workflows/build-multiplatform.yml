@@ -65,12 +65,12 @@ jobs:
           apt-get install --yes ca-certificates ccache git python3
 
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Restore Linux compiler cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ github.workspace }}/.ccache
           key: ccache-${{ runner.os }}-${{ matrix.arch }}-${{ inputs.ref || github.sha }}
@@ -155,7 +155,7 @@ jobs:
           apt-get install --yes "./${package_path}"
 
       - name: Upload Linux artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
           path: dist/PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.deb
@@ -183,12 +183,12 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Restore Windows compiler cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ github.workspace }}/.ccache
           key: ccache-${{ runner.os }}-${{ matrix.arch }}-${{ inputs.ref || github.sha }}
@@ -280,7 +280,7 @@ jobs:
           }
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}
           path: dist/PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}.exe
@@ -310,12 +310,12 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.ref || github.ref }}
 
       - name: Restore macOS compiler cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ github.workspace }}/.ccache
           key: ccache-${{ runner.os }}-${{ matrix.arch }}-${{ inputs.ref || github.sha }}
@@ -383,7 +383,7 @@ jobs:
             grep -F "PracticeTakes.app/Contents/MacOS/PracticeTakes"
 
       - name: Upload macOS artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}
           path: dist/PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}.pkg
@@ -449,7 +449,7 @@ jobs:
           apt-get install --yes ca-certificates
 
       - name: Download Linux package
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           pattern: PracticeTakes-*-linux-${{ matrix.arch }}
           path: dist
@@ -493,7 +493,7 @@ jobs:
 
     steps:
       - name: Check out build source
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.ref || github.ref }}
 
@@ -509,7 +509,7 @@ jobs:
           echo "source_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
 
       - name: Download platform artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           pattern: PracticeTakes-${{ steps.metadata.outputs.version }}-*
           path: release-assets
@@ -565,7 +565,7 @@ jobs:
           } > release-assets/BUILD-METADATA.txt
 
       - name: Upload release artifact bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: PracticeTakes-${{ steps.metadata.outputs.version }}-release-assets
           path: release-assets/*
