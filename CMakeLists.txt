@@ -156,8 +156,12 @@ target_sources(PracticeTakes
         src/features/performance/BenchmarkRecordCodec.h
         src/features/performance/BenchmarkRunner.cpp
         src/features/performance/BenchmarkRunner.h
+        src/features/performance/HarmonicAnalysisActions.cpp
+        src/features/performance/HarmonicAnalysisActions.h
         src/features/performance/InTreeOptimizationStrategy.cpp
         src/features/performance/InTreeOptimizationStrategy.h
+        src/features/performance/SustainedAudioAnalysisScenario.cpp
+        src/features/performance/SustainedAudioAnalysisScenario.h
         src/features/feedback/FeedbackComponent.cpp
         src/features/feedback/FeedbackComponent.h
         src/features/feedback/FeedbackInvitationPolicy.h
@@ -204,6 +208,7 @@ if(BUILD_TESTING)
         tests/InTreeOptimizationStrategyTests.cpp
         tests/PitchDetectorTests.cpp
         tests/SettingsPersistenceTests.cpp
+        tests/SustainedAudioAnalysisScenarioTests.cpp
         tests/ThemeContrastTests.cpp
         tests/WorkspaceLayoutStateTests.cpp
         tests/WorkspaceToolStateTests.cpp
@@ -213,7 +218,9 @@ if(BUILD_TESTING)
         src/features/analysis/tuner/PitchDetector.cpp
         src/features/performance/BenchmarkRecordCodec.cpp
         src/features/performance/BenchmarkRunner.cpp
+        src/features/performance/HarmonicAnalysisActions.cpp
         src/features/performance/InTreeOptimizationStrategy.cpp
+        src/features/performance/SustainedAudioAnalysisScenario.cpp
     )
 
     target_include_directories(PracticeTakesTests

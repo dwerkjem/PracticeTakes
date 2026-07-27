@@ -83,3 +83,45 @@ TEST_CASE("benchmark runner restores application state after a scenario failure"
     REQUIRE(scenario.restoreCount == 1);
     REQUIRE(strategy.deactivateCount == 1);
 }
+
+TEST_CASE("benchmark runner rejects invalid configuration before changing application state")
+{
+    FakeBenchmarkScenario scenario;
+    scenario.validationResult = performance::ValidationResult::failure("Invalid scenario setup");
+    FakeOptimizationStrategy strategy;
+    strategy.parameterValidationResult =
+        performance::ValidationResult::failure("Invalid strategy parameter");
+    FakeTelemetryCollector telemetry;
+    performance::BenchmarkRunner runner;
+
+    const auto result = runner.run(performance::RunConfiguration{}, scenario, strategy, telemetry);
+
+    REQUIRE_FALSE(result.validation.valid);
+    REQUIRE(result.validation.errors.size() == 2);
+    REQUIRE(result.status == performance::RunStatus::pending);
+    REQUIRE(scenario.prepareCount == 0);
+    REQUIRE(strategy.activateCount == 0);
+    REQUIRE(telemetry.beginCount == 0);
+}
+
+TEST_CASE("benchmark runner fails correctness after preserving trials and cleaning up")
+{
+    FakeBenchmarkScenario scenario;
+    scenario.correctnessResult =
+        performance::ValidationResult::failure("Output differs from baseline");
+    FakeOptimizationStrategy strategy;
+    FakeTelemetryCollector telemetry;
+    performance::RunConfiguration configuration;
+    configuration.warmUpCount = 0;
+    configuration.measuredTrialCount = 2;
+    performance::BenchmarkRunner runner;
+
+    const auto result = runner.run(configuration, scenario, strategy, telemetry);
+
+    REQUIRE_FALSE(result.validation.valid);
+    REQUIRE(result.status == performance::RunStatus::failed);
+    REQUIRE(result.statusDetail == "Scenario correctness verification failed");
+    REQUIRE(result.trials.size() == 2);
+    REQUIRE(scenario.restoreCount == 1);
+    REQUIRE(strategy.deactivateCount == 1);
+}
