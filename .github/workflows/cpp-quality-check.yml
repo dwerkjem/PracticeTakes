@@ -16,10 +16,16 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: cpp-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   cpp-quality:
     name: Format and lint changed C++
     runs-on: ubuntu-24.04
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
 
     steps:
       - name: Check out pull request
@@ -28,16 +34,34 @@ jobs:
       - name: Install analysis dependencies
         run: |
           bash scripts/build/check-linux-build-dependencies.sh --install
-          sudo apt-get install --yes clang-format clang-tidy
+          sudo apt-get install --yes ccache clang-format clang-tidy
+
+      - name: Restore compiler cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: cpp-quality-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            cpp-quality-${{ runner.os }}-
+
+      - name: Configure compiler cache
+        run: |
+          ccache --max-size=1G
+          ccache --zero-stats
 
       - name: Configure compilation database
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Generate JUCE headers and validate compilation
         run: cmake --build build --target PracticeTakes --parallel
+
+      - name: Report compiler cache performance
+        run: ccache --show-stats
 
       - name: Check clang-format compliance
         shell: bash

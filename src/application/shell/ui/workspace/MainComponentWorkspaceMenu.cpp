@@ -18,6 +18,9 @@ constexpr int closeHarmonicMenuItemId = 43;
 constexpr int horizontalLayoutMenuItemId = 31;
 constexpr int verticalLayoutMenuItemId = 32;
 constexpr int tabbedLayoutMenuItemId = 33;
+#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+constexpr int performanceLabMenuItemId = 50;
+#endif
 } // namespace
 
 void MainComponent::showToolsMenu()
@@ -79,6 +82,10 @@ void MainComponent::showToolsMenu()
         tabbedLayoutMenuItemId, "Tabbed", dockedCount >= 2, workspaceLayoutState.isFlattenedTabs());
     menu.addSeparator();
     menu.addSubMenu("Arrange workspace", layoutMenu, canArrangeSplit || dockedCount >= 2);
+#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+    menu.addSeparator();
+    menu.addItem(performanceLabMenuItemId, "Performance Lab");
+#endif
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(
@@ -156,5 +163,36 @@ void MainComponent::showToolsMenu()
             {
                 safeThis->setWorkspaceLayout(WorkspaceLayoutState::Layout::tabbed);
             }
+#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+            else if (selectedItemId == performanceLabMenuItemId)
+            {
+                safeThis->showPerformanceLab();
+            }
+#endif
         });
 }
+
+#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+#include "../performance/PerformanceLabWindow.h"
+
+void MainComponent::showPerformanceLab()
+{
+    if (performanceLabWindow == nullptr)
+    {
+        performanceLabWindow =
+            std::make_unique<PerformanceLabWindow>([this] { closePerformanceLab(); });
+        const auto palette = appPaletteFor(currentTheme);
+        performanceLabWindow->applyAppearance(&appLookAndFeel, palette.background);
+    }
+    else
+    {
+        performanceLabWindow->setVisible(true);
+        performanceLabWindow->toFront(true);
+    }
+}
+
+void MainComponent::closePerformanceLab()
+{
+    performanceLabWindow.reset();
+}
+#endif

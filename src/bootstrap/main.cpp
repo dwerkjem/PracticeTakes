@@ -12,6 +12,7 @@
 
 #include "../application/shell/MainComponent.h"
 #include "../application/shell/ui/main_window/MainTitleBar.h"
+#include "../features/performance/ApplicationLaunchTimer.h"
 
 namespace
 {
@@ -131,6 +132,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             setResizeLimits(980, 600, 3200, 2200);
             centreWithSize(getWidth(), getHeight());
             setVisible(true);
+            performance::markMainWindowVisible();
         }
 
         ~MainWindow() override

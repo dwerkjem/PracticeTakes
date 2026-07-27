@@ -124,11 +124,12 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 inputGainSlider.setTooltip(
                     "Adjust the software gain used by every analysis tool; 100% preserves the "
                     "captured microphone level");
-                inputGainSlider.onValueChange = [this]
-                {
+                // clang-format off
+                inputGainSlider.onValueChange = [this] {
                     audioInputService.setInputGain(
                         static_cast<float>(inputGainSlider.getValue() / 100.0));
                 };
+                // clang-format on
                 addAndMakeVisible(inputGainSlider);
 
                 inputLevelLabel.setText("Input level", juce::dontSendNotification);

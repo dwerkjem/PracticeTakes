@@ -3,6 +3,9 @@
 #include "ui/feedback/FeedbackWindow.h"
 #include "ui/main_window/MainTitleBar.h"
 #include "ui/main_window/MicrophoneWarning.h"
+#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+#include "ui/performance/PerformanceLabWindow.h"
+#endif
 #include "ui/settings/SettingsWindow.h"
 #include "ui/workspace/DockedToolPanel.h"
 #include "ui/workspace/ToolWindow.h"
@@ -43,6 +46,9 @@ MainComponent::~MainComponent()
     audioInputService.removeChangeListener(this);
     settingsWindow.reset();
     feedbackWindow.reset();
+#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+    performanceLabWindow.reset();
+#endif
     workspaceContainers.clear();
     tunerDock.reset();
     spectrogramDock.reset();

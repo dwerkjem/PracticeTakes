@@ -21,9 +21,23 @@ project(
     LANGUAGES C CXX
 )
 
+execute_process(
+    COMMAND git rev-parse --short=12 HEAD
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    OUTPUT_VARIABLE PRACTICE_TAKES_COMMIT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if(PRACTICE_TAKES_COMMIT STREQUAL "")
+    set(PRACTICE_TAKES_COMMIT "unknown")
+endif()
+
 set(PRACTICE_TAKES_FEEDBACK_ENDPOINT
     "https://practice-takes-feedback-intake.derekrneilson.workers.dev" CACHE STRING
     "HTTPS base URL for the Practice Takes feedback intake service")
+
+option(PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+    "Enable the development-only Performance Lab window" OFF)
 
 if(PRACTICE_TAKES_FEEDBACK_ENDPOINT STREQUAL "")
     set(PRACTICE_TAKES_USE_CURL 0)
@@ -123,6 +137,7 @@ target_sources(PracticeTakes
         src/application/shell/state/audio/MainComponentAudioState.cpp
         src/application/shell/ui/main_window/MainTitleBar.h
         src/application/shell/ui/main_window/MicrophoneWarning.h
+        src/application/shell/ui/performance/PerformanceLabWindow.h
         src/application/shell/ui/feedback/FeedbackWindow.h
         src/application/shell/ui/feedback/MainComponentFeedback.cpp
         src/application/shell/ui/settings/MainComponentSettings.cpp
@@ -152,6 +167,35 @@ target_sources(PracticeTakes
         src/features/analysis/tuner/TunerComponent.cpp
         src/features/analysis/tuner/TunerComponent.h
         src/features/analysis/tuner/TunerDrawing.cpp
+        src/features/performance/ApplicationLaunchTimer.cpp
+        src/features/performance/ApplicationLaunchTimer.h
+        src/features/performance/BenchmarkRecordCodec.cpp
+        src/features/performance/BenchmarkRecordCodec.h
+        src/features/performance/BenchmarkRecordStore.cpp
+        src/features/performance/BenchmarkRecordStore.h
+        src/features/performance/BenchmarkComparability.cpp
+        src/features/performance/BenchmarkComparability.h
+        src/features/performance/BenchmarkComparison.cpp
+        src/features/performance/BenchmarkComparison.h
+        src/features/performance/BenchmarkRunner.cpp
+        src/features/performance/BenchmarkRunner.h
+        src/features/performance/HarmonicAnalysisActions.cpp
+        src/features/performance/HarmonicAnalysisActions.h
+        src/features/performance/InTreeOptimizationStrategy.cpp
+        src/features/performance/InTreeOptimizationStrategy.h
+        src/features/performance/NonRealTimeTelemetryCollector.cpp
+        src/features/performance/NonRealTimeTelemetryCollector.h
+        src/features/performance/PerformanceLabController.cpp
+        src/features/performance/PerformanceLabController.h
+        src/features/performance/PlatformProvenanceProvider.cpp
+        src/features/performance/PlatformProvenanceProvider.h
+        src/features/performance/RealTimeEventCapture.h
+        src/features/performance/SustainedAudioAnalysisScenario.cpp
+        src/features/performance/SustainedAudioAnalysisScenario.h
+        src/features/performance/StrategyRegistry.cpp
+        src/features/performance/StrategyRegistry.h
+        src/features/performance/TrialAggregator.cpp
+        src/features/performance/TrialAggregator.h
         src/features/feedback/FeedbackComponent.cpp
         src/features/feedback/FeedbackComponent.h
         src/features/feedback/FeedbackInvitationPolicy.h
@@ -166,6 +210,12 @@ target_compile_definitions(PracticeTakes
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=${PRACTICE_TAKES_USE_CURL}
         PRACTICE_TAKES_FEEDBACK_ENDPOINT="${PRACTICE_TAKES_FEEDBACK_ENDPOINT}"
+        PRACTICE_TAKES_VERSION="${PROJECT_VERSION}"
+        PRACTICE_TAKES_COMMIT="${PRACTICE_TAKES_COMMIT}"
+        PRACTICE_TAKES_BUILD_TYPE="$<CONFIG>"
+        PRACTICE_TAKES_INSTRUMENTATION_VERSION="1"
+        PRACTICE_TAKES_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+        PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=$<BOOL:${PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB}>
 )
 
 target_link_libraries(PracticeTakes
@@ -186,19 +236,50 @@ endif()
 if(BUILD_TESTING)
     add_executable(PracticeTakesTests
         tests/AppDefaultsTests.cpp
+        tests/ApplicationLaunchTimerTests.cpp
         tests/AudioRecoveryPolicyTests.cpp
         tests/AudioSampleFifoTests.cpp
+        tests/BenchmarkFakesTests.cpp
+        tests/BenchmarkInterfacesTests.cpp
+        tests/BenchmarkComparabilityTests.cpp
+        tests/BenchmarkComparisonTests.cpp
+        tests/BenchmarkRecordCodecTests.cpp
+        tests/BenchmarkRecordStoreTests.cpp
+        tests/BenchmarkRunnerTests.cpp
+        tests/BenchmarkTypesTests.cpp
         tests/FeedbackInvitationPolicyTests.cpp
         tests/HarmonicAnalyzerTests.cpp
+        tests/InTreeOptimizationStrategyTests.cpp
+        tests/NonRealTimeTelemetryCollectorTests.cpp
+        tests/PerformanceLabControllerTests.cpp
         tests/PitchDetectorTests.cpp
+        tests/PlatformProvenanceProviderTests.cpp
+        tests/RealTimeEventCaptureTests.cpp
         tests/SettingsPersistenceTests.cpp
+        tests/StrategyRegistryTests.cpp
+        tests/SustainedAudioAnalysisScenarioTests.cpp
         tests/ThemeContrastTests.cpp
+        tests/TrialAggregatorTests.cpp
         tests/WorkspaceLayoutStateTests.cpp
         tests/WorkspaceToolStateTests.cpp
         src/application/configuration/SettingsPersistence.cpp
         src/application/theme/Theme.cpp
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
         src/features/analysis/tuner/PitchDetector.cpp
+        src/features/performance/ApplicationLaunchTimer.cpp
+        src/features/performance/BenchmarkRecordCodec.cpp
+        src/features/performance/BenchmarkRecordStore.cpp
+        src/features/performance/BenchmarkComparability.cpp
+        src/features/performance/BenchmarkComparison.cpp
+        src/features/performance/BenchmarkRunner.cpp
+        src/features/performance/HarmonicAnalysisActions.cpp
+        src/features/performance/InTreeOptimizationStrategy.cpp
+        src/features/performance/NonRealTimeTelemetryCollector.cpp
+        src/features/performance/PerformanceLabController.cpp
+        src/features/performance/PlatformProvenanceProvider.cpp
+        src/features/performance/SustainedAudioAnalysisScenario.cpp
+        src/features/performance/StrategyRegistry.cpp
+        src/features/performance/TrialAggregator.cpp
     )
 
     target_include_directories(PracticeTakesTests
@@ -212,6 +293,14 @@ if(BUILD_TESTING)
             juce::juce_data_structures
             juce::juce_dsp
             juce::juce_graphics
+    )
+
+    target_compile_definitions(PracticeTakesTests
+        PRIVATE
+            PRACTICE_TAKES_VERSION="${PROJECT_VERSION}"
+            PRACTICE_TAKES_COMMIT="${PRACTICE_TAKES_COMMIT}"
+            PRACTICE_TAKES_BUILD_TYPE="$<CONFIG>"
+            PRACTICE_TAKES_INSTRUMENTATION_VERSION="1"
     )
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND PRACTICE_TAKES_USE_CURL)

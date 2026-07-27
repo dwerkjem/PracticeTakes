@@ -69,6 +69,9 @@ class MainComponent final
     class WorkspaceSplitPane;
     class SettingsWindow;
     class FeedbackWindow;
+#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+    class PerformanceLabWindow;
+#endif
     class MicrophoneWarning;
 
     // Initial setup ---------------------------------------------------------
@@ -93,6 +96,10 @@ class MainComponent final
     void setFeedbackInvitationsDisabled(bool disabled);
     [[nodiscard]] bool feedbackInvitationsDisabled();
     void closeFeedback();
+#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+    void showPerformanceLab();
+    void closePerformanceLab();
+#endif
     void resetCurrentTool();
     void resetAudio();
     void resetLayout();
@@ -176,6 +183,9 @@ class MainComponent final
     std::unique_ptr<juce::Component> harmonicComponent;
     std::unique_ptr<SettingsWindow> settingsWindow;
     std::unique_ptr<FeedbackWindow> feedbackWindow;
+#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+    std::unique_ptr<PerformanceLabWindow> performanceLabWindow;
+#endif
     std::unique_ptr<MicrophoneWarning> microphoneWarning;
 
     Theme currentTheme = Theme::light;
