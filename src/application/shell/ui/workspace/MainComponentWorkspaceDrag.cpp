@@ -76,12 +76,15 @@ void paintDropZone(
 }
 } // namespace
 
-void MainComponent::beginToolDrag(ToolType tool, juce::Component& source)
+void MainComponent::beginToolDrag(
+    ToolType tool,
+    juce::Component& source,
+    juce::ScaledImage dragImage)
 {
     activeDropTarget = {};
     const auto description =
         juce::String(workspaceToolDragPrefix) + juce::String(static_cast<int>(tool));
-    startDragging(description, &source, juce::ScaledImage(), true);
+    startDragging(description, &source, dragImage, true);
 }
 
 std::optional<MainComponent::ToolType>
