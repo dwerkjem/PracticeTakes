@@ -91,7 +91,9 @@ class MainComponent::ToolWindow final : public juce::DocumentWindow
         {
             dragStarted = true;
             if (onDrag && contentComponent != nullptr)
+            {
                 onDrag(*contentComponent);
+            }
         }
     }
 
@@ -105,7 +107,9 @@ class MainComponent::ToolWindow final : public juce::DocumentWindow
     [[nodiscard]] bool canStartDrag(const juce::MouseEvent& event) const
     {
         if (contentComponent == nullptr || event.originalComponent != contentComponent)
+        {
             return false;
+        }
 
         constexpr int innerPadding = 14;
         const auto point = event.getEventRelativeTo(contentComponent).getPosition();

@@ -45,18 +45,28 @@ class ToolOptionsButton final : public juce::TextButton
             [safeThis](int selectedItemId)
             {
                 if (safeThis == nullptr)
+                {
                     return;
+                }
 
                 std::function<void()> action;
                 if (selectedItemId == changePresentation)
+                {
                     action = safeThis->onPresentation;
+                }
                 else if (selectedItemId == giveFeedback)
+                {
                     action = safeThis->onFeedback;
+                }
                 else if (selectedItemId == close)
+                {
                     action = safeThis->onClose;
+                }
 
                 if (action)
+                {
                     action();
+                }
             });
     }
 

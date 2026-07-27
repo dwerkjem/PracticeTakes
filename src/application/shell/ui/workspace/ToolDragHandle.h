@@ -37,7 +37,9 @@ class ToolDragHandle final : public juce::Component
         {
             dragStarted = true;
             if (onDrag)
+            {
                 onDrag(*this);
+            }
         }
     }
 

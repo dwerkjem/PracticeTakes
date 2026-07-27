@@ -1,3 +1,4 @@
+#include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
@@ -137,4 +138,61 @@ TEST_CASE("null and empty FIFO operations are harmless", "[audio][fifo]")
     CHECK(fifo.pop(output.data(), 0) == 0);
     CHECK(fifo.available() == 0);
     CHECK(fifo.droppedBlocks() == 0);
+}
+
+TEST_CASE(
+    "audio FIFO push/pop throughput at audio block sizes",
+    "[.benchmark][audio][fifo][performance]")
+{
+    // Capacity sized for a typical tool analysis window (65536 samples).
+    // Block sizes mirror common audio callback sizes in practice.
+    constexpr std::size_t fifoCapacity = 65536;
+    constexpr std::size_t blockSize128 = 128;
+    constexpr std::size_t blockSize256 = 256;
+    constexpr std::size_t blockSize512 = 512;
+
+    std::array<float, blockSize512> block{};
+    block.fill(0.5f);
+
+    std::array<float, blockSize512> readBuf{};
+
+    AudioSampleFifo<fifoCapacity> fifo128;
+    AudioSampleFifo<fifoCapacity> fifo256;
+    AudioSampleFifo<fifoCapacity> fifo512;
+
+    BENCHMARK("push 128-sample block")
+    {
+        fifo128.pop(readBuf.data(), blockSize128);
+        return fifo128.push(block.data(), blockSize128);
+    };
+
+    BENCHMARK("pop 128-sample block")
+    {
+        fifo128.push(block.data(), blockSize128);
+        return fifo128.pop(readBuf.data(), blockSize128);
+    };
+
+    BENCHMARK("push 256-sample block")
+    {
+        fifo256.pop(readBuf.data(), blockSize256);
+        return fifo256.push(block.data(), blockSize256);
+    };
+
+    BENCHMARK("pop 256-sample block")
+    {
+        fifo256.push(block.data(), blockSize256);
+        return fifo256.pop(readBuf.data(), blockSize256);
+    };
+
+    BENCHMARK("push 512-sample block")
+    {
+        fifo512.pop(readBuf.data(), blockSize512);
+        return fifo512.push(block.data(), blockSize512);
+    };
+
+    BENCHMARK("pop 512-sample block")
+    {
+        fifo512.push(block.data(), blockSize512);
+        return fifo512.pop(readBuf.data(), blockSize512);
+    };
 }

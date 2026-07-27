@@ -14,21 +14,31 @@ dropZoneBounds(WorkspaceLayoutState::DropZone zone, juce::Rectangle<int> workspa
     constexpr int floatingTargetWidth = 170;
     constexpr int floatingTargetHeight = 64;
     if (zone == WorkspaceLayoutState::DropZone::floating)
+    {
         return workspace.removeFromTop(floatingTargetHeight).removeFromRight(floatingTargetWidth);
+    }
 
     const auto horizontalEdge = juce::jmax(100, workspace.getWidth() / 4);
     const auto verticalEdge = juce::jmax(80, workspace.getHeight() / 4);
     if (zone == WorkspaceLayoutState::DropZone::left)
+    {
         return workspace.removeFromLeft(horizontalEdge);
+    }
     if (zone == WorkspaceLayoutState::DropZone::right)
+    {
         return workspace.removeFromRight(horizontalEdge);
+    }
 
     workspace.removeFromLeft(horizontalEdge);
     workspace.removeFromRight(horizontalEdge);
     if (zone == WorkspaceLayoutState::DropZone::top)
+    {
         return workspace.removeFromTop(verticalEdge);
+    }
     if (zone == WorkspaceLayoutState::DropZone::bottom)
+    {
         return workspace.removeFromBottom(verticalEdge);
+    }
     if (zone == WorkspaceLayoutState::DropZone::centre)
     {
         workspace.removeFromTop(verticalEdge);
@@ -92,13 +102,19 @@ MainComponent::draggedTool(const juce::DragAndDropTarget::SourceDetails& details
 {
     const auto description = details.description.toString();
     if (!description.startsWith(workspaceToolDragPrefix))
+    {
         return std::nullopt;
+    }
 
     const auto id =
         description.substring(juce::String(workspaceToolDragPrefix).length()).getIntValue();
     for (const auto candidate : allToolTypes)
+    {
         if (static_cast<int>(candidate) == id)
+        {
             return candidate;
+        }
+    }
     return std::nullopt;
 }
 
@@ -111,10 +127,14 @@ std::optional<MainComponent::ToolType> MainComponent::dockedToolAt(juce::Point<i
     {
         auto& dock = dockFor(tool);
         if (dock == nullptr || dock->getParentComponent() == nullptr || !dock->isVisible())
+        {
             continue;
+        }
         const auto local = dock->getLocalPoint(this, position);
         if (dock->getLocalBounds().contains(local))
+        {
             return tool;
+        }
     }
     return std::nullopt;
 }
@@ -129,7 +149,9 @@ MainComponent::DropTarget MainComponent::resolveDropTarget(juce::Point<int> posi
     // The floating target is a fixed workspace-corner control, independent
     // of whichever pane happens to be underneath it.
     if (workspaceZone == WorkspaceLayoutState::DropZone::floating)
+    {
         return {WorkspaceLayoutState::DropZone::floating, std::nullopt};
+    }
 
     if (const auto pane = dockedToolAt(position); pane.has_value())
     {
@@ -141,7 +163,9 @@ MainComponent::DropTarget MainComponent::resolveDropTarget(juce::Point<int> posi
         // above); a pane-relative "floating" result (e.g. a small pane's own
         // corner) just means "drop here", i.e. add as a tab.
         if (zone == WorkspaceLayoutState::DropZone::floating)
+        {
             zone = WorkspaceLayoutState::DropZone::centre;
+        }
         return {zone, pane};
     }
 
@@ -185,7 +209,9 @@ void MainComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& de
     activeDropTarget = {};
     repaint();
     if (!tool.has_value() || target.zone == WorkspaceLayoutState::DropZone::none)
+    {
         return;
+    }
 
     const auto draggedType = *tool;
 
@@ -198,7 +224,9 @@ void MainComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& de
     }
 
     if (stateFor(draggedType).presentation() != WorkspaceToolState::Presentation::docked)
+    {
         presentTool(draggedType, WorkspaceToolState::Presentation::docked);
+    }
 
     const auto paneTool =
         target.pane.has_value()
@@ -218,7 +246,9 @@ void MainComponent::paintOverChildren(juce::Graphics& graphics)
     // Nothing is being dragged over the workspace right now -- draw none of
     // the drop-zone indicators (including the floating target) at all.
     if (activeDropTarget.zone == WorkspaceLayoutState::DropZone::none)
+    {
         return;
+    }
 
     const auto palette = appPaletteFor(currentTheme);
     const auto workspace = getLocalBounds().reduced(18);
@@ -232,13 +262,17 @@ void MainComponent::paintOverChildren(juce::Graphics& graphics)
         activeDropTarget.zone == WorkspaceLayoutState::DropZone::floating, palette);
 
     if (activeDropTarget.zone == WorkspaceLayoutState::DropZone::floating)
+    {
         return;
+    }
 
     auto paneBounds = workspace;
     if (activeDropTarget.pane.has_value())
     {
         if (auto* dock = dockFor(*activeDropTarget.pane).get())
+        {
             paneBounds = getLocalArea(dock, dock->getLocalBounds());
+        }
     }
 
     constexpr WorkspaceLayoutState::DropZone tilingZones[]{
@@ -246,7 +280,9 @@ void MainComponent::paintOverChildren(juce::Graphics& graphics)
         WorkspaceLayoutState::DropZone::top, WorkspaceLayoutState::DropZone::bottom,
         WorkspaceLayoutState::DropZone::centre};
     for (const auto zone : tilingZones)
+    {
         paintDropZone(
             graphics, dropZoneBounds(zone, paneBounds).reduced(5), dropZoneLabel(zone),
             zone == activeDropTarget.zone, palette);
+    }
 }

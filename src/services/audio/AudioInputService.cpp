@@ -51,7 +51,9 @@ AudioInputService::AudioInputService()
     juce::ignoreUnused(error);
 
     if (auto* device = manager.getCurrentAudioDevice())
+    {
         lastDeviceName = device->getName();
+    }
 
     lastState = inputState();
     ticksUntilDeviceScan =
@@ -70,13 +72,17 @@ AudioInputService::~AudioInputService()
 void AudioInputService::addListener(Listener* listener)
 {
     if (listener == nullptr)
+    {
         return;
+    }
 
     bool added = false;
     {
         const juce::ScopedLock lock(consumerLock);
         if (findConsumer(listener) != nullptr)
+        {
             return;
+        }
 
         for (auto& consumer : consumers)
         {
@@ -93,7 +99,9 @@ void AudioInputService::addListener(Listener* listener)
 
     jassert(added);
     if (!added)
+    {
         return;
+    }
 
     listener->audioInputStateChanged(inputState());
     if (deviceRunning.load(std::memory_order_acquire))
@@ -111,14 +119,18 @@ void AudioInputService::removeListener(Listener* listener)
         const juce::ScopedLock lock(consumerLock);
         removedConsumer = findConsumer(listener);
         if (removedConsumer == nullptr)
+        {
             return;
+        }
         removedConsumer->active.store(false, std::memory_order_release);
     }
 
     // The callback never waits for the message thread. Removal may wait for
     // the current bounded callback to finish before recycling this slot.
     while (callbacksInProgress.load(std::memory_order_acquire) != 0)
+    {
         juce::Thread::yield();
+    }
 
     const juce::ScopedLock lock(consumerLock);
     if (removedConsumer->listener == listener)
@@ -132,7 +144,9 @@ std::size_t AudioInputService::availableSamples(Listener* listener) const
 {
     const juce::ScopedLock lock(consumerLock);
     if (const auto* consumer = findConsumer(listener))
+    {
         return consumer->fifo.available();
+    }
     return 0;
 }
 
@@ -141,7 +155,9 @@ AudioInputService::readSamples(Listener* listener, float* destination, std::size
 {
     const juce::ScopedLock lock(consumerLock);
     if (auto* consumer = findConsumer(listener))
+    {
         return consumer->fifo.pop(destination, maximumSamples);
+    }
     return 0;
 }
 
@@ -149,7 +165,9 @@ void AudioInputService::discardPendingSamples(Listener* listener)
 {
     const juce::ScopedLock lock(consumerLock);
     if (auto* consumer = findConsumer(listener))
+    {
         consumer->fifo.discardPending();
+    }
 }
 
 juce::AudioDeviceManager& AudioInputService::deviceManager() noexcept
@@ -170,9 +188,13 @@ bool AudioInputService::hasUsableInput() const
 AudioInputService::InputState AudioInputService::inputState() const
 {
     if (!hasUsableInput())
+    {
         return InputState::disconnected;
+    }
     if (muted.load(std::memory_order_relaxed))
+    {
         return InputState::muted;
+    }
     return clippingHoldTicks > 0 ? InputState::clipping : InputState::active;
 }
 
@@ -184,7 +206,9 @@ bool AudioInputService::isMuted() const noexcept
 void AudioInputService::setMuted(bool shouldBeMuted)
 {
     if (muted.exchange(shouldBeMuted, std::memory_order_acq_rel) == shouldBeMuted)
+    {
         return;
+    }
 
     clippingDetected.store(false, std::memory_order_relaxed);
     clippingHoldTicks = 0;
@@ -207,7 +231,9 @@ void AudioInputService::setInputGain(float newGain)
 {
     const auto limitedGain = juce::jlimit(0.0f, 2.0f, newGain);
     if (std::abs(gain.exchange(limitedGain, std::memory_order_acq_rel) - limitedGain) < 0.0001f)
+    {
         return;
+    }
     sendChangeMessage();
 }
 
@@ -220,7 +246,9 @@ std::uint64_t AudioInputService::droppedAnalysisBlocks() const noexcept
 {
     std::uint64_t total = 0;
     for (const auto& consumer : consumers)
+    {
         total += consumer.fifo.droppedBlocks();
+    }
     return total;
 }
 
@@ -228,7 +256,9 @@ std::uint64_t AudioInputService::droppedAnalysisSamples() const noexcept
 {
     std::uint64_t total = 0;
     for (const auto& consumer : consumers)
+    {
         total += consumer.fifo.droppedSamples();
+    }
     return total;
 }
 
@@ -270,11 +300,17 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
     AudioCallbackScope callbackScope(callbacksInProgress);
 
     for (int channel = 0; channel < numOutputChannels; ++channel)
+    {
         if (outputChannelData[channel] != nullptr)
+        {
             juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
+        }
+    }
 
     if (numSamples <= 0 || muted.load(std::memory_order_relaxed))
+    {
         return;
+    }
 
     const float* inputSamples = nullptr;
     for (int channel = 0; channel < numInputChannels; ++channel)
@@ -286,7 +322,9 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
         }
     }
     if (inputSamples == nullptr)
+    {
         return;
+    }
 
     const auto currentGain = gain.load(std::memory_order_relaxed);
     const auto sampleRange = juce::FloatVectorOperations::findMinAndMax(inputSamples, numSamples);
@@ -294,7 +332,9 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
         juce::jmax(std::abs(sampleRange.getStart()), std::abs(sampleRange.getEnd())) * currentGain;
     storeMaximum(peakSinceLastTimer, peakLevel);
     if (peakLevel >= 0.99f)
+    {
         clippingDetected.store(true, std::memory_order_relaxed);
+    }
 
     for (auto& consumer : consumers)
     {
@@ -328,7 +368,9 @@ void AudioInputService::changeListenerCallback(juce::ChangeBroadcaster*)
     if (hasUsableInput())
     {
         if (auto* device = manager.getCurrentAudioDevice())
+        {
             lastDeviceName = device->getName();
+        }
         recovering = false;
         ticksUntilDeviceScan = connectedDeviceScanIntervalTicks;
     }
@@ -351,12 +393,18 @@ void AudioInputService::timerCallback()
     displayedInputLevel.store(nextLevel, std::memory_order_relaxed);
 
     if (clippingDetected.exchange(false, std::memory_order_relaxed))
+    {
         clippingHoldTicks = serviceRefreshRateHz * 3;
+    }
     else if (clippingHoldTicks > 0)
+    {
         --clippingHoldTicks;
+    }
 
     if (formatVersion.load(std::memory_order_acquire) != deliveredFormatVersion)
+    {
         deliverFormatChange();
+    }
 
     if (--ticksUntilDeviceScan <= 0)
     {
@@ -378,16 +426,24 @@ void AudioInputService::timerCallback()
 AudioInputService::ConsumerSlot* AudioInputService::findConsumer(Listener* listener)
 {
     for (auto& consumer : consumers)
+    {
         if (consumer.listener == listener)
+        {
             return &consumer;
+        }
+    }
     return nullptr;
 }
 
 const AudioInputService::ConsumerSlot* AudioInputService::findConsumer(Listener* listener) const
 {
     for (const auto& consumer : consumers)
+    {
         if (consumer.listener == listener)
+        {
             return &consumer;
+        }
+    }
     return nullptr;
 }
 
@@ -397,7 +453,9 @@ AudioInputService::listenerSnapshot() const
     std::array<Listener*, maximumConsumers> snapshot{};
     const juce::ScopedLock lock(consumerLock);
     for (std::size_t index = 0; index < consumers.size(); ++index)
+    {
         snapshot[index] = consumers[index].listener;
+    }
     // Copying nullable pointer values does not dereference them. The analyzer
     // can otherwise misdiagnose std::array's return copy as a null dereference.
     return snapshot; // NOLINT(clang-analyzer-core.NullDereference)
@@ -414,12 +472,18 @@ void AudioInputService::deliverFormatChange()
     for (auto* listener : listeners)
     {
         if (listener == nullptr)
+        {
             continue;
+        }
         discardPendingSamples(listener);
         if (isRunning)
+        {
             listener->audioInputAboutToStart(sampleRate, inputChannels);
+        }
         else
+        {
             listener->audioInputStopped();
+        }
     }
 }
 
@@ -452,12 +516,18 @@ void AudioInputService::scanForDeviceChanges()
         manager.getAudioDeviceSetup(setup);
 
         if (manager.getCurrentAudioDevice() != nullptr)
+        {
             manager.closeAudioDevice();
+        }
 
         if (setup.inputDeviceName.isNotEmpty() || setup.outputDeviceName.isNotEmpty())
+        {
             manager.restartLastAudioDevice();
+        }
         else if (hasEnumeratedInput)
+        {
             juce::ignoreUnused(manager.initialise(2, 0, nullptr, true));
+        }
 
         recovering = false;
     }
@@ -467,11 +537,17 @@ void AudioInputService::publishState()
 {
     const auto state = inputState();
     if (state == lastState)
+    {
         return;
+    }
 
     lastState = state;
     for (auto* listener : listenerSnapshot())
+    {
         if (listener != nullptr)
+        {
             listener->audioInputStateChanged(state);
+        }
+    }
     sendChangeMessage();
 }

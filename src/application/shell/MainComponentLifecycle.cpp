@@ -108,6 +108,8 @@ void MainComponent::resized()
         microphoneWarning->setBounds(
             warningArea.removeFromTop(microphoneWarningHeight).removeFromRight(availableWidth));
         if (microphoneWarning->isVisible())
+        {
             microphoneWarning->toFront(false);
+        }
     }
 }

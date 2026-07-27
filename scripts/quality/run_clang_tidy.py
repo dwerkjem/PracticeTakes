@@ -107,7 +107,7 @@ def main(arguments: list[str]) -> int:
     if not source_files:
         return 0
 
-    command = [
+    base_command = [
         clang_tidy,
         "--quiet",
         "-p",
@@ -117,11 +117,23 @@ def main(arguments: list[str]) -> int:
     if options.fix:
         # --fix applies only replacements that the selected check explicitly
         # marks as safe. Formatting around replacements follows .clang-format.
-        command.extend(["--fix", "--format-style=file"])
+        #
+        # Process files one at a time so that fix-its applied to a shared
+        # header by the first translation unit are already on disk before the
+        # next translation unit is analysed.  Passing all files in a single
+        # invocation causes clang-tidy to merge fix-its from every TU that
+        # includes the header, producing duplicate byte-offset replacements
+        # whose offsets are stale after the first application and can corrupt
+        # `else if` chains and other multi-statement constructs.
+        base_command.extend(["--fix", "--format-style=file"])
+        exit_code = 0
+        for source_file in source_files:
+            result = subprocess.run(base_command + [str(source_file)], check=False)
+            if result.returncode != 0:
+                exit_code = result.returncode
+        return exit_code
 
-    command.extend(map(str, source_files))
-
-    result = subprocess.run(command, check=False)
+    result = subprocess.run(base_command + list(map(str, source_files)), check=False)
     return result.returncode
 
 

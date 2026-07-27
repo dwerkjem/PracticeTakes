@@ -45,9 +45,13 @@ class MainComponent::WorkspaceSplitPane final : public juce::Component
         // rather than let ~Component silently do nothing, so a stale parent
         // pointer never lingers on a component that outlives this pane.
         if (firstChild != nullptr)
+        {
             removeChildComponent(firstChild);
+        }
         if (secondChild != nullptr)
+        {
             removeChildComponent(secondChild);
+        }
     }
 
     void resized() override

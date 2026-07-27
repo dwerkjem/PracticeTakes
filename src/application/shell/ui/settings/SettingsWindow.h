@@ -56,7 +56,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 themeBox.onChange = [this]
                 {
                     if (onAppearanceChanged)
+                    {
                         onAppearanceChanged(static_cast<Theme>(themeBox.getSelectedId()));
+                    }
                 };
                 addAndMakeVisible(themeBox);
             }
@@ -184,7 +186,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             void changeListenerCallback(juce::ChangeBroadcaster* source) override
             {
                 if (source == &audioInputService)
+                {
                     updateMicrophoneControls();
+                }
             }
 
             void updateMicrophoneControls()
@@ -242,7 +246,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 presetBox.onChange = [this]
                 {
                     if (onPreset)
+                    {
                         onPreset(static_cast<AppDefaults::Preset>(presetBox.getSelectedId()));
+                    }
                 };
                 addAndMakeVisible(presetBox);
             }
@@ -341,7 +347,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                             [action](int result)
                             {
                                 if (result != 0 && action)
+                                {
                                     action();
+                                }
                             }));
                 };
                 addAndMakeVisible(button);

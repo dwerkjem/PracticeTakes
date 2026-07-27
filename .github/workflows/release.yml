@@ -37,7 +37,7 @@ jobs:
 
     steps:
       - name: Check out release source
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.ref }}
@@ -97,7 +97,7 @@ jobs:
 
     steps:
       - name: Check out selected release source
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           ref: ${{ needs.prepare.outputs.source_sha }}
@@ -151,7 +151,7 @@ jobs:
 
     steps:
       - name: Download release artifact bundle
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
           name: PracticeTakes-${{ needs.prepare.outputs.version }}-release-assets
           path: release-assets
