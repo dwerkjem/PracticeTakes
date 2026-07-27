@@ -36,6 +36,9 @@ set(PRACTICE_TAKES_FEEDBACK_ENDPOINT
     "https://practice-takes-feedback-intake.derekrneilson.workers.dev" CACHE STRING
     "HTTPS base URL for the Practice Takes feedback intake service")
 
+option(PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+    "Enable the development-only Performance Lab window" OFF)
+
 if(PRACTICE_TAKES_FEEDBACK_ENDPOINT STREQUAL "")
     set(PRACTICE_TAKES_USE_CURL 0)
 else()
@@ -134,6 +137,7 @@ target_sources(PracticeTakes
         src/application/shell/state/audio/MainComponentAudioState.cpp
         src/application/shell/ui/main_window/MainTitleBar.h
         src/application/shell/ui/main_window/MicrophoneWarning.h
+        src/application/shell/ui/performance/PerformanceLabWindow.h
         src/application/shell/ui/feedback/FeedbackWindow.h
         src/application/shell/ui/feedback/MainComponentFeedback.cpp
         src/application/shell/ui/settings/MainComponentSettings.cpp
@@ -179,6 +183,8 @@ target_sources(PracticeTakes
         src/features/performance/InTreeOptimizationStrategy.h
         src/features/performance/NonRealTimeTelemetryCollector.cpp
         src/features/performance/NonRealTimeTelemetryCollector.h
+        src/features/performance/PerformanceLabController.cpp
+        src/features/performance/PerformanceLabController.h
         src/features/performance/PlatformProvenanceProvider.cpp
         src/features/performance/PlatformProvenanceProvider.h
         src/features/performance/RealTimeEventCapture.h
@@ -206,6 +212,7 @@ target_compile_definitions(PracticeTakes
         PRACTICE_TAKES_COMMIT="${PRACTICE_TAKES_COMMIT}"
         PRACTICE_TAKES_BUILD_TYPE="$<CONFIG>"
         PRACTICE_TAKES_INSTRUMENTATION_VERSION="1"
+        PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=$<BOOL:${PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB}>
 )
 
 target_link_libraries(PracticeTakes
@@ -240,6 +247,7 @@ if(BUILD_TESTING)
         tests/HarmonicAnalyzerTests.cpp
         tests/InTreeOptimizationStrategyTests.cpp
         tests/NonRealTimeTelemetryCollectorTests.cpp
+        tests/PerformanceLabControllerTests.cpp
         tests/PitchDetectorTests.cpp
         tests/PlatformProvenanceProviderTests.cpp
         tests/RealTimeEventCaptureTests.cpp
@@ -262,6 +270,7 @@ if(BUILD_TESTING)
         src/features/performance/HarmonicAnalysisActions.cpp
         src/features/performance/InTreeOptimizationStrategy.cpp
         src/features/performance/NonRealTimeTelemetryCollector.cpp
+        src/features/performance/PerformanceLabController.cpp
         src/features/performance/PlatformProvenanceProvider.cpp
         src/features/performance/SustainedAudioAnalysisScenario.cpp
         src/features/performance/StrategyRegistry.cpp
