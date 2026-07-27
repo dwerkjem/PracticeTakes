@@ -155,7 +155,7 @@ jobs:
           apt-get install --yes "./${package_path}"
 
       - name: Upload Linux artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
           path: dist/PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.deb
@@ -280,7 +280,7 @@ jobs:
           }
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}
           path: dist/PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}.exe
@@ -383,7 +383,7 @@ jobs:
             grep -F "PracticeTakes.app/Contents/MacOS/PracticeTakes"
 
       - name: Upload macOS artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}
           path: dist/PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}.pkg
@@ -565,7 +565,7 @@ jobs:
           } > release-assets/BUILD-METADATA.txt
 
       - name: Upload release artifact bundle
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: PracticeTakes-${{ steps.metadata.outputs.version }}-release-assets
           path: release-assets/*
