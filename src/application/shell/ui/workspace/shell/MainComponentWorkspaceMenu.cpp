@@ -1,4 +1,4 @@
-#include "../../MainComponent.h"
+#include "../../../MainComponent.h"
 
 namespace
 {
@@ -173,7 +173,7 @@ void MainComponent::showToolsMenu()
 }
 
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
-#include "../performance/PerformanceLabWindow.h"
+#include "../../performance/PerformanceLabWindow.h"
 
 void MainComponent::showPerformanceLab()
 {

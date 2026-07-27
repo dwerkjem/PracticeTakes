@@ -60,8 +60,9 @@ touches ownership/lifetime does.
 
 - [ ] Pure logic (state machines, layout trees, policy decisions) is
       separated from JUCE `Component`/UI code so it can be unit tested
-      without a display — e.g. `WorkspaceLayoutState.h` has no JUCE
-      dependency and is covered by `tests/WorkspaceLayoutStateTests.cpp`.
+      without a display — e.g. `ui/workspace/model/WorkspaceLayoutState.h`
+      has no JUCE dependency and is covered by
+      `tests/WorkspaceLayoutStateTests.cpp`.
       New non-trivial logic should follow the same split rather than being
       embedded directly in a `Component` subclass.
 - [ ] A grep for a removed/renamed member or type covers the whole `src/`

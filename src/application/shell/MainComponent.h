@@ -6,8 +6,8 @@
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
 #include "../theme/Theme.h"
-#include "ui/workspace/WorkspaceLayoutState.h"
-#include "ui/workspace/WorkspaceToolState.h"
+#include "ui/workspace/model/WorkspaceLayoutState.h"
+#include "ui/workspace/model/WorkspaceToolState.h"
 
 #include <functional>
 #include <memory>
@@ -70,7 +70,6 @@ class MainComponent final
 
     class ToolWindow;
     class DockedToolPanel;
-    class WorkspaceSplitPane;
     class SettingsWindow;
     class FeedbackWindow;
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB

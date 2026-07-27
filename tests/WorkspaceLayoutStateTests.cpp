@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "application/shell/ui/workspace/WorkspaceLayoutState.h"
+#include "application/shell/ui/workspace/model/WorkspaceLayoutState.h"
 
 #include <optional>
 #include <vector>
@@ -402,4 +402,72 @@ TEST_CASE("arrange commands are a no-op when the root isn't a split", "[workspac
     REQUIRE(root != nullptr);
     CHECK(root->kind == NodeKind::leaf);
     CHECK(root->tool == tuner);
+}
+
+TEST_CASE(
+    "whole-tree replacement installs ratios tabs and unique stable node identities",
+    "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    auto replacement = WorkspaceLayoutState::makeSplitNode(
+        Orientation::horizontal, 0.63, WorkspaceLayoutState::makeLeafNode(tuner),
+        WorkspaceLayoutState::makeTabsNode({spectrogram, harmonics}, harmonics));
+
+    REQUIRE(state.replaceRoot(std::move(replacement)));
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    CHECK(root->kind == NodeKind::split);
+    CHECK(root->splitRatio == 0.63);
+    REQUIRE(root->first != nullptr);
+    REQUIRE(root->second != nullptr);
+    CHECK(root->id != 0);
+    CHECK(root->first->id != 0);
+    CHECK(root->second->id != 0);
+    CHECK(root->id != root->first->id);
+    CHECK(root->id != root->second->id);
+    CHECK(root->first->id != root->second->id);
+    CHECK(root->second->activeTab == harmonics);
+}
+
+TEST_CASE(
+    "whole-tree replacement rejects duplicate tool placement without changing state",
+    "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    state.insert(harmonics, std::nullopt, Zone::centre);
+    const auto originalId = state.rootNode()->id;
+
+    auto duplicate = WorkspaceLayoutState::makeSplitNode(
+        Orientation::vertical, 0.5, WorkspaceLayoutState::makeLeafNode(tuner),
+        WorkspaceLayoutState::makeTabsNode({spectrogram, tuner}, spectrogram));
+
+    CHECK_FALSE(state.replaceRoot(std::move(duplicate)));
+    REQUIRE(state.rootNode() != nullptr);
+    CHECK(state.rootNode()->id == originalId);
+    CHECK(state.rootNode()->tool == harmonics);
+}
+
+TEST_CASE(
+    "split ratios and active tabs mutate through stable node identities",
+    "[workspace][layout]")
+{
+    WorkspaceLayoutState state;
+    auto replacement = WorkspaceLayoutState::makeSplitNode(
+        Orientation::horizontal, 0.5, WorkspaceLayoutState::makeLeafNode(tuner),
+        WorkspaceLayoutState::makeTabsNode({spectrogram, harmonics}, spectrogram));
+    REQUIRE(state.replaceRoot(std::move(replacement)));
+
+    const auto splitId = state.rootNode()->id;
+    const auto tabsId = state.rootNode()->second->id;
+    CHECK(state.setSplitRatio(splitId, 1.4));
+    CHECK(state.setActiveTab(tabsId, harmonics));
+
+    REQUIRE(state.rootNode() != nullptr);
+    CHECK(state.rootNode()->id == splitId);
+    CHECK(state.rootNode()->splitRatio == 0.9);
+    REQUIRE(state.rootNode()->second != nullptr);
+    CHECK(state.rootNode()->second->id == tabsId);
+    CHECK(state.rootNode()->second->activeTab == harmonics);
+    CHECK_FALSE(state.setActiveTab(tabsId, tuner));
+    CHECK_FALSE(state.setSplitRatio(tabsId, 0.4));
 }

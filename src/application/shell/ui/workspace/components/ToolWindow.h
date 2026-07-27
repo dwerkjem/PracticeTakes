@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../MainComponent.h"
+#include "../../../MainComponent.h"
 #include "ToolDragHandle.h"
 #include "ToolOptionsButton.h"
 

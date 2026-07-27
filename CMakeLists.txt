@@ -144,17 +144,23 @@ target_sources(PracticeTakes
         src/application/shell/ui/feedback/MainComponentFeedback.cpp
         src/application/shell/ui/settings/MainComponentSettings.cpp
         src/application/shell/ui/settings/SettingsWindow.h
-        src/application/shell/ui/workspace/DockedToolPanel.h
-        src/application/shell/ui/workspace/MainComponentWorkspaceDrag.cpp
-        src/application/shell/ui/workspace/MainComponentWorkspaceLayout.cpp
-        src/application/shell/ui/workspace/MainComponentWorkspaceMenu.cpp
-        src/application/shell/ui/workspace/MainComponentWorkspacePresentation.cpp
-        src/application/shell/ui/workspace/ToolDragHandle.h
-        src/application/shell/ui/workspace/ToolOptionsButton.h
-        src/application/shell/ui/workspace/ToolWindow.h
-        src/application/shell/ui/workspace/WorkspaceLayoutState.h
-        src/application/shell/ui/workspace/WorkspaceSplitPane.h
-        src/application/shell/ui/workspace/WorkspaceToolState.h
+        src/application/shell/ui/workspace/components/DockedToolPanel.h
+        src/application/shell/ui/workspace/components/ToolDragHandle.h
+        src/application/shell/ui/workspace/components/ToolOptionsButton.h
+        src/application/shell/ui/workspace/components/ToolWindow.h
+        src/application/shell/ui/workspace/components/WorkspaceSplitPane.h
+        src/application/shell/ui/workspace/components/WorkspaceTabBarButton.h
+        src/application/shell/ui/workspace/components/WorkspaceTabbedComponent.h
+        src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h
+        src/application/shell/ui/workspace/model/WorkspaceDocuments.h
+        src/application/shell/ui/workspace/model/WorkspaceLayoutState.h
+        src/application/shell/ui/workspace/model/WorkspaceNormalizer.h
+        src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h
+        src/application/shell/ui/workspace/model/WorkspaceToolState.h
+        src/application/shell/ui/workspace/shell/MainComponentWorkspaceDrag.cpp
+        src/application/shell/ui/workspace/shell/MainComponentWorkspaceLayout.cpp
+        src/application/shell/ui/workspace/shell/MainComponentWorkspaceMenu.cpp
+        src/application/shell/ui/workspace/shell/MainComponentWorkspacePresentation.cpp
         src/application/theme/Theme.cpp
         src/application/theme/Theme.h
         src/application/theme/ThemeType.h
@@ -262,7 +268,11 @@ if(BUILD_TESTING)
         tests/SustainedAudioAnalysisScenarioTests.cpp
         tests/ThemeContrastTests.cpp
         tests/TrialAggregatorTests.cpp
+        tests/WorkspaceDocumentsTests.cpp
+        tests/WorkspaceBuiltInsTests.cpp
+        tests/WorkspaceRecoveryTests.cpp
         tests/WorkspaceLayoutStateTests.cpp
+        tests/WorkspacePresentationComponentsTests.cpp
         tests/WorkspaceToolStateTests.cpp
         src/application/configuration/SettingsPersistence.cpp
         src/application/theme/Theme.cpp
@@ -295,6 +305,7 @@ if(BUILD_TESTING)
             juce::juce_data_structures
             juce::juce_dsp
             juce::juce_graphics
+            juce::juce_gui_basics
     )
 
     target_compile_definitions(PracticeTakesTests

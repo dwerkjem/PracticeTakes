@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../MainComponent.h"
+#include "../../../MainComponent.h"
 #include "ToolOptionsButton.h"
 
 #include <functional>

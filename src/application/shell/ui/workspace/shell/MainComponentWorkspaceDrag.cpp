@@ -1,6 +1,6 @@
-#include "../../MainComponent.h"
+#include "../../../MainComponent.h"
 
-#include "DockedToolPanel.h"
+#include "../components/DockedToolPanel.h"
 
 namespace
 {

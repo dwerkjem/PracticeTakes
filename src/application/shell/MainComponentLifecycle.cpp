@@ -7,8 +7,8 @@
 #include "ui/performance/PerformanceLabWindow.h"
 #endif
 #include "ui/settings/SettingsWindow.h"
-#include "ui/workspace/DockedToolPanel.h"
-#include "ui/workspace/ToolWindow.h"
+#include "ui/workspace/components/DockedToolPanel.h"
+#include "ui/workspace/components/ToolWindow.h"
 
 namespace
 {

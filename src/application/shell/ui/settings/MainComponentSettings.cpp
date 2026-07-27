@@ -3,7 +3,7 @@
 #include "../../../../features/analysis/harmonics/HarmonicAnalyzerComponent.h"
 #include "../../../../features/analysis/spectrogram/SpectrogramComponent.h"
 #include "../../../../features/analysis/tuner/TunerComponent.h"
-#include "../workspace/ToolWindow.h"
+#include "../workspace/components/ToolWindow.h"
 #include "SettingsWindow.h"
 
 namespace

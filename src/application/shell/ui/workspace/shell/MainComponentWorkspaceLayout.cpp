@@ -1,10 +1,9 @@
-#include "../../MainComponent.h"
+#include "../../../MainComponent.h"
 
-#include "DockedToolPanel.h"
-#include "WorkspaceSplitPane.h"
-#include "WorkspaceTabbedComponent.h"
+#include "../components/DockedToolPanel.h"
+#include "../components/WorkspaceSplitPane.h"
+#include "../components/WorkspaceTabbedComponent.h"
 
-#include <algorithm>
 #include <utility>
 
 void MainComponent::setWorkspaceLayout(WorkspaceLayoutState::Layout layout)
@@ -49,28 +48,24 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
 
     if (node->kind == WorkspaceLayoutState::NodeKind::tabs)
     {
-        auto tabs = std::make_unique<WorkspaceTabbedComponent>(juce::TabbedButtonBar::TabsAtTop);
+        const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+        const auto nodeId = node->id;
+        auto tabs = std::make_unique<WorkspaceTabbedComponent>(
+            juce::TabbedButtonBar::TabsAtTop,
+            [safeThis, nodeId](WorkspaceLayoutState::Tool tool)
+            {
+                if (safeThis != nullptr)
+                {
+                    static_cast<void>(safeThis->workspaceLayoutState.setActiveTab(nodeId, tool));
+                    safeThis->currentTool = static_cast<ToolType>(tool);
+                }
+            });
         tabs->setTabBarDepth(38);
         tabs->setLookAndFeel(&appLookAndFeel);
 
-        // Prefer showing whichever tab matches the app's globally focused
-        // tool (if this group happens to contain it); otherwise fall back to
-        // this group's own remembered active tab.
-        const auto currentToolAsTool = static_cast<WorkspaceLayoutState::Tool>(currentTool);
-        const auto preferCurrentTool =
-            std::find(node->tabs.begin(), node->tabs.end(), currentToolAsTool) != node->tabs.end();
-        const auto preferredActive = preferCurrentTool ? currentToolAsTool : node->activeTab;
-
-        const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
-
-        int activeIndex = 0;
         for (size_t index = 0; index < node->tabs.size(); ++index)
         {
             const auto tool = static_cast<ToolType>(node->tabs[index]);
-            if (node->tabs[index] == preferredActive)
-            {
-                activeIndex = static_cast<int>(index);
-            }
             // Dragging this tab's label is a workspace tool drag like any
             // other drag source, but with a "picked up" drag image -- a
             // snapshot of the tab button itself -- instead of the default
@@ -85,10 +80,10 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
                 }
             };
             tabs->addToolTab(
-                toolName(tool), appPaletteFor(currentTheme).panel, dockFor(tool).get(),
-                dragHandler);
+                node->tabs[index], toolName(tool), appPaletteFor(currentTheme).panel,
+                dockFor(tool).get(), dragHandler);
         }
-        tabs->setCurrentTabIndex(activeIndex);
+        tabs->restoreActiveTool(node->activeTab);
 
         auto* rawTabs = tabs.get();
         workspaceContainers.push_back(std::move(tabs));
@@ -106,9 +101,18 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
         return first;
     }
 
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    const auto nodeId = node->id;
     auto pane = std::make_unique<WorkspaceSplitPane>(
         *first, *second, node->orientation == WorkspaceLayoutState::Orientation::vertical,
-        appLookAndFeel);
+        node->splitRatio, appLookAndFeel,
+        [safeThis, nodeId](double ratio)
+        {
+            if (safeThis != nullptr)
+            {
+                static_cast<void>(safeThis->workspaceLayoutState.setSplitRatio(nodeId, ratio));
+            }
+        });
     auto* rawPane = pane.get();
     workspaceContainers.push_back(std::move(pane));
     return rawPane;

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -57,11 +59,14 @@ class WorkspaceLayoutState
         split
     };
 
+    using NodeId = std::uint64_t;
+
     // Read-only description of one tree node. Treat this as an observation
     // window into the tree: mutate the tree only via WorkspaceLayoutState's
     // own methods, never by poking these fields directly.
     struct Node
     {
+        NodeId id = 0;
         NodeKind kind = NodeKind::leaf;
 
         // NodeKind::leaf
@@ -73,9 +78,42 @@ class WorkspaceLayoutState
 
         // NodeKind::split
         Orientation orientation = Orientation::horizontal;
+        double splitRatio = 0.5;
         std::unique_ptr<Node> first;
         std::unique_ptr<Node> second;
     };
+
+    [[nodiscard]] static std::unique_ptr<Node> makeLeafNode(Tool tool)
+    {
+        auto node = std::make_unique<Node>();
+        node->kind = NodeKind::leaf;
+        node->tool = tool;
+        return node;
+    }
+
+    [[nodiscard]] static std::unique_ptr<Node> makeTabsNode(std::vector<Tool> tabs, Tool activeTab)
+    {
+        auto node = std::make_unique<Node>();
+        node->kind = NodeKind::tabs;
+        node->tabs = std::move(tabs);
+        node->activeTab = activeTab;
+        return node;
+    }
+
+    [[nodiscard]] static std::unique_ptr<Node> makeSplitNode(
+        Orientation orientation,
+        double ratio,
+        std::unique_ptr<Node> first,
+        std::unique_ptr<Node> second)
+    {
+        auto node = std::make_unique<Node>();
+        node->kind = NodeKind::split;
+        node->orientation = orientation;
+        node->splitRatio = ratio;
+        node->first = std::move(first);
+        node->second = std::move(second);
+        return node;
+    }
 
     [[nodiscard]] static DropZone dropZoneForPosition(int x, int y, int width, int height) noexcept
     {
@@ -127,6 +165,42 @@ class WorkspaceLayoutState
         return root.get();
     }
 
+    [[nodiscard]] bool replaceRoot(std::unique_ptr<Node> replacement) noexcept
+    {
+        std::vector<Tool> seenTools;
+        if (!validateNode(replacement.get(), seenTools))
+        {
+            return false;
+        }
+
+        assignFreshIds(replacement.get());
+        root = std::move(replacement);
+        return true;
+    }
+
+    [[nodiscard]] bool setSplitRatio(NodeId id, double ratio) noexcept
+    {
+        auto* node = findById(root.get(), id);
+        if (node == nullptr || node->kind != NodeKind::split || !std::isfinite(ratio))
+        {
+            return false;
+        }
+        node->splitRatio = std::clamp(ratio, 0.1, 0.9);
+        return true;
+    }
+
+    [[nodiscard]] bool setActiveTab(NodeId id, Tool tool) noexcept
+    {
+        auto* node = findById(root.get(), id);
+        if (node == nullptr || node->kind != NodeKind::tabs ||
+            std::find(node->tabs.begin(), node->tabs.end(), tool) == node->tabs.end())
+        {
+            return false;
+        }
+        node->activeTab = tool;
+        return true;
+    }
+
     // Removes every tool from the tree.
     void clear() noexcept
     {
@@ -163,6 +237,7 @@ class WorkspaceLayoutState
         if (root == nullptr)
         {
             root = std::make_unique<Node>();
+            root->id = allocateNodeId();
             root->kind = NodeKind::leaf;
             root->tool = tool;
             return;
@@ -239,6 +314,83 @@ class WorkspaceLayoutState
     }
 
   private:
+    [[nodiscard]] NodeId allocateNodeId() noexcept
+    {
+        return nextNodeId++;
+    }
+
+    void assignFreshIds(Node* node) noexcept
+    {
+        if (node == nullptr)
+        {
+            return;
+        }
+        node->id = allocateNodeId();
+        assignFreshIds(node->first.get());
+        assignFreshIds(node->second.get());
+    }
+
+    [[nodiscard]] static bool validateNode(const Node* node, std::vector<Tool>& seenTools) noexcept
+    {
+        if (node == nullptr)
+        {
+            return true;
+        }
+
+        const auto addTool = [&seenTools](Tool tool)
+        {
+            if (std::find(seenTools.begin(), seenTools.end(), tool) != seenTools.end())
+            {
+                return false;
+            }
+            seenTools.push_back(tool);
+            return true;
+        };
+
+        if (node->kind == NodeKind::leaf)
+        {
+            return addTool(node->tool);
+        }
+        if (node->kind == NodeKind::tabs)
+        {
+            if (node->tabs.size() < 2 ||
+                std::find(node->tabs.begin(), node->tabs.end(), node->activeTab) ==
+                    node->tabs.end())
+            {
+                return false;
+            }
+            for (const auto tool : node->tabs)
+            {
+                if (!addTool(tool))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return node->first != nullptr && node->second != nullptr &&
+               std::isfinite(node->splitRatio) && node->splitRatio >= 0.1 &&
+               node->splitRatio <= 0.9 && validateNode(node->first.get(), seenTools) &&
+               validateNode(node->second.get(), seenTools);
+    }
+
+    [[nodiscard]] static Node* findById(Node* node, NodeId id) noexcept
+    {
+        if (node == nullptr)
+        {
+            return nullptr;
+        }
+        if (node->id == id)
+        {
+            return node;
+        }
+        if (auto* hit = findById(node->first.get(), id))
+        {
+            return hit;
+        }
+        return findById(node->second.get(), id);
+    }
+
     [[nodiscard]] static Node* firstLeafOrTabs(Node* node) noexcept
     {
         while (node->kind == NodeKind::split)
@@ -270,14 +422,18 @@ class WorkspaceLayoutState
         return find(node->second.get(), tool);
     }
 
-    static void convertToSplit(Node& node, Tool newTool, DropZone zone) noexcept
+    void convertToSplit(Node& node, Tool newTool, DropZone zone) noexcept
     {
+        const auto splitId = node.id;
         auto oldContent = std::make_unique<Node>(std::move(node));
+        oldContent->id = allocateNodeId();
         auto newLeaf = std::make_unique<Node>();
+        newLeaf->id = allocateNodeId();
         newLeaf->kind = NodeKind::leaf;
         newLeaf->tool = newTool;
 
         node = Node{};
+        node.id = splitId;
         node.kind = NodeKind::split;
         node.orientation = (zone == DropZone::top || zone == DropZone::bottom)
                                ? Orientation::vertical
@@ -400,6 +556,7 @@ class WorkspaceLayoutState
         }
 
         auto tabsNode = std::make_unique<Node>();
+        tabsNode->id = allocateNodeId();
         tabsNode->kind = NodeKind::tabs;
         tabsNode->activeTab = allTools.front();
         tabsNode->tabs = std::move(allTools);
@@ -407,4 +564,5 @@ class WorkspaceLayoutState
     }
 
     std::unique_ptr<Node> root;
+    NodeId nextNodeId = 1;
 };

@@ -1,18 +1,18 @@
 ## 1. Workspace Documents and Recovery
 
-- [ ] 1.1 Add failing tests for typed workspace snapshots covering nested splits, ratios, tab order and selection, floating bounds, focus, supported tool settings, and canonical closed/docked/floating placement
-- [ ] 1.2 Implement copyable workspace snapshot and catalog types with stable string IDs, generated named-workspace IDs, bounded names, and versioned per-tool settings payloads
-- [ ] 1.3 Add failing tests for tool-ID aliases, missing and duplicate tools, malformed branches, invalid ratios and active tabs, unavailable displays, depth and collection limits, and empty-layout fallback
-- [ ] 1.4 Implement the central tool registry and workspace normalizer, including alias resolution, branch collapse, ratio constraints, display-bound recovery, and Pitch Practice fallback
-- [ ] 1.5 Add tests that assert the exact tool arrangements, ratios, active tabs, and tuner settings of all four immutable built-in workspaces
-- [ ] 1.6 Implement Vocal Warm-up, Pitch Practice, Spectrum Analysis, and Performance Preparation as immutable code-defined snapshots
+- [x] 1.1 Add failing tests for typed workspace snapshots covering nested splits, ratios, tab order and selection, floating bounds, focus, supported tool settings, and canonical closed/docked/floating placement
+- [x] 1.2 Implement copyable workspace snapshot and catalog types with stable string IDs, generated named-workspace IDs, bounded names, and versioned per-tool settings payloads
+- [x] 1.3 Add failing tests for tool-ID aliases, missing and duplicate tools, malformed branches, invalid ratios and active tabs, unavailable displays, depth and collection limits, and empty-layout fallback
+- [x] 1.4 Implement the central tool registry and workspace normalizer, including alias resolution, branch collapse, ratio constraints, display-bound recovery, and Pitch Practice fallback
+- [x] 1.5 Add tests that assert the exact tool arrangements, ratios, active tabs, and tuner settings of all four immutable built-in workspaces
+- [x] 1.6 Implement Vocal Warm-up, Pitch Practice, Spectrum Analysis, and Performance Preparation as immutable code-defined snapshots
 
 ## 2. Authoritative Live Workspace State
 
-- [ ] 2.1 Add failing `WorkspaceLayoutState` tests for whole-tree replacement, split-ratio mutation, active-tab mutation, stable node identity, and validation that prevents duplicate tool placement
-- [ ] 2.2 Extend `WorkspaceLayoutState` nodes and commands with split ratios, stable node IDs, selected-tab updates, and validated snapshot replacement
-- [ ] 2.3 Add component tests for restoring a divider ratio, reporting a dragged divider, restoring an active tab, and reporting a clicked tab without regressing tab dragging
-- [ ] 2.4 Wire `WorkspaceSplitPane` and `WorkspaceTabbedComponent` callbacks to the authoritative model using stable node identities, and rebuild presentation from stored ratios and active tabs
+- [x] 2.1 Add failing `WorkspaceLayoutState` tests for whole-tree replacement, split-ratio mutation, active-tab mutation, stable node identity, and validation that prevents duplicate tool placement
+- [x] 2.2 Extend `WorkspaceLayoutState` nodes and commands with split ratios, stable node IDs, selected-tab updates, and validated snapshot replacement
+- [x] 2.3 Add component tests for restoring a divider ratio, reporting a dragged divider, restoring an active tab, and reporting a clicked tab without regressing tab dragging
+- [x] 2.4 Wire `WorkspaceSplitPane` and `WorkspaceTabbedComponent` callbacks to the authoritative model using stable node identities, and rebuild presentation from stored ratios and active tabs
 - [ ] 2.5 Add tests for capturing floating move/resize, focused tool, presentation changes, and tuner settings into the active snapshot
 - [ ] 2.6 Implement shell capture adapters for tool presentation, floating bounds, focus, and supported per-tool settings
 - [ ] 2.7 Add tests that applying a snapshot creates every tool at most once, rebuilds docked and floating presentation once, and preserves global theme, audio, fullscreen, and feedback preferences

@@ -1,10 +1,10 @@
-#include "../../MainComponent.h"
+#include "../../../MainComponent.h"
 
-#include "../../../../features/analysis/harmonics/HarmonicAnalyzerComponent.h"
-#include "../../../../features/analysis/spectrogram/SpectrogramComponent.h"
-#include "../../../../features/analysis/tuner/TunerComponent.h"
-#include "DockedToolPanel.h"
-#include "ToolWindow.h"
+#include "../../../../../features/analysis/harmonics/HarmonicAnalyzerComponent.h"
+#include "../../../../../features/analysis/spectrogram/SpectrogramComponent.h"
+#include "../../../../../features/analysis/tuner/TunerComponent.h"
+#include "../components/DockedToolPanel.h"
+#include "../components/ToolWindow.h"
 
 void MainComponent::openTool(ToolType tool, WorkspaceToolState::Presentation presentation)
 {
