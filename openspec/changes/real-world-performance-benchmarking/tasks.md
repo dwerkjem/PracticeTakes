@@ -18,7 +18,7 @@
 - [x] 3.1 Implement preallocated real-time event capture for callback timing, deadline misses, dropouts, and underruns without callback logging or allocation
 - [x] 3.2 Implement non-real-time collection for process CPU, process memory, GUI latency markers, ambient load, and scenario throughput
 - [x] 3.3 Implement platform providers for OS, CPU, memory, audio device/backend, sample rate, buffer size, build, commit, and instrumentation metadata with explicit unknown values
-- [ ] 3.4 Implement trial aggregation for count, median, tail percentile, minimum, maximum, variability, and event totals with deterministic tests
+- [x] 3.4 Implement trial aggregation for count, median, tail percentile, minimum, maximum, variability, and event totals with deterministic tests
 - [ ] 3.5 Add stress tests and an audio-thread safety review proving the event path is bounded, lock-free, and allocation-free
 
 ## 4. Strategy Comparison And Storage
