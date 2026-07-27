@@ -39,7 +39,7 @@ class WorkspaceNormalizer
         const std::vector<WorkspaceBounds>& displayAreas,
         const WorkspaceToolRegistry& registry = WorkspaceToolRegistry())
     {
-        Context context{registry, displayAreas};
+        Context context{registry, displayAreas, {}, {}, {}};
         WorkspaceSnapshot normalized;
 
         if (source.dockRoot.has_value())

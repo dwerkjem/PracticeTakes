@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../shell/ui/workspace/model/WorkspaceBuiltIns.h"
 #include "../theme/ThemeType.h"
 #include "AppDefaults.h"
 
@@ -42,6 +43,13 @@ struct State
     juce::String settingsBounds;
     RecentTool recentTool = RecentTool::tuner;
     FullscreenMode fullscreenMode = FullscreenMode::normal;
+    WorkspaceCatalog workspaceCatalog = []
+    {
+        WorkspaceCatalog catalog;
+        catalog.active = WorkspaceBuiltIns::pitchPractice().snapshot;
+        catalog.activeSource = WorkspaceBuiltIns::pitchPractice().id;
+        return catalog;
+    }();
 };
 
 struct LoadResult

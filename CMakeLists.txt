@@ -152,6 +152,8 @@ target_sources(PracticeTakes
         src/application/shell/ui/workspace/components/WorkspaceTabBarButton.h
         src/application/shell/ui/workspace/components/WorkspaceTabbedComponent.h
         src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h
+        src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
+        src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.h
         src/application/shell/ui/workspace/model/WorkspaceDocuments.h
         src/application/shell/ui/workspace/model/WorkspaceLayoutState.h
         src/application/shell/ui/workspace/model/WorkspaceNormalizer.h
@@ -271,8 +273,9 @@ if(BUILD_TESTING)
         tests/SustainedAudioAnalysisScenarioTests.cpp
         tests/ThemeContrastTests.cpp
         tests/TrialAggregatorTests.cpp
-        tests/WorkspaceDocumentsTests.cpp
         tests/WorkspaceBuiltInsTests.cpp
+        tests/WorkspaceCatalogCodecTests.cpp
+        tests/WorkspaceDocumentsTests.cpp
         tests/WorkspaceRecoveryTests.cpp
         tests/WorkspaceLayoutStateTests.cpp
         tests/WorkspacePresentationComponentsTests.cpp
@@ -280,6 +283,7 @@ if(BUILD_TESTING)
         tests/WorkspaceSnapshotCaptureTests.cpp
         tests/WorkspaceToolStateTests.cpp
         src/application/configuration/SettingsPersistence.cpp
+        src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
         src/application/theme/Theme.cpp
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
         src/features/analysis/tuner/PitchDetector.cpp
