@@ -136,12 +136,17 @@ target_sources(PracticeTakes
         src/application/shell/ui/workspace/ToolOptionsButton.h
         src/application/shell/ui/workspace/ToolWindow.h
         src/application/shell/ui/workspace/WorkspaceLayoutState.h
+        src/application/shell/ui/workspace/WorkspaceSplitPane.h
         src/application/shell/ui/workspace/WorkspaceToolState.h
         src/application/theme/Theme.cpp
         src/application/theme/Theme.h
         src/application/theme/ThemeType.h
         src/features/analysis/spectrogram/SpectrogramComponent.cpp
         src/features/analysis/spectrogram/SpectrogramComponent.h
+        src/features/analysis/harmonics/HarmonicAnalyzer.cpp
+        src/features/analysis/harmonics/HarmonicAnalyzer.h
+        src/features/analysis/harmonics/HarmonicAnalyzerComponent.cpp
+        src/features/analysis/harmonics/HarmonicAnalyzerComponent.h
         src/features/analysis/tuner/PitchDetector.cpp
         src/features/analysis/tuner/PitchDetector.h
         src/features/analysis/tuner/TunerComponent.cpp
@@ -184,6 +189,7 @@ if(BUILD_TESTING)
         tests/AudioRecoveryPolicyTests.cpp
         tests/AudioSampleFifoTests.cpp
         tests/FeedbackInvitationPolicyTests.cpp
+        tests/HarmonicAnalyzerTests.cpp
         tests/PitchDetectorTests.cpp
         tests/SettingsPersistenceTests.cpp
         tests/ThemeContrastTests.cpp
@@ -191,6 +197,7 @@ if(BUILD_TESTING)
         tests/WorkspaceToolStateTests.cpp
         src/application/configuration/SettingsPersistence.cpp
         src/application/theme/Theme.cpp
+        src/features/analysis/harmonics/HarmonicAnalyzer.cpp
         src/features/analysis/tuner/PitchDetector.cpp
     )
 

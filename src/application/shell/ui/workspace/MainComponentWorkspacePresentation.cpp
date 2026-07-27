@@ -1,5 +1,6 @@
 #include "../../MainComponent.h"
 
+#include "../../../../features/analysis/harmonics/HarmonicAnalyzerComponent.h"
 #include "../../../../features/analysis/spectrogram/SpectrogramComponent.h"
 #include "../../../../features/analysis/tuner/TunerComponent.h"
 #include "DockedToolPanel.h"
@@ -39,6 +40,21 @@ void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation 
 
     detachToolPresentation(tool);
     static_cast<void>(stateFor(tool).present(presentation));
+
+    // Keep the tiling tree in sync: docking places the tool somewhere in the
+    // tree (auto-tabbing alongside whatever's already there, or becoming the
+    // tree's sole pane if it's currently empty); floating removes it, since
+    // only currently-docked tools are ever tracked by the tree. Drag-driven
+    // docking calls insert() again right after this with a specific
+    // pane/zone, which safely relocates the tool since insert() has move
+    // (remove-then-place) semantics.
+    if (presentation == WorkspaceToolState::Presentation::docked)
+        workspaceLayoutState.insert(
+            static_cast<WorkspaceLayoutState::Tool>(tool), std::nullopt,
+            WorkspaceLayoutState::DropZone::centre);
+    else
+        workspaceLayoutState.remove(static_cast<WorkspaceLayoutState::Tool>(tool));
+
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     const auto closeHandler = [safeThis, tool]
     {
@@ -79,7 +95,9 @@ void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation 
             toolName(tool), *component, preferredToolWindowSize(tool), dragHandler, dockHandler,
             feedbackHandler, closeHandler);
         const auto savedBounds =
-            tool == ToolType::tuner ? savedTunerBounds : savedSpectrogramBounds;
+            tool == ToolType::tuner
+                ? savedTunerBounds
+                : (tool == ToolType::spectrogram ? savedSpectrogramBounds : savedHarmonicBounds);
         if (!savedBounds.isEmpty())
             window->setBounds(savedBounds);
     }
@@ -111,13 +129,16 @@ void MainComponent::closeTool(ToolType tool)
     {
         if (tool == ToolType::tuner)
             savedTunerBounds = window->getBounds();
-        else
+        else if (tool == ToolType::spectrogram)
             savedSpectrogramBounds = window->getBounds();
+        else
+            savedHarmonicBounds = window->getBounds();
     }
     if (auto* tuner = dynamic_cast<TunerComponent*>(componentFor(tool).get()))
         savedTunerSettings = tuner->settings();
 
     detachToolPresentation(tool);
+    workspaceLayoutState.remove(static_cast<WorkspaceLayoutState::Tool>(tool));
     componentFor(tool).reset();
     static_cast<void>(stateFor(tool).close());
     rebuildWorkspaceContainer();
@@ -134,19 +155,30 @@ std::unique_ptr<juce::Component> MainComponent::createToolComponent(ToolType too
         return tuner;
     }
 
-    auto spectrogram = std::make_unique<SpectrogramComponent>(audioInputService);
-    spectrogram->setTheme(currentTheme);
-    return spectrogram;
+    if (tool == ToolType::spectrogram)
+    {
+        auto spectrogram = std::make_unique<SpectrogramComponent>(audioInputService);
+        spectrogram->setTheme(currentTheme);
+        return spectrogram;
+    }
+
+    auto harmonics = std::make_unique<HarmonicAnalyzerComponent>(audioInputService);
+    harmonics->setTheme(currentTheme);
+    return harmonics;
 }
 
 juce::String MainComponent::toolName(ToolType tool) const
 {
-    return tool == ToolType::tuner ? "Tuner" : "Spectrogram";
+    if (tool == ToolType::tuner)
+        return "Tuner";
+    return tool == ToolType::spectrogram ? "Spectrogram" : "Harmonic Analyzer";
 }
 
 juce::Point<int> MainComponent::preferredToolWindowSize(ToolType tool) const
 {
-    return tool == ToolType::tuner ? juce::Point<int>{920, 760} : juce::Point<int>{980, 650};
+    if (tool == ToolType::tuner)
+        return {920, 760};
+    return tool == ToolType::spectrogram ? juce::Point<int>{980, 650} : juce::Point<int>{980, 700};
 }
 
 bool MainComponent::toolIsOpen(ToolType tool) const
@@ -156,27 +188,37 @@ bool MainComponent::toolIsOpen(ToolType tool) const
 
 WorkspaceToolState& MainComponent::stateFor(ToolType tool)
 {
-    return tool == ToolType::tuner ? tunerState : spectrogramState;
+    if (tool == ToolType::tuner)
+        return tunerState;
+    return tool == ToolType::spectrogram ? spectrogramState : harmonicState;
 }
 
 const WorkspaceToolState& MainComponent::stateFor(ToolType tool) const
 {
-    return tool == ToolType::tuner ? tunerState : spectrogramState;
+    if (tool == ToolType::tuner)
+        return tunerState;
+    return tool == ToolType::spectrogram ? spectrogramState : harmonicState;
 }
 
 std::unique_ptr<juce::Component>& MainComponent::componentFor(ToolType tool)
 {
-    return tool == ToolType::tuner ? tunerComponent : spectrogramComponent;
+    if (tool == ToolType::tuner)
+        return tunerComponent;
+    return tool == ToolType::spectrogram ? spectrogramComponent : harmonicComponent;
 }
 
 std::unique_ptr<MainComponent::ToolWindow>& MainComponent::windowFor(ToolType tool)
 {
-    return tool == ToolType::tuner ? tunerWindow : spectrogramWindow;
+    if (tool == ToolType::tuner)
+        return tunerWindow;
+    return tool == ToolType::spectrogram ? spectrogramWindow : harmonicWindow;
 }
 
 std::unique_ptr<MainComponent::DockedToolPanel>& MainComponent::dockFor(ToolType tool)
 {
-    return tool == ToolType::tuner ? tunerDock : spectrogramDock;
+    if (tool == ToolType::tuner)
+        return tunerDock;
+    return tool == ToolType::spectrogram ? spectrogramDock : harmonicDock;
 }
 
 void MainComponent::detachToolPresentation(ToolType tool)
@@ -185,24 +227,34 @@ void MainComponent::detachToolPresentation(ToolType tool)
     {
         if (tool == ToolType::tuner)
             savedTunerBounds = window->getBounds();
-        else
+        else if (tool == ToolType::spectrogram)
             savedSpectrogramBounds = window->getBounds();
+        else
+            savedHarmonicBounds = window->getBounds();
         window->releaseContent();
         window.reset();
     }
     if (auto& dock = dockFor(tool); dock != nullptr)
     {
-        if (workspaceTabs != nullptr)
+        dock->releaseContent();
+        // Detach from whatever the dock's actual current parent is -- a
+        // TabbedComponent needs its tab explicitly removed first (it keeps
+        // its own bookkeeping of tab-index-to-content-component), while any
+        // other parent (WorkspaceSplitPane, or this MainComponent directly
+        // for a lone docked tool) can just have the child removed directly.
+        if (auto* parent = dock->getParentComponent())
         {
-            for (int index = workspaceTabs->getNumTabs(); --index >= 0;)
+            if (auto* tabs = dynamic_cast<juce::TabbedComponent*>(parent))
             {
-                if (workspaceTabs->getTabContentComponent(index) == dock.get())
-                    workspaceTabs->removeTab(index);
+                for (int index = tabs->getNumTabs(); --index >= 0;)
+                    if (tabs->getTabContentComponent(index) == dock.get())
+                        tabs->removeTab(index);
+            }
+            else
+            {
+                parent->removeChildComponent(dock.get());
             }
         }
-        dock->releaseContent();
-        if (dock->getParentComponent() == this)
-            removeChildComponent(dock.get());
         dock.reset();
     }
 }
@@ -223,4 +275,6 @@ void MainComponent::applyAppearanceToTool(ToolType tool)
         tuner->setTheme(currentTheme);
     if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(componentFor(tool).get()))
         spectrogram->setTheme(currentTheme);
+    if (auto* harmonics = dynamic_cast<HarmonicAnalyzerComponent*>(componentFor(tool).get()))
+        harmonics->setTheme(currentTheme);
 }

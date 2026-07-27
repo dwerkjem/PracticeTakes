@@ -10,7 +10,8 @@ namespace AppSettings
 enum class RecentTool
 {
     tuner = 1,
-    spectrogram
+    spectrogram,
+    harmonics
 };
 
 enum class FullscreenMode
@@ -37,6 +38,7 @@ struct State
     AppDefaults::TunerSettings tuner = AppDefaults::tunerDefaults();
     juce::String tunerBounds;
     juce::String spectrogramBounds;
+    juce::String harmonicBounds;
     juce::String settingsBounds;
     RecentTool recentTool = RecentTool::tuner;
     FullscreenMode fullscreenMode = FullscreenMode::normal;

@@ -43,13 +43,15 @@ MainComponent::~MainComponent()
     audioInputService.removeChangeListener(this);
     settingsWindow.reset();
     feedbackWindow.reset();
-    workspaceTabs.reset();
-    workspaceDivider.reset();
+    workspaceContainers.clear();
     tunerDock.reset();
     spectrogramDock.reset();
+    harmonicDock.reset();
+    harmonicWindow.reset();
     spectrogramWindow.reset();
     tunerWindow.reset();
     spectrogramComponent.reset();
+    harmonicComponent.reset();
     tunerComponent.reset();
     microphoneWarning.reset();
     applicationProperties.closeFiles();

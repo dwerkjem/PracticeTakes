@@ -1,6 +1,6 @@
 # Settings defaults
 
-Settings schema version: **3**. Presets are identified by stable names and
+Settings schema version: **4**. Presets are identified by stable names and
 resolved through the current schema, so future preset revisions do not change
 or corrupt previously stored explicit values.
 
@@ -33,6 +33,7 @@ fallback while retaining the saved setup for future recovery.
 - Floating tool windows: centered at their preferred size
 - Tuner window: 920 x 760
 - Spectrogram window: 980 x 650
+- Harmonic Analyzer window: 980 x 700
 - Settings window: 760 x 650
 
 Normal fullscreen keeps the Practice Takes title bar visible. Kiosk fullscreen
