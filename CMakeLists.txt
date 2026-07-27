@@ -167,6 +167,8 @@ target_sources(PracticeTakes
         src/features/analysis/tuner/TunerComponent.cpp
         src/features/analysis/tuner/TunerComponent.h
         src/features/analysis/tuner/TunerDrawing.cpp
+        src/features/performance/ApplicationLaunchTimer.cpp
+        src/features/performance/ApplicationLaunchTimer.h
         src/features/performance/BenchmarkRecordCodec.cpp
         src/features/performance/BenchmarkRecordCodec.h
         src/features/performance/BenchmarkRecordStore.cpp
@@ -212,6 +214,7 @@ target_compile_definitions(PracticeTakes
         PRACTICE_TAKES_COMMIT="${PRACTICE_TAKES_COMMIT}"
         PRACTICE_TAKES_BUILD_TYPE="$<CONFIG>"
         PRACTICE_TAKES_INSTRUMENTATION_VERSION="1"
+        PRACTICE_TAKES_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
         PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=$<BOOL:${PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB}>
 )
 
@@ -233,6 +236,7 @@ endif()
 if(BUILD_TESTING)
     add_executable(PracticeTakesTests
         tests/AppDefaultsTests.cpp
+        tests/ApplicationLaunchTimerTests.cpp
         tests/AudioRecoveryPolicyTests.cpp
         tests/AudioSampleFifoTests.cpp
         tests/BenchmarkFakesTests.cpp
@@ -262,6 +266,7 @@ if(BUILD_TESTING)
         src/application/theme/Theme.cpp
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
         src/features/analysis/tuner/PitchDetector.cpp
+        src/features/performance/ApplicationLaunchTimer.cpp
         src/features/performance/BenchmarkRecordCodec.cpp
         src/features/performance/BenchmarkRecordStore.cpp
         src/features/performance/BenchmarkComparability.cpp

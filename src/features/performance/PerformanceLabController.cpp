@@ -17,13 +17,15 @@ PerformanceLabController::PerformanceLabController(
                                         : ValidationResult::failure("Validation is unavailable");
 }
 
-const PerformanceLabState& PerformanceLabController::state() const noexcept
+PerformanceLabState PerformanceLabController::state() const
 {
+    const std::scoped_lock lock(stateMutex);
     return currentState;
 }
 
 void PerformanceLabController::setConfiguration(RunConfiguration configuration)
 {
+    const std::scoped_lock lock(stateMutex);
     if (currentState.running)
         return;
 
@@ -35,22 +37,34 @@ void PerformanceLabController::setConfiguration(RunConfiguration configuration)
 
 bool PerformanceLabController::startRun()
 {
-    currentState.validation = validator ? validator(currentState.configuration)
-                                        : ValidationResult::failure("Validation is unavailable");
-    currentState.error.reset();
-    if (currentState.running || !currentState.validation.valid || !executor)
-        return false;
+    RunConfiguration configuration;
+    {
+        const std::scoped_lock lock(stateMutex);
+        currentState.validation =
+            validator ? validator(currentState.configuration)
+                      : ValidationResult::failure("Validation is unavailable");
+        currentState.error.reset();
+        if (currentState.running || !currentState.validation.valid || !executor)
+            return false;
 
-    currentState.running = true;
-    currentState.cancellationRequested = false;
-    currentState.progress = {};
-    currentState.view = PerformanceLabView::liveRun;
+        currentState.running = true;
+        currentState.cancellationRequested = false;
+        currentState.progress = {};
+        currentState.view = PerformanceLabView::liveRun;
+        configuration = currentState.configuration;
+    }
+    cancellationRequested.store(false, std::memory_order_release);
 
     auto record = executor(
-        currentState.configuration,
-        [this](const RunnerProgress& progress) { currentState.progress = progress; },
-        [this] { return currentState.cancellationRequested; });
+        configuration,
+        [this](const RunnerProgress& progress)
+        {
+            const std::scoped_lock lock(stateMutex);
+            currentState.progress = progress;
+        },
+        [this] { return cancellationRequested.load(std::memory_order_acquire); });
 
+    const std::scoped_lock lock(stateMutex);
     currentState.running = false;
     currentState.history.push_back(std::move(record));
     currentState.selectedResult = currentState.history.size() - 1;
@@ -60,27 +74,34 @@ bool PerformanceLabController::startRun()
 
 void PerformanceLabController::requestCancellation() noexcept
 {
+    const std::scoped_lock lock(stateMutex);
     if (currentState.running)
+    {
         currentState.cancellationRequested = true;
+        cancellationRequested.store(true, std::memory_order_release);
+    }
 }
 
 void PerformanceLabController::showConfiguration() noexcept
 {
+    const std::scoped_lock lock(stateMutex);
     if (!currentState.running)
         currentState.view = PerformanceLabView::configuration;
 }
 
 void PerformanceLabController::showHistory() noexcept
 {
+    const std::scoped_lock lock(stateMutex);
     if (!currentState.running)
         currentState.view = PerformanceLabView::history;
 }
 
 bool PerformanceLabController::selectResult(std::size_t index)
 {
+    const std::scoped_lock lock(stateMutex);
     if (index >= currentState.history.size())
     {
-        setError("The selected benchmark result is unavailable");
+        setErrorLocked("The selected benchmark result is unavailable");
         return false;
     }
 
@@ -94,10 +115,11 @@ bool PerformanceLabController::selectComparison(
     std::size_t baselineIndex,
     std::size_t candidateIndex)
 {
+    const std::scoped_lock lock(stateMutex);
     if (baselineIndex >= currentState.history.size() ||
         candidateIndex >= currentState.history.size())
     {
-        setError("Both comparison results must be available");
+        setErrorLocked("Both comparison results must be available");
         return false;
     }
 
@@ -125,6 +147,7 @@ bool PerformanceLabController::reopen(std::string_view runId)
         return false;
     }
 
+    const std::scoped_lock lock(stateMutex);
     currentState.history.push_back(std::move(*record));
     currentState.selectedResult = currentState.history.size() - 1;
     currentState.view = PerformanceLabView::results;
@@ -134,27 +157,42 @@ bool PerformanceLabController::reopen(std::string_view runId)
 
 bool PerformanceLabController::exportSelected(std::string_view destination)
 {
-    if (!currentState.selectedResult || *currentState.selectedResult >= currentState.history.size())
+    BenchmarkRunRecord record;
     {
-        setError("Select a benchmark result before exporting");
-        return false;
+        const std::scoped_lock lock(stateMutex);
+        if (!currentState.selectedResult ||
+            *currentState.selectedResult >= currentState.history.size())
+        {
+            setErrorLocked("Select a benchmark result before exporting");
+            return false;
+        }
+        record = currentState.history[*currentState.selectedResult];
     }
-    if (!exporter || !exporter(currentState.history[*currentState.selectedResult], destination))
+    if (!exporter || !exporter(record, destination))
     {
-        setError("The benchmark report could not be exported");
+        const std::scoped_lock lock(stateMutex);
+        setErrorLocked("The benchmark report could not be exported");
         return false;
     }
 
+    const std::scoped_lock lock(stateMutex);
     currentState.error.reset();
     return true;
 }
 
 void PerformanceLabController::setSafetyWarnings(std::vector<BenchmarkWarning> warnings)
 {
+    const std::scoped_lock lock(stateMutex);
     currentState.safetyWarnings = std::move(warnings);
 }
 
 void PerformanceLabController::setError(std::string message)
+{
+    const std::scoped_lock lock(stateMutex);
+    setErrorLocked(std::move(message));
+}
+
+void PerformanceLabController::setErrorLocked(std::string message)
 {
     currentState.error = std::move(message);
 }

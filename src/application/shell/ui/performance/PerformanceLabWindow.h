@@ -2,21 +2,36 @@
 
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
 
+#include "../../../../features/performance/ApplicationLaunchTimer.h"
 #include "../../../../features/performance/BenchmarkRecordStore.h"
+#include "../../../../features/performance/HarmonicAnalysisActions.h"
+#include "../../../../features/performance/NonRealTimeTelemetryCollector.h"
 #include "../../../../features/performance/PerformanceLabController.h"
+#include "../../../../features/performance/StrategyRegistry.h"
+#include "../../../../features/performance/SustainedAudioAnalysisScenario.h"
+#include "../../../../features/performance/TrialAggregator.h"
 #include "../../MainComponent.h"
 
 #include <atomic>
+#include <cctype>
+#include <cmath>
+#include <functional>
+#include <thread>
 #include <utility>
 
 class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
 {
   public:
-    class Content final : public juce::Component
+    class Content final : public juce::Component, private juce::Timer
     {
       public:
-        explicit Content(performance::PerformanceLabController& controllerIn)
-            : controller(controllerIn), progressValue(0.0), progressBar(progressValue)
+        explicit Content(
+            performance::PerformanceLabController& controllerIn,
+            std::function<bool(const performance::BenchmarkRunRecord&)> reopenRecordIn,
+            std::function<void(int)> setCalibrationModeIn)
+            : controller(controllerIn), reopenRecord(std::move(reopenRecordIn)),
+              setCalibrationMode(std::move(setCalibrationModeIn)), progressValue(0.0),
+              progressBar(progressValue)
         {
             configureNavigation();
             configureConfiguration();
@@ -24,6 +39,12 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
             addAndMakeVisible(contentViewport);
             contentViewport.setViewedComponent(&content, false);
             applyConfiguration();
+        }
+
+        ~Content() override
+        {
+            stopTimer();
+            controller.requestCancellation();
         }
 
         void paint(juce::Graphics& graphics) override
@@ -203,10 +224,21 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
             runButton.onClick = [this]
             {
                 applyConfiguration();
-                if (controller.startRun())
-                    refresh();
+                startRuns(false);
+            };
+            runAllButton.onClick = [this]
+            {
+                applyConfiguration();
+                startRuns(true);
+            };
+            calibrateButton.onClick = [this]
+            {
+                applyConfiguration();
+                startCalibration();
             };
             addViewComponent(runButton);
+            addViewComponent(runAllButton);
+            addViewComponent(calibrateButton);
         }
 
         void configureActions()
@@ -240,8 +272,13 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
             resultSummary.setReadOnly(true);
             resultSummary.setScrollbarsShown(true);
             exportButton.onClick = [this] { chooseExportFile(); };
+            backButton.onClick = [this]
+            {
+                controller.showConfiguration();
+                refresh();
+            };
             for (auto* component : std::initializer_list<juce::Component*>{
-                     &resultsHeading, &resultSummary, &exportButton})
+                     &resultsHeading, &resultSummary, &exportButton, &backButton})
                 addViewComponent(*component);
 
             comparisonHeading.setText("Strategy comparison", juce::dontSendNotification);
@@ -258,11 +295,11 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
         {
             performance::RunConfiguration configuration;
             configuration.scenarioId = "sustained-audio-analysis";
-            configuration.workloadId = "deterministic-harmonic-fixture";
+            configuration.workloadId = "generated-harmonic-fixture-v1";
             configuration.strategyId =
-                strategyBox.getSelectedId() == 1 ? "baseline" : "parameterized-analysis";
+                strategyBox.getSelectedId() == 1 ? "baseline" : "parameterized-fixture";
             if (configuration.strategyId != "baseline")
-                configuration.strategyParameters["window-size"] = "2048";
+                configuration.strategyParameters["batchSize"] = "4";
             configuration.warmUpCount =
                 static_cast<std::uint32_t>(warmUpEditor.getText().getIntValue());
             configuration.measuredTrialCount =
@@ -277,14 +314,78 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
             refresh();
         }
 
+        void startRuns(bool runAll)
+        {
+            setCalibrationMode(0);
+            runButton.setEnabled(false);
+            runAllButton.setEnabled(false);
+            calibrateButton.setEnabled(false);
+            workerFinished.store(false, std::memory_order_release);
+            benchmarkThread = std::jthread(
+                [this, runAll]
+                {
+                    (void)controller.startRun();
+                    if (runAll)
+                    {
+                        const auto state = controller.state();
+                        if (!state.history.empty() &&
+                            state.history.back().status == performance::RunStatus::completed)
+                        {
+                            auto configuration = state.configuration;
+                            configuration.strategyId =
+                                configuration.strategyId == "baseline"
+                                    ? "parameterized-fixture"
+                                    : "baseline";
+                            configuration.strategyParameters.clear();
+                            if (configuration.strategyId == "parameterized-fixture")
+                                configuration.strategyParameters["batchSize"] = "4";
+                            controller.setConfiguration(std::move(configuration));
+                            (void)controller.startRun();
+                        }
+                    }
+                    workerFinished.store(true, std::memory_order_release);
+                });
+            startTimerHz(20);
+        }
+
+        void startCalibration()
+        {
+            auto configuration = controller.state().configuration;
+            configuration.strategyId = "baseline";
+            configuration.strategyParameters.clear();
+            controller.setConfiguration(std::move(configuration));
+            runButton.setEnabled(false);
+            runAllButton.setEnabled(false);
+            calibrateButton.setEnabled(false);
+            workerFinished.store(false, std::memory_order_release);
+            benchmarkThread = std::jthread(
+                [this]
+                {
+                    setCalibrationMode(1);
+                    (void)controller.startRun();
+                    const auto disabledState = controller.state();
+                    if (!disabledState.history.empty() &&
+                        disabledState.history.back().status == performance::RunStatus::completed)
+                    {
+                        setCalibrationMode(2);
+                        (void)controller.startRun();
+                    }
+                    setCalibrationMode(0);
+                    workerFinished.store(true, std::memory_order_release);
+                });
+            startTimerHz(20);
+        }
+
         void updateConfiguration(const performance::PerformanceLabState& state)
         {
             const auto visible = state.view == performance::PerformanceLabView::configuration;
             for (auto* component : std::initializer_list<juce::Component*>{
-                     &heading, &scenarioLabel, &strategyLabel, &warmUpLabel, &trialsLabel,
-                     &deviceLabel, &backendLabel, &sampleRateLabel, &bufferSizeLabel, &scenarioBox,
-                     &strategyBox, &sampleRateBox, &bufferSizeBox, &warmUpEditor, &trialsEditor,
-                     &deviceEditor, &backendEditor, &validationLabel, &runButton})
+                     &heading,         &scenarioLabel,   &strategyLabel, &warmUpLabel,
+                     &trialsLabel,     &deviceLabel,     &backendLabel,  &sampleRateLabel,
+                     &bufferSizeLabel, &scenarioBox,     &strategyBox,   &sampleRateBox,
+                     &bufferSizeBox,   &warmUpEditor,    &trialsEditor,  &deviceEditor,
+                     &backendEditor,   &validationLabel, &runButton,     &runAllButton,
+                     &calibrateButton})
                 component->setVisible(visible);
 
             juce::String errors;
@@ -292,6 +393,8 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
                 errors << juce::String(error) << "\n";
             validationLabel.setText(errors, juce::dontSendNotification);
             runButton.setEnabled(state.validation.valid && !state.running);
+            runAllButton.setEnabled(state.validation.valid && !state.running);
+            calibrateButton.setEnabled(state.validation.valid && !state.running);
         }
 
         void updateLive(const performance::PerformanceLabState& state)
@@ -339,6 +442,7 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
             resultsHeading.setVisible(visible);
             resultSummary.setVisible(visible);
             exportButton.setVisible(visible);
+            backButton.setVisible(visible);
             juce::String text;
             if (state.selectedResult && *state.selectedResult < state.history.size())
             {
@@ -411,6 +515,16 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
             comparisonTable.setText(text, false);
         }
 
+        void timerCallback() override
+        {
+            refresh();
+            if (workerFinished.load(std::memory_order_acquire))
+            {
+                stopTimer();
+                benchmarkThread = {};
+            }
+        }
+
         void layoutCurrentView()
         {
             auto bounds = contentViewport.getLocalBounds().withWidth(juce::jmax(
@@ -439,7 +553,12 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
                 row(sampleRateLabel, sampleRateBox);
                 row(bufferSizeLabel, bufferSizeBox);
                 validationLabel.setBounds(bounds.removeFromTop(58));
-                runButton.setBounds(bounds.removeFromTop(38).removeFromLeft(180));
+                auto actions = bounds.removeFromTop(38);
+                runButton.setBounds(actions.removeFromLeft(180));
+                actions.removeFromLeft(10);
+                runAllButton.setBounds(actions.removeFromLeft(180));
+                actions.removeFromLeft(10);
+                calibrateButton.setBounds(actions.removeFromLeft(220));
             }
             else if (view == performance::PerformanceLabView::liveRun)
             {
@@ -468,7 +587,13 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
                     auto* action = view == performance::PerformanceLabView::history
                                        ? &reopenButton
                                        : &exportButton;
-                    action->setBounds(bounds.removeFromBottom(38).removeFromLeft(180));
+                    auto actions = bounds.removeFromBottom(38);
+                    if (view == performance::PerformanceLabView::results)
+                    {
+                        backButton.setBounds(actions.removeFromLeft(120));
+                        actions.removeFromLeft(10);
+                    }
+                    action->setBounds(actions.removeFromLeft(180));
                     bounds.removeFromBottom(10);
                 }
                 editor->setBounds(bounds);
@@ -489,10 +614,7 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
                         const auto decoded =
                             performance::BenchmarkRecordCodec::decode(juce::JSON::parse(file));
                         if (decoded.record)
-                        {
-                            reopenedRecord = *decoded.record;
-                            (void)controller.reopen(reopenedRecord->runId);
-                        }
+                            (void)reopenRecord(*decoded.record);
                     }
                     refresh();
                 });
@@ -518,6 +640,8 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
         }
 
         performance::PerformanceLabController& controller;
+        std::function<bool(const performance::BenchmarkRunRecord&)> reopenRecord;
+        std::function<void(int)> setCalibrationMode;
         juce::Component navigation;
         juce::TextButton configurationButton{"Configuration"}, liveButton{"Live"},
             historyButton{"History"}, resultsButton{"Results"}, comparisonButton{"Compare"};
@@ -529,7 +653,8 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
             backendLabel, sampleRateLabel, bufferSizeLabel, validationLabel;
         juce::ComboBox scenarioBox, strategyBox, sampleRateBox, bufferSizeBox;
         juce::TextEditor warmUpEditor, trialsEditor, deviceEditor, backendEditor;
-        juce::TextButton runButton{"Run benchmark"};
+        juce::TextButton runButton{"Run benchmark"}, runAllButton{"Run all"},
+            calibrateButton{"Calibrate instrumentation"};
 
         juce::Label liveHeading, liveStatus, warningLabel;
         double progressValue;
@@ -538,9 +663,11 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
 
         juce::Label historyHeading, resultsHeading, comparisonHeading;
         juce::TextEditor historyTable, resultSummary, comparisonTable;
-        juce::TextButton reopenButton{"Open saved result"}, exportButton{"Export JSON"};
+        juce::TextButton reopenButton{"Open saved result"}, exportButton{"Export JSON"},
+            backButton{"Back"};
         std::unique_ptr<juce::FileChooser> fileChooser;
-        std::optional<performance::BenchmarkRunRecord> reopenedRecord;
+        std::atomic_bool workerFinished{false};
+        std::jthread benchmarkThread;
     };
 
     explicit PerformanceLabWindow(std::function<void()> closeHandler)
@@ -551,6 +678,8 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
           recordStore(juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
                           .getChildFile("PracticeTakes")
                           .getChildFile("PerformanceLab")),
+          repositoryRecordStore(
+              juce::File(PRACTICE_TAKES_SOURCE_DIR).getChildFile("benchmark-results")),
           controller(
               validateConfiguration,
               [this](
@@ -575,7 +704,16 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
           onClose(std::move(closeHandler))
     {
         setUsingNativeTitleBar(true);
-        setContentOwned(new Content(controller), true);
+        setContentOwned(
+            new Content(
+                controller,
+                [this](const performance::BenchmarkRunRecord& record)
+                {
+                    pendingReopen = record;
+                    return controller.reopen(record.runId);
+                },
+                [this](int mode) { calibrationMode.store(mode, std::memory_order_release); }),
+            true);
         setResizable(true, true);
         setResizeLimits(780, 620, 1600, 1200);
         centreWithSize(980, 760);
@@ -602,6 +740,28 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
     }
 
   private:
+    static std::string runTag(const performance::RunConfiguration& configuration)
+    {
+        const auto slug = [](std::string value)
+        {
+            for (auto& character : value)
+            {
+                const auto byte = static_cast<unsigned char>(character);
+                character = std::isalnum(byte) != 0 ? static_cast<char>(std::tolower(byte)) : '-';
+            }
+            while (value.find("--") != std::string::npos)
+                value.replace(value.find("--"), 2, "-");
+            return value;
+        };
+        const auto timestamp = slug(juce::Time::getCurrentTime().toISO8601(false).toStdString());
+        const auto uuid = juce::Uuid().toString().substring(0, 8).toStdString();
+        return timestamp + "-" + slug(juce::SystemStats::getOperatingSystemName().toStdString()) +
+               "-" + slug(configuration.strategyId) + "-" +
+               std::to_string(static_cast<int>(configuration.audio.sampleRateHz)) + "hz-" +
+               std::to_string(configuration.audio.bufferSizeFrames) + "f-" +
+               slug(PRACTICE_TAKES_COMMIT) + "-" + uuid;
+    }
+
     static performance::ValidationResult
     validateConfiguration(const performance::RunConfiguration& configuration)
     {
@@ -624,13 +784,42 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
         return result;
     }
 
+    bool hasMatchingCalibration(const performance::RunProvenance& provenance) const
+    {
+        const auto matches = [&provenance](const performance::BenchmarkRunRecord& record)
+        {
+            const auto& candidate = record.provenance;
+            return record.status == performance::RunStatus::completed &&
+                   candidate.instrumentationOverheadStatus ==
+                       performance::InstrumentationOverheadStatus::measured &&
+                   candidate.operatingSystem == provenance.operatingSystem &&
+                   candidate.cpu == provenance.cpu &&
+                   candidate.instrumentationVersion == provenance.instrumentationVersion &&
+                   candidate.audio.deviceName == provenance.audio.deviceName &&
+                   candidate.audio.backend == provenance.audio.backend &&
+                   std::abs(candidate.audio.sampleRateHz - provenance.audio.sampleRateHz) < 0.01 &&
+                   candidate.audio.bufferSizeFrames == provenance.audio.bufferSizeFrames;
+        };
+        const auto storeHasMatch = [&matches](const performance::BenchmarkRecordStore& store)
+        {
+            for (const auto& runId : store.listRunIds())
+            {
+                const auto loaded = store.load(runId);
+                if (loaded.record && matches(*loaded.record))
+                    return true;
+            }
+            return false;
+        };
+        return storeHasMatch(recordStore) || storeHasMatch(repositoryRecordStore);
+    }
+
     performance::BenchmarkRunRecord executeFixtureRun(
         const performance::RunConfiguration& configuration,
         const std::function<void(const performance::RunnerProgress&)>& reportProgress,
         const std::function<bool()>& cancellationRequested)
     {
         performance::BenchmarkRunRecord record;
-        record.runId = juce::Uuid().toString().toStdString();
+        record.runId = runTag(configuration);
         record.status = performance::RunStatus::running;
         record.configuration = configuration;
         record.provenance.applicationVersion = PRACTICE_TAKES_VERSION;
@@ -642,55 +831,122 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
         record.provenance.memoryBytes =
             static_cast<std::uint64_t>(juce::SystemStats::getMemorySizeInMegabytes()) * 1024 * 1024;
         record.provenance.audio = configuration.audio;
-        record.provenance.instrumentationVersion = PRACTICE_TAKES_INSTRUMENTATION_VERSION;
-        record.provenance.instrumentationOverheadStatus =
-            performance::InstrumentationOverheadStatus::unknown;
-        record.warnings.push_back(
-            {performance::WarningCode::instrumentationOverheadUnknown,
-             "Instrumentation overhead has not been calibrated on this hardware"});
-
-        reportProgress(
-            {performance::RunnerPhase::stabilizing, 0, configuration.measuredTrialCount});
-        reportProgress({performance::RunnerPhase::warmingUp, 0, configuration.measuredTrialCount});
-        for (std::uint32_t trial = 0; trial < configuration.measuredTrialCount; ++trial)
+        const auto currentCalibrationMode = calibrationMode.load(std::memory_order_acquire);
+        record.provenance.instrumentationVersion =
+            currentCalibrationMode == 1 ? "disabled-v1" : PRACTICE_TAKES_INSTRUMENTATION_VERSION;
+        if (currentCalibrationMode == 2 || hasMatchingCalibration(record.provenance))
         {
-            if (cancellationRequested())
-            {
-                record.status = performance::RunStatus::cancelled;
-                record.statusDetail = "Cancelled after a safe trial boundary";
-                record.warnings.push_back(
-                    {performance::WarningCode::incompleteRun, "Run is incomplete"});
-                break;
-            }
-            reportProgress(
-                {performance::RunnerPhase::measuring, trial, configuration.measuredTrialCount});
-            performance::TrialMeasurement measurement;
-            measurement.trialIndex = trial;
-            const auto base = configuration.strategyId == "baseline" ? 2.0 : 1.5;
-            const auto value = base + static_cast<double>(trial) * 0.02;
-            measurement.duration =
-                std::chrono::nanoseconds(static_cast<std::int64_t>(value * 1000000.0));
-            measurement.samples.push_back({"analysis-latency", value, "ms"});
-            record.trials.push_back(std::move(measurement));
+            record.provenance.instrumentationOverheadStatus =
+                performance::InstrumentationOverheadStatus::measured;
         }
-        if (record.status == performance::RunStatus::running)
-            record.status = performance::RunStatus::completed;
-        if (!record.trials.empty())
+        else
         {
-            const auto first = record.trials.front().samples.front().value;
-            const auto last = record.trials.back().samples.front().value;
+            record.provenance.instrumentationOverheadStatus =
+                performance::InstrumentationOverheadStatus::unknown;
+            record.warnings.push_back(
+                {performance::WarningCode::instrumentationOverheadUnknown,
+                 "Instrumentation overhead has not been calibrated on this hardware"});
+        }
+
+        class SteadyBenchmarkClock final : public performance::BenchmarkClock
+        {
+          public:
+            std::chrono::steady_clock::time_point now() const noexcept override
+            {
+                return std::chrono::steady_clock::now();
+            }
+        } clock;
+        class UnavailableProcessMetrics final : public performance::ProcessMetricsProvider
+        {
+          public:
+            performance::ProcessMetricsSnapshot sample() override
+            {
+                return {};
+            }
+        } processMetrics;
+        class DurationOnlyTelemetry final : public performance::TelemetryCollector
+        {
+          public:
+            void beginTrial(std::uint32_t trialIndex) override
+            {
+                measurement = {};
+                measurement.trialIndex = trialIndex;
+                startedAt = std::chrono::steady_clock::now();
+            }
+
+            performance::TrialMeasurement endTrial() override
+            {
+                measurement.duration = std::chrono::steady_clock::now() - startedAt;
+                return measurement;
+            }
+
+            void abortTrial() noexcept override {}
+
+          private:
+            std::chrono::steady_clock::time_point startedAt{};
+            performance::TrialMeasurement measurement;
+        } durationOnlyTelemetry;
+
+        performance::HarmonicAnalysisActions actions(configuration.audio.sampleRateHz);
+        performance::SustainedAudioAnalysisScenario scenario(actions);
+        performance::StrategyRegistry strategies;
+        auto strategy = strategies.create(configuration.strategyId);
+        if (!strategy)
+        {
+            record.status = performance::RunStatus::failed;
+            record.statusDetail = "The selected benchmark strategy is unavailable";
+            saveRecord(record);
+            return record;
+        }
+
+        performance::NonRealTimeTelemetryCollector telemetry(processMetrics, clock);
+        auto& selectedTelemetry =
+            currentCalibrationMode == 1
+                ? static_cast<performance::TelemetryCollector&>(durationOnlyTelemetry)
+                : static_cast<performance::TelemetryCollector&>(telemetry);
+        performance::BenchmarkRunner runner({}, reportProgress, {}, cancellationRequested);
+        const auto result = runner.run(configuration, scenario, *strategy, selectedTelemetry);
+        record.status = result.status;
+        record.statusDetail = result.statusDetail;
+        record.trials = result.trials;
+        for (auto& trial : record.trials)
+            trial.samples.push_back(
+                {"analysis-latency",
+                 std::chrono::duration<double, std::milli>(trial.duration).count(), "ms"});
+        record.summaries = performance::TrialAggregator::aggregate(record.trials).summaries;
+        if (record.status != performance::RunStatus::completed)
+            record.warnings.push_back(
+                {performance::WarningCode::incompleteRun, "Run is incomplete"});
+        for (const auto& error : result.validation.errors)
+            record.warnings.push_back({performance::WarningCode::incompleteRun, error});
+        if (const auto launchDuration = performance::applicationLaunchDuration())
+        {
+            const auto milliseconds =
+                std::chrono::duration<double, std::milli>(*launchDuration).count();
             record.summaries.push_back(
-                {"analysis-latency", "ms", record.trials.size(), (first + last) / 2.0, last, first,
-                 last, last - first});
+                {"launch-to-main-window", "ms", 1, milliseconds, milliseconds, milliseconds,
+                 milliseconds, 0.0});
         }
         reportProgress(
             {performance::RunnerPhase::completed, static_cast<std::uint32_t>(record.trials.size()),
              configuration.measuredTrialCount});
-        (void)recordStore.save(record);
+        saveRecord(record);
         return record;
     }
 
+    void saveRecord(performance::BenchmarkRunRecord& record)
+    {
+        const auto repositoryStatus = repositoryRecordStore.save(record);
+        if (repositoryStatus != performance::RecordStoreStatus::succeeded)
+            record.warnings.push_back(
+                {performance::WarningCode::unknownProvenance,
+                 "The benchmark result could not be saved in the repository"});
+        (void)recordStore.save(record);
+    }
+
     performance::BenchmarkRecordStore recordStore;
+    performance::BenchmarkRecordStore repositoryRecordStore;
+    std::atomic_int calibrationMode{0};
     std::optional<performance::BenchmarkRunRecord> pendingReopen;
     performance::PerformanceLabController controller;
     std::function<void()> onClose;

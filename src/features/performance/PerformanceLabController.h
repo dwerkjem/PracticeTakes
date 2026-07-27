@@ -3,7 +3,9 @@
 #include "BenchmarkComparison.h"
 #include "BenchmarkRunner.h"
 
+#include <atomic>
 #include <functional>
+#include <mutex>
 #include <optional>
 
 namespace performance
@@ -51,7 +53,7 @@ class PerformanceLabController
         RecordLoader loader = {},
         RecordExporter exporter = {});
 
-    [[nodiscard]] const PerformanceLabState& state() const noexcept;
+    [[nodiscard]] PerformanceLabState state() const;
     void setConfiguration(RunConfiguration configuration);
     [[nodiscard]] bool startRun();
     void requestCancellation() noexcept;
@@ -65,11 +67,14 @@ class PerformanceLabController
 
   private:
     void setError(std::string message);
+    void setErrorLocked(std::string message);
 
     Validator validator;
     RunExecutor executor;
     RecordLoader loader;
     RecordExporter exporter;
+    mutable std::mutex stateMutex;
+    std::atomic_bool cancellationRequested{false};
     PerformanceLabState currentState;
 };
 } // namespace performance

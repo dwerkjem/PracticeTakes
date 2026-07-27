@@ -31,18 +31,18 @@
 
 ## 5. Performance Lab GUI
 
-- [ ] 5.1 Add a development-gated Performance Lab entry point and configuration view with scenario, strategy, trial, and audio controls plus inline validation
-- [ ] 5.2 Add a stable live-run view showing phase, trial progress, safety warnings, and safe cancellation without high-frequency visualization
-- [ ] 5.3 Add run-history and results views with provenance, statistical metric tables, raw-trial drill-down, and incomplete-run status
-- [ ] 5.4 Add side-by-side strategy comparison that blocks improvement/regression labels for incompatible runs and explains mismatched fields
-- [ ] 5.5 Add report export and saved-result reopening flows with GUI tests for configuration, progress, cancellation, comparison, and errors
-- [ ] 5.6 Add a GUI test that selects, runs, and compares a lightweight parameterized strategy against baseline in one application session
+- [x] 5.1 Add a development-gated Performance Lab entry point and configuration view with scenario, strategy, trial, and audio controls plus inline validation
+- [x] 5.2 Add a stable live-run view showing phase, trial progress, safety warnings, and safe cancellation without high-frequency visualization
+- [x] 5.3 Add run-history and results views with provenance, statistical metric tables, raw-trial drill-down, and incomplete-run status
+- [x] 5.4 Add side-by-side strategy comparison that blocks improvement/regression labels for incompatible runs and explains mismatched fields
+- [x] 5.5 Add report export and saved-result reopening flows with GUI tests for configuration, progress, cancellation, comparison, and errors
+- [x] 5.6 Add a GUI test that selects, runs, and compares a lightweight parameterized strategy against baseline in one application session
 
 ## 6. Hardware Pilot And Acceptance
 
-- [ ] 6.1 Document the initial reference-hardware matrix, ambient-load controls, stabilization procedure, trial ordering, and representative workload
+- [x] 6.1 Document the initial reference-hardware matrix, ambient-load controls, stabilization procedure, trial ordering, and representative workload
 - [ ] 6.2 Run instrumentation-off and instrumentation-on calibration scenarios to quantify or document overhead on each reference system
-- [ ] 6.3 Execute interleaved baseline and experimental-strategy pilot runs, inspect variance and thermal behavior, and set scenario-specific default trial counts
-- [ ] 6.4 Verify output equivalence and scenario correctness before accepting each strategy comparison
+- [x] 6.3 Execute interleaved baseline and experimental-strategy pilot runs, inspect variance and thermal behavior, and set scenario-specific default trial counts
+- [x] 6.4 Verify output equivalence and scenario correctness before accepting each strategy comparison
 - [ ] 6.5 Complete an end-to-end hardware acceptance run covering configuration, execution, cancellation, persistence, reopening, comparison, and export
-- [ ] 6.6 Keep the feature development-gated until repeatability, audio-thread safety, and report compatibility acceptance criteria are recorded and approved
+- [x] 6.6 Keep the feature development-gated until repeatability, audio-thread safety, and report compatibility acceptance criteria are recorded and approved
