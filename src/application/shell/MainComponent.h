@@ -89,6 +89,7 @@ class MainComponent final
         ToolType tool,
         WorkspaceToolState::Presentation presentation = WorkspaceToolState::Presentation::docked);
     void presentTool(ToolType tool, WorkspaceToolState::Presentation presentation);
+    void constructToolPresentation(ToolType tool, WorkspaceToolState::Presentation presentation);
     void focusTool(ToolType tool);
     void recordToolFocus(ToolType tool);
     void closeTool(ToolType tool);
@@ -114,6 +115,7 @@ class MainComponent final
     void loadSettings();
     [[nodiscard]] AppSettings::State captureSettingsState();
     void captureActiveWorkspace();
+    [[nodiscard]] bool applyWorkspaceSnapshot(const WorkspaceSnapshot& snapshot);
 
     [[nodiscard]] std::unique_ptr<juce::Component> createToolComponent(ToolType tool);
     [[nodiscard]] juce::String toolName(ToolType tool) const;
@@ -131,6 +133,7 @@ class MainComponent final
         juce::Component& source,
         const juce::ScaledImage& dragImage = juce::ScaledImage());
     void setWorkspaceLayout(WorkspaceLayoutState::Layout layout);
+    void detachWorkspaceContainer();
     void rebuildWorkspaceContainer();
     void layoutWorkspace(juce::Rectangle<int> bounds);
     [[nodiscard]] juce::Component* buildWorkspaceNode(const WorkspaceLayoutState::Node* node);

@@ -59,6 +59,20 @@ void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation 
         workspaceLayoutState.remove(static_cast<WorkspaceLayoutState::Tool>(tool));
     }
 
+    constructToolPresentation(tool, presentation);
+    rebuildWorkspaceContainer();
+    applyAppearanceToTool(tool);
+    focusTool(tool);
+}
+
+void MainComponent::constructToolPresentation(
+    ToolType tool,
+    WorkspaceToolState::Presentation presentation)
+{
+    jassert(presentation != WorkspaceToolState::Presentation::closed);
+    auto& component = componentFor(tool);
+    jassert(component != nullptr);
+
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     const auto closeHandler = [safeThis, tool]
     {
@@ -125,10 +139,6 @@ void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation 
             window->setBounds(savedBounds);
         }
     }
-
-    rebuildWorkspaceContainer();
-    applyAppearanceToTool(tool);
-    focusTool(tool);
 }
 
 void MainComponent::focusTool(ToolType tool)

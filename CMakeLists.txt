@@ -155,6 +155,7 @@ target_sources(PracticeTakes
         src/application/shell/ui/workspace/model/WorkspaceDocuments.h
         src/application/shell/ui/workspace/model/WorkspaceLayoutState.h
         src/application/shell/ui/workspace/model/WorkspaceNormalizer.h
+        src/application/shell/ui/workspace/model/WorkspaceSnapshotApply.h
         src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h
         src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h
         src/application/shell/ui/workspace/model/WorkspaceToolState.h
@@ -275,6 +276,7 @@ if(BUILD_TESTING)
         tests/WorkspaceRecoveryTests.cpp
         tests/WorkspaceLayoutStateTests.cpp
         tests/WorkspacePresentationComponentsTests.cpp
+        tests/WorkspaceSnapshotApplyTests.cpp
         tests/WorkspaceSnapshotCaptureTests.cpp
         tests/WorkspaceToolStateTests.cpp
         src/application/configuration/SettingsPersistence.cpp

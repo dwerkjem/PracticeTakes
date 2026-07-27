@@ -119,7 +119,7 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
     return rawPane;
 }
 
-void MainComponent::rebuildWorkspaceContainer()
+void MainComponent::detachWorkspaceContainer()
 {
     if (workspaceRoot != nullptr)
     {
@@ -156,6 +156,11 @@ void MainComponent::rebuildWorkspaceContainer()
             }
         }
     }
+}
+
+void MainComponent::rebuildWorkspaceContainer()
+{
+    detachWorkspaceContainer();
 
     workspaceRoot = buildWorkspaceNode(workspaceLayoutState.rootNode());
     if (workspaceRoot != nullptr)
