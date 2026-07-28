@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <optional>
+#include <string>
 #include <string_view>
 
 namespace
@@ -27,7 +28,46 @@ std::optional<unsigned long> windowPid(Display* display, Window window, Atom pid
     return pid;
 }
 
-std::optional<Window> findWindowForPid(Display* display, unsigned long pid)
+std::optional<std::string> windowTitle(Display* display, Window window)
+{
+    const auto utf8Atom = XInternAtom(display, "UTF8_STRING", True);
+    const auto readUtf8Property =
+        [display, window, utf8Atom](Atom nameAtom) -> std::optional<std::string>
+    {
+        if (utf8Atom == None || nameAtom == None)
+        {
+            return std::nullopt;
+        }
+        Atom actualType{};
+        int actualFormat{};
+        unsigned long itemCount{};
+        unsigned long bytesAfter{};
+        unsigned char* data{};
+        if (XGetWindowProperty(
+                display, window, nameAtom, 0, 1024, False, utf8Atom, &actualType, &actualFormat,
+                &itemCount, &bytesAfter, &data) == Success &&
+            data != nullptr)
+        {
+            const std::string title{reinterpret_cast<char*>(data), itemCount};
+            XFree(data);
+            return title;
+        }
+        return std::nullopt;
+    };
+
+    if (const auto title = readUtf8Property(XInternAtom(display, "_NET_WM_NAME", True)))
+    {
+        return title;
+    }
+    if (const auto title = readUtf8Property(XInternAtom(display, "WM_NAME", True)))
+    {
+        return title;
+    }
+    return std::nullopt;
+}
+
+std::optional<Window>
+findWindowForPid(Display* display, unsigned long pid, const std::optional<std::string>& title)
 {
     const auto root = DefaultRootWindow(display);
     const auto clientsAtom = XInternAtom(display, "_NET_CLIENT_LIST", True);
@@ -54,7 +94,8 @@ std::optional<Window> findWindowForPid(Display* display, unsigned long pid)
     std::optional<Window> result;
     for (unsigned long index = 0; index < itemCount; ++index)
     {
-        if (windowPid(display, windows[index], pidAtom) == pid)
+        if (windowPid(display, windows[index], pidAtom) == pid &&
+            (!title.has_value() || windowTitle(display, windows[index]) == title))
         {
             result = windows[index];
             break;
@@ -97,10 +138,24 @@ bool activateWindow(Display* display, Window window)
 
 int main(int argc, char** argv)
 {
-    if (argc != 3)
+    const std::string_view action(argc > 2 ? argv[2] : "");
+    const auto resize = action == "resize";
+    const auto requiredArguments = resize ? 5 : 3;
+    if (argc != requiredArguments && argc != requiredArguments + 2)
     {
-        std::cerr << "usage: window_control PID activate|maximize|restore\n";
+        std::cerr << "usage: window_control PID activate|maximize|restore|resize [WIDTH HEIGHT] "
+                     "[--title WINDOW_TITLE]\n";
         return 2;
+    }
+    std::optional<std::string> title;
+    if (argc == requiredArguments + 2)
+    {
+        if (std::string_view{argv[requiredArguments]} != "--title")
+        {
+            std::cerr << "expected --title before WINDOW_TITLE\n";
+            return 2;
+        }
+        title = argv[requiredArguments + 1];
     }
 
     auto* display = XOpenDisplay(nullptr);
@@ -109,14 +164,13 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    const auto window = findWindowForPid(display, std::stoul(argv[1]));
+    const auto window = findWindowForPid(display, std::stoul(argv[1]), title);
     if (!window)
     {
         XCloseDisplay(display);
         return 1;
     }
 
-    const std::string_view action(argv[2]);
     auto sent = false;
     if (action == "activate")
     {
@@ -129,6 +183,13 @@ int main(int argc, char** argv)
     else if (action == "restore")
     {
         sent = sendWindowState(display, *window, 0);
+    }
+    else if (action == "resize")
+    {
+        sent = activateWindow(display, *window) &&
+               XResizeWindow(
+                   display, *window, static_cast<unsigned int>(std::stoul(argv[3])),
+                   static_cast<unsigned int>(std::stoul(argv[4]))) != 0;
     }
     else
     {

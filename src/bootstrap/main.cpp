@@ -87,8 +87,16 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             return;
         }
 
-        const auto automatePerformanceLab = argument == "--automate-performance-lab";
-        const auto muteMicrophoneForSession = argument == "--mute-microphone";
+        juce::StringArray arguments;
+        arguments.addTokens(argument, true);
+        const auto automatePerformanceLab = arguments.contains("--automate-performance-lab");
+        const auto muteMicrophoneForSession = arguments.contains("--mute-microphone");
+        juce::String uiValidationScenario;
+        if (const auto scenarioIndex = arguments.indexOf("--ui-validation-scenario");
+            scenarioIndex >= 0 && scenarioIndex + 1 < arguments.size())
+        {
+            uiValidationScenario = arguments[scenarioIndex + 1];
+        }
 #if !PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
         if (automatePerformanceLab)
         {
@@ -102,7 +110,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         const auto windowTitle = getApplicationName() + " v" + getApplicationVersion();
 
         mainWindow = std::make_unique<MainWindow>(
-            windowTitle, automatePerformanceLab, muteMicrophoneForSession);
+            windowTitle, automatePerformanceLab, muteMicrophoneForSession, uiValidationScenario);
     }
 
     void shutdown() override
@@ -125,7 +133,8 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         MainWindow(
             const juce::String& title,
             bool automatePerformanceLab,
-            bool muteMicrophoneForSession)
+            bool muteMicrophoneForSession,
+            const juce::String& uiValidationScenario)
             : DocumentWindow(
                   title,
                   juce::Colour::fromRGB(18, 20, 27),
@@ -156,6 +165,10 @@ class PracticeTakesApplication final : public juce::JUCEApplication
                     performance::markMainWindowVisible();
                 },
                 [this] { content->initialiseAudioAfterLaunch(); });
+            if (uiValidationScenario.isNotEmpty())
+            {
+                content->runUiValidationScenario(uiValidationScenario);
+            }
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
             if (automatePerformanceLab)
             {

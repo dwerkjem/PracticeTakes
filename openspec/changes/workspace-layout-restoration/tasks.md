@@ -58,6 +58,6 @@
 - [x] 7.1 Update settings and user documentation with built-in and named workspace behavior, reset semantics, `.ptsettings` export contents and exclusions, replacement import behavior, compatibility errors, and unavailable-device fallback
 - [x] 7.2 Build the application and run the focused workspace, settings-persistence, transfer-codec, migration, and transaction test suites
 - [x] 7.3 Run the complete CTest suite and resolve only regressions caused by this change
-- [ ] 7.4 Generate approved first-launch and representative restored-workspace goldens after a 7-second settle with the pointer parked and title-bar pixels excluded
-- [ ] 7.5 Run process-owned exact-golden launch validation against those goldens, verify a visible responsive workspace, and record time-to-exact-match against the current 414.134 ms usable-time baseline
-- [ ] 7.6 Verify import and named-workspace workflows visually at desktop and constrained window sizes, including confirmation, validation error, rollback error, long names, disconnected-display recovery, and pointer-insensitive comparisons
+- [x] 7.4 Generate approved first-launch and representative restored-workspace goldens after a 7-second settle with the pointer parked and title-bar pixels excluded
+- [x] 7.5 Run process-owned exact-golden launch validation against those goldens, verify a visible responsive workspace, and record time-to-exact-match against the current 414.134 ms usable-time baseline
+- [x] 7.6 Verify import and named-workspace workflows visually at desktop and constrained window sizes, including confirmation, validation error, rollback error, long names, disconnected-display recovery, and pointer-insensitive comparisons

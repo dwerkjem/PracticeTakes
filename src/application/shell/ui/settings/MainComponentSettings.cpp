@@ -307,6 +307,11 @@ void MainComponent::executeSettingsImport(const SettingsTransferModel& model)
                  *settingsFile, applicationProperties.getStorageParameters(), state);
          }});
 
+    showSettingsImportResult(result);
+}
+
+void MainComponent::showSettingsImportResult(const SettingsImportResult& result)
+{
     juce::AlertWindow::showMessageBoxAsync(
         result.status == SettingsImportStatus::imported ? juce::MessageBoxIconType::InfoIcon
                                                         : juce::MessageBoxIconType::WarningIcon,

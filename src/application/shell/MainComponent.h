@@ -18,6 +18,7 @@
 #include <vector>
 
 class MainTitleBar;
+struct SettingsImportResult;
 struct SettingsTransferModel;
 
 // MainComponent is the application's central coordinator. It owns the shared
@@ -43,6 +44,7 @@ class MainComponent final
     [[nodiscard]] AppSettings::FullscreenMode fullscreenMode() const noexcept;
     void restoreLoadedWorkspace();
     void initialiseAudioAfterLaunch();
+    void runUiValidationScenario(const juce::String& scenario);
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
     void automatePerformanceLab(std::function<void(bool)> completion);
 #endif
@@ -114,6 +116,7 @@ class MainComponent final
     void importSettings();
     void confirmSettingsImport(SettingsTransferModel model);
     void executeSettingsImport(const SettingsTransferModel& model);
+    void showSettingsImportResult(const SettingsImportResult& result);
     void exportSettings();
     [[nodiscard]] bool applyTransferredSettings(const SettingsTransferModel& model);
     void closeSettings();
