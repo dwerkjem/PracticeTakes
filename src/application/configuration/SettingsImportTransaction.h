@@ -119,7 +119,8 @@ class SettingsImportTransaction
 
         juce::MemoryBlock data;
         stream->readIntoMemoryBlock(
-            data, static_cast<ssize_t>(SettingsTransferCodec::maximumDocumentBytes + 1));
+            data,
+            static_cast<juce::pointer_sized_int>(SettingsTransferCodec::maximumDocumentBytes + 1));
         if (data.getSize() > SettingsTransferCodec::maximumDocumentBytes)
         {
             return {

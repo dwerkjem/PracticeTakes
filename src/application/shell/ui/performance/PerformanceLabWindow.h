@@ -588,9 +588,10 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
 
         void layoutCurrentView()
         {
-            auto bounds = contentViewport.getLocalBounds().withWidth(
-                juce::jmax(
-                    720, contentViewport.getWidth() - contentViewport.getScrollBarThickness()));
+            const auto availableWidth =
+                contentViewport.getWidth() - contentViewport.getScrollBarThickness();
+            auto bounds =
+                contentViewport.getLocalBounds().withWidth(juce::jmax(720, availableWidth));
             content.setSize(bounds.getWidth(), juce::jmax(620, contentViewport.getHeight()));
             bounds = content.getLocalBounds().reduced(20);
             auto row = [&bounds](juce::Component& label, juce::Component& control)
@@ -740,10 +741,7 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
               "Performance Lab",
               juce::Colours::darkgrey,
               juce::DocumentWindow::allButtons),
-          recordStore(
-              juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-                  .getChildFile("PracticeTakes")
-                  .getChildFile("PerformanceLab")),
+          recordStore(performanceLabDataDirectory()),
           repositoryRecordStore(
               juce::File(PRACTICE_TAKES_SOURCE_DIR).getChildFile("benchmark-results")),
           controller(
@@ -807,6 +805,13 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
     }
 
   private:
+    [[nodiscard]] static juce::File performanceLabDataDirectory()
+    {
+        return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+            .getChildFile("PracticeTakes")
+            .getChildFile("PerformanceLab");
+    }
+
     static std::string runTag(const performance::RunConfiguration& configuration)
     {
         const auto slug = [](std::string value)
