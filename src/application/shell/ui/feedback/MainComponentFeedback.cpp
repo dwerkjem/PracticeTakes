@@ -30,11 +30,17 @@ void MainComponent::showHelpMenu()
         [safeThis](int selectedItemId)
         {
             if (safeThis == nullptr)
+            {
                 return;
+            }
             if (selectedItemId == sendFeedbackMenuItemId)
+            {
                 safeThis->showFeedback();
+            }
             else if (selectedItemId == feedbackInvitationsMenuItemId)
+            {
                 safeThis->setFeedbackInvitationsDisabled(!safeThis->feedbackInvitationsDisabled());
+            }
         });
 }
 
@@ -43,7 +49,9 @@ void MainComponent::showFeedback(const juce::String& context)
     if (feedbackWindow != nullptr)
     {
         if (context.isNotEmpty())
+        {
             feedbackWindow->setContextTag(context);
+        }
         feedbackWindow->setVisible(true);
         feedbackWindow->toFront(true);
         return;
@@ -51,7 +59,9 @@ void MainComponent::showFeedback(const juce::String& context)
 
     auto* settingsFile = applicationProperties.getUserSettings();
     if (settingsFile == nullptr)
+    {
         return;
+    }
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     feedbackWindow = std::make_unique<FeedbackWindow>(
@@ -59,7 +69,9 @@ void MainComponent::showFeedback(const juce::String& context)
         [safeThis]
         {
             if (safeThis != nullptr)
+            {
                 safeThis->closeFeedback();
+            }
         });
     feedbackWindow->setLookAndFeel(&appLookAndFeel);
     feedbackWindow->toFront(true);
@@ -74,7 +86,9 @@ void MainComponent::recordSuccessfulToolUse()
 {
     auto* settingsFile = applicationProperties.getUserSettings();
     if (settingsFile == nullptr)
+    {
         return;
+    }
 
     const auto uses = settingsFile->getIntValue(feedbackSuccessfulUsesKey, 0) + 1;
     settingsFile->setValue(feedbackSuccessfulUsesKey, uses);
@@ -86,7 +100,9 @@ void MainComponent::maybeOfferFeedbackInvitation()
 {
     auto* settingsFile = applicationProperties.getUserSettings();
     if (settingsFile == nullptr)
+    {
         return;
+    }
 
     const FeedbackInvitationPolicy::State state{
         settingsFile->getIntValue(feedbackSuccessfulUsesKey, 0),
@@ -94,7 +110,9 @@ void MainComponent::maybeOfferFeedbackInvitation()
         settingsFile->getBoolValue(feedbackInvitationsDisabledKey, false)};
     const auto isLiveSessionActive = tunerState.isOpen() || spectrogramState.isOpen();
     if (!FeedbackInvitationPolicy::shouldInvite(state, isLiveSessionActive))
+    {
         return;
+    }
 
     settingsFile->setValue(feedbackInvitationShownKey, true);
     settingsFile->saveIfNeeded();
@@ -108,11 +126,17 @@ void MainComponent::maybeOfferFeedbackInvitation()
             [safeThis](int result)
             {
                 if (safeThis == nullptr)
+                {
                     return;
+                }
                 if (result == 1)
+                {
                     safeThis->showFeedback("Early tester experience");
+                }
                 else if (result == 0)
+                {
                     safeThis->setFeedbackInvitationsDisabled(true);
+                }
             }));
 }
 
@@ -122,7 +146,9 @@ void MainComponent::setFeedbackInvitationsDisabled(bool disabled)
     {
         settingsFile->setValue(feedbackInvitationsDisabledKey, disabled);
         if (!disabled)
+        {
             settingsFile->setValue(feedbackInvitationShownKey, false);
+        }
         settingsFile->saveIfNeeded();
     }
 }
@@ -130,6 +156,8 @@ void MainComponent::setFeedbackInvitationsDisabled(bool disabled)
 bool MainComponent::feedbackInvitationsDisabled()
 {
     if (auto* settingsFile = applicationProperties.getUserSettings())
+    {
         return settingsFile->getBoolValue(feedbackInvitationsDisabledKey, false);
+    }
     return false;
 }

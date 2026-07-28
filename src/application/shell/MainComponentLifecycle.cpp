@@ -3,9 +3,12 @@
 #include "ui/feedback/FeedbackWindow.h"
 #include "ui/main_window/MainTitleBar.h"
 #include "ui/main_window/MicrophoneWarning.h"
+#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+#include "ui/performance/PerformanceLabWindow.h"
+#endif
 #include "ui/settings/SettingsWindow.h"
-#include "ui/workspace/DockedToolPanel.h"
-#include "ui/workspace/ToolWindow.h"
+#include "ui/workspace/components/DockedToolPanel.h"
+#include "ui/workspace/components/ToolWindow.h"
 
 namespace
 {
@@ -43,13 +46,18 @@ MainComponent::~MainComponent()
     audioInputService.removeChangeListener(this);
     settingsWindow.reset();
     feedbackWindow.reset();
-    workspaceTabs.reset();
-    workspaceDivider.reset();
+#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+    performanceLabWindow.reset();
+#endif
+    workspaceContainers.clear();
     tunerDock.reset();
     spectrogramDock.reset();
+    harmonicDock.reset();
+    harmonicWindow.reset();
     spectrogramWindow.reset();
     tunerWindow.reset();
     spectrogramComponent.reset();
+    harmonicComponent.reset();
     tunerComponent.reset();
     microphoneWarning.reset();
     applicationProperties.closeFiles();
@@ -82,6 +90,33 @@ AppSettings::FullscreenMode MainComponent::fullscreenMode() const noexcept
     return selectedFullscreenMode;
 }
 
+void MainComponent::initialiseAudioAfterLaunch()
+{
+    juce::Component::SafePointer<MainComponent> safeThis(this);
+    juce::MessageManager::callAsync(
+        [safeThis]
+        {
+            if (safeThis == nullptr)
+            {
+                return;
+            }
+
+            if (safeThis->pendingAudioDeviceState != nullptr)
+            {
+                safeThis->audioInputService.applySavedDeviceState(
+                    *safeThis->pendingAudioDeviceState);
+            }
+            else
+            {
+                safeThis->audioInputService.initialiseDefaultInput();
+            }
+
+            safeThis->pendingAudioDeviceState.reset();
+            safeThis->updateMicrophoneStateControl();
+            safeThis->updateMicrophoneWarning();
+        });
+}
+
 void MainComponent::createMicrophoneWarning()
 {
     microphoneWarning = std::make_unique<MicrophoneWarning>(
@@ -106,6 +141,8 @@ void MainComponent::resized()
         microphoneWarning->setBounds(
             warningArea.removeFromTop(microphoneWarningHeight).removeFromRight(availableWidth));
         if (microphoneWarning->isVisible())
+        {
             microphoneWarning->toFront(false);
+        }
     }
 }

@@ -1,8 +1,9 @@
 #include "../../MainComponent.h"
 
+#include "../../../../features/analysis/harmonics/HarmonicAnalyzerComponent.h"
 #include "../../../../features/analysis/spectrogram/SpectrogramComponent.h"
 #include "../../../../features/analysis/tuner/TunerComponent.h"
-#include "../workspace/ToolWindow.h"
+#include "../workspace/components/ToolWindow.h"
 #include "SettingsWindow.h"
 
 namespace
@@ -21,7 +22,9 @@ constexpr int kioskFullscreenMenuItemId = 6;
     constexpr int maximumWindowSize = 10000;
     if (bounds.getWidth() < minimumWindowSize || bounds.getHeight() < minimumWindowSize ||
         bounds.getWidth() > maximumWindowSize || bounds.getHeight() > maximumWindowSize)
+    {
         return {};
+    }
     return bounds;
 }
 } // namespace
@@ -57,7 +60,9 @@ void MainComponent::showSettingsMenu()
         [safeThis](int selectedItemId)
         {
             if (safeThis == nullptr)
+            {
                 return;
+            }
 
             switch (selectedItemId)
             {
@@ -102,53 +107,73 @@ void MainComponent::showSettings()
         [safeThis](Theme theme)
         {
             if (safeThis != nullptr)
+            {
                 safeThis->setTheme(theme);
+            }
         },
         [safeThis](AppDefaults::Preset preset)
         {
             if (safeThis != nullptr)
+            {
                 safeThis->applyPreset(preset);
+            }
         },
         [safeThis]
         {
             if (safeThis != nullptr)
+            {
                 safeThis->saveSettings(true);
+            }
         },
         [safeThis]
         {
             if (safeThis != nullptr)
+            {
                 safeThis->showFeedback();
+            }
         },
         [safeThis]
         {
             if (safeThis != nullptr)
+            {
                 safeThis->resetCurrentTool();
+            }
         },
         [safeThis]
         {
             if (safeThis != nullptr)
+            {
                 safeThis->resetAudio();
+            }
         },
         [safeThis]
         {
             if (safeThis != nullptr)
+            {
                 safeThis->resetLayout();
+            }
         },
         [safeThis]
         {
             if (safeThis != nullptr)
+            {
                 safeThis->resetAll();
+            }
         },
         [safeThis]
         {
             if (safeThis != nullptr)
+            {
                 safeThis->closeSettings();
+            }
         });
 
     const auto palette = appPaletteFor(currentTheme);
     settingsWindow->applyAppearance(&appLookAndFeel, palette.background, currentTheme);
     if (!savedSettingsBounds.isEmpty())
+    {
         settingsWindow->setBounds(savedSettingsBounds);
+    }
     settingsWindow->toFront(true);
 }
 
@@ -156,12 +181,22 @@ void MainComponent::resetCurrentTool()
 {
     auto& component = componentFor(currentTool);
     if (component == nullptr)
+    {
         return;
+    }
 
     if (auto* tuner = dynamic_cast<TunerComponent*>(component.get()))
+    {
         tuner->resetToDefaults();
+    }
     else if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(component.get()))
+    {
         spectrogram->resetToDefaults();
+    }
+    else if (auto* harmonics = dynamic_cast<HarmonicAnalyzerComponent*>(component.get()))
+    {
+        harmonics->resetToDefaults();
+    }
 }
 
 void MainComponent::resetAudio()
@@ -173,16 +208,9 @@ void MainComponent::resetAudio()
 
 void MainComponent::resetLayout()
 {
-    savedTunerBounds = {};
-    savedSpectrogramBounds = {};
-    savedSettingsBounds = {};
-
-    if (tunerState.presentation() == WorkspaceToolState::Presentation::floating)
-        tunerWindow->centreWithSize(920, 760);
-    if (spectrogramState.presentation() == WorkspaceToolState::Presentation::floating)
-        spectrogramWindow->centreWithSize(980, 650);
-    if (settingsWindow != nullptr)
-        settingsWindow->centreWithSize(900, 760);
+    WorkspaceSessionLifecycle::resetActive(workspaceCatalog);
+    static_cast<void>(applyWorkspaceSnapshot(workspaceCatalog.active));
+    saveSettings();
 }
 
 void MainComponent::resetAll()
@@ -194,30 +222,55 @@ void MainComponent::resetAll()
     currentTool = ToolType::tuner;
 
     if (auto* tuner = dynamic_cast<TunerComponent*>(tunerComponent.get()))
+    {
         tuner->resetToDefaults();
+    }
     if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(spectrogramComponent.get()))
+    {
         spectrogram->resetToDefaults();
+    }
+    if (auto* harmonics = dynamic_cast<HarmonicAnalyzerComponent*>(harmonicComponent.get()))
+    {
+        harmonics->resetToDefaults();
+    }
     resetLayout();
 }
 
 void MainComponent::applyPreset(AppDefaults::Preset preset)
 {
     if (!tunerState.isOpen())
+    {
         openTool(ToolType::tuner);
+    }
     if (auto* tuner = dynamic_cast<TunerComponent*>(tunerComponent.get()))
+    {
         tuner->applyPreset(preset);
+    }
 }
 
 AppSettings::State MainComponent::captureSettingsState()
 {
+    captureActiveWorkspace();
     if (tunerWindow != nullptr)
+    {
         savedTunerBounds = tunerWindow->getBounds();
+    }
     if (auto* tuner = dynamic_cast<TunerComponent*>(tunerComponent.get()))
+    {
         savedTunerSettings = tuner->settings();
+    }
     if (spectrogramWindow != nullptr)
+    {
         savedSpectrogramBounds = spectrogramWindow->getBounds();
+    }
+    if (harmonicWindow != nullptr)
+    {
+        savedHarmonicBounds = harmonicWindow->getBounds();
+    }
     if (settingsWindow != nullptr)
+    {
         savedSettingsBounds = settingsWindow->getBounds();
+    }
 
     AppSettings::State state;
     state.theme = currentTheme;
@@ -226,23 +279,46 @@ AppSettings::State MainComponent::captureSettingsState()
     state.tuner = savedTunerSettings;
     state.tunerBounds = savedTunerBounds.toString();
     state.spectrogramBounds = savedSpectrogramBounds.toString();
+    state.harmonicBounds = savedHarmonicBounds.toString();
     state.settingsBounds = savedSettingsBounds.toString();
-    state.recentTool = currentTool == ToolType::tuner ? AppSettings::RecentTool::tuner
-                                                      : AppSettings::RecentTool::spectrogram;
+    if (currentTool == ToolType::tuner)
+    {
+        state.recentTool = AppSettings::RecentTool::tuner;
+    }
+    else if (currentTool == ToolType::spectrogram)
+    {
+        state.recentTool = AppSettings::RecentTool::spectrogram;
+    }
+    else
+    {
+        state.recentTool = AppSettings::RecentTool::harmonics;
+    }
     state.fullscreenMode = selectedFullscreenMode;
-    if (const auto audioState = audioInputService.createDeviceState())
+    WorkspaceSessionLifecycle::captureActive(workspaceCatalog, activeWorkspaceSnapshot);
+    state.workspaceCatalog = workspaceCatalog;
+    if (pendingAudioDeviceState != nullptr)
+    {
+        state.audioDeviceState = pendingAudioDeviceState->toString();
+    }
+    else if (const auto audioState = audioInputService.createDeviceState())
+    {
         state.audioDeviceState = audioState->toString();
+    }
     return state;
 }
 
 void MainComponent::saveSettings(bool explicitSave)
 {
     if (!automaticSettingsSaveEnabled && !explicitSave)
+    {
         return;
+    }
 
     auto* settingsFile = applicationProperties.getUserSettings();
     if (settingsFile == nullptr)
+    {
         return;
+    }
 
     if (explicitSave && !automaticSettingsSaveEnabled)
     {
@@ -257,7 +333,9 @@ void MainComponent::loadSettings()
 {
     auto* settingsFile = applicationProperties.getUserSettings();
     if (settingsFile == nullptr)
+    {
         return;
+    }
 
     const auto loaded = AppSettings::load(*settingsFile);
     automaticSettingsSaveEnabled = loaded.status != AppSettings::LoadStatus::newerSchema;
@@ -265,16 +343,29 @@ void MainComponent::loadSettings()
     audioInputService.setMuted(loaded.state.microphoneMuted);
     audioInputService.setInputGain(static_cast<float>(loaded.state.inputGain));
     savedTunerSettings = loaded.state.tuner;
-    currentTool = loaded.state.recentTool == AppSettings::RecentTool::spectrogram
-                      ? ToolType::spectrogram
-                      : ToolType::tuner;
+    workspaceCatalog = loaded.state.workspaceCatalog;
+    if (loaded.state.recentTool == AppSettings::RecentTool::spectrogram)
+    {
+        currentTool = ToolType::spectrogram;
+    }
+    else if (loaded.state.recentTool == AppSettings::RecentTool::harmonics)
+    {
+        currentTool = ToolType::harmonics;
+    }
+    else
+    {
+        currentTool = ToolType::tuner;
+    }
     selectedFullscreenMode = loaded.state.fullscreenMode;
 
-    if (const auto xml = juce::parseXML(loaded.state.audioDeviceState); xml != nullptr)
-        audioInputService.applySavedDeviceState(*xml);
+    if (auto xml = juce::parseXML(loaded.state.audioDeviceState); xml != nullptr)
+    {
+        pendingAudioDeviceState = std::move(xml);
+    }
 
     savedTunerBounds = validWindowBounds(loaded.state.tunerBounds);
     savedSpectrogramBounds = validWindowBounds(loaded.state.spectrogramBounds);
+    savedHarmonicBounds = validWindowBounds(loaded.state.harmonicBounds);
     savedSettingsBounds = validWindowBounds(loaded.state.settingsBounds);
 
     if (loaded.status == AppSettings::LoadStatus::recoveredFromCorruption)
@@ -297,10 +388,36 @@ void MainComponent::loadSettings()
     }
 }
 
+void MainComponent::restoreLoadedWorkspace()
+{
+    std::vector<WorkspaceBounds> displayAreas;
+    const auto displays = juce::Desktop::getInstance().getDisplays().getRectangleList(true);
+    for (const auto& area : displays)
+    {
+        displayAreas.push_back({area.getX(), area.getY(), area.getWidth(), area.getHeight()});
+    }
+
+    auto restored = WorkspaceSessionLifecycle::restore(std::move(workspaceCatalog), displayAreas);
+    workspaceCatalog = std::move(restored.catalog);
+    if (!applyWorkspaceSnapshot(workspaceCatalog.active))
+    {
+        WorkspaceSessionLifecycle::resetActive(workspaceCatalog);
+        static_cast<void>(applyWorkspaceSnapshot(workspaceCatalog.active));
+        restored.recovered = true;
+    }
+
+    if (restored.recovered)
+    {
+        saveSettings();
+    }
+}
+
 void MainComponent::closeSettings()
 {
     if (settingsWindow != nullptr)
+    {
         savedSettingsBounds = settingsWindow->getBounds();
+    }
     settingsWindow.reset();
     updateMicrophoneWarning();
 }

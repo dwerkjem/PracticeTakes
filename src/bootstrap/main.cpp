@@ -11,7 +11,9 @@
 #include <iostream>
 
 #include "../application/shell/MainComponent.h"
+#include "../application/shell/WorkspaceStartupSequence.h"
 #include "../application/shell/ui/main_window/MainTitleBar.h"
+#include "../features/performance/ApplicationLaunchTimer.h"
 
 namespace
 {
@@ -22,7 +24,9 @@ void setOperatingSystemFullscreen(juce::Component& component, bool shouldBeFulls
     if (display == nullptr || component.getWindowHandle() == nullptr)
     {
         if (display != nullptr)
+        {
             XCloseDisplay(display);
+        }
         return;
     }
 
@@ -83,9 +87,20 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             return;
         }
 
+        const auto automatePerformanceLab = argument == "--automate-performance-lab";
+#if !PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+        if (automatePerformanceLab)
+        {
+            std::cerr << "Performance Lab is disabled; rebuild with "
+                         "-DPRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=ON\n";
+            setApplicationReturnValue(2);
+            quit();
+            return;
+        }
+#endif
         const auto windowTitle = getApplicationName() + " v" + getApplicationVersion();
 
-        mainWindow = std::make_unique<MainWindow>(windowTitle);
+        mainWindow = std::make_unique<MainWindow>(windowTitle, automatePerformanceLab);
     }
 
     void shutdown() override
@@ -105,7 +120,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
     class MainWindow final : public juce::DocumentWindow, private juce::Timer
     {
       public:
-        explicit MainWindow(const juce::String& title)
+        MainWindow(const juce::String& title, bool automatePerformanceLab)
             : DocumentWindow(
                   title,
                   juce::Colour::fromRGB(18, 20, 27),
@@ -128,13 +143,39 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             setResizable(true, false);
             setResizeLimits(980, 600, 3200, 2200);
             centreWithSize(getWidth(), getHeight());
-            setVisible(true);
+            WorkspaceStartupSequence::run(
+                [this] { content->restoreLoadedWorkspace(); },
+                [this]
+                {
+                    setVisible(true);
+                    performance::markMainWindowVisible();
+                },
+                [this] { content->initialiseAudioAfterLaunch(); });
+#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
+            if (automatePerformanceLab)
+            {
+                content->automatePerformanceLab(
+                    [](bool succeeded)
+                    {
+                        std::cout
+                            << (succeeded ? "Performance Lab automation completed\n"
+                                          : "Performance Lab automation failed\n");
+                        auto* application = juce::JUCEApplication::getInstance();
+                        application->setApplicationReturnValue(succeeded ? 0 : 1);
+                        application->quit();
+                    });
+            }
+#else
+            juce::ignoreUnused(automatePerformanceLab);
+#endif
         }
 
         ~MainWindow() override
         {
             if (fullscreenActive)
+            {
                 setFullscreen(false);
+            }
         }
 
         void closeButtonPressed() override

@@ -57,7 +57,9 @@ void MainComponent::updateMicrophoneStateControl()
 void MainComponent::updateMicrophoneWarning()
 {
     if (microphoneWarning == nullptr)
+    {
         return;
+    }
 
     if (hasUsableMicrophone())
     {
@@ -68,12 +70,16 @@ void MainComponent::updateMicrophoneWarning()
 
     microphoneWarning->setVisible(!isMicrophoneWarningDismissed);
     if (microphoneWarning->isVisible())
+    {
         microphoneWarning->toFront(false);
+    }
 }
 
 void MainComponent::dismissMicrophoneWarning()
 {
     isMicrophoneWarningDismissed = true;
     if (microphoneWarning != nullptr)
+    {
         microphoneWarning->setVisible(false);
+    }
 }

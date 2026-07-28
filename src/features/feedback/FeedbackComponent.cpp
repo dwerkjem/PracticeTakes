@@ -41,18 +41,26 @@ juce::String typeName(int type)
 juce::String contractCategory(int type)
 {
     if (type == 2)
+    {
         return "usability";
+    }
     if (type == 3)
+    {
         return "idea";
+    }
     if (type == 6)
+    {
         return "other";
+    }
     return "bug";
 }
 
 bool looksLikeEmail(const juce::String& email)
 {
     if (email.isEmpty())
+    {
         return true;
+    }
     const auto at = email.indexOfChar('@');
     return at > 0 && email.indexOfChar(at + 1, '.') > at + 1 && !email.containsAnyOf(" \t\r\n");
 }
@@ -100,7 +108,9 @@ FeedbackComponent::FeedbackComponent(
     for (const auto& item : std::array<juce::String, 6>{
              "Bug", "Usability problem", "Feature request", "Audio problem",
              "Notation/MIDI problem", "Other"})
+    {
         typeBox.addItem(item, typeBox.getNumItems() + 1);
+    }
     typeBox.setSelectedId(1, juce::dontSendNotification);
     typeBox.setTitle("Feedback type, required");
     typeBox.setExplicitFocusOrder(1);
@@ -116,7 +126,9 @@ FeedbackComponent::FeedbackComponent(
         "Feature context (optional and fully editable)", juce::dontSendNotification);
     for (auto* label :
          {&titleLabel, &descriptionLabel, &reproductionLabel, &emailLabel, &contextLabel})
+    {
         addAndMakeVisible(label);
+    }
 
     configureEditor(titleEditor, "Short title, required", 2, false);
     configureEditor(descriptionEditor, "Detailed description, required", 3, true);
@@ -158,7 +170,9 @@ FeedbackComponent::FeedbackComponent(
 
     restoreDraft();
     if (initialContext.isNotEmpty())
+    {
         setContextTag(initialContext);
+    }
 }
 
 FeedbackComponent::~FeedbackComponent()
@@ -233,17 +247,27 @@ juce::String FeedbackComponent::validate() const
 {
     const auto draft = currentDraft();
     if (draft.title.isEmpty())
+    {
         return "Enter a short title.";
+    }
     if (draft.description.length() < 3)
+    {
         return "Enter a detailed description of at least 3 characters.";
+    }
     if (draft.title.length() > maximumTitleLength ||
         draft.description.length() > maximumDescriptionLength ||
         draft.reproductionSteps.length() > maximumReproductionLength)
+    {
         return "One or more fields exceed the displayed size limit.";
+    }
     if (previewText(draft).length() > 8000)
+    {
         return "The complete submission is too large. Shorten the description or steps.";
+    }
     if (!looksLikeEmail(draft.contactEmail))
+    {
         return "Enter a valid contact email or leave it blank.";
+    }
     return {};
 }
 
@@ -252,22 +276,32 @@ juce::String FeedbackComponent::previewText(const Draft& draft) const
     auto text = "Type: " + typeName(draft.type) + "\nTitle: " + draft.title + "\n\nDescription:\n" +
                 draft.description;
     if (draft.reproductionSteps.isNotEmpty())
+    {
         text += "\n\nReproduction steps:\n" + draft.reproductionSteps;
+    }
     text += "\n\nContact: " +
             (draft.contactEmail.isEmpty() ? juce::String("Not provided") : draft.contactEmail);
     if (draft.includeVersion || draft.includeOperatingSystem)
     {
         text += "\n\nOptional diagnostics (included with consent):";
         if (draft.includeVersion)
+        {
             text += "\nApplication version: " + juce::String(ProjectInfo::versionString);
+        }
         if (draft.includeOperatingSystem)
+        {
             text += "\nOperating system: " + juce::SystemStats::getOperatingSystemName();
+        }
     }
     if (draft.includeScreenshot)
+    {
         text += "\n\nAttachment: screenshot of all visible Practice Takes windows "
                 "except this feedback window";
+    }
     if (draft.contextTag.isNotEmpty())
+    {
         text += "\n\nFeedback context (user-editable):\n" + draft.contextTag;
+    }
     return text;
 }
 
@@ -292,7 +326,9 @@ juce::String FeedbackComponent::captureApplicationScreenshot() const
         auto* window = desktop.getComponent(index);
         if (window == nullptr || window == feedbackWindow || !window->isVisible() ||
             window->getWidth() <= 0 || window->getHeight() <= 0)
+        {
             continue;
+        }
 
         windows.add(window);
         capturedBounds = capturedBounds.isEmpty()
@@ -301,15 +337,19 @@ juce::String FeedbackComponent::captureApplicationScreenshot() const
     }
 
     if (windows.isEmpty() || capturedBounds.isEmpty())
+    {
         return {};
+    }
 
     constexpr float maximumWidth = 1280.0f;
     constexpr float maximumHeight = 720.0f;
     const auto scale = juce::jmin(
         1.0f, maximumWidth / static_cast<float>(capturedBounds.getWidth()),
         maximumHeight / static_cast<float>(capturedBounds.getHeight()));
-    const auto imageWidth = juce::jmax(1, juce::roundToInt(capturedBounds.getWidth() * scale));
-    const auto imageHeight = juce::jmax(1, juce::roundToInt(capturedBounds.getHeight() * scale));
+    const auto imageWidth =
+        juce::jmax(1, juce::roundToInt(static_cast<float>(capturedBounds.getWidth()) * scale));
+    const auto imageHeight =
+        juce::jmax(1, juce::roundToInt(static_cast<float>(capturedBounds.getHeight()) * scale));
     juce::Image image(juce::Image::RGB, imageWidth, imageHeight, true);
     juce::Graphics graphics(image);
     graphics.fillAll(juce::Colours::black);
@@ -319,8 +359,10 @@ juce::String FeedbackComponent::captureApplicationScreenshot() const
         const auto snapshot =
             window->createComponentSnapshot(window->getLocalBounds(), true, scale);
         const auto screenBounds = window->getScreenBounds();
-        const auto x = juce::roundToInt((screenBounds.getX() - capturedBounds.getX()) * scale);
-        const auto y = juce::roundToInt((screenBounds.getY() - capturedBounds.getY()) * scale);
+        const auto x = juce::roundToInt(
+            static_cast<float>(screenBounds.getX() - capturedBounds.getX()) * scale);
+        const auto y = juce::roundToInt(
+            static_cast<float>(screenBounds.getY() - capturedBounds.getY()) * scale);
         graphics.drawImageAt(snapshot, x, y);
     }
 
@@ -328,7 +370,9 @@ juce::String FeedbackComponent::captureApplicationScreenshot() const
     juce::JPEGImageFormat jpeg;
     jpeg.setQuality(0.72f);
     if (!jpeg.writeImageToStream(image, output))
+    {
         return {};
+    }
 
     return juce::Base64::toBase64(output.getData(), output.getDataSize());
 }
@@ -380,7 +424,9 @@ void FeedbackComponent::submit()
         return;
     }
     if (isThreadRunning())
+    {
         return;
+    }
     pendingDraft = currentDraft();
     pendingDraft.clientSubmissionId = juce::Uuid().toDashedString();
     if (pendingDraft.includeScreenshot)
@@ -421,7 +467,9 @@ void FeedbackComponent::clearDraft()
     for (const auto* key :
          {draftTypeKey, draftTitleKey, draftDescriptionKey, draftReproductionKey, draftEmailKey,
           draftContextKey})
+    {
         properties.removeValue(key);
+    }
     properties.saveIfNeeded();
 }
 
@@ -447,9 +495,11 @@ void FeedbackComponent::run()
             [safe = juce::Component::SafePointer(this)]
             {
                 if (safe != nullptr)
+                {
                     safe->setSubmissionState(
                         SubmissionState::queued,
                         "Queued locally; the feedback service is unavailable.");
+                }
             });
         return;
     }
@@ -484,9 +534,11 @@ void FeedbackComponent::run()
             [safe = juce::Component::SafePointer(this)]
             {
                 if (safe != nullptr)
+                {
                     safe->setSubmissionState(
                         SubmissionState::queued,
                         "Queued locally; submission will need to be retried.");
+                }
             });
         return;
     }
@@ -504,7 +556,9 @@ void FeedbackComponent::run()
     submissionObject->setProperty("category", contractCategory(pendingDraft.type));
     submissionObject->setProperty("message", previewText(pendingDraft));
     if (pendingDraft.contactEmail.isNotEmpty())
+    {
         submissionObject->setProperty("contactEmail", pendingDraft.contactEmail);
+    }
     if (pendingDraft.screenshotBase64.isNotEmpty())
     {
         submissionObject->setProperty("screenshotMimeType", "image/jpeg");
@@ -532,7 +586,9 @@ void FeedbackComponent::run()
          submissionSucceeded]
         {
             if (safe == nullptr)
+            {
                 return;
+            }
             if (submissionSucceeded)
             {
                 safe->clearDraft();
@@ -551,7 +607,9 @@ void FeedbackComponent::run()
             {
                 auto detail = "Submission failed (HTTP " + juce::String(submissionStatus) + ").";
                 if (submissionError.isNotEmpty())
+                {
                     detail += " " + submissionError;
+                }
                 detail += " Your draft has been preserved.";
                 safe->setSubmissionState(SubmissionState::failed, detail);
             }

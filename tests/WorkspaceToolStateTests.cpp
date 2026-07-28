@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "application/shell/ui/workspace/WorkspaceToolState.h"
+#include "application/shell/ui/workspace/model/WorkspaceToolState.h"
 
 TEST_CASE("dock and float transitions retain the live tool instance", "[workspace]")
 {

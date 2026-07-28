@@ -1,0 +1,85 @@
+name: C++ quality check
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - ".clang-format"
+      - ".clang-tidy"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "scripts/quality/run_clang_format.py"
+      - "scripts/quality/run_clang_tidy.py"
+      - "scripts/build/check-linux-build-dependencies.sh"
+      - ".github/workflows/cpp-quality-check.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpp-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cpp-quality:
+    name: Format and lint changed C++
+    runs-on: ubuntu-24.04
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install analysis dependencies
+        run: |
+          bash scripts/build/check-linux-build-dependencies.sh --install
+          sudo apt-get install --yes ccache clang-format clang-tidy
+
+      - name: Restore compiler cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: cpp-quality-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            cpp-quality-${{ runner.os }}-
+
+      - name: Configure compiler cache
+        run: |
+          ccache --max-size=1G
+          ccache --zero-stats
+
+      - name: Configure compilation database
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Generate JUCE headers and validate compilation
+        run: cmake --build build --target PracticeTakes --parallel
+
+      - name: Report compiler cache performance
+        run: ccache --show-stats
+
+      - name: Check clang-format compliance
+        shell: bash
+        run: |
+          mapfile -t cpp_files < <(find src -type f -name "*.cpp" | sort)
+          mapfile -t header_files < <(find src -type f -name "*.h" | sort)
+          if [ "${#cpp_files[@]}" -eq 0 ]; then
+            echo "::error::No .cpp files discovered under src/ - refusing to report success on zero analyzed files."
+            exit 1
+          fi
+          clang-format --dry-run --Werror --style=file "${cpp_files[@]}" "${header_files[@]}"
+
+      - name: Check clang-tidy findings
+        shell: bash
+        run: |
+          mapfile -t cpp_files < <(find src -type f -name "*.cpp" | sort)
+          if [ "${#cpp_files[@]}" -eq 0 ]; then
+            echo "::error::No .cpp files discovered under src/ - refusing to report success on zero analyzed files."
+            exit 1
+          fi
+          python3 scripts/quality/run_clang_tidy.py "${cpp_files[@]}"
