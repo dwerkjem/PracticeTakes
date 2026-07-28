@@ -1,5 +1,7 @@
 #include "../../../MainComponent.h"
 
+#include "../model/WorkspaceMenuModel.h"
+
 namespace
 {
 constexpr int toolsMenuWidth = 190;
@@ -18,6 +20,12 @@ constexpr int closeHarmonicMenuItemId = 43;
 constexpr int horizontalLayoutMenuItemId = 31;
 constexpr int verticalLayoutMenuItemId = 32;
 constexpr int tabbedLayoutMenuItemId = 33;
+constexpr int saveWorkspaceMenuItemId = 60;
+constexpr int overwriteWorkspaceMenuItemId = 61;
+constexpr int renameWorkspaceMenuItemId = 62;
+constexpr int deleteWorkspaceMenuItemId = 63;
+constexpr int resetWorkspaceMenuItemId = 64;
+constexpr int firstWorkspaceMenuItemId = 1000;
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
 constexpr int performanceLabMenuItemId = 50;
 #endif
@@ -82,6 +90,34 @@ void MainComponent::showToolsMenu()
         tabbedLayoutMenuItemId, "Tabbed", dockedCount >= 2, workspaceLayoutState.isFlattenedTabs());
     menu.addSeparator();
     menu.addSubMenu("Arrange workspace", layoutMenu, canArrangeSplit || dockedCount >= 2);
+
+    const auto workspaceModel = WorkspaceMenuModel::fromCatalog(workspaceCatalog);
+    juce::PopupMenu workspaceMenu;
+    std::vector<std::string> workspaceIds;
+    workspaceIds.reserve(workspaceModel.entries.size());
+    auto addedNamedSeparator = false;
+    for (const auto& entry : workspaceModel.entries)
+    {
+        if (!entry.builtIn && !addedNamedSeparator)
+        {
+            workspaceMenu.addSeparator();
+            addedNamedSeparator = true;
+        }
+        const auto menuItemId = firstWorkspaceMenuItemId + static_cast<int>(workspaceIds.size());
+        workspaceMenu.addItem(
+            menuItemId, juce::String::fromUTF8(entry.name.c_str()), true, entry.selected);
+        workspaceIds.push_back(entry.id);
+    }
+    workspaceMenu.addSeparator();
+    workspaceMenu.addItem(saveWorkspaceMenuItemId, "Save As...", workspaceModel.canSaveAs);
+    workspaceMenu.addItem(
+        overwriteWorkspaceMenuItemId, "Overwrite Current...", workspaceModel.canOverwrite);
+    workspaceMenu.addItem(renameWorkspaceMenuItemId, "Rename Current...", workspaceModel.canRename);
+    workspaceMenu.addItem(deleteWorkspaceMenuItemId, "Delete Current...", workspaceModel.canDelete);
+    workspaceMenu.addSeparator();
+    workspaceMenu.addItem(resetWorkspaceMenuItemId, "Reset to Pitch Practice...");
+    menu.addSeparator();
+    menu.addSubMenu("Workspaces", workspaceMenu);
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
     menu.addSeparator();
     menu.addItem(performanceLabMenuItemId, "Performance Lab");
@@ -92,7 +128,7 @@ void MainComponent::showToolsMenu()
         juce::PopupMenu::Options()
             .withTargetComponent(&toolsButton)
             .withMinimumWidth(toolsMenuWidth),
-        [safeThis](int selectedItemId)
+        [safeThis, workspaceIds = std::move(workspaceIds)](int selectedItemId)
         {
             if (safeThis == nullptr)
             {
@@ -162,6 +198,33 @@ void MainComponent::showToolsMenu()
             else if (selectedItemId == tabbedLayoutMenuItemId)
             {
                 safeThis->setWorkspaceLayout(WorkspaceLayoutState::Layout::tabbed);
+            }
+            else if (
+                selectedItemId >= firstWorkspaceMenuItemId &&
+                selectedItemId < firstWorkspaceMenuItemId + static_cast<int>(workspaceIds.size()))
+            {
+                safeThis->applyWorkspace(workspaceIds[static_cast<std::size_t>(
+                    selectedItemId - firstWorkspaceMenuItemId)]);
+            }
+            else if (selectedItemId == saveWorkspaceMenuItemId)
+            {
+                safeThis->showSaveWorkspaceDialog();
+            }
+            else if (selectedItemId == overwriteWorkspaceMenuItemId)
+            {
+                safeThis->confirmOverwriteWorkspace();
+            }
+            else if (selectedItemId == renameWorkspaceMenuItemId)
+            {
+                safeThis->showRenameWorkspaceDialog();
+            }
+            else if (selectedItemId == deleteWorkspaceMenuItemId)
+            {
+                safeThis->confirmDeleteWorkspace();
+            }
+            else if (selectedItemId == resetWorkspaceMenuItemId)
+            {
+                safeThis->confirmResetWorkspace();
             }
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
             else if (selectedItemId == performanceLabMenuItemId)

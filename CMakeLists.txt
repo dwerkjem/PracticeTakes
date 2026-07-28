@@ -157,6 +157,7 @@ target_sources(PracticeTakes
         src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.h
         src/application/shell/ui/workspace/model/WorkspaceDocuments.h
         src/application/shell/ui/workspace/model/WorkspaceLayoutState.h
+        src/application/shell/ui/workspace/model/WorkspaceMenuModel.h
         src/application/shell/ui/workspace/model/NamedWorkspaceService.h
         src/application/shell/ui/workspace/model/WorkspaceNormalizer.h
         src/application/shell/ui/workspace/model/WorkspaceSnapshotApply.h
@@ -167,6 +168,7 @@ target_sources(PracticeTakes
         src/application/shell/ui/workspace/shell/MainComponentWorkspaceDrag.cpp
         src/application/shell/ui/workspace/shell/MainComponentWorkspaceLayout.cpp
         src/application/shell/ui/workspace/shell/MainComponentWorkspaceMenu.cpp
+        src/application/shell/ui/workspace/shell/MainComponentWorkspaceManagement.cpp
         src/application/shell/ui/workspace/shell/MainComponentWorkspacePresentation.cpp
         src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp
         src/application/theme/Theme.cpp
@@ -282,6 +284,7 @@ if(BUILD_TESTING)
         tests/WorkspaceDocumentsTests.cpp
         tests/WorkspaceRecoveryTests.cpp
         tests/WorkspaceLayoutStateTests.cpp
+        tests/WorkspaceMenuModelTests.cpp
         tests/WorkspacePresentationComponentsTests.cpp
         tests/WorkspaceSnapshotApplyTests.cpp
         tests/WorkspaceSnapshotCaptureTests.cpp

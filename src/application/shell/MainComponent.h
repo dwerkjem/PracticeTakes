@@ -6,6 +6,7 @@
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
 #include "../theme/Theme.h"
+#include "ui/workspace/model/NamedWorkspaceService.h"
 #include "ui/workspace/model/WorkspaceDocuments.h"
 #include "ui/workspace/model/WorkspaceLayoutState.h"
 #include "ui/workspace/model/WorkspaceSessionLifecycle.h"
@@ -86,6 +87,19 @@ class MainComponent final
 
     // Tool and settings windows --------------------------------------------
     void showToolsMenu();
+    void applyWorkspace(const std::string& workspaceId);
+    void showSaveWorkspaceDialog();
+    void showRenameWorkspaceDialog();
+    void confirmOverwriteWorkspace();
+    void confirmDeleteWorkspace();
+    void confirmResetWorkspace();
+    void saveNamedWorkspace(const juce::String& name, bool confirmed);
+    void renameNamedWorkspace(const juce::String& name, bool confirmed);
+    void showWorkspaceResult(
+        const juce::String& action,
+        const NamedWorkspaceService::Result& result,
+        const juce::String& requestedName = {});
+    [[nodiscard]] const NamedWorkspace* activeNamedWorkspace() const;
     void showSettingsMenu();
     void openTool(
         ToolType tool,

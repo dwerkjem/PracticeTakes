@@ -21,7 +21,7 @@ class NamedWorkspaceService
     static constexpr std::size_t maximumNameCharacters = 80;
     static constexpr std::size_t maximumNamedWorkspaces = 128;
 
-    enum class Status
+    enum class ResultStatus
     {
         applied,
         cancelled,
@@ -36,7 +36,7 @@ class NamedWorkspaceService
 
     struct Result
     {
-        Status status = Status::notFound;
+        ResultStatus status = ResultStatus::notFound;
         std::string workspaceId;
     };
 
@@ -51,7 +51,7 @@ class NamedWorkspaceService
     save(WorkspaceCatalog& catalog, const std::optional<std::string>& name, bool confirmed) const
     {
         const auto prepared = prepareName(name);
-        if (prepared.status != Status::applied)
+        if (prepared.status != ResultStatus::applied)
         {
             return prepared;
         }
@@ -61,27 +61,27 @@ class NamedWorkspaceService
         {
             if (!confirmed)
             {
-                return {Status::confirmationRequired, collision->id};
+                return {ResultStatus::confirmationRequired, collision->id};
             }
             collision->name = prepared.workspaceId;
             collision->snapshot = catalog.active;
             catalog.activeSource = collision->id;
-            return {Status::applied, collision->id};
+            return {ResultStatus::applied, collision->id};
         }
 
         if (catalog.named.size() >= maximumNamedWorkspaces)
         {
-            return {Status::catalogFull, {}};
+            return {ResultStatus::catalogFull, {}};
         }
 
         const auto id = uniqueId(catalog);
         if (!id.has_value())
         {
-            return {Status::idGenerationFailed, {}};
+            return {ResultStatus::idGenerationFailed, {}};
         }
         catalog.named.push_back({*id, prepared.workspaceId, catalog.active});
         catalog.activeSource = *id;
-        return {Status::applied, *id};
+        return {ResultStatus::applied, *id};
     }
 
     [[nodiscard]] Result apply(WorkspaceCatalog& catalog, std::string_view id) const
@@ -90,17 +90,17 @@ class NamedWorkspaceService
         {
             catalog.active = builtIn->snapshot;
             catalog.activeSource = builtIn->id;
-            return {Status::applied, builtIn->id};
+            return {ResultStatus::applied, builtIn->id};
         }
 
         const auto workspace = findNamedById(catalog, id);
         if (workspace == catalog.named.end())
         {
-            return {Status::notFound, std::string{id}};
+            return {ResultStatus::notFound, std::string{id}};
         }
         catalog.active = workspace->snapshot;
         catalog.activeSource = workspace->id;
-        return {Status::applied, workspace->id};
+        return {ResultStatus::applied, workspace->id};
     }
 
     [[nodiscard]] Result rename(
@@ -111,17 +111,17 @@ class NamedWorkspaceService
     {
         if (WorkspaceBuiltIns::find(id) != nullptr)
         {
-            return {Status::immutableBuiltIn, std::string{id}};
+            return {ResultStatus::immutableBuiltIn, std::string{id}};
         }
 
         const auto source = findNamedById(catalog, id);
         if (source == catalog.named.end())
         {
-            return {Status::notFound, std::string{id}};
+            return {ResultStatus::notFound, std::string{id}};
         }
 
         const auto prepared = prepareName(name);
-        if (prepared.status != Status::applied)
+        if (prepared.status != ResultStatus::applied)
         {
             return prepared;
         }
@@ -131,7 +131,7 @@ class NamedWorkspaceService
         {
             if (!confirmed)
             {
-                return {Status::confirmationRequired, collision->id};
+                return {ResultStatus::confirmationRequired, collision->id};
             }
 
             const auto sourceId = source->id;
@@ -150,11 +150,11 @@ class NamedWorkspaceService
             {
                 catalog.activeSource.reset();
             }
-            return {Status::applied, sourceId};
+            return {ResultStatus::applied, sourceId};
         }
 
         source->name = prepared.workspaceId;
-        return {Status::applied, source->id};
+        return {ResultStatus::applied, source->id};
     }
 
     [[nodiscard]] Result
@@ -162,21 +162,21 @@ class NamedWorkspaceService
     {
         if (WorkspaceBuiltIns::find(id) != nullptr)
         {
-            return {Status::immutableBuiltIn, std::string{id}};
+            return {ResultStatus::immutableBuiltIn, std::string{id}};
         }
         const auto workspace = findNamedById(catalog, id);
         if (workspace == catalog.named.end())
         {
-            return {Status::notFound, std::string{id}};
+            return {ResultStatus::notFound, std::string{id}};
         }
         if (!confirmed)
         {
-            return {Status::confirmationRequired, workspace->id};
+            return {ResultStatus::confirmationRequired, workspace->id};
         }
 
         workspace->snapshot = catalog.active;
         catalog.activeSource = workspace->id;
-        return {Status::applied, workspace->id};
+        return {ResultStatus::applied, workspace->id};
     }
 
     [[nodiscard]] Result
@@ -184,16 +184,16 @@ class NamedWorkspaceService
     {
         if (WorkspaceBuiltIns::find(id) != nullptr)
         {
-            return {Status::immutableBuiltIn, std::string{id}};
+            return {ResultStatus::immutableBuiltIn, std::string{id}};
         }
         const auto workspace = findNamedById(catalog, id);
         if (workspace == catalog.named.end())
         {
-            return {Status::notFound, std::string{id}};
+            return {ResultStatus::notFound, std::string{id}};
         }
         if (!confirmed)
         {
-            return {Status::confirmationRequired, workspace->id};
+            return {ResultStatus::confirmationRequired, workspace->id};
         }
 
         const auto removedId = workspace->id;
@@ -202,7 +202,7 @@ class NamedWorkspaceService
         {
             catalog.activeSource.reset();
         }
-        return {Status::applied, removedId};
+        return {ResultStatus::applied, removedId};
     }
 
   private:
@@ -235,19 +235,19 @@ class NamedWorkspaceService
     {
         if (!name.has_value())
         {
-            return {Status::cancelled, {}};
+            return {ResultStatus::cancelled, {}};
         }
 
         auto trimmed = trim(*name);
         if (trimmed.empty() || utf8CharacterCount(trimmed) > maximumNameCharacters)
         {
-            return {Status::invalidName, {}};
+            return {ResultStatus::invalidName, {}};
         }
         if (isReservedName(trimmed))
         {
-            return {Status::reservedName, {}};
+            return {ResultStatus::reservedName, {}};
         }
-        return {Status::applied, std::move(trimmed)};
+        return {ResultStatus::applied, std::move(trimmed)};
     }
 
     [[nodiscard]] static std::string trim(std::string_view value)

@@ -21,7 +21,7 @@ TEST_CASE("saving a named workspace trims its name and assigns a stable ID", "[w
 
     const auto result = service.save(catalog, std::string{"  Rehearsal  "}, false);
 
-    CHECK(result.status == NamedWorkspaceService::Status::applied);
+    CHECK(result.status == NamedWorkspaceService::ResultStatus::applied);
     CHECK(result.workspaceId == "generated-id");
     REQUIRE(catalog.named.size() == 2);
     CHECK(catalog.named.back().name == "Rehearsal");
@@ -37,7 +37,7 @@ TEST_CASE("saving can be cancelled without changing the catalog", "[workspace][n
 
     const auto result = service.save(catalog, std::nullopt, false);
 
-    CHECK(result.status == NamedWorkspaceService::Status::cancelled);
+    CHECK(result.status == NamedWorkspaceService::ResultStatus::cancelled);
     CHECK(catalog == before);
 }
 
@@ -51,14 +51,14 @@ TEST_CASE(
 
     const auto pending = service.save(catalog, std::string{"saved spectrum"}, false);
 
-    CHECK(pending.status == NamedWorkspaceService::Status::confirmationRequired);
+    CHECK(pending.status == NamedWorkspaceService::ResultStatus::confirmationRequired);
     CHECK(pending.workspaceId == "saved-spectrum");
     CHECK(catalog == before);
 
     catalog.active = WorkspaceBuiltIns::vocalWarmUp().snapshot;
     const auto overwritten = service.save(catalog, std::string{"SAVED SPECTRUM"}, true);
 
-    CHECK(overwritten.status == NamedWorkspaceService::Status::applied);
+    CHECK(overwritten.status == NamedWorkspaceService::ResultStatus::applied);
     CHECK(overwritten.workspaceId == "saved-spectrum");
     REQUIRE(catalog.named.size() == 1);
     CHECK(catalog.named.front().snapshot == catalog.active);
@@ -75,8 +75,8 @@ TEST_CASE("built-in names are reserved case insensitively", "[workspace][named]"
     const auto renameResult =
         service.rename(catalog, "saved-spectrum", std::string{"VOCAL WARM-UP"}, true);
 
-    CHECK(saveResult.status == NamedWorkspaceService::Status::reservedName);
-    CHECK(renameResult.status == NamedWorkspaceService::Status::reservedName);
+    CHECK(saveResult.status == NamedWorkspaceService::ResultStatus::reservedName);
+    CHECK(renameResult.status == NamedWorkspaceService::ResultStatus::reservedName);
     CHECK(catalog == before);
 }
 
@@ -88,14 +88,14 @@ TEST_CASE(
     NamedWorkspaceService service([] { return std::string{"unused-id"}; });
 
     const auto namedResult = service.apply(catalog, "saved-spectrum");
-    REQUIRE(namedResult.status == NamedWorkspaceService::Status::applied);
+    REQUIRE(namedResult.status == NamedWorkspaceService::ResultStatus::applied);
     CHECK(catalog.active == catalog.named.front().snapshot);
     CHECK(catalog.activeSource == "saved-spectrum");
     catalog.active.focusedTool = "harmonic-analyzer";
     CHECK(catalog.named.front().snapshot.focusedTool == "spectrogram");
 
     const auto builtInResult = service.apply(catalog, WorkspaceBuiltIns::pitchPractice().id);
-    REQUIRE(builtInResult.status == NamedWorkspaceService::Status::applied);
+    REQUIRE(builtInResult.status == NamedWorkspaceService::ResultStatus::applied);
     CHECK(catalog.active == WorkspaceBuiltIns::pitchPractice().snapshot);
     CHECK(catalog.activeSource == WorkspaceBuiltIns::pitchPractice().id);
     catalog.active.focusedTool = "spectrogram";
@@ -113,19 +113,19 @@ TEST_CASE(
 
     const auto renamed =
         service.rename(catalog, "saved-spectrum", std::string{" Analysis "}, false);
-    REQUIRE(renamed.status == NamedWorkspaceService::Status::applied);
+    REQUIRE(renamed.status == NamedWorkspaceService::ResultStatus::applied);
     CHECK(catalog.named.front().id == "saved-spectrum");
     CHECK(catalog.named.front().name == "Analysis");
     CHECK(catalog.activeSource == "saved-spectrum");
 
     const auto beforeCollision = catalog;
     const auto pending = service.rename(catalog, "saved-spectrum", std::string{"WARMUP"}, false);
-    CHECK(pending.status == NamedWorkspaceService::Status::confirmationRequired);
+    CHECK(pending.status == NamedWorkspaceService::ResultStatus::confirmationRequired);
     CHECK(pending.workspaceId == "warmup");
     CHECK(catalog == beforeCollision);
 
     const auto overwritten = service.rename(catalog, "saved-spectrum", std::string{"Warmup"}, true);
-    CHECK(overwritten.status == NamedWorkspaceService::Status::applied);
+    CHECK(overwritten.status == NamedWorkspaceService::ResultStatus::applied);
     REQUIRE(catalog.named.size() == 1);
     CHECK(catalog.named.front().id == "saved-spectrum");
     CHECK(catalog.named.front().name == "Warmup");
@@ -141,7 +141,7 @@ TEST_CASE(
 
     const auto result = service.overwrite(catalog, "saved-spectrum", true);
 
-    CHECK(result.status == NamedWorkspaceService::Status::applied);
+    CHECK(result.status == NamedWorkspaceService::ResultStatus::applied);
     CHECK(catalog.named.front().id == "saved-spectrum");
     CHECK(catalog.named.front().name == "Saved Spectrum");
     CHECK(catalog.named.front().snapshot == catalog.active);
@@ -158,11 +158,11 @@ TEST_CASE(
     NamedWorkspaceService service([] { return std::string{"unused-id"}; });
 
     const auto pending = service.remove(catalog, "saved-spectrum", false);
-    CHECK(pending.status == NamedWorkspaceService::Status::confirmationRequired);
+    CHECK(pending.status == NamedWorkspaceService::ResultStatus::confirmationRequired);
     CHECK(catalog.named.size() == 1);
 
     const auto removed = service.remove(catalog, "saved-spectrum", true);
-    CHECK(removed.status == NamedWorkspaceService::Status::applied);
+    CHECK(removed.status == NamedWorkspaceService::ResultStatus::applied);
     CHECK(catalog.named.empty());
     CHECK_FALSE(catalog.activeSource.has_value());
     CHECK(catalog.active == activeBefore);
@@ -176,20 +176,21 @@ TEST_CASE("invalid names and missing targets do not mutate the catalog", "[works
 
     CHECK(
         service.save(catalog, std::string{"   "}, false).status ==
-        NamedWorkspaceService::Status::invalidName);
+        NamedWorkspaceService::ResultStatus::invalidName);
     CHECK(
         service.save(catalog, std::string(81, 'x'), false).status ==
-        NamedWorkspaceService::Status::invalidName);
-    CHECK(service.apply(catalog, "missing").status == NamedWorkspaceService::Status::notFound);
+        NamedWorkspaceService::ResultStatus::invalidName);
+    CHECK(
+        service.apply(catalog, "missing").status == NamedWorkspaceService::ResultStatus::notFound);
     CHECK(
         service.rename(catalog, "missing", std::string{"Name"}, false).status ==
-        NamedWorkspaceService::Status::notFound);
+        NamedWorkspaceService::ResultStatus::notFound);
     CHECK(
         service.overwrite(catalog, "missing", true).status ==
-        NamedWorkspaceService::Status::notFound);
+        NamedWorkspaceService::ResultStatus::notFound);
     CHECK(
         service.remove(catalog, WorkspaceBuiltIns::pitchPractice().id, true).status ==
-        NamedWorkspaceService::Status::immutableBuiltIn);
+        NamedWorkspaceService::ResultStatus::immutableBuiltIn);
     CHECK(catalog == before);
 }
 
@@ -201,7 +202,7 @@ TEST_CASE(
     NamedWorkspaceService service([] { return std::string{"boundary-id"}; });
 
     const auto boundary = service.save(catalog, std::string(80, 'x'), false);
-    REQUIRE(boundary.status == NamedWorkspaceService::Status::applied);
+    REQUIRE(boundary.status == NamedWorkspaceService::ResultStatus::applied);
     CHECK(catalog.named.front().name.size() == 80);
 
     catalog.named.clear();
@@ -214,7 +215,7 @@ TEST_CASE(
 
     const auto overflow = service.save(catalog, std::string{"One Too Many"}, false);
 
-    CHECK(overflow.status == NamedWorkspaceService::Status::catalogFull);
+    CHECK(overflow.status == NamedWorkspaceService::ResultStatus::catalogFull);
     CHECK(catalog == before);
 }
 
@@ -228,8 +229,8 @@ TEST_CASE("rename and overwrite cancellation leave the catalog unchanged", "[wor
     const auto renameResult = service.rename(catalog, "saved-spectrum", std::nullopt, false);
     const auto overwriteResult = service.overwrite(catalog, "saved-spectrum", false);
 
-    CHECK(renameResult.status == NamedWorkspaceService::Status::cancelled);
-    CHECK(overwriteResult.status == NamedWorkspaceService::Status::confirmationRequired);
+    CHECK(renameResult.status == NamedWorkspaceService::ResultStatus::cancelled);
+    CHECK(overwriteResult.status == NamedWorkspaceService::ResultStatus::confirmationRequired);
     CHECK(catalog == before);
 }
 
@@ -246,7 +247,7 @@ TEST_CASE("generated workspace IDs retry collisions", "[workspace][named]")
 
     const auto result = service.save(catalog, std::string{"Rehearsal"}, false);
 
-    CHECK(result.status == NamedWorkspaceService::Status::applied);
+    CHECK(result.status == NamedWorkspaceService::ResultStatus::applied);
     CHECK(result.workspaceId == "unique-id");
     CHECK(attempts == 2);
 }
