@@ -29,8 +29,8 @@
 
 ## 4. Named Workspace Management
 
-- [ ] 4.1 Add service tests for save, apply, rename, overwrite, delete, case-insensitive name collisions, reserved built-in names, cancellation, and deletion of the active source
-- [ ] 4.2 Implement named-workspace lifecycle operations over stable IDs and independent working copies
+- [x] 4.1 Add service tests for save, apply, rename, overwrite, delete, case-insensitive name collisions, reserved built-in names, cancellation, and deletion of the active source
+- [x] 4.2 Implement named-workspace lifecycle operations over stable IDs and independent working copies
 - [ ] 4.3 Add `Tools > Workspaces` entries for built-ins and named workspaces plus Save As, Overwrite, Rename, Delete, and Reset commands
 - [ ] 4.4 Add name-entry, overwrite, delete, and reset confirmations with accessible labels, clear disabled states, and focused success or error reporting
 

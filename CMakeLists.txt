@@ -157,6 +157,7 @@ target_sources(PracticeTakes
         src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.h
         src/application/shell/ui/workspace/model/WorkspaceDocuments.h
         src/application/shell/ui/workspace/model/WorkspaceLayoutState.h
+        src/application/shell/ui/workspace/model/NamedWorkspaceService.h
         src/application/shell/ui/workspace/model/WorkspaceNormalizer.h
         src/application/shell/ui/workspace/model/WorkspaceSnapshotApply.h
         src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h
@@ -266,6 +267,7 @@ if(BUILD_TESTING)
         tests/HarmonicAnalyzerTests.cpp
         tests/InTreeOptimizationStrategyTests.cpp
         tests/NonRealTimeTelemetryCollectorTests.cpp
+        tests/NamedWorkspaceServiceTests.cpp
         tests/PerformanceLabControllerTests.cpp
         tests/PitchDetectorTests.cpp
         tests/PlatformProvenanceProviderTests.cpp
