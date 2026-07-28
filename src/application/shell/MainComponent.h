@@ -8,6 +8,7 @@
 #include "../theme/Theme.h"
 #include "ui/workspace/model/WorkspaceDocuments.h"
 #include "ui/workspace/model/WorkspaceLayoutState.h"
+#include "ui/workspace/model/WorkspaceSessionLifecycle.h"
 #include "ui/workspace/model/WorkspaceToolState.h"
 
 #include <functional>
@@ -38,6 +39,7 @@ class MainComponent final
         std::function<void()> fullscreenHandler,
         std::function<void()> closeHandler);
     [[nodiscard]] AppSettings::FullscreenMode fullscreenMode() const noexcept;
+    void restoreLoadedWorkspace();
     void initialiseAudioAfterLaunch();
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
     void automatePerformanceLab(std::function<void(bool)> completion);
@@ -203,6 +205,7 @@ class MainComponent final
     WorkspaceToolState spectrogramState;
     WorkspaceToolState harmonicState;
     WorkspaceLayoutState workspaceLayoutState;
+    WorkspaceCatalog workspaceCatalog;
     WorkspaceSnapshot activeWorkspaceSnapshot;
     DropTarget activeDropTarget;
     AppDefaults::TunerSettings savedTunerSettings = AppDefaults::tunerDefaults();

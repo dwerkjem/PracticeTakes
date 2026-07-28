@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include "../application/shell/MainComponent.h"
+#include "../application/shell/WorkspaceStartupSequence.h"
 #include "../application/shell/ui/main_window/MainTitleBar.h"
 #include "../features/performance/ApplicationLaunchTimer.h"
 
@@ -142,9 +143,14 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             setResizable(true, false);
             setResizeLimits(980, 600, 3200, 2200);
             centreWithSize(getWidth(), getHeight());
-            setVisible(true);
-            performance::markMainWindowVisible();
-            content->initialiseAudioAfterLaunch();
+            WorkspaceStartupSequence::run(
+                [this] { content->restoreLoadedWorkspace(); },
+                [this]
+                {
+                    setVisible(true);
+                    performance::markMainWindowVisible();
+                },
+                [this] { content->initialiseAudioAfterLaunch(); });
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
             if (automatePerformanceLab)
             {

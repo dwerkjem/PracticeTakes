@@ -208,26 +208,9 @@ void MainComponent::resetAudio()
 
 void MainComponent::resetLayout()
 {
-    savedTunerBounds = {};
-    savedSpectrogramBounds = {};
-    savedSettingsBounds = {};
-
-    if (tunerState.presentation() == WorkspaceToolState::Presentation::floating)
-    {
-        tunerWindow->centreWithSize(920, 760);
-    }
-    if (spectrogramState.presentation() == WorkspaceToolState::Presentation::floating)
-    {
-        spectrogramWindow->centreWithSize(980, 650);
-    }
-    if (harmonicState.presentation() == WorkspaceToolState::Presentation::floating)
-    {
-        harmonicWindow->centreWithSize(980, 700);
-    }
-    if (settingsWindow != nullptr)
-    {
-        settingsWindow->centreWithSize(900, 760);
-    }
+    WorkspaceSessionLifecycle::resetActive(workspaceCatalog);
+    static_cast<void>(applyWorkspaceSnapshot(workspaceCatalog.active));
+    saveSettings();
 }
 
 void MainComponent::resetAll()
@@ -311,6 +294,8 @@ AppSettings::State MainComponent::captureSettingsState()
         state.recentTool = AppSettings::RecentTool::harmonics;
     }
     state.fullscreenMode = selectedFullscreenMode;
+    WorkspaceSessionLifecycle::captureActive(workspaceCatalog, activeWorkspaceSnapshot);
+    state.workspaceCatalog = workspaceCatalog;
     if (pendingAudioDeviceState != nullptr)
     {
         state.audioDeviceState = pendingAudioDeviceState->toString();
@@ -358,6 +343,7 @@ void MainComponent::loadSettings()
     audioInputService.setMuted(loaded.state.microphoneMuted);
     audioInputService.setInputGain(static_cast<float>(loaded.state.inputGain));
     savedTunerSettings = loaded.state.tuner;
+    workspaceCatalog = loaded.state.workspaceCatalog;
     if (loaded.state.recentTool == AppSettings::RecentTool::spectrogram)
     {
         currentTool = ToolType::spectrogram;
@@ -399,6 +385,30 @@ void MainComponent::loadSettings()
     {
         AppSettings::store(*settingsFile, loaded.state);
         settingsFile->saveIfNeeded();
+    }
+}
+
+void MainComponent::restoreLoadedWorkspace()
+{
+    std::vector<WorkspaceBounds> displayAreas;
+    const auto displays = juce::Desktop::getInstance().getDisplays().getRectangleList(true);
+    for (const auto& area : displays)
+    {
+        displayAreas.push_back({area.getX(), area.getY(), area.getWidth(), area.getHeight()});
+    }
+
+    auto restored = WorkspaceSessionLifecycle::restore(std::move(workspaceCatalog), displayAreas);
+    workspaceCatalog = std::move(restored.catalog);
+    if (!applyWorkspaceSnapshot(workspaceCatalog.active))
+    {
+        WorkspaceSessionLifecycle::resetActive(workspaceCatalog);
+        static_cast<void>(applyWorkspaceSnapshot(workspaceCatalog.active));
+        restored.recovered = true;
+    }
+
+    if (restored.recovered)
+    {
+        saveSettings();
     }
 }
 

@@ -135,6 +135,7 @@ target_sources(PracticeTakes
         src/application/configuration/SettingsPersistence.h
         src/application/shell/MainComponent.h
         src/application/shell/MainComponentLifecycle.cpp
+        src/application/shell/WorkspaceStartupSequence.h
         src/application/shell/state/appearance/MainComponentAppearance.cpp
         src/application/shell/state/audio/MainComponentAudioState.cpp
         src/application/shell/ui/main_window/MainTitleBar.h
@@ -160,6 +161,7 @@ target_sources(PracticeTakes
         src/application/shell/ui/workspace/model/WorkspaceSnapshotApply.h
         src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h
         src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h
+        src/application/shell/ui/workspace/model/WorkspaceSessionLifecycle.h
         src/application/shell/ui/workspace/model/WorkspaceToolState.h
         src/application/shell/ui/workspace/shell/MainComponentWorkspaceDrag.cpp
         src/application/shell/ui/workspace/shell/MainComponentWorkspaceLayout.cpp
@@ -281,6 +283,8 @@ if(BUILD_TESTING)
         tests/WorkspacePresentationComponentsTests.cpp
         tests/WorkspaceSnapshotApplyTests.cpp
         tests/WorkspaceSnapshotCaptureTests.cpp
+        tests/WorkspaceSessionLifecycleTests.cpp
+        tests/WorkspaceStartupSequenceTests.cpp
         tests/WorkspaceToolStateTests.cpp
         src/application/configuration/SettingsPersistence.cpp
         src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
