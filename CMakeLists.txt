@@ -133,8 +133,11 @@ target_sources(PracticeTakes
         src/application/configuration/AppDefaults.h
         src/application/configuration/SettingsPersistence.cpp
         src/application/configuration/SettingsPersistence.h
+        src/application/configuration/SettingsImportPersistence.h
+        src/application/configuration/SettingsImportTransaction.h
         src/application/configuration/SettingsTransferCodec.cpp
         src/application/configuration/SettingsTransferCodec.h
+        src/application/configuration/SettingsTransferFile.h
         src/application/shell/MainComponent.h
         src/application/shell/MainComponentLifecycle.cpp
         src/application/shell/WorkspaceStartupSequence.h

@@ -87,7 +87,16 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             return;
         }
 
-        const auto automatePerformanceLab = argument == "--automate-performance-lab";
+        juce::StringArray arguments;
+        arguments.addTokens(argument, true);
+        const auto automatePerformanceLab = arguments.contains("--automate-performance-lab");
+        const auto muteMicrophoneForSession = arguments.contains("--mute-microphone");
+        juce::String uiValidationScenario;
+        if (const auto scenarioIndex = arguments.indexOf("--ui-validation-scenario");
+            scenarioIndex >= 0 && scenarioIndex + 1 < arguments.size())
+        {
+            uiValidationScenario = arguments[scenarioIndex + 1];
+        }
 #if !PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
         if (automatePerformanceLab)
         {
@@ -100,7 +109,8 @@ class PracticeTakesApplication final : public juce::JUCEApplication
 #endif
         const auto windowTitle = getApplicationName() + " v" + getApplicationVersion();
 
-        mainWindow = std::make_unique<MainWindow>(windowTitle, automatePerformanceLab);
+        mainWindow = std::make_unique<MainWindow>(
+            windowTitle, automatePerformanceLab, muteMicrophoneForSession, uiValidationScenario);
     }
 
     void shutdown() override
@@ -120,7 +130,11 @@ class PracticeTakesApplication final : public juce::JUCEApplication
     class MainWindow final : public juce::DocumentWindow, private juce::Timer
     {
       public:
-        MainWindow(const juce::String& title, bool automatePerformanceLab)
+        MainWindow(
+            const juce::String& title,
+            bool automatePerformanceLab,
+            bool muteMicrophoneForSession,
+            const juce::String& uiValidationScenario)
             : DocumentWindow(
                   title,
                   juce::Colour::fromRGB(18, 20, 27),
@@ -128,7 +142,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         {
             setUsingNativeTitleBar(false);
 
-            content = new MainComponent();
+            content = new MainComponent(muteMicrophoneForSession);
             setContentOwned(content, true);
 
             auto customTitleBar = content->createTitleBar(
@@ -151,6 +165,10 @@ class PracticeTakesApplication final : public juce::JUCEApplication
                     performance::markMainWindowVisible();
                 },
                 [this] { content->initialiseAudioAfterLaunch(); });
+            if (uiValidationScenario.isNotEmpty())
+            {
+                content->runUiValidationScenario(uiValidationScenario);
+            }
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
             if (automatePerformanceLab)
             {

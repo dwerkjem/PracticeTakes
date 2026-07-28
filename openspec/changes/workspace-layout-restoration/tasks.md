@@ -37,27 +37,27 @@
 ## 5. Portable Settings Bundle
 
 - [x] 5.1 Add transfer-codec tests for a deterministic `.ptsettings` JSON round trip containing appearance, audio, window, feedback-invitation preference, tool settings, active workspace, and named workspaces
-- [ ] 5.2 Add privacy tests proving export excludes feedback drafts, contact information, installation identity, use counts, invitation history, unknown native properties, logs, benchmarks, and analysis data
-- [ ] 5.3 Implement the bounded, versioned settings-bundle encoder from explicit typed allowlisted fields without enumerating the native `PropertySet`
-- [ ] 5.4 Add decoder tests for malformed input, wrong format markers, missing or invalid required fields, unknown fields, supported older migrations, unsupported newer schemas, document-size limits, and duplicate or conflicting workspace names
-- [ ] 5.5 Implement transfer-schema migration, typed decoding, workspace normalization, actionable validation errors, and safe audio-device and display fallback
-- [ ] 5.6 Add file-operation tests for chooser cancellation, temporary-file cleanup, write failure, and atomic destination replacement
-- [ ] 5.7 Implement asynchronous `.ptsettings` export with a native chooser, temporary sibling file, flush, atomic replacement, and user-visible result reporting
+- [x] 5.2 Add privacy tests proving export excludes feedback drafts, contact information, installation identity, use counts, invitation history, unknown native properties, logs, benchmarks, and analysis data
+- [x] 5.3 Implement the bounded, versioned settings-bundle encoder from explicit typed allowlisted fields without enumerating the native `PropertySet`
+- [x] 5.4 Add decoder tests for malformed input, wrong format markers, missing or invalid required fields, unknown fields, supported older migrations, unsupported newer schemas, document-size limits, and duplicate or conflicting workspace names
+- [x] 5.5 Implement transfer-schema migration, typed decoding, workspace normalization, actionable validation errors, and safe audio-device and display fallback
+- [x] 5.6 Add file-operation tests for chooser cancellation, temporary-file cleanup, write failure, and atomic destination replacement
+- [x] 5.7 Implement asynchronous `.ptsettings` export with a native chooser, temporary sibling file, flush, atomic replacement, and user-visible result reporting
 
 ## 6. Transactional Settings Import
 
-- [ ] 6.1 Add transaction tests for pre-confirmation non-mutation, confirmation cancellation, complete replacement, preservation of non-transfer native properties, immediate live application, and restart persistence
-- [ ] 6.2 Add failure-injection tests proving live-apply and persistence failures restore the complete prior live state while leaving the prior settings file intact
-- [ ] 6.3 Implement the import coordinator with bounded read, migration and validation into temporary state, pre-import snapshot capture, auto-save suppression, atomic persistence, and rollback
-- [ ] 6.4 Add Settings controls for Import Settings and Export Settings using asynchronous native choosers and keyboard-accessible actions
-- [ ] 6.5 Show a validated replacement summary with imported theme, audio preference, active workspace, and named-workspace count, then require explicit confirmation before import
-- [ ] 6.6 Apply confirmed appearance, audio preference, fullscreen behavior, feedback-invitation preference, tool settings, and workspace catalog immediately while preserving feedback drafts, identity, counters, and history
+- [x] 6.1 Add transaction tests for pre-confirmation non-mutation, confirmation cancellation, complete replacement, preservation of non-transfer native properties, immediate live application, and restart persistence
+- [x] 6.2 Add failure-injection tests proving live-apply and persistence failures restore the complete prior live state while leaving the prior settings file intact
+- [x] 6.3 Implement the import coordinator with bounded read, migration and validation into temporary state, pre-import snapshot capture, auto-save suppression, atomic persistence, and rollback
+- [x] 6.4 Add Settings controls for Import Settings and Export Settings using asynchronous native choosers and keyboard-accessible actions
+- [x] 6.5 Show a validated replacement summary with imported theme, audio preference, active workspace, and named-workspace count, then require explicit confirmation before import
+- [x] 6.6 Apply confirmed appearance, audio preference, fullscreen behavior, feedback-invitation preference, tool settings, and workspace catalog immediately while preserving feedback drafts, identity, counters, and history
 
 ## 7. Documentation and Regression Validation
 
-- [ ] 7.1 Update settings and user documentation with built-in and named workspace behavior, reset semantics, `.ptsettings` export contents and exclusions, replacement import behavior, compatibility errors, and unavailable-device fallback
-- [ ] 7.2 Build the application and run the focused workspace, settings-persistence, transfer-codec, migration, and transaction test suites
-- [ ] 7.3 Run the complete CTest suite and resolve only regressions caused by this change
-- [ ] 7.4 Generate approved first-launch and representative restored-workspace goldens after a 7-second settle with the pointer parked and title-bar pixels excluded
-- [ ] 7.5 Run process-owned exact-golden launch validation against those goldens, verify a visible responsive workspace, and record time-to-exact-match against the current 414.134 ms usable-time baseline
-- [ ] 7.6 Verify import and named-workspace workflows visually at desktop and constrained window sizes, including confirmation, validation error, rollback error, long names, disconnected-display recovery, and pointer-insensitive comparisons
+- [x] 7.1 Update settings and user documentation with built-in and named workspace behavior, reset semantics, `.ptsettings` export contents and exclusions, replacement import behavior, compatibility errors, and unavailable-device fallback
+- [x] 7.2 Build the application and run the focused workspace, settings-persistence, transfer-codec, migration, and transaction test suites
+- [x] 7.3 Run the complete CTest suite and resolve only regressions caused by this change
+- [x] 7.4 Generate approved first-launch and representative restored-workspace goldens after a 7-second settle with the pointer parked and title-bar pixels excluded
+- [x] 7.5 Run process-owned exact-golden launch validation against those goldens, verify a visible responsive workspace, and record time-to-exact-match against the current 414.134 ms usable-time baseline
+- [x] 7.6 Verify import and named-workspace workflows visually at desktop and constrained window sizes, including confirmation, validation error, rollback error, long names, disconnected-display recovery, and pointer-insensitive comparisons

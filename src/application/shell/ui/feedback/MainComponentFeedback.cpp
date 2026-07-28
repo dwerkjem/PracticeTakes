@@ -142,6 +142,7 @@ void MainComponent::maybeOfferFeedbackInvitation()
 
 void MainComponent::setFeedbackInvitationsDisabled(bool disabled)
 {
+    feedbackInvitationsDisabledState = disabled;
     if (auto* settingsFile = applicationProperties.getUserSettings())
     {
         settingsFile->setValue(feedbackInvitationsDisabledKey, disabled);
@@ -155,9 +156,5 @@ void MainComponent::setFeedbackInvitationsDisabled(bool disabled)
 
 bool MainComponent::feedbackInvitationsDisabled()
 {
-    if (auto* settingsFile = applicationProperties.getUserSettings())
-    {
-        return settingsFile->getBoolValue(feedbackInvitationsDisabledKey, false);
-    }
-    return false;
+    return feedbackInvitationsDisabledState;
 }
