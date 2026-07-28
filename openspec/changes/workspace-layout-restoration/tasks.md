@@ -31,12 +31,12 @@
 
 - [x] 4.1 Add service tests for save, apply, rename, overwrite, delete, case-insensitive name collisions, reserved built-in names, cancellation, and deletion of the active source
 - [x] 4.2 Implement named-workspace lifecycle operations over stable IDs and independent working copies
-- [ ] 4.3 Add `Tools > Workspaces` entries for built-ins and named workspaces plus Save As, Overwrite, Rename, Delete, and Reset commands
-- [ ] 4.4 Add name-entry, overwrite, delete, and reset confirmations with accessible labels, clear disabled states, and focused success or error reporting
+- [x] 4.3 Add `Tools > Workspaces` entries for built-ins and named workspaces plus Save As, Overwrite, Rename, Delete, and Reset commands
+- [x] 4.4 Add name-entry, overwrite, delete, and reset confirmations with accessible labels, clear disabled states, and focused success or error reporting
 
 ## 5. Portable Settings Bundle
 
-- [ ] 5.1 Add transfer-codec tests for a deterministic `.ptsettings` JSON round trip containing appearance, audio, window, feedback-invitation preference, tool settings, active workspace, and named workspaces
+- [x] 5.1 Add transfer-codec tests for a deterministic `.ptsettings` JSON round trip containing appearance, audio, window, feedback-invitation preference, tool settings, active workspace, and named workspaces
 - [ ] 5.2 Add privacy tests proving export excludes feedback drafts, contact information, installation identity, use counts, invitation history, unknown native properties, logs, benchmarks, and analysis data
 - [ ] 5.3 Implement the bounded, versioned settings-bundle encoder from explicit typed allowlisted fields without enumerating the native `PropertySet`
 - [ ] 5.4 Add decoder tests for malformed input, wrong format markers, missing or invalid required fields, unknown fields, supported older migrations, unsupported newer schemas, document-size limits, and duplicate or conflicting workspace names

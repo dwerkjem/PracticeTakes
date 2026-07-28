@@ -133,6 +133,8 @@ target_sources(PracticeTakes
         src/application/configuration/AppDefaults.h
         src/application/configuration/SettingsPersistence.cpp
         src/application/configuration/SettingsPersistence.h
+        src/application/configuration/SettingsTransferCodec.cpp
+        src/application/configuration/SettingsTransferCodec.h
         src/application/shell/MainComponent.h
         src/application/shell/MainComponentLifecycle.cpp
         src/application/shell/WorkspaceStartupSequence.h
@@ -275,6 +277,7 @@ if(BUILD_TESTING)
         tests/PlatformProvenanceProviderTests.cpp
         tests/RealTimeEventCaptureTests.cpp
         tests/SettingsPersistenceTests.cpp
+        tests/SettingsTransferCodecTests.cpp
         tests/StrategyRegistryTests.cpp
         tests/SustainedAudioAnalysisScenarioTests.cpp
         tests/ThemeContrastTests.cpp
@@ -292,6 +295,7 @@ if(BUILD_TESTING)
         tests/WorkspaceStartupSequenceTests.cpp
         tests/WorkspaceToolStateTests.cpp
         src/application/configuration/SettingsPersistence.cpp
+        src/application/configuration/SettingsTransferCodec.cpp
         src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
         src/application/theme/Theme.cpp
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
