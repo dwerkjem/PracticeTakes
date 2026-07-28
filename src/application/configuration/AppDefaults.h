@@ -4,7 +4,7 @@
 
 namespace AppDefaults
 {
-inline constexpr int schemaVersion = 4;
+inline constexpr int schemaVersion = 5;
 inline constexpr Theme theme = Theme::light;
 
 namespace Audio

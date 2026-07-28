@@ -22,8 +22,8 @@
 
 - [x] 3.1 Add codec tests for deterministic workspace-catalog JSON round trips, malformed documents, unsupported versions, bounded input, recoverable named-layout failures, and unrecoverable active-layout fallback
 - [x] 3.2 Implement the versioned workspace catalog codec and add it as one owned value in `AppSettings::State`
-- [ ] 3.3 Add migration tests from settings schema 4 that preserve valid global values, tuner settings, and legacy floating bounds while creating a Pitch Practice active workspace
-- [ ] 3.4 Increment the native settings schema and implement migration, owned-key storage, corruption recovery, and cleanup of successfully migrated legacy layout keys
+- [x] 3.3 Add migration tests from settings schema 4 that preserve valid global values, tuner settings, and legacy floating bounds while creating a Pitch Practice active workspace
+- [x] 3.4 Increment the native settings schema and implement migration, owned-key storage, corruption recovery, and cleanup of successfully migrated legacy layout keys
 - [ ] 3.5 Add startup and shutdown tests for first launch, active-session restart, selected tabs, divider ratios, floating windows, disconnected displays, missing tools, and deferred audio initialization
 - [ ] 3.6 Restore the active workspace during shell startup, persist active changes through normal settings saves, and make reset replace only the active workspace with Pitch Practice
 

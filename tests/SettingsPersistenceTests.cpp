@@ -2,6 +2,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "application/configuration/SettingsPersistence.h"
+#include "application/shell/ui/workspace/model/WorkspaceBuiltIns.h"
 
 namespace
 {
@@ -47,6 +48,8 @@ TEST_CASE("normal settings survive an atomic file round trip", "[settings][persi
     expected.settingsBounds = "50 60 900 760";
     expected.recentTool = AppSettings::RecentTool::spectrogram;
     expected.fullscreenMode = AppSettings::FullscreenMode::kiosk;
+    expected.workspaceCatalog.active = WorkspaceBuiltIns::spectrumAnalysis().snapshot;
+    expected.workspaceCatalog.activeSource = WorkspaceBuiltIns::spectrumAnalysis().id;
 
     {
         juce::PropertiesFile writer(temporary.path, settingsOptions());
@@ -78,6 +81,7 @@ TEST_CASE("normal settings survive an atomic file round trip", "[settings][persi
     CHECK(loaded.state.settingsBounds == expected.settingsBounds);
     CHECK(loaded.state.recentTool == expected.recentTool);
     CHECK(loaded.state.fullscreenMode == expected.fullscreenMode);
+    CHECK(loaded.state.workspaceCatalog == expected.workspaceCatalog);
 }
 
 TEST_CASE("schema one settings migrate with safe defaults for new fields", "[settings][migration]")
@@ -105,6 +109,180 @@ TEST_CASE("schema one settings migrate with safe defaults for new fields", "[set
     CHECK(loaded.state.tunerBounds == "10 20 920 760");
 }
 
+TEST_CASE(
+    "schema four settings migrate into Pitch Practice without losing valid preferences",
+    "[settings][migration][workspace]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile legacy(temporary.path, settingsOptions());
+        legacy.setValue("settings.schema", 4);
+        legacy.setValue("global.theme", static_cast<int>(Theme::dark));
+        legacy.setValue("audio.muted", true);
+        legacy.setValue("audio.inputGain", 0.75);
+        legacy.setValue("audio.deviceState", "<DEVICESETUP deviceType=\"Test\"/>");
+        legacy.setValue("tuner.displayMode", 3);
+        legacy.setValue("tuner.easing", 0.45);
+        legacy.setValue("tuner.averaging", 9.0);
+        legacy.setValue("tuner.noteSwitch", 0.8);
+        legacy.setValue("tuner.dropout", 6.0);
+        legacy.setValue("tuner.graphDuration", 28.0);
+        legacy.setValue("layout.tuner", "10 20 920 760");
+        legacy.setValue("layout.spectrogram", "30 40 980 650");
+        legacy.setValue("layout.harmonics", "40 50 980 700");
+        legacy.setValue("layout.settings", "50 60 900 760");
+        legacy.setValue(
+            "window.fullscreenMode", static_cast<int>(AppSettings::FullscreenMode::kiosk));
+        REQUIRE(legacy.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    REQUIRE(loaded.status == AppSettings::LoadStatus::migrated);
+    CHECK(loaded.state.theme == Theme::dark);
+    CHECK(loaded.state.microphoneMuted);
+    CHECK(loaded.state.inputGain == Catch::Approx(0.75));
+    CHECK(loaded.state.audioDeviceState == "<DEVICESETUP deviceType=\"Test\"/>");
+    CHECK(loaded.state.fullscreenMode == AppSettings::FullscreenMode::kiosk);
+    CHECK(loaded.state.tuner.displayMode == 3);
+    CHECK(loaded.state.tuner.easing == Catch::Approx(0.45));
+    CHECK(loaded.state.tuner.averaging == Catch::Approx(9.0));
+    CHECK(loaded.state.tuner.noteSwitchSemitones == Catch::Approx(0.8));
+    CHECK(loaded.state.tuner.dropoutFrames == Catch::Approx(6.0));
+    CHECK(loaded.state.tuner.graphDurationSeconds == Catch::Approx(28.0));
+    CHECK(loaded.state.tunerBounds == "10 20 920 760");
+    CHECK(loaded.state.spectrogramBounds == "30 40 980 650");
+    CHECK(loaded.state.harmonicBounds == "40 50 980 700");
+    CHECK(loaded.state.settingsBounds == "50 60 900 760");
+
+    const auto& catalog = loaded.state.workspaceCatalog;
+    CHECK(catalog.activeSource == WorkspaceBuiltIns::pitchPractice().id);
+    CHECK(catalog.active.dockRoot == WorkspaceBuiltIns::pitchPractice().snapshot.dockRoot);
+    CHECK(catalog.active.floating.empty());
+    CHECK(catalog.active.focusedTool == "tuner");
+    CHECK(catalog.named.empty());
+
+    const auto tunerPayload = catalog.active.toolSettings.find("tuner");
+    REQUIRE(tunerPayload != catalog.active.toolSettings.end());
+    REQUIRE(tunerPayload->second.version == 1);
+    const auto tunerSettings = juce::JSON::parse(tunerPayload->second.data);
+    REQUIRE(tunerSettings.getDynamicObject() != nullptr);
+    CHECK(static_cast<int>(tunerSettings["displayMode"]) == 3);
+    CHECK(static_cast<double>(tunerSettings["easing"]) == Catch::Approx(0.45));
+    CHECK(static_cast<double>(tunerSettings["averaging"]) == Catch::Approx(9.0));
+    CHECK(static_cast<double>(tunerSettings["noteSwitchSemitones"]) == Catch::Approx(0.8));
+    CHECK(static_cast<double>(tunerSettings["dropoutFrames"]) == Catch::Approx(6.0));
+    CHECK(static_cast<double>(tunerSettings["graphDurationSeconds"]) == Catch::Approx(28.0));
+}
+
+TEST_CASE(
+    "schema four migration retains only valid legacy window bounds",
+    "[settings][migration][workspace]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile legacy(temporary.path, settingsOptions());
+        legacy.setValue("settings.schema", 4);
+        legacy.setValue("layout.tuner", "10 20 920 760");
+        legacy.setValue("layout.spectrogram", "30 40 299 650");
+        legacy.setValue("layout.harmonics", "40 50 10001 700");
+        legacy.setValue("layout.settings", "50 60 900 760");
+        REQUIRE(legacy.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    REQUIRE(loaded.status == AppSettings::LoadStatus::migrated);
+    CHECK(loaded.state.tunerBounds == "10 20 920 760");
+    CHECK(loaded.state.spectrogramBounds.isEmpty());
+    CHECK(loaded.state.harmonicBounds.isEmpty());
+    CHECK(loaded.state.settingsBounds == "50 60 900 760");
+}
+
+TEST_CASE(
+    "schema five storage owns the workspace catalog and cleans legacy layout keys",
+    "[settings][migration][workspace]")
+{
+    juce::PropertySet properties;
+    properties.setValue("layout.tuner", "legacy tuner bounds");
+    properties.setValue("layout.spectrogram", "legacy spectrogram bounds");
+    properties.setValue("layout.harmonics", "legacy harmonic bounds");
+    properties.setValue("layout.settings", "legacy settings bounds");
+    properties.setValue("layout.recentTool", 3);
+
+    AppSettings::State state;
+    state.tunerBounds = "10 20 920 760";
+    state.spectrogramBounds = "30 40 980 650";
+    state.harmonicBounds = "40 50 980 700";
+    state.settingsBounds = "50 60 900 760";
+    AppSettings::store(properties, state);
+
+    CHECK(properties.getIntValue("settings.schema") == AppDefaults::schemaVersion);
+    CHECK(properties.containsKey("workspace.catalog"));
+    CHECK(properties.getValue("workspace.lastFloating.tuner") == state.tunerBounds);
+    CHECK(properties.getValue("workspace.lastFloating.spectrogram") == state.spectrogramBounds);
+    CHECK(properties.getValue("workspace.lastFloating.harmonicAnalyzer") == state.harmonicBounds);
+    CHECK(properties.getValue("window.settingsBounds") == state.settingsBounds);
+    CHECK_FALSE(properties.containsKey("layout.tuner"));
+    CHECK_FALSE(properties.containsKey("layout.spectrogram"));
+    CHECK_FALSE(properties.containsKey("layout.harmonics"));
+    CHECK_FALSE(properties.containsKey("layout.settings"));
+    CHECK_FALSE(properties.containsKey("layout.recentTool"));
+}
+
+TEST_CASE(
+    "malformed workspace catalog preserves valid global settings during recovery",
+    "[settings][recovery][workspace]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile invalid(temporary.path, settingsOptions());
+        AppSettings::State state;
+        state.theme = Theme::dark;
+        state.microphoneMuted = true;
+        state.inputGain = 0.75;
+        state.fullscreenMode = AppSettings::FullscreenMode::kiosk;
+        AppSettings::store(invalid, state);
+        invalid.setValue("workspace.catalog", "{not-json");
+        REQUIRE(invalid.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    REQUIRE(loaded.status == AppSettings::LoadStatus::recoveredFromCorruption);
+    CHECK(loaded.state.theme == Theme::dark);
+    CHECK(loaded.state.microphoneMuted);
+    CHECK(loaded.state.inputGain == Catch::Approx(0.75));
+    CHECK(loaded.state.fullscreenMode == AppSettings::FullscreenMode::kiosk);
+    CHECK(loaded.state.workspaceCatalog.active == WorkspaceBuiltIns::pitchPractice().snapshot);
+}
+
+TEST_CASE(
+    "newer workspace catalog versions prevent destructive native rewrites",
+    "[settings][migration][workspace]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile newer(temporary.path, settingsOptions());
+        AppSettings::State state;
+        state.theme = Theme::dark;
+        AppSettings::store(newer, state);
+        newer.setValue(
+            "workspace.catalog",
+            R"({"version":999,"active":{"dockRoot":{"kind":"leaf","toolId":"tuner"},"floating":[],"toolSettings":{}},"named":[]})");
+        REQUIRE(newer.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    CHECK(loaded.status == AppSettings::LoadStatus::newerSchema);
+    CHECK(loaded.state.theme == Theme::dark);
+}
+
 TEST_CASE("corrupt settings recover to defaults", "[settings][recovery]")
 {
     TemporarySettingsFile temporary;
@@ -125,7 +303,7 @@ TEST_CASE("invalid individual values fall back without rejecting the file", "[se
     TemporarySettingsFile temporary;
     {
         juce::PropertiesFile invalid(temporary.path, settingsOptions());
-        invalid.setValue("settings.schema", AppDefaults::schemaVersion);
+        AppSettings::store(invalid, AppSettings::State{});
         invalid.setValue("global.theme", 99);
         invalid.setValue("audio.inputGain", 99.0);
         invalid.setValue("tuner.displayMode", -1);
@@ -200,7 +378,7 @@ TEST_CASE("validation accepts every documented tuner boundary", "[settings][vali
     TemporarySettingsFile temporary;
     {
         juce::PropertiesFile boundary(temporary.path, settingsOptions());
-        boundary.setValue("settings.schema", AppDefaults::schemaVersion);
+        AppSettings::store(boundary, AppSettings::State{});
         boundary.setValue("audio.inputGain", 0.0);
         boundary.setValue("tuner.displayMode", 3);
         boundary.setValue("tuner.easing", 0.02);
@@ -224,12 +402,12 @@ TEST_CASE("validation accepts every documented tuner boundary", "[settings][vali
     CHECK(loaded.state.tuner.graphDurationSeconds == Catch::Approx(60.0));
 }
 
-TEST_CASE("invalid recent-tool values fall back to the tuner", "[settings][validation]")
+TEST_CASE("legacy recent-tool values do not override the workspace focus", "[settings][validation]")
 {
     TemporarySettingsFile temporary;
     {
         juce::PropertiesFile invalid(temporary.path, settingsOptions());
-        invalid.setValue("settings.schema", AppDefaults::schemaVersion);
+        AppSettings::store(invalid, AppSettings::State{});
         invalid.setValue("layout.recentTool", 99);
         REQUIRE(invalid.saveIfNeeded());
     }
