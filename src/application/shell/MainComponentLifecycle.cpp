@@ -16,7 +16,8 @@ constexpr int microphoneWarningWidth = 470;
 constexpr int microphoneWarningHeight = 118;
 } // namespace
 
-MainComponent::MainComponent()
+MainComponent::MainComponent(bool muteMicrophoneForSession)
+    : sessionMicrophoneMuteEnabled(muteMicrophoneForSession)
 {
     setOpaque(true);
     audioInputService.addChangeListener(this);
@@ -31,6 +32,11 @@ MainComponent::MainComponent()
     storageOptions.storageFormat = juce::PropertiesFile::storeAsXML;
     applicationProperties.setStorageParameters(storageOptions);
     loadSettings();
+    persistedMicrophoneMuted = audioInputService.isMuted();
+    if (sessionMicrophoneMuteEnabled)
+    {
+        audioInputService.setMuted(true);
+    }
 
     configureTopButtons();
     createMicrophoneWarning();

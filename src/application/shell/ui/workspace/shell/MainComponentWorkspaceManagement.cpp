@@ -109,7 +109,8 @@ void MainComponent::showSaveWorkspaceDialog()
                 }
             }),
         true);
-    static_cast<void>(alert.release());
+    auto* releasedAlert = alert.release();
+    juce::ignoreUnused(releasedAlert);
 }
 
 void MainComponent::showRenameWorkspaceDialog()
@@ -154,7 +155,8 @@ void MainComponent::showRenameWorkspaceDialog()
                 }
             }),
         true);
-    static_cast<void>(alert.release());
+    auto* releasedAlert = alert.release();
+    juce::ignoreUnused(releasedAlert);
 }
 
 void MainComponent::saveNamedWorkspace(const juce::String& name, bool confirmed)

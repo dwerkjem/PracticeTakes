@@ -72,7 +72,7 @@ rm -f "$validation_dir"/cursor-{candidate.pid,timing.txt,responsiveness.txt}
 
 park_pointer
 typeset -F 6 golden_started=$EPOCHREALTIME
-"$app" > "$validation_dir/cursor-golden.log" 2>&1 &
+"$app" --mute-microphone > "$validation_dir/cursor-golden.log" 2>&1 &
 golden_pid=$!
 
 while (( EPOCHREALTIME - golden_started < 7.0 )); do
@@ -96,7 +96,7 @@ golden_pid=""
 
 park_pointer
 typeset -F 6 candidate_started=$EPOCHREALTIME
-"$app" > "$validation_dir/cursor-candidate.log" 2>&1 &
+"$app" --mute-microphone > "$validation_dir/cursor-candidate.log" 2>&1 &
 candidate_pid=$!
 typeset -F 6 first_frame=0
 typeset -F 6 matched=0

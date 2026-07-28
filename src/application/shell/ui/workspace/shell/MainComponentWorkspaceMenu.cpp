@@ -203,8 +203,9 @@ void MainComponent::showToolsMenu()
                 selectedItemId >= firstWorkspaceMenuItemId &&
                 selectedItemId < firstWorkspaceMenuItemId + static_cast<int>(workspaceIds.size()))
             {
-                safeThis->applyWorkspace(workspaceIds[static_cast<std::size_t>(
-                    selectedItemId - firstWorkspaceMenuItemId)]);
+                safeThis->applyWorkspace(
+                    workspaceIds[static_cast<std::size_t>(
+                        selectedItemId - firstWorkspaceMenuItemId)]);
             }
             else if (selectedItemId == saveWorkspaceMenuItemId)
             {

@@ -88,6 +88,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         }
 
         const auto automatePerformanceLab = argument == "--automate-performance-lab";
+        const auto muteMicrophoneForSession = argument == "--mute-microphone";
 #if !PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
         if (automatePerformanceLab)
         {
@@ -100,7 +101,8 @@ class PracticeTakesApplication final : public juce::JUCEApplication
 #endif
         const auto windowTitle = getApplicationName() + " v" + getApplicationVersion();
 
-        mainWindow = std::make_unique<MainWindow>(windowTitle, automatePerformanceLab);
+        mainWindow = std::make_unique<MainWindow>(
+            windowTitle, automatePerformanceLab, muteMicrophoneForSession);
     }
 
     void shutdown() override
@@ -120,7 +122,10 @@ class PracticeTakesApplication final : public juce::JUCEApplication
     class MainWindow final : public juce::DocumentWindow, private juce::Timer
     {
       public:
-        MainWindow(const juce::String& title, bool automatePerformanceLab)
+        MainWindow(
+            const juce::String& title,
+            bool automatePerformanceLab,
+            bool muteMicrophoneForSession)
             : DocumentWindow(
                   title,
                   juce::Colour::fromRGB(18, 20, 27),
@@ -128,7 +133,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         {
             setUsingNativeTitleBar(false);
 
-            content = new MainComponent();
+            content = new MainComponent(muteMicrophoneForSession);
             setContentOwned(content, true);
 
             auto customTitleBar = content->createTitleBar(

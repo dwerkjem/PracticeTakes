@@ -374,6 +374,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             std::function<void(Theme)> appearanceHandler,
             std::function<void(AppDefaults::Preset)> presetHandler,
             std::function<void()> saveHandler,
+            std::function<void()> importHandler,
+            std::function<void()> exportHandler,
             std::function<void()> feedbackHandler,
             std::function<void()> resetToolHandler,
             std::function<void()> resetAudioHandler,
@@ -401,6 +403,16 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             saveButton.setTitle("Save the current settings");
             saveButton.onClick = std::move(saveHandler);
             addAndMakeVisible(saveButton);
+
+            exportButton.setButtonText("Export settings");
+            exportButton.setTitle("Export portable settings");
+            exportButton.onClick = std::move(exportHandler);
+            addAndMakeVisible(exportButton);
+
+            importButton.setButtonText("Import settings");
+            importButton.setTitle("Import portable settings");
+            importButton.onClick = std::move(importHandler);
+            addAndMakeVisible(importButton);
         }
 
         void paint(juce::Graphics& graphics) override
@@ -415,6 +427,10 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             categoryTabs.setBounds(bounds);
             footer.removeFromTop(10);
             saveButton.setBounds(footer.removeFromRight(180));
+            footer.removeFromRight(10);
+            exportButton.setBounds(footer.removeFromRight(180));
+            footer.removeFromRight(10);
+            importButton.setBounds(footer.removeFromRight(180));
         }
 
         void setTheme(Theme theme)
@@ -430,6 +446,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         PracticePanel practicePanel;
         ResetPanel resetPanel;
         juce::TextButton saveButton;
+        juce::TextButton importButton;
+        juce::TextButton exportButton;
         juce::TabbedComponent categoryTabs{juce::TabbedButtonBar::TabsAtTop};
     };
 
@@ -439,6 +457,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         std::function<void(Theme)> appearanceHandler,
         std::function<void(AppDefaults::Preset)> presetHandler,
         std::function<void()> saveHandler,
+        std::function<void()> importHandler,
+        std::function<void()> exportHandler,
         std::function<void()> feedbackHandler,
         std::function<void()> resetToolHandler,
         std::function<void()> resetAudioHandler,
@@ -452,9 +472,10 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         setContentOwned(
             new Content(
                 audioInputService, initialTheme, std::move(appearanceHandler),
-                std::move(presetHandler), std::move(saveHandler), std::move(feedbackHandler),
-                std::move(resetToolHandler), std::move(resetAudioHandler),
-                std::move(resetLayoutHandler), std::move(resetAllHandler)),
+                std::move(presetHandler), std::move(saveHandler), std::move(importHandler),
+                std::move(exportHandler), std::move(feedbackHandler), std::move(resetToolHandler),
+                std::move(resetAudioHandler), std::move(resetLayoutHandler),
+                std::move(resetAllHandler)),
             true);
         setResizable(true, true);
         setResizeLimits(760, 620, 1600, 1200);

@@ -18,6 +18,7 @@
 #include <vector>
 
 class MainTitleBar;
+struct SettingsTransferModel;
 
 // MainComponent is the application's central coordinator. It owns the shared
 // audio device, the top-level controls, and the docked/floating tool workspace.
@@ -28,7 +29,7 @@ class MainComponent final
       private juce::ChangeListener
 {
   public:
-    MainComponent();
+    explicit MainComponent(bool muteMicrophoneForSession = false);
     ~MainComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -110,6 +111,11 @@ class MainComponent final
     void recordToolFocus(ToolType tool);
     void closeTool(ToolType tool);
     void showSettings();
+    void importSettings();
+    void confirmSettingsImport(SettingsTransferModel model);
+    void executeSettingsImport(const SettingsTransferModel& model);
+    void exportSettings();
+    [[nodiscard]] bool applyTransferredSettings(const SettingsTransferModel& model);
     void closeSettings();
     void showHelpMenu();
     void showFeedback(const juce::String& context = {});
@@ -207,6 +213,7 @@ class MainComponent final
     std::unique_ptr<juce::Component> spectrogramComponent;
     std::unique_ptr<juce::Component> harmonicComponent;
     std::unique_ptr<SettingsWindow> settingsWindow;
+    std::unique_ptr<juce::FileChooser> settingsTransferChooser;
     std::unique_ptr<FeedbackWindow> feedbackWindow;
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
     std::unique_ptr<PerformanceLabWindow> performanceLabWindow;
@@ -230,6 +237,9 @@ class MainComponent final
     juce::Rectangle<int> savedSettingsBounds;
     bool isMicrophoneWarningDismissed = false;
     bool automaticSettingsSaveEnabled = true;
+    bool feedbackInvitationsDisabledState = false;
+    bool sessionMicrophoneMuteEnabled = false;
+    bool persistedMicrophoneMuted = false;
     std::unique_ptr<juce::XmlElement> pendingAudioDeviceState;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
