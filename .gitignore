@@ -305,3 +305,4 @@ __marimo__/
 !/scripts/build/
 benchmark-results/
 /.ua/.trash-*/*
+/.ua/tmp/
