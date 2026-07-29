@@ -304,3 +304,4 @@ __marimo__/
 # Build helper scripts are source files, not generated build output.
 !/scripts/build/
 benchmark-results/
+/.ua/.trash-*/*
