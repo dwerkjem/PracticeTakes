@@ -18,9 +18,7 @@
       "markdown",
       "python",
       "shell",
-      "sops",
       "sql",
-      "stderr",
       "txt",
       "typescript",
       "unknown",
@@ -34,8 +32,8 @@
       "JUCE"
     ],
     "description": "Practice Takes is an early cross-platform desktop music-practice application focused on live microphone analysis, with plans to grow into a more complete digital audio workstation. Note: this project has over 100 source files; consider scoping analysis to a subdirectory for faster results.",
-    "analyzedAt": "2026-07-29T07:46:08.108Z",
-    "gitCommitHash": "9ddc66aed4a5eee3b1bf11ff44ea9cfacaca10c1"
+    "analyzedAt": "2026-07-29T07:52:55.022Z",
+    "gitCommitHash": "04dcbb62fa686e658105fdd2c7713471ad6f91f5"
   },
   "nodes": [
     {

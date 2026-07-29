@@ -17,9 +17,7 @@
     "markdown",
     "python",
     "shell",
-    "sops",
     "sql",
-    "stderr",
     "txt",
     "typescript",
     "unknown",
@@ -2021,7 +2019,7 @@
     }
   ],
   "totalFiles": 331,
-  "filteredByIgnore": 0,
+  "filteredByIgnore": 11,
   "estimatedComplexity": "large",
   "importMap": {
     ".clang-format": [],
