@@ -1,6 +1,6 @@
 {
   "name": "PracticeTakes",
-  "description": "Practice Takes is an early cross-platform desktop music-practice application focused on live microphone analysis, with plans to grow into a more complete digital audio workstation. Note: this project has over 100 source files; consider scoping analysis to a subdirectory for faster results.",
+  "description": "Practice Takes is an early cross-platform desktop music-practice application for Windows, Linux, and macOS, focused on live microphone analysis (tuner and spectrogram) with a dockable/floating workspace system, and intended to grow into a more complete digital audio workstation.",
   "languages": [
     "c",
     "cmake",
@@ -80,6 +80,18 @@
       "fileCategory": "docs"
     },
     {
+      "path": ".claude/settings.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".claude/settings.local.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
       "path": ".claude/skills/openspec-apply-change/SKILL.md",
       "language": "markdown",
       "sizeLines": 160,
@@ -122,6 +134,12 @@
       "fileCategory": "code"
     },
     {
+      "path": ".github/dependabot.yml",
+      "language": "yaml",
+      "sizeLines": 11,
+      "fileCategory": "config"
+    },
+    {
       "path": ".github/ISSUE_TEMPLATE/bug_report.md",
       "language": "markdown",
       "sizeLines": 35,
@@ -138,18 +156,6 @@
       "language": "markdown",
       "sizeLines": 23,
       "fileCategory": "docs"
-    },
-    {
-      "path": ".github/PULL_REQUEST_TEMPLATE.md",
-      "language": "markdown",
-      "sizeLines": 20,
-      "fileCategory": "docs"
-    },
-    {
-      "path": ".github/dependabot.yml",
-      "language": "yaml",
-      "sizeLines": 11,
-      "fileCategory": "config"
     },
     {
       "path": ".github/prompts/opsx-apply.prompt.md",
@@ -185,6 +191,12 @@
       "path": ".github/prompts/opsx-update.prompt.md",
       "language": "markdown",
       "sizeLines": 78,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "language": "markdown",
+      "sizeLines": 20,
       "fileCategory": "docs"
     },
     {
@@ -284,42 +296,6 @@
       "fileCategory": "code"
     },
     {
-      "path": "CMakeLists.txt",
-      "language": "txt",
-      "sizeLines": 352,
-      "fileCategory": "docs"
-    },
-    {
-      "path": "CODEOWNERS",
-      "language": "unknown",
-      "sizeLines": 2,
-      "fileCategory": "code"
-    },
-    {
-      "path": "CONTRIBUTING.md",
-      "language": "markdown",
-      "sizeLines": 53,
-      "fileCategory": "docs"
-    },
-    {
-      "path": "README.md",
-      "language": "markdown",
-      "sizeLines": 114,
-      "fileCategory": "docs"
-    },
-    {
-      "path": "SECURITY.md",
-      "language": "markdown",
-      "sizeLines": 23,
-      "fileCategory": "docs"
-    },
-    {
-      "path": "VERSION",
-      "language": "unknown",
-      "sizeLines": 1,
-      "fileCategory": "code"
-    },
-    {
       "path": "benchmark-results/README.md",
       "language": "markdown",
       "sizeLines": 14,
@@ -356,21 +332,39 @@
       "fileCategory": "code"
     },
     {
+      "path": "CMakeLists.txt",
+      "language": "txt",
+      "sizeLines": 352,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "CODEOWNERS",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
       "path": "contracts/feedback/v1.schema.json",
       "language": "json",
       "sizeLines": 72,
       "fileCategory": "config"
     },
     {
-      "path": "docs/development/ARCHITECTURE.md",
+      "path": "CONTRIBUTING.md",
       "language": "markdown",
-      "sizeLines": 166,
+      "sizeLines": 53,
       "fileCategory": "docs"
     },
     {
       "path": "docs/development/ARCHITECTURE_QA.md",
       "language": "markdown",
       "sizeLines": 104,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/ARCHITECTURE.md",
+      "language": "markdown",
+      "sizeLines": 166,
       "fileCategory": "docs"
     },
     {
@@ -389,6 +383,18 @@
       "path": "docs/development/FEEDBACK.md",
       "language": "markdown",
       "sizeLines": 48,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/performance-audio-thread-safety.md",
+      "language": "markdown",
+      "sizeLines": 33,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/performance-hardware-acceptance.md",
+      "language": "markdown",
+      "sizeLines": 111,
       "fileCategory": "docs"
     },
     {
@@ -419,18 +425,6 @@
       "path": "docs/development/SECRETS.md",
       "language": "markdown",
       "sizeLines": 112,
-      "fileCategory": "docs"
-    },
-    {
-      "path": "docs/development/performance-audio-thread-safety.md",
-      "language": "markdown",
-      "sizeLines": 33,
-      "fileCategory": "docs"
-    },
-    {
-      "path": "docs/development/performance-hardware-acceptance.md",
-      "language": "markdown",
-      "sizeLines": 111,
       "fileCategory": "docs"
     },
     {
@@ -794,10 +788,22 @@
       "fileCategory": "code"
     },
     {
-      "path": "scripts/README.md",
+      "path": "README.md",
       "language": "markdown",
-      "sizeLines": 39,
+      "sizeLines": 114,
       "fileCategory": "docs"
+    },
+    {
+      "path": "scripts/build/build-and-run.sh",
+      "language": "shell",
+      "sizeLines": 306,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/build/check-linux-build-dependencies.sh",
+      "language": "shell",
+      "sizeLines": 134,
+      "fileCategory": "script"
     },
     {
       "path": "scripts/feedback/configure-cloudflare-access.sh",
@@ -896,12 +902,6 @@
       "fileCategory": "code"
     },
     {
-      "path": "scripts/quality/run-performance-lab.sh",
-      "language": "shell",
-      "sizeLines": 20,
-      "fileCategory": "script"
-    },
-    {
       "path": "scripts/quality/run_clang_format.py",
       "language": "python",
       "sizeLines": 44,
@@ -912,6 +912,12 @@
       "language": "python",
       "sizeLines": 157,
       "fileCategory": "code"
+    },
+    {
+      "path": "scripts/quality/run-performance-lab.sh",
+      "language": "shell",
+      "sizeLines": 20,
+      "fileCategory": "script"
     },
     {
       "path": "scripts/quality/ui-validation/pointer_control.cpp",
@@ -936,6 +942,12 @@
       "language": "cpp",
       "sizeLines": 224,
       "fileCategory": "code"
+    },
+    {
+      "path": "scripts/README.md",
+      "language": "markdown",
+      "sizeLines": 39,
+      "fileCategory": "docs"
     },
     {
       "path": "scripts/release/version.py",
@@ -968,6 +980,12 @@
       "fileCategory": "code"
     },
     {
+      "path": "SECURITY.md",
+      "language": "markdown",
+      "sizeLines": 23,
+      "fileCategory": "docs"
+    },
+    {
       "path": "services/.dockerignore",
       "language": "unknown",
       "sizeLines": 8,
@@ -986,18 +1004,6 @@
       "fileCategory": "config"
     },
     {
-      "path": "services/feedback-intake/Dockerfile",
-      "language": "dockerfile",
-      "sizeLines": 36,
-      "fileCategory": "infra"
-    },
-    {
-      "path": "services/feedback-intake/README.md",
-      "language": "markdown",
-      "sizeLines": 337,
-      "fileCategory": "docs"
-    },
-    {
       "path": "services/feedback-intake/compose.yaml",
       "language": "yaml",
       "sizeLines": 18,
@@ -1008,6 +1014,12 @@
       "language": "shell",
       "sizeLines": 15,
       "fileCategory": "script"
+    },
+    {
+      "path": "services/feedback-intake/Dockerfile",
+      "language": "dockerfile",
+      "sizeLines": 36,
+      "fileCategory": "infra"
     },
     {
       "path": "services/feedback-intake/migrations/0001_initial.sql",
@@ -1056,6 +1068,12 @@
       "language": "json",
       "sizeLines": 24,
       "fileCategory": "config"
+    },
+    {
+      "path": "services/feedback-intake/README.md",
+      "language": "markdown",
+      "sizeLines": 337,
+      "fileCategory": "docs"
     },
     {
       "path": "services/feedback-intake/src/access.ts",
@@ -1235,12 +1253,6 @@
       "path": "src/application/shell/MainComponentLifecycle.cpp",
       "language": "cpp",
       "sizeLines": 154,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/application/shell/WorkspaceStartupSequence.h",
-      "language": "c",
-      "sizeLines": 16,
       "fileCategory": "code"
     },
     {
@@ -1451,6 +1463,12 @@
       "path": "src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp",
       "language": "cpp",
       "sizeLines": 254,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/WorkspaceStartupSequence.h",
+      "language": "c",
+      "sizeLines": 16,
       "fileCategory": "code"
     },
     {
@@ -1916,6 +1934,12 @@
       "fileCategory": "code"
     },
     {
+      "path": "tests/support/BenchmarkFakes.h",
+      "language": "c",
+      "sizeLines": 153,
+      "fileCategory": "code"
+    },
+    {
       "path": "tests/SustainedAudioAnalysisScenarioTests.cpp",
       "language": "cpp",
       "sizeLines": 71,
@@ -2006,20 +2030,20 @@
       "fileCategory": "code"
     },
     {
-      "path": "tests/support/BenchmarkFakes.h",
-      "language": "c",
-      "sizeLines": 153,
-      "fileCategory": "code"
-    },
-    {
       "path": "vcpkg.json",
       "language": "json",
       "sizeLines": 23,
       "fileCategory": "config"
+    },
+    {
+      "path": "VERSION",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
     }
   ],
-  "totalFiles": 331,
-  "filteredByIgnore": 11,
+  "totalFiles": 335,
+  "filteredByIgnore": 1,
   "estimatedComplexity": "large",
   "importMap": {
     ".clang-format": [],
@@ -2030,6 +2054,8 @@
     ".claude/commands/opsx/propose.md": [],
     ".claude/commands/opsx/sync.md": [],
     ".claude/commands/opsx/update.md": [],
+    ".claude/settings.json": [],
+    ".claude/settings.local.json": [],
     ".claude/skills/openspec-apply-change/SKILL.md": [],
     ".claude/skills/openspec-archive-change/SKILL.md": [],
     ".claude/skills/openspec-explore/SKILL.md": [],
@@ -2722,6 +2748,8 @@
     "tests/support/BenchmarkFakes.h": [
       "src/features/performance/BenchmarkInterfaces.h"
     ],
-    "vcpkg.json": []
+    "vcpkg.json": [],
+    "scripts/build/build-and-run.sh": [],
+    "scripts/build/check-linux-build-dependencies.sh": []
   }
 }

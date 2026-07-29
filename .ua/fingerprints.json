@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "04dcbb62fa686e658105fdd2c7713471ad6f91f5",
-  "generatedAt": "2026-07-29T07:52:55.421Z",
+  "gitCommitHash": "1b5ed119258ac21d7bc5f8e493792e0f672d5cb6",
+  "generatedAt": "2026-07-29T20:28:56.115Z",
   "files": {
     ".clang-format": {
       "filePath": ".clang-format",
@@ -83,6 +83,26 @@
       "totalLines": 83,
       "hasStructuralAnalysis": true
     },
+    ".claude/settings.json": {
+      "filePath": ".claude/settings.json",
+      "contentHash": "43fd9292d8554aea3381e56d82032711f710bf8de2cec4c06ef2966351c70934",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 6,
+      "hasStructuralAnalysis": true
+    },
+    ".claude/settings.local.json": {
+      "filePath": ".claude/settings.local.json",
+      "contentHash": "d0accb5c68e53e6ba00cf7287ab610d8112307e100a6f353cc8645adf588ba3b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 28,
+      "hasStructuralAnalysis": true
+    },
     ".claude/skills/openspec-apply-change/SKILL.md": {
       "filePath": ".claude/skills/openspec-apply-change/SKILL.md",
       "contentHash": "83e0d2d4c47674e312fc9d29297d91e5c018a5507e6961829ee623600e2cf2ff",
@@ -153,6 +173,16 @@
       "totalLines": 4,
       "hasStructuralAnalysis": false
     },
+    ".github/dependabot.yml": {
+      "filePath": ".github/dependabot.yml",
+      "contentHash": "5b4405f2eb06ed2243b80865a6d02761911f0f8329cfe723d552cf0f0bf9585d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 12,
+      "hasStructuralAnalysis": true
+    },
     ".github/ISSUE_TEMPLATE/bug_report.md": {
       "filePath": ".github/ISSUE_TEMPLATE/bug_report.md",
       "contentHash": "ee3743dc179ac00a1ea5f30b5973d2c3de41c04b775e86d496e5d0f4ce5affd7",
@@ -181,26 +211,6 @@
       "imports": [],
       "exports": [],
       "totalLines": 24,
-      "hasStructuralAnalysis": true
-    },
-    ".github/PULL_REQUEST_TEMPLATE.md": {
-      "filePath": ".github/PULL_REQUEST_TEMPLATE.md",
-      "contentHash": "9d803636b63d266c76c202e2596a2949f1958b856c0b6011a2a46b163dd67428",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 21,
-      "hasStructuralAnalysis": true
-    },
-    ".github/dependabot.yml": {
-      "filePath": ".github/dependabot.yml",
-      "contentHash": "5b4405f2eb06ed2243b80865a6d02761911f0f8329cfe723d552cf0f0bf9585d",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 12,
       "hasStructuralAnalysis": true
     },
     ".github/prompts/opsx-apply.prompt.md": {
@@ -261,6 +271,16 @@
       "imports": [],
       "exports": [],
       "totalLines": 79,
+      "hasStructuralAnalysis": true
+    },
+    ".github/PULL_REQUEST_TEMPLATE.md": {
+      "filePath": ".github/PULL_REQUEST_TEMPLATE.md",
+      "contentHash": "9d803636b63d266c76c202e2596a2949f1958b856c0b6011a2a46b163dd67428",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 21,
       "hasStructuralAnalysis": true
     },
     ".github/skills/openspec-apply-change/SKILL.md": {
@@ -423,66 +443,6 @@
       "totalLines": 11,
       "hasStructuralAnalysis": false
     },
-    "CMakeLists.txt": {
-      "filePath": "CMakeLists.txt",
-      "contentHash": "387246f724e5c0af99023724bd84f8e1d854b9b396811ab13c427ee03ef92624",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 353,
-      "hasStructuralAnalysis": false
-    },
-    "CODEOWNERS": {
-      "filePath": "CODEOWNERS",
-      "contentHash": "9a77e0830fdae6c4a9b04a8f59ef5e8a4362b3fbc1dc03703c598cc4db0781e4",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 3,
-      "hasStructuralAnalysis": false
-    },
-    "CONTRIBUTING.md": {
-      "filePath": "CONTRIBUTING.md",
-      "contentHash": "b0aa297587545f64e858be6f7520c99d828072768728a7bc1e88293b2c6777eb",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 54,
-      "hasStructuralAnalysis": true
-    },
-    "README.md": {
-      "filePath": "README.md",
-      "contentHash": "ee0a78e51b362ac2b1ae32aebcad866930e2ccaf847e42b912decaccf858341e",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 115,
-      "hasStructuralAnalysis": true
-    },
-    "SECURITY.md": {
-      "filePath": "SECURITY.md",
-      "contentHash": "c8e8b0eca5555bd986cf64e77732472fb3f9382ceadccc2524d6a4c37c31248b",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 24,
-      "hasStructuralAnalysis": true
-    },
-    "VERSION": {
-      "filePath": "VERSION",
-      "contentHash": "f669b5e9183901b78b0952eb71f8fe54bdcff9cc3d155710c61e25be7b35b058",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 2,
-      "hasStructuralAnalysis": false
-    },
     "benchmark-results/README.md": {
       "filePath": "benchmark-results/README.md",
       "contentHash": "ca1e3214e3a6b6ac86ef1f5ac85050f3b031f4d0da43065188aab28206f7b970",
@@ -543,6 +503,26 @@
       "totalLines": 10,
       "hasStructuralAnalysis": false
     },
+    "CMakeLists.txt": {
+      "filePath": "CMakeLists.txt",
+      "contentHash": "387246f724e5c0af99023724bd84f8e1d854b9b396811ab13c427ee03ef92624",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 353,
+      "hasStructuralAnalysis": false
+    },
+    "CODEOWNERS": {
+      "filePath": "CODEOWNERS",
+      "contentHash": "9a77e0830fdae6c4a9b04a8f59ef5e8a4362b3fbc1dc03703c598cc4db0781e4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 3,
+      "hasStructuralAnalysis": false
+    },
     "contracts/feedback/v1.schema.json": {
       "filePath": "contracts/feedback/v1.schema.json",
       "contentHash": "4c0a96cd3ef026ea5b5bb446732948826ae6aac97fb085e4dd915296fd4c5629",
@@ -553,14 +533,14 @@
       "totalLines": 73,
       "hasStructuralAnalysis": true
     },
-    "docs/development/ARCHITECTURE.md": {
-      "filePath": "docs/development/ARCHITECTURE.md",
-      "contentHash": "260e334534dc416b11b90eaa8c239192d1b25e2a5a8f27d2638f4f1bf7437976",
+    "CONTRIBUTING.md": {
+      "filePath": "CONTRIBUTING.md",
+      "contentHash": "b0aa297587545f64e858be6f7520c99d828072768728a7bc1e88293b2c6777eb",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 167,
+      "totalLines": 54,
       "hasStructuralAnalysis": true
     },
     "docs/development/ARCHITECTURE_QA.md": {
@@ -571,6 +551,16 @@
       "imports": [],
       "exports": [],
       "totalLines": 105,
+      "hasStructuralAnalysis": true
+    },
+    "docs/development/ARCHITECTURE.md": {
+      "filePath": "docs/development/ARCHITECTURE.md",
+      "contentHash": "260e334534dc416b11b90eaa8c239192d1b25e2a5a8f27d2638f4f1bf7437976",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 167,
       "hasStructuralAnalysis": true
     },
     "docs/development/BUILDING.md": {
@@ -601,6 +591,26 @@
       "imports": [],
       "exports": [],
       "totalLines": 49,
+      "hasStructuralAnalysis": true
+    },
+    "docs/development/performance-audio-thread-safety.md": {
+      "filePath": "docs/development/performance-audio-thread-safety.md",
+      "contentHash": "ba89c30eb8513c38eb6d6b5cc1d6221dd0c51e5a21feb376016756e7498e30d5",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 34,
+      "hasStructuralAnalysis": true
+    },
+    "docs/development/performance-hardware-acceptance.md": {
+      "filePath": "docs/development/performance-hardware-acceptance.md",
+      "contentHash": "477069fc62c14741753f422e6941f29e4288b3957d25e4ab711e7d9c4fa72d02",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 112,
       "hasStructuralAnalysis": true
     },
     "docs/development/QA_STRATEGY.md": {
@@ -651,26 +661,6 @@
       "imports": [],
       "exports": [],
       "totalLines": 113,
-      "hasStructuralAnalysis": true
-    },
-    "docs/development/performance-audio-thread-safety.md": {
-      "filePath": "docs/development/performance-audio-thread-safety.md",
-      "contentHash": "ba89c30eb8513c38eb6d6b5cc1d6221dd0c51e5a21feb376016756e7498e30d5",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 34,
-      "hasStructuralAnalysis": true
-    },
-    "docs/development/performance-hardware-acceptance.md": {
-      "filePath": "docs/development/performance-hardware-acceptance.md",
-      "contentHash": "477069fc62c14741753f422e6941f29e4288b3957d25e4ab711e7d9c4fa72d02",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 112,
       "hasStructuralAnalysis": true
     },
     "docs/settings-defaults.md": {
@@ -1273,14 +1263,34 @@
       "totalLines": 13,
       "hasStructuralAnalysis": false
     },
-    "scripts/README.md": {
-      "filePath": "scripts/README.md",
-      "contentHash": "747654e54be63047345a022bc622b3d8c7ed87f8b4d60a8453275c33bda8dba0",
+    "README.md": {
+      "filePath": "README.md",
+      "contentHash": "ee0a78e51b362ac2b1ae32aebcad866930e2ccaf847e42b912decaccf858341e",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 40,
+      "totalLines": 115,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/build/build-and-run.sh": {
+      "filePath": "scripts/build/build-and-run.sh",
+      "contentHash": "d0561504338c9bdb930d6dbd8fa63f137b6dea5771b5edb518ed092a1ca8878e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 307,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/build/check-linux-build-dependencies.sh": {
+      "filePath": "scripts/build/check-linux-build-dependencies.sh",
+      "contentHash": "3176acea06ce103afce93cc8c19110bd1ea342729f69d61e602b9bbed1cf98e1",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 135,
       "hasStructuralAnalysis": true
     },
     "scripts/feedback/configure-cloudflare-access.sh": {
@@ -2609,16 +2619,6 @@
       "totalLines": 141,
       "hasStructuralAnalysis": true
     },
-    "scripts/quality/run-performance-lab.sh": {
-      "filePath": "scripts/quality/run-performance-lab.sh",
-      "contentHash": "8c31bdce2888fac8117c65ff15f65fadc2987be0cb1697550de3c32e49d25bb4",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 21,
-      "hasStructuralAnalysis": true
-    },
     "scripts/quality/run_clang_format.py": {
       "filePath": "scripts/quality/run_clang_format.py",
       "contentHash": "cc42b8fd4cf0c682463dc78949b1dc1bb73d450a057b063858d9e93a4e766d20",
@@ -2795,6 +2795,16 @@
         "main"
       ],
       "totalLines": 158,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/quality/run-performance-lab.sh": {
+      "filePath": "scripts/quality/run-performance-lab.sh",
+      "contentHash": "8c31bdce2888fac8117c65ff15f65fadc2987be0cb1697550de3c32e49d25bb4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 21,
       "hasStructuralAnalysis": true
     },
     "scripts/quality/ui-validation/pointer_control.cpp": {
@@ -3216,6 +3226,16 @@
         "main"
       ],
       "totalLines": 225,
+      "hasStructuralAnalysis": true
+    },
+    "scripts/README.md": {
+      "filePath": "scripts/README.md",
+      "contentHash": "747654e54be63047345a022bc622b3d8c7ed87f8b4d60a8453275c33bda8dba0",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 40,
       "hasStructuralAnalysis": true
     },
     "scripts/release/version.py": {
@@ -3909,6 +3929,16 @@
       "totalLines": 36,
       "hasStructuralAnalysis": false
     },
+    "SECURITY.md": {
+      "filePath": "SECURITY.md",
+      "contentHash": "c8e8b0eca5555bd986cf64e77732472fb3f9382ceadccc2524d6a4c37c31248b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 24,
+      "hasStructuralAnalysis": true
+    },
     "services/.dockerignore": {
       "filePath": "services/.dockerignore",
       "contentHash": "f0395f360ec2c9da60b2d5bdfcb8c6ac5237017ad8471818a4abeb396a66ceb4",
@@ -3939,26 +3969,6 @@
       "totalLines": 19,
       "hasStructuralAnalysis": true
     },
-    "services/feedback-intake/Dockerfile": {
-      "filePath": "services/feedback-intake/Dockerfile",
-      "contentHash": "ff861b5dc978dacfd90dd50eea181cd31c0a9369d77f077a118d086396e00919",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 37,
-      "hasStructuralAnalysis": true
-    },
-    "services/feedback-intake/README.md": {
-      "filePath": "services/feedback-intake/README.md",
-      "contentHash": "6bd9e64409d3b5e9f1284a6f136fe586445ec7c0a61663d7e706494863dfa073",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 338,
-      "hasStructuralAnalysis": true
-    },
     "services/feedback-intake/compose.yaml": {
       "filePath": "services/feedback-intake/compose.yaml",
       "contentHash": "e6da09aa72a49fba15c60389127765e7841e215da175900ee3cca9d44d4a6cc6",
@@ -3977,6 +3987,16 @@
       "imports": [],
       "exports": [],
       "totalLines": 16,
+      "hasStructuralAnalysis": true
+    },
+    "services/feedback-intake/Dockerfile": {
+      "filePath": "services/feedback-intake/Dockerfile",
+      "contentHash": "ff861b5dc978dacfd90dd50eea181cd31c0a9369d77f077a118d086396e00919",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 37,
       "hasStructuralAnalysis": true
     },
     "services/feedback-intake/migrations/0001_initial.sql": {
@@ -4057,6 +4077,16 @@
       "imports": [],
       "exports": [],
       "totalLines": 25,
+      "hasStructuralAnalysis": true
+    },
+    "services/feedback-intake/README.md": {
+      "filePath": "services/feedback-intake/README.md",
+      "contentHash": "6bd9e64409d3b5e9f1284a6f136fe586445ec7c0a61663d7e706494863dfa073",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 338,
       "hasStructuralAnalysis": true
     },
     "services/feedback-intake/src/access.ts": {
@@ -6758,33 +6788,6 @@
         "resized"
       ],
       "totalLines": 155,
-      "hasStructuralAnalysis": true
-    },
-    "src/application/shell/WorkspaceStartupSequence.h": {
-      "filePath": "src/application/shell/WorkspaceStartupSequence.h",
-      "contentHash": "317419ae06015fa5f63e9f2cce3545bd2f8ac9027b9ed171cf6fc8608fa6d365",
-      "functions": [],
-      "classes": [
-        {
-          "name": "WorkspaceStartupSequence",
-          "methods": [],
-          "properties": [],
-          "exported": true,
-          "lineCount": 12
-        }
-      ],
-      "imports": [
-        {
-          "source": "utility",
-          "specifiers": [
-            "utility"
-          ]
-        }
-      ],
-      "exports": [
-        "WorkspaceStartupSequence"
-      ],
-      "totalLines": 17,
       "hasStructuralAnalysis": true
     },
     "src/application/shell/state/appearance/MainComponentAppearance.cpp": {
@@ -11256,6 +11259,33 @@
         "applyWorkspaceSnapshot"
       ],
       "totalLines": 255,
+      "hasStructuralAnalysis": true
+    },
+    "src/application/shell/WorkspaceStartupSequence.h": {
+      "filePath": "src/application/shell/WorkspaceStartupSequence.h",
+      "contentHash": "317419ae06015fa5f63e9f2cce3545bd2f8ac9027b9ed171cf6fc8608fa6d365",
+      "functions": [],
+      "classes": [
+        {
+          "name": "WorkspaceStartupSequence",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 12
+        }
+      ],
+      "imports": [
+        {
+          "source": "utility",
+          "specifiers": [
+            "utility"
+          ]
+        }
+      ],
+      "exports": [
+        "WorkspaceStartupSequence"
+      ],
+      "totalLines": 17,
       "hasStructuralAnalysis": true
     },
     "src/application/theme/Theme.cpp": {
@@ -17670,6 +17700,315 @@
       "totalLines": 40,
       "hasStructuralAnalysis": true
     },
+    "tests/support/BenchmarkFakes.h": {
+      "filePath": "tests/support/BenchmarkFakes.h",
+      "contentHash": "9f2353f85ce910e62b4d9427570cc8385397ea2fa3644bed80389a50ebefaebc",
+      "functions": [
+        {
+          "name": "now",
+          "params": [],
+          "returnType": "std::chrono::steady_clock::time_point",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "advance",
+          "params": [
+            "duration"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "beginTrial",
+          "params": [
+            "trialIndex"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "endTrial",
+          "params": [],
+          "returnType": "performance::TrialMeasurement",
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "abortTrial",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "id",
+          "params": [],
+          "returnType": "std::string_view",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "displayName",
+          "params": [],
+          "returnType": "std::string_view",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "workloadId",
+          "params": [],
+          "returnType": "std::string_view",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "validate",
+          "params": [],
+          "returnType": "performance::ValidationResult",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "prepare",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "runTrial",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "verifyCorrectness",
+          "params": [],
+          "returnType": "performance::ValidationResult",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "restore",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "id",
+          "params": [],
+          "returnType": "std::string_view",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "displayName",
+          "params": [],
+          "returnType": "std::string_view",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "implementationVersion",
+          "params": [],
+          "returnType": "std::string_view",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "parameterSchema",
+          "params": [],
+          "returnType": "std::vector<performance::StrategyParameter>",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "validateParameters",
+          "params": [],
+          "returnType": "performance::ValidationResult",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "isCompatible",
+          "params": [],
+          "returnType": "bool",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "activate",
+          "params": [
+            "parameters"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "deactivate",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        }
+      ],
+      "classes": [
+        {
+          "name": "FakeBenchmarkClock",
+          "methods": [
+            "now",
+            "advance"
+          ],
+          "properties": [
+            "currentTime"
+          ],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "FakeTelemetryCollector",
+          "methods": [
+            "beginTrial",
+            "endTrial",
+            "abortTrial"
+          ],
+          "properties": [
+            "nextMeasurement",
+            "activeTrialIndex",
+            "beginCount",
+            "endCount",
+            "abortCount"
+          ],
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "FakeBenchmarkScenario",
+          "methods": [
+            "id",
+            "displayName",
+            "workloadId",
+            "validate",
+            "prepare",
+            "runTrial",
+            "verifyCorrectness",
+            "restore"
+          ],
+          "properties": [
+            "scenarioId",
+            "scenarioName",
+            "workload",
+            "validationResult",
+            "correctnessResult",
+            "prepareCount",
+            "runCount",
+            "restoreCount",
+            "throwOnRunNumber"
+          ],
+          "exported": true,
+          "lineCount": 49
+        },
+        {
+          "name": "FakeOptimizationStrategy",
+          "methods": [
+            "id",
+            "displayName",
+            "implementationVersion",
+            "parameterSchema",
+            "validateParameters",
+            "isCompatible",
+            "activate",
+            "deactivate"
+          ],
+          "properties": [
+            "strategyId",
+            "strategyName",
+            "version",
+            "schema",
+            "parameterValidationResult",
+            "compatible",
+            "activeParameters",
+            "activateCount",
+            "deactivateCount"
+          ],
+          "exported": true,
+          "lineCount": 49
+        }
+      ],
+      "imports": [
+        {
+          "source": "features/performance/BenchmarkInterfaces.h",
+          "specifiers": [
+            "features/performance/BenchmarkInterfaces.h"
+          ]
+        },
+        {
+          "source": "chrono",
+          "specifiers": [
+            "chrono"
+          ]
+        },
+        {
+          "source": "string",
+          "specifiers": [
+            "string"
+          ]
+        },
+        {
+          "source": "unordered_map",
+          "specifiers": [
+            "unordered_map"
+          ]
+        },
+        {
+          "source": "utility",
+          "specifiers": [
+            "utility"
+          ]
+        },
+        {
+          "source": "vector",
+          "specifiers": [
+            "vector"
+          ]
+        }
+      ],
+      "exports": [
+        "now",
+        "advance",
+        "FakeBenchmarkClock",
+        "beginTrial",
+        "endTrial",
+        "abortTrial",
+        "FakeTelemetryCollector",
+        "id",
+        "displayName",
+        "workloadId",
+        "validate",
+        "prepare",
+        "runTrial",
+        "verifyCorrectness",
+        "restore",
+        "FakeBenchmarkScenario",
+        "id",
+        "displayName",
+        "implementationVersion",
+        "parameterSchema",
+        "validateParameters",
+        "isCompatible",
+        "activate",
+        "deactivate",
+        "FakeOptimizationStrategy"
+      ],
+      "totalLines": 154,
+      "hasStructuralAnalysis": true
+    },
     "tests/SustainedAudioAnalysisScenarioTests.cpp": {
       "filePath": "tests/SustainedAudioAnalysisScenarioTests.cpp",
       "contentHash": "6dfb63abfb8ce0f29829ecd8515c4bcf1a93b0045a515ea8d37e9a6953a78872",
@@ -18301,315 +18640,6 @@
       "totalLines": 94,
       "hasStructuralAnalysis": true
     },
-    "tests/support/BenchmarkFakes.h": {
-      "filePath": "tests/support/BenchmarkFakes.h",
-      "contentHash": "9f2353f85ce910e62b4d9427570cc8385397ea2fa3644bed80389a50ebefaebc",
-      "functions": [
-        {
-          "name": "now",
-          "params": [],
-          "returnType": "std::chrono::steady_clock::time_point",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "advance",
-          "params": [
-            "duration"
-          ],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "beginTrial",
-          "params": [
-            "trialIndex"
-          ],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "endTrial",
-          "params": [],
-          "returnType": "performance::TrialMeasurement",
-          "exported": true,
-          "lineCount": 7
-        },
-        {
-          "name": "abortTrial",
-          "params": [],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "id",
-          "params": [],
-          "returnType": "std::string_view",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "displayName",
-          "params": [],
-          "returnType": "std::string_view",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "workloadId",
-          "params": [],
-          "returnType": "std::string_view",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "validate",
-          "params": [],
-          "returnType": "performance::ValidationResult",
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "prepare",
-          "params": [],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "runTrial",
-          "params": [],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 6
-        },
-        {
-          "name": "verifyCorrectness",
-          "params": [],
-          "returnType": "performance::ValidationResult",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "restore",
-          "params": [],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "id",
-          "params": [],
-          "returnType": "std::string_view",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "displayName",
-          "params": [],
-          "returnType": "std::string_view",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "implementationVersion",
-          "params": [],
-          "returnType": "std::string_view",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "parameterSchema",
-          "params": [],
-          "returnType": "std::vector<performance::StrategyParameter>",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "validateParameters",
-          "params": [],
-          "returnType": "performance::ValidationResult",
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "isCompatible",
-          "params": [],
-          "returnType": "bool",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "activate",
-          "params": [
-            "parameters"
-          ],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "deactivate",
-          "params": [],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 4
-        }
-      ],
-      "classes": [
-        {
-          "name": "FakeBenchmarkClock",
-          "methods": [
-            "now",
-            "advance"
-          ],
-          "properties": [
-            "currentTime"
-          ],
-          "exported": true,
-          "lineCount": 16
-        },
-        {
-          "name": "FakeTelemetryCollector",
-          "methods": [
-            "beginTrial",
-            "endTrial",
-            "abortTrial"
-          ],
-          "properties": [
-            "nextMeasurement",
-            "activeTrialIndex",
-            "beginCount",
-            "endCount",
-            "abortCount"
-          ],
-          "exported": true,
-          "lineCount": 27
-        },
-        {
-          "name": "FakeBenchmarkScenario",
-          "methods": [
-            "id",
-            "displayName",
-            "workloadId",
-            "validate",
-            "prepare",
-            "runTrial",
-            "verifyCorrectness",
-            "restore"
-          ],
-          "properties": [
-            "scenarioId",
-            "scenarioName",
-            "workload",
-            "validationResult",
-            "correctnessResult",
-            "prepareCount",
-            "runCount",
-            "restoreCount",
-            "throwOnRunNumber"
-          ],
-          "exported": true,
-          "lineCount": 49
-        },
-        {
-          "name": "FakeOptimizationStrategy",
-          "methods": [
-            "id",
-            "displayName",
-            "implementationVersion",
-            "parameterSchema",
-            "validateParameters",
-            "isCompatible",
-            "activate",
-            "deactivate"
-          ],
-          "properties": [
-            "strategyId",
-            "strategyName",
-            "version",
-            "schema",
-            "parameterValidationResult",
-            "compatible",
-            "activeParameters",
-            "activateCount",
-            "deactivateCount"
-          ],
-          "exported": true,
-          "lineCount": 49
-        }
-      ],
-      "imports": [
-        {
-          "source": "features/performance/BenchmarkInterfaces.h",
-          "specifiers": [
-            "features/performance/BenchmarkInterfaces.h"
-          ]
-        },
-        {
-          "source": "chrono",
-          "specifiers": [
-            "chrono"
-          ]
-        },
-        {
-          "source": "string",
-          "specifiers": [
-            "string"
-          ]
-        },
-        {
-          "source": "unordered_map",
-          "specifiers": [
-            "unordered_map"
-          ]
-        },
-        {
-          "source": "utility",
-          "specifiers": [
-            "utility"
-          ]
-        },
-        {
-          "source": "vector",
-          "specifiers": [
-            "vector"
-          ]
-        }
-      ],
-      "exports": [
-        "now",
-        "advance",
-        "FakeBenchmarkClock",
-        "beginTrial",
-        "endTrial",
-        "abortTrial",
-        "FakeTelemetryCollector",
-        "id",
-        "displayName",
-        "workloadId",
-        "validate",
-        "prepare",
-        "runTrial",
-        "verifyCorrectness",
-        "restore",
-        "FakeBenchmarkScenario",
-        "id",
-        "displayName",
-        "implementationVersion",
-        "parameterSchema",
-        "validateParameters",
-        "isCompatible",
-        "activate",
-        "deactivate",
-        "FakeOptimizationStrategy"
-      ],
-      "totalLines": 154,
-      "hasStructuralAnalysis": true
-    },
     "vcpkg.json": {
       "filePath": "vcpkg.json",
       "contentHash": "6c332fcea23adb7619ad58f2abb9a34dfe8ef61bae6d34e4a784142b0249bf03",
@@ -18619,6 +18649,16 @@
       "exports": [],
       "totalLines": 24,
       "hasStructuralAnalysis": true
+    },
+    "VERSION": {
+      "filePath": "VERSION",
+      "contentHash": "f669b5e9183901b78b0952eb71f8fe54bdcff9cc3d155710c61e25be7b35b058",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2,
+      "hasStructuralAnalysis": false
     }
   }
 }

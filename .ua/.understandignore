@@ -38,6 +38,28 @@
 **/secrets.toml
 services/feedback-intake/wrangler.jsonc
 
+# --- Agent / process scaffolding (not PracticeTakes code) ---
+# Duplicated OpenSpec skill+command definitions and local agent config.
+# These describe how tooling drives the repo, not what the app does.
+
+.claude/
+.github/prompts/
+.github/skills/
+
+# Issue / PR boilerplate — templates, no architectural signal.
+.github/ISSUE_TEMPLATE/
+.github/PULL_REQUEST_TEMPLATE.md
+
+# Completed change proposals. Current requirements live in openspec/specs/
+# and the active openspec/changes/<name>/ dir, both of which stay indexed.
+openspec/changes/archive/
+
+# Generated benchmark output.
+benchmark-results/
+
+# Kept on purpose: .github/workflows/ (real CI topology), docs/,
+# tests/, openspec/specs/, scripts/.
+
 # --- From .gitignore (uncomment to exclude) ---
 
 # *.d
