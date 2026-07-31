@@ -1,4 +1,4 @@
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage } from "node:http";
 import { timingSafeEqual } from "node:crypto";
 
 import { handleAdminRequest } from "./admin.js";
@@ -99,8 +99,34 @@ function authorized(header: string | undefined): boolean {
   } catch { return false; }
 }
 
+const safeMethods = new Set(["GET", "HEAD", "OPTIONS"]);
+
+// Basic-auth credentials are replayed by the browser on cross-site requests, so
+// state-changing calls must prove they were initiated by the dashboard itself.
+function sameOriginRequest(incoming: IncomingMessage): boolean {
+  if (safeMethods.has((incoming.method ?? "GET").toUpperCase())) return true;
+  const fetchSite = incoming.headers["sec-fetch-site"];
+  if (typeof fetchSite === "string" && fetchSite !== "same-origin" && fetchSite !== "none") {
+    return false;
+  }
+  const origin = incoming.headers.origin;
+  if (origin === undefined) return true;
+  try {
+    return new URL(origin).host === incoming.headers.host;
+  } catch { return false; }
+}
+
 createServer(async (incoming, outgoing) => {
   try {
+    if (!sameOriginRequest(incoming)) {
+      outgoing.writeHead(403, {
+        "cache-control": "no-store",
+        "content-type": "text/plain; charset=utf-8",
+      });
+      outgoing.end("Cross-site requests are not accepted.");
+      return;
+    }
+
     if (!authorized(incoming.headers.authorization)) {
       outgoing.writeHead(401, {
         "cache-control": "no-store",

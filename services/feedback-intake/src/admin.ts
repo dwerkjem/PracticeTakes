@@ -12,6 +12,7 @@ export interface AdminEnv {
   DECLINED_RETENTION_DAYS?: string;
   TELEMETRY_RETENTION_DAYS?: string;
   AUDIT_RETENTION_DAYS?: string;
+  EMAIL_QUEUE_RETENTION_DAYS?: string;
 }
 
 interface SubmissionRow {
@@ -200,7 +201,8 @@ function filters(url: URL): { where: string; values: unknown[] } {
   }
   const query = url.searchParams.get("q")?.trim();
   if (query) {
-    clauses.push("(message LIKE ? OR developer_notes LIKE ? OR tags_json LIKE ? OR contact_email LIKE ?)");
+    clauses.push("(message LIKE ? ESCAPE '\\' OR developer_notes LIKE ? ESCAPE '\\' " +
+                 "OR tags_json LIKE ? ESCAPE '\\' OR contact_email LIKE ? ESCAPE '\\')");
     const pattern = `%${query.replace(/[\\%_]/g, "\\$&")}%`;
     values.push(pattern, pattern, pattern, pattern);
   }
@@ -307,6 +309,7 @@ async function deleteSubmission(receiptId: string, db: D1Database, adminEmail: s
     "UPDATE feedback_submissions SET duplicate_of = NULL, status = 'needs_review' WHERE duplicate_of = ?",
   ).bind(receiptId).run();
   const result = await db.prepare("DELETE FROM feedback_submissions WHERE receipt_id = ?").bind(receiptId).run();
+  await db.prepare("DELETE FROM feedback_email_queue WHERE receipt_id = ?").bind(receiptId).run();
   if (!result.meta.changes) return jsonResponse(404, { error: { code: "not_found", message: "Submission not found." } });
   await recordAdminAction(db, adminEmail, "delete", receiptId, { title });
   return new Response(null, { status: 204, headers: { "cache-control": "no-store" } });
@@ -329,6 +332,7 @@ async function deleteSubmissions(request: Request, db: D1Database, adminEmail: s
       "UPDATE feedback_submissions SET duplicate_of = NULL, status = 'needs_review' WHERE duplicate_of = ?",
     ).bind(receiptId).run();
     const result = await db.prepare("DELETE FROM feedback_submissions WHERE receipt_id = ?").bind(receiptId).run();
+    await db.prepare("DELETE FROM feedback_email_queue WHERE receipt_id = ?").bind(receiptId).run();
     if (!result.meta.changes) {
       missing.push(receiptId);
       continue;
@@ -396,6 +400,12 @@ function validateCoreFields(input: Record<string, unknown>, required: boolean):
 }
 
 async function readObject(request: Request): Promise<Record<string, unknown> | Response> {
+  const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+  if (!contentType.startsWith("application/json")) {
+    return jsonResponse(415, { error: {
+      code: "unsupported_media_type", message: "Content-Type must be application/json.",
+    } });
+  }
   let input: unknown;
   try { input = await request.json(); } catch { return invalid("Request body must be valid JSON."); }
   return isRecord(input) ? input : invalid("Request body must be an object.");
@@ -472,7 +482,8 @@ function parseStructuredFeedback(message: string): {
 
 function csvCell(value: unknown): string {
   const text = value === null || value === undefined ? "" : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
+  const cell = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+  return `"${cell.replace(/"/g, '""')}"`;
 }
 
 function invalid(message: string): Response {

@@ -11,6 +11,13 @@ namespace
     return juce::JSON::toString(BenchmarkRecordCodec::encode(record), true);
 }
 
+[[nodiscard]] bool isValidRunId(std::string_view runId)
+{
+    return !runId.empty() && runId.front() != '~' &&
+           runId.find_first_of("/\\:") == std::string_view::npos &&
+           runId.find("..") == std::string_view::npos;
+}
+
 [[nodiscard]] bool writeFile(const juce::File& file, const juce::String& text)
 {
     std::unique_ptr<juce::FileOutputStream> stream(file.createOutputStream());
@@ -30,8 +37,7 @@ BenchmarkRecordStore::BenchmarkRecordStore(juce::File directoryToUse)
 
 RecordStoreStatus BenchmarkRecordStore::save(const BenchmarkRunRecord& record) const
 {
-    if (record.runId.empty() || record.runId.find('/') != std::string::npos ||
-        record.runId.find('\\') != std::string::npos)
+    if (!isValidRunId(record.runId))
     {
         return RecordStoreStatus::invalid;
     }
@@ -50,6 +56,12 @@ RecordStoreStatus BenchmarkRecordStore::save(const BenchmarkRunRecord& record) c
 
 StoredRecordResult BenchmarkRecordStore::load(std::string_view runId) const
 {
+    if (!isValidRunId(runId))
+    {
+        return {
+            .status = RecordStoreStatus::invalid,
+            .error = "Benchmark record identifier is not a valid record name"};
+    }
     const auto file = fileFor(runId);
     if (!file.existsAsFile())
     {

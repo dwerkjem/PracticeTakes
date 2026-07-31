@@ -1,3 +1,8 @@
+default_install_hook_types:
+  - pre-commit
+  - pre-merge-commit
+default_stages:
+  - pre-commit
 repos:
   - repo: local
     hooks:
@@ -8,6 +13,16 @@ repos:
         pass_filenames: false
         always_run: true
         require_serial: true
+      - id: sops-secret-audit
+        name: Reject tracked plaintext files matching secret-patterns
+        entry: python3 scripts/secrets/secrets_manager.py audit
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+        stages:
+          - pre-commit
+          - pre-merge-commit
       - id: clang-format
         name: Format C++ with clang-format
         entry: python3 scripts/quality/run_clang_format.py

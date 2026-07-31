@@ -241,6 +241,11 @@ venv.bak/
 !.secrets/
 !.secrets/**
 
+# A directory literally named secrets/ at the repository root behaves the way a
+# contributor expects: everything below it stays local and is mirrored
+# encrypted. This is the tracked counterpart to the same rule in secret-patterns.
+secrets/**
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -306,3 +311,10 @@ __marimo__/
 benchmark-results/
 /.ua/.trash-*/*
 /.ua/tmp/
+
+# Scratch output from ad-hoc secret rescans; it quotes scanned file contents.
+/.ua/tmp-secret-rescan.*
+
+# Per-machine Claude Code permission grants. These capture whole command lines
+# verbatim, so they must never be shared through the repository.
+/.claude/settings.local.json

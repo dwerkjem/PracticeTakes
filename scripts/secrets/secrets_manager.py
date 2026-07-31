@@ -43,6 +43,38 @@ PRUNED_DIRECTORIES = {
     "venv",
     "vcpkg_installed",
 }
+DEFAULT_PATTERNS = """\
+# Plaintext secret files to mirror with SOPS.
+#
+# Patterns are repository-relative globs. Rules are evaluated from top to
+# bottom; prefix a rule with ! to exclude a match. Keep example/template files
+# excluded because they are safe to commit as plaintext.
+
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+**/.dev.vars
+**/.dev.vars.*
+!**/.dev.vars.example
+
+*.secret
+*.secrets
+**/*.secret
+**/*.secrets
+
+secrets/**
+"""
 
 
 class SecretsError(RuntimeError):
@@ -104,6 +136,11 @@ def read_patterns(root: Path) -> list[tuple[bool, str]]:
             continue
         excluded = line.startswith("!")
         pattern = line[1:] if excluded else line
+        if any(character.isspace() for character in pattern):
+            raise SecretsError(
+                f"{PATTERN_FILE}:{number}: patterns cannot contain whitespace; "
+                "write one glob per line"
+            )
         try:
             pattern = validate_relative_path(pattern)
         except SecretsError as error:
@@ -133,6 +170,10 @@ def pattern_matches(relative_path: str, pattern: str) -> bool:
 
 def is_secret_path(relative_path: str, rules: Iterable[tuple[bool, str]]) -> bool:
     """Apply ordered pattern rules to a path."""
+    if validate_relative_path(relative_path).startswith(f"{SECRET_DIRECTORY}/"):
+        # Broad rules such as **/.env.* would otherwise classify the encrypted
+        # mirrors themselves as plaintext. The mirrors are meant to be tracked.
+        return False
     selected = False
     for excluded, pattern in rules:
         if pattern_matches(relative_path, pattern):
@@ -361,6 +402,17 @@ def staged_plaintext_paths(
     ]
 
 
+def tracked_plaintext_paths(
+    root: Path, rules: list[tuple[bool, str]]
+) -> list[str]:
+    result = run(["git", "ls-files", "-z"], cwd=root)
+    return sorted(
+        path
+        for path in result.stdout.decode(errors="surrogateescape").split("\0")
+        if path and is_secret_path(path, rules)
+    )
+
+
 def protect_staged_plaintext(
     root: Path, rules: list[tuple[bool, str]]
 ) -> list[str]:
@@ -385,6 +437,21 @@ def protect_staged_plaintext(
             f"  {paths}\nRun 'git rm --cached -- <path>' after confirming the files are secrets."
         )
     return unstaged
+
+
+def audit_command(root: Path) -> int:
+    """Fail when any committed file matches the plaintext secret patterns."""
+    rules = read_patterns(root)
+    tracked = tracked_plaintext_paths(root, rules)
+    if tracked:
+        paths = "\n  ".join(tracked)
+        raise SecretsError(
+            "Tracked plaintext secret files were found:\n"
+            f"  {paths}\nRotate the affected credentials, then remove the files "
+            "with 'git rm --cached -- <path>' and clean the Git history."
+        )
+    print("No tracked file matches the plaintext secret patterns.")
+    return 0
 
 
 def encrypt_command(root: Path, *, protect_index: bool = False) -> int:
@@ -444,14 +511,26 @@ def conflict_output_path(root: Path, source_relative: str) -> Path:
     return git_directory(root) / CONFLICT_DIRECTORY / f"{source_relative}.merge"
 
 
+def conflict_comparison_paths(root: Path, source_relative: str) -> list[Path]:
+    """Return the two local-only decrypted copies written for a sync conflict."""
+    base = git_directory(root) / CONFLICT_DIRECTORY / source_relative
+    return [
+        base.with_suffix(base.suffix + suffix) for suffix in (".local", ".encrypted")
+    ]
+
+
 def record_sync_conflict(
     root: Path, relative: str, local: bytes, encrypted: bytes
 ) -> None:
-    directory = git_directory(root) / CONFLICT_DIRECTORY / relative
-    atomic_write(directory.with_suffix(directory.suffix + ".local"), local, private=True)
-    atomic_write(
-        directory.with_suffix(directory.suffix + ".encrypted"), encrypted, private=True
-    )
+    local_path, encrypted_path = conflict_comparison_paths(root, relative)
+    atomic_write(local_path, local, private=True)
+    atomic_write(encrypted_path, encrypted, private=True)
+
+
+def clear_sync_conflict(root: Path, source_relative: str) -> None:
+    """Delete the decrypted comparison copies once a path is no longer split."""
+    for path in conflict_comparison_paths(root, source_relative):
+        path.unlink(missing_ok=True)
 
 
 def sync_command(root: Path, *, prefer: str | None) -> int:
@@ -504,6 +583,8 @@ def sync_command(root: Path, *, prefer: str | None) -> int:
         else:
             record_sync_conflict(root, relative, local_data, encrypted_data)
             conflicts.append(relative)
+            continue
+        clear_sync_conflict(root, relative)
 
     if conflicts:
         save_state(root, state)
@@ -555,9 +636,13 @@ def decrypt_temporary_ciphertext(root: Path, ciphertext: bytes) -> bytes:
         path.unlink(missing_ok=True)
 
 
-def merge_plaintext(ours: bytes, base: bytes, theirs: bytes) -> tuple[bytes, bool]:
+def merge_plaintext(
+    root: Path, ours: bytes, base: bytes, theirs: bytes
+) -> tuple[bytes, bool]:
     """Three-way merge plaintext with Git's merge-file implementation."""
-    directory = Path(tempfile.mkdtemp(prefix="practice-takes-sops-"))
+    scratch_root = git_directory(root) / CONFLICT_DIRECTORY
+    scratch_root.mkdir(parents=True, exist_ok=True)
+    directory = Path(tempfile.mkdtemp(prefix="merge-", dir=scratch_root))
     try:
         paths = [directory / name for name in ("ours", "base", "theirs")]
         for path, data in zip(paths, (ours, base, theirs), strict=True):
@@ -655,7 +740,7 @@ def resolve_command(
             if stages[1] is not None
             else b""
         )
-        merged, clean = merge_plaintext(ours, base, theirs)
+        merged, clean = merge_plaintext(root, ours, base, theirs)
         if clean:
             finish_resolution(root, mirror_relative, merged)
         else:
@@ -684,15 +769,23 @@ def init_command(root: Path, age_recipient: str) -> int:
     config = root / ".sops.yaml"
     content = (
         "creation_rules:\n"
-        "  - path_regex: ^\\\\.secrets/.*\\\\.sops$\n"
+        "  - path_regex: ^\\.secrets/.*\\.sops$\n"
         f"    age: {age_recipient}\n"
     )
     if config.exists() and config.read_text(encoding="utf-8") != content:
         raise SecretsError("Refusing to overwrite the existing .sops.yaml")
+    created = [
+        name for name in (".sops.yaml", PATTERN_FILE) if not (root / name).is_file()
+    ]
     atomic_write(config, content.encode())
+    patterns = root / PATTERN_FILE
+    if not patterns.is_file():
+        atomic_write(patterns, DEFAULT_PATTERNS.encode())
     stage(root, [".sops.yaml", PATTERN_FILE])
     sync_git_exclude(root, read_patterns(root))
-    print("Created and staged .sops.yaml and secret-patterns.")
+    if created:
+        print(f"Created {' and '.join(created)}.")
+    print(f"Staged .sops.yaml and {PATTERN_FILE}.")
     return 0
 
 
@@ -719,6 +812,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser(
         "pre-commit", help="protect plaintext, encrypt mirrors, and stage them"
+    )
+
+    subparsers.add_parser(
+        "audit", help="fail if any tracked file matches secret-patterns"
     )
 
     resolve = subparsers.add_parser(
@@ -751,6 +848,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 else None
             )
             return sync_command(root, prefer=preference)
+        if arguments.command == "audit":
+            return audit_command(root)
         if arguments.command == "pre-commit":
             if unmerged_mirrors(root):
                 raise SecretsError(

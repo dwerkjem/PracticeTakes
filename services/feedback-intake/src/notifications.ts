@@ -92,6 +92,7 @@ export async function sendPendingFeedbackBatch(
     });
   } catch (error) {
     await releaseClaim(db, claimId);
+    await releaseReservation(db, notificationDay, nowSeconds);
     console.error("Unable to send feedback email batch", error);
     return 0;
   }
@@ -145,6 +146,19 @@ async function releaseClaim(db: D1Database, claimId: string): Promise<void> {
     ).bind(claimId).run();
   } catch (error) {
     console.error("Unable to release failed feedback email claim", error);
+  }
+}
+
+async function releaseReservation(db: D1Database, notificationDay: string,
+                                  nowSeconds: number): Promise<void> {
+  try {
+    await db.prepare(
+      `UPDATE feedback_notification_days
+          SET sent_count = MAX(sent_count - 1, 0), updated_at = ?
+        WHERE notification_day = ?`,
+    ).bind(nowSeconds, notificationDay).run();
+  } catch (error) {
+    console.error("Unable to release the reserved feedback notification slot", error);
   }
 }
 

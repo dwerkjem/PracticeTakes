@@ -138,6 +138,20 @@ jobs:
     with:
       ref: ${{ needs.create-release-ref.outputs.source_sha }}
       version: ${{ needs.prepare.outputs.version }}
+    # Named one at a time rather than inherited so the build workflow only ever
+    # receives the signing material. Every entry is optional: a secret that has
+    # not been created resolves to an empty value and the matching signing step
+    # skips itself.
+    secrets:
+      WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+      WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+      APPLE_DEVELOPER_ID_CERT_P12: ${{ secrets.APPLE_DEVELOPER_ID_CERT_P12 }}
+      APPLE_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_CERT_PASSWORD }}
+      APPLE_DEVELOPER_ID_APPLICATION: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION }}
+      APPLE_DEVELOPER_ID_INSTALLER: ${{ secrets.APPLE_DEVELOPER_ID_INSTALLER }}
+      APPLE_NOTARY_APPLE_ID: ${{ secrets.APPLE_NOTARY_APPLE_ID }}
+      APPLE_NOTARY_PASSWORD: ${{ secrets.APPLE_NOTARY_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
   publish:
     name: Publish GitHub release from build artifacts
@@ -147,7 +161,9 @@ jobs:
       - build
     runs-on: ubuntu-24.04
     permissions:
+      attestations: write
       contents: write
+      id-token: write
 
     steps:
       - name: Download release artifact bundle
@@ -195,14 +211,38 @@ jobs:
             sha256sum --check SHA256SUMS.txt
           )
 
+      # The glob deliberately matches the one the publish step uploads from, so
+      # the release notes can promise provenance for every published asset. The
+      # step above has already proven the directory holds exactly the expected
+      # files and nothing else.
+      - name: Attest release artifact provenance
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4
+        with:
+          subject-path: release-assets/*
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          cat > release-notes.md <<NOTES
+          ### Verifying this download
+
+          Every asset attached to this release, including SHA256SUMS.txt and
+          BUILD-METADATA.txt, carries GitHub build provenance recorded for this
+          workflow run. With the GitHub CLI:
+
+              gh attestation verify <downloaded-file> --repo ${GITHUB_REPOSITORY}
+
+          SHA256SUMS.txt covers the six installers:
+
+              sha256sum --check SHA256SUMS.txt
+          NOTES
+
           gh release create "${{ needs.prepare.outputs.tag }}" release-assets/* \
             --repo "${GITHUB_REPOSITORY}" \
             --title "Practice Takes ${{ needs.prepare.outputs.tag }}" \
+            --notes-file release-notes.md \
             --generate-notes \
             --latest \
             --verify-tag

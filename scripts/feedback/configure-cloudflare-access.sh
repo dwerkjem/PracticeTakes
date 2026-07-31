@@ -127,14 +127,14 @@ api_request() {
         --show-error
         --fail-with-body
         --request "${method}"
-        --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+        --header @-
         --header "Content-Type: application/json"
         "${api_base}${path}"
     )
     if [[ -n ${body} ]]; then
         arguments+=(--data "${body}")
     fi
-    curl "${arguments[@]}"
+    curl "${arguments[@]}" <<<"Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
 }
 
 require_success() {

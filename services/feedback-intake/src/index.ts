@@ -32,6 +32,7 @@ interface Env extends AccessEnv, NotificationEnv {
   DECLINED_RETENTION_DAYS?: string;
   TELEMETRY_RETENTION_DAYS?: string;
   AUDIT_RETENTION_DAYS?: string;
+  EMAIL_QUEUE_RETENTION_DAYS?: string;
 }
 
 interface AuthorizationRequest {
@@ -69,6 +70,10 @@ const versionPattern = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
 const installationIdPattern = /^[0-9A-Za-z_-]{20,128}$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const allowedCategories = new Set(["bug", "idea", "usability", "other"]);
+const authorizationFields = new Set(["schemaVersion", "appVersion", "installationId"]);
+const feedbackFields = new Set([...authorizationFields, "authorization", "submittedAt", "category",
+                                "message", "contactEmail", "screenshotMimeType", "screenshotBase64",
+                                "clientSubmissionId"]);
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -173,7 +178,7 @@ async function createAuthorization(request: Request, env: Env): Promise<Response
   const input = validation.value;
 
   const now = Math.floor(Date.now() / 1000);
-  const clientHash = await hashClient(request);
+  const clientHash = await hashClient(request, env.SUBMISSION_SIGNING_KEY);
   const authorizationLimit = positiveInteger(env.AUTHORIZATIONS_PER_HOUR, 10);
   if (await isRateLimited(env.FEEDBACK_DB, "authorization_requests", "client_hash", clientHash,
                           now, authorizationLimit)) {
@@ -232,7 +237,7 @@ async function createSubmission(
   }
 
   const installationHash = await sha256(input.installationId);
-  const clientHash = await hashClient(request);
+  const clientHash = await hashClient(request, env.SUBMISSION_SIGNING_KEY);
   if (claims.appVersion !== input.appVersion || claims.installationHash !== installationHash ||
       claims.clientHash !== clientHash) {
     return errorResponse(401, "authorization_mismatch", "Authorization does not match this submission.");
@@ -284,31 +289,36 @@ async function createSubmission(
 
   const receiptId = crypto.randomUUID();
   const quarantineReason = suspiciousSubmissionReason(input.message);
+  const statements = [
+    env.FEEDBACK_DB.prepare(
+      "INSERT INTO consumed_authorizations (token_id, consumed_at) VALUES (?, ?)",
+    ).bind(claims.tokenId, now),
+    env.FEEDBACK_DB.prepare(
+      `INSERT INTO feedback_submissions
+       (receipt_id, schema_version, submitted_at, received_at, app_version,
+        installation_hash, client_hash, category, message, contact_email,
+        screenshot_mime_type, screenshot_base64, client_submission_id, status,
+        quarantine_reason, quarantined_at)
+       VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(receiptId, input.submittedAt, now, input.appVersion, installationHash,
+           clientHash, input.category, input.message, input.contactEmail ?? null,
+           input.screenshotMimeType ?? null, input.screenshotBase64 ?? null,
+           input.clientSubmissionId, quarantineReason ? "needs_review" : "new",
+           quarantineReason, quarantineReason ? now : null),
+  ];
+  // Quarantined reports stay in the authenticated inbox instead of reaching the
+  // administrator's mail client.
+  if (!quarantineReason) {
+    statements.push(env.FEEDBACK_DB.prepare(
+      `INSERT INTO feedback_email_queue
+       (receipt_id, received_at, app_version, category, message, contact_email,
+        screenshot_mime_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(receiptId, now, input.appVersion, input.category, input.message,
+           input.contactEmail ?? null, input.screenshotMimeType ?? null));
+  }
   try {
-    await env.FEEDBACK_DB.batch([
-      env.FEEDBACK_DB.prepare(
-        "INSERT INTO consumed_authorizations (token_id, consumed_at) VALUES (?, ?)",
-      ).bind(claims.tokenId, now),
-      env.FEEDBACK_DB.prepare(
-        `INSERT INTO feedback_submissions
-         (receipt_id, schema_version, submitted_at, received_at, app_version,
-          installation_hash, client_hash, category, message, contact_email,
-          screenshot_mime_type, screenshot_base64, client_submission_id, status,
-          quarantine_reason, quarantined_at)
-         VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).bind(receiptId, input.submittedAt, now, input.appVersion, installationHash,
-             clientHash, input.category, input.message, input.contactEmail ?? null,
-             input.screenshotMimeType ?? null, input.screenshotBase64 ?? null,
-             input.clientSubmissionId, quarantineReason ? "needs_review" : "new",
-             quarantineReason, quarantineReason ? now : null),
-      env.FEEDBACK_DB.prepare(
-        `INSERT INTO feedback_email_queue
-         (receipt_id, received_at, app_version, category, message, contact_email,
-          screenshot_mime_type)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      ).bind(receiptId, now, input.appVersion, input.category, input.message,
-             input.contactEmail ?? null, input.screenshotMimeType ?? null),
-    ]);
+    await env.FEEDBACK_DB.batch(statements);
   } catch (error) {
     if (isUniqueConstraintError(error)) {
       const existing = await env.FEEDBACK_DB.prepare(
@@ -349,10 +359,12 @@ async function readJson(request: Request): Promise<unknown | Response> {
   }
 }
 
-function validateAuthorizationRequest(value: unknown, minimumVersion: string):
+function validateAuthorizationRequest(value: unknown, minimumVersion: string,
+                                      allowedFields: Set<string> = authorizationFields):
   { value: AuthorizationRequest; error?: never } | { value?: never; error: Response } {
   if (!isRecord(value) || value.schemaVersion !== 1 || typeof value.appVersion !== "string" ||
-      typeof value.installationId !== "string") {
+      typeof value.installationId !== "string" ||
+      Object.keys(value).some((field) => !allowedFields.has(field))) {
     return { error: errorResponse(400, "invalid_request", "Authorization request fields are invalid.") };
   }
   if (!versionPattern.test(value.appVersion) || compareVersions(value.appVersion, minimumVersion) < 0) {
@@ -366,7 +378,7 @@ function validateAuthorizationRequest(value: unknown, minimumVersion: string):
 
 function validateFeedbackRequest(value: unknown, minimumVersion: string):
   { value: FeedbackRequest; error?: never } | { value?: never; error: Response } {
-  const base = validateAuthorizationRequest(value, minimumVersion);
+  const base = validateAuthorizationRequest(value, minimumVersion, feedbackFields);
   if (base.error) return { error: base.error };
   if (!isRecord(value) || typeof value.authorization !== "string" ||
       typeof value.submittedAt !== "string" || typeof value.category !== "string" ||
@@ -398,11 +410,22 @@ function validateFeedbackRequest(value: unknown, minimumVersion: string):
        typeof value.screenshotBase64 !== "string" ||
        value.screenshotBase64.length < 16 ||
        value.screenshotBase64.length > maximumScreenshotBase64Length ||
-       !/^[A-Za-z0-9+/]+={0,2}$/.test(value.screenshotBase64))) {
+       !/^[A-Za-z0-9+/]+={0,2}$/.test(value.screenshotBase64) ||
+       !hasImageSignature(value.screenshotBase64, value.screenshotMimeType))) {
     return { error: errorResponse(400, "invalid_screenshot",
       "Screenshot must be a bounded base64-encoded PNG or JPEG attachment.") };
   }
   return { value: { ...value, message } as unknown as FeedbackRequest };
+}
+
+function hasImageSignature(base64: string, mimeType: "image/png" | "image/jpeg"): boolean {
+  let prefix: string;
+  try {
+    prefix = atob(base64.slice(0, 12));
+  } catch { return false; }
+  return mimeType === "image/png"
+    ? prefix.startsWith("\x89PNG\r\n\x1a\n")
+    : prefix.startsWith("\xff\xd8\xff");
 }
 
 async function isRateLimited(db: D1Database, table: string, column: string, value: string,
@@ -459,9 +482,9 @@ async function sha256(value: string): Promise<string> {
   return base64UrlEncode(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))));
 }
 
-async function hashClient(request: Request): Promise<string> {
+async function hashClient(request: Request, secret: string): Promise<string> {
   const address = request.headers.get("cf-connecting-ip") ?? "unknown";
-  return sha256(address);
+  return hmac(`client:${address}`, secret);
 }
 
 function base64UrlEncode(bytes: Uint8Array): string {

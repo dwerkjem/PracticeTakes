@@ -73,6 +73,12 @@ class NotificationStatement {
           report.claimed_at = null;
         }
       }
+    } else if (this.sql.includes("feedback_notification_days")) {
+      const day = this.parameters[1] as string;
+      this.database.dailyAttempts.set(
+        day,
+        Math.max((this.database.dailyAttempts.get(day) ?? 0) - 1, 0),
+      );
     } else if (this.sql.includes("DELETE FROM feedback_email_queue")) {
       const claimId = this.parameters[0] as string;
       for (let index = this.database.reports.length - 1; index >= 0; index -= 1) {
@@ -263,6 +269,31 @@ describe("feedback email batching", () => {
     )).toBe(1);
     expect(database.reports).toHaveLength(0);
     expect(errorLog).toHaveBeenCalledOnce();
+    errorLog.mockRestore();
+  });
+
+  it("returns the reserved daily slot when a send fails", async () => {
+    const database = new NotificationDatabase();
+    database.add("undelivered", 1);
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const send = vi.fn(async (_message: unknown) => undefined)
+      .mockRejectedValueOnce(new Error("mail service unavailable"))
+      .mockRejectedValueOnce(new Error("mail service unavailable"))
+      .mockRejectedValueOnce(new Error("mail service unavailable"))
+      .mockResolvedValue(undefined);
+    const env = environment(send);
+
+    for (const hour of ["03", "07", "11"]) {
+      expect(await sendPendingFeedbackBatch(
+        database as unknown as D1Database, env, new Date(`2026-07-24T${hour}:17:00Z`),
+      )).toBe(0);
+    }
+
+    expect(await sendPendingFeedbackBatch(
+      database as unknown as D1Database, env, new Date("2026-07-24T15:17:00Z"),
+    )).toBe(1);
+    expect(database.dailyAttempts.get("2026-07-24")).toBe(1);
+    expect(database.reports).toHaveLength(0);
     errorLog.mockRestore();
   });
 });

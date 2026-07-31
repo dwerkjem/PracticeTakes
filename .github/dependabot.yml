@@ -5,7 +5,14 @@ updates:
     schedule:
       interval: weekly
 
+  # The npm workspace root owns package-lock.json, so updates must be raised
+  # there for the lockfile to stay in step with the member manifests.
   - package-ecosystem: npm
+    directory: /services
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
     directory: /services/feedback-intake
     schedule:
       interval: weekly

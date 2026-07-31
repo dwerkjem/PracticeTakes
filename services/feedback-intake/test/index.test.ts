@@ -229,6 +229,14 @@ async function errorCode(response: Response): Promise<string> {
   return body.error.code;
 }
 
+function attachment(signature: number[]): string {
+  const bytes = [...signature, ...Array.from({ length: 32 - signature.length }, () => 0)];
+  return btoa(String.fromCharCode(...bytes));
+}
+
+const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const jpegSignature = [0xff, 0xd8, 0xff, 0xe0];
+
 describe("feedback intake worker", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -392,6 +400,83 @@ describe("feedback intake worker", () => {
       status: "needs_review",
       quarantineReason: "multiple_external_links",
     });
+    expect(database.emailQueue.size).toBe(0);
+  });
+
+  it("stores the client address as a keyed pseudonym rather than a plain digest", async () => {
+    const database = new MemoryD1();
+    const environment = createEnvironment(database);
+    const authorization = await authorize(environment);
+    expect((await send("/v1/submissions", feedback(authorization), environment)).status).toBe(201);
+
+    const digest = await crypto.subtle.digest(
+      "SHA-256", new TextEncoder().encode(clientAddress),
+    );
+    const unkeyed = btoa(String.fromCharCode(...new Uint8Array(digest)))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    expect(database.submissions[0]?.clientHash).not.toBe(unkeyed);
+    expect(database.submissions[0]?.clientHash).not.toContain(clientAddress);
+  });
+
+  it.each([
+    ["image/png", pngSignature],
+    ["image/jpeg", jpegSignature],
+  ] as const)("accepts a %s screenshot whose bytes match the declared image type",
+              async (screenshotMimeType, signature) => {
+                const environment = createEnvironment();
+                const authorization = await authorize(environment);
+
+                const response = await send("/v1/submissions", {
+                  ...feedback(authorization),
+                  screenshotMimeType,
+                  screenshotBase64: attachment([...signature]),
+                }, environment);
+
+                expect(response.status).toBe(201);
+              });
+
+  it("rejects attachments whose bytes do not match the declared image type", async () => {
+    const environment = createEnvironment();
+    const authorization = await authorize(environment);
+
+    const response = await send("/v1/submissions", {
+      ...feedback(authorization),
+      screenshotMimeType: "image/png",
+      screenshotBase64: attachment(jpegSignature),
+    }, environment);
+
+    expect(response.status).toBe(400);
+    expect(await errorCode(response)).toBe("invalid_screenshot");
+  });
+
+  it("rejects attachments that are not images at all", async () => {
+    const environment = createEnvironment();
+    const authorization = await authorize(environment);
+
+    const response = await send("/v1/submissions", {
+      ...feedback(authorization),
+      screenshotMimeType: "image/png",
+      screenshotBase64: attachment([0x4d, 0x5a, 0x90, 0x00]),
+    }, environment);
+
+    expect(response.status).toBe(400);
+    expect(await errorCode(response)).toBe("invalid_screenshot");
+  });
+
+  it("rejects requests carrying fields outside the published contract", async () => {
+    const environment = createEnvironment();
+    const authorizationResponse = await send("/v1/authorizations", {
+      schemaVersion: 1, appVersion: "0.2.6", installationId, debugMode: true,
+    }, environment);
+    expect(authorizationResponse.status).toBe(400);
+    expect(await errorCode(authorizationResponse)).toBe("invalid_request");
+
+    const authorization = await authorize(environment);
+    const submissionResponse = await send("/v1/submissions", {
+      ...feedback(authorization), internalPriority: "critical",
+    }, environment);
+    expect(submissionResponse.status).toBe(400);
+    expect(await errorCode(submissionResponse)).toBe("invalid_request");
   });
 
   it("provides a data-free availability probe", async () => {

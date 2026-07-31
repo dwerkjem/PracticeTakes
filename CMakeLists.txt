@@ -68,10 +68,13 @@ add_compile_definitions(
 include(FetchContent)
 include(CTest)
 
+# Dependencies are pinned to the exact commit behind each release tag. A shallow
+# clone only retrieves ref tips, so a replacement commit must also be tagged
+# upstream or the fetch will not contain it.
 FetchContent_Declare(
     JUCE
     GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-    GIT_TAG 8.0.12
+    GIT_TAG 29396c22c93392d6738e021b83196283d6e4d850 # 8.0.12
     GIT_SHALLOW TRUE
 )
 
@@ -81,7 +84,7 @@ if(BUILD_TESTING)
     FetchContent_Declare(
         Catch2
         GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-        GIT_TAG v3.8.1
+        GIT_TAG 2b60af89e23d28eefc081bc930831ee9d45ea58b # v3.8.1
         GIT_SHALLOW TRUE
     )
 

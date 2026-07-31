@@ -2,7 +2,7 @@
 
 Practice Takes separates fast local formatting from slower repository-wide static analysis:
 
-- The SOPS secrets hook encrypts and stages configured secret mirrors before every local commit.
+- The SOPS secrets hook encrypts and stages configured secret mirrors before every local commit, and a companion audit hook rejects any tracked file that matches `secret-patterns`.
 - `clang-format` rewrites C and C++ files to match `.clang-format` before every local commit.
 - `clang-tidy` runs after relevant changes land on `main`, applies supported safe fixes, and commits those source changes back to `main`.
 - Pull requests run a check-only `clang-format`/`clang-tidy` gate across every `.cpp`/`.h` file under `src/`, failing the PR without modifying or committing anything.
@@ -22,7 +22,8 @@ Install pre-commit with the package manager for your platform, or with Python:
 python -m pip install pre-commit
 ```
 
-Install the Git hook from the repository root:
+Install the Git hooks from the repository root. Every clone needs this, because
+the secret-protection hooks only run once they are installed:
 
 ```bash
 pre-commit install

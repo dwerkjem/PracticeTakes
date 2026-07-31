@@ -10,6 +10,7 @@ export interface RetentionPolicy {
   declinedDays: number;
   telemetryDays: number;
   auditDays: number;
+  emailQueueDays: number;
 }
 
 interface CountRow {
@@ -34,6 +35,7 @@ export interface RetentionResult {
   telemetryBuckets: number;
   adminActions: number;
   maintenanceRuns: number;
+  emailQueue: number;
 }
 
 const oneDaySeconds = 24 * 60 * 60;
@@ -62,6 +64,7 @@ export function retentionPolicy(env: {
   DECLINED_RETENTION_DAYS?: string;
   TELEMETRY_RETENTION_DAYS?: string;
   AUDIT_RETENTION_DAYS?: string;
+  EMAIL_QUEUE_RETENTION_DAYS?: string;
 }): RetentionPolicy {
   return {
     resolvedDays: configuredPositiveInteger(env.RESOLVED_RETENTION_DAYS, 365),
@@ -69,6 +72,7 @@ export function retentionPolicy(env: {
     declinedDays: configuredPositiveInteger(env.DECLINED_RETENTION_DAYS, 30),
     telemetryDays: configuredPositiveInteger(env.TELEMETRY_RETENTION_DAYS, 90),
     auditDays: configuredPositiveInteger(env.AUDIT_RETENTION_DAYS, 730),
+    emailQueueDays: configuredPositiveInteger(env.EMAIL_QUEUE_RETENTION_DAYS, 30),
   };
 }
 
@@ -160,6 +164,7 @@ export async function runRetention(
     declined: now - policy.declinedDays * oneDaySeconds,
     telemetry: now - policy.telemetryDays * oneDaySeconds,
     audit: now - policy.auditDays * oneDaySeconds,
+    emailQueue: now - policy.emailQueueDays * oneDaySeconds,
     ephemeral: now - 2 * oneDaySeconds,
   };
 
@@ -183,6 +188,14 @@ export async function runRetention(
   const resolvedResult = await db.prepare(
     "DELETE FROM feedback_submissions WHERE status = 'resolved' AND received_at < ?",
   ).bind(cutoffs.resolved).run();
+  const emailQueueResult = await db.prepare(
+    `DELETE FROM feedback_email_queue
+      WHERE received_at < ?
+         OR NOT EXISTS (
+              SELECT 1 FROM feedback_submissions
+               WHERE feedback_submissions.receipt_id = feedback_email_queue.receipt_id
+            )`,
+  ).bind(cutoffs.emailQueue).run();
   const authorizationResult = await db.prepare(
     "DELETE FROM authorization_requests WHERE requested_at < ?",
   ).bind(cutoffs.ephemeral).run();
@@ -208,6 +221,7 @@ export async function runRetention(
     telemetryBuckets: changes(telemetryResult),
     adminActions: changes(adminActionsResult),
     maintenanceRuns: changes(maintenanceResult),
+    emailQueue: changes(emailQueueResult),
   };
 
   await db.prepare(

@@ -7,8 +7,9 @@ namespace
 struct TemporaryDirectory
 {
     TemporaryDirectory()
-        : directory(juce::File::getSpecialLocation(juce::File::tempDirectory)
-                        .getNonexistentChildFile("practice-takes-records", {}, true))
+        : directory(
+              juce::File::getSpecialLocation(juce::File::tempDirectory)
+                  .getNonexistentChildFile("practice-takes-records", {}, true))
     {
         REQUIRE(directory.createDirectory().wasOk());
     }
@@ -58,6 +59,26 @@ TEST_CASE("benchmark record store preserves corrupt and newer schema errors")
     REQUIRE(store.load("corrupt").status == performance::RecordStoreStatus::invalid);
     REQUIRE(store.load("newer").status == performance::RecordStoreStatus::newerSchema);
     REQUIRE(store.load("missing").status == performance::RecordStoreStatus::notFound);
+}
+
+TEST_CASE("benchmark record store rejects run identifiers that escape the record directory")
+{
+    TemporaryDirectory temporary;
+    performance::BenchmarkRecordStore store(temporary.directory.getChildFile("records"));
+    const auto outside = temporary.directory.getChildFile("outside.json");
+    const auto encoded = juce::JSON::toString(performance::BenchmarkRecordCodec::encode({}));
+    REQUIRE(outside.replaceWithText(encoded));
+
+    performance::BenchmarkRunRecord record;
+    record.runId = "../outside";
+
+    REQUIRE(store.save(record) == performance::RecordStoreStatus::invalid);
+    REQUIRE(store.load("../outside").status == performance::RecordStoreStatus::invalid);
+    REQUIRE(store.load("nested/run").status == performance::RecordStoreStatus::invalid);
+    REQUIRE(store.load("nested\\run").status == performance::RecordStoreStatus::invalid);
+    REQUIRE(store.load("~").status == performance::RecordStoreStatus::invalid);
+    REQUIRE(store.load("C:outside").status == performance::RecordStoreStatus::invalid);
+    REQUIRE(store.load("").status == performance::RecordStoreStatus::invalid);
 }
 
 TEST_CASE("benchmark export atomically writes complete codec JSON for incomplete runs")

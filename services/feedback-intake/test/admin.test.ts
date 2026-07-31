@@ -42,7 +42,7 @@ class AdminStatement {
     const results = this.sql.includes("FROM admin_action_receipts")
       ? [{ id: 1, admin_email: email, action: "update", receipt_id: receiptId,
            details_json: '{"fields":["status"]}', created_at: 1_768_788_000 }]
-      : [row];
+      : [{ ...row, ...this.database.rowOverrides }];
     return { success: true, results: results as T[], meta: {} } as D1Result<T>;
   }
 
@@ -80,6 +80,7 @@ class AdminD1 {
   sqlHistory: string[] = [];
   parameterHistory: unknown[][] = [];
   updateChanges = 1;
+  rowOverrides: Partial<typeof row> = {};
 
   prepare(sql: string): D1PreparedStatement {
     return new AdminStatement(this, sql) as unknown as D1PreparedStatement;
@@ -153,6 +154,7 @@ describe("feedback administration", () => {
 
     expect(response.status).toBe(200);
     expect(database.lastSql).toContain("status = ?");
+    expect(database.lastSql).toContain("message LIKE ? ESCAPE '\\'");
     expect(database.lastParameters).toContain("%Environment:%Linux%");
     expect(body.submissions[0]?.userFeedback).not.toContain("Environment:");
     expect(body.submissions[0]?.diagnosticContext).toBe("Practice Takes 0.3.1 | Linux");
@@ -207,6 +209,7 @@ describe("feedback administration", () => {
     }), environment(database));
     expect(response.status).toBe(204);
     expect(database.sqlHistory.some((sql) => sql.includes("DELETE FROM feedback_submissions"))).toBe(true);
+    expect(database.sqlHistory.some((sql) => sql.includes("DELETE FROM feedback_email_queue"))).toBe(true);
     expect(database.lastParameters).toContain("delete");
     expect(database.lastParameters.join(" ")).toContain("Wrong note");
   });
@@ -224,6 +227,7 @@ describe("feedback administration", () => {
     expect(response.status).toBe(200);
     expect(body.deleted).toEqual([receiptId, secondReceiptId]);
     expect(database.sqlHistory.filter((sql) => sql.includes("DELETE FROM feedback_submissions"))).toHaveLength(2);
+    expect(database.sqlHistory.filter((sql) => sql.includes("DELETE FROM feedback_email_queue"))).toHaveLength(2);
     expect(database.sqlHistory.filter((sql) => sql.includes("INSERT INTO admin_action_receipts"))).toHaveLength(2);
   });
 
@@ -256,6 +260,8 @@ describe("feedback administration", () => {
     expect(database.sqlHistory.some((sql) =>
       sql.includes("DELETE FROM feedback_submissions WHERE status = 'resolved'"))).toBe(true);
     expect(database.sqlHistory.some((sql) =>
+      sql.includes("DELETE FROM feedback_email_queue"))).toBe(true);
+    expect(database.sqlHistory.some((sql) =>
       sql.includes("INSERT INTO maintenance_runs"))).toBe(true);
   });
 
@@ -275,5 +281,31 @@ describe("feedback administration", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/csv");
     expect(await response.text()).toContain(receiptId);
+  });
+
+  it("neutralizes spreadsheet formulas in exported cells", async () => {
+    const database = new AdminD1();
+    database.rowOverrides = {
+      message: '=HYPERLINK("https://attacker.test","Click")',
+      developer_notes: "-2+3+cmd|' /c calc'!A0",
+    };
+    const response = await handleAdminRequest(
+      adminRequest(`/v1/admin/export?id=${receiptId}`), environment(database),
+    );
+    const csv = await response.text();
+
+    expect(csv).toContain(`"'=HYPERLINK(""https://attacker.test"",""Click"")"`);
+    expect(csv).toContain(`"'-2+3+cmd|' /c calc'!A0"`);
+  });
+
+  it("rejects administrative writes that omit the JSON content type", async () => {
+    const response = await handleAdminRequest(adminRequest("/v1/admin/submissions/batch-delete", {
+      method: "POST",
+      body: JSON.stringify({ receiptIds: [receiptId] }),
+    }), environment());
+    const body = await response.json() as { error: { code: string } };
+
+    expect(response.status).toBe(415);
+    expect(body.error.code).toBe("unsupported_media_type");
   });
 });

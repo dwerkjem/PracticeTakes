@@ -131,6 +131,8 @@ cmake_args=(
 # direct shallow clone is reliable and is passed back to FetchContent as an
 # explicit source override.
 juce_source_dir="$BUILD_DIR/_deps/juce-src"
+# Must stay in sync with the pinned GIT_TAG values in CMakeLists.txt.
+juce_commit="29396c22c93392d6738e021b83196283d6e4d850"
 if [[ ! -f "$juce_source_dir/CMakeLists.txt" ]]; then
     mkdir -p "$(dirname -- "$juce_source_dir")"
     git_command="$(command -v git)"
@@ -139,6 +141,14 @@ if [[ ! -f "$juce_source_dir/CMakeLists.txt" ]]; then
     fi
     "$git_command" clone --depth 1 --branch 8.0.12 \
         https://github.com/juce-framework/JUCE.git "$juce_source_dir"
+
+    cloned_commit="$("$git_command" -C "$juce_source_dir" rev-parse HEAD)"
+    if [[ "$cloned_commit" != "$juce_commit" ]]; then
+        rm -rf -- "$juce_source_dir"
+        printf 'Error: JUCE tag 8.0.12 resolved to %s, expected %s.\n' \
+            "$cloned_commit" "$juce_commit" >&2
+        exit 1
+    fi
 fi
 
 cmake_args+=(
@@ -146,6 +156,7 @@ cmake_args+=(
 )
 
 catch2_source_dir="$BUILD_DIR/_deps/catch2-src"
+catch2_commit="2b60af89e23d28eefc081bc930831ee9d45ea58b"
 if [[ ! -f "$catch2_source_dir/CMakeLists.txt" ]]; then
     mkdir -p "$(dirname -- "$catch2_source_dir")"
     git_command="$(command -v git)"
@@ -154,6 +165,14 @@ if [[ ! -f "$catch2_source_dir/CMakeLists.txt" ]]; then
     fi
     "$git_command" clone --depth 1 --branch v3.8.1 \
         https://github.com/catchorg/Catch2.git "$catch2_source_dir"
+
+    cloned_commit="$("$git_command" -C "$catch2_source_dir" rev-parse HEAD)"
+    if [[ "$cloned_commit" != "$catch2_commit" ]]; then
+        rm -rf -- "$catch2_source_dir"
+        printf 'Error: Catch2 tag v3.8.1 resolved to %s, expected %s.\n' \
+            "$cloned_commit" "$catch2_commit" >&2
+        exit 1
+    fi
 fi
 
 cmake_args+=(

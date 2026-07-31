@@ -14,9 +14,9 @@ scheduled delivery path: D1 retains all unemailed reports, and the Worker sends 
 emails per UTC day. At each of the three schedules it divides the current backlog by the remaining
 daily email slots, so five queued reports are sent as batches of two, two, and one instead of one
 large digest. Reports received after the third email remain queued for the next UTC day. Failed
-email batches are released back to the queue and retried later. A single email contains at most 100
-reports so the complete messages remain safely below the provider's message-size limit; larger
-backlogs continue on following days without dropping records.
+email batches are released back to the queue with their daily send slot and retried later. A single
+email contains at most 100 reports so the complete messages remain safely below the provider's
+message-size limit; larger backlogs continue on following days without dropping records.
 
 The administrative interface is protected by a path-scoped Cloudflare Access application for one
 email address. The Worker independently verifies the Access JWT signature, issuer, audience, and
@@ -143,14 +143,20 @@ export ADMIN_EMAIL='developer@example.com'
 ./scripts/feedback/setup-dashboard-daemon.sh
 ```
 
-The script creates a mode-`0600` `.env` file and generates the dashboard password. Rebuild and
-restart the daemon after changing the checkout with:
+The script creates a mode-`0600` `.env` file and generates the dashboard password. The password is
+never printed; read `ADMIN_PASSWORD` from that file. The script then installs root-owned copies of
+`compose.yaml` and the `.env` file under `/etc/practice-takes-feedback` and runs the unit from that
+directory, so the boot-time service never reads the checkout. Existing installations must re-run
+`setup-dashboard-daemon.sh` once to replace their unit with the hardened one. Rebuild and restart
+the daemon after changing the checkout with:
 
 ```bash
 ./scripts/feedback/update-dashboard-daemon.sh
 ```
 
-Pass `--pull-source` to perform a fast-forward-only `git pull` before rebuilding.
+The update script rebuilds the image, refreshes the root-owned runtime copies, and warns when the
+installed unit still runs from the checkout. Pass `--pull-source` to perform a fast-forward-only
+`git pull` before rebuilding.
 
 ## Deployment
 
@@ -250,7 +256,8 @@ linking, and CSV export.
 
 ## Security and abuse controls
 
-- 1.5 MiB request limit with an independently bounded optional PNG or JPEG screenshot
+- 1.5 MiB request limit with an independently bounded optional PNG or JPEG screenshot whose decoded
+  bytes must carry the signature of its declared media type
 - Screenshots require explicit per-submission consent, contain visible Practice Takes windows,
   and explicitly exclude the feedback form itself
 - configurable minimum supported semantic application version
@@ -275,8 +282,9 @@ The default hard ceilings are 5,000 feedback records, 500 MB of estimated feedba
 records per installation. These are enforced in addition to request-size and hourly frequency
 limits, including service-wide caps of 5,000 authorization requests and 500 submissions per hour.
 Reports containing three or more external links or long repeated-character runs are stored with
-`needs_review` status and a quarantine reason. They remain visible only in the authenticated inbox
-and can be released there by clearing that reason.
+`needs_review` status and a quarantine reason. They are never queued for email and remain visible
+only in the authenticated inbox, where clearing that reason releases them for triage without
+sending an email.
 
 The 03:17 UTC scheduled run performs retention after attempting its email batch. The 11:17 and
 19:17 UTC runs only process queued email. Retention applies these defaults:
@@ -286,14 +294,18 @@ The 03:17 UTC scheduled run performs retention after attempting its email batch.
 | Declined feedback | 30 days |
 | Duplicate feedback | 90 days |
 | Resolved feedback | 365 days |
+| Queued feedback email copies | 30 days |
 | Hourly operational telemetry | 90 days |
 | Authorization and consumed-token rows | 2 days |
 | Administrative receipts and maintenance history | 730 days |
 | New, needs-review, planned, and quarantined feedback | Until triaged or manually deleted |
 
-Override the feedback and telemetry periods with the `*_RETENTION_DAYS` Worker variables. Manual
-deletion is available per record or in batches and leaves a minimal administrative receipt with the
-record identifier and title. Selected records can be exported as CSV from the inbox before deletion.
+Override the feedback, email queue, and telemetry periods with the `*_RETENTION_DAYS` Worker
+variables. Retention drops queued email copies once they reach the email queue period or their
+submission is gone; the reports themselves stay in the inbox even when their copy expires unsent.
+Manual deletion is available per record or in batches, purges the queued email copy of each removed
+record, and leaves a minimal administrative receipt with the record identifier and title. Selected
+records can be exported as CSV from the inbox before deletion.
 
 For a complete D1 backup, use a date-stamped SQL export and retain it in encrypted storage outside
 the repository:
@@ -328,10 +340,12 @@ Run the local drill after schema changes and perform a staging D1 restore at lea
 No runtime or deployment credential belongs in source control. The signing key, Access audience,
 team domain, and one administrator email are Wrangler secrets. Cloudflare Access and Worker-side
 JWT validation protect the inbox; the optional dashboard container reads its scoped D1 token and
-login from the ignored mode-`0600` `.env` file.
+login from the ignored mode-`0600` `.env` file, and the systemd daemon reads the root-owned copy
+under `/etc/practice-takes-feedback`.
 
 Rotate `SUBMISSION_SIGNING_KEY` with `wrangler secret put` at least every 90 days and immediately
 after suspected exposure. Existing five-minute authorizations naturally expire after rotation.
 Rotate the dashboard D1 token and password independently, update the host secret file, restart the
-container, verify the operations endpoint, and revoke the previous credentials. Deployment tokens
-should be limited to the Worker and its D1 database.
+container or run `update-dashboard-daemon.sh` so the root-owned copy matches, verify the operations
+endpoint, and revoke the previous credentials. Deployment tokens should be limited to the Worker and
+its D1 database.
