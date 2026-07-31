@@ -13,6 +13,9 @@ All build, architecture, and quality documentation lives under
   configuration, and run commands
 - [Architecture](docs/development/ARCHITECTURE.md) — application ownership,
   audio flow, and UI structure
+- [Architecture map](https://dwerkjem.github.io/PracticeTakes/) — browsable
+  graph of the whole repository with a guided tour, useful for finding where a
+  change belongs before you start
 - [Design and architecture review checklist](docs/development/ARCHITECTURE_QA.md) —
   what reviewers check on pull requests beyond formatting/linting
 - [QA strategy](docs/development/QA_STRATEGY.md) — the current CI/testing

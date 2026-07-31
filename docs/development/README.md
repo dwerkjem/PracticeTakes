@@ -9,6 +9,9 @@ broader music-practice and digital-audio workstation application.
 
 ## Documentation
 
+- [Architecture map](https://dwerkjem.github.io/PracticeTakes/) — browsable
+  graph of every file, its role, and what it connects to, with a guided tour
+  through the codebase. Generated from the repository; no setup required
 - [Building](BUILDING.md) — prerequisites, local configuration, and run commands
 - [Architecture](ARCHITECTURE.md) — application ownership, audio flow, and UI structure
 - [Design and architecture review checklist](ARCHITECTURE_QA.md) — what reviewers check on pull requests beyond formatting/linting

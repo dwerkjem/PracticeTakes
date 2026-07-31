@@ -108,6 +108,10 @@ Developer documentation, including architecture, local builds, code
 conventions, and release instructions, is kept in
 [`docs/development/`](docs/development/README.md).
 
+The [architecture map](https://dwerkjem.github.io/PracticeTakes/) is a
+browsable graph of the codebase — every file, its role, and what it connects
+to, with a guided tour. It needs no checkout or setup.
+
 ## License
 
 Practice Takes is available under the permissive
