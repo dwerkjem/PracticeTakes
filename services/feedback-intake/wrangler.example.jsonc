@@ -14,7 +14,7 @@
     }
   ],
   "vars": {
-    "MINIMUM_APP_VERSION": "0.2.6",
+    "MINIMUM_APP_VERSION": "0.5.0",
     "AUTHORIZATIONS_PER_HOUR": "10",
     "SUBMISSIONS_PER_HOUR": "5",
     "MAX_AUTHORIZATIONS_PER_HOUR": "5000",
