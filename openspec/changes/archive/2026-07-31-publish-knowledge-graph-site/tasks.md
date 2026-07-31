@@ -1,6 +1,6 @@
 ## 1. Repository configuration
 
-- [ ] 1.1 Enable GitHub Pages with the GitHub Actions source. This is a
+- [x] 1.1 Enable GitHub Pages with the GitHub Actions source. This is a
       repository-admin action; the workflow cannot do it for itself, and every
       deployment fails until it is done.
 
@@ -56,5 +56,5 @@
 - [x] 4.3 Confirm the provenance warning fires on a graph whose recorded commit
       is an ancestor of `HEAD`.
 - [x] 4.4 Confirm a push touching only source files triggers no deployment.
-- [ ] 4.5 Open the pull request and confirm the workflow runs green, then merge
+- [x] 4.5 Open the pull request and confirm the workflow runs green, then merge
       and confirm the published URL serves the dashboard.

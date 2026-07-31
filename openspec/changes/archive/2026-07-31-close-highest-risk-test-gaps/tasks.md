@@ -86,7 +86,7 @@
       `ctest`.
 - [x] 6.3 Confirm the full diff touches no migration, no production query, and
       no existing workflow file.
-- [ ] 6.4 Confirm both new checks pass on a pushed pull request (live CI run).
-      Blocked: needs a push to a branch, which is the maintainer's call. Both
-      suites and the type-check pass locally (65 service tests, 30 Python
-      tests, `tsc --noEmit` clean).
+- [x] 6.4 Confirm both new checks pass on a pushed pull request (live CI run).
+      Confirmed on the push of b7882da to main: "Python quality check" and the
+      services suite both passed, alongside 65 service tests and 30 Python
+      tests locally.
