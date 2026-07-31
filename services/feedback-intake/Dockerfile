@@ -1,4 +1,4 @@
-FROM node:20-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 
 WORKDIR /app
 
@@ -9,17 +9,9 @@ RUN npm ci --workspace @practice-takes/feedback-intake
 COPY feedback-intake/src feedback-intake/src
 COPY feedback-intake/tsconfig.json feedback-intake/tsconfig.json
 
-RUN cd feedback-intake \
-    && ./node_modules/.bin/esbuild src/docker-server.ts \
-      --bundle \
-      --platform=node \
-      --format=esm \
-      --loader:.html=text \
-      --loader:.css=text \
-      --loader:.js=text \
-      --outfile=dist/docker-server.js
+RUN npm run build:docker --workspace @practice-takes/feedback-intake
 
-FROM node:20-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 
 WORKDIR /app
 
