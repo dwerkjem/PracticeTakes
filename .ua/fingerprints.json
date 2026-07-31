@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "1b5ed119258ac21d7bc5f8e493792e0f672d5cb6",
-  "generatedAt": "2026-07-29T20:28:56.115Z",
+  "gitCommitHash": "5ab9b85bbc1c37fcd3c9659c05f28cfa539df402",
+  "generatedAt": "2026-07-31T05:28:46.301Z",
   "files": {
     ".clang-format": {
       "filePath": ".clang-format",
@@ -23,146 +23,6 @@
       "totalLines": 36,
       "hasStructuralAnalysis": false
     },
-    ".claude/commands/opsx/apply.md": {
-      "filePath": ".claude/commands/opsx/apply.md",
-      "contentHash": "89d7cee95f269936adfa3b38e19acca09dc1780d6b448968e3315fc87f5222f4",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 157,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/commands/opsx/archive.md": {
-      "filePath": ".claude/commands/opsx/archive.md",
-      "contentHash": "fd18d7258de6002efbed97ab32e9ce61f2b7d899e3be6843dd64f6f2b5d88108",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 162,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/commands/opsx/explore.md": {
-      "filePath": ".claude/commands/opsx/explore.md",
-      "contentHash": "8ed0cb6e9933a71f676ef94a5b865e5681155b04ceafbe0171160791673da156",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 176,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/commands/opsx/propose.md": {
-      "filePath": ".claude/commands/opsx/propose.md",
-      "contentHash": "b6f40402553e7348172fae8e154aa65284f49308a90d79209d2bdaae35059023",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 111,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/commands/opsx/sync.md": {
-      "filePath": ".claude/commands/opsx/sync.md",
-      "contentHash": "df2c3ba5ad9bc4d6ecc8b35427285ad6355fc12fe1574cbca7bed165396075b1",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 145,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/commands/opsx/update.md": {
-      "filePath": ".claude/commands/opsx/update.md",
-      "contentHash": "6fc83c666f6f9a5955f67560183a692d1aada36de66f12bfc6a42c85e58f3c49",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 83,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/settings.json": {
-      "filePath": ".claude/settings.json",
-      "contentHash": "43fd9292d8554aea3381e56d82032711f710bf8de2cec4c06ef2966351c70934",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 6,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/settings.local.json": {
-      "filePath": ".claude/settings.local.json",
-      "contentHash": "d0accb5c68e53e6ba00cf7287ab610d8112307e100a6f353cc8645adf588ba3b",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 28,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/openspec-apply-change/SKILL.md": {
-      "filePath": ".claude/skills/openspec-apply-change/SKILL.md",
-      "contentHash": "83e0d2d4c47674e312fc9d29297d91e5c018a5507e6961829ee623600e2cf2ff",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 161,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/openspec-archive-change/SKILL.md": {
-      "filePath": ".claude/skills/openspec-archive-change/SKILL.md",
-      "contentHash": "85c8764715a18fbd11d16ca04bd9e15d8644bf5e4203176ad34eee192b546472",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 119,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/openspec-explore/SKILL.md": {
-      "filePath": ".claude/skills/openspec-explore/SKILL.md",
-      "contentHash": "79249f798ad0d69bf95f08f3c7a29d44d982e4c1645f1a12a21dfcd488f4ba0d",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 291,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/openspec-propose/SKILL.md": {
-      "filePath": ".claude/skills/openspec-propose/SKILL.md",
-      "contentHash": "a666b2381a7d5e982d8e32183484020f518da2b795c0f387c5ff4b3cb47be0fd",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 115,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/openspec-sync-specs/SKILL.md": {
-      "filePath": ".claude/skills/openspec-sync-specs/SKILL.md",
-      "contentHash": "420e5815eee33ebd642b9d038f0a5307b176923a5c1a837c4873e51de085aae3",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 149,
-      "hasStructuralAnalysis": true
-    },
-    ".claude/skills/openspec-update-change/SKILL.md": {
-      "filePath": ".claude/skills/openspec-update-change/SKILL.md",
-      "contentHash": "82a51ed50b10ac3be479d7abc4a99fe3685ee7794078d7d8ea7bfc90ae42c2d9",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 87,
-      "hasStructuralAnalysis": true
-    },
     ".gitattributes": {
       "filePath": ".gitattributes",
       "contentHash": "edadde4e794652be325663220a07ea5f48333a78e53725b632d9ec5b5716dffb",
@@ -175,172 +35,12 @@
     },
     ".github/dependabot.yml": {
       "filePath": ".github/dependabot.yml",
-      "contentHash": "5b4405f2eb06ed2243b80865a6d02761911f0f8329cfe723d552cf0f0bf9585d",
+      "contentHash": "5a3315a6e2e168fdd28f31e57ff7bc31871a57d285f7e3592cc7b95de185ba94",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 12,
-      "hasStructuralAnalysis": true
-    },
-    ".github/ISSUE_TEMPLATE/bug_report.md": {
-      "filePath": ".github/ISSUE_TEMPLATE/bug_report.md",
-      "contentHash": "ee3743dc179ac00a1ea5f30b5973d2c3de41c04b775e86d496e5d0f4ce5affd7",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 36,
-      "hasStructuralAnalysis": true
-    },
-    ".github/ISSUE_TEMPLATE/config.yml": {
-      "filePath": ".github/ISSUE_TEMPLATE/config.yml",
-      "contentHash": "fe5a5859c6ccf93921f0fc8ff37d67db7d1cf290af09f7706cb23f6217444990",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 6,
-      "hasStructuralAnalysis": true
-    },
-    ".github/ISSUE_TEMPLATE/feature_request.md": {
-      "filePath": ".github/ISSUE_TEMPLATE/feature_request.md",
-      "contentHash": "0037ff0ec60e6ce8e3b072e7e4d3a0d94fe3c74c0a22dc83b42f07c44a8ab4ad",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 24,
-      "hasStructuralAnalysis": true
-    },
-    ".github/prompts/opsx-apply.prompt.md": {
-      "filePath": ".github/prompts/opsx-apply.prompt.md",
-      "contentHash": "f60f9ae5a14ddd4d580c02b93e654bdc415fa582a536f23aabf034fe2e223b71",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 153,
-      "hasStructuralAnalysis": true
-    },
-    ".github/prompts/opsx-archive.prompt.md": {
-      "filePath": ".github/prompts/opsx-archive.prompt.md",
-      "contentHash": "5e699d70aafa805773e1bb6bc1eda1ae2b072b500795f5c021cf830e1432c1fd",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 158,
-      "hasStructuralAnalysis": true
-    },
-    ".github/prompts/opsx-explore.prompt.md": {
-      "filePath": ".github/prompts/opsx-explore.prompt.md",
-      "contentHash": "3f83f2c4d98477a32b93dc1cd5d80592ef2f7abd6f23cf87421bf86347b7139d",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 172,
-      "hasStructuralAnalysis": true
-    },
-    ".github/prompts/opsx-propose.prompt.md": {
-      "filePath": ".github/prompts/opsx-propose.prompt.md",
-      "contentHash": "52322790d84d0faec27a999dce1d17b1aef4a8d5f2e17df3a9387a395137b85a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 107,
-      "hasStructuralAnalysis": true
-    },
-    ".github/prompts/opsx-sync.prompt.md": {
-      "filePath": ".github/prompts/opsx-sync.prompt.md",
-      "contentHash": "341ffeb7cd7df5c0af7a4b760d15f6f7d57dbd7ab1ca65b86f4e3f6abe630408",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 141,
-      "hasStructuralAnalysis": true
-    },
-    ".github/prompts/opsx-update.prompt.md": {
-      "filePath": ".github/prompts/opsx-update.prompt.md",
-      "contentHash": "c403dc4de00ec53870f39a2f7dbfe5ec88e5259ea5150b781c7b463de8c7f80a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 79,
-      "hasStructuralAnalysis": true
-    },
-    ".github/PULL_REQUEST_TEMPLATE.md": {
-      "filePath": ".github/PULL_REQUEST_TEMPLATE.md",
-      "contentHash": "9d803636b63d266c76c202e2596a2949f1958b856c0b6011a2a46b163dd67428",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 21,
-      "hasStructuralAnalysis": true
-    },
-    ".github/skills/openspec-apply-change/SKILL.md": {
-      "filePath": ".github/skills/openspec-apply-change/SKILL.md",
-      "contentHash": "83e0d2d4c47674e312fc9d29297d91e5c018a5507e6961829ee623600e2cf2ff",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 161,
-      "hasStructuralAnalysis": true
-    },
-    ".github/skills/openspec-archive-change/SKILL.md": {
-      "filePath": ".github/skills/openspec-archive-change/SKILL.md",
-      "contentHash": "85c8764715a18fbd11d16ca04bd9e15d8644bf5e4203176ad34eee192b546472",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 119,
-      "hasStructuralAnalysis": true
-    },
-    ".github/skills/openspec-explore/SKILL.md": {
-      "filePath": ".github/skills/openspec-explore/SKILL.md",
-      "contentHash": "79249f798ad0d69bf95f08f3c7a29d44d982e4c1645f1a12a21dfcd488f4ba0d",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 291,
-      "hasStructuralAnalysis": true
-    },
-    ".github/skills/openspec-propose/SKILL.md": {
-      "filePath": ".github/skills/openspec-propose/SKILL.md",
-      "contentHash": "a666b2381a7d5e982d8e32183484020f518da2b795c0f387c5ff4b3cb47be0fd",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 115,
-      "hasStructuralAnalysis": true
-    },
-    ".github/skills/openspec-sync-specs/SKILL.md": {
-      "filePath": ".github/skills/openspec-sync-specs/SKILL.md",
-      "contentHash": "420e5815eee33ebd642b9d038f0a5307b176923a5c1a837c4873e51de085aae3",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 149,
-      "hasStructuralAnalysis": true
-    },
-    ".github/skills/openspec-update-change/SKILL.md": {
-      "filePath": ".github/skills/openspec-update-change/SKILL.md",
-      "contentHash": "82a51ed50b10ac3be479d7abc4a99fe3685ee7794078d7d8ea7bfc90ae42c2d9",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 87,
+      "totalLines": 19,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/benchmarks.yml": {
@@ -355,12 +55,12 @@
     },
     ".github/workflows/build-multiplatform.yml": {
       "filePath": ".github/workflows/build-multiplatform.yml",
-      "contentHash": "9d5197f33868e20bd0ab6290f7f84b6fc6dd2c8ef90df8b7cf5e7fa5a904d109",
+      "contentHash": "7600834fab212e9525096cdf2ded49183dd76e30810d495179796f6500e58e41",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 575,
+      "totalLines": 834,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/clang-tidy-main.yml": {
@@ -371,16 +71,6 @@
       "imports": [],
       "exports": [],
       "totalLines": 99,
-      "hasStructuralAnalysis": true
-    },
-    ".github/workflows/codeql.yml": {
-      "filePath": ".github/workflows/codeql.yml",
-      "contentHash": "a5b6011c2ef57a116ae7d39ca529f6c4185c37a5c6d4fa72ae1d7c20fa8af631",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 65,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/cpp-quality-check.yml": {
@@ -395,42 +85,52 @@
     },
     ".github/workflows/release.yml": {
       "filePath": ".github/workflows/release.yml",
-      "contentHash": "d445fbf446ef2da56b30a1a264c5ca859d388de1aee1c53168003a7c16affdd0",
+      "contentHash": "736cbf4667a3862b455b244c039ed6e88cf96bdc639425dad5bd360965606c9f",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 209,
+      "totalLines": 249,
+      "hasStructuralAnalysis": true
+    },
+    ".github/workflows/secret-scan.yml": {
+      "filePath": ".github/workflows/secret-scan.yml",
+      "contentHash": "eade72455a6dac2febd7a0b854869d5ee25178164cae8078dfd91a0d3cdb891d",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 52,
       "hasStructuralAnalysis": true
     },
     ".github/workflows/services-check.yml": {
       "filePath": ".github/workflows/services-check.yml",
-      "contentHash": "5a6483604914975e2d5e96f1f385e664a7e2d3d4681d11436db6fdbc35aeeb45",
+      "contentHash": "62a761d2a8a51ee5a3bab903874e9919df6f4fb30a9578e83b81eec959bbd1ac",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 45,
+      "totalLines": 73,
       "hasStructuralAnalysis": true
     },
     ".pre-commit-config.yaml": {
       "filePath": ".pre-commit-config.yaml",
-      "contentHash": "5aab48d55a83a883569b8d2bb4d1cf8fa965fc48422d66f2f8a30c165c313977",
+      "contentHash": "a1e46ba346db5242fcf70863138f69d0e0230781eee1500005fe0ff063369194",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 16,
+      "totalLines": 31,
       "hasStructuralAnalysis": true
     },
     ".sops.yaml": {
       "filePath": ".sops.yaml",
-      "contentHash": "32ce693cc1be9c6d5e5fb13884230dcc81b4dc679cc362de15f50f64a889bc44",
+      "contentHash": "e9f40aac376b1a244004049bae0afd1070279208934aea7f6128365cf5a5a0f2",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 8,
+      "totalLines": 4,
       "hasStructuralAnalysis": true
     },
     ".sops.yaml.example": {
@@ -443,15 +143,65 @@
       "totalLines": 11,
       "hasStructuralAnalysis": false
     },
-    "benchmark-results/README.md": {
-      "filePath": "benchmark-results/README.md",
-      "contentHash": "ca1e3214e3a6b6ac86ef1f5ac85050f3b031f4d0da43065188aab28206f7b970",
+    "CMakeLists.txt": {
+      "filePath": "CMakeLists.txt",
+      "contentHash": "83f8e1bda83744de06918a0952975b0004f2a4c91f83d23d7f879da6a527a954",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 15,
+      "totalLines": 356,
+      "hasStructuralAnalysis": false
+    },
+    "CODEOWNERS": {
+      "filePath": "CODEOWNERS",
+      "contentHash": "9a77e0830fdae6c4a9b04a8f59ef5e8a4362b3fbc1dc03703c598cc4db0781e4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 3,
+      "hasStructuralAnalysis": false
+    },
+    "CONTRIBUTING.md": {
+      "filePath": "CONTRIBUTING.md",
+      "contentHash": "b0aa297587545f64e858be6f7520c99d828072768728a7bc1e88293b2c6777eb",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 54,
       "hasStructuralAnalysis": true
+    },
+    "README.md": {
+      "filePath": "README.md",
+      "contentHash": "ee0a78e51b362ac2b1ae32aebcad866930e2ccaf847e42b912decaccf858341e",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 115,
+      "hasStructuralAnalysis": true
+    },
+    "SECURITY.md": {
+      "filePath": "SECURITY.md",
+      "contentHash": "764ac9db6f7aa85640d9bc007f5ffbebe1bd83898bfb7610cfea3077cef20691",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 34,
+      "hasStructuralAnalysis": true
+    },
+    "VERSION": {
+      "filePath": "VERSION",
+      "contentHash": "f669b5e9183901b78b0952eb71f8fe54bdcff9cc3d155710c61e25be7b35b058",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 2,
+      "hasStructuralAnalysis": false
     },
     "cmake/Packaging.cmake": {
       "filePath": "cmake/Packaging.cmake",
@@ -503,26 +253,6 @@
       "totalLines": 10,
       "hasStructuralAnalysis": false
     },
-    "CMakeLists.txt": {
-      "filePath": "CMakeLists.txt",
-      "contentHash": "387246f724e5c0af99023724bd84f8e1d854b9b396811ab13c427ee03ef92624",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 353,
-      "hasStructuralAnalysis": false
-    },
-    "CODEOWNERS": {
-      "filePath": "CODEOWNERS",
-      "contentHash": "9a77e0830fdae6c4a9b04a8f59ef5e8a4362b3fbc1dc03703c598cc4db0781e4",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 3,
-      "hasStructuralAnalysis": false
-    },
     "contracts/feedback/v1.schema.json": {
       "filePath": "contracts/feedback/v1.schema.json",
       "contentHash": "4c0a96cd3ef026ea5b5bb446732948826ae6aac97fb085e4dd915296fd4c5629",
@@ -533,14 +263,14 @@
       "totalLines": 73,
       "hasStructuralAnalysis": true
     },
-    "CONTRIBUTING.md": {
-      "filePath": "CONTRIBUTING.md",
-      "contentHash": "b0aa297587545f64e858be6f7520c99d828072768728a7bc1e88293b2c6777eb",
+    "docs/development/ARCHITECTURE.md": {
+      "filePath": "docs/development/ARCHITECTURE.md",
+      "contentHash": "260e334534dc416b11b90eaa8c239192d1b25e2a5a8f27d2638f4f1bf7437976",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 54,
+      "totalLines": 167,
       "hasStructuralAnalysis": true
     },
     "docs/development/ARCHITECTURE_QA.md": {
@@ -551,16 +281,6 @@
       "imports": [],
       "exports": [],
       "totalLines": 105,
-      "hasStructuralAnalysis": true
-    },
-    "docs/development/ARCHITECTURE.md": {
-      "filePath": "docs/development/ARCHITECTURE.md",
-      "contentHash": "260e334534dc416b11b90eaa8c239192d1b25e2a5a8f27d2638f4f1bf7437976",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 167,
       "hasStructuralAnalysis": true
     },
     "docs/development/BUILDING.md": {
@@ -593,6 +313,56 @@
       "totalLines": 49,
       "hasStructuralAnalysis": true
     },
+    "docs/development/QA_STRATEGY.md": {
+      "filePath": "docs/development/QA_STRATEGY.md",
+      "contentHash": "d14c0c763dea629b943f7725b8c60d4184982869cad36726802a523569b7a9cc",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 261,
+      "hasStructuralAnalysis": true
+    },
+    "docs/development/QUALITY.md": {
+      "filePath": "docs/development/QUALITY.md",
+      "contentHash": "974ff10b2aaccf7f117a12fb062875948fd2e2335bd6447211b235527669a5da",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 165,
+      "hasStructuralAnalysis": true
+    },
+    "docs/development/README.md": {
+      "filePath": "docs/development/README.md",
+      "contentHash": "98425e22b06c17bb063c18107937fb9c25446f9a81bb1d5d0af667e9253f0ebf",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 32,
+      "hasStructuralAnalysis": true
+    },
+    "docs/development/RELEASING.md": {
+      "filePath": "docs/development/RELEASING.md",
+      "contentHash": "ae69f245a330896411650cf518760f7d97194af73a3002287931c0b5d070c74b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 213,
+      "hasStructuralAnalysis": true
+    },
+    "docs/development/SECRETS.md": {
+      "filePath": "docs/development/SECRETS.md",
+      "contentHash": "370050412af4ec031834e60ec9869fe49b08a9847f88063b26393a7c7d57201b",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 207,
+      "hasStructuralAnalysis": true
+    },
     "docs/development/performance-audio-thread-safety.md": {
       "filePath": "docs/development/performance-audio-thread-safety.md",
       "contentHash": "ba89c30eb8513c38eb6d6b5cc1d6221dd0c51e5a21feb376016756e7498e30d5",
@@ -613,56 +383,6 @@
       "totalLines": 112,
       "hasStructuralAnalysis": true
     },
-    "docs/development/QA_STRATEGY.md": {
-      "filePath": "docs/development/QA_STRATEGY.md",
-      "contentHash": "64eb1eb5ef7878d97aaba10990bfc1ff10893bd9608e32b3a6de48425a30c7a2",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 172,
-      "hasStructuralAnalysis": true
-    },
-    "docs/development/QUALITY.md": {
-      "filePath": "docs/development/QUALITY.md",
-      "contentHash": "32bfe0cc53e98c5ec887925efa51100075633fa0f2ef0c2d87c4716912dd2b39",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 164,
-      "hasStructuralAnalysis": true
-    },
-    "docs/development/README.md": {
-      "filePath": "docs/development/README.md",
-      "contentHash": "a689caa9e1aed60a4195ffee5d2c680b2104663282824a77fd7a838d6b0aeb12",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 31,
-      "hasStructuralAnalysis": true
-    },
-    "docs/development/RELEASING.md": {
-      "filePath": "docs/development/RELEASING.md",
-      "contentHash": "9182e1ec6af3cd4966ab959677faf668f56b34a1cce460da0c69f276c2ca02d3",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 127,
-      "hasStructuralAnalysis": true
-    },
-    "docs/development/SECRETS.md": {
-      "filePath": "docs/development/SECRETS.md",
-      "contentHash": "78cc86a0749ab266c7f03f943ecaf389cdb2b09b11734553b26ac68d41341922",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 113,
-      "hasStructuralAnalysis": true
-    },
     "docs/settings-defaults.md": {
       "filePath": "docs/settings-defaults.md",
       "contentHash": "9c78954e20e377f05ce351098c0799f56d2a9de9469f9435db05e9058a7a379c",
@@ -673,9 +393,9 @@
       "totalLines": 120,
       "hasStructuralAnalysis": true
     },
-    "openspec/changes/archive/2026-07-27-add-codeql-security-scanning/.openspec.yaml": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-codeql-security-scanning/.openspec.yaml",
-      "contentHash": "0db77a840c2a2356d82ebc1671bdddcc1cf7e075820f3837796105c53dfb739a",
+    "openspec/changes/close-highest-risk-test-gaps/.openspec.yaml": {
+      "filePath": "openspec/changes/close-highest-risk-test-gaps/.openspec.yaml",
+      "contentHash": "aaab1efc65ce3b56fbc0b9d37a5389df7eca4b46c3ac11725c22c732283a16d9",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -683,429 +403,39 @@
       "totalLines": 3,
       "hasStructuralAnalysis": true
     },
-    "openspec/changes/archive/2026-07-27-add-codeql-security-scanning/design.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-codeql-security-scanning/design.md",
-      "contentHash": "724bc5b80158ab5acf52998260188bae98055afe76017c097ec491839b0a11b4",
+    "openspec/changes/close-highest-risk-test-gaps/design.md": {
+      "filePath": "openspec/changes/close-highest-risk-test-gaps/design.md",
+      "contentHash": "700955270a019519d4cbe8848ff28430d229a0485cd34d12e09e6e0d220aed86",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 42,
+      "totalLines": 171,
       "hasStructuralAnalysis": true
     },
-    "openspec/changes/archive/2026-07-27-add-codeql-security-scanning/proposal.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-codeql-security-scanning/proposal.md",
-      "contentHash": "9ab7ecf1ba84d90949c97a617ed93448e4d398990768f4d0efe598465af10f1b",
+    "openspec/changes/close-highest-risk-test-gaps/proposal.md": {
+      "filePath": "openspec/changes/close-highest-risk-test-gaps/proposal.md",
+      "contentHash": "17ebeaa4f30454d5da31613560f5137c2ab11b11352b767dc6c65a4a2a254bbe",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 24,
+      "totalLines": 85,
       "hasStructuralAnalysis": true
     },
-    "openspec/changes/archive/2026-07-27-add-codeql-security-scanning/specs/codeql-security-scanning/spec.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-codeql-security-scanning/specs/codeql-security-scanning/spec.md",
-      "contentHash": "943ba928e511e7e72465d4d567763e598082f0c258ec0a8fe9faaa1483237aed",
+    "openspec/changes/close-highest-risk-test-gaps/specs/python-script-test-gate/spec.md": {
+      "filePath": "openspec/changes/close-highest-risk-test-gaps/specs/python-script-test-gate/spec.md",
+      "contentHash": "6fd3d7988df35d8c978dc34a2541091fd2e824c24de64296b32e4dd615ec19d2",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 34,
+      "totalLines": 53,
       "hasStructuralAnalysis": true
     },
-    "openspec/changes/archive/2026-07-27-add-codeql-security-scanning/tasks.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-codeql-security-scanning/tasks.md",
-      "contentHash": "96d5700e11f101f8fa20bd98a91b998be8387221383b9fbb894fa1b514c43959",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 13,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-performance-suite/.openspec.yaml": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-performance-suite/.openspec.yaml",
-      "contentHash": "0db77a840c2a2356d82ebc1671bdddcc1cf7e075820f3837796105c53dfb739a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 3,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-performance-suite/design.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-performance-suite/design.md",
-      "contentHash": "ef5cd2aa1c9d91f209dee0141573e0c3e5859a92e22166994094213470cd9df2",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 69,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-performance-suite/proposal.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-performance-suite/proposal.md",
-      "contentHash": "f783438f5d731b3466bb3999d57d0f3217cb3d7018822f4e762441e5bd3e979f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 51,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-performance-suite/specs/benchmark-ci-reporting/spec.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-performance-suite/specs/benchmark-ci-reporting/spec.md",
-      "contentHash": "e08421061976ec0c29776a1ba35a182021192039b2016812d19be5b43d95543c",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 49,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-performance-suite/tasks.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-performance-suite/tasks.md",
-      "contentHash": "efc7a6bf791a6bbbdb3cea524494751dfba084fc4c4c70a4f774ccba74eb66ca",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 47,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-repo-governance-docs/.openspec.yaml": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-repo-governance-docs/.openspec.yaml",
-      "contentHash": "0db77a840c2a2356d82ebc1671bdddcc1cf7e075820f3837796105c53dfb739a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 3,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-repo-governance-docs/design.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-repo-governance-docs/design.md",
-      "contentHash": "ffea9618cbb380f35bcfc3f8cf006ec366c4ae076d3e6a9b8ed6281d282b8433",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 82,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-repo-governance-docs/proposal.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-repo-governance-docs/proposal.md",
-      "contentHash": "5fd56a978d914eee68d8d9df5f84026f0593ca77b86fe5082b934e39ce448cd8",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 47,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-repo-governance-docs/specs/repo-governance-docs/spec.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-repo-governance-docs/specs/repo-governance-docs/spec.md",
-      "contentHash": "159ed7f8fb19c60d1cf499e6ff77ae387006cf27f932c9a9720a64d1704742b0",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 55,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-repo-governance-docs/tasks.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-repo-governance-docs/tasks.md",
-      "contentHash": "f494177aec776025166630faf77a6d43f105dd7a6e0b12cc300bc5d5859df077",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 39,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-services-ci/.openspec.yaml": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-services-ci/.openspec.yaml",
-      "contentHash": "0db77a840c2a2356d82ebc1671bdddcc1cf7e075820f3837796105c53dfb739a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 3,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-services-ci/design.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-services-ci/design.md",
-      "contentHash": "8e3b4f564c4a8f13de76ada9f4c4ec9f183af521e0a7813bf359205dd80b0b8c",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 83,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-services-ci/proposal.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-services-ci/proposal.md",
-      "contentHash": "ae02d6b5aa2b201b941a1d1dcc97a77f193f22a2bf619e11b380f6c6aed664a2",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 40,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-services-ci/specs/services-quality-gate/spec.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-services-ci/specs/services-quality-gate/spec.md",
-      "contentHash": "89253271dbd4cd33c5729745ec1394e76bd498c81312a8ed7c7b50029c0e8767",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 42,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-services-ci/tasks.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-services-ci/tasks.md",
-      "contentHash": "0620cd48fa01241974d55e24530c38e00bfe11fbf01248c6fc4862d7b379562d",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 31,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-supply-chain-hygiene/.openspec.yaml": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-supply-chain-hygiene/.openspec.yaml",
-      "contentHash": "0db77a840c2a2356d82ebc1671bdddcc1cf7e075820f3837796105c53dfb739a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 3,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-supply-chain-hygiene/design.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-supply-chain-hygiene/design.md",
-      "contentHash": "d9ac4eae97af9083e1dcdc46181648fc0390c8dc378547db4ec212e11b5dfbc8",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 65,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-supply-chain-hygiene/proposal.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-supply-chain-hygiene/proposal.md",
-      "contentHash": "22143dfa68ba9d3590aa778becc228140346e47abc8e94c3fe60c08bb9a2a120",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 49,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-supply-chain-hygiene/specs/supply-chain-hygiene/spec.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-supply-chain-hygiene/specs/supply-chain-hygiene/spec.md",
-      "contentHash": "cd1baea7e2e69e354a8f475baf231452188f9f99d323c03133c0bbe0cb90728c",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 39,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-add-supply-chain-hygiene/tasks.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-add-supply-chain-hygiene/tasks.md",
-      "contentHash": "6d45867d9776e5c46551944df469b3768b602fae24d458ee52a6febe4c5c942f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 34,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-draggable-workspace-tabs/.openspec.yaml": {
-      "filePath": "openspec/changes/archive/2026-07-27-draggable-workspace-tabs/.openspec.yaml",
-      "contentHash": "0db77a840c2a2356d82ebc1671bdddcc1cf7e075820f3837796105c53dfb739a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 3,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-draggable-workspace-tabs/design.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-draggable-workspace-tabs/design.md",
-      "contentHash": "68f13b91787f47fa2197fcd778c9c60676e9ad56469bee0290a775ffc27a96e0",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 139,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-draggable-workspace-tabs/proposal.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-draggable-workspace-tabs/proposal.md",
-      "contentHash": "a2edfffa0a4e87ce1c6a1742fccbb1a1ce943e31ed9d0509d36f076ba57a7eaa",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 49,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-draggable-workspace-tabs/specs/workspace-tab-drag/spec.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-draggable-workspace-tabs/specs/workspace-tab-drag/spec.md",
-      "contentHash": "e902a44cb30e958a5d3d3f3cd3c8cb1019a4959a9e112a2dda8a58944815ab31",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 68,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-draggable-workspace-tabs/tasks.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-draggable-workspace-tabs/tasks.md",
-      "contentHash": "2a94e71ce467d50ec702c86d6e273319a317c0ce0db64a0de675770099fe3deb",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 75,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-enable-cross-platform-tests/.openspec.yaml": {
-      "filePath": "openspec/changes/archive/2026-07-27-enable-cross-platform-tests/.openspec.yaml",
-      "contentHash": "0db77a840c2a2356d82ebc1671bdddcc1cf7e075820f3837796105c53dfb739a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 3,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-enable-cross-platform-tests/design.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-enable-cross-platform-tests/design.md",
-      "contentHash": "ad8f69a00b4d86e8474fdcf3550598e80f156a47cb6cd3aa3bc61dbac8c912b3",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 51,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-enable-cross-platform-tests/proposal.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-enable-cross-platform-tests/proposal.md",
-      "contentHash": "4902349d4bebc9d3cc99766b828b27927ec55814bfca3c28a2dc86ca4caa75cd",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 42,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-enable-cross-platform-tests/specs/cross-platform-test-execution/spec.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-enable-cross-platform-tests/specs/cross-platform-test-execution/spec.md",
-      "contentHash": "0a28b3302c909627fb4c978d2f4b0eaace53d49540bdd74c6593c0afab67f730",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 29,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-enable-cross-platform-tests/tasks.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-enable-cross-platform-tests/tasks.md",
-      "contentHash": "3d7646a5edeae27b77e5ae8bf35703be8f080b3d84a335e221d71f78d06ba84f",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 17,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-enforce-cpp-quality-on-prs/.openspec.yaml": {
-      "filePath": "openspec/changes/archive/2026-07-27-enforce-cpp-quality-on-prs/.openspec.yaml",
-      "contentHash": "0db77a840c2a2356d82ebc1671bdddcc1cf7e075820f3837796105c53dfb739a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 3,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-enforce-cpp-quality-on-prs/design.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-enforce-cpp-quality-on-prs/design.md",
-      "contentHash": "e758e467e8c91a6dc84238f466332730598826f4a65ecb2725ec019896b10716",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 167,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-enforce-cpp-quality-on-prs/proposal.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-enforce-cpp-quality-on-prs/proposal.md",
-      "contentHash": "dc700eac0965cf23161c17dd507d5f3071f2d58d526aa379cce44010d61db66b",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 64,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-enforce-cpp-quality-on-prs/specs/cpp-pr-quality-gate/spec.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-enforce-cpp-quality-on-prs/specs/cpp-pr-quality-gate/spec.md",
-      "contentHash": "9de148e5e248761c9e63e441947c73250320960e20480d9ee133d4e4d11d3f65",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 59,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-27-enforce-cpp-quality-on-prs/tasks.md": {
-      "filePath": "openspec/changes/archive/2026-07-27-enforce-cpp-quality-on-prs/tasks.md",
-      "contentHash": "90f45759c23872ddf76b2d4eb8bc646d63aa4080f7b45a621776eb5cf1b1d6d9",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 86,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-28-workspace-layout-restoration/.openspec.yaml": {
-      "filePath": "openspec/changes/archive/2026-07-28-workspace-layout-restoration/.openspec.yaml",
-      "contentHash": "0db77a840c2a2356d82ebc1671bdddcc1cf7e075820f3837796105c53dfb739a",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 3,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-28-workspace-layout-restoration/design.md": {
-      "filePath": "openspec/changes/archive/2026-07-28-workspace-layout-restoration/design.md",
-      "contentHash": "77f3fbc1de62c93f3d410228a1ceef7312a2fae1e35175fd7c4a930299affc5e",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 209,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-28-workspace-layout-restoration/proposal.md": {
-      "filePath": "openspec/changes/archive/2026-07-28-workspace-layout-restoration/proposal.md",
-      "contentHash": "56c7e44cca3ad8916dee44d237b8d9a470fc09eba8d83efacb4b8f97370545cf",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 33,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-28-workspace-layout-restoration/specs/settings-transfer/spec.md": {
-      "filePath": "openspec/changes/archive/2026-07-28-workspace-layout-restoration/specs/settings-transfer/spec.md",
-      "contentHash": "ff478de51802615896981d47156155332fe2a0d9cc787c7406d5af602b807d00",
+    "openspec/changes/close-highest-risk-test-gaps/specs/worker-database-fidelity/spec.md": {
+      "filePath": "openspec/changes/close-highest-risk-test-gaps/specs/worker-database-fidelity/spec.md",
+      "contentHash": "91de0a913c00fb3d9b29dc9cc15bcf295b8138920d45cc14396949219f8885f8",
       "functions": [],
       "classes": [],
       "imports": [],
@@ -1113,24 +443,14 @@
       "totalLines": 76,
       "hasStructuralAnalysis": true
     },
-    "openspec/changes/archive/2026-07-28-workspace-layout-restoration/specs/workspace-layout-restoration/spec.md": {
-      "filePath": "openspec/changes/archive/2026-07-28-workspace-layout-restoration/specs/workspace-layout-restoration/spec.md",
-      "contentHash": "ecc3f84f0b34e708d62d5862df694af5b9e0d8c842bad0fa4213ba0db5a55ca8",
+    "openspec/changes/close-highest-risk-test-gaps/tasks.md": {
+      "filePath": "openspec/changes/close-highest-risk-test-gaps/tasks.md",
+      "contentHash": "729134a393c30913603e53aec38dc341403e0b287a64098e9488ff37f0891487",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 91,
-      "hasStructuralAnalysis": true
-    },
-    "openspec/changes/archive/2026-07-28-workspace-layout-restoration/tasks.md": {
-      "filePath": "openspec/changes/archive/2026-07-28-workspace-layout-restoration/tasks.md",
-      "contentHash": "9b861dba2b91413be2a1264d75a2818861a5dc92726da469f4bad9359c5523dc",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 64,
+      "totalLines": 93,
       "hasStructuralAnalysis": true
     },
     "openspec/changes/real-world-performance-benchmarking/.openspec.yaml": {
@@ -1205,12 +525,12 @@
     },
     "openspec/specs/codeql-security-scanning/spec.md": {
       "filePath": "openspec/specs/codeql-security-scanning/spec.md",
-      "contentHash": "b4652e8bfa3db441d52750abaa841c42aabf6dcf0c8149999d05521970e4f82d",
+      "contentHash": "1398c59df6f73e3dea3e99ad0112e81d62512e389d4f7ea4b97e8d38d654db9d",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 38,
+      "totalLines": 31,
       "hasStructuralAnalysis": true
     },
     "openspec/specs/cpp-pr-quality-gate/spec.md": {
@@ -1263,24 +583,24 @@
       "totalLines": 13,
       "hasStructuralAnalysis": false
     },
-    "README.md": {
-      "filePath": "README.md",
-      "contentHash": "ee0a78e51b362ac2b1ae32aebcad866930e2ccaf847e42b912decaccf858341e",
+    "scripts/README.md": {
+      "filePath": "scripts/README.md",
+      "contentHash": "747654e54be63047345a022bc622b3d8c7ed87f8b4d60a8453275c33bda8dba0",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 115,
+      "totalLines": 40,
       "hasStructuralAnalysis": true
     },
     "scripts/build/build-and-run.sh": {
       "filePath": "scripts/build/build-and-run.sh",
-      "contentHash": "d0561504338c9bdb930d6dbd8fa63f137b6dea5771b5edb518ed092a1ca8878e",
+      "contentHash": "ee26c9d94def292d4fbeb8e4c5b0bae5baa5b274b2f8e71fe1157cec813bd881",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 307,
+      "totalLines": 326,
       "hasStructuralAnalysis": true
     },
     "scripts/build/check-linux-build-dependencies.sh": {
@@ -1295,7 +615,7 @@
     },
     "scripts/feedback/configure-cloudflare-access.sh": {
       "filePath": "scripts/feedback/configure-cloudflare-access.sh",
-      "contentHash": "affb94c632f58b2e134fd4ac319d9548562d00e1b875a53202379ed8e2c81606",
+      "contentHash": "72a6c65006f6e393ffcf81246223f8216929f68be9e1d914c7ff9cf08dca5638",
       "functions": [
         {
           "name": "usage",
@@ -1407,22 +727,41 @@
     },
     "scripts/feedback/setup-dashboard-daemon.sh": {
       "filePath": "scripts/feedback/setup-dashboard-daemon.sh",
-      "contentHash": "9222f728a15bd6eb04640d0ca1ef35534b80d658a80ff0d432553f203758d801",
-      "functions": [],
+      "contentHash": "cdeef241052e0ca8b1c785ee77107943206d4c078a1fac7d7adc9789dcbc82a9",
+      "functions": [
+        {
+          "name": "is_root_owned",
+          "params": [],
+          "exported": false,
+          "lineCount": 7
+        },
+        {
+          "name": "trusted_binary_path",
+          "params": [],
+          "exported": false,
+          "lineCount": 14
+        },
+        {
+          "name": "require_unit_safe",
+          "params": [],
+          "exported": false,
+          "lineCount": 7
+        }
+      ],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 86,
+      "totalLines": 170,
       "hasStructuralAnalysis": true
     },
     "scripts/feedback/update-dashboard-daemon.sh": {
       "filePath": "scripts/feedback/update-dashboard-daemon.sh",
-      "contentHash": "27c3d67ad291184d5bfac9324b503573aad0a31bf4785f6f30276fcce84ded4e",
+      "contentHash": "c36f0f3d8befce972101786c5ecd49dd6d0640c2c78db2dd36efd1d94f97ecb0",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 28,
+      "totalLines": 49,
       "hasStructuralAnalysis": true
     },
     "scripts/practice_takes_roadmap/__init__.py": {
@@ -2619,6 +1958,16 @@
       "totalLines": 141,
       "hasStructuralAnalysis": true
     },
+    "scripts/quality/run-performance-lab.sh": {
+      "filePath": "scripts/quality/run-performance-lab.sh",
+      "contentHash": "8c31bdce2888fac8117c65ff15f65fadc2987be0cb1697550de3c32e49d25bb4",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 21,
+      "hasStructuralAnalysis": true
+    },
     "scripts/quality/run_clang_format.py": {
       "filePath": "scripts/quality/run_clang_format.py",
       "contentHash": "cc42b8fd4cf0c682463dc78949b1dc1bb73d450a057b063858d9e93a4e766d20",
@@ -2795,16 +2144,6 @@
         "main"
       ],
       "totalLines": 158,
-      "hasStructuralAnalysis": true
-    },
-    "scripts/quality/run-performance-lab.sh": {
-      "filePath": "scripts/quality/run-performance-lab.sh",
-      "contentHash": "8c31bdce2888fac8117c65ff15f65fadc2987be0cb1697550de3c32e49d25bb4",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 21,
       "hasStructuralAnalysis": true
     },
     "scripts/quality/ui-validation/pointer_control.cpp": {
@@ -3228,16 +2567,6 @@
       "totalLines": 225,
       "hasStructuralAnalysis": true
     },
-    "scripts/README.md": {
-      "filePath": "scripts/README.md",
-      "contentHash": "747654e54be63047345a022bc622b3d8c7ed87f8b4d60a8453275c33bda8dba0",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 40,
-      "hasStructuralAnalysis": true
-    },
     "scripts/release/version.py": {
       "filePath": "scripts/release/version.py",
       "contentHash": "df5e55a3694bc10da53ea726b6165f3a70099db12cfbd3336abe0f94b6983716",
@@ -3358,7 +2687,7 @@
     },
     "scripts/secrets/secrets_manager.py": {
       "filePath": "scripts/secrets/secrets_manager.py",
-      "contentHash": "f091071bc8d9c2bfcb765e93622e6901d1797b382f1661fa2e329f1bf0cfb520",
+      "contentHash": "cef5be26dadb1f2a4d519157a8bf2e678199322cf8c1931047f7b39ccdf03977",
       "functions": [
         {
           "name": "run",
@@ -3395,7 +2724,7 @@
           ],
           "returnType": "list[tuple[bool, str]]",
           "exported": true,
-          "lineCount": 26
+          "lineCount": 31
         },
         {
           "name": "pattern_matches",
@@ -3415,7 +2744,7 @@
           ],
           "returnType": "bool",
           "exported": true,
-          "lineCount": 7
+          "lineCount": 11
         },
         {
           "name": "discover_plaintext",
@@ -3583,6 +2912,16 @@
           "lineCount": 12
         },
         {
+          "name": "tracked_plaintext_paths",
+          "params": [
+            "root",
+            "rules"
+          ],
+          "returnType": "list[str]",
+          "exported": true,
+          "lineCount": 9
+        },
+        {
           "name": "protect_staged_plaintext",
           "params": [
             "root",
@@ -3591,6 +2930,15 @@
           "returnType": "list[str]",
           "exported": true,
           "lineCount": 24
+        },
+        {
+          "name": "audit_command",
+          "params": [
+            "root"
+          ],
+          "returnType": "int",
+          "exported": true,
+          "lineCount": 13
         },
         {
           "name": "encrypt_command",
@@ -3623,6 +2971,16 @@
           "lineCount": 2
         },
         {
+          "name": "conflict_comparison_paths",
+          "params": [
+            "root",
+            "source_relative"
+          ],
+          "returnType": "list[Path]",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
           "name": "record_sync_conflict",
           "params": [
             "root",
@@ -3632,7 +2990,17 @@
           ],
           "returnType": "None",
           "exported": true,
-          "lineCount": 8
+          "lineCount": 6
+        },
+        {
+          "name": "clear_sync_conflict",
+          "params": [
+            "root",
+            "source_relative"
+          ],
+          "returnType": "None",
+          "exported": true,
+          "lineCount": 4
         },
         {
           "name": "sync_command",
@@ -3642,7 +3010,7 @@
           ],
           "returnType": "int",
           "exported": true,
-          "lineCount": 65
+          "lineCount": 67
         },
         {
           "name": "unmerged_mirrors",
@@ -3677,13 +3045,14 @@
         {
           "name": "merge_plaintext",
           "params": [
+            "root",
             "ours",
             "base",
             "theirs"
           ],
           "returnType": "tuple[bytes, bool]",
           "exported": true,
-          "lineCount": 21
+          "lineCount": 25
         },
         {
           "name": "finish_resolution",
@@ -3715,14 +3084,14 @@
           ],
           "returnType": "int",
           "exported": true,
-          "lineCount": 19
+          "lineCount": 27
         },
         {
           "name": "build_parser",
           "params": [],
           "returnType": "argparse.ArgumentParser",
           "exported": true,
-          "lineCount": 33
+          "lineCount": 37
         },
         {
           "name": "main",
@@ -3731,7 +3100,7 @@
           ],
           "returnType": "int",
           "exported": true,
-          "lineCount": 39
+          "lineCount": 41
         }
       ],
       "classes": [
@@ -3838,11 +3207,15 @@
         "write_mirror",
         "sync_git_exclude",
         "staged_plaintext_paths",
+        "tracked_plaintext_paths",
         "protect_staged_plaintext",
+        "audit_command",
         "encrypt_command",
         "decrypt_command",
         "conflict_output_path",
+        "conflict_comparison_paths",
         "record_sync_conflict",
+        "clear_sync_conflict",
         "sync_command",
         "unmerged_mirrors",
         "git_stage_bytes",
@@ -3854,43 +3227,95 @@
         "build_parser",
         "main"
       ],
-      "totalLines": 777,
+      "totalLines": 876,
       "hasStructuralAnalysis": true
     },
     "scripts/secrets/test_secrets_manager.py": {
       "filePath": "scripts/secrets/test_secrets_manager.py",
-      "contentHash": "44d384b5247e9b3e12c3640ba819bf5d49441819595bafa0376fb6522e404ea3",
-      "functions": [],
+      "contentHash": "30726cfe39f57d69628c630b82f02b1fb3c043e326de0f8448b15bf8d9b4c98d",
+      "functions": [
+        {
+          "name": "temporary_repository",
+          "params": [],
+          "returnType": "Iterator[Path]",
+          "exported": true,
+          "lineCount": 10
+        }
+      ],
       "classes": [
         {
           "name": "PatternTests",
           "methods": [
             "test_double_star_matches_root_and_nested_files",
             "test_ordered_exclusion_wins",
+            "test_encrypted_mirrors_are_never_plaintext",
             "test_mirror_mapping_round_trips",
             "test_parent_traversal_is_rejected",
+            "test_patterns_containing_whitespace_are_rejected",
             "test_discovery_obeys_exclusions"
           ],
           "properties": [],
           "exported": true,
-          "lineCount": 32
+          "lineCount": 48
+        },
+        {
+          "name": "RepositoryPatternTests",
+          "methods": [
+            "setUp",
+            "test_managed_plaintext_is_selected",
+            "test_templates_and_sources_are_not_selected"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 35
+        },
+        {
+          "name": "InitTests",
+          "methods": [
+            "test_init_writes_a_regex_that_matches_mirror_paths"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "SyncConflictTests",
+          "methods": [
+            "test_conflict_copies_are_removed_once_resolved"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 14
         },
         {
           "name": "PlaintextMergeTests",
           "methods": [
             "test_non_overlapping_secret_edits_merge_cleanly",
-            "test_overlapping_secret_edits_produce_markers"
+            "test_overlapping_secret_edits_produce_markers",
+            "test_scratch_plaintext_stays_inside_the_git_directory"
           ],
           "properties": [],
           "exported": true,
-          "lineCount": 22
+          "lineCount": 35
         }
       ],
       "imports": [
         {
+          "source": "contextlib",
+          "specifiers": [
+            "contextlib"
+          ]
+        },
+        {
           "source": "importlib.util",
           "specifiers": [
             "importlib.util"
+          ]
+        },
+        {
+          "source": "io",
+          "specifiers": [
+            "io"
           ]
         },
         {
@@ -3900,9 +3325,27 @@
           ]
         },
         {
+          "source": "re",
+          "specifiers": [
+            "re"
+          ]
+        },
+        {
+          "source": "subprocess",
+          "specifiers": [
+            "subprocess"
+          ]
+        },
+        {
           "source": "tempfile",
           "specifiers": [
             "tempfile"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Iterator"
           ]
         },
         {
@@ -3913,31 +3356,25 @@
         }
       ],
       "exports": [
+        "temporary_repository",
         "PatternTests",
+        "RepositoryPatternTests",
+        "InitTests",
+        "SyncConflictTests",
         "PlaintextMergeTests"
       ],
-      "totalLines": 78,
+      "totalLines": 195,
       "hasStructuralAnalysis": true
     },
     "secret-patterns": {
       "filePath": "secret-patterns",
-      "contentHash": "9c5af5713a8caed06b357808196f2807a830b2be778e66d060525d24352f798a",
+      "contentHash": "899be173ec8b067b4f796e7a7db2b025b9203077fe9e88ab0c1e49df09e96b60",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 36,
+      "totalLines": 37,
       "hasStructuralAnalysis": false
-    },
-    "SECURITY.md": {
-      "filePath": "SECURITY.md",
-      "contentHash": "c8e8b0eca5555bd986cf64e77732472fb3f9382ceadccc2524d6a4c37c31248b",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 24,
-      "hasStructuralAnalysis": true
     },
     "services/.dockerignore": {
       "filePath": "services/.dockerignore",
@@ -3969,6 +3406,26 @@
       "totalLines": 19,
       "hasStructuralAnalysis": true
     },
+    "services/feedback-intake/Dockerfile": {
+      "filePath": "services/feedback-intake/Dockerfile",
+      "contentHash": "4a4e42949044b8858e725697b74d2f03f3f54a622c2f266b28e0dd53f9c5defd",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 29,
+      "hasStructuralAnalysis": true
+    },
+    "services/feedback-intake/README.md": {
+      "filePath": "services/feedback-intake/README.md",
+      "contentHash": "588f91318e1fc27a9968e1bfeccb8ff0042a3e05c72824d43f4476ad975316ba",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 373,
+      "hasStructuralAnalysis": true
+    },
     "services/feedback-intake/compose.yaml": {
       "filePath": "services/feedback-intake/compose.yaml",
       "contentHash": "e6da09aa72a49fba15c60389127765e7841e215da175900ee3cca9d44d4a6cc6",
@@ -3987,16 +3444,6 @@
       "imports": [],
       "exports": [],
       "totalLines": 16,
-      "hasStructuralAnalysis": true
-    },
-    "services/feedback-intake/Dockerfile": {
-      "filePath": "services/feedback-intake/Dockerfile",
-      "contentHash": "ff861b5dc978dacfd90dd50eea181cd31c0a9369d77f077a118d086396e00919",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 37,
       "hasStructuralAnalysis": true
     },
     "services/feedback-intake/migrations/0001_initial.sql": {
@@ -4071,22 +3518,12 @@
     },
     "services/feedback-intake/package.json": {
       "filePath": "services/feedback-intake/package.json",
-      "contentHash": "3df8fae9675b709b21917da5e990a83462d6713b466b6c768e90beb9f5cf5a66",
+      "contentHash": "2e23435636175b804ffcf49e2a5a5a31d3ef2e5e012b1950eff45b6046eb677c",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 25,
-      "hasStructuralAnalysis": true
-    },
-    "services/feedback-intake/README.md": {
-      "filePath": "services/feedback-intake/README.md",
-      "contentHash": "6bd9e64409d3b5e9f1284a6f136fe586445ec7c0a61663d7e706494863dfa073",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 338,
+      "totalLines": 27,
       "hasStructuralAnalysis": true
     },
     "services/feedback-intake/src/access.ts": {
@@ -4173,7 +3610,7 @@
     },
     "services/feedback-intake/src/admin.ts": {
       "filePath": "services/feedback-intake/src/admin.ts",
-      "contentHash": "80b83332ccf48367f3d01960b7d6de2288860802d4e64a4c38ab820497f2f0a1",
+      "contentHash": "b4e5220f29d57173cf3ff4945cf7226681ad86a85e15365c009c62c29abf602c",
       "functions": [
         {
           "name": "handleAdminRequest",
@@ -4234,7 +3671,7 @@
           ],
           "returnType": "{ where: string; values: unknown[] }",
           "exported": false,
-          "lineCount": 28
+          "lineCount": 29
         },
         {
           "name": "updateSubmission",
@@ -4257,7 +3694,7 @@
           ],
           "returnType": "Promise<Response>",
           "exported": false,
-          "lineCount": 10
+          "lineCount": 11
         },
         {
           "name": "deleteSubmissions",
@@ -4268,7 +3705,7 @@
           ],
           "returnType": "Promise<Response>",
           "exported": false,
-          "lineCount": 27
+          "lineCount": 28
         },
         {
           "name": "submissionTitle",
@@ -4320,7 +3757,7 @@
           ],
           "returnType": "Promise<Record<string, unknown> | Response>",
           "exported": false,
-          "lineCount": 5
+          "lineCount": 11
         },
         {
           "name": "exportSubmissions",
@@ -4356,7 +3793,7 @@
           ],
           "returnType": "string",
           "exported": false,
-          "lineCount": 4
+          "lineCount": 5
         },
         {
           "name": "invalid",
@@ -4467,7 +3904,7 @@
       "exports": [
         "handleAdminRequest"
       ],
-      "totalLines": 512,
+      "totalLines": 523,
       "hasStructuralAnalysis": true
     },
     "services/feedback-intake/src/audit.html": {
@@ -4619,7 +4056,7 @@
     },
     "services/feedback-intake/src/docker-server.ts": {
       "filePath": "services/feedback-intake/src/docker-server.ts",
-      "contentHash": "3ebda5c4b1094542d08ab18802230b28d92f7fb5c73cfe576d62d2fff51961a2",
+      "contentHash": "b3fa100776273ac5b46f910cb29db211b8ae3ee5ce4513c4da588145373eb119",
       "functions": [
         {
           "name": "required",
@@ -4643,6 +4080,15 @@
           "name": "authorized",
           "params": [
             "header"
+          ],
+          "returnType": "boolean",
+          "exported": false,
+          "lineCount": 12
+        },
+        {
+          "name": "sameOriginRequest",
+          "params": [
+            "incoming"
           ],
           "returnType": "boolean",
           "exported": false,
@@ -4681,7 +4127,8 @@
         {
           "source": "node:http",
           "specifiers": [
-            "createServer"
+            "createServer",
+            "IncomingMessage"
           ]
         },
         {
@@ -4698,7 +4145,7 @@
         }
       ],
       "exports": [],
-      "totalLines": 140,
+      "totalLines": 166,
       "hasStructuralAnalysis": true
     },
     "services/feedback-intake/src/html.d.ts": {
@@ -4713,7 +4160,7 @@
     },
     "services/feedback-intake/src/index.ts": {
       "filePath": "services/feedback-intake/src/index.ts",
-      "contentHash": "e499b32f9648e11acd3bf690634cd99fad5ef6396b771e373a17a2f7007fff29",
+      "contentHash": "f7fe54929a33239389d913ba80425c63e71568108fdfe8e092b58791df251619",
       "functions": [
         {
           "name": "handlePublicRequest",
@@ -4743,7 +4190,7 @@
           ],
           "returnType": "Promise<Response>",
           "exported": false,
-          "lineCount": 113
+          "lineCount": 118
         },
         {
           "name": "readJson",
@@ -4758,11 +4205,12 @@
           "name": "validateAuthorizationRequest",
           "params": [
             "value",
-            "minimumVersion"
+            "minimumVersion",
+            "allowedFields"
           ],
           "returnType": "{ value: AuthorizationRequest; error?: never } | { value?: never; error: Response }",
           "exported": false,
-          "lineCount": 14
+          "lineCount": 16
         },
         {
           "name": "validateFeedbackRequest",
@@ -4772,7 +4220,17 @@
           ],
           "returnType": "{ value: FeedbackRequest; error?: never } | { value?: never; error: Response }",
           "exported": false,
-          "lineCount": 40
+          "lineCount": 41
+        },
+        {
+          "name": "hasImageSignature",
+          "params": [
+            "base64",
+            "mimeType"
+          ],
+          "returnType": "boolean",
+          "exported": false,
+          "lineCount": 9
         },
         {
           "name": "isRateLimited",
@@ -4842,7 +4300,8 @@
         {
           "name": "hashClient",
           "params": [
-            "request"
+            "request",
+            "secret"
           ],
           "returnType": "Promise<string>",
           "exported": false,
@@ -4974,12 +4433,12 @@
         }
       ],
       "exports": [],
-      "totalLines": 517,
+      "totalLines": 540,
       "hasStructuralAnalysis": true
     },
     "services/feedback-intake/src/notifications.ts": {
       "filePath": "services/feedback-intake/src/notifications.ts",
-      "contentHash": "28bc66ace2562b10f23d1322552100e609dbf5126bc74e11f7923e28a3ef485a",
+      "contentHash": "f4666285fc90878f4ac339730e16c71c0701b9d9429639c8f03c318d358fb47d",
       "functions": [
         {
           "name": "sendPendingFeedbackBatch",
@@ -4990,7 +4449,7 @@
           ],
           "returnType": "Promise<number>",
           "exported": true,
-          "lineCount": 77
+          "lineCount": 78
         },
         {
           "name": "feedbackEmailSubject",
@@ -5024,6 +4483,17 @@
           "lineCount": 11
         },
         {
+          "name": "releaseReservation",
+          "params": [
+            "db",
+            "notificationDay",
+            "nowSeconds"
+          ],
+          "returnType": "Promise<void>",
+          "exported": false,
+          "lineCount": 12
+        },
+        {
           "name": "notificationConfiguration",
           "params": [
             "env"
@@ -5047,12 +4517,12 @@
       "exports": [
         "sendPendingFeedbackBatch"
       ],
-      "totalLines": 212,
+      "totalLines": 226,
       "hasStructuralAnalysis": true
     },
     "services/feedback-intake/src/operations.ts": {
       "filePath": "services/feedback-intake/src/operations.ts",
-      "contentHash": "182b5f5b60403fc200b73a05481cab3a06102fef236f6621752f09cad4cda260",
+      "contentHash": "8ee379fa411e600811dfbe4466156d46bf9e8a5003ab5c3196dd3c9f9dd119c7",
       "functions": [
         {
           "name": "configuredPositiveInteger",
@@ -5080,7 +4550,7 @@
           ],
           "returnType": "RetentionPolicy",
           "exported": true,
-          "lineCount": 15
+          "lineCount": 17
         },
         {
           "name": "estimatedStoredBytes",
@@ -5153,7 +4623,7 @@
           ],
           "returnType": "Promise<RetentionResult>",
           "exported": true,
-          "lineCount": 68
+          "lineCount": 78
         },
         {
           "name": "operationalReport",
@@ -5179,7 +4649,7 @@
         "runRetention",
         "operationalReport"
       ],
-      "totalLines": 284,
+      "totalLines": 298,
       "hasStructuralAnalysis": true
     },
     "services/feedback-intake/test/access.test.ts": {
@@ -5231,7 +4701,7 @@
     },
     "services/feedback-intake/test/admin.test.ts": {
       "filePath": "services/feedback-intake/test/admin.test.ts",
-      "contentHash": "9e879df612674454ee57f0845fbb2d43551006e9701692584d71c845097084fd",
+      "contentHash": "7c3ddaf6022c418d6dd4e6379f2f8383a5c13e3ecb993db5290b1b07d4dfdee8",
       "functions": [
         {
           "name": "environment",
@@ -5240,6 +4710,23 @@
           ],
           "exported": false,
           "lineCount": 3
+        },
+        {
+          "name": "withSubmission",
+          "params": [
+            "seed"
+          ],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "adminActions",
+          "params": [
+            "database"
+          ],
+          "returnType": "AdminAction[]",
+          "exported": false,
+          "lineCount": 5
         },
         {
           "name": "adminRequest",
@@ -5263,38 +4750,7 @@
           "lineCount": 10
         }
       ],
-      "classes": [
-        {
-          "name": "AdminStatement",
-          "methods": [
-            "constructor",
-            "bind",
-            "all",
-            "first",
-            "run"
-          ],
-          "properties": [
-            "parameters"
-          ],
-          "exported": false,
-          "lineCount": 49
-        },
-        {
-          "name": "AdminD1",
-          "methods": [
-            "prepare"
-          ],
-          "properties": [
-            "lastSql",
-            "lastParameters",
-            "sqlHistory",
-            "parameterHistory",
-            "updateChanges"
-          ],
-          "exported": false,
-          "lineCount": 11
-        }
-      ],
+      "classes": [],
       "imports": [
         {
           "source": "vitest",
@@ -5309,16 +4765,39 @@
           "specifiers": [
             "handleAdminRequestWithIdentity"
           ]
+        },
+        {
+          "source": "./support/database",
+          "specifiers": [
+            "asD1",
+            "createTestDatabase",
+            "seedAdminAction",
+            "seedMaintenanceRun",
+            "seedQueuedFeedback",
+            "seedRequestMetric",
+            "seedSubmission",
+            "SubmissionSeed",
+            "TestDatabase"
+          ]
         }
       ],
       "exports": [],
-      "totalLines": 280,
+      "totalLines": 428,
       "hasStructuralAnalysis": true
     },
     "services/feedback-intake/test/index.test.ts": {
       "filePath": "services/feedback-intake/test/index.test.ts",
-      "contentHash": "10fab2b56a1cb226e3b122dfab7229353d3c5d9b4d471ad06bcc1a54afd836ec",
+      "contentHash": "609735a6e2572efc6cba346b504efae6fbccdb58ac43c00ab1365bac70cb8492",
       "functions": [
+        {
+          "name": "submissions",
+          "params": [
+            "database"
+          ],
+          "returnType": "StoredSubmission[]",
+          "exported": false,
+          "lineCount": 7
+        },
         {
           "name": "createEnvironment",
           "params": [
@@ -5326,7 +4805,7 @@
             "overrides"
           ],
           "exported": false,
-          "lineCount": 11
+          "lineCount": 14
         },
         {
           "name": "request",
@@ -5393,39 +4872,18 @@
           "returnType": "Promise<string>",
           "exported": false,
           "lineCount": 4
-        }
-      ],
-      "classes": [
-        {
-          "name": "MemoryStatement",
-          "methods": [
-            "constructor",
-            "bind",
-            "first",
-            "run"
-          ],
-          "properties": [],
-          "exported": false,
-          "lineCount": 61
         },
         {
-          "name": "MemoryD1",
-          "methods": [
-            "prepare",
-            "batch",
-            "execute"
+          "name": "attachment",
+          "params": [
+            "signature"
           ],
-          "properties": [
-            "authorizationRequests",
-            "consumedTokenIds",
-            "submissions",
-            "emailQueue",
-            "notificationCount"
-          ],
+          "returnType": "string",
           "exported": false,
-          "lineCount": 53
+          "lineCount": 4
         }
       ],
+      "classes": [],
       "imports": [
         {
           "source": "vitest",
@@ -5443,16 +4901,43 @@
           "specifiers": [
             "worker"
           ]
+        },
+        {
+          "source": "./support/database",
+          "specifiers": [
+            "asD1",
+            "createTestDatabase",
+            "TestDatabase"
+          ]
         }
       ],
       "exports": [],
-      "totalLines": 421,
+      "totalLines": 445,
       "hasStructuralAnalysis": true
     },
     "services/feedback-intake/test/notifications.test.ts": {
       "filePath": "services/feedback-intake/test/notifications.test.ts",
-      "contentHash": "4a06d09ef5584766586c4b10ddfbecef246bb335cc8940eaa5b0da689ae4e6aa",
+      "contentHash": "df6b0035307e675a7d2cb7291a616ada309e955a94c4d9f1dfcedaf7d520ce0f",
       "functions": [
+        {
+          "name": "queued",
+          "params": [
+            "database"
+          ],
+          "returnType": "Array<{\n  receipt_id: string;\n  claim_id: string | null;\n  claimed_at: number | null;\n}>",
+          "exported": false,
+          "lineCount": 9
+        },
+        {
+          "name": "dailyCount",
+          "params": [
+            "database",
+            "day"
+          ],
+          "returnType": "number | undefined",
+          "exported": false,
+          "lineCount": 6
+        },
         {
           "name": "environment",
           "params": [
@@ -5462,34 +4947,7 @@
           "lineCount": 9
         }
       ],
-      "classes": [
-        {
-          "name": "NotificationStatement",
-          "methods": [
-            "constructor",
-            "bind",
-            "first",
-            "all",
-            "run"
-          ],
-          "properties": [],
-          "exported": false,
-          "lineCount": 78
-        },
-        {
-          "name": "NotificationDatabase",
-          "methods": [
-            "prepare",
-            "add"
-          ],
-          "properties": [
-            "reports",
-            "dailyAttempts"
-          ],
-          "exported": false,
-          "lineCount": 22
-        }
-      ],
+      "classes": [],
       "imports": [
         {
           "source": "vitest",
@@ -5505,10 +4963,19 @@
           "specifiers": [
             "sendPendingFeedbackBatch"
           ]
+        },
+        {
+          "source": "./support/database",
+          "specifiers": [
+            "asD1",
+            "createTestDatabase",
+            "seedQueuedFeedback",
+            "TestDatabase"
+          ]
         }
       ],
       "exports": [],
-      "totalLines": 269,
+      "totalLines": 223,
       "hasStructuralAnalysis": true
     },
     "services/feedback-intake/tsconfig.json": {
@@ -5523,12 +4990,12 @@
     },
     "services/feedback-intake/wrangler.example.jsonc": {
       "filePath": "services/feedback-intake/wrangler.example.jsonc",
-      "contentHash": "1d36b940e3bcb532f178ec47d316d4a97ab6ead53a0cdee8ec80921849e7d41f",
+      "contentHash": "ebaa58a617af428dba591422ae84a4e58fc808a1e6de3bf06c47b8c5da1f8e17",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 49,
+      "totalLines": 50,
       "hasStructuralAnalysis": true
     },
     "services/package.json": {
@@ -5541,35 +5008,15 @@
       "totalLines": 12,
       "hasStructuralAnalysis": true
     },
-    "services/vitest.config.ts": {
-      "filePath": "services/vitest.config.ts",
+    "services/vitest.config.mts": {
+      "filePath": "services/vitest.config.mts",
       "contentHash": "42c5270f17d56d8a49cea32ce67c34b4c948f3155bf745aca55b8c6b311f487a",
       "functions": [],
       "classes": [],
-      "imports": [
-        {
-          "source": "node:fs/promises",
-          "specifiers": [
-            "readFile"
-          ]
-        },
-        {
-          "source": "node:path",
-          "specifiers": [
-            "dirname",
-            "resolve"
-          ]
-        },
-        {
-          "source": "vitest/config",
-          "specifiers": [
-            "defineConfig"
-          ]
-        }
-      ],
+      "imports": [],
       "exports": [],
       "totalLines": 25,
-      "hasStructuralAnalysis": true
+      "hasStructuralAnalysis": false
     },
     "src/application/configuration/AppDefaults.h": {
       "filePath": "src/application/configuration/AppDefaults.h",
@@ -6658,15 +6105,31 @@
     },
     "src/application/shell/MainComponentLifecycle.cpp": {
       "filePath": "src/application/shell/MainComponentLifecycle.cpp",
-      "contentHash": "d22205c15dd70ebd6aa4db7ebbf28eecc508f21792ae73532ec3c412f8af727b",
+      "contentHash": "08cb44b5c85b2c8f4a89e2be12d76e6a8c5f0602d33998d3358002cc5a770121",
       "functions": [
+        {
+          "name": "settingsFolderName",
+          "params": [],
+          "returnType": "juce::String",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "migrateLegacySettingsFile",
+          "params": [
+            "destination"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 27
+        },
         {
           "name": "MainComponent",
           "params": [
             "muteMicrophoneForSession"
           ],
           "exported": true,
-          "lineCount": 29
+          "lineCount": 30
         },
         {
           "name": "~MainComponent",
@@ -6777,6 +6240,8 @@
         }
       ],
       "exports": [
+        "settingsFolderName",
+        "migrateLegacySettingsFile",
         "MainComponent",
         "~MainComponent",
         "configureTopButtons",
@@ -6787,7 +6252,34 @@
         "paint",
         "resized"
       ],
-      "totalLines": 155,
+      "totalLines": 198,
+      "hasStructuralAnalysis": true
+    },
+    "src/application/shell/WorkspaceStartupSequence.h": {
+      "filePath": "src/application/shell/WorkspaceStartupSequence.h",
+      "contentHash": "317419ae06015fa5f63e9f2cce3545bd2f8ac9027b9ed171cf6fc8608fa6d365",
+      "functions": [],
+      "classes": [
+        {
+          "name": "WorkspaceStartupSequence",
+          "methods": [],
+          "properties": [],
+          "exported": true,
+          "lineCount": 12
+        }
+      ],
+      "imports": [
+        {
+          "source": "utility",
+          "specifiers": [
+            "utility"
+          ]
+        }
+      ],
+      "exports": [
+        "WorkspaceStartupSequence"
+      ],
+      "totalLines": 17,
       "hasStructuralAnalysis": true
     },
     "src/application/shell/state/appearance/MainComponentAppearance.cpp": {
@@ -11261,33 +10753,6 @@
       "totalLines": 255,
       "hasStructuralAnalysis": true
     },
-    "src/application/shell/WorkspaceStartupSequence.h": {
-      "filePath": "src/application/shell/WorkspaceStartupSequence.h",
-      "contentHash": "317419ae06015fa5f63e9f2cce3545bd2f8ac9027b9ed171cf6fc8608fa6d365",
-      "functions": [],
-      "classes": [
-        {
-          "name": "WorkspaceStartupSequence",
-          "methods": [],
-          "properties": [],
-          "exported": true,
-          "lineCount": 12
-        }
-      ],
-      "imports": [
-        {
-          "source": "utility",
-          "specifiers": [
-            "utility"
-          ]
-        }
-      ],
-      "exports": [
-        "WorkspaceStartupSequence"
-      ],
-      "totalLines": 17,
-      "hasStructuralAnalysis": true
-    },
     "src/application/theme/Theme.cpp": {
       "filePath": "src/application/theme/Theme.cpp",
       "contentHash": "d103c1798cdf391bafe6d2b561aaea63af7ec8d4ac30e33282cd823f4ccdf3cf",
@@ -12915,8 +12380,17 @@
     },
     "src/features/feedback/FeedbackComponent.cpp": {
       "filePath": "src/features/feedback/FeedbackComponent.cpp",
-      "contentHash": "c2604e5844fcb5188d743327f7aa8cb3d6451afb69f11e3a4e060ffd0d9b2132",
+      "contentHash": "23e1bbb2b94dabf23ecae640238f76d8fdf1f6e7d4a2b62f42af1fb5aefe1cd0",
       "functions": [
+        {
+          "name": "hasHttpsScheme",
+          "params": [
+            "endpoint"
+          ],
+          "returnType": "bool",
+          "exported": true,
+          "lineCount": 21
+        },
         {
           "name": "typeName",
           "params": [
@@ -12967,13 +12441,13 @@
             "initialContext"
           ],
           "exported": true,
-          "lineCount": 79
+          "lineCount": 85
         },
         {
           "name": "~FeedbackComponent",
           "params": [],
           "exported": true,
-          "lineCount": 5
+          "lineCount": 12
         },
         {
           "name": "configureEditor",
@@ -13027,6 +12501,15 @@
           "lineCount": 33
         },
         {
+          "name": "previewSummary",
+          "params": [
+            "draft"
+          ],
+          "returnType": "juce::String",
+          "exported": true,
+          "lineCount": 7
+        },
+        {
           "name": "setContextTag",
           "params": [
             "toolOrWorkflowName"
@@ -13073,7 +12556,7 @@
           ],
           "returnType": "void",
           "exported": true,
-          "lineCount": 10
+          "lineCount": 17
         },
         {
           "name": "clearDraft",
@@ -13090,11 +12573,22 @@
           "lineCount": 12
         },
         {
+          "name": "sendRequest",
+          "params": [
+            "request",
+            "statusCode",
+            "responseBody"
+          ],
+          "returnType": "bool",
+          "exported": true,
+          "lineCount": 28
+        },
+        {
           "name": "run",
           "params": [],
           "returnType": "void",
           "exported": true,
-          "lineCount": 129
+          "lineCount": 137
         }
       ],
       "classes": [
@@ -13118,9 +12612,16 @@
           "specifiers": [
             "FeedbackComponent.h"
           ]
+        },
+        {
+          "source": "string_view",
+          "specifiers": [
+            "string_view"
+          ]
         }
       ],
       "exports": [
+        "hasHttpsScheme",
         "typeName",
         "contractCategory",
         "looksLikeEmail",
@@ -13135,6 +12636,7 @@
         "currentDraft",
         "validate",
         "previewText",
+        "previewSummary",
         "setContextTag",
         "captureApplicationScreenshot",
         "preview",
@@ -13143,14 +12645,15 @@
         "saveDraft",
         "clearDraft",
         "restoreDraft",
+        "sendRequest",
         "run"
       ],
-      "totalLines": 618,
+      "totalLines": 713,
       "hasStructuralAnalysis": true
     },
     "src/features/feedback/FeedbackComponent.h": {
       "filePath": "src/features/feedback/FeedbackComponent.h",
-      "contentHash": "205a146ae6b1eed0a77aa5f7ab4359f020508d2905ae05bc1bc1e796ff24f0c8",
+      "contentHash": "32494351d1275b5d0e3da32bdbe296e1ec7dd498a9e3481fc9c5d37a66fc7789",
       "functions": [],
       "classes": [
         {
@@ -13165,11 +12668,13 @@
             "validate",
             "currentDraft",
             "previewText",
+            "previewSummary",
             "captureApplicationScreenshot",
             "saveDraft",
             "clearDraft",
             "restoreDraft",
             "setSubmissionState",
+            "sendRequest",
             "run"
           ],
           "properties": [
@@ -13195,10 +12700,12 @@
             "submitButton",
             "pendingDraft",
             "submissionState",
+            "requestLock",
+            "activeRequest",
             "FeedbackComponent"
           ],
           "exported": true,
-          "lineCount": 80
+          "lineCount": 85
         }
       ],
       "imports": [
@@ -13215,7 +12722,7 @@
         "setContextTag",
         "FeedbackComponent"
       ],
-      "totalLines": 85,
+      "totalLines": 90,
       "hasStructuralAnalysis": true
     },
     "src/features/feedback/FeedbackInvitationPolicy.h": {
@@ -13983,7 +13490,7 @@
     },
     "src/features/performance/BenchmarkRecordStore.cpp": {
       "filePath": "src/features/performance/BenchmarkRecordStore.cpp",
-      "contentHash": "7436a3005588dff4dbf67aab58c74cbb4fa1fa168b7e03deb9a52d42c851e301",
+      "contentHash": "0a8e2a6480f354c32d9f1aa843b33d54f6be900de8d3bbf91312488891df9b51",
       "functions": [
         {
           "name": "jsonFor",
@@ -13993,6 +13500,15 @@
           "returnType": "juce::String",
           "exported": true,
           "lineCount": 4
+        },
+        {
+          "name": "isValidRunId",
+          "params": [
+            "runId"
+          ],
+          "returnType": "bool",
+          "exported": true,
+          "lineCount": 6
         },
         {
           "name": "writeFile",
@@ -14019,7 +13535,7 @@
           ],
           "returnType": "RecordStoreStatus",
           "exported": true,
-          "lineCount": 19
+          "lineCount": 18
         },
         {
           "name": "load",
@@ -14028,7 +13544,7 @@
           ],
           "returnType": "StoredRecordResult",
           "exported": true,
-          "lineCount": 23
+          "lineCount": 29
         },
         {
           "name": "listRunIds",
@@ -14074,6 +13590,7 @@
       ],
       "exports": [
         "jsonFor",
+        "isValidRunId",
         "writeFile",
         "BenchmarkRecordStore",
         "save",
@@ -14082,7 +13599,7 @@
         "fileFor",
         "exportBenchmarkRecord"
       ],
-      "totalLines": 108,
+      "totalLines": 120,
       "hasStructuralAnalysis": true
     },
     "src/features/performance/BenchmarkRecordStore.h": {
@@ -16897,13 +16414,13 @@
     },
     "tests/BenchmarkRecordStoreTests.cpp": {
       "filePath": "tests/BenchmarkRecordStoreTests.cpp",
-      "contentHash": "1dfabbfe11396fd2f90262e3bd2d8540d889b97603763feb276bb65cb013b6a7",
+      "contentHash": "a227bacb2c006550709aa8d80eab9ff372d6186669ccd2ecc57948f3d3c4ea70",
       "functions": [
         {
           "name": "TemporaryDirectory",
           "params": [],
           "exported": true,
-          "lineCount": 6
+          "lineCount": 7
         },
         {
           "name": "~TemporaryDirectory",
@@ -16923,7 +16440,7 @@
             "directory"
           ],
           "exported": true,
-          "lineCount": 16
+          "lineCount": 17
         }
       ],
       "imports": [
@@ -16945,7 +16462,7 @@
         "~TemporaryDirectory",
         "TemporaryDirectory"
       ],
-      "totalLines": 88,
+      "totalLines": 109,
       "hasStructuralAnalysis": true
     },
     "tests/BenchmarkRunnerTests.cpp": {
@@ -17700,315 +17217,6 @@
       "totalLines": 40,
       "hasStructuralAnalysis": true
     },
-    "tests/support/BenchmarkFakes.h": {
-      "filePath": "tests/support/BenchmarkFakes.h",
-      "contentHash": "9f2353f85ce910e62b4d9427570cc8385397ea2fa3644bed80389a50ebefaebc",
-      "functions": [
-        {
-          "name": "now",
-          "params": [],
-          "returnType": "std::chrono::steady_clock::time_point",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "advance",
-          "params": [
-            "duration"
-          ],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "beginTrial",
-          "params": [
-            "trialIndex"
-          ],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "endTrial",
-          "params": [],
-          "returnType": "performance::TrialMeasurement",
-          "exported": true,
-          "lineCount": 7
-        },
-        {
-          "name": "abortTrial",
-          "params": [],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "id",
-          "params": [],
-          "returnType": "std::string_view",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "displayName",
-          "params": [],
-          "returnType": "std::string_view",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "workloadId",
-          "params": [],
-          "returnType": "std::string_view",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "validate",
-          "params": [],
-          "returnType": "performance::ValidationResult",
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "prepare",
-          "params": [],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "runTrial",
-          "params": [],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 6
-        },
-        {
-          "name": "verifyCorrectness",
-          "params": [],
-          "returnType": "performance::ValidationResult",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "restore",
-          "params": [],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "id",
-          "params": [],
-          "returnType": "std::string_view",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "displayName",
-          "params": [],
-          "returnType": "std::string_view",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "implementationVersion",
-          "params": [],
-          "returnType": "std::string_view",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "parameterSchema",
-          "params": [],
-          "returnType": "std::vector<performance::StrategyParameter>",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "validateParameters",
-          "params": [],
-          "returnType": "performance::ValidationResult",
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "isCompatible",
-          "params": [],
-          "returnType": "bool",
-          "exported": true,
-          "lineCount": 4
-        },
-        {
-          "name": "activate",
-          "params": [
-            "parameters"
-          ],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 5
-        },
-        {
-          "name": "deactivate",
-          "params": [],
-          "returnType": "void",
-          "exported": true,
-          "lineCount": 4
-        }
-      ],
-      "classes": [
-        {
-          "name": "FakeBenchmarkClock",
-          "methods": [
-            "now",
-            "advance"
-          ],
-          "properties": [
-            "currentTime"
-          ],
-          "exported": true,
-          "lineCount": 16
-        },
-        {
-          "name": "FakeTelemetryCollector",
-          "methods": [
-            "beginTrial",
-            "endTrial",
-            "abortTrial"
-          ],
-          "properties": [
-            "nextMeasurement",
-            "activeTrialIndex",
-            "beginCount",
-            "endCount",
-            "abortCount"
-          ],
-          "exported": true,
-          "lineCount": 27
-        },
-        {
-          "name": "FakeBenchmarkScenario",
-          "methods": [
-            "id",
-            "displayName",
-            "workloadId",
-            "validate",
-            "prepare",
-            "runTrial",
-            "verifyCorrectness",
-            "restore"
-          ],
-          "properties": [
-            "scenarioId",
-            "scenarioName",
-            "workload",
-            "validationResult",
-            "correctnessResult",
-            "prepareCount",
-            "runCount",
-            "restoreCount",
-            "throwOnRunNumber"
-          ],
-          "exported": true,
-          "lineCount": 49
-        },
-        {
-          "name": "FakeOptimizationStrategy",
-          "methods": [
-            "id",
-            "displayName",
-            "implementationVersion",
-            "parameterSchema",
-            "validateParameters",
-            "isCompatible",
-            "activate",
-            "deactivate"
-          ],
-          "properties": [
-            "strategyId",
-            "strategyName",
-            "version",
-            "schema",
-            "parameterValidationResult",
-            "compatible",
-            "activeParameters",
-            "activateCount",
-            "deactivateCount"
-          ],
-          "exported": true,
-          "lineCount": 49
-        }
-      ],
-      "imports": [
-        {
-          "source": "features/performance/BenchmarkInterfaces.h",
-          "specifiers": [
-            "features/performance/BenchmarkInterfaces.h"
-          ]
-        },
-        {
-          "source": "chrono",
-          "specifiers": [
-            "chrono"
-          ]
-        },
-        {
-          "source": "string",
-          "specifiers": [
-            "string"
-          ]
-        },
-        {
-          "source": "unordered_map",
-          "specifiers": [
-            "unordered_map"
-          ]
-        },
-        {
-          "source": "utility",
-          "specifiers": [
-            "utility"
-          ]
-        },
-        {
-          "source": "vector",
-          "specifiers": [
-            "vector"
-          ]
-        }
-      ],
-      "exports": [
-        "now",
-        "advance",
-        "FakeBenchmarkClock",
-        "beginTrial",
-        "endTrial",
-        "abortTrial",
-        "FakeTelemetryCollector",
-        "id",
-        "displayName",
-        "workloadId",
-        "validate",
-        "prepare",
-        "runTrial",
-        "verifyCorrectness",
-        "restore",
-        "FakeBenchmarkScenario",
-        "id",
-        "displayName",
-        "implementationVersion",
-        "parameterSchema",
-        "validateParameters",
-        "isCompatible",
-        "activate",
-        "deactivate",
-        "FakeOptimizationStrategy"
-      ],
-      "totalLines": 154,
-      "hasStructuralAnalysis": true
-    },
     "tests/SustainedAudioAnalysisScenarioTests.cpp": {
       "filePath": "tests/SustainedAudioAnalysisScenarioTests.cpp",
       "contentHash": "6dfb63abfb8ce0f29829ecd8515c4bcf1a93b0045a515ea8d37e9a6953a78872",
@@ -18640,25 +17848,324 @@
       "totalLines": 94,
       "hasStructuralAnalysis": true
     },
-    "vcpkg.json": {
-      "filePath": "vcpkg.json",
-      "contentHash": "6c332fcea23adb7619ad58f2abb9a34dfe8ef61bae6d34e4a784142b0249bf03",
-      "functions": [],
-      "classes": [],
-      "imports": [],
-      "exports": [],
-      "totalLines": 24,
+    "tests/support/BenchmarkFakes.h": {
+      "filePath": "tests/support/BenchmarkFakes.h",
+      "contentHash": "9f2353f85ce910e62b4d9427570cc8385397ea2fa3644bed80389a50ebefaebc",
+      "functions": [
+        {
+          "name": "now",
+          "params": [],
+          "returnType": "std::chrono::steady_clock::time_point",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "advance",
+          "params": [
+            "duration"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "beginTrial",
+          "params": [
+            "trialIndex"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "endTrial",
+          "params": [],
+          "returnType": "performance::TrialMeasurement",
+          "exported": true,
+          "lineCount": 7
+        },
+        {
+          "name": "abortTrial",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "id",
+          "params": [],
+          "returnType": "std::string_view",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "displayName",
+          "params": [],
+          "returnType": "std::string_view",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "workloadId",
+          "params": [],
+          "returnType": "std::string_view",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "validate",
+          "params": [],
+          "returnType": "performance::ValidationResult",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "prepare",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "runTrial",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 6
+        },
+        {
+          "name": "verifyCorrectness",
+          "params": [],
+          "returnType": "performance::ValidationResult",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "restore",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "id",
+          "params": [],
+          "returnType": "std::string_view",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "displayName",
+          "params": [],
+          "returnType": "std::string_view",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "implementationVersion",
+          "params": [],
+          "returnType": "std::string_view",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "parameterSchema",
+          "params": [],
+          "returnType": "std::vector<performance::StrategyParameter>",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "validateParameters",
+          "params": [],
+          "returnType": "performance::ValidationResult",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "isCompatible",
+          "params": [],
+          "returnType": "bool",
+          "exported": true,
+          "lineCount": 4
+        },
+        {
+          "name": "activate",
+          "params": [
+            "parameters"
+          ],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 5
+        },
+        {
+          "name": "deactivate",
+          "params": [],
+          "returnType": "void",
+          "exported": true,
+          "lineCount": 4
+        }
+      ],
+      "classes": [
+        {
+          "name": "FakeBenchmarkClock",
+          "methods": [
+            "now",
+            "advance"
+          ],
+          "properties": [
+            "currentTime"
+          ],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "FakeTelemetryCollector",
+          "methods": [
+            "beginTrial",
+            "endTrial",
+            "abortTrial"
+          ],
+          "properties": [
+            "nextMeasurement",
+            "activeTrialIndex",
+            "beginCount",
+            "endCount",
+            "abortCount"
+          ],
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "FakeBenchmarkScenario",
+          "methods": [
+            "id",
+            "displayName",
+            "workloadId",
+            "validate",
+            "prepare",
+            "runTrial",
+            "verifyCorrectness",
+            "restore"
+          ],
+          "properties": [
+            "scenarioId",
+            "scenarioName",
+            "workload",
+            "validationResult",
+            "correctnessResult",
+            "prepareCount",
+            "runCount",
+            "restoreCount",
+            "throwOnRunNumber"
+          ],
+          "exported": true,
+          "lineCount": 49
+        },
+        {
+          "name": "FakeOptimizationStrategy",
+          "methods": [
+            "id",
+            "displayName",
+            "implementationVersion",
+            "parameterSchema",
+            "validateParameters",
+            "isCompatible",
+            "activate",
+            "deactivate"
+          ],
+          "properties": [
+            "strategyId",
+            "strategyName",
+            "version",
+            "schema",
+            "parameterValidationResult",
+            "compatible",
+            "activeParameters",
+            "activateCount",
+            "deactivateCount"
+          ],
+          "exported": true,
+          "lineCount": 49
+        }
+      ],
+      "imports": [
+        {
+          "source": "features/performance/BenchmarkInterfaces.h",
+          "specifiers": [
+            "features/performance/BenchmarkInterfaces.h"
+          ]
+        },
+        {
+          "source": "chrono",
+          "specifiers": [
+            "chrono"
+          ]
+        },
+        {
+          "source": "string",
+          "specifiers": [
+            "string"
+          ]
+        },
+        {
+          "source": "unordered_map",
+          "specifiers": [
+            "unordered_map"
+          ]
+        },
+        {
+          "source": "utility",
+          "specifiers": [
+            "utility"
+          ]
+        },
+        {
+          "source": "vector",
+          "specifiers": [
+            "vector"
+          ]
+        }
+      ],
+      "exports": [
+        "now",
+        "advance",
+        "FakeBenchmarkClock",
+        "beginTrial",
+        "endTrial",
+        "abortTrial",
+        "FakeTelemetryCollector",
+        "id",
+        "displayName",
+        "workloadId",
+        "validate",
+        "prepare",
+        "runTrial",
+        "verifyCorrectness",
+        "restore",
+        "FakeBenchmarkScenario",
+        "id",
+        "displayName",
+        "implementationVersion",
+        "parameterSchema",
+        "validateParameters",
+        "isCompatible",
+        "activate",
+        "deactivate",
+        "FakeOptimizationStrategy"
+      ],
+      "totalLines": 154,
       "hasStructuralAnalysis": true
     },
-    "VERSION": {
-      "filePath": "VERSION",
-      "contentHash": "f669b5e9183901b78b0952eb71f8fe54bdcff9cc3d155710c61e25be7b35b058",
+    "vcpkg.json": {
+      "filePath": "vcpkg.json",
+      "contentHash": "c985e6467fe82fec25fe88495fbe0243f5509e8aaa3d0e97c2980fd68b18489e",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 2,
-      "hasStructuralAnalysis": false
+      "totalLines": 25,
+      "hasStructuralAnalysis": true
     }
   }
 }
