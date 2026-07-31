@@ -28,30 +28,30 @@
 
 All headers in `src/services/score/`, `namespace score`.
 
-- [ ] 1.1 Add the pitch type storing step, alteration, octave, and the derived
+- [x] 1.1 Add the pitch type storing step, alteration, octave, and the derived
       sounding number, with construction from a spelling and the consistency
       check that invariant 5 requires.
-- [ ] 1.2 Add the duration and position types for the chosen time
+- [x] 1.2 Add the duration and position types for the chosen time
       representation, with the conversions between the source's units and the
       model's, and the rescale factor kept on the score.
-- [ ] 1.3 Add the event types — note, chord, rest — carrying staff, onset,
+- [x] 1.3 Add the event types — note, chord, rest — carrying staff, onset,
       duration, grace flag, tuplet ratio, tie linkage, and lyric syllables.
-- [ ] 1.4 Add the lyric syllable type with verse number, syllabic position,
+- [x] 1.4 Add the lyric syllable type with verse number, syllabic position,
       text, and extend flag.
-- [ ] 1.5 Add the clef, key signature, and time signature types, and the
+- [x] 1.5 Add the clef, key signature, and time signature types, and the
       direction type covering tempo and dynamic markings.
-- [ ] 1.6 Add the measure type: printed number as a string, zero-based index,
+- [x] 1.6 Add the measure type: printed number as a string, zero-based index,
       absolute start, nominal duration, pickup flag, attribute changes, repeat
       and ending data held uninterpreted, and voices.
-- [ ] 1.7 Add the part and score root types, including the work and credit
+- [x] 1.7 Add the part and score root types, including the work and credit
       metadata and the encoding-software string.
-- [ ] 1.8 Add the tempo map with position-to-seconds and seconds-to-position
+- [x] 1.8 Add the tempo map with position-to-seconds and seconds-to-position
       conversion and the documented default tempo (120 BPM). Per decision 4 this
       is the one piece shared with #34's MIDI timeline, so put it in its own
       header with no dependency on `Score`, `Part`, or `Measure`.
-- [ ] 1.9 Add the diagnostic type: severity, optional location (part, printed
+- [x] 1.9 Add the diagnostic type: severity, optional location (part, printed
       measure number, voice, position), element name, and message.
-- [ ] 1.10 Confirm no model header includes `JuceHeader.h` or any GUI module,
+- [x] 1.10 Confirm no model header includes `JuceHeader.h` or any GUI module,
       and that the model compiles against the module set `PracticeTakesTests`
       already links.
 
@@ -70,10 +70,10 @@ All headers in `src/services/score/`, `namespace score`.
       violation.
 - [ ] 2.4 Add `tests/ScoreModelTests.cpp` covering every invariant, each with a
       case that satisfies it and a case that must be repaired.
-- [ ] 2.5 Add `tests/TempoMapTests.cpp` covering single tempo, mid-score tempo
+- [x] 2.5 Add `tests/TempoMapTests.cpp` covering single tempo, mid-score tempo
       change, no declared tempo, duplicate positions, and round-tripping
       position to seconds and back.
-- [ ] 2.6 Add the new sources to `target_sources(PracticeTakes ...)` and to
+- [x] 2.6 Add the new sources to `target_sources(PracticeTakes ...)` and to
       `add_executable(PracticeTakesTests ...)` in `CMakeLists.txt`, keeping the
       lists alphabetically grouped as they already are.
 
