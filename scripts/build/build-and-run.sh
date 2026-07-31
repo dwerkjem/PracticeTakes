@@ -53,6 +53,8 @@ if [[ -n "$BUILD_JOBS" && ! "$BUILD_JOBS" =~ ^[1-9][0-9]*$ ]]; then
     exit 2
 fi
 
+cmake_command="cmake"
+
 # A Nix compiler combined with Debian pkg-config libraries produces binaries
 # whose Nix dynamic loader cannot reliably resolve system dependencies. The
 # default non-vcpkg Linux build must use the matching system toolchain.
@@ -68,6 +70,14 @@ if [[ "$(uname -s)" == "Linux" && "$USE_VCPKG" != true ]]; then
         if [[ -x /usr/bin/ld ]]; then
             system_toolchain_args+=(-DCMAKE_LINKER=/usr/bin/ld)
         fi
+    fi
+
+    # Nix builds CMake with an empty CMAKE_SYSTEM_PREFIX_PATH so that packages
+    # cannot pick up host libraries. That also hides Debian's /usr from
+    # find_package, and this build needs it to resolve X11. Anything found
+    # through pkg-config is unaffected, which is why only X11 fails.
+    if [[ -x /usr/bin/cmake ]]; then
+        cmake_command=/usr/bin/cmake
     fi
 fi
 
@@ -98,7 +108,7 @@ if [[ "$BUILD_ONLY" == true ]]; then
         printf 'Building %s...\n' "$TARGET_NAME"
     fi
 
-    cmake "${build_only_args[@]}"
+    "$cmake_command" "${build_only_args[@]}"
     exit 0
 fi
 
@@ -262,7 +272,7 @@ if [[ -n "$vcpkg_toolchain" ]]; then
 fi
 
 printf 'Configuring Practice Takes (%s)...\n' "$BUILD_TYPE"
-cmake "${cmake_args[@]}"
+"$cmake_command" "${cmake_args[@]}"
 
 if [[ -n "${vcpkg_prefix:-}" && "$(uname -s)" == "Linux" ]]; then
     for library_pattern in 'libX11.so*' 'libXext.so*'; do
@@ -288,7 +298,7 @@ else
     printf 'Building %s...\n' "$TARGET_NAME"
 fi
 
-cmake "${build_args[@]}"
+"$cmake_command" "${build_args[@]}"
 
 if [[ "$BUILD_ONLY" == true ]]; then
     exit 0

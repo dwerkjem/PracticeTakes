@@ -63,6 +63,23 @@ cmake -S . -B build
 cmake --build build --config Debug --target PracticeTakes --parallel
 ```
 
+On a Linux machine where Nix is installed alongside the distribution packages,
+run these commands with the system toolchain rather than whichever one is first
+on `PATH`:
+
+```bash
+/usr/bin/cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_C_COMPILER=/usr/bin/gcc -DCMAKE_CXX_COMPILER=/usr/bin/g++
+```
+
+Nix builds CMake with an empty `CMAKE_SYSTEM_PREFIX_PATH` so that packages
+cannot pick up host libraries, which also hides `/usr` from `find_package` and
+makes `find_package(X11)` fail. Dependencies located through `pkg-config` are
+unaffected, so X11 is usually the only thing that breaks. Configuring with the
+wrong toolchain also rewrites `build/CMakeCache.txt`, which forces the next
+`build-and-run.sh` run to reconfigure from scratch and surface the failure
+there. `scripts/build/build-and-run.sh` selects the system toolchain for you.
+
 ## Compilation database
 
 The project enables `CMAKE_EXPORT_COMPILE_COMMANDS`, producing
