@@ -203,24 +203,24 @@ start 4.2 until that is settled.
 
 ## 7. Load and soak tests
 
-- [ ] 7.1 Add a Catch2 tag for opt-in load tests, distinct from `[.benchmark]`,
+- [x] 7.1 Add a Catch2 tag for opt-in load tests, distinct from `[.benchmark]`,
       and confirm the default `ctest` run excludes it.
-- [ ] 7.2 Add concurrent `AudioSampleFifo` tests: a producer and a consumer on
+- [x] 7.2 Add concurrent `AudioSampleFifo` tests: a producer and a consumer on
       separate threads, asserting every sample arrives exactly once and in
       order.
-- [ ] 7.3 Add the overflow case: the producer outruns the consumer and the ring
+- [x] 7.3 Add the overflow case: the producer outruns the consumer and the ring
       fills, asserting the documented overflow behaviour rather than corruption
       or blocking.
-- [ ] 7.4 State in the test file that these are necessary but not sufficient
+- [x] 7.4 State in the test file that these are necessary but not sufficient
       without TSan (QA_STRATEGY area 13), so a green run is not mistaken for
       proof of correctness.
-- [ ] 7.5 Add the saturation tests: the maximum supported number of simultaneous
+- [x] 7.5 Add the saturation tests: the maximum supported number of simultaneous
       tool consumers each draining its own stream, and one stalled consumer
       overflowing without affecting the others.
-- [ ] 7.6 Add the soak test with a configurable duration, asserting bounded
+- [x] 7.6 Add the soak test with a configurable duration, asserting bounded
       memory and throughput within a stated tolerance; have CI run a short
       configuration to prove the harness.
-- [ ] 7.7 Emit the measured figures — throughput, overflow counts, peak memory,
+- [x] 7.7 Emit the measured figures — throughput, overflow counts, peak memory,
       duration — from every load and soak test, so a pass still shows whether
       headroom is shrinking.
 

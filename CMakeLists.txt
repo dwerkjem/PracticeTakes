@@ -356,6 +356,7 @@ if(BUILD_TESTING)
         tests/features/performance/SustainedAudioAnalysisScenarioTests.cpp
         tests/features/performance/TrialAggregatorTests.cpp
         tests/services/audio/AudioRecoveryPolicyTests.cpp
+        tests/services/audio/AudioSampleFifoLoadTests.cpp
         tests/services/audio/AudioSampleFifoTests.cpp
         tests/services/score/MusicalTimeTests.cpp
         tests/services/score/PitchTests.cpp
