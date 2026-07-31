@@ -278,7 +278,11 @@ target_sources(PracticeTakes
         src/services/score/Pitch.h
         src/services/score/Score.h
         src/services/score/ScoreAttributes.h
+        src/services/score/ScoreBuilder.cpp
+        src/services/score/ScoreBuilder.h
         src/services/score/ScoreEvent.h
+        src/services/score/ScoreInvariants.cpp
+        src/services/score/ScoreInvariants.h
         src/services/score/TempoMap.cpp
         src/services/score/TempoMap.h
 )
@@ -360,6 +364,7 @@ if(BUILD_TESTING)
         tests/services/audio/AudioSampleFifoTests.cpp
         tests/services/score/MusicalTimeTests.cpp
         tests/services/score/PitchTests.cpp
+        tests/services/score/ScoreInvariantsTests.cpp
         tests/services/score/ScoreModelTests.cpp
         tests/services/score/TempoMapTests.cpp
         tests/support/BenchmarkFakesTests.cpp
@@ -387,6 +392,8 @@ if(BUILD_TESTING)
         src/features/performance/SustainedAudioAnalysisScenario.cpp
         src/features/performance/StrategyRegistry.cpp
         src/features/performance/TrialAggregator.cpp
+        src/services/score/ScoreBuilder.cpp
+        src/services/score/ScoreInvariants.cpp
         src/services/score/TempoMap.cpp
     )
 

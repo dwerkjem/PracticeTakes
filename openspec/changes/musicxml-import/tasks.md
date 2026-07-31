@@ -57,18 +57,18 @@ All headers in `src/services/score/`, `namespace score`.
 
 ## 2. Model construction and invariants
 
-- [ ] 2.1 Add the builder that assembles a score and produces an immutable
+- [x] 2.1 Add the builder that assembles a score and produces an immutable
       value; make the constructed score shareable as read-only and unmutatable
       afterwards.
-- [ ] 2.2 Implement the invariant checks: voice ordering and non-overlap,
+- [x] 2.2 Implement the invariant checks: voice ordering and non-overlap,
       non-negative durations, measure-duration bounds with the pickup
       exemption, tie-chain matching, unique non-empty part identifiers,
       cross-part measure alignment, tempo-map ordering, and diagnostic
       locations referencing only existing entities.
-- [ ] 2.3 Make each invariant violation a repair plus a diagnostic, not a
+- [x] 2.3 Make each invariant violation a repair plus a diagnostic, not a
       throw, and record in the code comment which repair applies to which
       violation.
-- [ ] 2.4 Add `tests/services/score/ScoreModelTests.cpp` covering every invariant, each with a
+- [x] 2.4 Add `tests/services/score/ScoreInvariantsTests.cpp` covering every invariant, each with a
       case that satisfies it and a case that must be repaired.
 - [x] 2.5 Add `tests/services/score/TempoMapTests.cpp` covering single tempo, mid-score tempo
       change, no declared tempo, duplicate positions, and round-tripping
