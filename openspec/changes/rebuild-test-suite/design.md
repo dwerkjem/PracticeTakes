@@ -205,7 +205,69 @@ One boundary must hold regardless: the three scripts `pre-commit` invokes
 preinstalled `python3` must stay stdlib-only. The dependency stays confined to
 the harness.
 
-### Decision 10 — the layout check is a Python script in CI
+### Decision 10 — the release gate matches records by code state, not commit id
+
+Blocking a version bump on "a full manual run for the current commit" has a
+chicken-and-egg problem that has to be solved explicitly or the gate is
+unsatisfiable: the run verifies the app built from commit A, and the record of
+that run is then committed as commit B. **A record can never name the commit
+that contains it.** A naive `record.commit == HEAD` check would fail every time.
+
+So the gate accepts a record when two things hold:
+
+1. the verified commit is an ancestor of, or identical to, the commit being
+   released — the run happened on this line of development, not a side branch;
+   and
+2. no *release-affecting* file differs between the verified commit and the
+   release commit.
+
+That second condition is the real check, and it is what makes committing the
+record itself harmless: a commit that only adds a run record changes nothing
+that affects the built application, so the record stays current.
+
+"Release-affecting" is an explicit, documented path list — `src/`,
+`CMakeLists.txt`, `cmake/`, `packaging/`, `vcpkg.json` — rather than an
+inference. `tests/`, `docs/`, `scripts/`, `openspec/`, and `services/` do not
+affect the desktop binary, so changing them does not invalidate a manual run.
+Making the list explicit means a gap in it is a reviewable mistake rather than
+silent under-enforcement, and adding a new release-affecting directory is a
+deliberate act.
+
+`VERSION` is deliberately excluded even though it is read by CMake, because the
+dispatch path bumps it as part of releasing — including it would make the gate
+unsatisfiable for exactly the case it exists to guard.
+
+**Where it runs:** at the front of `release.yml`, before any artifact is built,
+covering both entry points — the `workflow_dispatch` that bumps `VERSION` and a
+pushed `v*` tag. Not on pull requests: an ordinary PR must not fail for lack of
+a manual run.
+
+**On waived failures.** A full run with a failed item blocks by default, but the
+record may carry a written waiver per failed item. Without that, the only way to
+ship with a known cosmetic defect is to bypass the gate entirely, and a gate
+people routinely bypass stops being a gate. A waiver keeps the decision recorded
+in the release's own history.
+
+**On skipping.** The gate has an explicit skip flag, defaulting to off. Plenty of
+releases — a docs fix, a CI tweak, a dependency pin — genuinely do not warrant a
+full manual run, and a gate with no legitimate escape hatch gets bypassed in
+ways that leave no trace at all.
+
+The design constraint is that skipping must be *visible*, not that it must be
+hard. So a skip requires a written reason, and the skip and its reason are
+recorded with the release rather than only in workflow logs. That keeps "which
+releases shipped without manual verification, and why" answerable months later,
+which is the question that actually matters. On the `workflow_dispatch` path the
+flag and reason are workflow inputs; the tag-push path has no inputs, so its
+equivalent is a committed marker, and that asymmetry should be documented rather
+than papered over.
+
+**Alternative considered:** having the harness write the record and the version
+bump in one commit, so the ids do match. Rejected — it welds a manual local tool
+to the release process, and it still breaks the moment anything else lands
+between the run and the release.
+
+### Decision 11 — the layout check is a Python script in CI
 
 `scripts/` already has a Python test convention and `python-check.yml` already
 runs on changes there, so a small script that walks `tests/` and `src/` and
@@ -261,6 +323,13 @@ documentation of what is deliberately outside the mirror.
   keep the dependency confined to the harness: the three pre-commit scripts and
   anything CI runs must stay stdlib-only. Verified that `packaging/` references
   no Python, so nothing here reaches a shipped artifact.
+- **[Risk] The skip flag becomes the default habit**, and the release gate
+  quietly stops meaning anything. → It defaults to off, requires a written
+  reason, and the skip is recorded with the release rather than only in workflow
+  logs — so a run of consecutive skipped releases is visible rather than
+  invisible. This is deliberately a visibility control, not a barrier: the
+  maintainer is the only user, and a barrier they cannot pass would just get
+  removed.
 - **[Risk] Quick mode becomes the only mode anyone runs**, and a quick run gets
   mistaken for a release check. → The mode is recorded with the run and an
   incomplete run is marked as such, so a record cannot be read as more than it
@@ -287,8 +356,11 @@ The build order keeps each step independently useful:
    once end to end and commit the first record so the format is proven rather
    than hypothetical. Quick mode first, since it is a strict subset of full and
    proves the driving mechanism with the fewest surfaces.
-4. **Smoke tests** — Xvfb job, then launch/tool/shutdown assertions.
-5. **Load and soak tests** — concurrent FIFO first (highest value, area 13),
+4. **Release gate** — after the harness, since it reads the records the harness
+   produces. Land the gate and its skip flag together; a gate without an escape
+   hatch gets bypassed rather than used.
+5. **Smoke tests** — Xvfb job, then launch/tool/shutdown assertions.
+6. **Load and soak tests** — concurrent FIFO first (highest value, area 13),
    then saturation, then the soak harness.
 
 Rollback for any step is reverting its commits; each adds a CI job or a script

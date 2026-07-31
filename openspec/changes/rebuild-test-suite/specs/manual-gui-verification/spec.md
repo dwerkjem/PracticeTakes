@@ -159,10 +159,141 @@ shrinks as automation grows.
 - **WHEN** an automated test is added that verifies a question the harness asks
 - **THEN** that question is removed from the harness in the same change
 
+### Requirement: A release is blocked without a current full manual run
+The release workflow SHALL fail before producing or publishing any artifact when
+there is no complete, current, full-mode manual run record for the code being
+released. This applies to both release entry points: the manual dispatch that
+bumps `VERSION`, and a pushed release tag.
+
+#### Scenario: A release is attempted with no record
+- **WHEN** a release is triggered and no full-mode run record exists
+- **THEN** the release fails before any artifact is built or published
+
+#### Scenario: A release is attempted with only a quick run
+- **WHEN** the most recent run record is a quick run
+- **THEN** the release fails, because quick mode is not a release check
+
+#### Scenario: A release is attempted with an incomplete run
+- **WHEN** the most recent full run record is marked incomplete
+- **THEN** the release fails
+
+#### Scenario: A release proceeds
+- **WHEN** a complete, current, full-mode record exists for the code being
+  released
+- **THEN** the gate passes and the release continues
+
+### Requirement: A run record is matched to a release by code state
+A manual run verifies the application as built from some commit, and the record
+of that run is necessarily committed afterwards — so a record can never name the
+commit that contains it. The gate SHALL therefore treat a record as current when
+the commit it verified is an ancestor of, or identical to, the commit being
+released, **and** no file that affects the built application differs between
+those two commits.
+
+#### Scenario: The record was committed after the run
+- **WHEN** a run verified commit A and its record was committed as commit B, and
+  the release is from commit B
+- **THEN** the record is accepted, because committing the record changed no file
+  that affects the built application
+
+#### Scenario: Application code changed after the run
+- **WHEN** a source file affecting the built application changed between the
+  verified commit and the commit being released
+- **THEN** the record is stale and the release fails, naming the files that
+  changed
+
+#### Scenario: Only documentation changed after the run
+- **WHEN** the only changes between the verified commit and the release commit
+  are to documentation, tests, or repository tooling
+- **THEN** the record remains current and the release proceeds
+
+#### Scenario: The verified commit is not an ancestor
+- **WHEN** the record names a commit that is not an ancestor of the commit being
+  released
+- **THEN** the record is not accepted, because it verified a different line of
+  development
+
+### Requirement: The set of release-affecting files is explicit
+The gate SHALL work from an explicit, documented list of paths that affect the
+built application, so that what does and does not invalidate a manual run is a
+reviewable decision rather than an inference.
+
+#### Scenario: A new release-affecting path is added
+- **WHEN** a change introduces a directory that affects the built application
+- **THEN** it is added to the documented list, and its absence would otherwise
+  be a gap the gate cannot detect
+
+### Requirement: Failed items block a release unless explicitly waived
+A full run containing a failed item SHALL block the release. A release MAY still
+proceed if the record carries an explicit, written waiver for each failed item,
+so that a known cosmetic defect can ship as a deliberate, recorded decision
+rather than by the gate being bypassed.
+
+#### Scenario: An unwaived failure
+- **WHEN** a full run record contains a failed item with no waiver
+- **THEN** the release fails and names the failed item
+
+#### Scenario: A waived failure
+- **WHEN** every failed item carries a written waiver
+- **THEN** the release proceeds, and the waivers remain in the record as part of
+  the release's history
+
+### Requirement: A release may explicitly skip manual verification
+The release workflow SHALL provide a flag that skips the manual verification
+gate, defaulting to not skipping, so that a change too small to warrant a full
+run is not forced through one.
+
+#### Scenario: A small release skips the gate
+- **WHEN** a release is triggered with the skip flag set and a reason given
+- **THEN** the gate does not block and the release proceeds
+
+#### Scenario: The flag is not set
+- **WHEN** a release is triggered without the skip flag
+- **THEN** the gate applies normally
+
+### Requirement: Skipping requires a stated reason
+Setting the skip flag SHALL require a written reason, and a skip request without
+one SHALL fail, so that skipping is a deliberate decision rather than a default
+that drifts into always being set.
+
+#### Scenario: Skip requested with no reason
+- **WHEN** the skip flag is set but no reason is supplied
+- **THEN** the release fails and asks for a reason
+
+### Requirement: A skipped release is identifiable afterwards
+When the gate is skipped, the release SHALL record that manual verification was
+skipped and why, in a place that survives with the release, so that which
+releases shipped without manual verification is answerable later without
+inspecting workflow logs.
+
+#### Scenario: Auditing past releases
+- **WHEN** past releases are reviewed
+- **THEN** those that skipped manual verification are identifiable along with
+  the reason each gave
+
+#### Scenario: A skipped release is not mistaken for a verified one
+- **WHEN** a skipped release's record is compared against a verified one
+- **THEN** it is distinguishable without inspecting workflow logs
+
+### Requirement: The gate explains why it blocked
+When the gate fails it SHALL state which condition failed — missing, quick-only,
+incomplete, stale, or unwaived failure — and, for staleness, which
+release-affecting files changed since the verified commit.
+
+#### Scenario: A stale record blocks a release
+- **WHEN** the gate fails because the record is stale
+- **THEN** the failure message names the verified commit and the
+  release-affecting files that changed since it
+
 ### Requirement: The harness is not required to run in CI
-The harness SHALL be a local development tool. No CI check SHALL depend on it,
-since it requires a real display, a real audio device, and a human.
+The harness SHALL be a local development tool. No CI check SHALL invoke it,
+since it requires a real display, a real audio device, and a human. CI reads the
+records it produces; it never runs it.
 
 #### Scenario: CI runs without a display or a tester
 - **WHEN** CI runs
-- **THEN** no check invokes the manual harness and none fails for its absence
+- **THEN** no check invokes the manual harness
+
+#### Scenario: An ordinary pull request
+- **WHEN** a pull request that is not a release runs CI
+- **THEN** no check fails for the absence of a manual run record

@@ -12,7 +12,9 @@
 - [ ] 0.3 Confirm the sequencing dependency on `adopt-uv-for-python`
       (`design.md` decision 9): either land it first, or decide how else the
       harness gets a Python dependency. Section 4 is blocked until this is
-      settled; sections 1, 2, 3, 5, and 6 are not.
+      settled, and section 5 is blocked behind section 4 because the gate reads
+      the records the harness produces. Sections 1, 2, 3, 6, and 7 are
+      independent and can proceed meanwhile.
 
 ## 1. Lock in the test layout
 
@@ -121,63 +123,99 @@ start 4.2 until that is settled.
 - [ ] 4.15 Document that any question covered by a later automated test must be
       removed from the harness in the same change that adds the test.
 
-## 5. End-to-end smoke tests
+## 5. Release gate on manual verification
 
-- [ ] 5.1 Add a CI job that installs Xvfb and runs the built application under a
+- [ ] 5.1 Define and document the release-affecting path list — `src/`,
+      `CMakeLists.txt`, `cmake/`, `packaging/`, `vcpkg.json` — and why `VERSION`
+      is excluded (the dispatch path bumps it, so including it makes the gate
+      unsatisfiable).
+- [ ] 5.2 Add the gate script: find the most recent full-mode record, confirm it
+      is complete, confirm its verified commit is an ancestor of or identical to
+      the release commit, and confirm no release-affecting file differs between
+      the two.
+- [ ] 5.3 Make the gate block on any failed item in the record unless that item
+      carries a written waiver.
+- [ ] 5.4 Make every failure mode report its specific cause — missing,
+      quick-only, incomplete, stale, or unwaived failure — and for staleness,
+      name the verified commit and the release-affecting files that changed.
+- [ ] 5.5 Add tests covering each accept and reject path, including the case
+      that motivates the whole design: a record committed *after* the run it
+      describes must still be accepted, because committing it changed no
+      release-affecting file.
+- [ ] 5.6 Add the skip flag to `release.yml`'s `workflow_dispatch` inputs,
+      defaulting to off, with a required reason that fails the release if the
+      flag is set and the reason is empty.
+- [ ] 5.7 Record the skip and its reason with the release itself, not only in
+      workflow logs, so past releases that shipped without manual verification
+      are identifiable later.
+- [ ] 5.8 Handle the tag-push path, which has no workflow inputs: decide and
+      document its skip equivalent (a committed marker) and note the asymmetry
+      with the dispatch path rather than leaving it implicit.
+- [ ] 5.9 Wire the gate in as a job that runs before any artifact is built or
+      published, on both release entry points.
+- [ ] 5.10 Confirm an ordinary pull request does not fail for the absence of a
+      manual run record.
+- [ ] 5.11 Exercise the gate end to end before relying on it: one release
+      attempt blocked by a stale record, one passing with a current record, and
+      one skipped with a reason.
+
+## 6. End-to-end smoke tests
+
+- [ ] 6.1 Add a CI job that installs Xvfb and runs the built application under a
       virtual display on Linux.
-- [ ] 5.2 Build the existing `scripts/quality/ui-validation/` X11 helpers
+- [ ] 6.2 Build the existing `scripts/quality/ui-validation/` X11 helpers
       (`xwindow_capture`, `window_control`) as a reusable step rather than
       duplicating them for the smoke suite.
-- [ ] 5.3 Add a smoke driver under `scripts/quality/` that launches
+- [ ] 6.3 Add a smoke driver under `scripts/quality/` that launches
       `build/bin/PracticeTakes`, waits for the main window with a bounded
       timeout, and exits non-zero on crash, hang, or missing window.
-- [ ] 5.4 Add the tool-opening assertion: open one analysis tool and confirm it
+- [ ] 6.4 Add the tool-opening assertion: open one analysis tool and confirm it
       is present in the running application.
-- [ ] 5.5 Add the shutdown assertion: close the application, require exit within
+- [ ] 6.5 Add the shutdown assertion: close the application, require exit within
       a bounded time with a success status, and terminate the process on timeout
       so a hang cannot stall the run.
-- [ ] 5.6 Confirm the whole smoke suite passes on a host with no audio capture
+- [ ] 6.6 Confirm the whole smoke suite passes on a host with no audio capture
       device, since CI runners have none.
-- [ ] 5.7 Confirm the smoke suite does not run as part of the default `ctest`
+- [ ] 6.7 Confirm the smoke suite does not run as part of the default `ctest`
       invocation.
-- [ ] 5.8 Run the smoke suite ten times in CI before relying on it, and record
+- [ ] 6.8 Run the smoke suite ten times in CI before relying on it, and record
       the flake count; per `design.md`, a test that flakes without a real defect
       is deleted rather than retried.
 
-## 6. Load and soak tests
+## 7. Load and soak tests
 
-- [ ] 6.1 Add a Catch2 tag for opt-in load tests, distinct from `[.benchmark]`,
+- [ ] 7.1 Add a Catch2 tag for opt-in load tests, distinct from `[.benchmark]`,
       and confirm the default `ctest` run excludes it.
-- [ ] 6.2 Add concurrent `AudioSampleFifo` tests: a producer and a consumer on
+- [ ] 7.2 Add concurrent `AudioSampleFifo` tests: a producer and a consumer on
       separate threads, asserting every sample arrives exactly once and in
       order.
-- [ ] 6.3 Add the overflow case: the producer outruns the consumer and the ring
+- [ ] 7.3 Add the overflow case: the producer outruns the consumer and the ring
       fills, asserting the documented overflow behaviour rather than corruption
       or blocking.
-- [ ] 6.4 State in the test file that these are necessary but not sufficient
+- [ ] 7.4 State in the test file that these are necessary but not sufficient
       without TSan (QA_STRATEGY area 13), so a green run is not mistaken for
       proof of correctness.
-- [ ] 6.5 Add the saturation tests: the maximum supported number of simultaneous
+- [ ] 7.5 Add the saturation tests: the maximum supported number of simultaneous
       tool consumers each draining its own stream, and one stalled consumer
       overflowing without affecting the others.
-- [ ] 6.6 Add the soak test with a configurable duration, asserting bounded
+- [ ] 7.6 Add the soak test with a configurable duration, asserting bounded
       memory and throughput within a stated tolerance; have CI run a short
       configuration to prove the harness.
-- [ ] 6.7 Emit the measured figures — throughput, overflow counts, peak memory,
+- [ ] 7.7 Emit the measured figures — throughput, overflow counts, peak memory,
       duration — from every load and soak test, so a pass still shows whether
       headroom is shrinking.
 
-## 7. Documentation and verification
+## 8. Documentation and verification
 
-- [ ] 7.1 Update `docs/development/QA_STRATEGY.md` areas 8, 9, and 13 to reflect
+- [ ] 8.1 Update `docs/development/QA_STRATEGY.md` areas 8, 9, and 13 to reflect
       what this change delivered and what it deliberately left open.
-- [ ] 7.2 Add follow-up issues for the work this change explicitly defers:
+- [ ] 8.2 Add follow-up issues for the work this change explicitly defers:
       coverage thresholds, extracting logic out of the JUCE components,
       sanitizer builds, and macOS test execution.
-- [ ] 7.3 Run `python scripts/run_tests.py`, the C++ suite, and
+- [ ] 8.3 Run `python scripts/run_tests.py`, the C++ suite, and
       `npm run check && npm run test` from `services/`, and confirm all pass.
-- [ ] 7.4 Run `clang-format` and `clang-tidy` via pre-commit and confirm any new
+- [ ] 8.4 Run `clang-format` and `clang-tidy` via pre-commit and confirm any new
       C++ sources are clean.
-- [ ] 7.5 Re-read this change's spec deltas against what was implemented and
+- [ ] 8.5 Re-read this change's spec deltas against what was implemented and
       correct any requirement the implementation had to deviate from, recording
       the deviation rather than quietly editing the spec to match.

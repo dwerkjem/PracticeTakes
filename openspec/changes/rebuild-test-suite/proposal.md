@@ -37,6 +37,12 @@ says which source directory each test belongs to.
   **full** mode for pre-release verification and a **quick** mode for "does it
   still work", and an optional flag that repeats each surface at several window
   geometries. Today this knowledge exists only in the maintainer's head.
+- **Gate releases on a current full manual run.** `release.yml` fails before
+  building anything if there is no complete, current, full-mode run record for
+  the code being released — which is what makes the manual run load-bearing
+  rather than optional. An explicit skip flag, defaulting to off and requiring a
+  written reason, covers releases too small to warrant a run; the skip and its
+  reason are recorded with the release.
 - **Add end-to-end smoke tests** that launch the real built application, assert
   it starts, opens a tool, and shuts down cleanly. Requires establishing a
   headless X story (Xvfb) — the repository has none today, and the existing
@@ -74,7 +80,8 @@ Deliberately **not** in scope:
 - `manual-gui-verification`: an interactive harness that drives the application
   to each surface, scores it on three fixed axes plus surface-specific
   questions, offers full and quick modes and an optional window-geometry sweep,
-  and writes a dated run record itself.
+  writes a dated run record itself, and gates releases on a current full run
+  with a recorded skip flag for small changes.
 - `end-to-end-smoke-tests`: headless launch of the built application, asserting
   startup, a tool opening, and clean shutdown, runnable in CI on Linux.
 - `load-and-soak-tests`: opt-in sustained and saturating tests of the audio
@@ -94,7 +101,9 @@ pressure.
 - **`.github/workflows/`** — coverage steps added to the C++, TypeScript, and
   Python legs; a new headless smoke-test job needing Xvfb. `build-multiplatform.yml`
   already runs `ctest` on the Linux and Windows legs and is where C++ coverage
-  attaches.
+  attaches. **`release.yml` gains a gate job** that runs before any artifact is
+  built, plus a skip input on its `workflow_dispatch` path — the first change to
+  the release workflow that can stop a release.
 - **`CMakeLists.txt`** — a coverage build option (`--coverage`/`-fprofile-instr-generate`),
   kept off by default so ordinary builds are unaffected, plus any new test
   targets that must not be part of the default `PracticeTakesTests` run.
