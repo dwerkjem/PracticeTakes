@@ -18,20 +18,20 @@
 
 ## 1. Lock in the test layout
 
-- [ ] 1.1 Add `scripts/quality/check_test_layout.py` that fails when a `.cpp`
+- [x] 1.1 Add `scripts/quality/check_test_layout.py` that fails when a `.cpp`
       file sits directly at the root of `tests/`, or when a test path under
       `tests/` has no corresponding directory under `src/`.
-- [ ] 1.2 Give the script an explicit allowlist of directories that are
+- [x] 1.2 Give the script an explicit allowlist of directories that are
       deliberately outside the mirror, starting with `tests/support/`, so the
       allowlist doubles as the documentation of what is exempt.
-- [ ] 1.3 Add `scripts/quality/test_check_test_layout.py` covering: a conforming
+- [x] 1.3 Add `scripts/quality/test_check_test_layout.py` covering: a conforming
       tree, a stray `.cpp` at the `tests/` root, a mirrored path with no `src/`
       counterpart, and an allowlisted directory being accepted.
-- [ ] 1.4 Confirm the new tests are discovered by `python scripts/run_tests.py`,
+- [x] 1.4 Confirm the new tests are discovered by `python scripts/run_tests.py`,
       which finds `test_*.py` by path.
-- [ ] 1.5 Wire the layout check into CI so it runs on pull requests, alongside
+- [x] 1.5 Wire the layout check into CI so it runs on pull requests, alongside
       the existing Python check.
-- [ ] 1.6 Document the mirror rule, the `tests/support/` exemption, and the
+- [x] 1.6 Document the mirror rule, the `tests/support/` exemption, and the
       include-path arrangement in `docs/development/`, and link it from
       `CONTRIBUTING.md`.
 

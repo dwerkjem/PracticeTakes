@@ -20,6 +20,8 @@ All build, architecture, and quality documentation lives under
   what reviewers check on pull requests beyond formatting/linting
 - [QA strategy](docs/development/QA_STRATEGY.md) — the current CI/testing
   gap analysis and plan
+- [Test layout](docs/development/TEST_LAYOUT.md) — how `tests/` mirrors `src/`,
+  where a new test goes, and what sits outside the mirror
 - [Code style](docs/development/CODE_STYLE.md) — readability and real-time
   audio guidelines
 - [Code quality](docs/development/QUALITY.md) — clang-format, clang-tidy,
