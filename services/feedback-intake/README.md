@@ -254,6 +254,27 @@ The suite covers receipts, validation, expiration, replay protection, request-si
 limiting, HTTPS enforcement, administrative authentication, filtering, triage updates, duplicate
 linking, and CSV export.
 
+### How tests get a database
+
+Tests do not mock the database. `test/support/database.ts` creates an in-memory
+SQLite database with Node's built-in `node:sqlite` and builds its schema by applying
+every file in `migrations/` in filename order, then exposes it through the D1 methods the
+worker uses (`prepare`, `bind`, `first`, `all`, `run`, and a transactional `batch`).
+
+Consequences worth knowing before adding a test:
+
+- Every statement is really parsed and executed. Invalid SQL, a misspelled column, and a
+  query against a table no migration creates all fail the suite.
+- The schema comes only from `migrations/`. Never hand-write a test schema — that would
+  reintroduce the drift these tests exist to catch. Add a migration instead.
+- Seed rows with the `seed*` helpers (which are plain `INSERT`s) rather than by
+  constructing objects, and assert against the database with `rows`, `row`, and `count`.
+- Real constraints apply: the `UNIQUE` index from `0005_idempotent_submissions.sql`
+  drives duplicate detection, and a failed `batch` rolls back.
+
+`test/migrations.test.ts` applies the migration set on its own and fails, naming the file,
+if any migration errors.
+
 ## Security and abuse controls
 
 - 1.5 MiB request limit with an independently bounded optional PNG or JPEG screenshot whose decoded

@@ -1,149 +1,36 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import worker from "../src/index";
+import { asD1, createTestDatabase, type TestDatabase } from "./support/database";
 
 const installationId = "test-installation-identifier-0001";
 const signingKey = "test-only-signing-key-with-at-least-32-characters";
 const clientAddress = "192.0.2.10";
 
-interface StoredAuthorizationRequest {
-  clientHash: string;
-  requestedAt: number;
-}
-
 interface StoredSubmission {
-  receiptId: string;
-  submittedAt: string;
-  receivedAt: number;
-  appVersion: string;
-  installationHash: string;
-  clientHash: string;
-  category: string;
+  receipt_id: string;
   message: string;
-  contactEmail: string | null;
+  client_hash: string;
+  installation_hash: string;
   status: string;
-  quarantineReason: string | null;
+  quarantine_reason: string | null;
+  client_submission_id: string | null;
 }
 
-class MemoryStatement {
-  constructor(
-    readonly database: MemoryD1,
-    readonly sql: string,
-    readonly parameters: unknown[] = [],
-  ) {}
-
-  bind(...parameters: unknown[]): MemoryStatement {
-    return new MemoryStatement(this.database, this.sql, parameters);
-  }
-
-  async first<T>(): Promise<T | null> {
-    const [value, cutoff] = this.parameters as [string, number];
-    let count = 0;
-
-    if (this.sql.includes("SELECT 1 AS available")) {
-      return { available: 1 } as T;
-    } else if (this.sql.includes("feedback_notification_days")) {
-      if (this.database.notificationCount >= 3) return null;
-      this.database.notificationCount += 1;
-      return { sent_count: this.database.notificationCount } as T;
-    } else if (this.sql.includes("COALESCE(SUM(LENGTH(message)")) {
-      return {
-        count: this.database.submissions.length,
-        bytes: this.database.submissions.reduce(
-          (total, submission) => total + 512 + submission.message.length +
-            (submission.contactEmail?.length ?? 0),
-          0,
-        ),
-      } as T;
-    } else if (this.sql.includes("FROM authorization_requests")) {
-      count = this.sql.includes("client_hash = ?")
-        ? this.database.authorizationRequests.filter(
-          (request) => request.clientHash === value && request.requestedAt >= cutoff,
-        ).length
-        : this.database.authorizationRequests.filter(
-          (request) => request.requestedAt >= Number(value),
-        ).length;
-    } else if (this.sql.includes("installation_hash")) {
-      count = this.database.submissions.filter(
-        (submission) => submission.installationHash === value &&
-          (cutoff === undefined || submission.receivedAt >= cutoff),
-      ).length;
-    } else if (this.sql.includes("client_hash")) {
-      count = this.database.submissions.filter(
-        (submission) => submission.clientHash === value && submission.receivedAt >= cutoff,
-      ).length;
-    } else if (this.sql.includes("FROM feedback_submissions")) {
-      count = this.database.submissions.filter(
-        (submission) => submission.receivedAt >= Number(value),
-      ).length;
-    }
-
-    return { count } as T;
-  }
-
-  async run(): Promise<D1Result> {
-    this.database.execute(this);
-    return { success: true, meta: {} } as D1Result;
-  }
+function submissions(database: TestDatabase): StoredSubmission[] {
+  return database.rows<StoredSubmission>(
+    `SELECT receipt_id, message, client_hash, installation_hash, status,
+            quarantine_reason, client_submission_id
+       FROM feedback_submissions ORDER BY received_at ASC, rowid ASC`,
+  );
 }
 
-class MemoryD1 {
-  readonly authorizationRequests: StoredAuthorizationRequest[] = [];
-  readonly consumedTokenIds = new Set<string>();
-  readonly submissions: StoredSubmission[] = [];
-  readonly emailQueue = new Set<string>();
-  notificationCount = 0;
-
-  prepare(sql: string): D1PreparedStatement {
-    return new MemoryStatement(this, sql) as unknown as D1PreparedStatement;
-  }
-
-  async batch(statements: D1PreparedStatement[]): Promise<D1Result[]> {
-    const memoryStatements = statements as unknown as MemoryStatement[];
-    const consumedStatement = memoryStatements.find((statement) =>
-      statement.sql.includes("INSERT INTO consumed_authorizations"),
-    );
-    const tokenId = consumedStatement?.parameters[0] as string | undefined;
-    if (tokenId && this.consumedTokenIds.has(tokenId)) {
-      throw new Error("UNIQUE constraint failed: consumed_authorizations.token_id");
-    }
-
-    for (const statement of memoryStatements) this.execute(statement);
-    return memoryStatements.map(() => ({ success: true, meta: {} }) as D1Result);
-  }
-
-  execute(statement: MemoryStatement): void {
-    if (statement.sql.includes("INSERT INTO authorization_requests")) {
-      const [clientHash, requestedAt] = statement.parameters as [string, number];
-      this.authorizationRequests.push({ clientHash, requestedAt });
-      return;
-    }
-
-    if (statement.sql.includes("INSERT INTO consumed_authorizations")) {
-      this.consumedTokenIds.add(statement.parameters[0] as string);
-      return;
-    }
-
-    if (statement.sql.includes("INSERT INTO feedback_submissions")) {
-      const [receiptId, submittedAt, receivedAt, appVersion, installationHash, clientHash,
-        category, message, contactEmail, , , , status, quarantineReason] = statement.parameters as
-        [string, string, number, string, string, string, string, string, string | null,
-         string | null, string | null, string, string, string | null];
-      this.submissions.push({ receiptId, submittedAt, receivedAt, appVersion, installationHash,
-                              clientHash, category, message, contactEmail, status,
-                              quarantineReason });
-      return;
-    }
-
-    if (statement.sql.includes("INSERT INTO feedback_email_queue")) {
-      this.emailQueue.add(statement.parameters[0] as string);
-    }
-  }
-}
-
-function createEnvironment(database = new MemoryD1(), overrides: Record<string, unknown> = {}) {
+function createEnvironment(
+  database = createTestDatabase(),
+  overrides: Record<string, unknown> = {},
+) {
   return {
-    FEEDBACK_DB: database as unknown as D1Database,
+    FEEDBACK_DB: asD1(database),
     SUBMISSION_SIGNING_KEY: signingKey,
     MINIMUM_APP_VERSION: "0.2.6",
     AUTHORIZATIONS_PER_HOUR: "10",
@@ -264,7 +151,7 @@ describe("feedback intake worker", () => {
      });
 
   it("accepts a valid report and returns a receipt", async () => {
-    const database = new MemoryD1();
+    const database = createTestDatabase();
     const environment = createEnvironment(database);
     const authorization = await authorize(environment);
 
@@ -274,12 +161,12 @@ describe("feedback intake worker", () => {
     expect(response.status).toBe(201);
     expect(body.schemaVersion).toBe(1);
     expect(body.receiptId).toMatch(/^[0-9a-f-]{36}$/);
-    expect(database.submissions).toHaveLength(1);
-    expect(database.submissions[0]?.message).toBe("The tuner displayed an incorrect octave.");
+    expect(submissions(database)).toHaveLength(1);
+    expect(submissions(database)[0]?.message).toBe("The tuner displayed an incorrect octave.");
   });
 
   it("stores every report without depending on email delivery", async () => {
-    const database = new MemoryD1();
+    const database = createTestDatabase();
     const sendEmail = vi.fn(async () => ({ messageId: crypto.randomUUID() }));
     const environment = createEnvironment(database, {
       FEEDBACK_EMAIL: { send: sendEmail },
@@ -298,8 +185,8 @@ describe("feedback intake worker", () => {
       expect(response.status).toBe(201);
     }
 
-    expect(database.submissions).toHaveLength(5);
-    expect(database.emailQueue.size).toBe(5);
+    expect(submissions(database)).toHaveLength(5);
+    expect(database.count("feedback_email_queue")).toBe(5);
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
@@ -336,6 +223,48 @@ describe("feedback intake worker", () => {
     expect(await errorCode(replay)).toBe("duplicate_submission");
   });
 
+  it("returns the original receipt when a client retries the same submission", async () => {
+    const database = createTestDatabase();
+    const environment = createEnvironment(database);
+    const report = feedback(await authorize(environment));
+
+    const first = await send("/v1/submissions", report, environment);
+    const original = await first.json() as { receiptId: string };
+    const retry = await send(
+      "/v1/submissions",
+      { ...report, authorization: await authorize(environment) },
+      environment,
+    );
+    const body = await retry.json() as { receiptId: string; duplicate: boolean };
+
+    expect(first.status).toBe(201);
+    // The partial unique index from 0005_idempotent_submissions.sql is what
+    // rejects the retry; the worker turns that conflict into the first receipt.
+    expect(retry.status).toBe(200);
+    expect(body).toEqual({ schemaVersion: 1, receiptId: original.receiptId, duplicate: true });
+    expect(submissions(database)).toHaveLength(1);
+  });
+
+  it("leaves no partial rows behind when a submission batch fails", async () => {
+    const database = createTestDatabase();
+    const environment = createEnvironment(database);
+    const report = feedback(await authorize(environment));
+    expect((await send("/v1/submissions", report, environment)).status).toBe(201);
+
+    // The retry consumes a fresh authorization, so the batch's first statement
+    // succeeds and only the submission insert conflicts.
+    const retry = await send(
+      "/v1/submissions",
+      { ...report, authorization: await authorize(environment) },
+      environment,
+    );
+
+    expect(retry.status).toBe(200);
+    expect(database.count("consumed_authorizations")).toBe(1);
+    expect(database.count("feedback_email_queue")).toBe(1);
+    expect(submissions(database)).toHaveLength(1);
+  });
+
   it("rejects oversized requests before authorization processing", async () => {
     const response = await send("/v1/submissions", {
       ...feedback("not-a-real-token"),
@@ -347,7 +276,7 @@ describe("feedback intake worker", () => {
   });
 
   it("enforces the submission rate limit", async () => {
-    const environment = createEnvironment(new MemoryD1(), { SUBMISSIONS_PER_HOUR: "1" });
+    const environment = createEnvironment(createTestDatabase(), { SUBMISSIONS_PER_HOUR: "1" });
     const firstAuthorization = await authorize(environment);
     expect((await send("/v1/submissions", feedback(firstAuthorization), environment)).status).toBe(201);
 
@@ -359,7 +288,7 @@ describe("feedback intake worker", () => {
   });
 
   it("caps authorization traffic across all clients", async () => {
-    const environment = createEnvironment(new MemoryD1(), {
+    const environment = createEnvironment(createTestDatabase(), {
       MAX_AUTHORIZATIONS_PER_HOUR: "1",
     });
     expect((await send("/v1/authorizations", {
@@ -374,7 +303,7 @@ describe("feedback intake worker", () => {
   });
 
   it("enforces the global storage ceiling before consuming another report", async () => {
-    const environment = createEnvironment(new MemoryD1(), {
+    const environment = createEnvironment(createTestDatabase(), {
       MAX_STORED_SUBMISSIONS: "1",
       SUBMISSIONS_PER_HOUR: "5",
     });
@@ -389,22 +318,22 @@ describe("feedback intake worker", () => {
   });
 
   it("quarantines suspicious link-heavy reports for manual review", async () => {
-    const database = new MemoryD1();
+    const database = createTestDatabase();
     const environment = createEnvironment(database);
     const authorization = await authorize(environment);
     const report = feedback(authorization);
     report.message = "Review https://one.test https://two.test and https://three.test";
 
     expect((await send("/v1/submissions", report, environment)).status).toBe(201);
-    expect(database.submissions[0]).toMatchObject({
+    expect(submissions(database)[0]).toMatchObject({
       status: "needs_review",
-      quarantineReason: "multiple_external_links",
+      quarantine_reason: "multiple_external_links",
     });
-    expect(database.emailQueue.size).toBe(0);
+    expect(database.count("feedback_email_queue")).toBe(0);
   });
 
   it("stores the client address as a keyed pseudonym rather than a plain digest", async () => {
-    const database = new MemoryD1();
+    const database = createTestDatabase();
     const environment = createEnvironment(database);
     const authorization = await authorize(environment);
     expect((await send("/v1/submissions", feedback(authorization), environment)).status).toBe(201);
@@ -414,8 +343,8 @@ describe("feedback intake worker", () => {
     );
     const unkeyed = btoa(String.fromCharCode(...new Uint8Array(digest)))
       .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    expect(database.submissions[0]?.clientHash).not.toBe(unkeyed);
-    expect(database.submissions[0]?.clientHash).not.toContain(clientAddress);
+    expect(submissions(database)[0]?.client_hash).not.toBe(unkeyed);
+    expect(submissions(database)[0]?.client_hash).not.toContain(clientAddress);
   });
 
   it.each([
@@ -477,6 +406,16 @@ describe("feedback intake worker", () => {
     }, environment);
     expect(submissionResponse.status).toBe(400);
     expect(await errorCode(submissionResponse)).toBe("invalid_request");
+  });
+
+  it("records a telemetry bucket for every public request", async () => {
+    const database = createTestDatabase();
+    const environment = createEnvironment(database);
+    await authorize(environment);
+
+    expect(database.rows<{ route: string; outcome: string; request_count: number }>(
+      "SELECT route, outcome, request_count FROM request_metrics",
+    )).toEqual([{ route: "authorizations", outcome: "success", request_count: 1 }]);
   });
 
   it("provides a data-free availability probe", async () => {

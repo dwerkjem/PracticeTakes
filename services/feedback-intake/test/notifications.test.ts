@@ -1,125 +1,28 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { sendPendingFeedbackBatch } from "../src/notifications";
+import {
+  asD1,
+  createTestDatabase,
+  seedQueuedFeedback,
+  type TestDatabase,
+} from "./support/database";
 
-interface QueuedFeedback {
+function queued(database: TestDatabase): Array<{
   receipt_id: string;
-  received_at: number;
-  app_version: string;
-  category: string;
-  message: string;
-  contact_email: string | null;
-  screenshot_mime_type: string | null;
   claim_id: string | null;
   claimed_at: number | null;
+}> {
+  return database.rows(
+    "SELECT receipt_id, claim_id, claimed_at FROM feedback_email_queue ORDER BY received_at ASC",
+  );
 }
 
-class NotificationStatement {
-  constructor(
-    private readonly database: NotificationDatabase,
-    private readonly sql: string,
-    private readonly parameters: unknown[] = [],
-  ) {}
-
-  bind(...parameters: unknown[]): NotificationStatement {
-    return new NotificationStatement(this.database, this.sql, parameters);
-  }
-
-  async first<T>(): Promise<T | null> {
-    if (this.sql.includes("SELECT COUNT(*) AS count")) {
-      return {
-        count: this.database.reports.filter(
-          (report) => report.claim_id === null,
-        ).length,
-      } as T;
-    }
-    if (this.sql.includes("feedback_notification_days")) {
-      const day = this.parameters[0] as string;
-      const count = this.database.dailyAttempts.get(day) ?? 0;
-      if (count >= 3) return null;
-      this.database.dailyAttempts.set(day, count + 1);
-      return { sent_count: count + 1 } as T;
-    }
-    return null;
-  }
-
-  async all<T>(): Promise<D1Result<T>> {
-    if (!this.sql.includes("RETURNING receipt_id")) {
-      return { success: true, results: [], meta: {} } as unknown as D1Result<T>;
-    }
-    const [claimId, claimedAt, limit] = this.parameters as [string, number, number];
-    const reports = this.database.reports
-      .filter((report) => report.claim_id === null)
-      .sort((left, right) =>
-        left.received_at - right.received_at || left.receipt_id.localeCompare(right.receipt_id),
-      )
-      .slice(0, limit);
-    for (const report of reports) {
-      report.claim_id = claimId;
-      report.claimed_at = claimedAt;
-    }
-    return { success: true, results: reports as T[], meta: {} } as D1Result<T>;
-  }
-
-  async run(): Promise<D1Result> {
-    if (this.sql.includes("claimed_at < ?")) {
-      const cutoff = this.parameters[0] as number;
-      for (const report of this.database.reports) {
-        if (
-          report.claim_id !== null &&
-          (report.claimed_at ?? 0) < cutoff
-        ) {
-          report.claim_id = null;
-          report.claimed_at = null;
-        }
-      }
-    } else if (this.sql.includes("feedback_notification_days")) {
-      const day = this.parameters[1] as string;
-      this.database.dailyAttempts.set(
-        day,
-        Math.max((this.database.dailyAttempts.get(day) ?? 0) - 1, 0),
-      );
-    } else if (this.sql.includes("DELETE FROM feedback_email_queue")) {
-      const claimId = this.parameters[0] as string;
-      for (let index = this.database.reports.length - 1; index >= 0; index -= 1) {
-        if (this.database.reports[index]?.claim_id === claimId) {
-          this.database.reports.splice(index, 1);
-        }
-      }
-    } else if (this.sql.includes("WHERE claim_id = ?")) {
-      const claimId = this.parameters[0] as string;
-      for (const report of this.database.reports.filter(
-        (candidate) => candidate.claim_id === claimId,
-      )) {
-        report.claim_id = null;
-        report.claimed_at = null;
-      }
-    }
-    return { success: true, meta: {} } as D1Result;
-  }
-}
-
-class NotificationDatabase {
-  readonly reports: QueuedFeedback[] = [];
-  readonly dailyAttempts = new Map<string, number>();
-
-  prepare(sql: string): D1PreparedStatement {
-    return new NotificationStatement(this, sql) as unknown as D1PreparedStatement;
-  }
-
-  add(receipt: string, receivedAt: number): void {
-    this.reports.push({
-      receipt_id: receipt,
-      received_at: receivedAt,
-      app_version: "0.4.3",
-      category: "bug",
-      message: `Complete feedback for ${receipt}`,
-      contact_email: `${receipt}@example.com`,
-      screenshot_mime_type: null,
-      claim_id: null,
-      claimed_at: null,
-    });
-  }
+function dailyCount(database: TestDatabase, day: string): number | undefined {
+  return database.row<{ sent_count: number }>(
+    "SELECT sent_count FROM feedback_notification_days WHERE notification_day = ?",
+    day,
+  )?.sent_count;
 }
 
 function environment(send: (message: unknown) => Promise<void>) {
@@ -138,8 +41,8 @@ describe("feedback email batching", () => {
     "FEEDBACK_NOTIFICATION_TO",
   ] as const)("rejects oversized adversarial %s values before querying the queue",
               async (field) => {
-                const database = new NotificationDatabase();
-                database.add("adversarial-address", 1);
+                const database = createTestDatabase();
+                seedQueuedFeedback(database, "adversarial-address", 1);
                 const send = vi.fn(async (_message: unknown) => undefined);
                 const env = {
                   ...environment(send),
@@ -147,17 +50,17 @@ describe("feedback email batching", () => {
                 };
 
                 expect(await sendPendingFeedbackBatch(
-                  database as unknown as D1Database,
+                  asD1(database),
                   env,
                   new Date("2026-07-24T03:17:00Z"),
                 )).toBe(0);
                 expect(send).not.toHaveBeenCalled();
-                expect(database.reports).toHaveLength(1);
+                expect(queued(database)).toHaveLength(1);
               });
 
   it("fails closed when the email recipient is not the one Access administrator", async () => {
-    const database = new NotificationDatabase();
-    database.add("private-recipient", 1);
+    const database = createTestDatabase();
+    seedQueuedFeedback(database, "private-recipient", 1);
     const send = vi.fn(async (_message: unknown) => undefined);
     const env = {
       ...environment(send),
@@ -165,31 +68,33 @@ describe("feedback email batching", () => {
     };
 
     expect(await sendPendingFeedbackBatch(
-      database as unknown as D1Database, env, new Date("2026-07-24T03:17:00Z"),
+      asD1(database), env, new Date("2026-07-24T03:17:00Z"),
     )).toBe(0);
     expect(send).not.toHaveBeenCalled();
-    expect(database.reports).toHaveLength(1);
+    expect(queued(database)).toHaveLength(1);
   });
 
   it("emails every queued report in the smallest balanced batches with three daily emails",
      async () => {
-       const database = new NotificationDatabase();
-       for (let index = 1; index <= 5; index += 1) database.add(`receipt-${index}`, index);
+       const database = createTestDatabase();
+       for (let index = 1; index <= 5; index += 1) {
+         seedQueuedFeedback(database, `receipt-${index}`, index);
+       }
        const send = vi.fn(async (_message: unknown) => undefined);
        const env = environment(send);
 
        expect(await sendPendingFeedbackBatch(
-         database as unknown as D1Database, env, new Date("2026-07-24T03:17:00Z"),
+         asD1(database), env, new Date("2026-07-24T03:17:00Z"),
        )).toBe(2);
        expect(await sendPendingFeedbackBatch(
-         database as unknown as D1Database, env, new Date("2026-07-24T11:17:00Z"),
+         asD1(database), env, new Date("2026-07-24T11:17:00Z"),
        )).toBe(2);
        expect(await sendPendingFeedbackBatch(
-         database as unknown as D1Database, env, new Date("2026-07-24T19:17:00Z"),
+         asD1(database), env, new Date("2026-07-24T19:17:00Z"),
        )).toBe(1);
 
        expect(send).toHaveBeenCalledTimes(3);
-       expect(database.reports).toHaveLength(0);
+       expect(queued(database)).toHaveLength(0);
        expect(send.mock.calls.map(([message]) =>
          (message as { text: string }).text.match(/Feedback \d+ of \d+/g)?.length,
        )).toEqual([2, 2, 1]);
@@ -202,58 +107,60 @@ describe("feedback email batching", () => {
      });
 
   it("queues reports received after the third email for the next UTC day", async () => {
-    const database = new NotificationDatabase();
+    const database = createTestDatabase();
     const send = vi.fn(async (_message: unknown) => undefined);
     const env = environment(send);
 
     for (let index = 1; index <= 3; index += 1) {
-      database.add(`day-one-${index}`, index);
+      seedQueuedFeedback(database, `day-one-${index}`, index);
       expect(await sendPendingFeedbackBatch(
-        database as unknown as D1Database,
+        asD1(database),
         env,
         new Date(`2026-07-24T${String(index * 3).padStart(2, "0")}:17:00Z`),
       )).toBe(1);
     }
-    database.add("after-cap-1", 10);
-    database.add("after-cap-2", 11);
+    seedQueuedFeedback(database, "after-cap-1", 10);
+    seedQueuedFeedback(database, "after-cap-2", 11);
 
     expect(await sendPendingFeedbackBatch(
-      database as unknown as D1Database, env, new Date("2026-07-24T20:00:00Z"),
+      asD1(database), env, new Date("2026-07-24T20:00:00Z"),
     )).toBe(0);
     expect(await sendPendingFeedbackBatch(
-      database as unknown as D1Database, env, new Date("2026-07-25T03:17:00Z"),
+      asD1(database), env, new Date("2026-07-25T03:17:00Z"),
     )).toBe(1);
     expect(await sendPendingFeedbackBatch(
-      database as unknown as D1Database, env, new Date("2026-07-25T11:17:00Z"),
+      asD1(database), env, new Date("2026-07-25T11:17:00Z"),
     )).toBe(1);
     expect(send).toHaveBeenCalledTimes(5);
-    expect(database.reports).toHaveLength(0);
+    expect(queued(database)).toHaveLength(0);
   });
 
   it("keeps oversized daily backlogs queued instead of creating an oversized email", async () => {
-    const database = new NotificationDatabase();
-    for (let index = 1; index <= 305; index += 1) database.add(`large-${index}`, index);
+    const database = createTestDatabase();
+    for (let index = 1; index <= 305; index += 1) {
+      seedQueuedFeedback(database, `large-${index}`, index);
+    }
     const send = vi.fn(async (_message: unknown) => undefined);
     const env = environment(send);
 
     for (const hour of ["03", "11", "19"]) {
       expect(await sendPendingFeedbackBatch(
-        database as unknown as D1Database,
+        asD1(database),
         env,
         new Date(`2026-07-24T${hour}:17:00Z`),
       )).toBe(100);
     }
 
     expect(send).toHaveBeenCalledTimes(3);
-    expect(database.reports).toHaveLength(5);
+    expect(queued(database)).toHaveLength(5);
     expect(await sendPendingFeedbackBatch(
-      database as unknown as D1Database, env, new Date("2026-07-25T03:17:00Z"),
+      asD1(database), env, new Date("2026-07-25T03:17:00Z"),
     )).toBe(2);
   });
 
   it("returns failed batches to the durable queue for a later attempt", async () => {
-    const database = new NotificationDatabase();
-    database.add("retry-me", 1);
+    const database = createTestDatabase();
+    seedQueuedFeedback(database, "retry-me", 1);
     const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const send = vi.fn(async (_message: unknown) => undefined)
       .mockRejectedValueOnce(new Error("mail service unavailable"))
@@ -261,20 +168,20 @@ describe("feedback email batching", () => {
     const env = environment(send);
 
     expect(await sendPendingFeedbackBatch(
-      database as unknown as D1Database, env, new Date("2026-07-24T03:17:00Z"),
+      asD1(database), env, new Date("2026-07-24T03:17:00Z"),
     )).toBe(0);
-    expect(database.reports[0]?.claim_id).toBeNull();
+    expect(queued(database)[0]?.claim_id).toBeNull();
     expect(await sendPendingFeedbackBatch(
-      database as unknown as D1Database, env, new Date("2026-07-24T11:17:00Z"),
+      asD1(database), env, new Date("2026-07-24T11:17:00Z"),
     )).toBe(1);
-    expect(database.reports).toHaveLength(0);
+    expect(queued(database)).toHaveLength(0);
     expect(errorLog).toHaveBeenCalledOnce();
     errorLog.mockRestore();
   });
 
   it("returns the reserved daily slot when a send fails", async () => {
-    const database = new NotificationDatabase();
-    database.add("undelivered", 1);
+    const database = createTestDatabase();
+    seedQueuedFeedback(database, "undelivered", 1);
     const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const send = vi.fn(async (_message: unknown) => undefined)
       .mockRejectedValueOnce(new Error("mail service unavailable"))
@@ -285,15 +192,31 @@ describe("feedback email batching", () => {
 
     for (const hour of ["03", "07", "11"]) {
       expect(await sendPendingFeedbackBatch(
-        database as unknown as D1Database, env, new Date(`2026-07-24T${hour}:17:00Z`),
+        asD1(database), env, new Date(`2026-07-24T${hour}:17:00Z`),
       )).toBe(0);
     }
 
     expect(await sendPendingFeedbackBatch(
-      database as unknown as D1Database, env, new Date("2026-07-24T15:17:00Z"),
+      asD1(database), env, new Date("2026-07-24T15:17:00Z"),
     )).toBe(1);
-    expect(database.dailyAttempts.get("2026-07-24")).toBe(1);
-    expect(database.reports).toHaveLength(0);
+    expect(dailyCount(database, "2026-07-24")).toBe(1);
+    expect(queued(database)).toHaveLength(0);
     errorLog.mockRestore();
+  });
+
+  it("releases claims that outlive their processing window", async () => {
+    const database = createTestDatabase();
+    seedQueuedFeedback(database, "stale-claim", 1);
+    database.execute(
+      "UPDATE feedback_email_queue SET claim_id = 'abandoned', claimed_at = ? WHERE receipt_id = ?",
+      Math.floor(Date.parse("2026-07-24T02:00:00Z") / 1000),
+      "stale-claim",
+    );
+    const send = vi.fn(async (_message: unknown) => undefined);
+
+    expect(await sendPendingFeedbackBatch(
+      asD1(database), environment(send), new Date("2026-07-24T03:17:00Z"),
+    )).toBe(1);
+    expect(queued(database)).toHaveLength(0);
   });
 });
