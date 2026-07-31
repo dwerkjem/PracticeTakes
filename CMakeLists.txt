@@ -196,6 +196,10 @@ target_sources(PracticeTakes
         src/application/shell/ui/workspace/shell/MainComponentWorkspaceManagement.cpp
         src/application/shell/ui/workspace/shell/MainComponentWorkspacePresentation.cpp
         src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp
+        src/application/testcontrol/ApprovedWindowStates.cpp
+        src/application/testcontrol/ApprovedWindowStates.h
+        src/application/testcontrol/TestControlCommand.cpp
+        src/application/testcontrol/TestControlCommand.h
         src/application/theme/Theme.cpp
         src/application/theme/Theme.h
         src/application/theme/ThemeType.h
@@ -305,6 +309,8 @@ if(BUILD_TESTING)
         tests/application/shell/ui/workspace/model/WorkspaceSnapshotApplyTests.cpp
         tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp
         tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
+        tests/application/testcontrol/ApprovedWindowStatesTests.cpp
+        tests/application/testcontrol/TestControlCommandTests.cpp
         tests/application/theme/ThemeContrastTests.cpp
         tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
         tests/features/analysis/tuner/PitchDetectorTests.cpp
@@ -335,6 +341,8 @@ if(BUILD_TESTING)
         src/application/configuration/SettingsPersistence.cpp
         src/application/configuration/SettingsTransferCodec.cpp
         src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
+        src/application/testcontrol/ApprovedWindowStates.cpp
+        src/application/testcontrol/TestControlCommand.cpp
         src/application/theme/Theme.cpp
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
         src/features/analysis/tuner/PitchDetector.cpp

@@ -1,11 +1,11 @@
 ## 0. Decisions before the affected steps
 
-- [ ] 0.1 Resolve the six items in `design.md` § "Open Questions": where manual
-      run records live and in what format, how the harness drives the
-      application to a surface, which surfaces belong in quick mode, whether
-      coverage runs per-PR or only on `main`, the maximum supported number of
-      simultaneous tool consumers, and whether the soak test can avoid needing a
-      real audio device.
+- [ ] 0.1 Resolve the remaining five items in `design.md` § "Open Questions":
+      where manual run records live and in what format, which surfaces belong in
+      quick mode, whether coverage runs per-PR or only on `main`, the maximum
+      supported number of simultaneous tool consumers, and whether the soak test
+      can avoid needing a real audio device. (The sixth — how the harness drives
+      the application — is resolved; see § "Resolved Questions".)
 - [ ] 0.2 Record each resolution in `design.md` under a "Resolved Questions"
       section, following the convention in
       `openspec/changes/archive/2026-07-31-close-highest-risk-test-gaps/design.md`.
@@ -76,11 +76,30 @@
 define its own Python dependency mechanism — see `design.md` decision 9. Do not
 start 4.2 until that is settled.
 
-- [ ] 4.1 Decide how the harness drives the application to a surface (see
-      `design.md` § Open Questions): coordinate clicks via the existing
-      `pointer_control`, keyboard navigation through menus, or a
-      development-only command channel in the app. This is the harness's main
-      fragility risk and must be decided before the driving mechanism is built.
+- [x] 4.1 Decide how the harness drives the application to a surface. Resolved:
+      **no input synthesis** — a development-only control channel with a closed
+      vocabulary of approved window states and approved click targets, with
+      clicks invoking the object's own action in process. See `design.md`
+      § "Resolved Questions".
+- [x] 4.1a Add the control-channel command parser as JUCE-free logic, rejecting
+      unknown verbs, missing arguments, and trailing extra arguments, since a
+      harness that has drifted must fail loudly rather than appear to work.
+- [x] 4.1b Add the approved-state and approved-click-target registries as
+      JUCE-free logic, with tests pinning uniqueness, tool-name agreement with
+      `ToolType`, and every tool being reachable in at least one state.
+- [ ] 4.1c Set component ids on the approved click targets in the shell, and
+      make a click resolve by id and invoke that object's action — no pointer
+      movement, no synthesised button event.
+- [ ] 4.1d Add the `PRACTICE_TAKES_ENABLE_TEST_CONTROL` CMake option, default
+      off, following the `PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB` precedent, and
+      confirm the channel is absent from a default build.
+- [ ] 4.1e Wire the channel to `MainComponent`: apply an approved state via
+      `openTool`, report the current state for `status`, and answer
+      `list-states` / `list-objects` so the harness can verify the vocabulary
+      before relying on it.
+- [ ] 4.1f Add the launch flag that starts the application directly in an
+      approved state, so a surface can be reached without replaying a click
+      sequence.
 - [ ] 4.2 Add Textual as a Python dependency for the harness only, and confirm
       the three `pre-commit` scripts (`secrets_manager.py` twice,
       `run_clang_format.py`) and everything CI runs remain stdlib-only.

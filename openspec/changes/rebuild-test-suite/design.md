@@ -366,6 +366,42 @@ The build order keeps each step independently useful:
 Rollback for any step is reverting its commits; each adds a CI job or a script
 and none changes the application or the existing test suite.
 
+## Resolved Questions
+
+- **How does the harness drive the application to a surface?** Resolved
+  2026-07-31: **no input synthesis of any kind.** Not keyboard, not mouse. The
+  application instead exposes a development-only control channel with a *closed
+  vocabulary* of two operations — put yourself into an approved named window
+  state, and ask an approved named object to act as though clicked. The click
+  invokes the object's own action in process; no pointer moves and no button
+  event is faked.
+
+  Three facts found while investigating, which are why coordinate-driving was
+  never really on the table:
+
+  - `pointer_control` does **not** click. It is `XTestFakeMotionEvent` only, and
+    `run-ui-golden.zsh` uses it purely to *park* the pointer away from the UI so
+    hover states do not pollute golden images. An earlier draft of this document
+    said it could click; that was wrong.
+  - The application has no keyboard accelerators beyond F11 and Escape, and no
+    menu bar. Tools open through a `toolsButton` that raises a `PopupMenu`, so
+    there is nothing to navigate to by key.
+  - `openTool(ToolType, Presentation)` already exists as a clean entry point
+    that maps one-to-one onto the notion of a surface.
+
+  So coordinate clicking would have meant inventing click synthesis *and*
+  binding the harness to pixel positions — paying for the fragility this design
+  exists to avoid. Naming states and objects costs less and cannot silently
+  redirect a click to the wrong control.
+
+  `window_control` is retained for geometry only (`activate`, `maximize`,
+  `restore`, `resize` by PID). Resizing a window is not input synthesis, and it
+  is what decision 8's geometry sweep needs.
+
+  The channel is gated behind a CMake option, following the
+  `PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB` precedent, so it is absent from
+  release builds.
+
 ## Open Questions
 
 - **Where do manual run records live, and in what format?** A
@@ -374,13 +410,6 @@ and none changes the application or the existing test suite.
   the directory. Format is a related question: the harness writes it, so it can
   be structured (JSON, diffable and comparable across runs) with a rendered
   markdown summary beside it — which is more useful than either alone.
-- **How does the harness drive the application to a surface?** The X11 tools
-  (`pointer_control`, `window_control`) can click at coordinates, but coordinates
-  break whenever the layout changes, which is the harness's main fragility risk.
-  The alternatives are keyboard-driven navigation through menus, or a
-  development-only command channel in the application. The last is the most
-  robust and the most invasive; this needs deciding before the driving mechanism
-  is built, not after.
 - **Which surfaces belong in quick mode?** It should be the smallest set that
   answers "does it still work" — plausibly launch, one analysis tool showing
   live input, and clean shutdown. Worth agreeing explicitly, since a quick mode
