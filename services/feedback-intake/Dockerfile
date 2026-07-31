@@ -1,4 +1,4 @@
-FROM node:20-bookworm-slim AS build
+FROM node:25-bookworm-slim AS build
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ RUN cd feedback-intake \
       --loader:.js=text \
       --outfile=dist/docker-server.js
 
-FROM node:20-bookworm-slim AS runtime
+FROM node:25-bookworm-slim AS runtime
 
 WORKDIR /app
 
