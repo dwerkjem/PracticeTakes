@@ -200,6 +200,9 @@ target_sources(PracticeTakes
         src/application/testcontrol/ApprovedWindowStates.h
         src/application/testcontrol/TestControlCommand.cpp
         src/application/testcontrol/TestControlCommand.h
+        src/application/testcontrol/TestControlSession.cpp
+        src/application/testcontrol/TestControlSession.h
+        src/application/testcontrol/TestControlTarget.h
         src/application/theme/Theme.cpp
         src/application/theme/Theme.h
         src/application/theme/ThemeType.h
@@ -311,6 +314,7 @@ if(BUILD_TESTING)
         tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
         tests/application/testcontrol/ApprovedWindowStatesTests.cpp
         tests/application/testcontrol/TestControlCommandTests.cpp
+        tests/application/testcontrol/TestControlSessionTests.cpp
         tests/application/theme/ThemeContrastTests.cpp
         tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
         tests/features/analysis/tuner/PitchDetectorTests.cpp
@@ -343,6 +347,7 @@ if(BUILD_TESTING)
         src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
         src/application/testcontrol/ApprovedWindowStates.cpp
         src/application/testcontrol/TestControlCommand.cpp
+        src/application/testcontrol/TestControlSession.cpp
         src/application/theme/Theme.cpp
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
         src/features/analysis/tuner/PitchDetector.cpp

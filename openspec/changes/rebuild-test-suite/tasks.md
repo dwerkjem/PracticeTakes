@@ -87,7 +87,7 @@ start 4.2 until that is settled.
 - [x] 4.1b Add the approved-state and approved-click-target registries as
       JUCE-free logic, with tests pinning uniqueness, tool-name agreement with
       `ToolType`, and every tool being reachable in at least one state.
-- [ ] 4.1c Set component ids on the approved click targets in the shell, and
+- [x] 4.1c-pure Set component ids on the approved click targets in the shell, and
       make a click resolve by id and invoke that object's action — no pointer
       movement, no synthesised button event.
 - [ ] 4.1d Add the `PRACTICE_TAKES_ENABLE_TEST_CONTROL` CMake option, default
