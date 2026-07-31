@@ -1,0 +1,208 @@
+name: Coverage
+
+# Coverage is INFORMATIONAL. No job here applies a threshold, ratchet, or
+# comparison against a previous run, and none of them can fail a pull request
+# because a number moved. That is deliberate rather than an oversight: the
+# repository has never measured coverage, so there is no baseline worth gating
+# on yet, and a threshold introduced alongside the first measurement would be
+# guesswork.
+#
+# The figures are published as artifacts and in the step summary so they can be
+# looked at. Gating, if it is ever wanted, is a separate decision made once the
+# numbers have been watched for a while.
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "scripts/**"
+      - "services/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/coverage.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "scripts/**"
+      - "services/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/coverage.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coverage-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  cpp-coverage:
+    name: C++ coverage
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install build and coverage tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            gcovr \
+            libasound2-dev \
+            libcurl4-openssl-dev \
+            libfontconfig1-dev \
+            libfreetype-dev \
+            libgl1-mesa-dev \
+            libx11-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev \
+            ninja-build
+
+      # A dedicated tree: instrumented objects are not interchangeable with
+      # ordinary ones, and the script disables ccache because it does not mix
+      # with coverage counters.
+      - name: Measure coverage
+        run: python3 scripts/quality/run_coverage.py --build-dir build-coverage
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "## C++ coverage"
+            echo
+            echo "Informational only — no threshold gates this build."
+            echo
+            if [ -f build/coverage/coverage-summary.json ]; then
+              python3 - <<'PY'
+          import json
+          with open("build/coverage/coverage-summary.json") as handle:
+              data = json.load(handle)
+          root = data.get("line_percent")
+          print(f"Line coverage of instrumented sources: **{root}%**")
+          PY
+            fi
+            echo
+            echo '### Sources not built into the test binary'
+            echo
+            echo 'These cannot be measured by any coverage tool until they are'
+            echo 'added to `add_executable(PracticeTakesTests ...)`. This is a'
+            echo 'more serious category than 0% covered, and it is reported'
+            echo 'separately so the headline figure cannot hide it.'
+            echo
+            echo '```'
+            python3 scripts/quality/coverage_sources.py || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the C++ coverage report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: coverage-cpp
+          path: build/coverage
+          if-no-files-found: warn
+
+  typescript-coverage:
+    name: TypeScript coverage
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: services/package-lock.json
+
+      - name: Install dependencies
+        working-directory: services
+        run: npm ci
+
+      - name: Measure coverage
+        working-directory: services
+        run: npm run test:coverage
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "## TypeScript coverage"
+            echo
+            echo "Informational only — no threshold gates this build."
+            echo
+            if [ -f build/coverage/services/coverage-summary.json ]; then
+              python3 - <<'PY'
+          import json
+          with open("build/coverage/services/coverage-summary.json") as handle:
+              data = json.load(handle)
+          total = data["total"]
+          for name in ("lines", "statements", "branches", "functions"):
+              entry = total[name]
+              print(f"- {name}: **{entry['pct']}%** ({entry['covered']}/{entry['total']})")
+          PY
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the TypeScript coverage report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: coverage-typescript
+          path: build/coverage/services
+          if-no-files-found: warn
+
+  python-coverage:
+    name: Python coverage
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      # coverage is a reporting dependency for CI only. The scripts pre-commit
+      # invokes stay standard-library only, because they run on whatever
+      # interpreter a contributor happens to have.
+      - name: Install coverage
+        run: python3 -m pip install --user coverage
+
+      - name: Measure coverage
+        run: python3 scripts/quality/run_python_coverage.py
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo "## Python coverage"
+            echo
+            echo "Informational only — no threshold gates this build."
+            echo
+            if [ -f build/coverage/python/coverage.json ]; then
+              python3 - <<'PY'
+          import json
+          with open("build/coverage/python/coverage.json") as handle:
+              data = json.load(handle)
+          totals = data["totals"]
+          print(f"Line coverage: **{totals['percent_covered_display']}%** "
+                f"({totals['covered_lines']}/{totals['num_statements']})")
+          PY
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the Python coverage report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: coverage-python
+          path: build/coverage/python
+          if-no-files-found: warn

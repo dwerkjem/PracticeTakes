@@ -37,36 +37,36 @@
 
 ## 2. C++ coverage
 
-- [ ] 2.1 Add a `PRACTICE_TAKES_ENABLE_COVERAGE` CMake option, default off, that
+- [x] 2.1 Add a `PRACTICE_TAKES_ENABLE_COVERAGE` CMake option, default off, that
       applies `--coverage` to `PracticeTakesTests` and its sources; confirm an
       ordinary configure is byte-for-byte unaffected when it is off.
-- [ ] 2.2 Add a script that configures a dedicated coverage build tree, runs the
+- [x] 2.2 Add a script that configures a dedicated coverage build tree, runs the
       suite, and invokes `gcovr` to emit both a human summary and a
       machine-readable report. Do not reuse the normal build tree, and disable
       `ccache` for this configuration.
-- [ ] 2.3 Add the second half of the denominator: derive the list of files under
+- [x] 2.3 Add the second half of the denominator: derive the list of files under
       `src/` that are absent from `add_executable(PracticeTakesTests ...)` and
       report them as *not built into the test binary*, distinct from 0% covered.
-- [ ] 2.4 Add tests for the file-list derivation in 2.3, since a bug there would
+- [x] 2.4 Add tests for the file-list derivation in 2.3, since a bug there would
       silently shrink the denominator and inflate the headline figure.
-- [ ] 2.5 Verify the report names the area 9 files — `AudioInputService.cpp`,
+- [x] 2.5 Verify the report names the area 9 files — `AudioInputService.cpp`,
       `FeedbackComponent.cpp`, `TunerComponent`, `SpectrogramComponent`, and the
       `MainComponent*` shell — in the not-built-in category rather than omitting
       them.
 
 ## 3. TypeScript, Python, and CI publication
 
-- [ ] 3.1 Add a coverage script to `services/` that runs Vitest with coverage
+- [x] 3.1 Add a coverage script to `services/` that runs Vitest with coverage
       across every workspace and emits a machine-readable report.
-- [ ] 3.2 Add a Python coverage command producing a machine-readable report for
+- [x] 3.2 Add a Python coverage command producing a machine-readable report for
       files under `scripts/`.
-- [ ] 3.3 Publish all three reports as CI artifacts and write the headline
+- [x] 3.3 Publish all three reports as CI artifacts and write the headline
       figure for each language to the workflow step summary.
-- [ ] 3.4 State explicitly in the workflow that coverage is informational and
+- [x] 3.4 State explicitly in the workflow that coverage is informational and
       that no threshold gates the build, so its absence is not read as an
       oversight.
-- [ ] 3.5 Confirm a pull request that sharply reduces coverage still passes CI.
-- [ ] 3.6 Record the measured baseline for all three languages in
+- [x] 3.5 Confirm a pull request that sharply reduces coverage still passes CI.
+- [x] 3.6 Record the measured baseline for all three languages in
       `docs/development/QA_STRATEGY.md` with the date and commit, and replace
       the hand-counted estimates in areas 8 and 9 with the measured figures.
 

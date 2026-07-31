@@ -6,6 +6,7 @@
   "scripts": {
     "check": "tsc --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "db:migrate:local": "wrangler d1 migrations apply practice-takes-feedback --local",
@@ -15,6 +16,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260728.1",
     "@types/node": "26.1.2",
+    "@vitest/coverage-v8": "4.1.10",
     "esbuild": "^0.28.1",
     "typescript": "^7.0.2",
     "vitest": "4.1.10",

@@ -186,17 +186,52 @@ left out of area 7. Each should become its own OpenSpec change.
 
 ### 8. Coverage measurement
 
-**Problem**: nothing measures coverage in any language — no gcov/llvm-cov, no
-`vitest --coverage`, no Python coverage. Every figure in these areas had to be
-derived by hand.
+**Status**: done. Coverage is measured for all three languages and published as
+an informational CI artifact plus a step summary by
+`.github/workflows/coverage.yml`. No threshold gates anything, deliberately —
+gating is a separate decision to make once the numbers have been watched.
 
-**Plan**: publish coverage as an informational CI artifact for all three
-languages first; only consider thresholds once a baseline exists.
+Run it locally with `python3 scripts/quality/run_coverage.py` (C++),
+`npm run test:coverage` from `services/`, and
+`python3 scripts/quality/run_python_coverage.py`.
+
+#### Measured baseline
+
+Taken at `efb65ec7b5fb` on 2026-07-31. These replace the hand-counted estimates
+that used to be in this document.
+
+| Language | Lines | Notes |
+|---|---|---|
+| C++ | **89.7%** (3081/3434) | Over *instrumented* sources only — see the caveat below |
+| TypeScript | **76.2%** (499/655) | 72.8% statements, 67.2% branches, 6 files |
+| Python | **29%** (584/2025) | `practice_takes_roadmap` is 0%, `secrets_manager.py` 40% |
+
+**The C++ figure needs its caveat attached every time it is quoted.** 89.7% is
+measured over the 25 translation units compiled into `PracticeTakesTests` — out
+of 43 under `src/`. The other 18 are not instrumented at all, so they are absent
+from both the numerator *and* the denominator. A tool cannot report on code it
+was never given.
+
+That is why the report has a second half: `scripts/quality/coverage_sources.py`
+lists what is outside the test build, and CI publishes it beside the percentage.
+Read them together or the number means very little.
+
+The same trap exists in TypeScript and was hit while setting this up: with a
+mistaken `include` pattern, `docker-server.ts` was missing from the report
+rather than showing as 0%, and the headline read 82% instead of 72.8%. The
+config now sets `all: true` with a corrected pattern.
 
 ### 9. C++ code outside the test build
 
-**Problem**: `PracticeTakesTests` compiles 64 of 99 source files; roughly 9,000
-of 16,100 lines never enter the test binary. The largest untested units are
+**Problem** (measured at `efb65ec7b5fb`, 2026-07-31): `PracticeTakesTests`
+compiles **25 of 43 translation units** under `src/` — 58.1%. The remaining 18
+never enter the test binary, so no coverage tool can say anything about them.
+Run `python3 scripts/quality/coverage_sources.py` for the current list; CI
+publishes it with every coverage run.
+
+The earlier hand count of "64 of 99 source files" included headers, which are
+not separately compiled units; 25/43 is the figure that matters for coverage,
+and it is now measured rather than estimated. The largest untested units are
 `AudioInputService.cpp` (device lifecycle, gain, level metering, dropout
 accounting), `FeedbackComponent.cpp`, `TunerComponent`/`TunerDrawing`,
 `SpectrogramComponent`, and the `MainComponent*` shell files.

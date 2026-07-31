@@ -45,6 +45,13 @@ option(PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
 option(PRACTICE_TAKES_ENABLE_TEST_CONTROL
     "Enable the development-only test control channel used by the manual GUI harness" OFF)
 
+# Coverage instrumentation for PracticeTakesTests. Off by default, and it needs
+# its own build tree: instrumented objects are not interchangeable with ordinary
+# ones, and ccache does not play well with coverage counters. Use
+# scripts/quality/run_coverage.py rather than configuring this by hand.
+option(PRACTICE_TAKES_ENABLE_COVERAGE
+    "Instrument PracticeTakesTests for gcov coverage measurement" OFF)
+
 if(PRACTICE_TAKES_FEEDBACK_ENDPOINT STREQUAL "")
     set(PRACTICE_TAKES_USE_CURL 0)
 else()
@@ -397,6 +404,20 @@ if(BUILD_TESTING)
             juce::juce_graphics
             juce::juce_gui_basics
     )
+
+    if(PRACTICE_TAKES_ENABLE_COVERAGE)
+        if(NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+            message(FATAL_ERROR
+                "PRACTICE_TAKES_ENABLE_COVERAGE needs a GCC or Clang toolchain, "
+                "but the compiler is ${CMAKE_CXX_COMPILER_ID}")
+        endif()
+
+        # -O0 so line counts map to the source a reader is looking at; an
+        # optimised build merges and reorders lines and the report stops
+        # matching the file.
+        target_compile_options(PracticeTakesTests PRIVATE --coverage -O0 -g)
+        target_link_options(PracticeTakesTests PRIVATE --coverage)
+    endif()
 
     target_compile_definitions(PracticeTakesTests
         PRIVATE
