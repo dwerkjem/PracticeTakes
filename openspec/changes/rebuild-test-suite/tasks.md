@@ -1,14 +1,18 @@
 ## 0. Decisions before the affected steps
 
-- [ ] 0.1 Resolve the four items in `design.md` § "Open Questions": where manual
-      run records live, whether coverage runs per-PR or only on `main`, the
-      maximum supported number of simultaneous tool consumers, and whether the
-      soak test can avoid needing a real audio device.
+- [ ] 0.1 Resolve the six items in `design.md` § "Open Questions": where manual
+      run records live and in what format, how the harness drives the
+      application to a surface, which surfaces belong in quick mode, whether
+      coverage runs per-PR or only on `main`, the maximum supported number of
+      simultaneous tool consumers, and whether the soak test can avoid needing a
+      real audio device.
 - [ ] 0.2 Record each resolution in `design.md` under a "Resolved Questions"
       section, following the convention in
       `openspec/changes/archive/2026-07-31-close-highest-risk-test-gaps/design.md`.
-      Only 0.1's first two block section 2 and section 3; the last two block
-      section 5 and can be deferred until then.
+- [ ] 0.3 Confirm the sequencing dependency on `adopt-uv-for-python`
+      (`design.md` decision 9): either land it first, or decide how else the
+      harness gets a Python dependency. Section 4 is blocked until this is
+      settled; sections 1, 2, 3, 5, and 6 are not.
 
 ## 1. Lock in the test layout
 
@@ -64,23 +68,58 @@
       `docs/development/QA_STRATEGY.md` with the date and commit, and replace
       the hand-counted estimates in areas 8 and 9 with the measured figures.
 
-## 4. Manual GUI verification
+## 4. Manual GUI verification harness
 
-- [ ] 4.1 Write `docs/development/manual-gui-checklist.md` covering, at minimum:
-      microphone device selection and switching, global mute and gain, each
-      analysis tool opening and showing live input, moving a tool between
-      docked/floating/tabbed presentation, workspace layout surviving a restart,
-      and the settings import/export round trip.
-- [ ] 4.2 Give every item a stated reason why it is not automated, so the
-      checklist shrinks as the smoke and unit suites grow.
-- [ ] 4.3 State the cadence — at minimum before a release — and mark which items
-      are required every run versus only when a related area changed.
-- [ ] 4.4 Define the run-record format and location (per decision 0.1), covering
-      date, commit, platform, audio device, and per-item outcome.
-- [ ] 4.5 Run the checklist once end to end against a real device and display,
-      and commit the first record, so the format is proven rather than assumed.
-- [ ] 4.6 Note in the checklist that any item covered by a later automated test
-      must be removed in the same change that adds the test.
+**Prerequisite:** `adopt-uv-for-python` must land first, or this section must
+define its own Python dependency mechanism — see `design.md` decision 9. Do not
+start 4.2 until that is settled.
+
+- [ ] 4.1 Decide how the harness drives the application to a surface (see
+      `design.md` § Open Questions): coordinate clicks via the existing
+      `pointer_control`, keyboard navigation through menus, or a
+      development-only command channel in the app. This is the harness's main
+      fragility risk and must be decided before the driving mechanism is built.
+- [ ] 4.2 Add Textual as a Python dependency for the harness only, and confirm
+      the three `pre-commit` scripts (`secrets_manager.py` twice,
+      `run_clang_format.py`) and everything CI runs remain stdlib-only.
+- [ ] 4.3 Define the declarative surface format: how to reach a surface, its
+      three fixed axes, and any surface-specific extra questions. Surfaces are
+      data, not code, so adding one is not a harness change.
+- [ ] 4.4 Define the surface set, covering at minimum microphone device
+      selection and switching, global mute and gain, each analysis tool opening
+      and showing live input, moving a tool between docked/floating/tabbed
+      presentation, workspace layout surviving a restart, and the settings
+      import/export round trip.
+- [ ] 4.5 Mark which surfaces belong to quick mode — the smallest set that
+      answers "does it still work" (see `design.md` § Open Questions) — and
+      confirm quick mode is a strict subset of full mode.
+- [ ] 4.6 Build the TUI: present each surface's three fixed axes as
+      pass/fail/skip, then its extras, allow a free-text note on any answer, and
+      require one on any failure.
+- [ ] 4.7 Build the driving layer per 4.1, launching the application and
+      advancing between surfaces without tester intervention.
+- [ ] 4.8 Record an unreachable surface as a failure of that surface with the
+      reason, and continue the run, rather than skipping it silently.
+- [ ] 4.9 Add the `--full` and `--quick` modes and record which was used, so a
+      quick run cannot be read as a release check.
+- [ ] 4.10 Add the optional window-geometry flag repeating each surface at a
+      constrained size, the default, and maximised; record which geometry each
+      answer applied to, and state in the record when only the default was
+      covered.
+- [ ] 4.11 Write the run record automatically on completion — date, commit,
+      platform, audio device, mode, geometry flag, and every answer with notes —
+      in the format and location settled in 0.1.
+- [ ] 4.12 Preserve answers and mark the run incomplete when a run is
+      interrupted, so a long full run is not lost and an incomplete run is never
+      mistaken for a passing one.
+- [ ] 4.13 Add tests for the parts that do not need a display: surface
+      definition parsing, mode subsetting, geometry expansion, record writing,
+      and incomplete-run marking.
+- [ ] 4.14 Run the harness once in quick mode and once in full mode against a
+      real device and display, and commit both records, so the format is proven
+      rather than assumed.
+- [ ] 4.15 Document that any question covered by a later automated test must be
+      removed from the harness in the same change that adds the test.
 
 ## 5. End-to-end smoke tests
 

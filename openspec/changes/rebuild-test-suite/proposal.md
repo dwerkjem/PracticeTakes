@@ -29,10 +29,14 @@ says which source directory each test belongs to.
 - **Lock in the test layout** that just landed: `tests/` mirrors `src/`, and a
   check keeps it that way rather than trusting habit. `tests/support/` is the
   one exempt directory.
-- **Add a manual GUI verification checklist** — a versioned, reviewable document
-  covering what no automated test can reach, with a stated cadence (per release)
-  and a place to record the result. Today this knowledge exists only in the
-  maintainer's head.
+- **Add an interactive manual GUI verification harness** — not a document to
+  read, but a tool that launches the application, drives it to each surface,
+  prompts the tester in a terminal UI, and writes the run record itself. Every
+  surface is scored on three fixed axes (does it look correct, does it look
+  well-presented, does it work) plus any surface-specific questions. It has a
+  **full** mode for pre-release verification and a **quick** mode for "does it
+  still work", and an optional flag that repeats each surface at several window
+  geometries. Today this knowledge exists only in the maintainer's head.
 - **Add end-to-end smoke tests** that launch the real built application, assert
   it starts, opens a tool, and shuts down cleanly. Requires establishing a
   headless X story (Xvfb) — the repository has none today, and the existing
@@ -67,8 +71,10 @@ Deliberately **not** in scope:
 - `test-coverage-reporting`: coverage measured for C++, TypeScript, and Python,
   published as an informational CI artifact and summary, explicitly
   non-gating, with a recorded baseline.
-- `manual-gui-verification`: a versioned checklist of what is verified by hand,
-  when it is run, who records the outcome, and where that record lives.
+- `manual-gui-verification`: an interactive harness that drives the application
+  to each surface, scores it on three fixed axes plus surface-specific
+  questions, offers full and quick modes and an optional window-geometry sweep,
+  and writes a dated run record itself.
 - `end-to-end-smoke-tests`: headless launch of the built application, asserting
   startup, a tool opening, and clean shutdown, runnable in CI on Linux.
 - `load-and-soak-tests`: opt-in sustained and saturating tests of the audio
@@ -98,9 +104,16 @@ pressure.
 - **`docs/development/QA_STRATEGY.md`** — areas 8 and 9's hand-counted figures
   get replaced by measured ones, and the manual checklist becomes a real
   document rather than a plan.
-- **New tooling dependency** — `gcovr` or `llvm-cov` for the C++ report and
-  Xvfb for headless launch. Both are CI-image packages rather than vendored
-  dependencies, so neither touches `vcpkg.json` or `FetchContent`.
+- **New tooling dependencies** — `gcovr` for the C++ report and Xvfb for
+  headless launch, both CI-image packages that touch neither `vcpkg.json` nor
+  `FetchContent`. Separately, **Textual** for the manual harness's TUI, which
+  would be the repository's first third-party Python dependency: there is no
+  `requirements.txt`, `pyproject.toml`, or lockfile today. This is acceptable
+  because Python is developer tooling that is never shipped — `packaging/`
+  contains no Python reference and the released artifact is the C++ binary — but
+  it makes the unmerged `adopt-uv-for-python` change a **prerequisite**, since
+  that change exists precisely to make taking a Python dependency reproducible.
+  The three scripts `pre-commit` invokes must stay stdlib-only regardless.
 - **Runtime cost** — a coverage build is slower and cannot reuse the normal
   build tree; load and soak tests are slow by design and must stay opt-in so the
   default `ctest` run stays fast enough to be run before every commit.

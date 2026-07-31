@@ -1,59 +1,168 @@
 ## ADDED Requirements
 
-### Requirement: A manual GUI checklist exists and is versioned
-The repository SHALL contain a manual GUI verification checklist under
-`docs/development/`, tracked in git so that changes to what is verified are
-reviewable in the same way as code.
+### Requirement: Manual verification is driven by an interactive harness
+Manual GUI verification SHALL be performed through a harness that launches the
+application, navigates it to each surface under test, and prompts the tester in
+a terminal UI, rather than through a document the tester reads and follows by
+hand.
 
-#### Scenario: The checklist is changed
-- **WHEN** a step is added to or removed from the manual checklist
-- **THEN** the change appears in the repository's history and is reviewable in a
-  pull request
+#### Scenario: A verification run is started
+- **WHEN** the tester starts the harness
+- **THEN** the application is launched and brought to the first surface under
+  test without the tester navigating to it manually
 
-### Requirement: The checklist covers what automation cannot
-Each checklist item SHALL state what is being verified and why it cannot be
-covered by an automated test, so that the checklist shrinks as automation grows
-rather than accumulating items indefinitely.
+#### Scenario: The tester is never asked to find something themselves
+- **WHEN** the harness prompts about a surface
+- **THEN** that surface is already displayed, so the prompt is about what is on
+  screen rather than about something the tester must first locate
 
-#### Scenario: An item becomes automatable
-- **WHEN** an automated test is added that covers a checklist item
-- **THEN** that item is removed from the manual checklist in the same change
+### Requirement: The harness advances through surfaces automatically
+After each surface is answered, the harness SHALL drive the application to the
+next surface in the run without tester intervention, and SHALL report a surface
+it could not reach as a failure of that surface rather than silently skipping
+it.
 
-#### Scenario: An item is added without justification
-- **WHEN** an item is proposed that an existing automated test already covers
-- **THEN** it is rejected in review as redundant
+#### Scenario: Advancing after an answer
+- **WHEN** the tester submits their answers for a surface
+- **THEN** the application is driven to the next surface and the next prompt is
+  shown
 
-### Requirement: The checklist covers the audio and workspace surfaces
-The checklist SHALL include, at minimum, verification of: microphone device
-selection and switching, the global mute and gain controls, each analysis tool
-opening and displaying live input, moving a tool between docked, floating, and
-tabbed presentation, workspace layout persisting across a restart, and the
-settings import and export round trip.
+#### Scenario: A surface cannot be reached
+- **WHEN** the harness cannot navigate to a surface — a control is missing, or
+  the application stops responding
+- **THEN** that surface is recorded as failed with the reason, and the run
+  continues to the next surface
 
-#### Scenario: A release is prepared
-- **WHEN** the checklist is run
-- **THEN** every listed surface has been exercised against a real audio device
-  and a real display
+### Requirement: Every surface is scored on three fixed axes
+For every surface, the harness SHALL ask the same three questions — whether it
+looks correct, whether it looks well-presented, and whether it functions — each
+answerable as pass, fail, or skipped, so that results are comparable across
+surfaces and across runs.
 
-### Requirement: The checklist states its cadence and scope
-The checklist SHALL state when it is required to be run — at minimum before a
-release — and SHALL identify which items are required for every run and which
-apply only when a related area changed.
+#### Scenario: Answering the fixed axes
+- **WHEN** a surface is presented
+- **THEN** the tester is asked all three axes and may answer each independently
 
-#### Scenario: A change touches only the feedback service
-- **WHEN** a change modifies nothing in the audio or workspace paths
-- **THEN** the checklist identifies which subset, if any, still applies
+#### Scenario: Comparing a surface across runs
+- **WHEN** two runs of the same surface are compared
+- **THEN** the same three axes are present in both, so a regression in any one
+  of them is visible
 
-### Requirement: Results are recorded
-Running the checklist SHALL produce a dated record naming the version or commit
-verified, the platform and audio device used, and the outcome of each item,
-stored in the repository.
+### Requirement: Surfaces may add their own questions
+A surface SHALL be able to declare additional questions specific to it, asked
+after the three fixed axes and recorded separately from them, so that
+surface-specific checks do not dilute the comparable core.
 
-#### Scenario: A checklist run finds a defect
-- **WHEN** an item fails during a run
-- **THEN** the record captures which item failed and on which platform and
-  device, so the failure is actionable without re-running the whole checklist
+#### Scenario: A surface with an extra check
+- **WHEN** a surface declares an additional question
+- **THEN** it is asked after the three fixed axes and recorded as an extra
+  rather than as one of the three
 
-#### Scenario: A clean run before release
-- **WHEN** every item passes
-- **THEN** a dated record naming the commit, platform, and device is committed
+### Requirement: Free-text notes can accompany any answer
+The harness SHALL allow the tester to attach a free-text note to any answer, and
+SHALL require one when an answer is a failure, so that a recorded failure is
+actionable without re-running the surface.
+
+#### Scenario: A failure is recorded
+- **WHEN** the tester marks any question as failed
+- **THEN** a note is required before the run can advance
+
+#### Scenario: A note on a passing answer
+- **WHEN** the tester passes a question but wants to record an observation
+- **THEN** a note may be attached without changing the verdict
+
+### Requirement: The harness offers a full mode and a quick mode
+The harness SHALL provide two run modes: a full mode covering every surface and
+every question, intended to be run before a release; and a quick mode covering a
+reduced set intended to answer only whether the application still works. The
+mode SHALL be recorded with the run.
+
+#### Scenario: A quick run before committing
+- **WHEN** the tester runs the harness in quick mode
+- **THEN** only the reduced set is presented, and the record identifies the run
+  as a quick run
+
+#### Scenario: A full run before a release
+- **WHEN** the tester runs the harness in full mode
+- **THEN** every surface and question is presented, and the record identifies
+  the run as a full run
+
+#### Scenario: A quick run is not mistaken for a release check
+- **WHEN** a quick run's record is read
+- **THEN** it is distinguishable from a full run without inspecting which items
+  it happened to contain
+
+### Requirement: An optional flag repeats surfaces at multiple window sizes
+The harness SHALL accept a flag that, when set, presents each surface at several
+window geometries — including a constrained size, the default size, and a
+maximised window — so that layout problems that only appear at some sizes are
+caught. When the flag is not set, each surface is presented once at the default
+geometry.
+
+#### Scenario: The scaling flag is set
+- **WHEN** the harness runs with the geometry flag enabled
+- **THEN** each surface is presented and scored once per configured geometry,
+  and each answer records which geometry it applied to
+
+#### Scenario: The scaling flag is not set
+- **WHEN** the harness runs without the flag
+- **THEN** each surface is presented once and the record states that only the
+  default geometry was covered
+
+### Requirement: The harness covers the audio and workspace surfaces
+The full run SHALL include, at minimum: microphone device selection and
+switching, the global mute and gain controls, each analysis tool opening and
+displaying live input, moving a tool between docked, floating, and tabbed
+presentation, workspace layout persisting across a restart, and the settings
+import and export round trip.
+
+#### Scenario: A full run completes
+- **WHEN** a full run finishes
+- **THEN** every listed surface has been presented and scored
+
+### Requirement: The harness writes the run record itself
+On completion the harness SHALL write a record containing the date, the commit
+verified, the platform, the audio device in use, the mode, whether the geometry
+flag was set, and every answer with its notes. The tester SHALL NOT have to
+transcribe results by hand.
+
+#### Scenario: A run finishes
+- **WHEN** the last surface is answered
+- **THEN** a complete record is written without further tester action
+
+#### Scenario: The record identifies what was verified
+- **WHEN** a record is read later
+- **THEN** it names the commit, platform, and audio device, so it is clear what
+  the results apply to
+
+### Requirement: An interrupted run preserves what was answered
+If a run is interrupted, the harness SHALL preserve the answers already given
+and mark the run incomplete, so that a long full run is not lost and an
+incomplete run is never mistaken for a passing one.
+
+#### Scenario: The tester interrupts a full run
+- **WHEN** a run is interrupted partway
+- **THEN** the answers given so far are written and the record is marked
+  incomplete
+
+#### Scenario: An incomplete record is read
+- **WHEN** an incomplete record is compared against a complete one
+- **THEN** it is identifiable as incomplete rather than appearing to be a run in
+  which the remaining surfaces passed
+
+### Requirement: Automated coverage removes manual questions
+When an automated test is added that covers a question the harness asks, that
+question SHALL be removed from the harness in the same change, so the manual run
+shrinks as automation grows.
+
+#### Scenario: A smoke test covers a manual question
+- **WHEN** an automated test is added that verifies a question the harness asks
+- **THEN** that question is removed from the harness in the same change
+
+### Requirement: The harness is not required to run in CI
+The harness SHALL be a local development tool. No CI check SHALL depend on it,
+since it requires a real display, a real audio device, and a human.
+
+#### Scenario: CI runs without a display or a tester
+- **WHEN** CI runs
+- **THEN** no check invokes the manual harness and none fails for its absence

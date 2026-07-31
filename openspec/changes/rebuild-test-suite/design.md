@@ -132,18 +132,80 @@ fast is one call" and is expected to be run and compared over time, whereas a
 load test answers "does this survive pressure" and is pass/fail. Sharing a tag
 would mean neither can be run without the other.
 
-### Decision 6 — the manual checklist is a document plus dated run records
+### Decision 6 — manual verification is a harness, not a document
 
-The checklist lives at `docs/development/manual-gui-checklist.md`; each run
-produces a dated record naming the commit, platform, and audio device. Keeping
-both in git makes "what do we verify" reviewable and "what did we verify before
-v0.5.7" answerable, which is the whole point of writing it down.
+A markdown checklist puts the whole burden on the tester: navigate to the right
+place, remember what to look at, and transcribe the result afterwards. Each of
+those is a way for a run to be skipped, done inconsistently, or not written
+down — which is how manual checklists rot.
 
-Each item must state why automation cannot cover it. That is what keeps the
-checklist shrinking as the smoke and unit suites grow, instead of becoming a
-ritual nobody prunes.
+So manual verification is an interactive harness instead. It launches the
+application, drives it to each surface, prompts in a terminal UI, and writes the
+record itself. The tester's only job is to look and answer, which is the only
+part a human is actually needed for.
 
-### Decision 7 — the layout check is a Python script in CI
+The surface list is *data*, not code — a declarative definition of each surface,
+how to reach it, and any extra questions — so adding a surface does not mean
+editing the harness, and the definitions are reviewable on their own.
+
+**Alternative considered:** the markdown checklist originally proposed. Rejected
+because it optimises for being easy to write once and hard to run repeatedly,
+which is exactly backwards for something whose value is entirely in being run
+before every release.
+
+### Decision 7 — three fixed axes plus per-surface extras
+
+Every surface is scored on the same three questions: does it look correct, does
+it look well-presented, does it work. Fixed axes are what make runs comparable —
+you can see that presentation regressed on the tuner between two versions, which
+a bespoke question set per surface cannot tell you.
+
+Surfaces may then add their own questions, recorded separately so they do not
+dilute the comparable core. A failure requires a note, because a recorded
+failure with no detail costs more than it saves.
+
+### Decision 8 — the scaling flag varies window geometry
+
+An optional flag repeats each surface at several window sizes — a constrained
+size, the default, and maximised. This targets the failure this application is
+actually prone to: layouts that clip, overlap, or put controls out of reach when
+the window is small. The existing `run-ui-golden.zsh` already exercises a
+constrained 800x600 case, so the sizes have precedent.
+
+Off by default, because it multiplies the number of prompts in a full run and
+most runs do not need it.
+
+**Alternative considered:** varying the desktop scale factor for HiDPI instead.
+Deferred rather than rejected — it is a real concern, but it is a different
+axis, and geometry is the one with existing evidence in the repository.
+
+### Decision 9 — Textual for the TUI, which makes `adopt-uv-for-python` a
+prerequisite
+
+The harness is built with Python and Textual. Textual would be the repository's
+**first third-party Python dependency**: there is no `requirements.txt`, no
+`pyproject.toml`, and no lockfile anywhere today, and `python-check.yml` runs on
+the runner's preinstalled interpreter with no install step.
+
+This is safe to take on because Python is developer tooling that is never
+shipped — `packaging/` contains no Python reference at all, and the released
+artifact is the C++ binary. A dependency here reaches contributors, not users.
+
+The unmerged `adopt-uv-for-python` change is the enabling piece, and its own
+proposal says so directly: the scripts are stdlib-only "precisely because taking
+a dependency currently means asking every contributor to `pip install` into
+whatever environment they happen to have", and `uv add` is "the point at which a
+script can reasonably start using a real library". It is already scoped to local
+development only, which is exactly this harness's scope. **This change should
+land after it**, or otherwise define its own dependency mechanism — which would
+be inventing a second one for no reason.
+
+One boundary must hold regardless: the three scripts `pre-commit` invokes
+(`secrets_manager.py` twice, `run_clang_format.py`) and anything CI runs on the
+preinstalled `python3` must stay stdlib-only. The dependency stays confined to
+the harness.
+
+### Decision 10 — the layout check is a Python script in CI
 
 `scripts/` already has a Python test convention and `python-check.yml` already
 runs on changes there, so a small script that walks `tests/` and `src/` and
@@ -185,10 +247,30 @@ documentation of what is deliberately outside the mirror.
   will be far shorter than a meaningful one. Accepted: the duration is
   configurable, CI runs a short one to prove the harness works, and a genuinely
   long run is a manual or scheduled activity.
-- **[Risk] The manual checklist rots.** It is the item most likely to be written
-  once and never run. → It states its cadence, its runs are committed records,
-  and items must justify why they are not automated, so a stale item is visible
-  as one nobody has recorded running.
+- **[Risk] The harness itself becomes the thing that breaks.** A tool that
+  drives the GUI depends on the GUI's structure, so a UI change can leave the
+  harness unable to reach a surface — and a harness that fails to launch is a
+  release check that silently does not happen. → Surfaces are declarative data,
+  so a broken one is a one-line fix rather than a code change; an unreachable
+  surface is recorded as a *failure* of that surface rather than skipped; and
+  the harness is exercised by a quick-mode run often enough that breakage is
+  found between releases rather than during one.
+- **[Risk] Textual is the repository's first third-party Python dependency** and
+  lands in a repo with no dependency file, no lockfile, and pre-commit hooks
+  running on an ambient interpreter. → Land after `adopt-uv-for-python`, and
+  keep the dependency confined to the harness: the three pre-commit scripts and
+  anything CI runs must stay stdlib-only. Verified that `packaging/` references
+  no Python, so nothing here reaches a shipped artifact.
+- **[Risk] Quick mode becomes the only mode anyone runs**, and a quick run gets
+  mistaken for a release check. → The mode is recorded with the run and an
+  incomplete run is marked as such, so a record cannot be read as more than it
+  was. Full mode's value depends on it actually being run before releases, which
+  is a discipline this change can support but not enforce.
+- **[Risk] Manual verification rots regardless.** It is still the item most
+  likely to be written once and never run. → Driving and recording are
+  automated, so the marginal cost of a run is answering prompts; the cadence is
+  stated; and questions must be deleted once automation covers them, so the run
+  gets shorter over time rather than longer.
 
 ## Migration Plan
 
@@ -200,8 +282,11 @@ The build order keeps each step independently useful:
 2. **Coverage, all three languages, informational** — publish artifacts and a
    summary, then record the baseline in QA_STRATEGY. This is the priority item
    and it tells the remaining steps where to aim.
-3. **Manual GUI checklist** — write it, then run it once and commit the first
-   record so the format is proven rather than hypothetical.
+3. **Manual GUI harness** — depends on `adopt-uv-for-python` landing first (see
+   decision 9). Build the surface-definition format and the TUI, then run it
+   once end to end and commit the first record so the format is proven rather
+   than hypothetical. Quick mode first, since it is a strict subset of full and
+   proves the driving mechanism with the fewest surfaces.
 4. **Smoke tests** — Xvfb job, then launch/tool/shutdown assertions.
 5. **Load and soak tests** — concurrent FIFO first (highest value, area 13),
    then saturation, then the soak harness.
@@ -211,9 +296,23 @@ and none changes the application or the existing test suite.
 
 ## Open Questions
 
-- **Where do manual checklist run records live?** A `docs/development/manual-runs/`
-  directory of dated files is simplest and most reviewable; a single appended
-  log is tidier but conflicts more. Leaning toward the directory.
+- **Where do manual run records live, and in what format?** A
+  `docs/development/manual-runs/` directory of dated files is simplest and most
+  reviewable; a single appended log is tidier but conflicts more. Leaning toward
+  the directory. Format is a related question: the harness writes it, so it can
+  be structured (JSON, diffable and comparable across runs) with a rendered
+  markdown summary beside it — which is more useful than either alone.
+- **How does the harness drive the application to a surface?** The X11 tools
+  (`pointer_control`, `window_control`) can click at coordinates, but coordinates
+  break whenever the layout changes, which is the harness's main fragility risk.
+  The alternatives are keyboard-driven navigation through menus, or a
+  development-only command channel in the application. The last is the most
+  robust and the most invasive; this needs deciding before the driving mechanism
+  is built, not after.
+- **Which surfaces belong in quick mode?** It should be the smallest set that
+  answers "does it still work" — plausibly launch, one analysis tool showing
+  live input, and clean shutdown. Worth agreeing explicitly, since a quick mode
+  that grows becomes a second full mode.
 - **Should coverage run on every PR or only on `main`?** Per-PR is more useful
   and is what Decision 1 assumes, but it adds a slow leg to every PR. If PR time
   becomes a problem, `main`-only plus a manual trigger is the fallback.
