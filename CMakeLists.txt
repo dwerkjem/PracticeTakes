@@ -176,6 +176,7 @@ target_sources(PracticeTakes
         src/application/shell/WorkspaceStartupSequence.h
         src/application/shell/state/appearance/MainComponentAppearance.cpp
         src/application/shell/state/audio/MainComponentAudioState.cpp
+        src/application/shell/state/testcontrol/MainComponentTestControl.cpp
         src/application/shell/ui/main_window/MainTitleBar.h
         src/application/shell/ui/main_window/MicrophoneWarning.h
         src/application/shell/ui/performance/PerformanceLabWindow.h
@@ -211,6 +212,8 @@ target_sources(PracticeTakes
         src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp
         src/application/testcontrol/ApprovedWindowStates.cpp
         src/application/testcontrol/ApprovedWindowStates.h
+        src/application/testcontrol/TestControlChannel.cpp
+        src/application/testcontrol/TestControlChannel.h
         src/application/testcontrol/TestControlClicker.cpp
         src/application/testcontrol/TestControlClicker.h
         src/application/testcontrol/TestControlCommand.cpp

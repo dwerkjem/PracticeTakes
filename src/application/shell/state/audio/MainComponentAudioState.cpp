@@ -4,6 +4,14 @@
 
 bool MainComponent::hasUsableMicrophone() const
 {
+#if PRACTICE_TAKES_ENABLE_TEST_CONTROL
+    // Development-only: lets the manual harness reach the no-input warning.
+    if (testControlNoMicrophone)
+    {
+        return false;
+    }
+#endif
+
     return audioInputService.hasUsableInput();
 }
 

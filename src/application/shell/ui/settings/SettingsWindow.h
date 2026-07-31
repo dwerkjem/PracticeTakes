@@ -440,6 +440,24 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             repaint();
         }
 
+        // Select a category tab by its printed name. False when no tab matches,
+        // so a caller naming a panel that has been renamed fails loudly rather
+        // than silently leaving whichever tab happened to be showing.
+        [[nodiscard]] bool showPanel(const juce::String& name)
+        {
+            for (int index = 0; index < categoryTabs.getNumTabs(); ++index)
+            {
+                if (categoryTabs.getTabNames()[index] == name)
+                {
+                    categoryTabs.setCurrentTabIndex(index);
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
       private:
         AppearancePanel appearancePanel;
         AudioPanel audioPanel;
@@ -492,6 +510,19 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
     {
         setVisible(false);
         juce::MessageManager::callAsync(onClose);
+    }
+
+    // Show a named category panel. Used by the development-only test control
+    // channel so a manual-verification run can be pointed at one panel rather
+    // than at whichever tab the window happens to open on.
+    [[nodiscard]] bool showPanel(const juce::String& name)
+    {
+        if (auto* content = dynamic_cast<Content*>(getContentComponent()))
+        {
+            return content->showPanel(name);
+        }
+
+        return false;
     }
 
     void applyAppearance(juce::LookAndFeel* appearance, juce::Colour background, Theme theme)

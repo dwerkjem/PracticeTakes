@@ -93,11 +93,11 @@ start 4.2 until that is settled.
 - [x] 4.1d Add the `PRACTICE_TAKES_ENABLE_TEST_CONTROL` CMake option, default
       off, following the `PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB` precedent, and
       confirm the channel is absent from a default build.
-- [ ] 4.1e Wire the channel to `MainComponent`: apply an approved state via
+- [x] 4.1e Wire the channel to `MainComponent`: apply an approved state via
       `openTool`, report the current state for `status`, and answer
       `list-states` / `list-objects` so the harness can verify the vocabulary
       before relying on it.
-- [ ] 4.1f Add the launch flag that starts the application directly in an
+- [x] 4.1f Add the launch flag that starts the application directly in an
       approved state, so a surface can be reached without replaying a click
       sequence.
 - [ ] 4.2 Add Textual as a Python dependency for the harness only, and confirm

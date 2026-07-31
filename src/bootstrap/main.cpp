@@ -8,6 +8,10 @@
 #include <JuceHeader.h>
 #include <PracticeTakesIcon.h>
 
+#if PRACTICE_TAKES_ENABLE_TEST_CONTROL
+#include "../application/testcontrol/TestControlChannel.h"
+#endif
+
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -99,6 +103,25 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         {
             uiValidationScenario = arguments[scenarioIndex + 1];
         }
+        juce::String testControlState;
+        if (const auto stateIndex = arguments.indexOf("--test-state");
+            stateIndex >= 0 && stateIndex + 1 < arguments.size())
+        {
+            testControlState = arguments[stateIndex + 1];
+        }
+        const auto testControlChannelRequested = arguments.contains("--test-control");
+
+#if !PRACTICE_TAKES_ENABLE_TEST_CONTROL
+        if (testControlState.isNotEmpty() || testControlChannelRequested)
+        {
+            std::cerr << "The test control channel is disabled; rebuild with "
+                         "-DPRACTICE_TAKES_ENABLE_TEST_CONTROL=ON\n";
+            setApplicationReturnValue(2);
+            quit();
+            return;
+        }
+#endif
+
 #if !PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
         if (automatePerformanceLab)
         {
@@ -112,7 +135,8 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         const auto windowTitle = getApplicationName() + " v" + getApplicationVersion();
 
         mainWindow = std::make_unique<MainWindow>(
-            windowTitle, automatePerformanceLab, muteMicrophoneForSession, uiValidationScenario);
+            windowTitle, automatePerformanceLab, muteMicrophoneForSession, uiValidationScenario,
+            testControlState, testControlChannelRequested);
     }
 
     void shutdown() override
@@ -136,7 +160,9 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             const juce::String& title,
             bool automatePerformanceLab,
             bool muteMicrophoneForSession,
-            const juce::String& uiValidationScenario)
+            const juce::String& uiValidationScenario,
+            const juce::String& testControlState,
+            bool testControlChannelRequested)
             : DocumentWindow(
                   title,
                   juce::Colour::fromRGB(18, 20, 27),
@@ -174,6 +200,11 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             {
                 content->runUiValidationScenario(uiValidationScenario);
             }
+#if PRACTICE_TAKES_ENABLE_TEST_CONTROL
+            startTestControl(testControlState, testControlChannelRequested);
+#else
+            juce::ignoreUnused(testControlState, testControlChannelRequested);
+#endif
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
             if (automatePerformanceLab)
             {
@@ -328,6 +359,69 @@ class PracticeTakesApplication final : public juce::JUCEApplication
                 (titleBar->isVisible() ? pointer.y <= visibleLimit : pointer.y <= revealDistance);
             titleBar->setVisible(shouldShow);
         }
+
+#if PRACTICE_TAKES_ENABLE_TEST_CONTROL
+        // Start the application in an approved state, and optionally open the
+        // control channel so the harness can drive it further.
+        //
+        // The state is applied after a short delay for the same reason
+        // runUiValidationScenario waits: the workspace is restored
+        // asynchronously after launch, and applying a state before that lands
+        // would have the restore overwrite it.
+        void startTestControl(const juce::String& state, bool channelRequested)
+        {
+            if (state.isEmpty() && !channelRequested)
+            {
+                return;
+            }
+
+            juce::Timer::callAfterDelay(
+                500,
+                [this, state, channelRequested]
+                {
+                    if (content == nullptr)
+                    {
+                        return;
+                    }
+
+                    if (state.isNotEmpty())
+                    {
+                        const auto* approved =
+                            testcontrol::findApprovedWindowState(state.toStdString());
+
+                        if (approved == nullptr || !content->applyTestControlState(*approved))
+                        {
+                            std::cerr << "Could not start in test state '" << state << "'\n";
+                            juce::JUCEApplication::getInstance()->setApplicationReturnValue(3);
+                            juce::JUCEApplication::getInstance()->quit();
+                            return;
+                        }
+                    }
+
+                    if (channelRequested)
+                    {
+                        testControlTarget.onApplyState =
+                            [this](const testcontrol::ApprovedWindowState& approved)
+                        { return content != nullptr && content->applyTestControlState(approved); };
+                        testControlTarget.onClick = [this](const std::string& id)
+                        { return content != nullptr && content->clickTestControlTarget(id); };
+                        testControlTarget.onCurrentStateId = [this]
+                        {
+                            return content != nullptr ? content->currentTestControlStateId()
+                                                      : std::string{};
+                        };
+                        testControlTarget.onQuit = []
+                        { juce::JUCEApplication::getInstance()->systemRequestedQuit(); };
+
+                        testControlChannel =
+                            std::make_unique<testcontrol::TestControlChannel>(testControlTarget);
+                    }
+                });
+        }
+
+        testcontrol::FunctionTestControlTarget testControlTarget;
+        std::unique_ptr<testcontrol::TestControlChannel> testControlChannel;
+#endif
 
         MainComponent* content = nullptr;
         std::unique_ptr<MainTitleBar> titleBar;

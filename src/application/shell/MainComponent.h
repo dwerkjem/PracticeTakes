@@ -17,6 +17,12 @@
 #include <optional>
 #include <vector>
 
+#if PRACTICE_TAKES_ENABLE_TEST_CONTROL
+#include <string>
+
+#include "../testcontrol/ApprovedWindowStates.h"
+#endif
+
 class MainTitleBar;
 struct SettingsImportResult;
 struct SettingsTransferModel;
@@ -47,6 +53,18 @@ class MainComponent final
     void runUiValidationScenario(const juce::String& scenario);
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
     void automatePerformanceLab(std::function<void(bool)> completion);
+#endif
+
+#if PRACTICE_TAKES_ENABLE_TEST_CONTROL
+    // Development-only control surface for the manual GUI harness. Absent from
+    // release builds; see src/application/testcontrol/ for the vocabulary and
+    // why nothing here synthesises input.
+    //
+    // Everything below runs on the message thread. The channel marshals to it
+    // before calling, so these need no locking of their own.
+    [[nodiscard]] bool applyTestControlState(const testcontrol::ApprovedWindowState& state);
+    [[nodiscard]] bool clickTestControlTarget(const std::string& id);
+    [[nodiscard]] std::string currentTestControlStateId() const;
 #endif
 
   private:
@@ -239,6 +257,21 @@ class MainComponent final
     juce::Rectangle<int> savedHarmonicBounds;
     juce::Rectangle<int> savedSettingsBounds;
     bool isMicrophoneWarningDismissed = false;
+
+#if PRACTICE_TAKES_ENABLE_TEST_CONTROL
+    // The approved state last applied, or empty when the application is not in
+    // one -- at startup, and after a click changed something.
+    std::string testControlStateId;
+
+    // Makes hasUsableMicrophone report false so the no-input warning can be
+    // seen on a machine whose microphone works, which is every machine a
+    // release is cut from.
+    //
+    // Deliberately overrides at this level rather than in AudioInputService:
+    // hasUsableInput there also drives device recovery, so forcing it false
+    // would have the service continuously trying to reopen the device.
+    bool testControlNoMicrophone = false;
+#endif
     bool automaticSettingsSaveEnabled = true;
     bool feedbackInvitationsDisabledState = false;
     bool sessionMicrophoneMuteEnabled = false;
