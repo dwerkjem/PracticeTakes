@@ -17,6 +17,10 @@
 //    file, rather than an emergent property of harness code.
 //  - Nothing is addressed by screen position, so a layout change cannot
 //    silently redirect a click to the wrong object.
+//
+// A state describes *what the application should look like*, not the steps to
+// get there. The glue decides how to establish it, which is what keeps these
+// definitions stable when the route to a surface changes.
 namespace testcontrol
 {
 enum class ToolPresentation
@@ -27,21 +31,67 @@ enum class ToolPresentation
     floating
 };
 
+// How several docked tools sit relative to each other. Only meaningful when a
+// state opens more than one.
+enum class WorkspaceArrangement
+{
+    // Zero or one tool; nothing to arrange.
+    single,
+
+    // Tiled side by side in the workspace's split tree.
+    split,
+
+    // Sharing one tab strip.
+    tabbed
+};
+
+enum class WindowGeometry
+{
+    normal,
+
+    // Narrower than the 900px threshold at which MainTitleBar swaps its
+    // buttons for the collapsed hamburger menu.
+    narrow,
+
+    fullscreen
+};
+
+// The audio input condition the state presents.
+//
+// `unavailable` is established by the control channel telling the audio service
+// to report no usable device -- it is application state being set, not input
+// being synthesised, and it is the only way to see the microphone warning on a
+// machine whose microphone works.
+enum class MicrophoneCondition
+{
+    available,
+    muted,
+    unavailable
+};
+
 // A window configuration the application will put itself into on request.
 struct ApprovedWindowState
 {
     // Wire name, kebab-case, used by `open-state`.
     std::string id;
 
-    // Which tool the state opens: "tuner", "spectrogram", "harmonics", or
-    // empty for a state that opens none. A string rather than the application's
-    // ToolType enum, because that enum lives in a JUCE header and this list has
-    // to stay testable without one; the glue maps it.
-    std::string tool;
+    // Which tools the state opens: "tuner", "spectrogram", "harmonics".
+    // Strings rather than the application's ToolType enum, because that enum
+    // lives in a JUCE header and this list has to stay testable without one;
+    // the glue maps them.
+    std::vector<std::string> tools;
 
     ToolPresentation presentation = ToolPresentation::none;
+    WorkspaceArrangement arrangement = WorkspaceArrangement::single;
+    WindowGeometry geometry = WindowGeometry::normal;
+    MicrophoneCondition microphone = MicrophoneCondition::available;
 
     bool settingsOpen = false;
+
+    // Which settings panel to show. Empty means whichever the window opens on
+    // by default.
+    std::string settingsPanel;
+
     bool feedbackOpen = false;
 
     // What a tester is looking at in this state. Shown by `list-states` and
@@ -72,4 +122,9 @@ struct ApprovedClickTarget
 // treat as an error rather than a miss.
 [[nodiscard]] const ApprovedWindowState* findApprovedWindowState(const std::string& id);
 [[nodiscard]] const ApprovedClickTarget* findApprovedClickTarget(const std::string& id);
+
+// Every tool name any approved state may reference. The glue maps these onto
+// ToolType, and the tests pin the two lists together -- ToolType itself cannot
+// be named here because it lives behind JuceHeader.
+[[nodiscard]] const std::vector<std::string>& knownToolNames();
 } // namespace testcontrol
