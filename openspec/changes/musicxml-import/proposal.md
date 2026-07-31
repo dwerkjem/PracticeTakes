@@ -93,10 +93,10 @@ data, or file import, and this change alters no existing behaviour.
 
 ## Impact
 
-- **New source tree** for the score model and the MusicXML importer. Its
-  location — `src/services/` versus `src/features/` — is an open decision, see
-  `design.md` decision 1, because #32, #33, #34, and #39 will all depend on
-  wherever it lands.
+- **New source tree** — `src/services/score/` for the model and
+  `src/services/score/musicxml/` for the importer, under `namespace score`
+  (`design.md` § Resolved Questions, decision 1). #32, #33, #34, and #39 all
+  depend downward on it.
 - **`CMakeLists.txt`** — every source file is listed explicitly, so each new
   `.h`/`.cpp` is added to `target_sources(PracticeTakes ...)`, and each
   unit-testable `.cpp` is also added to `add_executable(PracticeTakesTests ...)`.
@@ -104,9 +104,17 @@ data, or file import, and this change alters no existing behaviour.
   `juce_graphics`, and `juce_gui_basics`; the model and importer must be
   buildable against that set, which means no `JuceHeader.h` and no
   `juce_gui_extra` in model or importer headers.
-- **New JUCE surface** — `juce::ZipFile` is used nowhere in the repository
-  today and would be introduced here for `.mxl`. XML parsing exists only for
-  `AudioDeviceManager` state round-tripping via `juce::parseXML`.
+- **New third-party dependency** — libmusicxml (Grame), MPL-2.0, added via the
+  existing pinned-commit `FetchContent` pattern alongside JUCE and Catch2
+  (`design.md` § Resolved Questions, decision 5). It is the first weak-copyleft
+  code in this BSD-3-Clause tree; MPL-2.0 obligations attach to its own files
+  only. It is reached through a single adapter header so it stays replaceable.
+  It supplies the MusicXML DOM and visitor layer only — it does not perform the
+  normalization this change is mostly about.
+- **New JUCE surface** — `juce::ZipFile` is used nowhere in the repository today
+  and is introduced here for `.mxl`, since libmusicxml's core ships no ZIP
+  reader. XML parsing previously existed only for `AudioDeviceManager` state
+  round-tripping via `juce::parseXML`.
 - **`tests/`** — the test directory is flat, has no fixture or resource
   directory, and existing tests that need files create them at runtime in the
   temp directory. Importing "representative vocal and piano scores" needs real

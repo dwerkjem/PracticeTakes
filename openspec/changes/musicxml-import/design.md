@@ -1,5 +1,11 @@
 ## Decisions needed from Derek
 
+> **All six were resolved on 2026-07-31.** See
+> [Resolved Questions](#resolved-questions) below for what was chosen and why.
+> The option analysis in this section is kept as the record of what was weighed;
+> where a resolution contradicts the recommendation written here, the resolution
+> wins.
+
 These six are structural. Each one is cheap to decide now and expensive to
 unwind after #32, #33, #34, and #39 are written against it. I have written a
 recommendation for each and deliberately did **not** commit to any of them: the
@@ -244,6 +250,100 @@ test file.
 It is on this list because it introduces a repo convention and a licensing
 policy, not because it is hard to reverse.
 
+## Resolved Questions
+
+Decided by Derek on 2026-07-31. Five of six went with the recommendation;
+decision 5 did not.
+
+- **Decision 1 — which layer owns the score model and the importer?**
+  `src/services/score/` for the model, `src/services/score/musicxml/` for the
+  importer, as recommended. A score has four consumers (#32, #33, #35–#38, #39)
+  across at least two feature directories, and `ARCHITECTURE_QA.md` forbids one
+  feature reaching into another. The renderer and score tool land in
+  `src/features/notation/` and depend downward on the service. Namespace is
+  lowercase `score`, matching the `namespace performance` precedent in
+  `src/features/performance/`.
+
+- **Decision 2 — how is musical time represented?** Fixed score-wide **3840 PPQ
+  integer ticks**, as recommended, with the source-to-tick rescale factor stored
+  on the `Score` so diagnostics can report the original `<divisions>`. 3840 is
+  `2^8 × 15`, so it divides exactly by 2, 3, 5, and every power of two up to 256.
+  Inexact rescales round and emit a diagnostic rather than corrupting silently.
+  This was flagged as the most expensive item to revisit; it is now fixed.
+
+- **Decision 3 — as-written or as-played?** **As-written only**, as recommended.
+  Measures appear once in source order. Repeat barlines, endings, and D.C./D.S.
+  jumps are captured faithfully as uninterpreted data on the measure but are not
+  expanded. Option 2 (as-played only) is rejected permanently, because it breaks
+  "measure number identifies a measure" for every consumer. Adding an expansion
+  table (`playbackOrder`) later is a pure addition and belongs to whichever
+  change first needs to hear a repeat.
+
+- **Decision 4 — one model for MusicXML and MIDI, or two?** **Two models with one
+  shared time base**, as recommended. MusicXML produces the notation-oriented
+  `Score` described below; #34's MIDI import produces its own `Timeline`. The
+  `TempoMap` and the tick/seconds conversion are extracted into a shared header
+  in this change so #34 inherits them rather than reinventing them. Consequence
+  accepted: "display a MIDI file" (#13's exit criterion) needs either an explicit
+  MIDI-to-`Score` conversion step or a separate piano-roll view, and that cost
+  lands in #34, not here.
+
+- **Decision 5 — parser and dependency policy.** **libmusicxml (Grame) via the
+  existing pinned `FetchContent` pattern** — *not* the recommended JUCE-only
+  option. The recommendation rested on "licence is the blocker", which is true of
+  MuseScore's GPL importer but not of libmusicxml: it is **MPL-2.0**, a
+  file-level weak copyleft that links cleanly into this BSD-3-Clause application.
+  Obligations attach only to libmusicxml's own files, not to Practice Takes code.
+  Verified at decision time: last upstream commit 2025-06-07, not archived, ships
+  a top-level `CMakeLists.txt`, ~108 MB checkout.
+
+  Four consequences that follow, and that the task list must reflect:
+
+  1. **It does not replace the normalization work.** libmusicxml is "designed
+     close to the MusicXML format" — `src/elements`, `src/parser`, and
+     `src/visitors` give a MusicXML-shaped DOM with a visitor API. It removes the
+     raw XML/element-traversal layer only. Rescaling `<divisions>` into 3840 PPQ,
+     resolving the `<backup>`/`<forward>` voice cursor, collapsing chords,
+     matching ties against slurs, and attaching lyrics — `tasks.md` sections 4
+     through 7 — are unchanged and remain the bulk of this change.
+  2. **`.mxl` is still ours to handle.** The `mxl` hits in the libmusicxml
+     repository are DTD/schema files and the `xml2ly`/`xml2brl` sample programs;
+     the library core contains no ZIP reader. `juce::ZipFile` is still introduced
+     here to resolve the `META-INF/container.xml` manifest to its root document.
+  3. **Validation still means our structural rules, not schema validation.**
+     Unchanged from the original recommendation. No XSD or DTD validation, and no
+     network access on the file-open path — a MusicXML DOCTYPE references an
+     external DTD by URL, and fetching it would be both an I/O stall and an
+     XXE-shaped hole. "Invalid" means "violates the rules we document".
+  4. **Diagnostic location is musical, not textual — provisionally.** The
+     original constraint was that `juce::XmlDocument` exposes no source
+     positions. libmusicxml may expose parse-error positions; whether it does has
+     **not** been verified. Task 3.2 now covers this. If it does, a line/column
+     may be added to `Diagnostic` as an optional extra field, but the musical
+     location (part, printed measure number, voice, event index) stays primary
+     because it is what a musician can act on.
+
+  The adapter-header rule still stands and matters more now, not less: the
+  library is named in exactly one header, so this decision stays reversible in
+  one file if libmusicxml's size, staleness, or licence posture becomes a
+  problem.
+
+- **Decision 6 — test fixtures and licensing.** **Synthetic fixtures plus a
+  committed corpus, MuseScore only.** Hand-written MusicXML string literals cover
+  the invariant and boundary tests, matching the existing `tests/` convention.
+  Alongside them, four to six public-domain scores exported from MuseScore land
+  in `tests/resources/musicxml/` with a `PRACTICE_TAKES_TEST_RESOURCES_DIR`
+  compile definition, following the `PRACTICE_TAKES_SOURCE_DIR` precedent.
+  Committing them is acceptable: the repertoire is public domain and the export
+  files are ours.
+
+  A second notation program is **not** available, so the corpus covers only
+  MuseScore's dialect. This is a known gap — Finale's divisions and voice
+  numbering differ, and Sibelius emits far more layout elements — and per task
+  8.5 it must be stated in `MusicXmlCorpusTests.cpp` so a later reader is not
+  misled about what "real-score coverage" means here. Adding a Finale or Dorico
+  export later is cheap and remains worth doing.
+
 ## Context
 
 Practice Takes is a C++20 / JUCE 8 desktop application with a single
@@ -323,8 +423,10 @@ this design:
 - Schema/DTD validation, or any network access during import.
 - Round-trip fidelity. Unsupported constructs are reported, not preserved for
   re-export.
-- Supporting `score-timewise`, unless decision 5 goes a different way — see
-  Risks.
+- Supporting `score-timewise`. Still out of scope under the resolved decision 5:
+  libmusicxml vendors a `parttime.xsl` partwise/timewise conversion, but wiring
+  an XSLT step into the import path is its own dependency and its own test
+  surface. A timewise document is rejected with `unsupportedDocumentType`.
 
 ## Decisions
 
@@ -333,7 +435,8 @@ These are the smaller choices I made directly, given the six above.
 ### Entities
 
 The model is a tree of value types with a single root, built by an importer and
-frozen. Working names, all subject to decision 1's directory choice:
+frozen. These live in `src/services/score/` under `namespace score`, per the
+resolved decision 1:
 
 - **`Score`** — root. Work title, movement title, composer/lyricist credits, the
   encoding software string (worth keeping: it is the first thing you want when a
@@ -493,12 +596,23 @@ produce thousands.
   emits divisions and voice numbering unlike MuseScore's; Sibelius emits large
   volumes of layout elements. Decision 6 is the mitigation, and it only works if
   the corpus really does come from more than one program.
-- **[Risk] `juce::XmlDocument`'s handling of an inline DTD with recursive entity
+- **[Risk] libmusicxml's handling of an inline DTD with recursive entity
   definitions is not something I verified.** MusicXML files carry a DOCTYPE
-  referencing an external DTD, which JUCE should not fetch — but "should not" is
-  an assumption, and an entity-expansion bomb is the classic XML denial of
-  service. This is an explicit task: confirm no network access occurs during a
-  parse, and bound entity expansion or strip the DOCTYPE before parsing.
+  referencing an external DTD, which the parser should not fetch — but "should
+  not" is an assumption, and an entity-expansion bomb is the classic XML denial
+  of service. Note that libmusicxml *vendors* the MusicXML DTDs and schemas
+  (`dtds/`, `schema/`), which makes a local resolution plausible but does not
+  prove no network fetch occurs. This is an explicit task: confirm no network
+  access occurs during a parse, and bound entity expansion or strip the DOCTYPE
+  before parsing.
+- **[Risk] libmusicxml is a large, externally-maintained dependency in a
+  repository whose dependency posture is deliberately minimal.** ~108 MB of
+  checkout, last upstream commit 2025-06-07, and the first weak-copyleft
+  (MPL-2.0) code in a BSD-3-Clause tree. Mitigated by the adapter header — the
+  library is named in exactly one place, so replacing it is one file plus a CMake
+  declaration — and by pinning to an exact commit SHA as the repository already
+  does for JUCE and Catch2. Worth re-checking upstream activity before the change
+  lands.
 - **[Risk] Rounding when rescaling divisions (decision 2, option 1) accumulates
   within a measure.** Mitigated by rescaling with exact integer arithmetic where
   the division is exact, diagnosing where it is not, and asserting invariant 1
