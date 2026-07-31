@@ -18,17 +18,14 @@ reporter, so the issue can be discussed and fixed before public disclosure.
 
 ## Supported versions
 
-Practice Takes is early-stage software. Two lines receive support:
+Practice Takes is early-stage software distributed as a single current
+release (see the root `VERSION` file). Only the latest released version is
+supported.
 
-| Line | Ref | What it receives |
-| --- | --- | --- |
-| Current | `main`, latest tag | Features and fixes, including security fixes |
-| Long-term support | `LTS` branch | Security fixes only |
-
-The current release is recorded in the root `VERSION` file. The `LTS` branch
-starts at `v0.5.6` and moves forward only when a security fix is backported to
-it. Releases older than the `LTS` branch point are not supported, and no fixes
-are issued for them.
+An `LTS` branch exists at `v0.5.6` as groundwork for a future long-term-support
+line. It is not an active support line yet: nothing is backported to it and no
+LTS release has been made. Until that changes, treat the latest release as the
+only supported version.
 
 Support here means source-level fixes. The hosted feedback service applies its
 own minimum supported version and rejects submissions from clients older than
