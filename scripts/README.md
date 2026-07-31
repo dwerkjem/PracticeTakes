@@ -3,6 +3,7 @@
 Scripts are grouped by their purpose:
 
 - `build/` configures, builds, and runs the desktop application.
+- `design/` regenerates committed design assets such as the application icon.
 - `feedback/` manages the feedback database and dashboard service.
 - `quality/` runs source-formatting and static-analysis checks.
 - `release/` manages application versions.

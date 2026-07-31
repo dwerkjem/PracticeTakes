@@ -98,15 +98,32 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     practice_takes_patch_juce_alsa_input_startup("${juce_SOURCE_DIR}")
 endif()
 
+# The icon artwork is generated from the design system by
+# scripts/design/generate_app_icons.py; see packaging/icons/README.md. JUCE
+# turns ICON_BIG/ICON_SMALL into the macOS .icns and the Windows executable
+# icon, and ignores them elsewhere.
+set(PRACTICE_TAKES_ICON_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons")
+
 juce_add_gui_app(PracticeTakes
     ${PRACTICE_TAKES_JUCE_APP_OPTIONS}
     VERSION ${PROJECT_VERSION}
     PRODUCT_NAME "Practice Takes"
     COMPANY_NAME "Derek R. Neilson"
     BUNDLE_ID "org.derekrneilson.practicetakes"
+    ICON_BIG "${PRACTICE_TAKES_ICON_DIRECTORY}/practice-takes-1024.png"
+    ICON_SMALL "${PRACTICE_TAKES_ICON_DIRECTORY}/practice-takes-128.png"
 )
 
 juce_generate_juce_header(PracticeTakes)
+
+# JUCE only consumes ICON_BIG/ICON_SMALL on macOS and Windows. Linux window
+# managers read _NET_WM_ICON off the window instead, so the artwork is also
+# embedded for the runtime call in main.cpp that publishes it.
+juce_add_binary_data(PracticeTakesIcon
+    HEADER_NAME PracticeTakesIcon.h
+    NAMESPACE PracticeTakesIcon
+    SOURCES "${PRACTICE_TAKES_ICON_DIRECTORY}/practice-takes-128.png"
+)
 
 set_target_properties(PracticeTakes PROPERTIES
     OUTPUT_NAME "PracticeTakes"
@@ -246,6 +263,7 @@ target_compile_definitions(PracticeTakes
 
 target_link_libraries(PracticeTakes
     PRIVATE
+        PracticeTakesIcon
         juce::juce_audio_utils
         juce::juce_dsp
         juce::juce_gui_extra

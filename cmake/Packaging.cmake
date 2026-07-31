@@ -13,6 +13,28 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         "${CMAKE_CURRENT_SOURCE_DIR}/packaging/linux/org.derekrneilson.practicetakes.desktop"
         DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
     )
+
+    # Launchers resolve the desktop entry's Icon= key through the hicolor theme
+    # rather than reading anything out of the executable, so the icon has to be
+    # installed under the same name the entry asks for.
+    set(PRACTICE_TAKES_ICON_NAME "org.derekrneilson.practicetakes")
+    set(PRACTICE_TAKES_ICON_PNG_SIZES 32 48 64 128 256 512 1024)
+
+    foreach(icon_size IN LISTS PRACTICE_TAKES_ICON_PNG_SIZES)
+        install(FILES
+            "${PRACTICE_TAKES_ICON_DIRECTORY}/practice-takes-${icon_size}.png"
+            DESTINATION
+                "${CMAKE_INSTALL_DATADIR}/icons/hicolor/${icon_size}x${icon_size}/apps"
+            RENAME "${PRACTICE_TAKES_ICON_NAME}.png"
+        )
+    endforeach()
+
+    install(FILES
+        "${PRACTICE_TAKES_ICON_DIRECTORY}/practice-takes.svg"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps"
+        RENAME "${PRACTICE_TAKES_ICON_NAME}.svg"
+    )
+
     install(FILES
         "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
         "${CMAKE_CURRENT_SOURCE_DIR}/README.md"
@@ -80,6 +102,14 @@ elseif(WIN32)
         "${CMAKE_INSTALL_BINDIR}\\\\PracticeTakes.exe")
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
     set(CPACK_NSIS_UNINSTALL_NAME "Uninstall Practice Takes")
+    # NSIS needs a real .ico on disk; it cannot read the icon JUCE embedded in
+    # the executable. Backslashes are what the generated NSIS script expects.
+    file(TO_NATIVE_PATH
+        "${PRACTICE_TAKES_ICON_DIRECTORY}/practice-takes.ico"
+        PRACTICE_TAKES_NSIS_ICON)
+    string(REPLACE "\\" "\\\\" PRACTICE_TAKES_NSIS_ICON "${PRACTICE_TAKES_NSIS_ICON}")
+    set(CPACK_NSIS_MUI_ICON "${PRACTICE_TAKES_NSIS_ICON}")
+    set(CPACK_NSIS_MUI_UNIICON "${PRACTICE_TAKES_NSIS_ICON}")
     set(CPACK_NSIS_HELP_LINK
         "https://github.com/dwerkjem/PracticeTakes/issues")
     set(CPACK_NSIS_URL_INFO_ABOUT

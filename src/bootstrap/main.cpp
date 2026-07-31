@@ -6,7 +6,9 @@
 #endif
 
 #include <JuceHeader.h>
+#include <PracticeTakesIcon.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 
@@ -162,6 +164,9 @@ class PracticeTakesApplication final : public juce::JUCEApplication
                 [this]
                 {
                     setVisible(true);
+                    // The window has a native peer only once it is visible, and
+                    // the icon reaches the window manager through that peer.
+                    applyApplicationIcon();
                     performance::markMainWindowVisible();
                 },
                 [this] { content->initialiseAudioAfterLaunch(); });
@@ -229,6 +234,28 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         }
 
       private:
+        // Publishes the application icon to the window manager. DocumentWindow
+        // only keeps its own copy for the title bar it would otherwise draw, so
+        // the peer has to be told separately, and it exists only once the
+        // window is visible.
+        void applyApplicationIcon()
+        {
+            auto* peer = getPeer();
+            if (peer == nullptr)
+            {
+                return;
+            }
+
+            const auto icon = juce::ImageFileFormat::loadFrom(
+                PracticeTakesIcon::practicetakes128_png,
+                static_cast<std::size_t>(PracticeTakesIcon::practicetakes128_pngSize));
+
+            if (icon.isValid())
+            {
+                peer->setIcon(icon);
+            }
+        }
+
         void toggleFullscreen()
         {
             setFullscreen(!fullscreenActive);
