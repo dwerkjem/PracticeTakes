@@ -1,0 +1,38 @@
+name: Python quality check
+
+on:
+  pull_request:
+    paths:
+      - "scripts/**"
+      - ".github/workflows/python-check.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/**"
+      - ".github/workflows/python-check.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  python-tests:
+    name: Test repository scripts
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Report the interpreter under test
+        run: python3 --version
+
+      # The suite is standard-library only, so it runs on the runner's
+      # preinstalled Python — the same interpreter the release, secret-scan,
+      # and clang-tidy workflows already invoke these scripts with.
+      - name: Run tests
+        run: python3 scripts/run_tests.py
