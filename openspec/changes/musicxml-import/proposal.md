@@ -115,11 +115,12 @@ data, or file import, and this change alters no existing behaviour.
   and is introduced here for `.mxl`, since libmusicxml's core ships no ZIP
   reader. XML parsing previously existed only for `AudioDeviceManager` state
   round-tripping via `juce::parseXML`.
-- **`tests/`** — the test directory is flat, has no fixture or resource
-  directory, and existing tests that need files create them at runtime in the
-  temp directory. Importing "representative vocal and piano scores" needs real
-  files, which is a new convention and a licensing question; see `design.md`
-  decision 6.
+- **`tests/`** — the test directory now mirrors `src/`, so these land in
+  `tests/services/score/` and `tests/services/score/musicxml/`. It still has no
+  resource directory, and existing tests that need files create them at runtime
+  in the temp directory. Importing "representative vocal and piano scores" needs
+  real files, which is a new convention and a licensing question; see
+  `design.md` decision 6.
 - **Documentation** — `docs/development/ARCHITECTURE.md` gains a score-model
   section covering ownership and the audio-thread boundary, and the change adds
   a supported-MusicXML-subset document that both the renderer (#32) and user

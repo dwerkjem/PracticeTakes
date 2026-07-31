@@ -289,49 +289,49 @@ endif()
 
 if(BUILD_TESTING)
     add_executable(PracticeTakesTests
-        tests/AppDefaultsTests.cpp
-        tests/ApplicationLaunchTimerTests.cpp
-        tests/AudioRecoveryPolicyTests.cpp
-        tests/AudioSampleFifoTests.cpp
-        tests/BenchmarkFakesTests.cpp
-        tests/BenchmarkInterfacesTests.cpp
-        tests/BenchmarkComparabilityTests.cpp
-        tests/BenchmarkComparisonTests.cpp
-        tests/BenchmarkRecordCodecTests.cpp
-        tests/BenchmarkRecordStoreTests.cpp
-        tests/BenchmarkRunnerTests.cpp
-        tests/BenchmarkTypesTests.cpp
-        tests/FeedbackInvitationPolicyTests.cpp
-        tests/HarmonicAnalyzerTests.cpp
-        tests/InTreeOptimizationStrategyTests.cpp
-        tests/NonRealTimeTelemetryCollectorTests.cpp
-        tests/NamedWorkspaceServiceTests.cpp
-        tests/PerformanceLabControllerTests.cpp
-        tests/PitchDetectorTests.cpp
-        tests/PlatformProvenanceProviderTests.cpp
-        tests/MusicalTimeTests.cpp
-        tests/PitchTests.cpp
-        tests/RealTimeEventCaptureTests.cpp
-        tests/ScoreModelTests.cpp
-        tests/SettingsPersistenceTests.cpp
-        tests/TempoMapTests.cpp
-        tests/SettingsTransferCodecTests.cpp
-        tests/StrategyRegistryTests.cpp
-        tests/SustainedAudioAnalysisScenarioTests.cpp
-        tests/ThemeContrastTests.cpp
-        tests/TrialAggregatorTests.cpp
-        tests/WorkspaceBuiltInsTests.cpp
-        tests/WorkspaceCatalogCodecTests.cpp
-        tests/WorkspaceDocumentsTests.cpp
-        tests/WorkspaceRecoveryTests.cpp
-        tests/WorkspaceLayoutStateTests.cpp
-        tests/WorkspaceMenuModelTests.cpp
-        tests/WorkspacePresentationComponentsTests.cpp
-        tests/WorkspaceSnapshotApplyTests.cpp
-        tests/WorkspaceSnapshotCaptureTests.cpp
-        tests/WorkspaceSessionLifecycleTests.cpp
-        tests/WorkspaceStartupSequenceTests.cpp
-        tests/WorkspaceToolStateTests.cpp
+        tests/application/configuration/AppDefaultsTests.cpp
+        tests/application/configuration/SettingsPersistenceTests.cpp
+        tests/application/configuration/SettingsTransferCodecTests.cpp
+        tests/application/shell/WorkspaceStartupSequenceTests.cpp
+        tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp
+        tests/application/shell/ui/workspace/model/NamedWorkspaceServiceTests.cpp
+        tests/application/shell/ui/workspace/model/WorkspaceBuiltInsTests.cpp
+        tests/application/shell/ui/workspace/model/WorkspaceCatalogCodecTests.cpp
+        tests/application/shell/ui/workspace/model/WorkspaceDocumentsTests.cpp
+        tests/application/shell/ui/workspace/model/WorkspaceLayoutStateTests.cpp
+        tests/application/shell/ui/workspace/model/WorkspaceMenuModelTests.cpp
+        tests/application/shell/ui/workspace/model/WorkspaceRecoveryTests.cpp
+        tests/application/shell/ui/workspace/model/WorkspaceSessionLifecycleTests.cpp
+        tests/application/shell/ui/workspace/model/WorkspaceSnapshotApplyTests.cpp
+        tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp
+        tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
+        tests/application/theme/ThemeContrastTests.cpp
+        tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
+        tests/features/analysis/tuner/PitchDetectorTests.cpp
+        tests/features/feedback/FeedbackInvitationPolicyTests.cpp
+        tests/features/performance/ApplicationLaunchTimerTests.cpp
+        tests/features/performance/BenchmarkComparabilityTests.cpp
+        tests/features/performance/BenchmarkComparisonTests.cpp
+        tests/features/performance/BenchmarkInterfacesTests.cpp
+        tests/features/performance/BenchmarkRecordCodecTests.cpp
+        tests/features/performance/BenchmarkRecordStoreTests.cpp
+        tests/features/performance/BenchmarkRunnerTests.cpp
+        tests/features/performance/BenchmarkTypesTests.cpp
+        tests/features/performance/InTreeOptimizationStrategyTests.cpp
+        tests/features/performance/NonRealTimeTelemetryCollectorTests.cpp
+        tests/features/performance/PerformanceLabControllerTests.cpp
+        tests/features/performance/PlatformProvenanceProviderTests.cpp
+        tests/features/performance/RealTimeEventCaptureTests.cpp
+        tests/features/performance/StrategyRegistryTests.cpp
+        tests/features/performance/SustainedAudioAnalysisScenarioTests.cpp
+        tests/features/performance/TrialAggregatorTests.cpp
+        tests/services/audio/AudioRecoveryPolicyTests.cpp
+        tests/services/audio/AudioSampleFifoTests.cpp
+        tests/services/score/MusicalTimeTests.cpp
+        tests/services/score/PitchTests.cpp
+        tests/services/score/ScoreModelTests.cpp
+        tests/services/score/TempoMapTests.cpp
+        tests/support/BenchmarkFakesTests.cpp
         src/application/configuration/SettingsPersistence.cpp
         src/application/configuration/SettingsTransferCodec.cpp
         src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
@@ -355,9 +355,14 @@ if(BUILD_TESTING)
         src/services/score/TempoMap.cpp
     )
 
+    # tests/ mirrors src/, so a test's path says which source file it covers.
+    # Both roots are on the include path: "services/score/Score.h" resolves
+    # against src/, and shared fixtures such as "support/BenchmarkFakes.h"
+    # resolve against tests/ from any depth.
     target_include_directories(PracticeTakesTests
         PRIVATE
             "${CMAKE_CURRENT_SOURCE_DIR}/src"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests"
     )
 
     target_link_libraries(PracticeTakesTests

@@ -36,7 +36,7 @@ exist.
   pinned by mutable tag (`@v6`, `@v4`, `@v5`), not commit SHA. JUCE and
   Catch2 are pinned by immutable git tag in `CMakeLists.txt` (already good).
 - **Performance**: one Catch2 benchmark exists today
-  (`tests/PitchDetectorTests.cpp`, tag `[.benchmark]`, comparing FFT vs.
+  (`tests/features/analysis/tuner/PitchDetectorTests.cpp`, tag `[.benchmark]`, comparing FFT vs.
   scalar autocorrelation) but it is never executed in CI, has no other
   pipeline covered (spectrogram FFT, harmonic analyzer, audio FIFO), and has
   no baseline/regression comparison.
@@ -127,7 +127,7 @@ alongside other items.
 and [Code style § Real-time audio rules](CODE_STYLE.md#real-time-audio-rules)),
 but nothing measures whether a change quietly regresses the analysis
 pipelines' performance. One Catch2 benchmark exists
-(`tests/PitchDetectorTests.cpp`, `[.benchmark]` tag) but it's never run in
+(`tests/features/analysis/tuner/PitchDetectorTests.cpp`, `[.benchmark]` tag) but it's never run in
 CI and there's no comparable coverage for the spectrogram FFT path, harmonic
 analyzer, or `AudioSampleFifo` push/pop under load.
 

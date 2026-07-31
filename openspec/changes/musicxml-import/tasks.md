@@ -68,9 +68,9 @@ All headers in `src/services/score/`, `namespace score`.
 - [ ] 2.3 Make each invariant violation a repair plus a diagnostic, not a
       throw, and record in the code comment which repair applies to which
       violation.
-- [ ] 2.4 Add `tests/ScoreModelTests.cpp` covering every invariant, each with a
+- [ ] 2.4 Add `tests/services/score/ScoreModelTests.cpp` covering every invariant, each with a
       case that satisfies it and a case that must be repaired.
-- [x] 2.5 Add `tests/TempoMapTests.cpp` covering single tempo, mid-score tempo
+- [x] 2.5 Add `tests/services/score/TempoMapTests.cpp` covering single tempo, mid-score tempo
       change, no declared tempo, duplicate positions, and round-tripping
       position to seconds and back.
 - [x] 2.6 Add the new sources to `target_sources(PracticeTakes ...)` and to
@@ -119,7 +119,7 @@ All headers in `src/services/score/`, `namespace score`.
 - [ ] 3.5 Add the import status enum and result struct following the
       `enum class ...Status` plus `struct ...Result` convention, including the
       partial-success status modelled on `WorkspaceCatalogDecodeStatus`.
-- [ ] 3.6 Add `tests/MusicXmlContainerTests.cpp` covering a valid container, a
+- [ ] 3.6 Add `tests/services/score/musicxml/MusicXmlContainerTests.cpp` covering a valid container, a
       container with no manifest, a manifest naming a missing entry, an
       expansion-ratio violation, an oversized source file, a missing file, an
       unreadable file, malformed XML, a well-formed non-MusicXML document, and a
@@ -141,7 +141,7 @@ All headers in `src/services/score/`, `namespace score`.
       order each voice's events by position.
 - [ ] 4.5 Enforce the measure-duration bound per voice with the pickup
       exemption, truncating and diagnosing over-full measures.
-- [ ] 4.6 Add `tests/MusicXmlTimingTests.cpp` covering two- and four-voice
+- [ ] 4.6 Add `tests/services/score/musicxml/MusicXmlTimingTests.cpp` covering two- and four-voice
       measures, a backward move to a non-zero position, a forward move past the
       end of a measure, a mid-score change of source duration units, a pickup
       measure, an over-full measure, and an under-full non-pickup measure.
@@ -157,7 +157,7 @@ All headers in `src/services/score/`, `namespace score`.
       drop unmatched tie ends with a diagnostic.
 - [ ] 5.5 Import grace notes as zero-duration events that do not advance the
       cursor.
-- [ ] 5.6 Add `tests/MusicXmlNoteTests.cpp` covering enharmonic spellings, a
+- [ ] 5.6 Add `tests/services/score/musicxml/MusicXmlNoteTests.cpp` covering enharmonic spellings, a
       three-note chord, a tie across a barline, a tie with no end, a slur that
       must not become a tie, a whole-measure rest, and a grace note.
 
@@ -171,8 +171,8 @@ All headers in `src/services/score/`, `namespace score`.
       position.
 - [ ] 6.4 Import lyrics with verse number, syllabic position, text, and extend,
       attaching each syllable to the correct note.
-- [ ] 6.5 Add `tests/MusicXmlAttributeTests.cpp` and
-      `tests/MusicXmlLyricTests.cpp` covering mid-score clef, key, and time
+- [ ] 6.5 Add `tests/services/score/musicxml/MusicXmlAttributeTests.cpp` and
+      `tests/services/score/musicxml/MusicXmlLyricTests.cpp` covering mid-score clef, key, and time
       changes, conflicting tempo sources, dynamics placement, multiple verses,
       a melisma, and a syllable on a chord.
 
@@ -184,7 +184,7 @@ All headers in `src/services/score/`, `namespace score`.
       occurrence count, not once per occurrence.
 - [ ] 7.3 Confirm no unsupported or unrecognised content can turn a successful
       import into a failure.
-- [ ] 7.4 Add `tests/MusicXmlDiagnosticsTests.cpp` covering diagnostic
+- [ ] 7.4 Add `tests/services/score/musicxml/MusicXmlDiagnosticsTests.cpp` covering diagnostic
       locations for a per-measure problem, a non-numeric measure number, a
       document-level problem with no location, aggregation of a repeated
       unrecognised element, and an import that succeeds despite dropped
@@ -204,10 +204,10 @@ All headers in `src/services/score/`, `namespace score`.
 - [ ] 8.3 Wire `tests/resources/musicxml/` into the test target as a
       `PRACTICE_TAKES_TEST_RESOURCES_DIR` compile definition, following the
       `PRACTICE_TAKES_SOURCE_DIR` precedent on the app target.
-- [ ] 8.4 Add `tests/MusicXmlCorpusTests.cpp` asserting each file's part count,
+- [ ] 8.4 Add `tests/services/score/musicxml/MusicXmlCorpusTests.cpp` asserting each file's part count,
       measure count, total musical length, and diagnostic count, so a change in
       conversion fails rather than passing silently.
-- [ ] 8.5 State plainly at the top of `MusicXmlCorpusTests.cpp` that the corpus
+- [ ] 8.5 State plainly at the top of `tests/services/score/musicxml/MusicXmlCorpusTests.cpp` that the corpus
       is **MuseScore exports only**, so nobody reads "real-score coverage" as
       cross-dialect coverage. Finale's divisions and voice numbering differ, and
       Sibelius emits far more layout elements; neither is exercised here.

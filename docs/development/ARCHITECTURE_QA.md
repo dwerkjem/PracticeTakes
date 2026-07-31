@@ -62,7 +62,7 @@ touches ownership/lifetime does.
       separated from JUCE `Component`/UI code so it can be unit tested
       without a display — e.g. `ui/workspace/model/WorkspaceLayoutState.h`
       has no JUCE dependency and is covered by
-      `tests/WorkspaceLayoutStateTests.cpp`.
+      `tests/application/shell/ui/workspace/model/WorkspaceLayoutStateTests.cpp`.
       New non-trivial logic should follow the same split rather than being
       embedded directly in a `Component` subclass.
 - [ ] A grep for a removed/renamed member or type covers the whole `src/`

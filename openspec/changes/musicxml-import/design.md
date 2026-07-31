@@ -209,9 +209,10 @@ decision is harder to revisit because it defines what the test suite asserts.
 ### Decision 6 — Test fixtures for real scores, and their licensing
 
 **Question.** #31's first acceptance criterion is that "representative vocal and
-piano scores import consistently". That needs real files. `tests/` is currently
-flat, has no resource directory, and every existing test that needs a file
-creates it at runtime in the temp directory.
+piano scores import consistently". That needs real files. `tests/` was flat when
+this was written and has since been reorganised to mirror `src/`, but it still
+has no resource directory, and every existing test that needs a file creates it
+at runtime in the temp directory.
 
 **Options.**
 
@@ -348,8 +349,8 @@ decision 5 did not.
 
 Practice Takes is a C++20 / JUCE 8 desktop application with a single
 `CMakeLists.txt` that lists every source file explicitly, Catch2 v3 tests in a
-flat `tests/` directory, and a hard rule that nothing reachable from the audio
-callback may allocate, lock, block, log, or touch files. There is no notation,
+`tests/` tree that mirrors `src/`, and a hard rule that nothing reachable from
+the audio callback may allocate, lock, block, log, or touch files. There is no notation,
 score, or MIDI code of any kind. The application's only structured music data is
 a fractional MIDI-note value produced by `PitchDetector` from live microphone
 input.

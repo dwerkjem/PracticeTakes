@@ -167,14 +167,28 @@ checklist version of these rules.
 Pure logic (state machines, layout trees, policy decisions) is deliberately
 split out of JUCE `Component` classes so it can be unit tested without a
 display — e.g. `ui/workspace/model/WorkspaceLayoutState.h` has no JUCE
-dependency and is covered by `tests/WorkspaceLayoutStateTests.cpp`. Follow
-this split for new non-trivial logic rather than embedding it directly in a
-`Component` subclass. Roughly a third of `src/` (the JUCE `Component`-heavy
+dependency and is covered by
+`tests/application/shell/ui/workspace/model/WorkspaceLayoutStateTests.cpp`.
+Follow this split for new non-trivial logic rather than embedding it directly
+in a `Component` subclass. Roughly a third of `src/` (the JUCE `Component`-heavy
 files: `AudioInputService.cpp`, `FeedbackComponent.cpp`, `TunerComponent`,
 `SpectrogramComponent`, `MainComponent*`) is currently outside
 `PracticeTakesTests` for this reason — see
 `docs/development/QA_STRATEGY.md` area 9 before assuming a change there is
 covered.
+
+### Test layout
+
+`tests/` mirrors `src/`, so a test's path names the source directory it
+covers: `src/services/score/TempoMap.h` is tested by
+`tests/services/score/TempoMapTests.cpp`. Put a new test beside the mirror of
+the file it exercises rather than at the top level, and add its path to
+`add_executable(PracticeTakesTests ...)` in `CMakeLists.txt`.
+
+Both `src/` and `tests/` are on the test target's include path, so a test
+includes its subject as `"services/score/TempoMap.h"` and a shared fixture as
+`"support/BenchmarkFakes.h"`, whatever depth it sits at. `tests/support/` holds
+fixtures shared across areas and is the one directory that mirrors nothing.
 
 ### Version
 
