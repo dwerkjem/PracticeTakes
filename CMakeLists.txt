@@ -246,6 +246,16 @@ target_sources(PracticeTakes
         src/services/audio/AudioInputService.h
         src/services/audio/AudioRecoveryPolicy.h
         src/services/audio/AudioSampleFifo.h
+        src/services/score/Diagnostic.h
+        src/services/score/LyricSyllable.h
+        src/services/score/Measure.h
+        src/services/score/MusicalTime.h
+        src/services/score/Pitch.h
+        src/services/score/Score.h
+        src/services/score/ScoreAttributes.h
+        src/services/score/ScoreEvent.h
+        src/services/score/TempoMap.cpp
+        src/services/score/TempoMap.h
 )
 
 target_compile_definitions(PracticeTakes
@@ -299,8 +309,12 @@ if(BUILD_TESTING)
         tests/PerformanceLabControllerTests.cpp
         tests/PitchDetectorTests.cpp
         tests/PlatformProvenanceProviderTests.cpp
+        tests/MusicalTimeTests.cpp
+        tests/PitchTests.cpp
         tests/RealTimeEventCaptureTests.cpp
+        tests/ScoreModelTests.cpp
         tests/SettingsPersistenceTests.cpp
+        tests/TempoMapTests.cpp
         tests/SettingsTransferCodecTests.cpp
         tests/StrategyRegistryTests.cpp
         tests/SustainedAudioAnalysisScenarioTests.cpp
@@ -338,6 +352,7 @@ if(BUILD_TESTING)
         src/features/performance/SustainedAudioAnalysisScenario.cpp
         src/features/performance/StrategyRegistry.cpp
         src/features/performance/TrialAggregator.cpp
+        src/services/score/TempoMap.cpp
     )
 
     target_include_directories(PracticeTakesTests
