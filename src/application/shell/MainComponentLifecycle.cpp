@@ -14,6 +14,48 @@ namespace
 {
 constexpr int microphoneWarningWidth = 470;
 constexpr int microphoneWarningHeight = 118;
+
+juce::String settingsFolderName()
+{
+#if JUCE_LINUX || JUCE_BSD
+    // PropertiesFile puts Linux settings straight under $HOME, which leaves a
+    // visible folder among the user's own directories. An absolute folderName
+    // overrides that, so resolve the XDG config location instead.
+    return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+        .getChildFile("PracticeTakes")
+        .getFullPathName();
+#else
+    return "PracticeTakes";
+#endif
+}
+
+void migrateLegacySettingsFile(const juce::File& destination)
+{
+#if JUCE_LINUX || JUCE_BSD
+    if (destination.existsAsFile())
+    {
+        return;
+    }
+
+    const auto legacyFolder =
+        juce::File::getSpecialLocation(juce::File::userHomeDirectory).getChildFile("PracticeTakes");
+    const auto legacyFile = legacyFolder.getChildFile("PracticeTakes.settings");
+
+    if (!legacyFile.existsAsFile() || !destination.getParentDirectory().createDirectory().wasOk())
+    {
+        return;
+    }
+
+    if (legacyFile.moveFileTo(destination))
+    {
+        // Removes the directory only when it is empty, so anything else the
+        // user kept there survives.
+        legacyFolder.deleteFile();
+    }
+#else
+    juce::ignoreUnused(destination);
+#endif
+}
 } // namespace
 
 MainComponent::MainComponent(bool muteMicrophoneForSession)
@@ -25,11 +67,12 @@ MainComponent::MainComponent(bool muteMicrophoneForSession)
     juce::PropertiesFile::Options storageOptions;
     storageOptions.applicationName = "PracticeTakes";
     storageOptions.filenameSuffix = ".settings";
-    storageOptions.folderName = "PracticeTakes";
+    storageOptions.folderName = settingsFolderName();
     storageOptions.osxLibrarySubFolder = "Application Support";
     storageOptions.commonToAllUsers = false;
     storageOptions.millisecondsBeforeSaving = -1;
     storageOptions.storageFormat = juce::PropertiesFile::storeAsXML;
+    migrateLegacySettingsFile(storageOptions.getDefaultFile());
     applicationProperties.setStorageParameters(storageOptions);
     loadSettings();
     persistedMicrophoneMuted = audioInputService.isMuted();
