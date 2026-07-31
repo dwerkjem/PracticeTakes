@@ -39,6 +39,12 @@ set(PRACTICE_TAKES_FEEDBACK_ENDPOINT
 option(PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
     "Enable the development-only Performance Lab window" OFF)
 
+# The manual GUI harness drives the application through this channel. It is a
+# control surface over the application's own state, so it must never be present
+# in a shipped build -- default off, and the release workflow does not set it.
+option(PRACTICE_TAKES_ENABLE_TEST_CONTROL
+    "Enable the development-only test control channel used by the manual GUI harness" OFF)
+
 if(PRACTICE_TAKES_FEEDBACK_ENDPOINT STREQUAL "")
     set(PRACTICE_TAKES_USE_CURL 0)
 else()
@@ -198,6 +204,8 @@ target_sources(PracticeTakes
         src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp
         src/application/testcontrol/ApprovedWindowStates.cpp
         src/application/testcontrol/ApprovedWindowStates.h
+        src/application/testcontrol/TestControlClicker.cpp
+        src/application/testcontrol/TestControlClicker.h
         src/application/testcontrol/TestControlCommand.cpp
         src/application/testcontrol/TestControlCommand.h
         src/application/testcontrol/TestControlSession.cpp
@@ -273,6 +281,7 @@ target_compile_definitions(PracticeTakes
         PRACTICE_TAKES_VERSION="${PROJECT_VERSION}"
         PRACTICE_TAKES_COMMIT="${PRACTICE_TAKES_COMMIT}"
         PRACTICE_TAKES_BUILD_TYPE="$<CONFIG>"
+        PRACTICE_TAKES_ENABLE_TEST_CONTROL=$<BOOL:${PRACTICE_TAKES_ENABLE_TEST_CONTROL}>
         PRACTICE_TAKES_INSTRUMENTATION_VERSION="1"
         PRACTICE_TAKES_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
         PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=$<BOOL:${PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB}>
@@ -313,6 +322,7 @@ if(BUILD_TESTING)
         tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp
         tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
         tests/application/testcontrol/ApprovedWindowStatesTests.cpp
+        tests/application/testcontrol/TestControlClickerTests.cpp
         tests/application/testcontrol/TestControlCommandTests.cpp
         tests/application/testcontrol/TestControlSessionTests.cpp
         tests/application/theme/ThemeContrastTests.cpp
@@ -346,6 +356,7 @@ if(BUILD_TESTING)
         src/application/configuration/SettingsTransferCodec.cpp
         src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
         src/application/testcontrol/ApprovedWindowStates.cpp
+        src/application/testcontrol/TestControlClicker.cpp
         src/application/testcontrol/TestControlCommand.cpp
         src/application/testcontrol/TestControlSession.cpp
         src/application/theme/Theme.cpp
