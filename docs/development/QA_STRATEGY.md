@@ -14,6 +14,10 @@ exist.
 
 ## Current state (baseline)
 
+> This section is the July 2026 snapshot that produced areas 1–6. It is left as
+> written; work completed since then is recorded in the areas below and in
+> [area 7](#7-database-backed-service-tests-and-python-test-execution).
+
 - **C++ formatting/linting**: `clang-format` on every local commit
   (pre-commit), `clang-tidy` full-repo check on every pull request
   ([cpp-quality-check.yml](../../.github/workflows/cpp-quality-check.yml)),
@@ -152,6 +156,91 @@ analyzer, or `AudioSampleFifo` push/pop under load.
 **Dependencies**: benefits from item 2 (cross-platform test execution)
 settling first so "which platform runs what" isn't being decided twice at
 once, but isn't strictly blocked by it.
+
+## 7. Database-backed service tests and Python test execution
+
+**Status**: done (2026-07-30, `close-highest-risk-test-gaps`).
+
+**Problem**: the two places a defect could ship with no test able to catch it.
+The feedback worker's suites ran against three hand-written fakes that
+dispatched on SQL *substring* matching, so no statement was ever parsed or
+executed and the seven files under `migrations/` were never applied — invalid
+SQL and schema drift were invisible. Separately, `scripts/` held 3,651 lines
+with one test file that no workflow and no pre-commit hook ever ran.
+
+**Outcome**:
+- `services/feedback-intake/test/support/database.ts` builds an in-memory
+  `node:sqlite` database from the real migration files and exposes the D1
+  surface the worker uses. All three fakes are gone.
+- `test/migrations.test.ts` applies the migration set and names any file that
+  fails.
+- `scripts/run_tests.py` plus `.github/workflows/python-check.yml` run the
+  Python suite on every pull request touching `scripts/`, and
+  `scripts/release/version.py` — which the release workflow depends on — now
+  has tests.
+
+## Follow-up test-coverage areas
+
+These were found during the same 2026-07-30 coverage review and deliberately
+left out of area 7. Each should become its own OpenSpec change.
+
+### 8. Coverage measurement
+
+**Problem**: nothing measures coverage in any language — no gcov/llvm-cov, no
+`vitest --coverage`, no Python coverage. Every figure in these areas had to be
+derived by hand.
+
+**Plan**: publish coverage as an informational CI artifact for all three
+languages first; only consider thresholds once a baseline exists.
+
+### 9. C++ code outside the test build
+
+**Problem**: `PracticeTakesTests` compiles 64 of 99 source files; roughly 9,000
+of 16,100 lines never enter the test binary. The largest untested units are
+`AudioInputService.cpp` (device lifecycle, gain, level metering, dropout
+accounting), `FeedbackComponent.cpp`, `TunerComponent`/`TunerDrawing`,
+`SpectrogramComponent`, and the `MainComponent*` shell files.
+
+**Plan**: extract the testable logic out of the JUCE components — the pattern
+the workspace model and settings codecs already follow — rather than trying to
+instantiate components headlessly. Start with `AudioInputService`, which is the
+highest-value target and closest to pure logic already.
+
+### 10. Untested worker paths
+
+**Problem**: `docker-server.ts` (165 lines, including the `authorized()` bearer
+check and the `sameOriginRequest()` CSRF guard — the self-hosted deployment
+path), the `scheduled` cron handler in `index.ts`, and the browser assets
+`dashboard.js`/`audit.js` (431 lines) have no tests. Area 7's database helper
+now makes the first two straightforward.
+
+### 11. Roadmap tooling tests
+
+**Problem**: `scripts/practice_takes_roadmap` is 2,046 lines that call the
+GitHub API and mutate persisted state, with no tests. Area 7 established where
+Python tests live and how CI runs them; this fills in the largest gap.
+
+### 12. Feedback wire-contract conformance
+
+**Problem**: `contracts/feedback/v1.schema.json` is documentation only. The C++
+client hand-builds the JSON, the worker hand-validates it, and no test on
+either side checks either against the schema, so the two can drift apart while
+both remain internally consistent.
+
+### 13. Concurrency and real-time verification
+
+**Problem**: `AudioSampleFifo` is a lock-free single-producer/single-consumer
+ring, and every one of its tests is single-threaded. There is no ASan/UBSan/TSan
+build in CI, and the audio-thread no-allocation rules asserted in
+[Audio-thread safety](performance-audio-thread-safety.md) are unverified.
+
+**Plan**: add a sanitizer build to CI plus genuinely concurrent producer and
+consumer tests for the FIFO.
+
+### 14. macOS test execution
+
+**Problem**: both macOS legs of `build-multiplatform.yml` still set
+`run_tests: false` — the deferred remainder of area 2.
 
 ## Suggested sequencing
 
