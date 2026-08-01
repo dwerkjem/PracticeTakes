@@ -402,6 +402,31 @@ and none changes the application or the existing test suite.
   `PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB` precedent, so it is absent from
   release builds.
 
+- **Where do manual run records live, and in what format?** Resolved
+  2026-08-01: `docs/development/manual-runs/`, one dated pair of files per run —
+  JSON and rendered Markdown side by side. A directory rather than one appended
+  log, because a log conflicts on every concurrent edit and is harder to diff.
+  Both forms because they answer different questions: JSON lets two runs be
+  compared question by question, Markdown is what a person reads. The mode is in
+  the filename so a directory listing distinguishes a quick run from a release
+  check without opening anything.
+
+- **Which surfaces belong in quick mode?** Resolved 2026-08-01: the shell with
+  no tool open, the tuner docked with live input, and the settings window. The
+  smallest set that answers "does it still work" — the shell renders, a tool
+  runs against real audio, and the most-used secondary window opens. A test
+  asserts quick mode stays at five surfaces or fewer, because a quick mode that
+  grows becomes a second full mode.
+
+- **How does the harness take a Python dependency?** Resolved 2026-08-01: a root
+  `pyproject.toml` declaring `textual` under an optional `manual-gui` extra,
+  with `dependencies` deliberately empty. Forward-compatible with
+  `adopt-uv-for-python`, which plans `uv add` against exactly this file, rather
+  than a competing mechanism. The empty core is the enforcement: the scripts
+  `pre-commit` invokes and everything CI runs on the preinstalled interpreter
+  stay standard-library only, and the harness's tests skip its TUI cases when
+  Textual is absent so the ordinary Python suite needs nothing installed.
+
 ## Open Questions
 
 - **Where do manual run records live, and in what format?** A

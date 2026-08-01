@@ -17,6 +17,7 @@ broader music-practice and digital-audio workstation application.
 - [Design and architecture review checklist](ARCHITECTURE_QA.md) — what reviewers check on pull requests beyond formatting/linting
 - [QA strategy](QA_STRATEGY.md) — the current CI/testing gap analysis and plan for closing it
 - [Test layout](TEST_LAYOUT.md) — how `tests/` mirrors `src/`, where a new test goes, and what sits outside the mirror
+- [Manual GUI verification](MANUAL_GUI_VERIFICATION.md) — the interactive harness that drives the app, asks about each surface, and records the run
 - [Code style](CODE_STYLE.md) — readability and real-time audio guidelines
 - [Code quality](QUALITY.md) — clang-format, clang-tidy, pre-commit, and VS Code diagnostics
 - [SOPS secrets](SECRETS.md) — encrypted secret mirrors, synchronization, and conflict resolution

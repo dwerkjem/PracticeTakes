@@ -22,6 +22,8 @@ All build, architecture, and quality documentation lives under
   gap analysis and plan
 - [Test layout](docs/development/TEST_LAYOUT.md) — how `tests/` mirrors `src/`,
   where a new test goes, and what sits outside the mirror
+- [Manual GUI verification](docs/development/MANUAL_GUI_VERIFICATION.md) —
+  the interactive harness run before a release
 - [Code style](docs/development/CODE_STYLE.md) — readability and real-time
   audio guidelines
 - [Code quality](docs/development/QUALITY.md) — clang-format, clang-tidy,

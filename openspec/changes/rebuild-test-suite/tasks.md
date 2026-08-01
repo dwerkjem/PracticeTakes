@@ -1,6 +1,6 @@
 ## 0. Decisions before the affected steps
 
-- [ ] 0.1 Resolve the remaining five items in `design.md` § "Open Questions":
+- [ ] 0.1 Resolve the remaining two items in `design.md` § "Open Questions":
       where manual run records live and in what format, which surfaces belong in
       quick mode, whether coverage runs per-PR or only on `main`, the maximum
       supported number of simultaneous tool consumers, and whether the soak test
@@ -100,46 +100,46 @@ start 4.2 until that is settled.
 - [x] 4.1f Add the launch flag that starts the application directly in an
       approved state, so a surface can be reached without replaying a click
       sequence.
-- [ ] 4.2 Add Textual as a Python dependency for the harness only, and confirm
+- [x] 4.2 Add Textual as a Python dependency for the harness only, and confirm
       the three `pre-commit` scripts (`secrets_manager.py` twice,
       `run_clang_format.py`) and everything CI runs remain stdlib-only.
-- [ ] 4.3 Define the declarative surface format: how to reach a surface, its
+- [x] 4.3 Define the declarative surface format: how to reach a surface, its
       three fixed axes, and any surface-specific extra questions. Surfaces are
       data, not code, so adding one is not a harness change.
-- [ ] 4.4 Define the surface set, covering at minimum microphone device
+- [x] 4.4 Define the surface set, covering at minimum microphone device
       selection and switching, global mute and gain, each analysis tool opening
       and showing live input, moving a tool between docked/floating/tabbed
       presentation, workspace layout surviving a restart, and the settings
       import/export round trip.
-- [ ] 4.5 Mark which surfaces belong to quick mode — the smallest set that
+- [x] 4.5 Mark which surfaces belong to quick mode — the smallest set that
       answers "does it still work" (see `design.md` § Open Questions) — and
       confirm quick mode is a strict subset of full mode.
-- [ ] 4.6 Build the TUI: present each surface's three fixed axes as
+- [x] 4.6 Build the TUI: present each surface's three fixed axes as
       pass/fail/skip, then its extras, allow a free-text note on any answer, and
       require one on any failure.
-- [ ] 4.7 Build the driving layer per 4.1, launching the application and
+- [x] 4.7 Build the driving layer per 4.1, launching the application and
       advancing between surfaces without tester intervention.
-- [ ] 4.8 Record an unreachable surface as a failure of that surface with the
+- [x] 4.8 Record an unreachable surface as a failure of that surface with the
       reason, and continue the run, rather than skipping it silently.
-- [ ] 4.9 Add the `--full` and `--quick` modes and record which was used, so a
+- [x] 4.9 Add the `--full` and `--quick` modes and record which was used, so a
       quick run cannot be read as a release check.
-- [ ] 4.10 Add the optional window-geometry flag repeating each surface at a
+- [x] 4.10 Add the optional window-geometry flag repeating each surface at a
       constrained size, the default, and maximised; record which geometry each
       answer applied to, and state in the record when only the default was
       covered.
-- [ ] 4.11 Write the run record automatically on completion — date, commit,
+- [x] 4.11 Write the run record automatically on completion — date, commit,
       platform, audio device, mode, geometry flag, and every answer with notes —
       in the format and location settled in 0.1.
-- [ ] 4.12 Preserve answers and mark the run incomplete when a run is
+- [x] 4.12 Preserve answers and mark the run incomplete when a run is
       interrupted, so a long full run is not lost and an incomplete run is never
       mistaken for a passing one.
-- [ ] 4.13 Add tests for the parts that do not need a display: surface
+- [x] 4.13 Add tests for the parts that do not need a display: surface
       definition parsing, mode subsetting, geometry expansion, record writing,
       and incomplete-run marking.
 - [ ] 4.14 Run the harness once in quick mode and once in full mode against a
       real device and display, and commit both records, so the format is proven
       rather than assumed.
-- [ ] 4.15 Document that any question covered by a later automated test must be
+- [x] 4.15 Document that any question covered by a later automated test must be
       removed from the harness in the same change that adds the test.
 
 ## 5. Release gate on manual verification
