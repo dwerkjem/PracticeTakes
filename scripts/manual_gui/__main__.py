@@ -161,13 +161,29 @@ def main(argv: list[str] | None = None) -> int:
     try:
         from app import VerificationApp
     except ImportError:
+        # Naming the install command alone is not enough: `uv sync` installs
+        # into .venv, and a bare `python3` does not look there, so following
+        # only half of this lands you right back here.
+        interpreter = Path(sys.executable)
+        in_venv = (REPOSITORY_ROOT / ".venv") in interpreter.parents
+
         print(
-            "Textual is not installed. Install the harness's dependencies with\n"
-            "  uv sync --extra manual-gui\n"
-            "or\n"
-            "  python3 -m pip install 'textual>=8.2,<9'",
+            f"Textual is not installed for this interpreter ({interpreter}).\n"
+            f"\n"
+            f"Run the harness through uv, which installs and runs in one step:\n"
+            f"\n"
+            f"    uv run scripts/manual_gui --quick\n",
             file=sys.stderr,
         )
+
+        if not in_venv and (REPOSITORY_ROOT / ".venv").is_dir():
+            print(
+                f"There is already a .venv here; you are just not using it. "
+                f"Either use the command above, or:\n"
+                f"\n"
+                f"    {REPOSITORY_ROOT / '.venv' / 'bin' / 'python3'} scripts/manual_gui --quick\n",
+                file=sys.stderr,
+            )
 
         return 1
 

@@ -18,14 +18,24 @@ cmake -S . -B build-tc -DCMAKE_BUILD_TYPE=Debug -DPRACTICE_TAKES_ENABLE_TEST_CON
 cmake --build build-tc --target PracticeTakes --parallel
 ```
 
-Then, with the harness's dependency installed (`uv sync --extra manual-gui`, or
-`pip install 'textual>=8.2,<9'`):
+Then run it through `uv`, which installs the harness's dependency and runs it in
+one step:
 
 ```bash
-python3 scripts/manual_gui --quick     # does it still work?
-python3 scripts/manual_gui --full      # before a release
-python3 scripts/manual_gui --full --geometry-sweep
-python3 scripts/manual_gui --check     # no prompts; proves the harness works
+uv run scripts/manual_gui --quick     # does it still work?
+uv run scripts/manual_gui --full      # before a release
+uv run scripts/manual_gui --full --geometry-sweep
+uv run scripts/manual_gui --check     # no prompts; proves the harness works
+```
+
+**Use `uv run`, not a bare `python3`.** `uv sync` installs into `.venv`, and a
+bare `python3` does not look there — so installing the dependency and then
+running with `python3` fails with the same "Textual is not installed" message
+you were trying to fix. If you would rather not use `uv run`, call the
+interpreter in the virtual environment directly:
+
+```bash
+.venv/bin/python3 scripts/manual_gui --quick
 ```
 
 `--check` launches the application, enters every surface, and exits. It asks
