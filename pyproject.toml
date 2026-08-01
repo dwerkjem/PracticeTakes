@@ -25,11 +25,17 @@ ui-test = "manual_gui.__main__:main"
 manual-gui = ["textual>=8.2,<9"]
 
 [project.optional-dependencies]
-# Coverage reporting. CI installs these; the scripts degrade with a clear
-# message when they are absent rather than failing a run over a report. Kept as
-# an extra rather than a default group because a developer does not need them
-# to work on the application.
-coverage = ["gcovr>=8,<9", "coverage>=7"]
+# Pinned developer tooling. CI installs what it needs directly; the scripts
+# degrade with a clear message when a tool is absent rather than failing a run
+# over a report. Kept as an extra rather than a default group because none of
+# it is needed to work on the application.
+#
+# clang-format is pinned to the exact version the CI runner has. The two drifted
+# once already and it cost a red build: clang-format 21 accepted a lambda
+# wrapping that 18 rejects, so the tree was clean locally and broken in CI.
+# scripts/quality/run_clang_format.py warns when the version in use differs from
+# this pin, so the next drift is visible rather than mysterious.
+coverage = ["gcovr>=8,<9", "coverage>=7", "clang-format==18.1.8"]
 
 [tool.uv]
 default-groups = ["manual-gui"]
