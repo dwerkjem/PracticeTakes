@@ -225,7 +225,9 @@ def main(argv: list[str] | None = None) -> int:
                 if not reply.success:
                     return reply.error
 
-                if arguments.geometry_sweep:
+                # A surface that owns its geometry keeps whatever the state
+                # established; resizing it would undo the thing being verified.
+                if arguments.geometry_sweep and not surface.fixed_geometry:
                     return driver.set_geometry(geometry)
 
                 return ""

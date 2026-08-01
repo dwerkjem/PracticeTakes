@@ -72,6 +72,13 @@ class Surface:
     # not simulate it.
     instruction: str = ""
 
+    # This surface *is about* its window size, so the geometry sweep must leave
+    # it alone. Sweeping it would resize the window to each geometry in turn and
+    # so destroy the very thing under test -- which is exactly what happened:
+    # narrow-window was reported "not narrow" and fullscreen "not fullscreen",
+    # because the sweep set them both back to the default size.
+    fixed_geometry: bool = False
+
 
 # The surface set. Ordered as a run presents them: cheapest and most
 # fundamental first, so a broken build fails early rather than after a tester
@@ -147,6 +154,7 @@ SURFACES: tuple[Surface, ...] = (
         state="narrow-window",
         title="A narrow window with the collapsed menu",
         modes=frozenset({FULL}),
+        fixed_geometry=True,
         extras=(
             Question("hamburger", "Does the collapsed menu open and list the same actions?"),
         ),
@@ -155,6 +163,7 @@ SURFACES: tuple[Surface, ...] = (
         state="fullscreen",
         title="Fullscreen",
         modes=frozenset({FULL}),
+        fixed_geometry=True,
         extras=(Question("escape", "Does Escape or F11 leave fullscreen?"),),
     ),
     Surface(
@@ -246,12 +255,24 @@ def geometries_for(sweep: bool) -> tuple[str, ...]:
     return SWEEP_GEOMETRIES if sweep else (DEFAULT_GEOMETRY,)
 
 
+def geometries_for_surface(surface: Surface, sweep: bool) -> tuple[str, ...]:
+    """Geometries a particular surface is presented at.
+
+    A surface that is about its own window size is presented once regardless of
+    the sweep, because resizing it would destroy what is under test.
+    """
+    if surface.fixed_geometry:
+        return (DEFAULT_GEOMETRY,)
+
+    return geometries_for(sweep)
+
+
 def plan(mode: str, sweep: bool) -> tuple[tuple[Surface, str], ...]:
     """The full ordered list of (surface, geometry) pairs a run will present."""
     return tuple(
         (surface, geometry)
         for surface in surfaces_for_mode(mode)
-        for geometry in geometries_for(sweep)
+        for geometry in geometries_for_surface(surface, sweep)
     )
 
 

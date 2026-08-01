@@ -58,6 +58,8 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
             ? WorkspaceToolState::Presentation::floating
             : WorkspaceToolState::Presentation::docked;
 
+    std::vector<ToolType> opened;
+
     for (const std::string& name : state.tools)
     {
         std::optional<ToolType> tool;
@@ -83,6 +85,7 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
         }
 
         openTool(*tool, presentation);
+        opened.push_back(*tool);
     }
 
     if (state.arrangement == WorkspaceArrangement::tabbed)
@@ -91,7 +94,20 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     }
     else if (state.arrangement == WorkspaceArrangement::split)
     {
-        setWorkspaceLayout(WorkspaceLayoutState::Layout::horizontal);
+        // openTool always inserts with DropZone::centre, which auto-tabs
+        // alongside whatever is already docked -- so two tools opened normally
+        // share a tab strip, and applyLayoutCommand(horizontal) only
+        // re-orients an *existing* split rather than creating one. Tiling has
+        // to be asked for explicitly, by placing each tool beside the previous.
+        for (std::size_t index = 1; index < opened.size(); ++index)
+        {
+            workspaceLayoutState.insert(
+                static_cast<WorkspaceLayoutState::Tool>(opened[index]),
+                static_cast<WorkspaceLayoutState::Tool>(opened[index - 1]),
+                WorkspaceLayoutState::DropZone::right);
+        }
+
+        rebuildWorkspaceContainer();
     }
 
     if (state.settingsOpen)

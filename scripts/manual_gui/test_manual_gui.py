@@ -60,11 +60,34 @@ class SurfaceListTests(unittest.TestCase):
         self.assertEqual(surfaces.geometries_for(False), (surfaces.DEFAULT_GEOMETRY,))
         self.assertEqual(len(surfaces.geometries_for(True)), 3)
 
-    def test_the_sweep_multiplies_the_plan(self) -> None:
+    def test_the_sweep_multiplies_all_but_the_exempt_surfaces(self) -> None:
         plain = surfaces.plan(surfaces.FULL, sweep=False)
         swept = surfaces.plan(surfaces.FULL, sweep=True)
 
-        self.assertEqual(len(swept), len(plain) * 3)
+        exempt = sum(1 for s in surfaces.surfaces_for_mode(surfaces.FULL) if s.fixed_geometry)
+
+        self.assertTrue(exempt)
+        self.assertEqual(len(swept), (len(plain) - exempt) * 3 + exempt)
+
+    def test_a_surface_about_its_own_size_is_never_swept(self) -> None:
+        """Resizing it would destroy the thing under test.
+
+        This is not hypothetical: the sweep reset narrow-window and fullscreen
+        to the default size, and a real run reported them "not narrow" and
+        "not fullscreen".
+        """
+        for surface in surfaces.SURFACES:
+            if surface.fixed_geometry:
+                with self.subTest(surface=surface.title):
+                    self.assertEqual(
+                        surfaces.geometries_for_surface(surface, sweep=True),
+                        (surfaces.DEFAULT_GEOMETRY,),
+                    )
+
+    def test_the_geometry_surfaces_are_the_exempt_ones(self) -> None:
+        exempt = {s.state for s in surfaces.SURFACES if s.fixed_geometry}
+
+        self.assertEqual(exempt, {"narrow-window", "fullscreen"})
 
     def test_the_plan_records_which_geometry_each_entry_is_for(self) -> None:
         for _, geometry in surfaces.plan(surfaces.QUICK, sweep=True):
