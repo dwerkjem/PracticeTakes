@@ -1,5 +1,7 @@
 #include "TestControlSession.h"
 
+#include <algorithm>
+
 namespace testcontrol
 {
 namespace
@@ -79,6 +81,23 @@ Response TestControlSession::handle(const Command& command)
             // Approved but not present -- the hamburger button in a wide
             // window, for instance. A real failure, not something to ignore.
             return failed("object '" + command.argument + "' is not available right now");
+        }
+
+        return succeeded();
+    }
+
+    case CommandKind::geometry:
+    {
+        const auto& names = approvedGeometryNames();
+
+        if (std::find(names.begin(), names.end(), command.argument) == names.end())
+        {
+            return failed("no approved geometry '" + command.argument + "'");
+        }
+
+        if (!target_.applyGeometry(command.argument))
+        {
+            return failed("could not apply geometry '" + command.argument + "'");
         }
 
         return succeeded();

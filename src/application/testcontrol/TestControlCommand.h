@@ -35,6 +35,15 @@ enum class CommandKind
     // synthesised; the object's own action is invoked directly.
     click,
 
+    // `geometry <name>` -- resize the window to a named geometry.
+    //
+    // Done through the application rather than by an external resize, because
+    // the window advertises a 980px minimum width and a window manager honours
+    // it. That is above the 900px threshold at which the title bar collapses,
+    // so an outside resize can never reach the collapsed menu; the application
+    // resizing itself can.
+    geometry,
+
     // `list-states` / `list-objects` -- discovery, so the harness can check the
     // vocabulary it expects still exists before relying on it.
     listStates,

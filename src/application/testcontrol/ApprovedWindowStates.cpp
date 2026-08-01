@@ -177,6 +177,13 @@ const ApprovedClickTarget* findApprovedClickTarget(const std::string& id)
     return findById(targets(), id);
 }
 
+const std::vector<std::string>& approvedGeometryNames()
+{
+    static const std::vector<std::string> names{"normal", "narrow", "maximised", "fullscreen"};
+
+    return names;
+}
+
 const std::vector<std::string>& knownToolNames()
 {
     static const std::vector<std::string> names{"tuner", "spectrogram", "harmonics"};

@@ -123,6 +123,15 @@ struct ApprovedClickTarget
 [[nodiscard]] const ApprovedWindowState* findApprovedWindowState(const std::string& id);
 [[nodiscard]] const ApprovedClickTarget* findApprovedClickTarget(const std::string& id);
 
+// Named geometries the `geometry` command accepts. A closed vocabulary for the
+// same reason states are: an unrecognised name is an error, not a guess.
+//
+// Deliberately applied by the application resizing itself. The window
+// advertises a 980px minimum width, which a window manager honours, and that is
+// above the 900px threshold at which the title bar collapses -- so an external
+// resize can never reach the collapsed menu.
+[[nodiscard]] const std::vector<std::string>& approvedGeometryNames();
+
 // Every tool name any approved state may reference. The glue maps these onto
 // ToolType, and the tests pin the two lists together -- ToolType itself cannot
 // be named here because it lives behind JuceHeader.

@@ -153,6 +153,59 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     return true;
 }
 
+bool MainComponent::applyTestControlGeometry(const std::string& geometry)
+{
+    auto* window = dynamic_cast<juce::ResizableWindow*>(getTopLevelComponent());
+
+    if (window == nullptr)
+    {
+        return false;
+    }
+
+    // setSize rather than an external resize. The window advertises a 980px
+    // minimum width via setResizeLimits and a window manager honours it, but
+    // that is above MainTitleBar's 900px collapse threshold -- so only the
+    // application resizing itself can reach the collapsed menu.
+    if (geometry == "normal")
+    {
+        window->setFullScreen(false);
+        window->setSize(1280, 800);
+
+        return true;
+    }
+
+    if (geometry == "narrow")
+    {
+        window->setFullScreen(false);
+        window->setSize(800, 600);
+
+        return true;
+    }
+
+    if (geometry == "maximised")
+    {
+        window->setFullScreen(false);
+
+        if (auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
+        {
+            window->setBounds(display->userArea);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    if (geometry == "fullscreen")
+    {
+        window->setFullScreen(true);
+
+        return true;
+    }
+
+    return false;
+}
+
 bool MainComponent::clickTestControlTarget(const std::string& id)
 {
     // Search from the window, not from this component: the title bar objects

@@ -32,6 +32,10 @@ class TestControlTarget
     // not something to paper over.
     [[nodiscard]] virtual bool clickTarget(const std::string& id) = 0;
 
+    // Resize the window to a named geometry. Returns false when the name is
+    // approved but could not be applied.
+    [[nodiscard]] virtual bool applyGeometry(const std::string& geometry) = 0;
+
     // The id of the state the application is currently in, or empty if it is
     // not in an approved state (at startup, or after a click changed things).
     [[nodiscard]] virtual std::string currentStateId() const = 0;

@@ -16,11 +16,13 @@ struct FakeTarget : TestControlTarget
 {
     std::vector<std::string> appliedStates;
     std::vector<std::string> clicked;
+    std::vector<std::string> geometries;
     std::string current;
     bool quitRequested = false;
 
     bool refuseState = false;
     bool refuseClick = false;
+    bool refuseGeometry = false;
 
     bool applyState(const ApprovedWindowState& state) override
     {
@@ -43,6 +45,18 @@ struct FakeTarget : TestControlTarget
         }
 
         clicked.push_back(id);
+
+        return true;
+    }
+
+    bool applyGeometry(const std::string& geometry) override
+    {
+        if (refuseGeometry)
+        {
+            return false;
+        }
+
+        geometries.push_back(geometry);
 
         return true;
     }
@@ -294,5 +308,55 @@ TEST_CASE("every reply ends with a verdict line", "[testcontrol][session]")
             rendered.find("error ") != std::string::npos;
 
         CHECK(endsWithVerdict);
+    }
+}
+
+TEST_CASE("an approved geometry is applied", "[testcontrol][session]")
+{
+    FakeTarget target;
+    TestControlSession session{target};
+
+    const Response response = session.handleLine("geometry narrow");
+
+    CHECK(response.success);
+    REQUIRE(target.geometries.size() == 1);
+    CHECK(target.geometries.front() == "narrow");
+}
+
+TEST_CASE("an unapproved geometry is refused without touching the app", "[testcontrol][session]")
+{
+    FakeTarget target;
+    TestControlSession session{target};
+
+    const Response response = session.handleLine("geometry enormous");
+
+    CHECK_FALSE(response.success);
+    CHECK(target.geometries.empty());
+}
+
+TEST_CASE("a geometry that cannot be applied is reported", "[testcontrol][session]")
+{
+    FakeTarget target;
+    target.refuseGeometry = true;
+
+    TestControlSession session{target};
+
+    const Response response = session.handleLine("geometry narrow");
+
+    CHECK_FALSE(response.success);
+    CHECK_FALSE(response.error.empty());
+}
+
+TEST_CASE("every approved geometry name is accepted", "[testcontrol][session]")
+{
+    // The harness maps its sweep names onto these, so a rename here breaks the
+    // sweep silently unless something pins them.
+    FakeTarget target;
+    TestControlSession session{target};
+
+    for (const std::string& name : approvedGeometryNames())
+    {
+        INFO("geometry " << name);
+        CHECK(session.handleLine("geometry " + name).success);
     }
 }

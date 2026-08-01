@@ -405,6 +405,11 @@ class PracticeTakesApplication final : public juce::JUCEApplication
                         { return content != nullptr && content->applyTestControlState(approved); };
                         testControlTarget.onClick = [this](const std::string& id)
                         { return content != nullptr && content->clickTestControlTarget(id); };
+                        testControlTarget.onGeometry = [this](const std::string& geometry)
+                        {
+                            return content != nullptr &&
+                                   content->applyTestControlGeometry(geometry);
+                        };
                         testControlTarget.onCurrentStateId = [this]
                         {
                             return content != nullptr ? content->currentTestControlStateId()

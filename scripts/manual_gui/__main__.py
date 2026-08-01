@@ -22,13 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import record  # noqa: E402
 import session as session_module  # noqa: E402
 import surfaces  # noqa: E402
-from driver import (  # noqa: E402
-    ApplicationDriver,
-    ChannelError,
-    build_window_control,
-    missing_states,
-    set_geometry,
-)
+from driver import ApplicationDriver, ChannelError, missing_states  # noqa: E402
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_EXECUTABLE = REPOSITORY_ROOT / "build-tc" / "bin" / "PracticeTakes"
@@ -187,18 +181,6 @@ def main(argv: list[str] | None = None) -> int:
 
         return 1
 
-    window_control = None
-
-    if arguments.geometry_sweep:
-        try:
-            window_control = build_window_control(
-                REPOSITORY_ROOT, REPOSITORY_ROOT / "build" / "manual-gui" / "window_control"
-            )
-        except ChannelError as error:
-            print(f"Cannot run the geometry sweep: {error}", file=sys.stderr)
-
-            return 1
-
     driver = ApplicationDriver(arguments.executable)
 
     try:
@@ -243,13 +225,8 @@ def main(argv: list[str] | None = None) -> int:
                 if not reply.success:
                     return reply.error
 
-                if arguments.geometry_sweep and window_control is not None:
-                    pid = driver.pid
-
-                    if pid is None:
-                        return "the application is not running"
-
-                    return set_geometry(window_control, pid, geometry)
+                if arguments.geometry_sweep:
+                    return driver.set_geometry(geometry)
 
                 return ""
             except ChannelError as error:

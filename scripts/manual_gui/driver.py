@@ -157,63 +157,30 @@ class ApplicationDriver:
     def pid(self) -> int | None:
         return self._process.pid if self._process is not None else None
 
+    def set_geometry(self, geometry: str) -> str:
+        """Apply a sweep geometry. Returns a reason on failure, empty on success."""
+        name = GEOMETRY_NAMES.get(geometry)
 
-# Window geometry is done with the repository's existing X11 helper rather than
-# through the control channel. Resizing a window is not input synthesis -- no
-# pointer moves and no key is faked -- and window_control already does exactly
-# this by PID for the golden-image harness.
-WINDOW_CONTROL_SOURCE = Path("scripts/quality/ui-validation/window_control.cpp")
+        if name is None:
+            return f"unknown geometry '{geometry}'"
 
-# Sizes the sweep presents. The constrained one is below MainTitleBar's 900px
-# threshold, so it is also what makes the collapsed menu appear.
-GEOMETRY_SIZES = {
-    "default": ("resize", "1280", "800"),
-    "constrained": ("resize", "800", "600"),
-    "maximised": ("maximize",),
+        reply = self.send(f"geometry {name}")
+
+        return "" if reply.success else reply.error
+
+
+# Geometry names the application accepts, mapped from the sweep's names.
+#
+# Applied through the control channel rather than by an external resize. The
+# window advertises a 980px minimum width and a window manager honours it, but
+# that is above the 900px threshold at which the title bar collapses -- so an
+# outside resize could never reach the collapsed menu. Measured: an external
+# resize to 800x600 left the window at 1280x800.
+GEOMETRY_NAMES = {
+    "default": "normal",
+    "constrained": "narrow",
+    "maximised": "maximised",
 }
-
-
-def build_window_control(repository_root: Path, output: Path) -> Path:
-    """Compile the X11 helper if it is not already built."""
-    if output.is_file():
-        return output
-
-    source = repository_root / WINDOW_CONTROL_SOURCE
-
-    if not source.is_file():
-        raise ChannelError(f"No window_control source at {source}")
-
-    output.parent.mkdir(parents=True, exist_ok=True)
-
-    completed = subprocess.run(
-        ["g++", "-std=c++20", "-O2", str(source), "-o", str(output), "-lX11"],
-        capture_output=True,
-        text=True,
-    )
-
-    if completed.returncode != 0:
-        raise ChannelError(f"Could not build window_control: {completed.stderr.strip()}")
-
-    return output
-
-
-def set_geometry(window_control: Path, pid: int, geometry: str) -> str:
-    """Apply a named geometry. Returns a reason on failure, empty on success."""
-    arguments = GEOMETRY_SIZES.get(geometry)
-
-    if arguments is None:
-        return f"unknown geometry '{geometry}'"
-
-    completed = subprocess.run(
-        [str(window_control), str(pid), *arguments],
-        capture_output=True,
-        text=True,
-    )
-
-    if completed.returncode != 0:
-        return f"window_control failed: {completed.stderr.strip() or completed.returncode}"
-
-    return ""
 
 
 def missing_states(available: list[str], required: frozenset[str]) -> list[str]:

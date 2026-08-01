@@ -113,6 +113,11 @@ Command parseCommand(const std::string& line)
         return withArgument(CommandKind::click, tokens, "object id");
     }
 
+    if (verb == "geometry")
+    {
+        return withArgument(CommandKind::geometry, tokens, "geometry name");
+    }
+
     if (verb == "list-states")
     {
         return withoutArguments(CommandKind::listStates, tokens);
@@ -146,6 +151,8 @@ std::string commandVerb(CommandKind kind)
         return "open-state";
     case CommandKind::click:
         return "click";
+    case CommandKind::geometry:
+        return "geometry";
     case CommandKind::listStates:
         return "list-states";
     case CommandKind::listObjects:
