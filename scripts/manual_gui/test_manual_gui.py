@@ -342,6 +342,49 @@ class SessionTests(unittest.TestCase):
         self.assertFalse(active.finished)
         self.assertIsNotNone(active.current())
 
+    def test_an_area_pass_answers_every_question_on_the_surface(self) -> None:
+        """The common case: you look, nothing is wrong, one keystroke."""
+        active = self.make_session()
+        surface = active.current().surface
+        expected = len(surfaces.questions_for(surface))
+
+        self.assertEqual(active.answer_rest_of_surface(record.PASS), [])
+        self.assertEqual(len(active.run.answers), expected)
+        self.assertTrue(all(a.verdict == record.PASS for a in active.run.answers))
+
+    def test_an_area_pass_stops_at_the_surface_boundary(self) -> None:
+        active = self.make_session()
+        first = active.current().surface
+
+        active.answer_rest_of_surface(record.PASS)
+
+        self.assertIsNot(active.current().surface, first)
+
+    def test_an_area_skip_records_skips_not_passes(self) -> None:
+        """An area you did not examine must not be recorded as verified."""
+        active = self.make_session()
+
+        active.answer_rest_of_surface(record.SKIP)
+
+        self.assertTrue(all(a.verdict == record.SKIP for a in active.run.answers))
+
+    def test_an_area_fail_without_a_note_records_nothing(self) -> None:
+        """It stops at the offending question rather than half-applying."""
+        active = self.make_session()
+
+        problems = active.answer_rest_of_surface(record.FAIL)
+
+        self.assertTrue(problems)
+        self.assertEqual(len(active.run.answers), 0)
+
+    def test_an_area_fail_with_a_note_applies_to_the_whole_surface(self) -> None:
+        active = self.make_session()
+        surface = active.current().surface
+        expected = len(surfaces.questions_for(surface))
+
+        self.assertEqual(active.answer_rest_of_surface(record.FAIL, "all broken"), [])
+        self.assertEqual(len(active.run.failures()), expected)
+
     def test_answering_past_the_end_is_reported(self) -> None:
         active = self.make_session()
 
@@ -386,29 +429,65 @@ class TerminalUiTests(unittest.IsolatedAsyncioTestCase):
 
         async with app.run_test() as pilot:
             for _ in range(active.total_steps):
-                await pilot.press("p")
+                await pilot.press("f1")
 
             await pilot.pause()
 
         self.assertTrue(active.run.complete)
         self.assertEqual(len(active.run.answers), active.total_steps)
 
+    async def test_a_note_can_be_typed_and_a_failure_recorded(self) -> None:
+        """The bug this replaced: bare-letter bindings ate what you typed, so a
+        failure could never be given the note it requires."""
+        app, active = self.make_app()
+
+        async with app.run_test() as pilot:
+            for character in "meter frozen":
+                await pilot.press(character if character != " " else "space")
+
+            await pilot.press("f2")
+            await pilot.pause()
+
+        self.assertEqual(len(active.run.answers), 1)
+        self.assertEqual(active.run.answers[0].verdict, record.FAIL)
+        self.assertIn("frozen", active.run.answers[0].note)
+
     async def test_a_failure_without_a_note_is_refused_in_the_ui(self) -> None:
         """The tester must supply detail before the run will advance."""
         app, active = self.make_app()
 
         async with app.run_test() as pilot:
-            await pilot.press("f")
+            await pilot.press("f2")
             await pilot.pause()
 
             self.assertEqual(len(active.run.answers), 0)
+
+    async def test_the_note_field_has_focus_from_the_start(self) -> None:
+        app, _ = self.make_app()
+
+        async with app.run_test() as pilot:
+            await pilot.pause()
+
+            self.assertEqual(app.focused.id, "note")
+
+    async def test_an_area_pass_advances_a_whole_surface_in_one_key(self) -> None:
+        app, active = self.make_app()
+        first = active.current().surface
+        expected = len(surfaces.questions_for(first))
+
+        async with app.run_test() as pilot:
+            await pilot.press("f5")
+            await pilot.pause()
+
+            self.assertEqual(len(active.run.answers), expected)
+            self.assertIsNot(active.current().surface, first)
 
     async def test_stopping_early_records_an_incomplete_run(self) -> None:
         """A long run must not be lost, and must not look like a pass."""
         app, active = self.make_app()
 
         async with app.run_test() as pilot:
-            await pilot.press("p")
+            await pilot.press("f1")
             await pilot.press("ctrl+q")
             await pilot.pause()
 

@@ -108,6 +108,41 @@ class Session:
 
         return []
 
+    def answer_rest_of_surface(self, verdict: str, note: str = "") -> list[str]:
+        """Apply one verdict to every remaining question on this surface.
+
+        The common case by far: you look at the surface, nothing is wrong, and
+        answering three or four questions individually is friction for no
+        information. One keystroke instead.
+
+        `skip` is the honest choice for an area a change did not touch and you
+        did not actually examine — recording a pass for something unexamined is
+        what turns a record into a rubber stamp.
+        """
+        step = self.current()
+
+        if step is None:
+            return ["The run has already finished."]
+
+        surface = step.surface
+        geometry = step.geometry
+        problems: list[str] = []
+
+        while not self.finished:
+            current = self._steps[self._position]
+
+            if current[0] is not surface or current[1] != geometry:
+                break
+
+            problems = self.answer(verdict, note)
+
+            if problems:
+                # A failure with no note stops the sweep at the offending
+                # question rather than applying a half-recorded verdict.
+                break
+
+        return problems
+
     def skip_surface(self, reason: str) -> None:
         """Abandon the current surface, recording it as unreachable.
 

@@ -42,8 +42,30 @@ interpreter in the virtual environment directly:
 nothing, so it is the quick way to find out whether the harness still lines up
 with the application after a UI change.
 
-Keys during a run: `p` pass, `f` fail, `s` skip, `u` can't reach it,
-`ctrl+q` stop and save.
+Keys during a run:
+
+| Key | Does |
+|---|---|
+| `F1` | Pass this question |
+| `F2` | Fail it — **requires a note** |
+| `F3` | Skip it |
+| `F4` | Can't reach this surface |
+| `F5` | **Pass the whole area** — every remaining question on this surface |
+| `F6` | Skip the whole area |
+| `ctrl+q` | Stop and save |
+
+The note field is focused the whole time, so just type. That is why the verdict
+keys are function keys rather than letters: a bare `f` would be typed into the
+note instead of failing the question, which made failing impossible — you cannot
+supply the required note and press the key if they are the same keystroke.
+
+**`F5` is the one you will use most.** Most surfaces are unaffected by most
+changes: look at it, nothing is wrong, one key answers all three axes and moves
+on.
+
+Use `F6` rather than `F5` for an area you did not actually examine. Recording a
+pass for something unlooked-at is what turns a record into a rubber stamp, and
+the two are distinguishable in the record precisely so that distinction survives.
 
 ## What it asks
 
