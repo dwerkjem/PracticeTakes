@@ -112,6 +112,12 @@ juce_add_gui_app(PracticeTakes
     BUNDLE_ID "org.derekrneilson.practicetakes"
     ICON_BIG "${PRACTICE_TAKES_ICON_DIRECTORY}/practice-takes-1024.png"
     ICON_SMALL "${PRACTICE_TAKES_ICON_DIRECTORY}/practice-takes-128.png"
+    # macOS terminates any process that opens an audio input device without a
+    # usage description, so the tuner needs this key in the generated
+    # Info.plist. JUCE writes it for Apple targets and ignores it elsewhere.
+    MICROPHONE_PERMISSION_ENABLED TRUE
+    MICROPHONE_PERMISSION_TEXT
+        "Practice Takes listens to your instrument to show tuning and spectrum analysis."
 )
 
 juce_generate_juce_header(PracticeTakes)
@@ -125,8 +131,17 @@ juce_add_binary_data(PracticeTakesIcon
     SOURCES "${PRACTICE_TAKES_ICON_DIRECTORY}/practice-takes-128.png"
 )
 
+# The space-free binary name is what the Debian package, the NSIS installer,
+# and the tooling scripts under scripts/ all expect. Apple is deliberately
+# excluded: juce_add_gui_app names both the bundle and its executable after
+# PRODUCT_NAME and bakes that same name into the configure-time Info.plist as
+# CFBundleExecutable, so renaming the binary afterwards leaves the bundle
+# pointing at a file that does not exist and macOS refuses to launch it.
+if(NOT APPLE)
+    set_target_properties(PracticeTakes PROPERTIES OUTPUT_NAME "PracticeTakes")
+endif()
+
 set_target_properties(PracticeTakes PROPERTIES
-    OUTPUT_NAME "PracticeTakes"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin"
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin"
