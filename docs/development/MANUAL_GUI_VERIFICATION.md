@@ -155,6 +155,64 @@ forms, prominently. A partial run must never be mistaken for a passing one.
 A surface the harness could not reach is recorded as a **failure of that
 surface**, not skipped — a surface nobody could look at is a finding.
 
+## Releases are gated on this
+
+`release.yml` fails before building anything if there is no complete, current,
+full-mode run for the code being released. That is what makes this harness
+load-bearing rather than optional.
+
+**"Current" cannot mean "for this exact commit."** A run verifies the
+application built from some commit, and its record is committed *afterwards* —
+so a record can never name the commit that contains it. The gate matches on code
+state instead: the verified commit must be an ancestor of the release commit,
+and no *release-affecting* file may differ between them. Committing a record is
+therefore harmless, because it touches nothing that ends up in the binary.
+
+Release-affecting paths are an explicit list in
+`scripts/release/check_manual_verification.py`: `src/`, `CMakeLists.txt`,
+`cmake/`, `packaging/`, `vcpkg.json`. `docs/`, `tests/`, `scripts/`, and
+`services/` are not — none of them changes the desktop binary. `VERSION` is
+deliberately excluded, because the release workflow bumps it as part of
+releasing and including it would make the gate unsatisfiable for the very case
+it guards.
+
+Check it locally before triggering a release:
+
+```bash
+python3 scripts/release/check_manual_verification.py
+```
+
+### Skipping
+
+Plenty of releases — a docs fix, a CI tweak — do not warrant a full run. The
+`workflow_dispatch` inputs `skip_manual_verification` and
+`skip_manual_verification_reason` skip the gate; the reason is required, and
+both are written to the release's step summary and uploaded as an artifact, so
+"which releases shipped unverified, and why" stays answerable later.
+
+The tag-push path has no workflow inputs, so its equivalent is a committed
+`.manual-verification-skip` file whose contents are the reason. That asymmetry
+is deliberate: skipping on that path is a reviewable commit rather than a
+checkbox.
+
+### Waived failures
+
+A full run with a failed item blocks by default. A release can still proceed if
+the record carries a waiver naming the surface, the question, and a written
+reason:
+
+```json
+"waivers": [
+  {"surface": "The tuner, docked", "question": "looks-good",
+   "reason": "cosmetic, tracked in #113"}
+]
+```
+
+Waiving is deliberately not something the harness offers mid-run — it is a
+decision made after seeing the result, so it is an edit to the record and thus a
+reviewable commit. A waiver with an empty reason does not count; otherwise it
+would just be a way to silence the gate.
+
 ## Keeping it honest
 
 **When an automated test starts covering a question this harness asks, delete

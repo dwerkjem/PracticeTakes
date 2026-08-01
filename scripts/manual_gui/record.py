@@ -78,6 +78,27 @@ class Run:
     # finding, not an absence.
     unreachable: list[dict[str, str]] = field(default_factory=list)
 
+    # Failures that are allowed to ship anyway, each with a written reason.
+    #
+    # Deliberately not something the harness offers during a run: waiving is a
+    # decision made after seeing the result, not while looking at the screen.
+    # Adding one means editing this file, which makes it a reviewable commit
+    # rather than a keystroke -- and it stays in the release's history.
+    #
+    # Each entry needs "surface", "question", and "reason".
+    waivers: list[dict[str, str]] = field(default_factory=list)
+
+    def is_waived(self, answer: "Answer") -> bool:
+        return any(
+            waiver.get("surface") == answer.surface
+            and waiver.get("question") == answer.question
+            and waiver.get("reason", "").strip()
+            for waiver in self.waivers
+        )
+
+    def unwaived_failures(self) -> list["Answer"]:
+        return [answer for answer in self.failures() if not self.is_waived(answer)]
+
     def add(self, answer: Answer) -> None:
         self.answers.append(answer)
 

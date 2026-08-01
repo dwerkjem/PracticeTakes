@@ -13,6 +13,18 @@ on:
           - patch
           - minor
           - major
+      skip_manual_verification:
+        description: >-
+          Release without a current full manual GUI verification run. Off by
+          default; requires a reason, and both are recorded with the release.
+        required: false
+        default: false
+        type: boolean
+      skip_manual_verification_reason:
+        description: Why manual verification is being skipped.
+        required: false
+        default: ""
+        type: string
   push:
     tags:
       - "v[0-9]*.[0-9]*.[0-9]*"
@@ -26,8 +38,93 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Runs before any artifact is built. This is what makes the manual GUI
+  # harness load-bearing rather than optional.
+  #
+  # A record can never name the commit that contains it -- the run verifies a
+  # commit, and its record is committed afterwards -- so this matches on code
+  # state instead: the verified commit must be an ancestor of the release
+  # commit, with no release-affecting file changed since.
+  manual-verification:
+    name: Manual verification gate
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.ref }}
+
+      # The tag path has no workflow inputs, so it cannot carry a skip. Its
+      # equivalent is a committed marker file, which is a reviewable decision
+      # rather than a checkbox -- the asymmetry is deliberate and documented in
+      # docs/development/MANUAL_GUI_VERIFICATION.md.
+      - name: Check for a committed skip marker
+        id: marker
+        shell: bash
+        run: |
+          if [ -f .manual-verification-skip ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "reason<<EOF"
+              cat .manual-verification-skip
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify a current full manual run exists
+        shell: bash
+        env:
+          SKIP_INPUT: ${{ github.event.inputs.skip_manual_verification }}
+          SKIP_REASON: ${{ github.event.inputs.skip_manual_verification_reason }}
+          MARKER_PRESENT: ${{ steps.marker.outputs.present }}
+          MARKER_REASON: ${{ steps.marker.outputs.reason }}
+        run: |
+          if [ "$SKIP_INPUT" = "true" ]; then
+            python3 scripts/release/check_manual_verification.py \
+              --skip --skip-reason "$SKIP_REASON" | tee skip-notice.txt
+          elif [ "$MARKER_PRESENT" = "true" ]; then
+            python3 scripts/release/check_manual_verification.py \
+              --skip --skip-reason "$MARKER_REASON" | tee skip-notice.txt
+          else
+            python3 scripts/release/check_manual_verification.py
+          fi
+
+      # Recorded with the release, not only in the workflow log, so "which
+      # releases shipped without manual verification, and why" stays answerable
+      # months later.
+      - name: Record the outcome
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Manual verification"
+            echo
+            if [ -f skip-notice.txt ]; then
+              echo "**SKIPPED.**"
+              echo
+              echo '```'
+              cat skip-notice.txt
+              echo '```'
+            else
+              echo "A current, complete, full-mode manual run was found."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the skip notice
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: manual-verification-skip
+          path: skip-notice.txt
+          if-no-files-found: ignore
+
   prepare:
     name: Calculate release version
+    needs: manual-verification
     runs-on: ubuntu-24.04
     outputs:
       current_version: ${{ steps.version.outputs.current_version }}

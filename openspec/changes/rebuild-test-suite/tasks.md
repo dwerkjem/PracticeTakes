@@ -144,37 +144,37 @@ start 4.2 until that is settled.
 
 ## 5. Release gate on manual verification
 
-- [ ] 5.1 Define and document the release-affecting path list — `src/`,
+- [x] 5.1 Define and document the release-affecting path list — `src/`,
       `CMakeLists.txt`, `cmake/`, `packaging/`, `vcpkg.json` — and why `VERSION`
       is excluded (the dispatch path bumps it, so including it makes the gate
       unsatisfiable).
-- [ ] 5.2 Add the gate script: find the most recent full-mode record, confirm it
+- [x] 5.2 Add the gate script: find the most recent full-mode record, confirm it
       is complete, confirm its verified commit is an ancestor of or identical to
       the release commit, and confirm no release-affecting file differs between
       the two.
-- [ ] 5.3 Make the gate block on any failed item in the record unless that item
+- [x] 5.3 Make the gate block on any failed item in the record unless that item
       carries a written waiver.
-- [ ] 5.4 Make every failure mode report its specific cause — missing,
+- [x] 5.4 Make every failure mode report its specific cause — missing,
       quick-only, incomplete, stale, or unwaived failure — and for staleness,
       name the verified commit and the release-affecting files that changed.
-- [ ] 5.5 Add tests covering each accept and reject path, including the case
+- [x] 5.5 Add tests covering each accept and reject path, including the case
       that motivates the whole design: a record committed *after* the run it
       describes must still be accepted, because committing it changed no
       release-affecting file.
-- [ ] 5.6 Add the skip flag to `release.yml`'s `workflow_dispatch` inputs,
+- [x] 5.6 Add the skip flag to `release.yml`'s `workflow_dispatch` inputs,
       defaulting to off, with a required reason that fails the release if the
       flag is set and the reason is empty.
-- [ ] 5.7 Record the skip and its reason with the release itself, not only in
+- [x] 5.7 Record the skip and its reason with the release itself, not only in
       workflow logs, so past releases that shipped without manual verification
       are identifiable later.
-- [ ] 5.8 Handle the tag-push path, which has no workflow inputs: decide and
+- [x] 5.8 Handle the tag-push path, which has no workflow inputs: decide and
       document its skip equivalent (a committed marker) and note the asymmetry
       with the dispatch path rather than leaving it implicit.
-- [ ] 5.9 Wire the gate in as a job that runs before any artifact is built or
+- [x] 5.9 Wire the gate in as a job that runs before any artifact is built or
       published, on both release entry points.
-- [ ] 5.10 Confirm an ordinary pull request does not fail for the absence of a
+- [x] 5.10 Confirm an ordinary pull request does not fail for the absence of a
       manual run record.
-- [ ] 5.11 Exercise the gate end to end before relying on it: one release
+- [x] 5.11 Exercise the gate end to end before relying on it: one release
       attempt blocked by a stale record, one passing with a current record, and
       one skipped with a reason.
 
