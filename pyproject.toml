@@ -9,22 +9,35 @@ requires-python = ">=3.13"
 # preinstalled interpreter are standard-library only, and must stay that way:
 # they run on whatever `python3` a contributor happens to have.
 #
-# Anything that needs a real library declares it as an optional group below, so
-# taking a dependency is always a scoped decision rather than something the
-# commit gate inherits.
+# Tooling that needs a real library declares it in a dependency group or an
+# optional extra below, so taking a dependency is always a scoped decision
+# rather than something the commit gate inherits.
 dependencies = []
 
-[project.optional-dependencies]
-# The manual GUI verification harness (scripts/manual_gui/). A local
-# development tool: it needs a real display, a real audio device, and a human,
-# so no CI check depends on it.
+[project.scripts]
+# `uv run ui-test` -- the manual GUI verification harness.
+ui-test = "manual_gui.__main__:main"
+
+[dependency-groups]
+# Installed by default for developers (see [tool.uv] below), so `uv run ui-test`
+# works without anyone having to remember an extra flag. A dependency group is
+# not a published dependency, so this does not leak into `dependencies`.
 manual-gui = ["textual>=8.2,<9"]
 
+[project.optional-dependencies]
 # Coverage reporting. CI installs these; the scripts degrade with a clear
-# message when they are absent rather than failing a run over a report.
+# message when they are absent rather than failing a run over a report. Kept as
+# an extra rather than a default group because a developer does not need them
+# to work on the application.
 coverage = ["gcovr>=8,<9", "coverage>=7"]
 
+[tool.uv]
+default-groups = ["manual-gui"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [tool.setuptools]
-# No package to build -- this file exists to declare tooling dependencies, not
-# to publish anything.
-packages = []
+package-dir = { "" = "scripts" }
+packages = ["manual_gui"]

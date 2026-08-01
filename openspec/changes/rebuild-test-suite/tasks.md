@@ -136,7 +136,7 @@ start 4.2 until that is settled.
 - [x] 4.13 Add tests for the parts that do not need a display: surface
       definition parsing, mode subsetting, geometry expansion, record writing,
       and incomplete-run marking.
-- [ ] 4.14 Run the harness once in quick mode and once in full mode against a
+- [x] 4.14 Run the harness once in quick mode and once in full mode against a
       real device and display, and commit both records, so the format is proven
       rather than assumed.
 - [x] 4.15 Document that any question covered by a later automated test must be

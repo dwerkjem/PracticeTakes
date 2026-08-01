@@ -280,13 +280,15 @@ wheels = [
 [[package]]
 name = "practice-takes-tools"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 
 [package.optional-dependencies]
 coverage = [
     { name = "coverage" },
     { name = "gcovr" },
 ]
+
+[package.dev-dependencies]
 manual-gui = [
     { name = "textual" },
 ]
@@ -295,9 +297,11 @@ manual-gui = [
 requires-dist = [
     { name = "coverage", marker = "extra == 'coverage'", specifier = ">=7" },
     { name = "gcovr", marker = "extra == 'coverage'", specifier = ">=8,<9" },
-    { name = "textual", marker = "extra == 'manual-gui'", specifier = ">=8.2,<9" },
 ]
-provides-extras = ["manual-gui", "coverage"]
+provides-extras = ["coverage"]
+
+[package.metadata.requires-dev]
+manual-gui = [{ name = "textual", specifier = ">=8.2,<9" }]
 
 [[package]]
 name = "pygments"
