@@ -102,9 +102,12 @@ also exercises the responsive layout.
 
 Off by default because it triples how many prompts a run asks.
 
-Resizing is done with `scripts/quality/ui-validation/window_control`, the same
-X11 helper the golden-image harness uses. Resizing a window is not input
-synthesis — see below.
+Resizing goes through the control channel, so the application resizes *itself*.
+An external resize cannot do this job: the window advertises a 980px minimum
+width through `setResizeLimits`, a window manager honours it, and 980 is above
+the 900px collapse threshold — so an outside resize can never reach the
+collapsed menu. Measured before the fix: an external resize to 800×600 left the
+window at 1280×800 while reporting success.
 
 ## Nothing is synthesised
 
@@ -154,7 +157,7 @@ that list, not a change to the harness.
 | `surfaces.py` | The surface list and what each asks — data |
 | `session.py` | Sequencing: what is asked next, when the app must move |
 | `record.py` | The run record and its two rendered forms |
-| `driver.py` | Speaks the control protocol; geometry via `window_control` |
+| `driver.py` | Speaks the control protocol, including geometry |
 | `app.py` | The Textual UI — deliberately thin |
 
 Everything except `app.py` is standard-library only and tested without a
