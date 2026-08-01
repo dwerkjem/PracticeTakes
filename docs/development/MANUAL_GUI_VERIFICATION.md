@@ -42,30 +42,45 @@ interpreter in the virtual environment directly:
 nothing, so it is the quick way to find out whether the harness still lines up
 with the application after a UI change.
 
-Keys during a run:
+## Answering
 
-| Key | Does |
+You **type** answers rather than pressing hotkeys. Two earlier designs failed
+for opposite reasons: bare letters were swallowed by the note field, so a
+failure could never be given the reason it requires; function keys are bound by
+the terminal's host — VS Code takes F1–F12 — so they never arrived at all. A
+typed line collides with nothing and carries the reason in the same breath as
+the verdict.
+
+| Type | Does |
 |---|---|
-| `F1` | Pass this question |
-| `F2` | Fail it — **requires a note** |
-| `F3` | Skip it |
-| `F4` | Can't reach this surface |
-| `F5` | **Pass the whole area** — every remaining question on this surface |
-| `F6` | Skip the whole area |
-| `ctrl+q` | Stop and save |
+| *(nothing)* + Enter | Pass |
+| `f <reason>` | Fail — the reason is required, and is typed right here |
+| `s` | Skip |
+| `a` | **Pass the whole area** — every remaining question on this surface |
+| `as` | Skip the whole area |
+| `u <reason>` | Can't reach this surface |
+| `q` | Stop and save |
+| `?` | Show the commands |
 
-The note field is focused the whole time, so just type. That is why the verdict
-keys are function keys rather than letters: a bare `f` would be typed into the
-note instead of failing the question, which made failing impossible — you cannot
-supply the required note and press the key if they are the same keystroke.
+`p <note>` and `s <note>` attach a note to a pass or a skip.
 
-**`F5` is the one you will use most.** Most surfaces are unaffected by most
-changes: look at it, nothing is wrong, one key answers all three axes and moves
-on.
+**`a` is the one you will use most.** Most surfaces are untouched by most
+changes: look at it, nothing is wrong, one keystroke answers all three axes.
 
-Use `F6` rather than `F5` for an area you did not actually examine. Recording a
+Use `as` rather than `a` for an area you did not actually examine. Recording a
 pass for something unlooked-at is what turns a record into a rubber stamp, and
-the two are distinguishable in the record precisely so that distinction survives.
+the two stay distinguishable in the record precisely so that distinction
+survives.
+
+`ctrl+q` also stops and saves, as a safety net.
+
+## Small terminals
+
+The body scrolls and the entry field is docked to the bottom, so the one thing
+you must always be able to reach cannot be pushed off-screen by a long question
+or a short window. Below about 24 rows the command legend is dropped (`?` still
+prints it), and below 18 the diagnostic state line goes too. A narrow terminal
+gets a shortened legend.
 
 ## What it asks
 

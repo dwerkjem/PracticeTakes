@@ -1,0 +1,616 @@
+{
+  "answers": [
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does the tuner respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does the tuner respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does the tuner respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does the spectrogram respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does the spectrogram respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does the spectrogram respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does the analyser respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does the analyser respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does the analyser respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Can the floating window be moved and resized?",
+      "question": "moveable",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Can the floating window be moved and resized?",
+      "question": "moveable",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Can the floating window be moved and resized?",
+      "question": "moveable",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "dsa",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "two-tools-split",
+      "surface": "Two tools tiled side by side",
+      "verdict": "fail"
+    }
+  ],
+  "audio_device": "unspecified",
+  "commit": "5c4efa66d23c",
+  "complete": false,
+  "finished_at": "2026-08-01T13:01:10",
+  "geometry_sweep": true,
+  "mode": "full",
+  "platform": "Linux 6.12.90+deb13.1-amd64 (x86_64)",
+  "started_at": "2026-08-01T12:56:06",
+  "unreachable": []
+}

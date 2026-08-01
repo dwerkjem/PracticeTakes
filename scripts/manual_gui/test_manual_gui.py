@@ -424,76 +424,101 @@ class TerminalUiTests(unittest.IsolatedAsyncioTestCase):
 
         return VerificationApp(active, move), active
 
-    async def test_passing_every_prompt_completes_the_run(self) -> None:
+    async def type_line(self, pilot, text: str) -> None:
+        from textual.widgets import Input
+
+        pilot.app.query_one("#entry", Input).value = text
+        await pilot.press("enter")
+        await pilot.pause()
+
+    async def test_enter_alone_passes(self) -> None:
+        """The overwhelmingly common answer costs one keystroke."""
         app, active = self.make_app()
 
         async with app.run_test() as pilot:
-            for _ in range(active.total_steps):
-                await pilot.press("f1")
+            await self.type_line(pilot, "")
 
-            await pilot.pause()
+            self.assertEqual(len(active.run.answers), 1)
+            self.assertEqual(active.run.answers[0].verdict, record.PASS)
 
-        self.assertTrue(active.run.complete)
-        self.assertEqual(len(active.run.answers), active.total_steps)
-
-    async def test_a_note_can_be_typed_and_a_failure_recorded(self) -> None:
-        """The bug this replaced: bare-letter bindings ate what you typed, so a
-        failure could never be given the note it requires."""
+    async def test_a_failure_carries_the_reason_typed_with_it(self) -> None:
+        """The bug this design exists to fix: two earlier attempts made it
+        impossible to supply the reason a failure requires."""
         app, active = self.make_app()
 
         async with app.run_test() as pilot:
-            for character in "meter frozen":
-                await pilot.press(character if character != " " else "space")
-
-            await pilot.press("f2")
-            await pilot.pause()
+            await self.type_line(pilot, "f meter frozen")
 
         self.assertEqual(len(active.run.answers), 1)
         self.assertEqual(active.run.answers[0].verdict, record.FAIL)
-        self.assertIn("frozen", active.run.answers[0].note)
+        self.assertEqual(active.run.answers[0].note, "meter frozen")
 
-    async def test_a_failure_without_a_note_is_refused_in_the_ui(self) -> None:
-        """The tester must supply detail before the run will advance."""
+    async def test_a_failure_with_no_reason_is_refused(self) -> None:
         app, active = self.make_app()
 
         async with app.run_test() as pilot:
-            await pilot.press("f2")
-            await pilot.pause()
+            await self.type_line(pilot, "f")
 
             self.assertEqual(len(active.run.answers), 0)
 
-    async def test_the_note_field_has_focus_from_the_start(self) -> None:
-        app, _ = self.make_app()
+    async def test_an_unknown_command_is_refused_and_the_text_kept(self) -> None:
+        """So a mistyped verb is corrected rather than retyped."""
+        from textual.widgets import Input
+
+        app, active = self.make_app()
 
         async with app.run_test() as pilot:
-            await pilot.pause()
+            await self.type_line(pilot, "wat something")
 
-            self.assertEqual(app.focused.id, "note")
+            self.assertEqual(len(active.run.answers), 0)
+            self.assertEqual(pilot.app.query_one("#entry", Input).value, "wat something")
 
-    async def test_an_area_pass_advances_a_whole_surface_in_one_key(self) -> None:
+    async def test_area_pass_answers_the_whole_surface(self) -> None:
         app, active = self.make_app()
         first = active.current().surface
         expected = len(surfaces.questions_for(first))
 
         async with app.run_test() as pilot:
-            await pilot.press("f5")
-            await pilot.pause()
+            await self.type_line(pilot, "a")
 
             self.assertEqual(len(active.run.answers), expected)
             self.assertIsNot(active.current().surface, first)
 
-    async def test_stopping_early_records_an_incomplete_run(self) -> None:
-        """A long run must not be lost, and must not look like a pass."""
+    async def test_area_skip_records_skips(self) -> None:
         app, active = self.make_app()
 
         async with app.run_test() as pilot:
-            await pilot.press("f1")
-            await pilot.press("ctrl+q")
-            await pilot.pause()
+            await self.type_line(pilot, "as")
+
+        self.assertTrue(all(a.verdict == record.SKIP for a in active.run.answers))
+
+    async def test_quitting_records_an_incomplete_run(self) -> None:
+        app, active = self.make_app()
+
+        async with app.run_test() as pilot:
+            await self.type_line(pilot, "")
+            await self.type_line(pilot, "q")
 
         self.assertFalse(active.run.complete)
         self.assertEqual(len(active.run.answers), 1)
         self.assertIn("INCOMPLETE", record.to_markdown(active.run))
+
+    async def test_passing_everything_completes_the_run(self) -> None:
+        app, active = self.make_app()
+
+        async with app.run_test() as pilot:
+            for _ in range(active.total_steps):
+                await self.type_line(pilot, "")
+
+        self.assertTrue(active.run.complete)
+
+    async def test_the_entry_field_has_focus_from_the_start(self) -> None:
+        app, _ = self.make_app()
+
+        async with app.run_test() as pilot:
+            await pilot.pause()
+
+            self.assertEqual(app.focused.id, "entry")
 
     async def test_an_unreachable_surface_is_recorded_and_the_run_continues(self) -> None:
         app, active = self.make_app(reachable=False)
@@ -501,7 +526,51 @@ class TerminalUiTests(unittest.IsolatedAsyncioTestCase):
         async with app.run_test() as pilot:
             await pilot.pause()
 
-        # Every surface was unreachable, so the run finished with each of them
-        # recorded as a finding rather than quietly skipped.
         self.assertTrue(active.run.unreachable)
         self.assertTrue(all(a.verdict == record.FAIL for a in active.run.answers))
+
+    async def test_a_small_terminal_still_shows_the_entry_field(self) -> None:
+        """The one thing you must always reach cannot be pushed off-screen."""
+        from textual.widgets import Input
+
+        app, _ = self.make_app()
+
+        async with app.run_test(size=(60, 12)) as pilot:
+            await pilot.pause()
+
+            entry = pilot.app.query_one("#entry", Input)
+
+            self.assertTrue(entry.region.height > 0)
+            self.assertTrue(entry.region.y < 12)
+
+    async def test_a_small_terminal_sheds_the_legend(self) -> None:
+        from textual.widgets import Static
+
+        app, _ = self.make_app()
+
+        async with app.run_test(size=(60, 12)) as pilot:
+            await pilot.pause()
+
+            self.assertTrue(pilot.app.query_one("#legend", Static).has_class("hidden"))
+
+    async def test_a_roomy_terminal_keeps_the_legend(self) -> None:
+        from textual.widgets import Static
+
+        app, _ = self.make_app()
+
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+
+            self.assertFalse(pilot.app.query_one("#legend", Static).has_class("hidden"))
+
+    async def test_typing_a_question_mark_shows_the_commands(self) -> None:
+        from textual.widgets import Static
+
+        app, _ = self.make_app()
+
+        async with app.run_test() as pilot:
+            await self.type_line(pilot, "?")
+
+            shown = str(pilot.app.query_one("#problem", Static).content)
+
+            self.assertIn("fail", shown)

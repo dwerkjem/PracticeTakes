@@ -18,6 +18,83 @@ import surfaces
 from surfaces import Question, Surface
 
 
+# What one line typed into the harness means.
+#
+# A typed command rather than a hotkey, because hotkeys kept colliding with
+# something: bare letters were swallowed by the note field, and function keys are
+# taken by the terminal's host (VS Code binds F1-F12), so the keystroke never
+# reached the application at all. A line of text collides with nothing and
+# carries the reason in the same breath as the verdict, which is the thing that
+# has to be easy -- a failure is useless without one.
+@dataclass(frozen=True)
+class Entry:
+    # "answer", "area", "unreachable", "stop", "help", or "error".
+    action: str
+    verdict: str = ""
+    note: str = ""
+    message: str = ""
+
+
+HELP_TEXT = (
+    "Enter = pass  ·  f <reason> = fail  ·  s = skip  ·  "
+    "a = pass area  ·  as = skip area  ·  u <reason> = can't reach  ·  q = stop"
+)
+
+# For a narrow terminal. Names every command, without the glosses.
+SHORT_HELP_TEXT = "Enter·f <why>·s·a·as·u <why>·q·?"
+
+
+def parse_entry(text: str) -> Entry:
+    """Interpret one typed line.
+
+    Pure and testable, so the grammar is verified without a terminal.
+    """
+    stripped = text.strip()
+
+    # The overwhelmingly common answer, so it is the one that costs nothing.
+    if not stripped:
+        return Entry("answer", record.PASS)
+
+    verb, _, rest = stripped.partition(" ")
+    rest = rest.strip()
+    verb = verb.lower()
+
+    if verb in ("?", "help"):
+        return Entry("help", message=HELP_TEXT)
+
+    if verb in ("q", "quit", "stop"):
+        return Entry("stop")
+
+    if verb in ("p", "pass"):
+        return Entry("answer", record.PASS, rest)
+
+    if verb in ("f", "fail"):
+        if not rest:
+            return Entry("error", message="A failure needs a reason: f <what you saw>")
+
+        return Entry("answer", record.FAIL, rest)
+
+    if verb in ("s", "skip"):
+        return Entry("answer", record.SKIP, rest)
+
+    if verb in ("a", "area"):
+        return Entry("area", record.PASS, rest)
+
+    if verb in ("as", "area-skip"):
+        return Entry("area", record.SKIP, rest)
+
+    if verb in ("u", "unreachable"):
+        if not rest:
+            return Entry("error", message="Say why it could not be reached: u <reason>")
+
+        return Entry("unreachable", note=rest)
+
+    return Entry(
+        "error",
+        message=f"'{verb}' is not a command. Type ? for the list.",
+    )
+
+
 @dataclass
 class Step:
     """One prompt: a surface, at a geometry, asking one question."""
