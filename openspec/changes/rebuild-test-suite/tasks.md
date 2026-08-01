@@ -180,24 +180,26 @@ start 4.2 until that is settled.
 
 ## 6. End-to-end smoke tests
 
-- [ ] 6.1 Add a CI job that installs Xvfb and runs the built application under a
+- [x] 6.1 Add a CI job that installs Xvfb and runs the built application under a
       virtual display on Linux.
-- [ ] 6.2 Build the existing `scripts/quality/ui-validation/` X11 helpers
-      (`xwindow_capture`, `window_control`) as a reusable step rather than
-      duplicating them for the smoke suite.
-- [ ] 6.3 Add a smoke driver under `scripts/quality/` that launches
+- [x] 6.2 ~~Build the existing `scripts/quality/ui-validation/` X11 helpers as a
+      reusable step.~~ Not needed: the smoke driver reaches the application
+      through the test control channel, which already exists and needs no X11
+      helper. Nothing is addressed by screen position, so there is nothing to
+      capture or point at.
+- [x] 6.3 Add a smoke driver under `scripts/quality/` that launches
       `build/bin/PracticeTakes`, waits for the main window with a bounded
       timeout, and exits non-zero on crash, hang, or missing window.
-- [ ] 6.4 Add the tool-opening assertion: open one analysis tool and confirm it
+- [x] 6.4 Add the tool-opening assertion: open one analysis tool and confirm it
       is present in the running application.
-- [ ] 6.5 Add the shutdown assertion: close the application, require exit within
+- [x] 6.5 Add the shutdown assertion: close the application, require exit within
       a bounded time with a success status, and terminate the process on timeout
       so a hang cannot stall the run.
-- [ ] 6.6 Confirm the whole smoke suite passes on a host with no audio capture
+- [x] 6.6 Confirm the whole smoke suite passes on a host with no audio capture
       device, since CI runners have none.
-- [ ] 6.7 Confirm the smoke suite does not run as part of the default `ctest`
+- [x] 6.7 Confirm the smoke suite does not run as part of the default `ctest`
       invocation.
-- [ ] 6.8 Run the smoke suite ten times in CI before relying on it, and record
+- [x] 6.8 Run the smoke suite ten times in CI before relying on it, and record
       the flake count; per `design.md`, a test that flakes without a real defect
       is deleted rather than retried.
 
