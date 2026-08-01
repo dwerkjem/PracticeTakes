@@ -1,15 +1,15 @@
 ## 0. Decisions before the affected steps
 
-- [ ] 0.1 Resolve the remaining two items in `design.md` § "Open Questions":
+- [x] 0.1 Resolve the remaining two items in `design.md` § "Open Questions":
       where manual run records live and in what format, which surfaces belong in
       quick mode, whether coverage runs per-PR or only on `main`, the maximum
       supported number of simultaneous tool consumers, and whether the soak test
       can avoid needing a real audio device. (The sixth — how the harness drives
       the application — is resolved; see § "Resolved Questions".)
-- [ ] 0.2 Record each resolution in `design.md` under a "Resolved Questions"
+- [x] 0.2 Record each resolution in `design.md` under a "Resolved Questions"
       section, following the convention in
       `openspec/changes/archive/2026-07-31-close-highest-risk-test-gaps/design.md`.
-- [ ] 0.3 Confirm the sequencing dependency on `adopt-uv-for-python`
+- [x] 0.3 Confirm the sequencing dependency on `adopt-uv-for-python`
       (`design.md` decision 9): either land it first, or decide how else the
       harness gets a Python dependency. Section 4 is blocked until this is
       settled, and section 5 is blocked behind section 4 because the gate reads
@@ -228,15 +228,22 @@ start 4.2 until that is settled.
 
 ## 8. Documentation and verification
 
-- [ ] 8.1 Update `docs/development/QA_STRATEGY.md` areas 8, 9, and 13 to reflect
+- [x] 8.1 Update `docs/development/QA_STRATEGY.md` areas 8, 9, and 13 to reflect
       what this change delivered and what it deliberately left open.
-- [ ] 8.2 Add follow-up issues for the work this change explicitly defers:
+- [x] 8.2 Add follow-up issues for the work this change explicitly defers:
       coverage thresholds, extracting logic out of the JUCE components,
       sanitizer builds, and macOS test execution.
-- [ ] 8.3 Run `python scripts/run_tests.py`, the C++ suite, and
+- [x] 8.3 Run `python scripts/run_tests.py`, the C++ suite, and
       `npm run check && npm run test` from `services/`, and confirm all pass.
-- [ ] 8.4 Run `clang-format` and `clang-tidy` via pre-commit and confirm any new
+- [x] 8.4 Run `clang-format` and `clang-tidy` via pre-commit and confirm any new
       C++ sources are clean.
-- [ ] 8.5 Re-read this change's spec deltas against what was implemented and
+- [x] 8.5 Re-read this change's spec deltas against what was implemented and
       correct any requirement the implementation had to deviate from, recording
       the deviation rather than quietly editing the spec to match.
+      *Two design decisions were overturned by reality and are marked as
+      superseded rather than rewritten: decision 3's "reuse the X11 tools" half
+      (the control channel replaced it once "no input synthesis" was the
+      constraint), and the geometry route, which moved to the channel after an
+      external resize proved to be silently refused below the window's
+      advertised minimum width. The spec deltas themselves are phrased
+      behaviourally and needed no change.*

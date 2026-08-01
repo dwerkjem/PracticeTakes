@@ -264,13 +264,21 @@ both remain internally consistent.
 
 ### 13. Concurrency and real-time verification
 
-**Problem**: `AudioSampleFifo` is a lock-free single-producer/single-consumer
-ring, and every one of its tests is single-threaded. There is no ASan/UBSan/TSan
-build in CI, and the audio-thread no-allocation rules asserted in
-[Audio-thread safety](performance-audio-thread-safety.md) are unverified.
+**Half done.** The concurrent tests exist; the sanitizer build does not.
 
-**Plan**: add a sanitizer build to CI plus genuinely concurrent producer and
-consumer tests for the FIFO.
+Done: `tests/services/audio/AudioSampleFifoLoadTests.cpp` exercises the FIFO
+with a real producer and consumer on separate threads, asserting exactly-once
+in-order delivery, documented overflow behaviour under a stalled consumer,
+isolation between consumers, and a configurable soak run. Tagged `[.load]` so
+the default suite is unaffected; run with
+`build/bin/PracticeTakesTests "[.load]"`.
+
+**Still open, and the more important half**: there is no ASan/UBSan/TSan build
+in CI, and the audio-thread no-allocation rules in
+[Audio-thread safety](performance-audio-thread-safety.md) remain unverified.
+The concurrent tests say so at the top of the file in as many words — a race
+that does not manifest on a given scheduler passes silently, so a green run is
+**not** proof the FIFO is correct. Do not read those tests as closing this area.
 
 ### 14. macOS test execution
 

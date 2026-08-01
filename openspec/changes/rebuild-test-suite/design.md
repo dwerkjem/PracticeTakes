@@ -55,8 +55,8 @@ What already exists and constrains the design:
   (area 9). This change measures; closing is per-component follow-up work.
 - Sanitizer builds in CI (area 13), though the concurrent tests here are
   weaker without TSan and that is called out below.
-- Golden-image or pixel comparison. The existing ui-golden harness stays as it
-  is; this change borrows its X11 tools, not its goldens.
+- Golden-image or pixel comparison. The existing ui-golden harness stays exactly
+  as it is; this change ended up borrowing nothing from it.
 - macOS test execution (area 14), worker paths (area 10), roadmap tooling
   (area 11), contract conformance (area 12).
 
@@ -92,22 +92,32 @@ target's source list. Files in the second list are reported as *not built into
 the test binary* — a distinct and more serious category than 0% coverage, and
 the one that actually names area 9's backlog.
 
-### Decision 3 — Xvfb for headless launch, reusing the existing X11 tools
+### Decision 3 — Xvfb for headless launch
+
+> **Superseded in part.** The "reuse the X11 tools" half did not survive
+> contact: the smoke driver reaches the application through the test control
+> channel instead, so no X11 helper is involved, and geometry in the manual
+> harness moved to the channel too when an external resize turned out to be
+> refused below the window's advertised 980px minimum. Xvfb itself stands.
 
 JUCE on Linux needs a real X server; there is no offscreen mode that exercises
 the same window path. Xvfb is the standard answer, is a single apt package, and
 is what the existing ui-validation tools already implicitly assume (they speak
 Xlib).
 
-The smoke tests therefore reuse `xwindow_capture` and `window_control` rather
-than growing a second X11 helper set. What is new is the driver: the existing
-`run-ui-golden.zsh` is a golden-image workflow that writes evidence for a human
-to inspect, whereas a smoke test must assert and exit non-zero. The two share
-tools and share nothing else.
+The plan was to reuse `xwindow_capture` and `window_control` rather than growing
+a second X11 helper set, and to reject a test-only control surface in the
+application on the grounds that the X11 route needs nothing in `src/`.
 
-**Alternative considered:** driving the app through an added test-only IPC or
-scripting hook. Rejected — it would mean shipping a control surface in the
-application to test the application, and the X11 route needs nothing in `src/`.
+**Both of those were overturned once the constraint was "no input synthesis".**
+`pointer_control` turned out to do motion only — it cannot click — and the
+application has no accelerators or menu bar, so there was nothing to drive with
+either. A development-only control channel became the only route that does not
+involve faking input, and it is gated so it never ships. See § "Resolved
+Questions".
+
+What survives is Xvfb, and the reasoning for it: JUCE on Linux needs a real X
+server and there is no offscreen mode exercising the same path.
 
 ### Decision 4 — smoke tests are a script, not a Catch2 target
 
@@ -427,26 +437,32 @@ and none changes the application or the existing test suite.
   stay standard-library only, and the harness's tests skip its TUI cases when
   Textual is absent so the ordinary Python suite needs nothing installed.
 
+- **Whether coverage runs per-PR or only on `main`.** Resolved 2026-08-01:
+  **per-PR**, as decision 1 assumed. A figure nobody sees on their own pull
+  request is a figure nobody acts on. Only one leg does the C++ build, and no
+  job gates merge, so the cost is a slow leg on an informational workflow rather
+  than a slower merge. If PR time becomes a problem, `main`-only plus a manual
+  trigger is the fallback and needs no redesign.
+
+- **The maximum supported number of simultaneous tool consumers.** Resolved
+  2026-08-01: **not decided, and deliberately labelled as such.** The
+  audio-thread contract states no cap, and inventing one here would put a number
+  in the documentation that nothing enforces. The load tests use eight — the
+  current tool count plus headroom — and say in the test file that it is
+  provisional rather than agreed. A real cap belongs with whoever adds the tool
+  that makes it matter.
+
+- **Whether the soak test needs a real audio device.** Resolved 2026-08-01:
+  **no.** It exercises `AudioSampleFifo` directly with a synthetic producer,
+  which is where drift and unbounded growth would show, and needs no device or
+  extraction work. That keeps it runnable in CI. Driving the whole capture path
+  end to end under sustained load does still need either a device or the
+  area-9 extraction, and that remains future work rather than something this
+  change pretended to deliver.
+
 ## Open Questions
 
-- **Where do manual run records live, and in what format?** A
-  `docs/development/manual-runs/` directory of dated files is simplest and most
-  reviewable; a single appended log is tidier but conflicts more. Leaning toward
-  the directory. Format is a related question: the harness writes it, so it can
-  be structured (JSON, diffable and comparable across runs) with a rendered
-  markdown summary beside it — which is more useful than either alone.
-- **Which surfaces belong in quick mode?** It should be the smallest set that
-  answers "does it still work" — plausibly launch, one analysis tool showing
-  live input, and clean shutdown. Worth agreeing explicitly, since a quick mode
-  that grows becomes a second full mode.
-- **Should coverage run on every PR or only on `main`?** Per-PR is more useful
-  and is what Decision 1 assumes, but it adds a slow leg to every PR. If PR time
-  becomes a problem, `main`-only plus a manual trigger is the fallback.
-- **How many simultaneous tool consumers is "the maximum supported"?** The
-  audio-thread contract documents one preallocated 65,536-sample FIFO per active
-  tool consumer but does not state a cap. The load tests need a number; it may
-  need to be decided and documented as part of this work.
-- **Does the soak test need a real audio device?** If it must run in CI it
-  cannot depend on one, which likely means driving `AudioInputService` through a
-  synthetic source rather than a device — and that may itself require the kind
-  of extraction area 9 describes.
+All resolved — see § "Resolved Questions". Kept as a heading so a future reader
+does not assume the section was never filled in.
+
+
