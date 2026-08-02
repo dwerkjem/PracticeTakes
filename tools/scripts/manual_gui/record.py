@@ -33,7 +33,7 @@ VERDICTS = (PASS, FAIL, SKIP)
 # Runs live in the repository so "what did we verify, and when" is answerable
 # from a clone. A directory of dated files rather than one appended log: a log
 # conflicts on every concurrent edit and is harder to diff.
-DEFAULT_RECORDS_DIRECTORY = Path("docs/development/manual-runs")
+DEFAULT_RECORDS_DIRECTORY = Path("docs/development/quality/manual-runs")
 
 
 @dataclass

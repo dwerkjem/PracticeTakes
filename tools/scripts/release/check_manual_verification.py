@@ -51,7 +51,7 @@ RELEASE_AFFECTING_PATHS = (
 # invalidate a manual verification run.
 RELEASE_EXEMPT_PATHS = ("src/tests/",)
 
-RECORDS_DIRECTORY = Path("docs/development/manual-runs")
+RECORDS_DIRECTORY = Path("docs/development/quality/manual-runs")
 
 FULL_MODE = "full"
 

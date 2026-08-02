@@ -3,8 +3,8 @@
 set -euo pipefail
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-repo_dir=$(cd -- "${script_dir}/../.." && pwd)
-service_dir=${repo_dir}/services/feedback-intake
+repo_dir=$(cd -- "${script_dir}/../../.." && pwd)
+service_dir=${repo_dir}/src/services/feedback-intake
 environment_file=${service_dir}/.env
 wrangler=${service_dir}/node_modules/wrangler/bin/wrangler.js
 application_name="Practice Takes feedback dashboard"

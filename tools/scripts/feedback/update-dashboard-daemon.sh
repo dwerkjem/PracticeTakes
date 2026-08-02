@@ -4,8 +4,8 @@ set -euo pipefail
 service_name=practice-takes-feedback-dashboard
 compose_project=feedback-intake
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-repo_dir=$(cd -- "${script_dir}/../.." && pwd)
-dashboard_dir=${repo_dir}/services/feedback-intake
+repo_dir=$(cd -- "${script_dir}/../../.." && pwd)
+dashboard_dir=${repo_dir}/src/services/feedback-intake
 compose_file=${dashboard_dir}/compose.yaml
 environment_file=${dashboard_dir}/.env
 unit_file=/etc/systemd/system/${service_name}.service
