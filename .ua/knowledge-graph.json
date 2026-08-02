@@ -34214,9 +34214,9 @@
   ],
   "layers": [
     {
-      "id": "layer:application-shell",
-      "name": "Application Shell",
-      "description": "JUCE entry point plus the window/menu/workspace coordination, settings persistence, theming, and stdin/stdout test-control protocol that make up the PracticeTakes desktop shell.",
+      "id": "layer:desktop-application-shell",
+      "name": "Desktop Application Shell",
+      "description": "The JUCE process entry point, the main window, and the shell that coordinates it all: window and menu wiring, audio-device state, settings persistence and the portable .ptsettings codec, theming, the dockable workspace system, and the test-control channel. Owns the single shared AudioDeviceManager and one live component per open tool; presentation containers never own the tool component, so moving one between docked, floating and tabbed reparents it without destroying its state.",
       "nodeIds": [
         "file:src/application/shell/MainComponent.h",
         "file:src/application/shell/MainComponentLifecycle.cpp",
@@ -34283,9 +34283,9 @@
       ]
     },
     {
-      "id": "layer:features",
-      "name": "Feature Tools",
-      "description": "Self-contained user-facing tools \u2014 tuner, spectrogram and harmonics analysis, in-app feedback, and the opt-in Performance Lab \u2014 that plug into the shell without reaching into each other.",
+      "id": "layer:practice-tools",
+      "name": "Practice Tools",
+      "description": "The user-facing tools built on the shared capture path: the tuner, the spectrogram, the harmonic analyzer, in-app feedback capture, and the development-only Performance Lab. A tool never reaches into another tool's internals; anything shared belongs to the platform or the shell.",
       "nodeIds": [
         "file:src/features/feedback/FeedbackComponent.cpp",
         "file:src/features/feedback/FeedbackComponent.h",
@@ -34335,9 +34335,9 @@
       ]
     },
     {
-      "id": "layer:platform",
-      "name": "Platform Layer",
-      "description": "Shared JUCE-light infrastructure behind the real-time audio boundary: microphone capture, the SPSC sample FIFO and recovery policy, plus the JUCE-free musical score model.",
+      "id": "layer:realtime-audio-score-platform",
+      "name": "Real-Time Audio & Score Platform",
+      "description": "Shared infrastructure the tools are built on. Microphone capture with device-loss recovery and one preallocated 65,536-sample SPSC FIFO per consumer, behind a hard real-time boundary: the audio callback performs no allocation, locking, I/O or FFT work. Also the JUCE-free music score model \u2014 musical time, pitch, measures, tempo map \u2014 that notation and MIDI/MusicXML import build on.",
       "nodeIds": [
         "file:src/platform/audio/AudioInputService.cpp",
         "file:src/platform/audio/AudioInputService.h",
@@ -34356,9 +34356,9 @@
       ]
     },
     {
-      "id": "layer:backend-service",
+      "id": "layer:feedback-backend-service",
       "name": "Feedback Backend Service",
-      "description": "The deployed TypeScript Cloudflare Worker that ingests in-app feedback, with its admin UI, D1 migrations, Docker image, and Vitest suite.",
+      "description": "The deployed TypeScript Cloudflare Worker that receives in-app feedback: request routing and validation, Cloudflare Access authentication, the admin triage console, email notification queue, and the D1 schema migrations behind them. Import-isolated from the C++ tree and shipped on its own cadence.",
       "nodeIds": [
         "file:src/services/feedback-intake/src/access.ts",
         "file:src/services/feedback-intake/src/admin.ts",
@@ -34410,9 +34410,9 @@
       ]
     },
     {
-      "id": "layer:test",
+      "id": "layer:test-suite",
       "name": "Test Suite",
-      "description": "Catch2 unit and integration tests mirroring the src/ tree, covering pure logic split out of JUCE components.",
+      "description": "Catch2 unit and scenario suites for the desktop application, mirroring the src/ tree so a test's path names what it covers, plus the Vitest suites and database fixtures for the feedback worker. The mirror is enforced in CI rather than trusted.",
       "nodeIds": [
         "file:src/tests/application/shell/WorkspaceStartupSequenceTests.cpp",
         "file:src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp",
@@ -34466,9 +34466,9 @@
       ]
     },
     {
-      "id": "layer:build-tooling",
-      "name": "Build and Developer Tooling",
-      "description": "CMake modules and vcpkg triplets, packaging assets, and the Python/shell scripts for building, quality gates, releases, secrets, and the manual GUI harness.",
+      "id": "layer:build-release-tooling",
+      "name": "Build & Release Tooling",
+      "description": "Everything that builds, packages, versions, checks or operates the project: the CMake build and its modules, the vcpkg manifest and overlay triplets, icon and packaging inputs, quality and coverage tooling, the Git merge drivers, SOPS secret management, the manual GUI verification harness, and the release version and verification gates.",
       "nodeIds": [
         "file:tools/scripts/practice_takes_roadmap/__main__.py",
         "file:tools/scripts/practice_takes_roadmap/config.py",
@@ -34549,9 +34549,9 @@
       ]
     },
     {
-      "id": "layer:ci-cd",
-      "name": "CI/CD Pipelines",
-      "description": "GitHub Actions workflows for multiplatform builds, clang-tidy, coverage, benchmarks, smoke tests, secret scanning, and releases, plus repository automation config.",
+      "id": "layer:continuous-integration",
+      "name": "Continuous Integration",
+      "description": "The GitHub Actions pipelines that gate and ship the project: multi-platform builds and packaging, C++ formatting and static analysis, the services and Python check suites, coverage and benchmarks, CodeQL, secret scanning, and the release workflow. Path filters keep the C++ and TypeScript trees from triggering each other's builds.",
       "nodeIds": [
         "pipeline:.github/workflows/benchmarks.yml",
         "pipeline:.github/workflows/build-multiplatform.yml",
@@ -34569,9 +34569,9 @@
       ]
     },
     {
-      "id": "layer:documentation",
-      "name": "Documentation and Specs",
-      "description": "Architecture, quality, performance, and operations guides, OpenSpec change proposals and capability specs, and the shared feedback wire-format contract.",
+      "id": "layer:documentation-specifications",
+      "name": "Documentation & Specifications",
+      "description": "Developer documentation grouped by subject \u2014 build, architecture, quality, performance, operations, agents \u2014 alongside the OpenSpec capability specs and change proposals that precede larger work, the shared feedback wire contract, and the repository's community-health files.",
       "nodeIds": [
         "document:.github/CONTRIBUTING.md",
         "document:.github/SECURITY.md",
