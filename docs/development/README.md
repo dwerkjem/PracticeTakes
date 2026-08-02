@@ -21,6 +21,8 @@ broader music-practice and digital-audio workstation application.
 - [SOPS secrets](SECRETS.md) — encrypted secret mirrors, synchronization, and conflict resolution
 - [Releasing](RELEASING.md) — semantic versions, GitHub release automation, and
   artifact signing
+- [Agent guide](AGENT_GUIDE.md) — repository guidance loaded by Claude Code
+  through the root `CLAUDE.md` stub
 
 ## Main technologies
 
@@ -30,5 +32,5 @@ broader music-practice and digital-audio workstation application.
 - vcpkg for Linux system dependencies
 - GitHub Actions for Windows, Linux, and macOS packages
 
-The application version is stored only in the root `VERSION` file. Do not
-copy the version into CMake or C++ source code.
+The application version is stored only in `tools/VERSION`. Do not copy the
+version into CMake or C++ source code.

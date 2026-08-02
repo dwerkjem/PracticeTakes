@@ -39,11 +39,16 @@ points a newcomer or a tool needs to find immediately:
 - `services/` — the Cloudflare Worker services
 - `contracts/` — shared wire-format schemas
 - `openspec/` — change proposals and specs
-- `tools/` — everything that builds, packages, or checks the project:
-  `tools/cmake/`, `tools/packaging/`, `tools/scripts/`, and
-  `tools/secret-patterns`
-- `README.md`, `CMakeLists.txt`, `LICENSE`, `VERSION`, `vcpkg.json` — files
-  whose tooling requires them at the root
+- `tools/` — everything that builds, packages, versions, or checks the
+  project: `tools/cmake/`, `tools/packaging/`, `tools/scripts/`,
+  `tools/secret-patterns`, `tools/VERSION`, and `tools/vcpkg.json`
+- `README.md`, `CMakeLists.txt`, `LICENSE`, `CLAUDE.md` — files whose tooling
+  requires them at the root. `CLAUDE.md` is a stub that imports
+  [`docs/development/AGENT_GUIDE.md`](../docs/development/AGENT_GUIDE.md)
+
+Because the vcpkg manifest is not at the root, `CMakeLists.txt` sets
+`VCPKG_MANIFEST_DIR` before `project()`. Configure through CMake rather than
+running `vcpkg install` by hand from the root.
 
 Community-health files (`CONTRIBUTING.md`, `SECURITY.md`, `CODEOWNERS`,
 issue and pull request templates) live under `.github/`.
