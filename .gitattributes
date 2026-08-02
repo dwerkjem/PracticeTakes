@@ -1,3 +1,34 @@
+# Merge behaviour for files where a line-by-line three-way merge is the wrong
+# answer. The drivers named here are defined per clone by
+# tools/scripts/git/configure_merge.py — Git will not read driver definitions
+# out of a repository, so a clone that has not run it falls back to the normal
+# merge and simply sees more conflicts. Nothing here is load-bearing for
+# correctness; it removes conflicts that always resolve the same way.
+#
+# See docs/development/operations/MERGING.md.
+
 # SOPS ciphertext must be resolved through tools/scripts/secrets/secrets_manager.py.
 # Treating it as binary preserves all three Git stages for plaintext merging.
 .secrets/** -diff -merge
+
+# The long source lists in target_sources()/add_executable() are unordered sets
+# of paths, and every branch that adds or moves a file collides in them. The
+# driver unions the lists and conflicts on anything that is not a bare path.
+/CMakeLists.txt merge=cmake-sources
+
+# Lockfiles are generated. The driver regenerates from the merged manifest and
+# refuses if it cannot, rather than interleaving two dependency trees.
+src/services/package-lock.json merge=npm-lock
+
+# The knowledge graph is regenerated wholesale by /understand. It is tens of
+# thousands of lines of machine-written JSON, so a textual merge produces a
+# file that is valid JSON and describes a repository that never existed. Keep
+# ours and regenerate.
+.ua/knowledge-graph.json merge=ours -diff
+.ua/fingerprints.json merge=ours -diff
+.ua/intermediate/** merge=ours -diff
+
+# Manual verification evidence is an append-only record of runs that actually
+# happened. Two branches recording different runs is not a conflict; both are
+# true.
+docs/development/quality/manual-runs/*.md merge=union
