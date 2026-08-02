@@ -126,11 +126,11 @@ jobs:
           cache-dependency-path: src/services/package-lock.json
 
       - name: Install dependencies
-        working-directory: services
+        working-directory: src/services
         run: npm ci
 
       - name: Measure coverage
-        working-directory: services
+        working-directory: src/services
         run: npm run test:coverage
 
       - name: Summarise

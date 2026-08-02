@@ -12,7 +12,7 @@ export default defineConfig({
       provider: "v8",
       // Relative to the workspace vitest runs in (feedback-intake), so this
       // lands in the repository's gitignored build/ directory.
-      reportsDirectory: "../../build/coverage/services",
+      reportsDirectory: "../../../build/coverage/services",
       reporter: ["text-summary", "json-summary", "lcov"],
       // Relative to the workspace root too. Getting this wrong is not a loud
       // failure -- it silently reports only the files a test imported, so
