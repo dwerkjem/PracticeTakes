@@ -93,9 +93,11 @@ data, or file import, and this change alters no existing behaviour.
 
 ## Impact
 
-- **New source tree** — `src/services/score/` for the model and
-  `src/services/score/musicxml/` for the importer, under `namespace score`
-  (`design.md` § Resolved Questions, decision 1). #32, #33, #34, and #39 all
+- **New source tree** — `src/platform/score/` for the model and
+  `src/platform/score/musicxml/` for the importer, under `namespace score`
+  (`design.md` § Resolved Questions, decision 1; the layer was named
+  `src/services/` when that decision was written and has since been renamed
+  `src/platform/`). #32, #33, #34, and #39 all
   depend downward on it.
 - **`CMakeLists.txt`** — every source file is listed explicitly, so each new
   `.h`/`.cpp` is added to `target_sources(PracticeTakes ...)`, and each
@@ -104,23 +106,23 @@ data, or file import, and this change alters no existing behaviour.
   `juce_graphics`, and `juce_gui_basics`; the model and importer must be
   buildable against that set, which means no `JuceHeader.h` and no
   `juce_gui_extra` in model or importer headers.
-- **New third-party dependency** — libmusicxml (Grame), MPL-2.0, added via the
-  existing pinned-commit `FetchContent` pattern alongside JUCE and Catch2
-  (`design.md` § Resolved Questions, decision 5). It is the first weak-copyleft
-  code in this BSD-3-Clause tree; MPL-2.0 obligations attach to its own files
-  only. It is reached through a single adapter header so it stays replaceable.
-  It supplies the MusicXML DOM and visitor layer only — it does not perform the
-  normalization this change is mostly about.
+- **No new third-party dependency.** Decision 5 was resolved in favour of
+  libmusicxml (MPL-2.0, `FetchContent`) and then reversed after verification
+  showed it cannot parse anything outside MusicXML's own element vocabulary —
+  which rules out the `.mxl` manifest and defeats the unrecognised-element
+  reporting this change requires. See `design.md` § Verification of libmusicxml.
+  XML parsing is `juce::parseXML`, already linked, reached through a single
+  adapter header so the choice stays reversible in one file.
 - **New JUCE surface** — `juce::ZipFile` is used nowhere in the repository today
-  and is introduced here for `.mxl`, since libmusicxml's core ships no ZIP
-  reader. XML parsing previously existed only for `AudioDeviceManager` state
-  round-tripping via `juce::parseXML`.
-- **`tests/`** — the test directory now mirrors `src/`, so these land in
-  `tests/services/score/` and `tests/services/score/musicxml/`. It still has no
-  resource directory, and existing tests that need files create them at runtime
-  in the temp directory. Importing "representative vocal and piano scores" needs
-  real files, which is a new convention and a licensing question; see
-  `design.md` decision 6.
+  and is introduced here for `.mxl`. XML parsing previously existed only for
+  `AudioDeviceManager` state round-tripping via `juce::parseXML`; this is its
+  first use on input from outside the application, which is why the adapter
+  strips the DOCTYPE before parsing.
+- **`src/tests/`** — mirrors `src/`, so these land in
+  `src/tests/platform/score/musicxml/`. It gains its first resource directory,
+  `src/tests/resources/musicxml/`, reached through a
+  `PRACTICE_TAKES_TEST_RESOURCES_DIR` compile definition; every other test that
+  needs a file still creates it at runtime in the temp directory.
 - **Documentation** — `docs/development/ARCHITECTURE.md` gains a score-model
   section covering ownership and the audio-thread boundary, and the change adds
   a supported-MusicXML-subset document that both the renderer (#32) and user

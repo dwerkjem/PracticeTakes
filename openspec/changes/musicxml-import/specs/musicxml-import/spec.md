@@ -95,9 +95,10 @@ unusable volume of diagnostics.
 ### Requirement: Invalid input fails with a specific, actionable reason
 The importer SHALL distinguish between a missing file, an unreadable file, a
 file exceeding the documented size limits, a file that is not MusicXML,
-malformed XML, an unsupported document type, and a structurally invalid score.
-The failure SHALL carry a human-readable message. No score SHALL be produced on
-failure, and no partially constructed score SHALL be observable.
+malformed XML, an inconsistent compressed container, an unsupported document
+type, and a structurally invalid score. The failure SHALL carry a human-readable
+message. No score SHALL be produced on failure, and no partially constructed
+score SHALL be observable.
 
 #### Scenario: The XML is malformed
 - **WHEN** a file's XML is truncated or syntactically invalid
@@ -118,6 +119,15 @@ failure, and no partially constructed score SHALL be observable.
 #### Scenario: A failed import leaves no partial result
 - **WHEN** an import fails for any reason
 - **THEN** the result carries no score
+
+#### Scenario: A document yields no music at all
+- **WHEN** a partwise document parses but produces no notes and no rests
+- **THEN** the import fails as structurally invalid, because a document with no
+  events is a failed parse rather than an empty score
+
+#### Scenario: A document contains only rests
+- **WHEN** a partwise document produces rests but no notes
+- **THEN** the import succeeds, because a passage of rests is valid notation
 
 ### Requirement: Diagnostics identify where in the score a problem occurred
 Every diagnostic SHALL carry a severity and, where the problem is attributable to

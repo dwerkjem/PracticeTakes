@@ -289,45 +289,103 @@ decision 5 did not.
   MIDI-to-`Score` conversion step or a separate piano-roll view, and that cost
   lands in #34, not here.
 
-- **Decision 5 — parser and dependency policy.** **libmusicxml (Grame) via the
-  existing pinned `FetchContent` pattern** — *not* the recommended JUCE-only
-  option. The recommendation rested on "licence is the blocker", which is true of
-  MuseScore's GPL importer but not of libmusicxml: it is **MPL-2.0**, a
-  file-level weak copyleft that links cleanly into this BSD-3-Clause application.
-  Obligations attach only to libmusicxml's own files, not to Practice Takes code.
-  Verified at decision time: last upstream commit 2025-06-07, not archived, ships
-  a top-level `CMakeLists.txt`, ~108 MB checkout.
+- **Decision 5 — parser and dependency policy.** Resolved on 2026-07-31 as
+  **libmusicxml (Grame) via pinned `FetchContent`**, overturning the JUCE-only
+  recommendation on the grounds that the licence objection did not apply to it
+  (MPL-2.0, not GPL). **Reversed on 2026-08-02, after verification, back to
+  `juce::parseXML`.** The reasoning for the original reversal was sound; the
+  library simply does not do what it was chosen to do. What was weighed and what
+  was found is in [Verification of libmusicxml](#verification-of-libmusicxml)
+  below, and the reversal is deliberately recorded rather than tidied away,
+  because the *reason* it failed is a constraint on any future replacement.
 
-  Four consequences that follow, and that the task list must reflect:
+  What holds either way:
 
-  1. **It does not replace the normalization work.** libmusicxml is "designed
-     close to the MusicXML format" — `src/elements`, `src/parser`, and
-     `src/visitors` give a MusicXML-shaped DOM with a visitor API. It removes the
-     raw XML/element-traversal layer only. Rescaling `<divisions>` into 3840 PPQ,
-     resolving the `<backup>`/`<forward>` voice cursor, collapsing chords,
-     matching ties against slurs, and attaching lyrics — `tasks.md` sections 4
-     through 7 — are unchanged and remain the bulk of this change.
-  2. **`.mxl` is still ours to handle.** The `mxl` hits in the libmusicxml
-     repository are DTD/schema files and the `xml2ly`/`xml2brl` sample programs;
-     the library core contains no ZIP reader. `juce::ZipFile` is still introduced
-     here to resolve the `META-INF/container.xml` manifest to its root document.
-  3. **Validation still means our structural rules, not schema validation.**
-     Unchanged from the original recommendation. No XSD or DTD validation, and no
-     network access on the file-open path — a MusicXML DOCTYPE references an
-     external DTD by URL, and fetching it would be both an I/O stall and an
-     XXE-shaped hole. "Invalid" means "violates the rules we document".
-  4. **Diagnostic location is musical, not textual — provisionally.** The
-     original constraint was that `juce::XmlDocument` exposes no source
-     positions. libmusicxml may expose parse-error positions; whether it does has
-     **not** been verified. Task 3.2 now covers this. If it does, a line/column
-     may be added to `Diagnostic` as an optional extra field, but the musical
-     location (part, printed measure number, voice, event index) stays primary
-     because it is what a musician can act on.
+  1. **The parser does not replace the normalization work.** Rescaling
+     `<divisions>` into 3840 PPQ, resolving the `<backup>`/`<forward>` voice
+     cursor, collapsing chords, matching ties against slurs, and attaching
+     lyrics — `tasks.md` sections 4 through 7 — are the bulk of this change
+     whatever parses the XML.
+  2. **`.mxl` is ours to handle.** `juce::ZipFile` reads the container and
+     resolves `META-INF/container.xml` to its root document. This was true under
+     libmusicxml too: its core ships no ZIP reader.
+  3. **Validation means our structural rules, not schema validation.** No XSD or
+     DTD validation, and no network access on the file-open path. "Invalid"
+     means "violates the rules we document".
+  4. **Diagnostic location is musical, not textual.** As originally reasoned:
+     `juce::XmlDocument` exposes a parse error as a string with no line or
+     column, so a diagnostic says "part P1, measure 12, voice 1" rather than
+     "line 4127". That is more useful to a musician anyway. The provisional
+     hope that libmusicxml might supply a line number came to nothing — it does
+     expose one, but the counter is broken (finding 5 below), and it is moot now.
 
-  The adapter-header rule still stands and matters more now, not less: the
-  library is named in exactly one header, so this decision stays reversible in
-  one file if libmusicxml's size, staleness, or licence posture becomes a
-  problem.
+  The adapter-header rule stands and did its job: when the parser was swapped,
+  `XmlDocumentAdapter.cpp` was the only file that changed. Nothing in the
+  importer, the container reader, or the model ever named a parser.
+
+### Verification of libmusicxml
+
+Checked on 2026-08-02 against upstream commit
+`525399683cd9165c483bc20e2459b4149efcd809`, still the tip of the default branch.
+It builds, and its headers compile clean under C++20 apart from
+`-Wunused-parameter`. Six findings followed. Three were worked around; the
+fourth is disqualifying.
+
+1. **No network access, confirmed by source and by execution.** There is no
+   socket, HTTP, or curl code anywhere in its `src/` — the only `http://`
+   strings are MPL licence header URLs. A document carrying the standard
+   MusicXML 4.0 external DTD reference parsed with no fetch.
+
+2. **Entity expansion is impossible, not merely bounded.** Its grammar has no
+   `ENTITY` production, so a billion-laughs prologue fails to parse rather than
+   expanding.
+
+3. **[Defect, worked around] Not reentrant.** `readbuffer` drives a flex/bison
+   parser through file-scope globals, so two imports on two background threads
+   would interleave into each other's element stacks. A mutex in the adapter
+   fixed it.
+
+4. **[Defect, worked around] Parse-error line numbers drift.** `%option
+   yylineno` keeps the counter in a global that is never reset between parses.
+   Three consecutive parses of the same malformed document reported lines 2, 3,
+   and 4 — the first correct and every one after it wrong, which is worse than
+   having no line at all, because it is wrong in a way that looks right.
+   `libmxmlset_lineno(1)` before each parse fixed it.
+
+5. **[Defect, worked around] `<!DOCTYPE>` is mandatory.** Its grammar is
+   `prolog : xmldecl doctype`, with the alternative that would permit a prolog
+   without one present in the grammar file and commented out. A valid MusicXML
+   document that omits its DOCTYPE — permitted by the specification, and common
+   — was rejected as malformed. Synthesising one in the adapter fixed it.
+
+6. **[Disqualifying] It parses only MusicXML element names.**
+   `xmlreader::newElement` asks a fixed factory for every element and returns
+   false when the factory does not know it (`factory.cpp:59`,
+   `xmlreader.cpp:84`), which aborts the whole parse and writes to `std::cerr`
+   on the way out. Three consequences, any one of which is serious:
+
+   - It cannot parse `META-INF/container.xml`. `<container>` and `<rootfile>`
+     are not MusicXML elements, so `.mxl` support needed a second XML parser
+     regardless — which removes the reason to have this one.
+   - It cannot distinguish well-formed non-MusicXML from malformed XML. Both are
+     "parse failed", so `notMusicXml` and `malformedXml` could not be told apart.
+   - **It defeats task 7.2 outright.** Summarising unrecognised elements is
+     impossible when meeting an unrecognised element is fatal. Any vendor
+     extension, or any element from a MusicXML version newer than the library,
+     fails the entire import. That is the opposite of the robustness #31 asks
+     for, and it cannot be worked around without abandoning the library's DOM
+     entirely — at which point it supplies nothing but an XML tokeniser, which
+     `juce_core` already has.
+
+**What this cost and what it bought.** The change no longer takes a ~120 MB
+dependency, no longer introduces weak-copyleft code into a BSD-3-Clause tree,
+and no longer needs the third-party notice file and packaging changes that
+MPL-2.0 §3.2 would have required. Against that, `juce::parseXML` expands inline
+entities and would follow a `SYSTEM` identifier given an input source, so the
+adapter **removes the DOCTYPE declaration entirely before parsing**. That makes
+both an expansion bomb and an XXE impossible rather than bounded, and costs
+nothing: the five predefined entities and numeric character references do not
+come from the DTD, and MusicXML content uses nothing else.
 
 - **Decision 6 — test fixtures and licensing.** **Synthetic fixtures plus a
   committed corpus, MuseScore only.** Hand-written MusicXML string literals cover
@@ -424,10 +482,10 @@ this design:
 - Schema/DTD validation, or any network access during import.
 - Round-trip fidelity. Unsupported constructs are reported, not preserved for
   re-export.
-- Supporting `score-timewise`. Still out of scope under the resolved decision 5:
-  libmusicxml vendors a `parttime.xsl` partwise/timewise conversion, but wiring
-  an XSLT step into the import path is its own dependency and its own test
-  surface. A timewise document is rejected with `unsupportedDocumentType`.
+- Supporting `score-timewise`. Converting one root form to the other is an XSLT
+  step, with its own dependency and its own test surface, and no mainstream
+  program exports timewise. A timewise document is rejected with
+  `unsupportedDocumentType` rather than misread.
 
 ## Decisions
 
@@ -597,23 +655,16 @@ produce thousands.
   emits divisions and voice numbering unlike MuseScore's; Sibelius emits large
   volumes of layout elements. Decision 6 is the mitigation, and it only works if
   the corpus really does come from more than one program.
-- **[Risk] libmusicxml's handling of an inline DTD with recursive entity
-  definitions is not something I verified.** MusicXML files carry a DOCTYPE
-  referencing an external DTD, which the parser should not fetch — but "should
-  not" is an assumption, and an entity-expansion bomb is the classic XML denial
-  of service. Note that libmusicxml *vendors* the MusicXML DTDs and schemas
-  (`dtds/`, `schema/`), which makes a local resolution plausible but does not
-  prove no network fetch occurs. This is an explicit task: confirm no network
-  access occurs during a parse, and bound entity expansion or strip the DOCTYPE
-  before parsing.
-- **[Risk] libmusicxml is a large, externally-maintained dependency in a
-  repository whose dependency posture is deliberately minimal.** ~108 MB of
-  checkout, last upstream commit 2025-06-07, and the first weak-copyleft
-  (MPL-2.0) code in a BSD-3-Clause tree. Mitigated by the adapter header — the
-  library is named in exactly one place, so replacing it is one file plus a CMake
-  declaration — and by pinning to an exact commit SHA as the repository already
-  does for JUCE and Catch2. Worth re-checking upstream activity before the change
-  lands.
+- **[Risk, resolved] The DOCTYPE was the sharpest edge in the format.** MusicXML
+  files carry a DOCTYPE referencing an external DTD by URL, and may declare
+  entities inline. Fetching the former on a file-open path would be an I/O stall
+  and an XXE-shaped hole; expanding the latter is the classic XML denial of
+  service, and `juce::XmlDocument` does expand inline entities and would follow
+  a `SYSTEM` identifier given an input source. Resolved by **removing the
+  DOCTYPE declaration outright before parsing**, which makes both impossible
+  rather than bounded. Nothing is lost: the five predefined entities and numeric
+  character references do not come from the DTD, and MusicXML content uses
+  nothing else.
 - **[Risk] Rounding when rescaling divisions (decision 2, option 1) accumulates
   within a measure.** Mitigated by rescaling with exact integer arithmetic where
   the division is exact, diagnosing where it is not, and asserting invariant 1
@@ -651,6 +702,45 @@ step independently reviewable:
 
 Rollback is deleting the directory and its CMake entries. No existing file's
 behaviour changes, so nothing can regress.
+
+## Deviations from the spec deltas
+
+Task 9.7 asks that the spec deltas be re-read against what was built, and that
+any deviation be *recorded* rather than quietly edited away. Four, of which two
+changed the spec and two did not.
+
+**Changed the spec, because the implementation was right:**
+
+- **`invalidContainer` was added to the failure-status list.** The container
+  requirement already demanded "a status distinguishing it from a valid file",
+  so the enumeration in the invalid-input requirement was simply incomplete. A
+  `.mxl` with a broken manifest really is a container — saying "not MusicXML" of
+  it would be less useful, not more.
+- **Two scenarios were added for a document that yields no music.** This was an
+  open question when the deltas were written, and it is now decided: zero
+  *events* is a structural failure, zero *notes* is not. Writing only the first
+  half into the spec would have left the second half as an accident of the
+  implementation rather than a promise.
+
+**Left unmet, and not papered over:**
+
+- **"A large score is imported → the user interface remains responsive"** cannot
+  be verified by this change. There is no file-open command until #32, so
+  nothing exercises the importer from a UI at all. What *is* verified is the
+  property the scenario rests on: `importMusicXmlFile` and
+  `importMusicXmlDocument` start no threads, hold no global state, and touch
+  nothing outside their arguments, and a test imports the same document
+  repeatedly to hold that. The scenario becomes testable when #32 gives the
+  importer a caller.
+- **"Representative real-world scores import consistently" is not yet
+  satisfied.** The corpus directory, the manifest format, the compile
+  definition, and both corpus test cases exist; the corpus itself is empty,
+  because exporting public-domain scores from MuseScore needs MuseScore, which is
+  not installed on the development machine. `MusicXmlCorpusTests` reports the gap
+  with a warning on every run rather than passing silently, and fails on any
+  corpus file that has no pinned expectation — so adding files later cannot
+  accidentally produce coverage that asserts nothing. Tasks 8.1 and 8.2 stay
+  open.
 
 ## Open questions and assumptions
 
@@ -690,6 +780,9 @@ where I guessed and want the guess on the record.
   captured now even though only #32 uses it? It is cheap to capture and annoying
   to add later, but it is arguably engraving data, which invariant 10 says the
   model does not hold.
-- How should a file that imports with zero notes be treated — success with a
-  diagnostic, or a structural failure? I lean toward failure, because it almost
-  always means the parse went wrong rather than that the score is empty.
+- ~~How should a file that imports with zero notes be treated?~~ **Answered
+  (task 7.5): a structural failure, but stated over *events* rather than over
+  notes.** The lean towards failure was right — zero events almost always means
+  the parse went wrong. Stating it over notes would have been wrong: a movement
+  of nothing but rests is unusual and entirely valid, and refusing it would
+  reject a real score to catch a hypothetical one.
