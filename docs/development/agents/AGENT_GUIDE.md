@@ -116,7 +116,7 @@ fresh launches against them; writes evidence to `build/ui-validation/step-7/`.
 
 ## Architecture
 
-Full detail lives in `docs/development/ARCHITECTURE.md` — read it before any
+Full detail lives in `docs/development/architecture/ARCHITECTURE.md` — read it before any
 change that touches ownership, the audio thread, or adds a new tool/service.
 Summary:
 
@@ -137,6 +137,13 @@ exception that could not move: its CLI searches upward for an `openspec/`
 directory, so it would not be found from a subdirectory. If something else
 genuinely cannot work outside the root, say so explicitly rather than adding
 it silently.
+
+The root is the only place kept flat. Everywhere below it, prefer nesting: a
+new document goes in the `docs/development/` subdirectory that matches its
+subject (`build/`, `architecture/`, `quality/`, `performance/`,
+`operations/`, `agents/`) rather than loose beside the index, and a new
+subdirectory is the right answer when a subject grows. Add it to the index in
+`docs/development/README.md`.
 
 ### Source layering (`src/`)
 
@@ -178,8 +185,8 @@ one preallocated 65,536-sample SPSC FIFO per active tool consumer. Each tool
 drains its own FIFO from a message-thread timer and does its analysis there,
 so a slow tool can't block capture or another tool. Device
 start/stop/sample-rate changes are communicated via atomics polled on a timer,
-not shared mutable state. See `docs/development/performance-audio-thread-safety.md`
-for the fuller contract and `docs/development/ARCHITECTURE_QA.md` for the PR
+not shared mutable state. See `docs/development/performance/audio-thread-safety.md`
+for the fuller contract and `docs/development/architecture/ARCHITECTURE_QA.md` for the PR
 checklist version of these rules.
 
 ### Testability pattern
@@ -193,7 +200,7 @@ this split for new non-trivial logic rather than embedding it directly in a
 files: `AudioInputService.cpp`, `FeedbackComponent.cpp`, `TunerComponent`,
 `SpectrogramComponent`, `MainComponent*`) is currently outside
 `PracticeTakesTests` for this reason — see
-`docs/development/QA_STRATEGY.md` area 9 before assuming a change there is
+`docs/development/quality/QA_STRATEGY.md` area 9 before assuming a change there is
 covered.
 
 ### Version
@@ -209,7 +216,7 @@ or copy the version elsewhere.
 `docs/contracts/feedback/v1.schema.json` documents the wire format shared by the
 C++ feedback client (`src/features/feedback`) and the
 `src/services/feedback-intake` worker, but nothing currently validates either side
-against it — they can drift (`docs/development/QA_STRATEGY.md` area 12).
+against it — they can drift (`docs/development/quality/QA_STRATEGY.md` area 12).
 
 ## Workflow notes
 
@@ -217,7 +224,7 @@ against it — they can drift (`docs/development/QA_STRATEGY.md` area 12).
   a PR. Anything touching multiple layers, introducing a new shared
   service/ownership pattern, or changing the audio-thread contract goes
   through an OpenSpec proposal in `openspec/changes/` first — see
-  `docs/development/ARCHITECTURE_QA.md § When to write more than a checklist
+  `docs/development/architecture/ARCHITECTURE_QA.md § When to write more than a checklist
   pass`.
 - The [architecture map](https://dwerkjem.github.io/PracticeTakes/) is a
   generated, browsable graph of the whole repo — useful for finding where a

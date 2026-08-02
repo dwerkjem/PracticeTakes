@@ -33,7 +33,7 @@ Every commit runs `clang-format` against staged C and C++ files. When formatting
 
 The same hook run protects files selected by `tools/secret-patterns`. It removes
 newly added plaintext secrets from the index and stages only their encrypted
-mirrors below `.secrets/`. See [SOPS secret management](SECRETS.md) for setup,
+mirrors below `.secrets/`. See [SOPS secret management](../operations/SECRETS.md) for setup,
 synchronization, and conflict resolution.
 
 Run the formatter manually across the repository with:

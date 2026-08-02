@@ -3,9 +3,9 @@
 This is a review checklist, not a design tutorial. It exists so pull request
 reviewers have concrete, checkable questions for design and architecture
 quality — the things `clang-format`/`clang-tidy` (see
-[Code quality](QUALITY.md)) cannot check. Use it alongside
+[Code quality](../quality/QUALITY.md)) cannot check. Use it alongside
 [Architecture](ARCHITECTURE.md) (what the current system looks like) and
-[Code style](CODE_STYLE.md) (line-level conventions).
+[Code style](../quality/CODE_STYLE.md) (line-level conventions).
 
 Not every item applies to every PR. Use judgment: a one-line bug fix does not
 need a layering review. A new tool, a new shared service, or a change that
@@ -28,7 +28,7 @@ touches ownership/lifetime does.
 
 - [ ] Every new owned object has exactly one clear owner, expressed with
       `std::unique_ptr` or equivalent RAII, per
-      [Code style § Ownership](CODE_STYLE.md#ownership).
+      [Code style § Ownership](../quality/CODE_STYLE.md#ownership).
 - [ ] Shared, long-lived services (audio device manager, look-and-feel,
       `AudioInputService`) are referenced, not duplicated. Check whether a
       new feature actually needs its own instance of something that should
@@ -48,7 +48,7 @@ touches ownership/lifetime does.
       real-time callback) allocates, locks, blocks, touches files/network,
       logs, or updates UI. See
       [Architecture § Audio-thread boundary](ARCHITECTURE.md#audio-thread-boundary)
-      and [Code style § Real-time audio rules](CODE_STYLE.md#real-time-audio-rules).
+      and [Code style § Real-time audio rules](../quality/CODE_STYLE.md#real-time-audio-rules).
 - [ ] New audio consumers drain their own preallocated FIFO from a
       message-thread timer; a slow consumer cannot block capture or another
       consumer.

@@ -4,7 +4,7 @@ This is a living plan for closing quality-assurance gaps identified during a
 July 2026 review of the project's CI/CD, testing, and repository hygiene. It
 complements the day-to-day mechanics already documented in
 [Code quality](QUALITY.md) (formatting/linting) and
-[Design and architecture review checklist](ARCHITECTURE_QA.md) (PR review
+[Design and architecture review checklist](../architecture/ARCHITECTURE_QA.md) (PR review
 criteria) — this document is about *what to build next* and in what order.
 
 Each numbered area below is meant to become its own OpenSpec change
@@ -20,11 +20,11 @@ exist.
 
 - **C++ formatting/linting**: `clang-format` on every local commit
   (pre-commit), `clang-tidy` full-repo check on every pull request
-  ([cpp-quality-check.yml](../../.github/workflows/cpp-quality-check.yml)),
+  ([cpp-quality-check.yml](../../../.github/workflows/cpp-quality-check.yml)),
   and an auto-fix pass on `main`
-  ([clang-tidy-main.yml](../../.github/workflows/clang-tidy-main.yml)).
+  ([clang-tidy-main.yml](../../../.github/workflows/clang-tidy-main.yml)).
 - **C++ tests**: Catch2 (`PracticeTakesTests`), run via `ctest` only on the
-  `Linux x64` leg of [build-multiplatform.yml](../../.github/workflows/build-multiplatform.yml)
+  `Linux x64` leg of [build-multiplatform.yml](../../../.github/workflows/build-multiplatform.yml)
   (`run_tests: true`). Linux arm64, Windows x64/arm64, and macOS legs build
   but never execute tests.
 - **TypeScript service** (`src/services/feedback-intake`, a Cloudflare Worker):
@@ -123,7 +123,7 @@ alongside other items.
 ## 6. Performance monitoring and impact suite
 
 **Problem**: Real-time audio code has hard latency/allocation constraints
-(see [Architecture § Audio-thread boundary](ARCHITECTURE.md#audio-thread-boundary)
+(see [Architecture § Audio-thread boundary](../architecture/ARCHITECTURE.md#audio-thread-boundary)
 and [Code style § Real-time audio rules](CODE_STYLE.md#real-time-audio-rules)),
 but nothing measures whether a change quietly regresses the analysis
 pipelines' performance. One Catch2 benchmark exists
@@ -232,7 +232,7 @@ both remain internally consistent.
 **Problem**: `AudioSampleFifo` is a lock-free single-producer/single-consumer
 ring, and every one of its tests is single-threaded. There is no ASan/UBSan/TSan
 build in CI, and the audio-thread no-allocation rules asserted in
-[Audio-thread safety](performance-audio-thread-safety.md) are unverified.
+[Audio-thread safety](../performance/audio-thread-safety.md) are unverified.
 
 **Plan**: add a sanitizer build to CI plus genuinely concurrent producer and
 consumer tests for the FIFO.

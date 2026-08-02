@@ -10,6 +10,6 @@ each run. Run IDs are generated automatically from:
 - source commit; and
 - a short UUID suffix to prevent collisions.
 
-Review results against `docs/development/performance-hardware-acceptance.md` before committing
+Review results against `docs/development/performance/hardware-acceptance.md` before committing
 them. Synthetic, interrupted, or uncontrolled runs should remain identifiable through their
 status, warnings, and provenance rather than being edited after capture.

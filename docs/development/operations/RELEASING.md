@@ -1,7 +1,7 @@
 # Releasing Practice Takes
 
 Practice Takes has one source of truth for its version: the root
-[`tools/VERSION`](../../tools/VERSION) file. CMake, JUCE application metadata, the C++
+[`tools/VERSION`](../../../tools/VERSION) file. CMake, JUCE application metadata, the C++
 application version, window titles, package names, tags, build artifacts, and
 GitHub Releases all derive from that value. When the version helper writes a
 release version, it also synchronizes the `version-string` in `tools/vcpkg.json`.
