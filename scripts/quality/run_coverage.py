@@ -101,6 +101,15 @@ def run_gcovr(build_dir: Path, output_dir: Path) -> bool:
             # repository's own code.
             "--exclude",
             str(build_dir),
+            # --filter and --exclude shape the report, but gcovr still parses
+            # every .gcda it finds first. JUCE compiles its modules into the
+            # test target, and gcov cannot resolve the generated Ragel sources
+            # that HarfBuzz includes, which is a hard error rather than a
+            # skipped file. Excluding the directory keeps those files from
+            # being searched at all: same numbers, no error to suppress, and
+            # roughly a third of the runtime.
+            "--gcov-exclude-directories",
+            ".*_deps.*",
             "--print-summary",
             "--xml",
             str(output_dir / "coverage.xml"),
