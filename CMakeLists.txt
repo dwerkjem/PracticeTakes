@@ -305,6 +305,36 @@ target_sources(PracticeTakes
         src/platform/score/ScoreInvariants.h
         src/platform/score/TempoMap.cpp
         src/platform/score/TempoMap.h
+        src/platform/score/musicxml/MusicXmlDiagnosticSink.cpp
+        src/platform/score/musicxml/MusicXmlDiagnosticSink.h
+        src/platform/score/musicxml/MusicXmlImportResult.h
+        src/platform/score/musicxml/MusicXmlImporter.cpp
+        src/platform/score/musicxml/MusicXmlImporter.h
+        src/platform/score/musicxml/XmlDocumentAdapter.cpp
+        src/platform/score/musicxml/XmlDocumentAdapter.h
+        src/platform/score/musicxml/container/MusicXmlContainer.cpp
+        src/platform/score/musicxml/container/MusicXmlContainer.h
+        src/platform/score/musicxml/read/MusicXmlMeasureReader.cpp
+        src/platform/score/musicxml/read/MusicXmlMeasureReader.h
+        src/platform/score/musicxml/read/MusicXmlReadContext.cpp
+        src/platform/score/musicxml/read/MusicXmlReadContext.h
+        src/platform/score/musicxml/read/MusicXmlScoreReader.cpp
+        src/platform/score/musicxml/read/MusicXmlScoreReader.h
+        src/platform/score/musicxml/read/MusicXmlSubset.cpp
+        src/platform/score/musicxml/read/MusicXmlSubset.h
+        src/platform/score/musicxml/read/MusicXmlTieResolver.cpp
+        src/platform/score/musicxml/read/MusicXmlTieResolver.h
+        src/platform/score/musicxml/read/MusicXmlValueParsing.cpp
+        src/platform/score/musicxml/read/MusicXmlValueParsing.h
+)
+
+# src/ on the include path so a file deep in the tree includes a sibling
+# subsystem by its full path -- "platform/score/Score.h" -- rather than counting
+# ../ hops. The test target already does this; this keeps the two consistent, so
+# an include that compiles in a test compiles in the application.
+target_include_directories(PracticeTakes
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
 target_compile_definitions(PracticeTakes
