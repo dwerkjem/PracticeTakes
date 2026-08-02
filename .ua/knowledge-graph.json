@@ -33288,7 +33288,7 @@
       "target": "file:src/tests/application/shell/WorkspaceStartupSequenceTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "WorkspaceStartupSequence.h is covered by WorkspaceStartupSequenceTests.cpp"
     },
     {
@@ -33296,7 +33296,7 @@
       "target": "file:src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "FeedbackInvitationPolicy.h is covered by FeedbackInvitationPolicyTests.cpp"
     },
     {
@@ -33304,7 +33304,7 @@
       "target": "file:src/tests/features/performance/ApplicationLaunchTimerTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "ApplicationLaunchTimer.h is covered by ApplicationLaunchTimerTests.cpp"
     },
     {
@@ -33312,7 +33312,7 @@
       "target": "class:src/tests/features/performance/BenchmarkInterfacesTests.cpp:TestStrategy",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "BenchmarkInterfaces.h is covered by BenchmarkInterfacesTests.cpp"
     },
     {
@@ -33320,7 +33320,7 @@
       "target": "file:src/tests/features/performance/BenchmarkRecordCodecTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "BenchmarkRecordCodec.h is covered by BenchmarkRecordCodecTests.cpp"
     },
     {
@@ -33328,7 +33328,7 @@
       "target": "class:src/tests/features/performance/BenchmarkRecordStoreTests.cpp:TemporaryDirectory",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "BenchmarkRecordStore.h is covered by BenchmarkRecordStoreTests.cpp"
     },
     {
@@ -33336,7 +33336,7 @@
       "target": "file:src/tests/features/performance/BenchmarkTypesTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "BenchmarkTypes.h is covered by BenchmarkTypesTests.cpp"
     },
     {
@@ -33344,7 +33344,7 @@
       "target": "file:src/tests/features/performance/InTreeOptimizationStrategyTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "InTreeOptimizationStrategy.h is covered by InTreeOptimizationStrategyTests.cpp"
     },
     {
@@ -33352,7 +33352,7 @@
       "target": "file:src/tests/features/performance/NonRealTimeTelemetryCollectorTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "NonRealTimeTelemetryCollector.h is covered by NonRealTimeTelemetryCollectorTests.cpp"
     },
     {
@@ -33360,7 +33360,7 @@
       "target": "file:src/tests/features/performance/PlatformProvenanceProviderTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "PlatformProvenanceProvider.h is covered by PlatformProvenanceProviderTests.cpp"
     },
     {
@@ -33368,7 +33368,7 @@
       "target": "file:src/tests/features/performance/StrategyRegistryTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "StrategyRegistry.h is covered by StrategyRegistryTests.cpp"
     },
     {
@@ -33376,7 +33376,7 @@
       "target": "file:src/tests/features/performance/TrialAggregatorTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "TrialAggregator.h is covered by TrialAggregatorTests.cpp"
     },
     {
@@ -33384,7 +33384,7 @@
       "target": "function:src/tests/application/configuration/SettingsTransferCodecTests.cpp:settingsOptions",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "SettingsTransferCodec.h is covered by SettingsTransferCodecTests.cpp"
     },
     {
@@ -33392,7 +33392,7 @@
       "target": "file:src/tests/platform/audio/AudioRecoveryPolicyTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "AudioRecoveryPolicy.h is covered by AudioRecoveryPolicyTests.cpp"
     },
     {
@@ -33400,7 +33400,7 @@
       "target": "file:src/tests/platform/audio/AudioSampleFifoTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "AudioSampleFifo.h is covered by AudioSampleFifoTests.cpp"
     },
     {
@@ -33408,7 +33408,7 @@
       "target": "file:src/tests/application/configuration/AppDefaultsTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "AppDefaults.h is covered by AppDefaultsTests.cpp"
     },
     {
@@ -33416,7 +33416,7 @@
       "target": "class:src/tests/application/configuration/SettingsPersistenceTests.cpp:TemporarySettingsFile",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "SettingsPersistence.h is covered by SettingsPersistenceTests.cpp"
     },
     {
@@ -33424,7 +33424,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceBuiltInsTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "WorkspaceBuiltIns.h is covered by WorkspaceBuiltInsTests.cpp"
     },
     {
@@ -33432,7 +33432,7 @@
       "target": "function:src/tests/application/shell/ui/workspace/model/WorkspaceCatalogCodecTests.cpp:sampleCatalog",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "WorkspaceCatalogCodec.h is covered by WorkspaceCatalogCodecTests.cpp"
     },
     {
@@ -33440,7 +33440,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceDocumentsTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "WorkspaceDocuments.h is covered by WorkspaceDocumentsTests.cpp"
     },
     {
@@ -33448,7 +33448,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceSessionLifecycleTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "WorkspaceSessionLifecycle.h is covered by WorkspaceSessionLifecycleTests.cpp"
     },
     {
@@ -33456,7 +33456,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotApplyTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "WorkspaceSnapshotApply.h is covered by WorkspaceSnapshotApplyTests.cpp"
     },
     {
@@ -33464,7 +33464,7 @@
       "target": "file:src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "ApprovedWindowStates.h is covered by ApprovedWindowStatesTests.cpp"
     },
     {
@@ -33472,7 +33472,7 @@
       "target": "class:src/tests/application/testcontrol/TestControlClickerTests.cpp:Fixture",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "TestControlClicker.h is covered by TestControlClickerTests.cpp"
     },
     {
@@ -33480,7 +33480,7 @@
       "target": "file:src/tests/application/testcontrol/TestControlCommandTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "TestControlCommand.h is covered by TestControlCommandTests.cpp"
     },
     {
@@ -33488,7 +33488,7 @@
       "target": "class:src/tests/application/testcontrol/TestControlSessionTests.cpp:FakeTarget",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "TestControlSession.h is covered by TestControlSessionTests.cpp"
     },
     {
@@ -33496,7 +33496,7 @@
       "target": "file:src/tests/platform/score/MusicalTimeTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "MusicalTime.h is covered by MusicalTimeTests.cpp"
     },
     {
@@ -33504,7 +33504,7 @@
       "target": "file:src/tests/platform/score/PitchTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "Pitch.h is covered by PitchTests.cpp"
     },
     {
@@ -33512,7 +33512,7 @@
       "target": "file:src/tests/platform/score/TempoMapTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "TempoMap.h is covered by TempoMapTests.cpp"
     },
     {
@@ -33520,7 +33520,7 @@
       "target": "function:src/tests/features/performance/BenchmarkComparabilityTests.cpp:comparableRecord",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "BenchmarkComparability.h is covered by BenchmarkComparabilityTests.cpp"
     },
     {
@@ -33528,7 +33528,7 @@
       "target": "file:src/tests/features/performance/BenchmarkComparisonTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "BenchmarkComparison.h is covered by BenchmarkComparisonTests.cpp"
     },
     {
@@ -33536,7 +33536,7 @@
       "target": "file:src/tests/features/performance/BenchmarkRunnerTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "BenchmarkRunner.h is covered by BenchmarkRunnerTests.cpp"
     },
     {
@@ -33544,7 +33544,7 @@
       "target": "function:src/tests/features/performance/PerformanceLabControllerTests.cpp:validConfiguration",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "PerformanceLabController.h is covered by PerformanceLabControllerTests.cpp"
     },
     {
@@ -33552,7 +33552,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceLayoutStateTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "WorkspaceLayoutState.h is covered by WorkspaceLayoutStateTests.cpp"
     },
     {
@@ -33560,7 +33560,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "WorkspaceSnapshotCapture.h is covered by WorkspaceSnapshotCaptureTests.cpp"
     },
     {
@@ -33568,7 +33568,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "WorkspaceToolState.h is covered by WorkspaceToolStateTests.cpp"
     },
     {
@@ -33576,7 +33576,7 @@
       "target": "function:src/tests/features/analysis/tuner/PitchDetectorTests.cpp:scalarReference",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "PitchDetector.h is covered by PitchDetectorTests.cpp"
     },
     {
@@ -33584,7 +33584,7 @@
       "target": "function:src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp:harmonicSignal",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "HarmonicAnalyzer.h is covered by HarmonicAnalyzerTests.cpp"
     },
     {
@@ -33592,7 +33592,7 @@
       "target": "class:src/tests/features/performance/SustainedAudioAnalysisScenarioTests.cpp:FakeAnalysisActions",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "SustainedAudioAnalysisScenario.h is covered by SustainedAudioAnalysisScenarioTests.cpp"
     },
     {
@@ -33600,7 +33600,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/NamedWorkspaceServiceTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "NamedWorkspaceService.h is covered by NamedWorkspaceServiceTests.cpp"
     },
     {
@@ -33608,7 +33608,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceMenuModelTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "WorkspaceMenuModel.h is covered by WorkspaceMenuModelTests.cpp"
     },
     {
@@ -33616,7 +33616,7 @@
       "target": "file:src/tests/features/performance/RealTimeEventCaptureTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "RealTimeEventCapture.h is covered by RealTimeEventCaptureTests.cpp"
     },
     {
@@ -33624,7 +33624,7 @@
       "target": "file:src/tests/application/shell/WorkspaceStartupSequenceTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33632,7 +33632,7 @@
       "target": "file:src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33640,7 +33640,7 @@
       "target": "file:src/tests/features/performance/ApplicationLaunchTimerTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33648,7 +33648,7 @@
       "target": "file:src/tests/features/analysis/tuner/PitchDetectorTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33656,7 +33656,7 @@
       "target": "file:src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33664,7 +33664,7 @@
       "target": "file:src/tests/features/performance/SustainedAudioAnalysisScenarioTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33672,7 +33672,7 @@
       "target": "file:src/tests/features/performance/SustainedAudioAnalysisScenarioTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33680,7 +33680,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/NamedWorkspaceServiceTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33688,7 +33688,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceMenuModelTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33696,7 +33696,7 @@
       "target": "file:src/tests/features/performance/BenchmarkInterfacesTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33704,7 +33704,7 @@
       "target": "file:src/tests/features/performance/BenchmarkRecordCodecTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33712,7 +33712,7 @@
       "target": "file:src/tests/features/performance/BenchmarkRecordCodecTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33720,7 +33720,7 @@
       "target": "file:src/tests/features/performance/BenchmarkRecordStoreTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33728,7 +33728,7 @@
       "target": "file:src/tests/features/performance/BenchmarkRecordStoreTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33736,7 +33736,7 @@
       "target": "file:src/tests/features/performance/BenchmarkTypesTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33744,7 +33744,7 @@
       "target": "file:src/tests/features/performance/InTreeOptimizationStrategyTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33752,7 +33752,7 @@
       "target": "file:src/tests/features/performance/InTreeOptimizationStrategyTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33760,7 +33760,7 @@
       "target": "file:src/tests/features/performance/NonRealTimeTelemetryCollectorTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33768,7 +33768,7 @@
       "target": "file:src/tests/features/performance/NonRealTimeTelemetryCollectorTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33776,7 +33776,7 @@
       "target": "file:src/tests/features/performance/PlatformProvenanceProviderTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33784,7 +33784,7 @@
       "target": "file:src/tests/features/performance/PlatformProvenanceProviderTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33792,7 +33792,7 @@
       "target": "file:src/tests/features/performance/StrategyRegistryTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33800,7 +33800,7 @@
       "target": "file:src/tests/features/performance/StrategyRegistryTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33808,7 +33808,7 @@
       "target": "file:src/tests/features/performance/TrialAggregatorTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33816,7 +33816,7 @@
       "target": "file:src/tests/features/performance/TrialAggregatorTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33824,7 +33824,7 @@
       "target": "file:src/tests/features/performance/RealTimeEventCaptureTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33832,7 +33832,7 @@
       "target": "file:src/tests/application/configuration/SettingsTransferCodecTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33840,7 +33840,7 @@
       "target": "file:src/tests/application/configuration/SettingsTransferCodecTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33848,7 +33848,7 @@
       "target": "file:src/tests/application/configuration/SettingsTransferCodecTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33856,7 +33856,7 @@
       "target": "file:src/tests/application/configuration/SettingsTransferCodecTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33864,7 +33864,7 @@
       "target": "file:src/tests/application/configuration/SettingsTransferCodecTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33872,7 +33872,7 @@
       "target": "file:src/tests/application/theme/ThemeContrastTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33880,7 +33880,7 @@
       "target": "file:src/tests/application/theme/ThemeContrastTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33888,7 +33888,7 @@
       "target": "file:src/tests/platform/audio/AudioRecoveryPolicyTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33896,7 +33896,7 @@
       "target": "file:src/tests/platform/audio/AudioSampleFifoTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33904,7 +33904,7 @@
       "target": "file:src/tests/platform/audio/AudioSampleFifoLoadTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33912,7 +33912,7 @@
       "target": "file:src/tests/application/configuration/AppDefaultsTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33920,7 +33920,7 @@
       "target": "file:src/tests/application/configuration/SettingsPersistenceTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33928,7 +33928,7 @@
       "target": "file:src/tests/application/configuration/SettingsPersistenceTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33936,7 +33936,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceBuiltInsTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33944,7 +33944,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceCatalogCodecTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33952,7 +33952,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceCatalogCodecTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33960,7 +33960,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceDocumentsTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33968,7 +33968,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceRecoveryTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33976,7 +33976,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceSessionLifecycleTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33984,7 +33984,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotApplyTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -33992,7 +33992,7 @@
       "target": "file:src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34000,7 +34000,7 @@
       "target": "file:src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34008,7 +34008,7 @@
       "target": "file:src/tests/application/testcontrol/TestControlClickerTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34016,7 +34016,7 @@
       "target": "file:src/tests/application/testcontrol/TestControlClickerTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34024,7 +34024,7 @@
       "target": "file:src/tests/application/testcontrol/TestControlCommandTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34032,7 +34032,7 @@
       "target": "file:src/tests/application/testcontrol/TestControlCommandTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34040,7 +34040,7 @@
       "target": "file:src/tests/application/testcontrol/TestControlSessionTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34048,7 +34048,7 @@
       "target": "file:src/tests/application/testcontrol/TestControlSessionTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34056,7 +34056,7 @@
       "target": "file:src/tests/platform/score/MusicalTimeTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34064,7 +34064,7 @@
       "target": "file:src/tests/platform/score/PitchTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34072,7 +34072,7 @@
       "target": "file:src/tests/platform/score/TempoMapTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34080,7 +34080,7 @@
       "target": "file:src/tests/platform/score/TempoMapTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34088,7 +34088,7 @@
       "target": "file:src/tests/platform/score/ScoreModelTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34096,7 +34096,7 @@
       "target": "file:src/tests/platform/score/ScoreModelTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34104,7 +34104,7 @@
       "target": "file:src/tests/platform/score/ScoreModelTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34112,7 +34112,7 @@
       "target": "file:src/tests/platform/score/ScoreModelTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34120,7 +34120,7 @@
       "target": "file:src/tests/platform/score/ScoreModelTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34128,7 +34128,7 @@
       "target": "file:src/tests/platform/score/ScoreModelTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34136,7 +34136,7 @@
       "target": "file:src/tests/features/performance/BenchmarkComparabilityTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34144,7 +34144,7 @@
       "target": "file:src/tests/features/performance/BenchmarkComparisonTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34152,7 +34152,7 @@
       "target": "file:src/tests/features/performance/BenchmarkRunnerTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34160,7 +34160,7 @@
       "target": "file:src/tests/features/performance/PerformanceLabControllerTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34168,7 +34168,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34176,7 +34176,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34184,7 +34184,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34192,7 +34192,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceLayoutStateTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34200,7 +34200,7 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     },
     {
@@ -34208,16 +34208,24 @@
       "target": "file:src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp",
       "type": "tested_by",
       "weight": 0.5,
-      "direction": "directed",
+      "direction": "forward",
       "description": "covered by this test"
     }
   ],
   "layers": [
     {
-      "id": "layer:desktop-application-shell",
-      "name": "Desktop Application Shell",
-      "description": "The JUCE process entry point, the main window, and the shell that coordinates it all: window and menu wiring, audio-device state, settings persistence and the portable .ptsettings codec, theming, the dockable workspace system, and the test-control channel. Owns the single shared AudioDeviceManager and one live component per open tool; presentation containers never own the tool component, so moving one between docked, floating and tabbed reparents it without destroying its state.",
+      "id": "layer:desktop-application",
+      "name": "Desktop Application",
+      "description": "The JUCE desktop app end to end: the process entry point, the shell that owns the single shared AudioDeviceManager and the dockable workspace, the practice tools built on it (tuner, spectrogram, harmonic analyzer, feedback, Performance Lab), and the shared platform beneath them. Its sub-groups are the layering the project enforces \u2014 a tool never reaches into another tool, and anything shared moves down into platform. The audio callback in platform/audio sits behind a hard real-time boundary: no allocation, locking, I/O or FFT work.",
       "nodeIds": [
+        "file:src/application/configuration/AppDefaults.h",
+        "file:src/application/configuration/SettingsImportPersistence.h",
+        "file:src/application/configuration/SettingsImportTransaction.h",
+        "file:src/application/configuration/SettingsPersistence.cpp",
+        "file:src/application/configuration/SettingsPersistence.h",
+        "file:src/application/configuration/SettingsTransferCodec.cpp",
+        "file:src/application/configuration/SettingsTransferCodec.h",
+        "file:src/application/configuration/SettingsTransferFile.h",
         "file:src/application/shell/MainComponent.h",
         "file:src/application/shell/MainComponentLifecycle.cpp",
         "file:src/application/shell/WorkspaceStartupSequence.h",
@@ -34228,36 +34236,35 @@
         "file:src/application/shell/ui/feedback/MainComponentFeedback.cpp",
         "file:src/application/shell/ui/main_window/MainTitleBar.h",
         "file:src/application/shell/ui/main_window/MicrophoneWarning.h",
+        "file:src/application/shell/ui/performance/PerformanceLabWindow.h",
+        "file:src/application/shell/ui/settings/MainComponentSettings.cpp",
         "file:src/application/shell/ui/settings/SettingsWindow.h",
         "file:src/application/shell/ui/workspace/components/DockedToolPanel.h",
         "file:src/application/shell/ui/workspace/components/ToolDragHandle.h",
         "file:src/application/shell/ui/workspace/components/ToolOptionsButton.h",
         "file:src/application/shell/ui/workspace/components/ToolWindow.h",
-        "file:src/application/shell/ui/workspace/shell/MainComponentWorkspaceDrag.cpp",
-        "file:src/application/shell/ui/workspace/shell/MainComponentWorkspacePresentation.cpp",
-        "file:src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp",
-        "file:src/bootstrap/main.cpp",
-        "file:src/application/configuration/SettingsImportPersistence.h",
-        "file:src/application/configuration/SettingsImportTransaction.h",
-        "file:src/application/configuration/SettingsTransferCodec.cpp",
-        "file:src/application/configuration/SettingsTransferCodec.h",
-        "file:src/application/configuration/SettingsTransferFile.h",
-        "file:src/application/shell/ui/settings/MainComponentSettings.cpp",
-        "file:src/application/shell/ui/workspace/shell/MainComponentWorkspaceManagement.cpp",
-        "file:src/application/theme/Theme.cpp",
-        "file:src/application/theme/Theme.h",
-        "file:src/application/configuration/AppDefaults.h",
-        "file:src/application/configuration/SettingsPersistence.cpp",
-        "file:src/application/configuration/SettingsPersistence.h",
+        "file:src/application/shell/ui/workspace/components/WorkspaceSplitPane.h",
+        "file:src/application/shell/ui/workspace/components/WorkspaceTabBarButton.h",
+        "file:src/application/shell/ui/workspace/components/WorkspaceTabbedComponent.h",
+        "file:src/application/shell/ui/workspace/model/NamedWorkspaceService.h",
         "file:src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h",
         "file:src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp",
         "file:src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.h",
         "file:src/application/shell/ui/workspace/model/WorkspaceDocuments.h",
+        "file:src/application/shell/ui/workspace/model/WorkspaceLayoutState.h",
+        "file:src/application/shell/ui/workspace/model/WorkspaceMenuModel.h",
         "file:src/application/shell/ui/workspace/model/WorkspaceNormalizer.h",
         "file:src/application/shell/ui/workspace/model/WorkspaceSessionLifecycle.h",
         "file:src/application/shell/ui/workspace/model/WorkspaceSnapshotApply.h",
+        "file:src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h",
         "file:src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h",
-        "file:src/application/theme/ThemeType.h",
+        "file:src/application/shell/ui/workspace/model/WorkspaceToolState.h",
+        "file:src/application/shell/ui/workspace/shell/MainComponentWorkspaceDrag.cpp",
+        "file:src/application/shell/ui/workspace/shell/MainComponentWorkspaceLayout.cpp",
+        "file:src/application/shell/ui/workspace/shell/MainComponentWorkspaceManagement.cpp",
+        "file:src/application/shell/ui/workspace/shell/MainComponentWorkspaceMenu.cpp",
+        "file:src/application/shell/ui/workspace/shell/MainComponentWorkspacePresentation.cpp",
+        "file:src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp",
         "file:src/application/testcontrol/ApprovedWindowStates.cpp",
         "file:src/application/testcontrol/ApprovedWindowStates.h",
         "file:src/application/testcontrol/TestControlChannel.cpp",
@@ -34269,102 +34276,141 @@
         "file:src/application/testcontrol/TestControlSession.cpp",
         "file:src/application/testcontrol/TestControlSession.h",
         "file:src/application/testcontrol/TestControlTarget.h",
-        "file:src/application/shell/ui/workspace/components/WorkspaceSplitPane.h",
-        "file:src/application/shell/ui/workspace/components/WorkspaceTabBarButton.h",
-        "file:src/application/shell/ui/workspace/components/WorkspaceTabbedComponent.h",
-        "file:src/application/shell/ui/workspace/model/WorkspaceLayoutState.h",
-        "file:src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h",
-        "file:src/application/shell/ui/workspace/model/WorkspaceToolState.h",
-        "file:src/application/shell/ui/workspace/shell/MainComponentWorkspaceLayout.cpp",
-        "file:src/application/shell/ui/workspace/model/NamedWorkspaceService.h",
-        "file:src/application/shell/ui/workspace/model/WorkspaceMenuModel.h",
-        "file:src/application/shell/ui/workspace/shell/MainComponentWorkspaceMenu.cpp",
-        "file:src/application/shell/ui/performance/PerformanceLabWindow.h"
-      ]
-    },
-    {
-      "id": "layer:practice-tools",
-      "name": "Practice Tools",
-      "description": "The user-facing tools built on the shared capture path: the tuner, the spectrogram, the harmonic analyzer, in-app feedback capture, and the development-only Performance Lab. A tool never reaches into another tool's internals; anything shared belongs to the platform or the shell.",
-      "nodeIds": [
+        "file:src/application/theme/Theme.cpp",
+        "file:src/application/theme/Theme.h",
+        "file:src/application/theme/ThemeType.h",
+        "file:src/bootstrap/main.cpp",
+        "file:src/features/analysis/harmonics/HarmonicAnalyzer.cpp",
+        "file:src/features/analysis/harmonics/HarmonicAnalyzer.h",
+        "file:src/features/analysis/harmonics/HarmonicAnalyzerComponent.cpp",
+        "file:src/features/analysis/harmonics/HarmonicAnalyzerComponent.h",
+        "file:src/features/analysis/spectrogram/SpectrogramComponent.cpp",
+        "file:src/features/analysis/spectrogram/SpectrogramComponent.h",
+        "file:src/features/analysis/tuner/PitchDetector.cpp",
+        "file:src/features/analysis/tuner/PitchDetector.h",
+        "file:src/features/analysis/tuner/TunerComponent.cpp",
+        "file:src/features/analysis/tuner/TunerComponent.h",
+        "file:src/features/analysis/tuner/TunerDrawing.cpp",
         "file:src/features/feedback/FeedbackComponent.cpp",
         "file:src/features/feedback/FeedbackComponent.h",
         "file:src/features/feedback/FeedbackInvitationPolicy.h",
         "file:src/features/performance/ApplicationLaunchTimer.cpp",
         "file:src/features/performance/ApplicationLaunchTimer.h",
+        "file:src/features/performance/BenchmarkComparability.cpp",
+        "file:src/features/performance/BenchmarkComparability.h",
+        "file:src/features/performance/BenchmarkComparison.cpp",
+        "file:src/features/performance/BenchmarkComparison.h",
         "file:src/features/performance/BenchmarkInterfaces.h",
         "file:src/features/performance/BenchmarkRecordCodec.cpp",
         "file:src/features/performance/BenchmarkRecordCodec.h",
         "file:src/features/performance/BenchmarkRecordStore.cpp",
         "file:src/features/performance/BenchmarkRecordStore.h",
+        "file:src/features/performance/BenchmarkRunner.cpp",
+        "file:src/features/performance/BenchmarkRunner.h",
         "file:src/features/performance/BenchmarkTypes.h",
+        "file:src/features/performance/HarmonicAnalysisActions.cpp",
+        "file:src/features/performance/HarmonicAnalysisActions.h",
         "file:src/features/performance/InTreeOptimizationStrategy.cpp",
         "file:src/features/performance/InTreeOptimizationStrategy.h",
         "file:src/features/performance/NonRealTimeTelemetryCollector.cpp",
         "file:src/features/performance/NonRealTimeTelemetryCollector.h",
-        "file:src/features/performance/PlatformProvenanceProvider.cpp",
-        "file:src/features/performance/PlatformProvenanceProvider.h",
-        "file:src/features/performance/StrategyRegistry.cpp",
-        "file:src/features/performance/StrategyRegistry.h",
-        "file:src/features/performance/TrialAggregator.cpp",
-        "file:src/features/performance/TrialAggregator.h",
-        "file:src/features/analysis/harmonics/HarmonicAnalyzerComponent.cpp",
-        "file:src/features/analysis/harmonics/HarmonicAnalyzerComponent.h",
-        "file:src/features/analysis/spectrogram/SpectrogramComponent.cpp",
-        "file:src/features/analysis/spectrogram/SpectrogramComponent.h",
-        "file:src/features/analysis/tuner/TunerComponent.cpp",
-        "file:src/features/analysis/tuner/TunerComponent.h",
-        "file:src/features/analysis/tuner/TunerDrawing.cpp",
-        "file:src/features/performance/BenchmarkComparability.cpp",
-        "file:src/features/performance/BenchmarkComparability.h",
-        "file:src/features/performance/BenchmarkComparison.cpp",
-        "file:src/features/performance/BenchmarkComparison.h",
-        "file:src/features/performance/BenchmarkRunner.cpp",
-        "file:src/features/performance/BenchmarkRunner.h",
         "file:src/features/performance/PerformanceLabController.cpp",
         "file:src/features/performance/PerformanceLabController.h",
-        "file:src/features/analysis/tuner/PitchDetector.h",
-        "file:src/features/analysis/tuner/PitchDetector.cpp",
-        "file:src/features/analysis/harmonics/HarmonicAnalyzer.h",
-        "file:src/features/analysis/harmonics/HarmonicAnalyzer.cpp",
-        "file:src/features/performance/SustainedAudioAnalysisScenario.h",
+        "file:src/features/performance/PlatformProvenanceProvider.cpp",
+        "file:src/features/performance/PlatformProvenanceProvider.h",
+        "file:src/features/performance/RealTimeEventCapture.h",
+        "file:src/features/performance/StrategyRegistry.cpp",
+        "file:src/features/performance/StrategyRegistry.h",
         "file:src/features/performance/SustainedAudioAnalysisScenario.cpp",
-        "file:src/features/performance/HarmonicAnalysisActions.h",
-        "file:src/features/performance/HarmonicAnalysisActions.cpp",
-        "file:src/features/performance/RealTimeEventCapture.h"
-      ]
-    },
-    {
-      "id": "layer:realtime-audio-score-platform",
-      "name": "Real-Time Audio & Score Platform",
-      "description": "Shared infrastructure the tools are built on. Microphone capture with device-loss recovery and one preallocated 65,536-sample SPSC FIFO per consumer, behind a hard real-time boundary: the audio callback performs no allocation, locking, I/O or FFT work. Also the JUCE-free music score model \u2014 musical time, pitch, measures, tempo map \u2014 that notation and MIDI/MusicXML import build on.",
-      "nodeIds": [
+        "file:src/features/performance/SustainedAudioAnalysisScenario.h",
+        "file:src/features/performance/TrialAggregator.cpp",
+        "file:src/features/performance/TrialAggregator.h",
         "file:src/platform/audio/AudioInputService.cpp",
         "file:src/platform/audio/AudioInputService.h",
         "file:src/platform/audio/AudioRecoveryPolicy.h",
         "file:src/platform/audio/AudioSampleFifo.h",
+        "file:src/platform/score/Diagnostic.h",
+        "file:src/platform/score/LyricSyllable.h",
+        "file:src/platform/score/Measure.h",
         "file:src/platform/score/MusicalTime.h",
         "file:src/platform/score/Pitch.h",
-        "file:src/platform/score/LyricSyllable.h",
-        "file:src/platform/score/ScoreEvent.h",
+        "file:src/platform/score/Score.h",
         "file:src/platform/score/ScoreAttributes.h",
-        "file:src/platform/score/Measure.h",
-        "file:src/platform/score/Diagnostic.h",
-        "file:src/platform/score/TempoMap.h",
+        "file:src/platform/score/ScoreEvent.h",
         "file:src/platform/score/TempoMap.cpp",
-        "file:src/platform/score/Score.h"
+        "file:src/platform/score/TempoMap.h"
+      ]
+    },
+    {
+      "id": "layer:test-suite",
+      "name": "Test Suite",
+      "description": "Catch2 unit and scenario suites mirroring the src/ tree, so a test's path names what it covers; the mirror is enforced in CI rather than trusted. Includes the shared fixtures under support/, the one directory that deliberately mirrors nothing.",
+      "nodeIds": [
+        "file:src/tests/application/configuration/AppDefaultsTests.cpp",
+        "file:src/tests/application/configuration/SettingsPersistenceTests.cpp",
+        "file:src/tests/application/configuration/SettingsTransferCodecTests.cpp",
+        "file:src/tests/application/shell/WorkspaceStartupSequenceTests.cpp",
+        "file:src/tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp",
+        "file:src/tests/application/shell/ui/workspace/model/NamedWorkspaceServiceTests.cpp",
+        "file:src/tests/application/shell/ui/workspace/model/WorkspaceBuiltInsTests.cpp",
+        "file:src/tests/application/shell/ui/workspace/model/WorkspaceCatalogCodecTests.cpp",
+        "file:src/tests/application/shell/ui/workspace/model/WorkspaceDocumentsTests.cpp",
+        "file:src/tests/application/shell/ui/workspace/model/WorkspaceLayoutStateTests.cpp",
+        "file:src/tests/application/shell/ui/workspace/model/WorkspaceMenuModelTests.cpp",
+        "file:src/tests/application/shell/ui/workspace/model/WorkspaceRecoveryTests.cpp",
+        "file:src/tests/application/shell/ui/workspace/model/WorkspaceSessionLifecycleTests.cpp",
+        "file:src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotApplyTests.cpp",
+        "file:src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp",
+        "file:src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp",
+        "file:src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp",
+        "file:src/tests/application/testcontrol/TestControlClickerTests.cpp",
+        "file:src/tests/application/testcontrol/TestControlCommandTests.cpp",
+        "file:src/tests/application/testcontrol/TestControlSessionTests.cpp",
+        "file:src/tests/application/theme/ThemeContrastTests.cpp",
+        "file:src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp",
+        "file:src/tests/features/analysis/tuner/PitchDetectorTests.cpp",
+        "file:src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp",
+        "file:src/tests/features/performance/ApplicationLaunchTimerTests.cpp",
+        "file:src/tests/features/performance/BenchmarkComparabilityTests.cpp",
+        "file:src/tests/features/performance/BenchmarkComparisonTests.cpp",
+        "file:src/tests/features/performance/BenchmarkInterfacesTests.cpp",
+        "file:src/tests/features/performance/BenchmarkRecordCodecTests.cpp",
+        "file:src/tests/features/performance/BenchmarkRecordStoreTests.cpp",
+        "file:src/tests/features/performance/BenchmarkRunnerTests.cpp",
+        "file:src/tests/features/performance/BenchmarkTypesTests.cpp",
+        "file:src/tests/features/performance/InTreeOptimizationStrategyTests.cpp",
+        "file:src/tests/features/performance/NonRealTimeTelemetryCollectorTests.cpp",
+        "file:src/tests/features/performance/PerformanceLabControllerTests.cpp",
+        "file:src/tests/features/performance/PlatformProvenanceProviderTests.cpp",
+        "file:src/tests/features/performance/RealTimeEventCaptureTests.cpp",
+        "file:src/tests/features/performance/StrategyRegistryTests.cpp",
+        "file:src/tests/features/performance/SustainedAudioAnalysisScenarioTests.cpp",
+        "file:src/tests/features/performance/TrialAggregatorTests.cpp",
+        "file:src/tests/platform/audio/AudioRecoveryPolicyTests.cpp",
+        "file:src/tests/platform/audio/AudioSampleFifoLoadTests.cpp",
+        "file:src/tests/platform/audio/AudioSampleFifoTests.cpp",
+        "file:src/tests/platform/score/MusicalTimeTests.cpp",
+        "file:src/tests/platform/score/PitchTests.cpp",
+        "file:src/tests/platform/score/ScoreModelTests.cpp",
+        "file:src/tests/platform/score/TempoMapTests.cpp",
+        "file:src/tests/support/BenchmarkFakes.h",
+        "file:src/tests/support/BenchmarkFakesTests.cpp"
       ]
     },
     {
       "id": "layer:feedback-backend-service",
       "name": "Feedback Backend Service",
-      "description": "The deployed TypeScript Cloudflare Worker that receives in-app feedback: request routing and validation, Cloudflare Access authentication, the admin triage console, email notification queue, and the D1 schema migrations behind them. Import-isolated from the C++ tree and shipped on its own cadence.",
+      "description": "The deployed TypeScript Cloudflare Worker that receives in-app feedback: request routing and validation, Cloudflare Access authentication, the admin triage console, the email notification queue, the D1 schema migrations behind them, and the Vitest suites with their in-memory database fixtures. Import-isolated from the C++ tree and shipped on its own cadence.",
       "nodeIds": [
         "file:src/services/feedback-intake/src/access.ts",
+        "file:src/services/feedback-intake/src/admin.css",
+        "file:src/services/feedback-intake/src/admin.html",
         "file:src/services/feedback-intake/src/admin.ts",
+        "file:src/services/feedback-intake/src/audit.html",
         "file:src/services/feedback-intake/src/audit.js",
         "file:src/services/feedback-intake/src/dashboard.js",
         "file:src/services/feedback-intake/src/docker-server.ts",
+        "file:src/services/feedback-intake/src/html.d.ts",
         "file:src/services/feedback-intake/src/index.ts",
         "file:src/services/feedback-intake/src/notifications.ts",
         "file:src/services/feedback-intake/src/operations.ts",
@@ -34374,9 +34420,6 @@
         "file:src/services/feedback-intake/test/migrations.test.ts",
         "file:src/services/feedback-intake/test/notifications.test.ts",
         "file:src/services/feedback-intake/test/support/database.ts",
-        "service:src/services/feedback-intake/Dockerfile",
-        "service:src/services/feedback-intake/Dockerfile:build",
-        "service:src/services/feedback-intake/Dockerfile:runtime",
         "table:src/services/feedback-intake/migrations/0001_initial.sql",
         "table:src/services/feedback-intake/migrations/0001_initial.sql:authorization_requests",
         "table:src/services/feedback-intake/migrations/0001_initial.sql:consumed_authorizations",
@@ -34387,89 +34430,43 @@
         "table:src/services/feedback-intake/migrations/0004_optional_screenshots.sql",
         "table:src/services/feedback-intake/migrations/0005_idempotent_submissions.sql",
         "table:src/services/feedback-intake/migrations/0006_operations.sql",
-        "table:src/services/feedback-intake/migrations/0006_operations.sql:request_metrics",
         "table:src/services/feedback-intake/migrations/0006_operations.sql:maintenance_runs",
+        "table:src/services/feedback-intake/migrations/0006_operations.sql:request_metrics",
         "table:src/services/feedback-intake/migrations/0007_email_notification_limits.sql",
         "table:src/services/feedback-intake/migrations/0007_email_notification_limits.sql:feedback_email_queue",
-        "table:src/services/feedback-intake/migrations/0007_email_notification_limits.sql:feedback_notification_days",
-        "config:src/services/feedback-intake/.env.example",
-        "document:src/services/feedback-intake/README.md",
-        "service:src/services/feedback-intake/compose.yaml",
-        "file:src/services/feedback-intake/docker-entrypoint.sh",
-        "config:src/services/feedback-intake/package.json",
-        "config:src/services/feedback-intake/tsconfig.json",
-        "config:src/services/feedback-intake/wrangler.example.jsonc",
-        "file:src/services/feedback-intake/src/admin.css",
-        "file:src/services/feedback-intake/src/admin.html",
-        "file:src/services/feedback-intake/src/audit.html",
-        "service:src/services/.dockerignore",
-        "file:src/services/feedback-intake/.dev.vars.example",
-        "file:src/services/feedback-intake/src/html.d.ts",
-        "config:src/services/package.json",
-        "file:src/services/vitest.config.mts"
+        "table:src/services/feedback-intake/migrations/0007_email_notification_limits.sql:feedback_notification_days"
       ]
     },
     {
-      "id": "layer:test-suite",
-      "name": "Test Suite",
-      "description": "Catch2 unit and scenario suites for the desktop application, mirroring the src/ tree so a test's path names what it covers, plus the Vitest suites and database fixtures for the feedback worker. The mirror is enforced in CI rather than trusted.",
+      "id": "layer:developer-tooling",
+      "name": "Developer Tooling",
+      "description": "The scripts that build, check, release and operate the project, one folder per concern: the build driver, icon generation, feedback operations, the Git merge drivers, the manual GUI verification harness, the knowledge-graph page verifier, the roadmap CLI, quality and coverage tooling, release version and verification gates, and SOPS secret management.",
       "nodeIds": [
-        "file:src/tests/application/shell/WorkspaceStartupSequenceTests.cpp",
-        "file:src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp",
-        "file:src/tests/features/performance/ApplicationLaunchTimerTests.cpp",
-        "file:src/tests/features/performance/BenchmarkInterfacesTests.cpp",
-        "file:src/tests/features/performance/BenchmarkRecordCodecTests.cpp",
-        "file:src/tests/features/performance/BenchmarkRecordStoreTests.cpp",
-        "file:src/tests/features/performance/BenchmarkTypesTests.cpp",
-        "file:src/tests/features/performance/InTreeOptimizationStrategyTests.cpp",
-        "file:src/tests/features/performance/NonRealTimeTelemetryCollectorTests.cpp",
-        "file:src/tests/features/performance/PlatformProvenanceProviderTests.cpp",
-        "file:src/tests/features/performance/StrategyRegistryTests.cpp",
-        "file:src/tests/features/performance/TrialAggregatorTests.cpp",
-        "file:src/tests/support/BenchmarkFakes.h",
-        "file:src/tests/application/configuration/SettingsTransferCodecTests.cpp",
-        "file:src/tests/application/theme/ThemeContrastTests.cpp",
-        "file:src/tests/platform/audio/AudioRecoveryPolicyTests.cpp",
-        "file:src/tests/platform/audio/AudioSampleFifoLoadTests.cpp",
-        "file:src/tests/platform/audio/AudioSampleFifoTests.cpp",
-        "file:src/tests/application/configuration/AppDefaultsTests.cpp",
-        "file:src/tests/application/configuration/SettingsPersistenceTests.cpp",
-        "file:src/tests/application/shell/ui/workspace/model/WorkspaceBuiltInsTests.cpp",
-        "file:src/tests/application/shell/ui/workspace/model/WorkspaceCatalogCodecTests.cpp",
-        "file:src/tests/application/shell/ui/workspace/model/WorkspaceDocumentsTests.cpp",
-        "file:src/tests/application/shell/ui/workspace/model/WorkspaceRecoveryTests.cpp",
-        "file:src/tests/application/shell/ui/workspace/model/WorkspaceSessionLifecycleTests.cpp",
-        "file:src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotApplyTests.cpp",
-        "file:src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp",
-        "file:src/tests/application/testcontrol/TestControlClickerTests.cpp",
-        "file:src/tests/application/testcontrol/TestControlCommandTests.cpp",
-        "file:src/tests/application/testcontrol/TestControlSessionTests.cpp",
-        "file:src/tests/platform/score/MusicalTimeTests.cpp",
-        "file:src/tests/platform/score/PitchTests.cpp",
-        "file:src/tests/platform/score/ScoreModelTests.cpp",
-        "file:src/tests/platform/score/TempoMapTests.cpp",
-        "file:src/tests/features/performance/BenchmarkComparabilityTests.cpp",
-        "file:src/tests/features/performance/BenchmarkComparisonTests.cpp",
-        "file:src/tests/features/performance/BenchmarkRunnerTests.cpp",
-        "file:src/tests/features/performance/PerformanceLabControllerTests.cpp",
-        "file:src/tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp",
-        "file:src/tests/application/shell/ui/workspace/model/WorkspaceLayoutStateTests.cpp",
-        "file:src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp",
-        "file:src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp",
-        "file:src/tests/features/analysis/tuner/PitchDetectorTests.cpp",
-        "file:src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp",
-        "file:src/tests/features/performance/SustainedAudioAnalysisScenarioTests.cpp",
-        "file:src/tests/application/shell/ui/workspace/model/NamedWorkspaceServiceTests.cpp",
-        "file:src/tests/application/shell/ui/workspace/model/WorkspaceMenuModelTests.cpp",
-        "file:src/tests/features/performance/RealTimeEventCaptureTests.cpp",
-        "file:src/tests/support/BenchmarkFakesTests.cpp"
-      ]
-    },
-    {
-      "id": "layer:build-release-tooling",
-      "name": "Build & Release Tooling",
-      "description": "Everything that builds, packages, versions, checks or operates the project: the CMake build and its modules, the vcpkg manifest and overlay triplets, icon and packaging inputs, quality and coverage tooling, the Git merge drivers, SOPS secret management, the manual GUI verification harness, and the release version and verification gates.",
-      "nodeIds": [
+        "file:tools/scripts/build/build-and-run.sh",
+        "file:tools/scripts/build/check-linux-build-dependencies.sh",
+        "file:tools/scripts/design/generate_app_icons.py",
+        "file:tools/scripts/design/test_generate_app_icons.py",
+        "file:tools/scripts/feedback/configure-cloudflare-access.sh",
+        "file:tools/scripts/feedback/migrate-feedback-database.sh",
+        "file:tools/scripts/feedback/run-recovery-drill.py",
+        "file:tools/scripts/feedback/setup-dashboard-daemon.sh",
+        "file:tools/scripts/feedback/update-dashboard-daemon.sh",
+        "file:tools/scripts/git/configure_merge.py",
+        "file:tools/scripts/git/merge_cmake_sources.py",
+        "file:tools/scripts/git/merge_npm_lock.py",
+        "file:tools/scripts/git/test_configure_merge.py",
+        "file:tools/scripts/git/test_merge_cmake_sources.py",
+        "file:tools/scripts/git/test_merge_npm_lock.py",
+        "file:tools/scripts/manual_gui/__init__.py",
+        "file:tools/scripts/manual_gui/__main__.py",
+        "file:tools/scripts/manual_gui/app.py",
+        "file:tools/scripts/manual_gui/driver.py",
+        "file:tools/scripts/manual_gui/record.py",
+        "file:tools/scripts/manual_gui/session.py",
+        "file:tools/scripts/manual_gui/surfaces.py",
+        "file:tools/scripts/manual_gui/test_manual_gui.py",
+        "file:tools/scripts/pages/verify-graph.mjs",
+        "file:tools/scripts/practice_takes_roadmap/__init__.py",
         "file:tools/scripts/practice_takes_roadmap/__main__.py",
         "file:tools/scripts/practice_takes_roadmap/config.py",
         "file:tools/scripts/practice_takes_roadmap/discovery.py",
@@ -34479,59 +34476,17 @@
         "file:tools/scripts/practice_takes_roadmap/planning.py",
         "file:tools/scripts/practice_takes_roadmap/progress.py",
         "file:tools/scripts/practice_takes_roadmap/state.py",
-        "file:tools/scripts/manual_gui/__main__.py",
-        "file:tools/scripts/manual_gui/app.py",
-        "file:tools/scripts/manual_gui/driver.py",
-        "file:tools/scripts/manual_gui/record.py",
-        "file:tools/scripts/manual_gui/session.py",
-        "file:tools/scripts/manual_gui/surfaces.py",
-        "file:tools/scripts/manual_gui/test_manual_gui.py",
-        "file:tools/scripts/quality/coverage_sources.py",
-        "file:tools/scripts/quality/run_coverage.py",
-        "file:tools/scripts/quality/test_coverage_sources.py",
-        "config:.pre-commit-config.yaml",
-        "config:.sops.yaml",
-        "document:CMakeLists.txt",
-        "config:pyproject.toml",
-        "file:tools/scripts/feedback/configure-cloudflare-access.sh",
-        "file:tools/scripts/feedback/migrate-feedback-database.sh",
-        "file:tools/scripts/feedback/setup-dashboard-daemon.sh",
-        "file:tools/scripts/feedback/update-dashboard-daemon.sh",
-        "config:.clang-format",
-        "config:.clang-tidy",
-        "config:.gitattributes",
-        "config:.sops.yaml.example",
-        "file:tools/VERSION",
-        "file:tools/cmake/Packaging.cmake",
-        "file:tools/cmake/PatchJuceAlsaChannelMismatch.cmake",
-        "file:tools/cmake/PatchJuceAlsaInputStartup.cmake",
-        "file:tools/cmake/triplets/arm64-linux-practice.cmake",
-        "file:tools/cmake/triplets/x64-linux-practice.cmake",
-        "document:tools/packaging/icons/README.md",
-        "file:tools/packaging/linux/org.derekrneilson.practicetakes.desktop",
-        "document:tools/scripts/README.md",
-        "file:tools/scripts/build/build-and-run.sh",
-        "file:tools/scripts/build/check-linux-build-dependencies.sh",
-        "file:tools/scripts/design/generate_app_icons.py",
-        "file:tools/scripts/design/test_generate_app_icons.py",
-        "file:tools/scripts/feedback/run-recovery-drill.py",
-        "file:tools/scripts/git/configure_merge.py",
-        "file:tools/scripts/git/merge_cmake_sources.py",
-        "file:tools/scripts/git/merge_npm_lock.py",
-        "file:tools/scripts/git/test_configure_merge.py",
-        "file:tools/scripts/git/test_merge_cmake_sources.py",
-        "file:tools/scripts/git/test_merge_npm_lock.py",
-        "file:tools/scripts/manual_gui/__init__.py",
-        "file:tools/scripts/pages/verify-graph.mjs",
-        "file:tools/scripts/practice_takes_roadmap/__init__.py",
         "file:tools/scripts/quality/check_test_layout.py",
+        "file:tools/scripts/quality/coverage_sources.py",
         "file:tools/scripts/quality/format_benchmarks.py",
         "file:tools/scripts/quality/run-performance-lab.sh",
         "file:tools/scripts/quality/run_clang_format.py",
         "file:tools/scripts/quality/run_clang_tidy.py",
+        "file:tools/scripts/quality/run_coverage.py",
         "file:tools/scripts/quality/run_python_coverage.py",
         "file:tools/scripts/quality/smoke_test.py",
         "file:tools/scripts/quality/test_check_test_layout.py",
+        "file:tools/scripts/quality/test_coverage_sources.py",
         "file:tools/scripts/quality/ui-validation/pointer_control.cpp",
         "file:tools/scripts/quality/ui-validation/run-ui-golden.zsh",
         "file:tools/scripts/quality/ui-validation/window_control.cpp",
@@ -34541,83 +34496,55 @@
         "file:tools/scripts/release/test_version.py",
         "file:tools/scripts/release/version.py",
         "file:tools/scripts/roadmap/setup.sh",
-        "file:tools/scripts/run_tests.py",
         "file:tools/scripts/secrets/secrets_manager.py",
-        "file:tools/scripts/secrets/test_secrets_manager.py",
-        "file:tools/secret-patterns",
-        "config:tools/vcpkg.json"
-      ]
-    },
-    {
-      "id": "layer:continuous-integration",
-      "name": "Continuous Integration",
-      "description": "The GitHub Actions pipelines that gate and ship the project: multi-platform builds and packaging, C++ formatting and static analysis, the services and Python check suites, coverage and benchmarks, CodeQL, secret scanning, and the release workflow. Path filters keep the C++ and TypeScript trees from triggering each other's builds.",
-      "nodeIds": [
-        "pipeline:.github/workflows/benchmarks.yml",
-        "pipeline:.github/workflows/build-multiplatform.yml",
-        "pipeline:.github/workflows/clang-tidy-main.yml",
-        "pipeline:.github/workflows/coverage.yml",
-        "pipeline:.github/workflows/cpp-quality-check.yml",
-        "pipeline:.github/workflows/pages.yml",
-        "pipeline:.github/workflows/python-check.yml",
-        "pipeline:.github/workflows/release.yml",
-        "pipeline:.github/workflows/secret-scan.yml",
-        "pipeline:.github/workflows/services-check.yml",
-        "pipeline:.github/workflows/smoke.yml",
-        "config:.github/dependabot.yml",
-        "config:.github/CODEOWNERS"
+        "file:tools/scripts/secrets/test_secrets_manager.py"
       ]
     },
     {
       "id": "layer:documentation-specifications",
       "name": "Documentation & Specifications",
-      "description": "Developer documentation grouped by subject \u2014 build, architecture, quality, performance, operations, agents \u2014 alongside the OpenSpec capability specs and change proposals that precede larger work, the shared feedback wire contract, and the repository's community-health files.",
+      "description": "Developer documentation grouped by subject \u2014 build, architecture, quality, performance, operations, agents \u2014 alongside the OpenSpec capability specs and change proposals that precede larger work, and the shared feedback wire contract.",
       "nodeIds": [
-        "document:.github/CONTRIBUTING.md",
-        "document:.github/SECURITY.md",
-        "document:CLAUDE.md",
-        "document:README.md",
+        "config:docs/development/quality/manual-runs/20260801-122601-quick.json",
+        "config:docs/development/quality/manual-runs/20260801-123636-full.json",
+        "config:docs/development/quality/manual-runs/20260801-124009-full.json",
+        "config:docs/development/quality/manual-runs/20260801-124240-full.json",
+        "config:docs/development/quality/manual-runs/20260801-125606-full.json",
+        "config:docs/development/quality/manual-runs/20260801-130349-full.json",
+        "config:openspec/changes/musicxml-import/.openspec.yaml",
+        "config:openspec/changes/real-world-performance-benchmarking/.openspec.yaml",
+        "config:openspec/config.yaml",
+        "document:docs/development/README.md",
+        "document:docs/development/agents/AGENT_GUIDE.md",
+        "document:docs/development/architecture/ARCHITECTURE.md",
+        "document:docs/development/architecture/ARCHITECTURE_QA.md",
         "document:docs/development/operations/FEEDBACK.md",
         "document:docs/development/operations/MERGING.md",
         "document:docs/development/operations/RELEASING.md",
         "document:docs/development/operations/SECRETS.md",
+        "document:docs/development/performance/audio-thread-safety.md",
+        "document:docs/development/performance/hardware-acceptance.md",
         "document:docs/development/quality/CODE_STYLE.md",
         "document:docs/development/quality/MANUAL_GUI_VERIFICATION.md",
         "document:docs/development/quality/QA_STRATEGY.md",
         "document:docs/development/quality/QUALITY.md",
         "document:docs/development/quality/TEST_LAYOUT.md",
-        "config:docs/development/quality/manual-runs/20260801-122601-quick.json",
         "document:docs/development/quality/manual-runs/20260801-122601-quick.md",
-        "config:docs/development/quality/manual-runs/20260801-123636-full.json",
         "document:docs/development/quality/manual-runs/20260801-123636-full.md",
-        "config:docs/development/quality/manual-runs/20260801-124009-full.json",
         "document:docs/development/quality/manual-runs/20260801-124009-full.md",
-        "config:docs/development/quality/manual-runs/20260801-124240-full.json",
         "document:docs/development/quality/manual-runs/20260801-124240-full.md",
-        "config:docs/development/quality/manual-runs/20260801-125606-full.json",
         "document:docs/development/quality/manual-runs/20260801-125606-full.md",
-        "config:docs/development/quality/manual-runs/20260801-130349-full.json",
         "document:docs/development/quality/manual-runs/20260801-130349-full.md",
-        "config:openspec/changes/musicxml-import/.openspec.yaml",
-        "document:openspec/changes/musicxml-import/proposal.md",
-        "document:openspec/changes/musicxml-import/design.md",
-        "document:openspec/changes/musicxml-import/tasks.md",
-        "config:openspec/changes/real-world-performance-benchmarking/.openspec.yaml",
-        "document:openspec/changes/real-world-performance-benchmarking/proposal.md",
-        "document:openspec/changes/real-world-performance-benchmarking/design.md",
-        "document:openspec/changes/real-world-performance-benchmarking/tasks.md",
-        "schema:docs/contracts/feedback/v1.schema.json",
-        "document:docs/development/README.md",
-        "document:docs/development/agents/AGENT_GUIDE.md",
-        "document:docs/development/architecture/ARCHITECTURE.md",
-        "document:docs/development/architecture/ARCHITECTURE_QA.md",
-        "document:docs/development/performance/audio-thread-safety.md",
-        "document:docs/development/performance/hardware-acceptance.md",
         "document:docs/settings-defaults.md",
+        "document:openspec/changes/musicxml-import/design.md",
+        "document:openspec/changes/musicxml-import/proposal.md",
         "document:openspec/changes/musicxml-import/specs/musicxml-import/spec.md",
         "document:openspec/changes/musicxml-import/specs/normalized-score-model/spec.md",
+        "document:openspec/changes/musicxml-import/tasks.md",
+        "document:openspec/changes/real-world-performance-benchmarking/design.md",
+        "document:openspec/changes/real-world-performance-benchmarking/proposal.md",
         "document:openspec/changes/real-world-performance-benchmarking/specs/hardware-performance-lab/spec.md",
-        "config:openspec/config.yaml",
+        "document:openspec/changes/real-world-performance-benchmarking/tasks.md",
         "document:openspec/specs/benchmark-ci-reporting/spec.md",
         "document:openspec/specs/codeql-security-scanning/spec.md",
         "document:openspec/specs/cpp-pr-quality-gate/spec.md",
@@ -34631,7 +34558,66 @@
         "document:openspec/specs/test-suite-layout/spec.md",
         "document:openspec/specs/worker-database-fidelity/spec.md",
         "document:openspec/specs/workspace-layout-restoration/spec.md",
-        "document:openspec/specs/workspace-tab-drag/spec.md"
+        "document:openspec/specs/workspace-tab-drag/spec.md",
+        "schema:docs/contracts/feedback/v1.schema.json"
+      ]
+    },
+    {
+      "id": "layer:build-packaging-ci",
+      "name": "Build, Packaging & CI",
+      "description": "Everything that turns the source into a shipped artifact and gates it: the root CMake build, its modules and vcpkg manifest and overlay triplets, icons and the Linux desktop entry, the version stamp, the lint/format/secret configuration at the root, the worker's deployment and workspace config, and the eleven GitHub Actions pipelines. Path filters keep the C++ and TypeScript trees from triggering each other's builds.",
+      "nodeIds": [
+        "config:.clang-format",
+        "config:.clang-tidy",
+        "config:.gitattributes",
+        "config:.github/CODEOWNERS",
+        "config:.github/dependabot.yml",
+        "config:.pre-commit-config.yaml",
+        "config:.sops.yaml",
+        "config:.sops.yaml.example",
+        "config:pyproject.toml",
+        "config:src/services/feedback-intake/.env.example",
+        "config:src/services/feedback-intake/package.json",
+        "config:src/services/feedback-intake/tsconfig.json",
+        "config:src/services/feedback-intake/wrangler.example.jsonc",
+        "config:src/services/package.json",
+        "config:tools/vcpkg.json",
+        "document:.github/CONTRIBUTING.md",
+        "document:.github/SECURITY.md",
+        "document:CLAUDE.md",
+        "document:CMakeLists.txt",
+        "document:README.md",
+        "document:src/services/feedback-intake/README.md",
+        "document:tools/packaging/icons/README.md",
+        "document:tools/scripts/README.md",
+        "file:src/services/feedback-intake/.dev.vars.example",
+        "file:src/services/feedback-intake/docker-entrypoint.sh",
+        "file:src/services/vitest.config.mts",
+        "file:tools/VERSION",
+        "file:tools/cmake/Packaging.cmake",
+        "file:tools/cmake/PatchJuceAlsaChannelMismatch.cmake",
+        "file:tools/cmake/PatchJuceAlsaInputStartup.cmake",
+        "file:tools/cmake/triplets/arm64-linux-practice.cmake",
+        "file:tools/cmake/triplets/x64-linux-practice.cmake",
+        "file:tools/packaging/linux/org.derekrneilson.practicetakes.desktop",
+        "file:tools/scripts/run_tests.py",
+        "file:tools/secret-patterns",
+        "pipeline:.github/workflows/benchmarks.yml",
+        "pipeline:.github/workflows/build-multiplatform.yml",
+        "pipeline:.github/workflows/clang-tidy-main.yml",
+        "pipeline:.github/workflows/coverage.yml",
+        "pipeline:.github/workflows/cpp-quality-check.yml",
+        "pipeline:.github/workflows/pages.yml",
+        "pipeline:.github/workflows/python-check.yml",
+        "pipeline:.github/workflows/release.yml",
+        "pipeline:.github/workflows/secret-scan.yml",
+        "pipeline:.github/workflows/services-check.yml",
+        "pipeline:.github/workflows/smoke.yml",
+        "service:src/services/.dockerignore",
+        "service:src/services/feedback-intake/Dockerfile",
+        "service:src/services/feedback-intake/Dockerfile:build",
+        "service:src/services/feedback-intake/Dockerfile:runtime",
+        "service:src/services/feedback-intake/compose.yaml"
       ]
     }
   ],
