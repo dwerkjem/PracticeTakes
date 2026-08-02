@@ -8,14 +8,14 @@ repos:
     hooks:
       - id: sops-secrets
         name: Encrypt and stage configured secrets with SOPS
-        entry: python3 scripts/secrets/secrets_manager.py pre-commit
+        entry: python3 tools/scripts/secrets/secrets_manager.py pre-commit
         language: system
         pass_filenames: false
         always_run: true
         require_serial: true
       - id: sops-secret-audit
-        name: Reject tracked plaintext files matching secret-patterns
-        entry: python3 scripts/secrets/secrets_manager.py audit
+        name: Reject tracked plaintext files matching tools/secret-patterns
+        entry: python3 tools/scripts/secrets/secrets_manager.py audit
         language: system
         pass_filenames: false
         always_run: true
@@ -25,6 +25,6 @@ repos:
           - pre-merge-commit
       - id: clang-format
         name: Format C++ with clang-format
-        entry: python3 scripts/quality/run_clang_format.py
+        entry: python3 tools/scripts/quality/run_clang_format.py
         language: python
         files: '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$'

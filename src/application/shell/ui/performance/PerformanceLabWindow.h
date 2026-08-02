@@ -743,7 +743,7 @@ class MainComponent::PerformanceLabWindow final : public juce::DocumentWindow
               juce::DocumentWindow::allButtons),
           recordStore(performanceLabDataDirectory()),
           repositoryRecordStore(
-              juce::File(PRACTICE_TAKES_SOURCE_DIR).getChildFile("benchmark-results")),
+              juce::File(PRACTICE_TAKES_SOURCE_DIR).getChildFile("tools/benchmark-results")),
           controller(
               validateConfiguration,
               [this](

@@ -1,13 +1,13 @@
 # Worker database fidelity
 
 ### Requirement: Worker tests execute SQL against a real database engine
-Automated tests for `services/feedback-intake` SHALL execute the worker's SQL
+Automated tests for `src/services/feedback-intake` SHALL execute the worker's SQL
 statements against a real SQLite engine rather than a fake that inspects
 statement text. No test-only database substitute may decide its result by
 matching substrings of the SQL it is given.
 
 #### Scenario: Query contains invalid SQL
-- **WHEN** a query in `services/feedback-intake/src` is changed to contain a
+- **WHEN** a query in `src/services/feedback-intake/src` is changed to contain a
   SQL syntax error
 - **THEN** the Vitest suite covering the route that issues the query fails
 
@@ -18,7 +18,7 @@ matching substrings of the SQL it is given.
 
 ### Requirement: Test schema is built from the project's migration files
 The test database SHALL be created by applying every file in
-`services/feedback-intake/migrations/` in ascending filename order. Tests
+`src/services/feedback-intake/migrations/` in ascending filename order. Tests
 SHALL NOT define the schema by any other means, including a hand-maintained
 schema file or programmatic table creation.
 

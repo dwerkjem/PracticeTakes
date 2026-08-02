@@ -4,7 +4,7 @@
 
 #include "../../../application/configuration/AppDefaults.h"
 #include "../../../application/theme/Theme.h"
-#include "../../../services/audio/AudioInputService.h"
+#include "../../../platform/audio/AudioInputService.h"
 #include "PitchDetector.h"
 
 #include <array>

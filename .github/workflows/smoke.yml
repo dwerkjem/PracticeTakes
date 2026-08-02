@@ -14,8 +14,8 @@ on:
       - "src/**"
       - "CMakeLists.txt"
       - "cmake/**"
-      - "scripts/quality/smoke_test.py"
-      - "scripts/manual_gui/driver.py"
+      - "tools/scripts/quality/smoke_test.py"
+      - "tools/scripts/manual_gui/driver.py"
       - ".github/workflows/smoke.yml"
   push:
     branches:
@@ -24,8 +24,8 @@ on:
       - "src/**"
       - "CMakeLists.txt"
       - "cmake/**"
-      - "scripts/quality/smoke_test.py"
-      - "scripts/manual_gui/driver.py"
+      - "tools/scripts/quality/smoke_test.py"
+      - "tools/scripts/manual_gui/driver.py"
       - ".github/workflows/smoke.yml"
 
 permissions:
@@ -84,5 +84,5 @@ jobs:
       - name: Run the smoke tests
         run: |
           xvfb-run -a --server-args="-screen 0 1600x1000x24" \
-            python3 scripts/quality/smoke_test.py \
+            python3 tools/scripts/quality/smoke_test.py \
               --executable build-smoke/bin/PracticeTakes

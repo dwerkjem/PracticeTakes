@@ -1,6 +1,6 @@
 # Copy this file to .sops.yaml through the secrets manager:
 #
-#   python scripts/secrets/secrets_manager.py init \
+#   python tools/scripts/secrets/secrets_manager.py init \
 #     --age-recipient age1...
 #
 # The age recipient is a public key and is safe to commit. Never put the

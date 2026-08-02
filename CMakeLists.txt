@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.25)
 
-set(PRACTICE_TAKES_VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/VERSION")
+# The vcpkg manifest lives under tools/ to keep the repository root small. The
+# vcpkg toolchain only auto-discovers a manifest in CMAKE_SOURCE_DIR, so it has
+# to be pointed at the real directory before project() loads the toolchain.
+set(VCPKG_MANIFEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tools")
+
+set(PRACTICE_TAKES_VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/tools/VERSION")
 
 if(NOT EXISTS "${PRACTICE_TAKES_VERSION_FILE}")
     message(FATAL_ERROR
@@ -48,7 +53,7 @@ option(PRACTICE_TAKES_ENABLE_TEST_CONTROL
 # Coverage instrumentation for PracticeTakesTests. Off by default, and it needs
 # its own build tree: instrumented objects are not interchangeable with ordinary
 # ones, and ccache does not play well with coverage counters. Use
-# scripts/quality/run_coverage.py rather than configuring this by hand.
+# tools/scripts/quality/run_coverage.py rather than configuring this by hand.
 option(PRACTICE_TAKES_ENABLE_COVERAGE
     "Instrument PracticeTakesTests for gcov coverage measurement" OFF)
 
@@ -105,17 +110,17 @@ if(BUILD_TESTING)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PatchJuceAlsaChannelMismatch.cmake")
-    include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PatchJuceAlsaInputStartup.cmake")
+    include("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/PatchJuceAlsaChannelMismatch.cmake")
+    include("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/PatchJuceAlsaInputStartup.cmake")
     practice_takes_patch_juce_alsa_channel_mismatch("${juce_SOURCE_DIR}")
     practice_takes_patch_juce_alsa_input_startup("${juce_SOURCE_DIR}")
 endif()
 
 # The icon artwork is generated from the design system by
-# scripts/design/generate_app_icons.py; see packaging/icons/README.md. JUCE
+# tools/scripts/design/generate_app_icons.py; see tools/packaging/icons/README.md. JUCE
 # turns ICON_BIG/ICON_SMALL into the macOS .icns and the Windows executable
 # icon, and ignores them elsewhere.
-set(PRACTICE_TAKES_ICON_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons")
+set(PRACTICE_TAKES_ICON_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/tools/packaging/icons")
 
 juce_add_gui_app(PracticeTakes
     ${PRACTICE_TAKES_JUCE_APP_OPTIONS}
@@ -125,6 +130,12 @@ juce_add_gui_app(PracticeTakes
     BUNDLE_ID "org.derekrneilson.practicetakes"
     ICON_BIG "${PRACTICE_TAKES_ICON_DIRECTORY}/practice-takes-1024.png"
     ICON_SMALL "${PRACTICE_TAKES_ICON_DIRECTORY}/practice-takes-128.png"
+    # macOS terminates any process that opens an audio input device without a
+    # usage description, so the tuner needs this key in the generated
+    # Info.plist. JUCE writes it for Apple targets and ignores it elsewhere.
+    MICROPHONE_PERMISSION_ENABLED TRUE
+    MICROPHONE_PERMISSION_TEXT
+        "Practice Takes listens to your instrument to show tuning and spectrum analysis."
 )
 
 juce_generate_juce_header(PracticeTakes)
@@ -138,8 +149,17 @@ juce_add_binary_data(PracticeTakesIcon
     SOURCES "${PRACTICE_TAKES_ICON_DIRECTORY}/practice-takes-128.png"
 )
 
+# The space-free binary name is what the Debian package, the NSIS installer,
+# and the tooling scripts under tools/scripts/ all expect. Apple is deliberately
+# excluded: juce_add_gui_app names both the bundle and its executable after
+# PRODUCT_NAME and bakes that same name into the configure-time Info.plist as
+# CFBundleExecutable, so renaming the binary afterwards leaves the bundle
+# pointing at a file that does not exist and macOS refuses to launch it.
+if(NOT APPLE)
+    set_target_properties(PracticeTakes PROPERTIES OUTPUT_NAME "PracticeTakes")
+endif()
+
 set_target_properties(PracticeTakes PROPERTIES
-    OUTPUT_NAME "PracticeTakes"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin"
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin"
@@ -267,20 +287,20 @@ target_sources(PracticeTakes
         src/features/feedback/FeedbackComponent.cpp
         src/features/feedback/FeedbackComponent.h
         src/features/feedback/FeedbackInvitationPolicy.h
-        src/services/audio/AudioInputService.cpp
-        src/services/audio/AudioInputService.h
-        src/services/audio/AudioRecoveryPolicy.h
-        src/services/audio/AudioSampleFifo.h
-        src/services/score/Diagnostic.h
-        src/services/score/LyricSyllable.h
-        src/services/score/Measure.h
-        src/services/score/MusicalTime.h
-        src/services/score/Pitch.h
-        src/services/score/Score.h
-        src/services/score/ScoreAttributes.h
-        src/services/score/ScoreEvent.h
-        src/services/score/TempoMap.cpp
-        src/services/score/TempoMap.h
+        src/platform/audio/AudioInputService.cpp
+        src/platform/audio/AudioInputService.h
+        src/platform/audio/AudioRecoveryPolicy.h
+        src/platform/audio/AudioSampleFifo.h
+        src/platform/score/Diagnostic.h
+        src/platform/score/LyricSyllable.h
+        src/platform/score/Measure.h
+        src/platform/score/MusicalTime.h
+        src/platform/score/Pitch.h
+        src/platform/score/Score.h
+        src/platform/score/ScoreAttributes.h
+        src/platform/score/ScoreEvent.h
+        src/platform/score/TempoMap.cpp
+        src/platform/score/TempoMap.h
 )
 
 target_compile_definitions(PracticeTakes
@@ -315,54 +335,54 @@ endif()
 
 if(BUILD_TESTING)
     add_executable(PracticeTakesTests
-        tests/application/configuration/AppDefaultsTests.cpp
-        tests/application/configuration/SettingsPersistenceTests.cpp
-        tests/application/configuration/SettingsTransferCodecTests.cpp
-        tests/application/shell/WorkspaceStartupSequenceTests.cpp
-        tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp
-        tests/application/shell/ui/workspace/model/NamedWorkspaceServiceTests.cpp
-        tests/application/shell/ui/workspace/model/WorkspaceBuiltInsTests.cpp
-        tests/application/shell/ui/workspace/model/WorkspaceCatalogCodecTests.cpp
-        tests/application/shell/ui/workspace/model/WorkspaceDocumentsTests.cpp
-        tests/application/shell/ui/workspace/model/WorkspaceLayoutStateTests.cpp
-        tests/application/shell/ui/workspace/model/WorkspaceMenuModelTests.cpp
-        tests/application/shell/ui/workspace/model/WorkspaceRecoveryTests.cpp
-        tests/application/shell/ui/workspace/model/WorkspaceSessionLifecycleTests.cpp
-        tests/application/shell/ui/workspace/model/WorkspaceSnapshotApplyTests.cpp
-        tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp
-        tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
-        tests/application/testcontrol/ApprovedWindowStatesTests.cpp
-        tests/application/testcontrol/TestControlClickerTests.cpp
-        tests/application/testcontrol/TestControlCommandTests.cpp
-        tests/application/testcontrol/TestControlSessionTests.cpp
-        tests/application/theme/ThemeContrastTests.cpp
-        tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
-        tests/features/analysis/tuner/PitchDetectorTests.cpp
-        tests/features/feedback/FeedbackInvitationPolicyTests.cpp
-        tests/features/performance/ApplicationLaunchTimerTests.cpp
-        tests/features/performance/BenchmarkComparabilityTests.cpp
-        tests/features/performance/BenchmarkComparisonTests.cpp
-        tests/features/performance/BenchmarkInterfacesTests.cpp
-        tests/features/performance/BenchmarkRecordCodecTests.cpp
-        tests/features/performance/BenchmarkRecordStoreTests.cpp
-        tests/features/performance/BenchmarkRunnerTests.cpp
-        tests/features/performance/BenchmarkTypesTests.cpp
-        tests/features/performance/InTreeOptimizationStrategyTests.cpp
-        tests/features/performance/NonRealTimeTelemetryCollectorTests.cpp
-        tests/features/performance/PerformanceLabControllerTests.cpp
-        tests/features/performance/PlatformProvenanceProviderTests.cpp
-        tests/features/performance/RealTimeEventCaptureTests.cpp
-        tests/features/performance/StrategyRegistryTests.cpp
-        tests/features/performance/SustainedAudioAnalysisScenarioTests.cpp
-        tests/features/performance/TrialAggregatorTests.cpp
-        tests/services/audio/AudioRecoveryPolicyTests.cpp
-        tests/services/audio/AudioSampleFifoLoadTests.cpp
-        tests/services/audio/AudioSampleFifoTests.cpp
-        tests/services/score/MusicalTimeTests.cpp
-        tests/services/score/PitchTests.cpp
-        tests/services/score/ScoreModelTests.cpp
-        tests/services/score/TempoMapTests.cpp
-        tests/support/BenchmarkFakesTests.cpp
+        src/tests/application/configuration/AppDefaultsTests.cpp
+        src/tests/application/configuration/SettingsPersistenceTests.cpp
+        src/tests/application/configuration/SettingsTransferCodecTests.cpp
+        src/tests/application/shell/WorkspaceStartupSequenceTests.cpp
+        src/tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp
+        src/tests/application/shell/ui/workspace/model/NamedWorkspaceServiceTests.cpp
+        src/tests/application/shell/ui/workspace/model/WorkspaceBuiltInsTests.cpp
+        src/tests/application/shell/ui/workspace/model/WorkspaceCatalogCodecTests.cpp
+        src/tests/application/shell/ui/workspace/model/WorkspaceDocumentsTests.cpp
+        src/tests/application/shell/ui/workspace/model/WorkspaceLayoutStateTests.cpp
+        src/tests/application/shell/ui/workspace/model/WorkspaceMenuModelTests.cpp
+        src/tests/application/shell/ui/workspace/model/WorkspaceRecoveryTests.cpp
+        src/tests/application/shell/ui/workspace/model/WorkspaceSessionLifecycleTests.cpp
+        src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotApplyTests.cpp
+        src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp
+        src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
+        src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp
+        src/tests/application/testcontrol/TestControlClickerTests.cpp
+        src/tests/application/testcontrol/TestControlCommandTests.cpp
+        src/tests/application/testcontrol/TestControlSessionTests.cpp
+        src/tests/application/theme/ThemeContrastTests.cpp
+        src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
+        src/tests/features/analysis/tuner/PitchDetectorTests.cpp
+        src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
+        src/tests/features/performance/ApplicationLaunchTimerTests.cpp
+        src/tests/features/performance/BenchmarkComparabilityTests.cpp
+        src/tests/features/performance/BenchmarkComparisonTests.cpp
+        src/tests/features/performance/BenchmarkInterfacesTests.cpp
+        src/tests/features/performance/BenchmarkRecordCodecTests.cpp
+        src/tests/features/performance/BenchmarkRecordStoreTests.cpp
+        src/tests/features/performance/BenchmarkRunnerTests.cpp
+        src/tests/features/performance/BenchmarkTypesTests.cpp
+        src/tests/features/performance/InTreeOptimizationStrategyTests.cpp
+        src/tests/features/performance/NonRealTimeTelemetryCollectorTests.cpp
+        src/tests/features/performance/PerformanceLabControllerTests.cpp
+        src/tests/features/performance/PlatformProvenanceProviderTests.cpp
+        src/tests/features/performance/RealTimeEventCaptureTests.cpp
+        src/tests/features/performance/StrategyRegistryTests.cpp
+        src/tests/features/performance/SustainedAudioAnalysisScenarioTests.cpp
+        src/tests/features/performance/TrialAggregatorTests.cpp
+        src/tests/platform/audio/AudioRecoveryPolicyTests.cpp
+        src/tests/platform/audio/AudioSampleFifoLoadTests.cpp
+        src/tests/platform/audio/AudioSampleFifoTests.cpp
+        src/tests/platform/score/MusicalTimeTests.cpp
+        src/tests/platform/score/PitchTests.cpp
+        src/tests/platform/score/ScoreModelTests.cpp
+        src/tests/platform/score/TempoMapTests.cpp
+        src/tests/support/BenchmarkFakesTests.cpp
         src/application/configuration/SettingsPersistence.cpp
         src/application/configuration/SettingsTransferCodec.cpp
         src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
@@ -387,17 +407,17 @@ if(BUILD_TESTING)
         src/features/performance/SustainedAudioAnalysisScenario.cpp
         src/features/performance/StrategyRegistry.cpp
         src/features/performance/TrialAggregator.cpp
-        src/services/score/TempoMap.cpp
+        src/platform/score/TempoMap.cpp
     )
 
-    # tests/ mirrors src/, so a test's path says which source file it covers.
-    # Both roots are on the include path: "services/score/Score.h" resolves
+    # src/tests/ mirrors src/, so a test's path says which source file it covers.
+    # Both roots are on the include path: "platform/score/Score.h" resolves
     # against src/, and shared fixtures such as "support/BenchmarkFakes.h"
-    # resolve against tests/ from any depth.
+    # resolve against src/tests/ from any depth.
     target_include_directories(PracticeTakesTests
         PRIVATE
             "${CMAKE_CURRENT_SOURCE_DIR}/src"
-            "${CMAKE_CURRENT_SOURCE_DIR}/tests"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/tests"
     )
 
     target_link_libraries(PracticeTakesTests
@@ -439,4 +459,4 @@ if(BUILD_TESTING)
     catch_discover_tests(PracticeTakesTests)
 endif()
 
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Packaging.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/Packaging.cmake")

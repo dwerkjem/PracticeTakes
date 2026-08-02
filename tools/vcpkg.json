@@ -1,0 +1,24 @@
+{
+  "name": "practice-takes",
+  "version-string": "0.5.8",
+  "builtin-baseline": "5b698638c97b4610044a254347d571f823e56557",
+  "dependencies": [
+    "alsa",
+    {
+      "name": "curl",
+      "default-features": false,
+      "features": [
+        "ssl"
+      ]
+    },
+    "fontconfig",
+    "freetype",
+    "jack2",
+    "libx11",
+    "libxcomposite",
+    "libxext",
+    "libxinerama",
+    "libxrandr",
+    "libxrender"
+  ]
+}

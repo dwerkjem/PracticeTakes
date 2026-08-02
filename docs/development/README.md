@@ -12,17 +12,40 @@ broader music-practice and digital-audio workstation application.
 - [Architecture map](https://dwerkjem.github.io/PracticeTakes/) — browsable
   graph of every file, its role, and what it connects to, with a guided tour
   through the codebase. Generated from the repository; no setup required
-- [Building](BUILDING.md) — prerequisites, local configuration, and run commands
-- [Architecture](ARCHITECTURE.md) — application ownership, audio flow, and UI structure
-- [Design and architecture review checklist](ARCHITECTURE_QA.md) — what reviewers check on pull requests beyond formatting/linting
-- [QA strategy](QA_STRATEGY.md) — the current CI/testing gap analysis and plan for closing it
-- [Test layout](TEST_LAYOUT.md) — how `tests/` mirrors `src/`, where a new test goes, and what sits outside the mirror
-- [Manual GUI verification](MANUAL_GUI_VERIFICATION.md) — the interactive harness that drives the app, asks about each surface, and records the run
-- [Code style](CODE_STYLE.md) — readability and real-time audio guidelines
-- [Code quality](QUALITY.md) — clang-format, clang-tidy, pre-commit, and VS Code diagnostics
-- [SOPS secrets](SECRETS.md) — encrypted secret mirrors, synchronization, and conflict resolution
-- [Releasing](RELEASING.md) — semantic versions, GitHub release automation, and
+
+### `build/`
+
+- [Building](build/BUILDING.md) — prerequisites, local configuration, and run commands
+
+### `architecture/`
+
+- [Architecture](architecture/ARCHITECTURE.md) — application ownership, audio flow, and UI structure
+- [Design and architecture review checklist](architecture/ARCHITECTURE_QA.md) — what reviewers check on pull requests beyond formatting/linting
+
+### `quality/`
+
+- [Code quality](quality/QUALITY.md) — clang-format, clang-tidy, pre-commit, and VS Code diagnostics
+- [Code style](quality/CODE_STYLE.md) — readability and real-time audio guidelines
+- [QA strategy](quality/QA_STRATEGY.md) — the current CI/testing gap analysis and plan for closing it
+- [Test layout](quality/TEST_LAYOUT.md) — how `src/tests/` mirrors `src/`, where a new test goes, and what sits outside the mirror
+- [Manual GUI verification](quality/MANUAL_GUI_VERIFICATION.md) — the interactive harness that drives the app, asks about each surface, and records the run
+
+### `performance/`
+
+- [Audio-thread safety](performance/audio-thread-safety.md) — the real-time capture and telemetry contract
+- [Hardware acceptance](performance/hardware-acceptance.md) — the physical-hardware evidence protocol for the Performance Lab
+
+### `operations/`
+
+- [Releasing](operations/RELEASING.md) — semantic versions, GitHub release automation, and
   artifact signing
+- [SOPS secrets](operations/SECRETS.md) — encrypted secret mirrors, synchronization, and conflict resolution
+- [Feedback service](operations/FEEDBACK.md) — the in-app feedback contract and endpoint configuration
+
+### `agents/`
+
+- [Agent guide](agents/AGENT_GUIDE.md) — repository guidance loaded by Claude Code
+  through the root `CLAUDE.md` stub
 
 ## Main technologies
 
@@ -32,5 +55,5 @@ broader music-practice and digital-audio workstation application.
 - vcpkg for Linux system dependencies
 - GitHub Actions for Windows, Linux, and macOS packages
 
-The application version is stored only in the root `VERSION` file. Do not
-copy the version into CMake or C++ source code.
+The application version is stored only in `tools/VERSION`. Do not copy the
+version into CMake or C++ source code.
