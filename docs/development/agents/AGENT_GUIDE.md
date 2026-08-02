@@ -244,6 +244,11 @@ against it — they can drift (`docs/development/quality/QA_STRATEGY.md` area 12
 - The [architecture map](https://dwerkjem.github.io/PracticeTakes/) is a
   generated, browsable graph of the whole repo — useful for finding where a
   change belongs before starting.
+- This repository configures Git merge drivers and `rerere`; `pre-commit
+  install` sets them up. `CMakeLists.txt` source lists union automatically,
+  and generated files under `.ua/` keep ours rather than merging. See
+  `docs/development/operations/MERGING.md` before hand-resolving a conflict
+  in either.
 - Run the relevant test suite before requesting review: `PracticeTakesTests`
   for C++ changes under `src/**`/`src/tests/**`; `npm run check && npm run test`
   from `src/services/` for `src/services/**`; `python tools/scripts/run_tests.py` for

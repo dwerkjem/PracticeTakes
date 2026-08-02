@@ -6,6 +6,19 @@ default_stages:
 repos:
   - repo: local
     hooks:
+      # Git will not read merge-driver definitions out of a cloned repository,
+      # so .gitattributes can name a driver but not define one. This installs
+      # them into the clone's own config. Idempotent and silent once set, so it
+      # costs a few config reads per commit and self-heals a stale value.
+      - id: git-merge-config
+        name: Install this repository's Git merge configuration
+        entry: python3 tools/scripts/git/configure_merge.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages:
+          - pre-commit
+          - pre-merge-commit
       - id: sops-secrets
         name: Encrypt and stage configured secrets with SOPS
         entry: python3 tools/scripts/secrets/secrets_manager.py pre-commit

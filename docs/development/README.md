@@ -40,6 +40,7 @@ broader music-practice and digital-audio workstation application.
 - [Releasing](operations/RELEASING.md) — semantic versions, GitHub release automation, and
   artifact signing
 - [SOPS secrets](operations/SECRETS.md) — encrypted secret mirrors, synchronization, and conflict resolution
+- [Merging](operations/MERGING.md) — the merge drivers and Git configuration this repository expects, and how to bypass them
 - [Feedback service](operations/FEEDBACK.md) — the in-app feedback contract and endpoint configuration
 
 ### `agents/`
