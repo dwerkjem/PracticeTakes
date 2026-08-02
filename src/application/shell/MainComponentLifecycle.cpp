@@ -121,6 +121,17 @@ void MainComponent::configureTopButtons()
     helpButton.onClick = [this] { showHelpMenu(); };
     microphoneButton.setTitle("Global microphone mute control");
     microphoneButton.onClick = [this] { audioInputService.toggleMuted(); };
+
+    // Component ids let the development-only test control channel address these
+    // by name rather than by screen position, so the manual GUI harness never
+    // synthesises a pointer or a key. The names must match the approved click
+    // targets in src/application/testcontrol/ApprovedWindowStates.cpp -- a
+    // rename that misses one shows up as a click failing, not as a click
+    // silently landing on nothing.
+    settingsButton.setComponentID("settings-button");
+    toolsButton.setComponentID("tools-button");
+    helpButton.setComponentID("help-button");
+    microphoneButton.setComponentID("microphone-button");
 }
 
 std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(

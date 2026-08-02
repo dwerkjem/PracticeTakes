@@ -26,8 +26,17 @@ class MainTitleBar final : public juce::Component
             addAndMakeVisible(button);
         }
 
+        // Component ids let the development-only test control channel address
+        // these by name rather than by screen position. The names must match
+        // the approved click targets in
+        // src/application/testcontrol/ApprovedWindowStates.cpp.
+        //
+        // The hamburger is only visible below the collapsed-menu width, so a
+        // click on it is legitimately unavailable in a wide window -- which the
+        // channel reports as a failure rather than a silent no-op.
         hamburgerButton.setButtonText("Menu");
         hamburgerButton.setTooltip("Show application menu");
+        hamburgerButton.setComponentID("hamburger-button");
         hamburgerButton.onClick = [this] { showCollapsedMenu(); };
         addChildComponent(hamburgerButton);
 
@@ -37,6 +46,7 @@ class MainTitleBar final : public juce::Component
         addAndMakeVisible(minimiseButton);
 
         fullscreenButton.setTooltip("Enter fullscreen (F11)");
+        fullscreenButton.setComponentID("fullscreen-button");
         fullscreenButton.onClick = onFullscreen;
         addAndMakeVisible(fullscreenButton);
 

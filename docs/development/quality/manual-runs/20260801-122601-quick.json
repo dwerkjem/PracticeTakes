@@ -1,0 +1,103 @@
+{
+  "answers": [
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does the tuner respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    }
+  ],
+  "audio_device": "unspecified",
+  "commit": "6eab7d0fe08a",
+  "complete": true,
+  "finished_at": "2026-08-01T12:27:47",
+  "geometry_sweep": false,
+  "mode": "quick",
+  "platform": "Linux 6.12.90+deb13.1-amd64 (x86_64)",
+  "started_at": "2026-08-01T12:26:01",
+  "unreachable": []
+}

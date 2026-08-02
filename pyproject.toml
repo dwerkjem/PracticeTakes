@@ -1,0 +1,49 @@
+[project]
+name = "practice-takes-tools"
+version = "0.1.0"
+description = "Repository tooling for Practice Takes. Not the shipped application."
+requires-python = ">=3.13"
+
+# Deliberately empty. The scripts `pre-commit` invokes -- both secrets-manager
+# hooks and the C++ formatter -- and everything CI runs on the runner's
+# preinstalled interpreter are standard-library only, and must stay that way:
+# they run on whatever `python3` a contributor happens to have.
+#
+# Tooling that needs a real library declares it in a dependency group or an
+# optional extra below, so taking a dependency is always a scoped decision
+# rather than something the commit gate inherits.
+dependencies = []
+
+[project.scripts]
+# `uv run ui-test` -- the manual GUI verification harness.
+ui-test = "manual_gui.__main__:main"
+
+[dependency-groups]
+# Installed by default for developers (see [tool.uv] below), so `uv run ui-test`
+# works without anyone having to remember an extra flag. A dependency group is
+# not a published dependency, so this does not leak into `dependencies`.
+manual-gui = ["textual>=8.2,<9"]
+
+[project.optional-dependencies]
+# Pinned developer tooling. CI installs what it needs directly; the scripts
+# degrade with a clear message when a tool is absent rather than failing a run
+# over a report. Kept as an extra rather than a default group because none of
+# it is needed to work on the application.
+#
+# clang-format is pinned to the exact version the CI runner has. The two drifted
+# once already and it cost a red build: clang-format 21 accepted a lambda
+# wrapping that 18 rejects, so the tree was clean locally and broken in CI.
+# scripts/quality/run_clang_format.py warns when the version in use differs from
+# this pin, so the next drift is visible rather than mysterious.
+coverage = ["gcovr>=8,<9", "coverage>=7", "clang-format==18.1.8"]
+
+[tool.uv]
+default-groups = ["manual-gui"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "scripts" }
+packages = ["manual_gui"]

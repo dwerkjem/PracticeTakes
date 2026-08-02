@@ -5,12 +5,19 @@ on:
     paths:
       - "tools/scripts/**"
       - ".github/workflows/python-check.yml"
+      # The layout check below reads src/tests/ and src/, so a change to either has
+      # to be able to fail it. Without these, a test added at the root of
+      # src/tests/ would never trigger the job that rejects it.
+      - "src/tests/**"
+      - "src/**"
   push:
     branches:
       - main
     paths:
       - "tools/scripts/**"
       - ".github/workflows/python-check.yml"
+      - "src/tests/**"
+      - "src/**"
 
 permissions:
   contents: read
@@ -36,3 +43,9 @@ jobs:
       # and clang-tidy workflows already invoke these scripts with.
       - name: Run tests
         run: python3 tools/scripts/run_tests.py
+
+      # src/tests/ mirrors src/ so a test's path names what it covers. Enforced
+      # rather than trusted, because the tree was flat until recently and a new
+      # test at the top level is an easy habit to fall back into.
+      - name: Check the test layout mirrors the source tree
+        run: python3 tools/scripts/quality/check_test_layout.py

@@ -54,6 +54,22 @@ Set an explicit executable when `clang-format` is not on `PATH`:
 CLANG_FORMAT=/path/to/clang-format pre-commit run --all-files
 ```
 
+## clang-format version
+
+CI checks formatting with the clang-format on its runner, currently **18.1.8**.
+Formatter versions disagree at the column limit — 21 accepts wrapping that 18
+rejects — so a tree can be clean locally and red in CI.
+
+Get the matching binary with:
+
+```bash
+uv sync --extra coverage
+```
+
+`tools/scripts/quality/run_clang_format.py` warns when the version in use is not the
+pinned one, so the next drift is visible rather than mysterious. Set
+`CLANG_FORMAT` to override which binary is used.
+
 ## Clang-tidy auto-fixes on main
 
 Clang-tidy is not part of the local pre-commit hook. The `.github/workflows/clang-tidy-main.yml` workflow runs when relevant C++ or analysis configuration changes are pushed to `main`.

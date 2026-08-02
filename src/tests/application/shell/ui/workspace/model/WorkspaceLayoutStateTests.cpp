@@ -471,3 +471,62 @@ TEST_CASE(
     CHECK_FALSE(state.setActiveTab(tabsId, tuner));
     CHECK_FALSE(state.setSplitRatio(tabsId, 0.4));
 }
+
+TEST_CASE("opening tools the way openTool does produces tabs, not a split", "[workspace][layout]")
+{
+    // The behaviour that misled the manual GUI harness. openTool inserts every
+    // docked tool with DropZone::centre, which auto-tabs alongside whatever is
+    // already there -- so "open two tools docked" is never a side-by-side
+    // layout, however it is described.
+    WorkspaceLayoutState state;
+
+    state.insert(tuner, std::nullopt, WorkspaceLayoutState::DropZone::centre);
+    state.insert(spectrogram, std::nullopt, WorkspaceLayoutState::DropZone::centre);
+
+    CHECK(state.isFlattenedTabs());
+    CHECK_FALSE(state.canSplitRoot());
+}
+
+TEST_CASE("an arrange command cannot turn tabs into a split", "[workspace][layout]")
+{
+    // applyLayoutCommand only re-orients an *existing* split. Asking for
+    // horizontal while the root is a tabs node silently does nothing, which is
+    // why the harness reported "there tabbed not side by side".
+    WorkspaceLayoutState state;
+
+    state.insert(tuner, std::nullopt, WorkspaceLayoutState::DropZone::centre);
+    state.insert(spectrogram, std::nullopt, WorkspaceLayoutState::DropZone::centre);
+
+    state.applyLayoutCommand(WorkspaceLayoutState::Layout::horizontal);
+
+    CHECK(state.isFlattenedTabs());
+    CHECK_FALSE(state.canSplitRoot());
+}
+
+TEST_CASE("placing a tool beside another does produce a split", "[workspace][layout]")
+{
+    // The fix: tiling has to be asked for explicitly, by naming the pane to
+    // sit beside and the side to sit on.
+    WorkspaceLayoutState state;
+
+    state.insert(tuner, std::nullopt, WorkspaceLayoutState::DropZone::centre);
+    state.insert(spectrogram, tuner, WorkspaceLayoutState::DropZone::right);
+
+    CHECK_FALSE(state.isFlattenedTabs());
+    CHECK(state.canSplitRoot());
+    CHECK(state.isRootOrientation(WorkspaceLayoutState::Orientation::horizontal));
+}
+
+TEST_CASE("three tools placed beside each other all stay visible", "[workspace][layout]")
+{
+    // "All three tools open at once" reported "not all visable" for the same
+    // reason: they were tabbed, so only one showed.
+    WorkspaceLayoutState state;
+
+    state.insert(tuner, std::nullopt, WorkspaceLayoutState::DropZone::centre);
+    state.insert(spectrogram, tuner, WorkspaceLayoutState::DropZone::right);
+    state.insert(harmonics, spectrogram, WorkspaceLayoutState::DropZone::right);
+
+    CHECK_FALSE(state.isFlattenedTabs());
+    CHECK(state.canSplitRoot());
+}

@@ -27,6 +27,8 @@ broader music-practice and digital-audio workstation application.
 - [Code quality](quality/QUALITY.md) — clang-format, clang-tidy, pre-commit, and VS Code diagnostics
 - [Code style](quality/CODE_STYLE.md) — readability and real-time audio guidelines
 - [QA strategy](quality/QA_STRATEGY.md) — the current CI/testing gap analysis and plan for closing it
+- [Test layout](quality/TEST_LAYOUT.md) — how `src/tests/` mirrors `src/`, where a new test goes, and what sits outside the mirror
+- [Manual GUI verification](quality/MANUAL_GUI_VERIFICATION.md) — the interactive harness that drives the app, asks about each surface, and records the run
 
 ### `performance/`
 
