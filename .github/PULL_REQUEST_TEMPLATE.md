@@ -5,7 +5,7 @@
 ## Checklist
 
 - [ ] I reviewed the relevant items in the
-      [design and architecture review checklist](https://github.com/dwerkjem/PracticeTakes/blob/main/docs/development/ARCHITECTURE_QA.md)
+      [design and architecture review checklist](https://github.com/dwerkjem/PracticeTakes/blob/main/docs/development/architecture/ARCHITECTURE_QA.md)
       for this change (layering, ownership/lifetime, audio-thread boundary,
       coupling/testability, scope/consistency).
 - [ ] I ran the relevant test suite locally and it passes:

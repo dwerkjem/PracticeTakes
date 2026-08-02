@@ -5,7 +5,7 @@ faint staff systems, drawn from the application's own accent colour
 (`#64AAFF` dark, `#3770C4` light — see `src/application/theme/Theme.cpp`).
 
 Every file here is generated. Edit the geometry in
-[`tools/scripts/design/generate_app_icons.py`](../../tools/scripts/design/generate_app_icons.py)
+[`tools/scripts/design/generate_app_icons.py`](../../scripts/design/generate_app_icons.py)
 rather than the artwork, then regenerate:
 
 ```bash

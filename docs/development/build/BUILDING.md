@@ -96,7 +96,7 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 ```
 
 Configuring is enough to create the database; the executable does not need to
-be built first. See [Code quality and editor setup](QUALITY.md) for pre-commit
+be built first. See [Code quality and editor setup](../quality/QUALITY.md) for pre-commit
 and VS Code instructions.
 
 ## Build output
