@@ -1,0 +1,18 @@
+# What each corpus file must import to.
+#
+# One row per score file in this directory, pipe-separated:
+#
+#   file name | parts | measures | total ticks | diagnostics
+#
+# Blank lines and lines starting with '#' are ignored.
+#
+# These are pinned so that a change in how the importer converts a real file
+# fails a test rather than passing silently. If a number here changes, that is
+# the point: work out why before updating it. "The importer changed" is not a
+# reason to edit this file, it is a reason to look at the diff.
+#
+# Total ticks is the score's musical length, in the model's 3840-per-quarter
+# base -- so one 4/4 bar is 15360.
+#
+# MusicXmlCorpusTests fails on any score file in this directory with no row
+# here, and reports the values it actually saw so a new row can be written.

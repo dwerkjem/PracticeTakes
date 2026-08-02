@@ -109,6 +109,7 @@ if(BUILD_TESTING)
     FetchContent_MakeAvailable(Catch2)
 endif()
 
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     include("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/PatchJuceAlsaChannelMismatch.cmake")
     include("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/PatchJuceAlsaInputStartup.cmake")
@@ -417,6 +418,13 @@ if(BUILD_TESTING)
         src/tests/platform/score/ScoreInvariantsTests.cpp
         src/tests/platform/score/ScoreModelTests.cpp
         src/tests/platform/score/TempoMapTests.cpp
+        src/tests/platform/score/musicxml/MusicXmlCorpusTests.cpp
+        src/tests/platform/score/musicxml/container/MusicXmlContainerTests.cpp
+        src/tests/platform/score/musicxml/read/MusicXmlAttributeTests.cpp
+        src/tests/platform/score/musicxml/read/MusicXmlDiagnosticsTests.cpp
+        src/tests/platform/score/musicxml/read/MusicXmlLyricTests.cpp
+        src/tests/platform/score/musicxml/read/MusicXmlNoteTests.cpp
+        src/tests/platform/score/musicxml/read/MusicXmlTimingTests.cpp
         src/tests/support/BenchmarkFakesTests.cpp
         src/application/configuration/SettingsPersistence.cpp
         src/application/configuration/SettingsTransferCodec.cpp
@@ -445,6 +453,16 @@ if(BUILD_TESTING)
         src/platform/score/ScoreBuilder.cpp
         src/platform/score/ScoreInvariants.cpp
         src/platform/score/TempoMap.cpp
+        src/platform/score/musicxml/MusicXmlDiagnosticSink.cpp
+        src/platform/score/musicxml/MusicXmlImporter.cpp
+        src/platform/score/musicxml/XmlDocumentAdapter.cpp
+        src/platform/score/musicxml/container/MusicXmlContainer.cpp
+        src/platform/score/musicxml/read/MusicXmlMeasureReader.cpp
+        src/platform/score/musicxml/read/MusicXmlReadContext.cpp
+        src/platform/score/musicxml/read/MusicXmlScoreReader.cpp
+        src/platform/score/musicxml/read/MusicXmlSubset.cpp
+        src/platform/score/musicxml/read/MusicXmlTieResolver.cpp
+        src/platform/score/musicxml/read/MusicXmlValueParsing.cpp
     )
 
     # src/tests/ mirrors src/, so a test's path says which source file it covers.
@@ -455,6 +473,14 @@ if(BUILD_TESTING)
         PRIVATE
             "${CMAKE_CURRENT_SOURCE_DIR}/src"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/tests"
+    )
+
+    # The corpus of real MuseScore exports lives on disk rather than in a string
+    # literal, following the PRACTICE_TAKES_SOURCE_DIR precedent on the app
+    # target. MusicXmlCorpusTests is the only test that reads it.
+    target_compile_definitions(PracticeTakesTests
+        PRIVATE
+            PRACTICE_TAKES_TEST_RESOURCES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/tests/resources"
     )
 
     target_link_libraries(PracticeTakesTests
