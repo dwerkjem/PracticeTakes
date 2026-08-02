@@ -55,7 +55,7 @@ compile_commands.json
 # JavaScript service dependencies and local Cloudflare state
 node_modules/
 .wrangler/
-services/feedback-intake/wrangler.jsonc
+src/services/feedback-intake/wrangler.jsonc
 .dev.vars
 .dev.vars.*
 !.dev.vars.example
@@ -68,7 +68,9 @@ services/feedback-intake/wrangler.jsonc
 coverage/
 
 # vcpkg
-/vcpkg_installed/
+# Not root-anchored: the manifest lives in tools/, so vcpkg writes its install
+# tree there when it is invoked outside a CMake build directory.
+vcpkg_installed/
 
 # Test output and caches
 Testing/
@@ -235,15 +237,15 @@ ENV/
 env.bak/
 venv.bak/
 
-# SOPS plaintext is selected by secret-patterns and also copied into each
-# clone's .git/info/exclude by scripts/secrets/secrets_manager.py. Encrypted
+# SOPS plaintext is selected by tools/secret-patterns and also copied into each
+# clone's .git/info/exclude by tools/scripts/secrets/secrets_manager.py. Encrypted
 # mirrors below .secrets/ are intentionally tracked.
 !.secrets/
 !.secrets/**
 
 # A directory literally named secrets/ at the repository root behaves the way a
 # contributor expects: everything below it stays local and is mirrored
-# encrypted. This is the tracked counterpart to the same rule in secret-patterns.
+# encrypted. This is the tracked counterpart to the same rule in tools/secret-patterns.
 secrets/**
 
 # Spyder project settings
@@ -307,8 +309,8 @@ __marimo__/
 .streamlit/secrets.toml
 
 # Build helper scripts are source files, not generated build output.
-!/scripts/build/
-benchmark-results/
+!/tools/scripts/build/
+/tools/benchmark-results/
 /.ua/.trash-*/*
 /.ua/tmp/
 

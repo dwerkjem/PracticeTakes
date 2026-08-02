@@ -119,15 +119,15 @@ jobs:
         if: ${{ inputs.version != '' }}
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-        run: python3 scripts/release/version.py set "${RELEASE_VERSION}"
+        run: python3 tools/scripts/release/version.py set "${RELEASE_VERSION}"
 
       - name: Read application version
         id: version
         shell: bash
-        run: echo "version=$(python3 scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
+        run: echo "version=$(python3 tools/scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
 
       - name: Install Linux build dependencies
-        run: bash scripts/build/check-linux-build-dependencies.sh --install
+        run: bash tools/scripts/build/check-linux-build-dependencies.sh --install
 
       - name: Configure
         run: |
@@ -242,13 +242,13 @@ jobs:
         shell: pwsh
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-        run: python scripts/release/version.py set "${env:RELEASE_VERSION}"
+        run: python tools/scripts/release/version.py set "${env:RELEASE_VERSION}"
 
       - name: Read application version
         id: version
         shell: pwsh
         run: |
-          $version = (python scripts/release/version.py current).Trim()
+          $version = (python tools/scripts/release/version.py current).Trim()
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Install Windows build tools
@@ -495,12 +495,12 @@ jobs:
         if: ${{ inputs.version != '' }}
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-        run: python3 scripts/release/version.py set "${RELEASE_VERSION}"
+        run: python3 tools/scripts/release/version.py set "${RELEASE_VERSION}"
 
       - name: Read application version
         id: version
         shell: bash
-        run: echo "version=$(python3 scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
+        run: echo "version=$(python3 tools/scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
 
       - name: Configure
         run: |
@@ -567,10 +567,13 @@ jobs:
           APPLE_DEVELOPER_ID_APPLICATION: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION }}
           APPLE_DEVELOPER_ID_INSTALLER: ${{ secrets.APPLE_DEVELOPER_ID_INSTALLER }}
         run: |
-          app_path="$(find build -type d -name 'PracticeTakes.app' -print -quit)"
+          # JUCE names the bundle after PRODUCT_NAME, so the directory keeps the
+          # display name with its space. Only the published .pkg file name uses
+          # the space-free form.
+          app_path="$(find build -type d -name 'Practice Takes.app' -print -quit)"
 
           if [[ -z "${app_path}" ]]; then
-            echo "PracticeTakes.app was not found after the build." >&2
+            echo "Practice Takes.app was not found after the build." >&2
             exit 1
           fi
 
@@ -585,15 +588,42 @@ jobs:
             codesign --force --deep --sign - "${app_path}"
           fi
 
+          # pkgbuild marks bundles relocatable by default, which makes the
+          # installer ask LaunchServices for an existing copy of this bundle ID
+          # and install over that instead of /Applications. Anyone who kept an
+          # old copy of the app outside /Applications would have it silently
+          # overwritten and see nothing installed where they expected. Staging
+          # through --root is what allows --component-plist, which is the only
+          # way to turn relocation off.
+          rm -rf staging
+          mkdir staging
+          ditto "${app_path}" "staging/$(basename "${app_path}")"
+
+          pkgbuild --analyze --root staging component.plist
+          plutil -replace 0.BundleIsRelocatable -bool false component.plist
+
+          if ! plutil -convert xml1 component.plist -o - \
+            | grep -A1 "<key>BundleIsRelocatable</key>" | grep -q "<false/>"; then
+            echo "BundleIsRelocatable was not turned off:" >&2
+            plutil -convert xml1 component.plist -o - >&2
+            exit 1
+          fi
+
+          # --root preserves the build user's ownership by default, which would
+          # install an app owned by a uid that means nothing on the user's
+          # machine. "recommended" hands it to root:wheel like any other
+          # /Applications install.
           pkgbuild \
-            --component "${app_path}" \
+            --root staging \
+            --component-plist component.plist \
             --identifier org.derekrneilson.practicetakes.pkg \
             --version "${{ steps.version.outputs.version }}" \
             --install-location /Applications \
+            --ownership recommended \
             "dist/${artifact_name}.pkg"
 
           pkgutil --payload-files "dist/${artifact_name}.pkg" | \
-            grep -F "PracticeTakes.app/Contents/MacOS/PracticeTakes"
+            grep -F "Practice Takes.app/Contents/MacOS/Practice Takes"
 
           if [[ "${MACOS_SIGNING_ENABLED}" == "true" ]]; then
             mv "dist/${artifact_name}.pkg" "dist/${artifact_name}-unsigned.pkg"
@@ -603,6 +633,88 @@ jobs:
             rm -f "dist/${artifact_name}-unsigned.pkg"
             pkgutil --check-signature "dist/${artifact_name}.pkg"
           fi
+
+      # A .pkg can build, sign, and notarize cleanly while containing a bundle
+      # macOS refuses to launch, which is exactly how 0.5.6 shipped: the binary
+      # had been renamed out from under CFBundleExecutable. These assertions run
+      # against the built bundle and again against the one the installer
+      # actually places in /Applications, so packaging is checked end to end
+      # rather than only for the presence of a payload path.
+      - name: Verify macOS bundle and installed package
+        run: |
+          set -euo pipefail
+
+          verify_bundle() {
+            local bundle="$1"
+            local label="$2"
+            local plist="${bundle}/Contents/Info.plist"
+
+            echo "== ${label}: ${bundle}"
+
+            if [[ ! -f "${plist}" ]]; then
+              echo "${label}: Info.plist is missing." >&2
+              return 1
+            fi
+
+            # plutil exits non-zero for a missing key. PlistBuddy would instead
+            # print its error to stdout and read back as a plausible value.
+            local executable_name
+            if ! executable_name="$(plutil -extract CFBundleExecutable raw -o - "${plist}")"; then
+              echo "${label}: Info.plist has no CFBundleExecutable." >&2
+              return 1
+            fi
+
+            if [[ ! -x "${bundle}/Contents/MacOS/${executable_name}" ]]; then
+              echo "${label}: CFBundleExecutable is '${executable_name}' but" \
+                   "Contents/MacOS/${executable_name} is not an executable file." >&2
+              ls -l "${bundle}/Contents/MacOS" >&2
+              return 1
+            fi
+
+            # An audio-input app without this key is killed by TCC on first
+            # capture, so ship it or the tuner cannot work at all.
+            local microphone_usage
+            if ! microphone_usage="$(plutil -extract NSMicrophoneUsageDescription raw -o - "${plist}")" \
+              || [[ -z "${microphone_usage}" ]]; then
+              echo "${label}: Info.plist has no usable NSMicrophoneUsageDescription." >&2
+              return 1
+            fi
+
+            codesign --verify --deep --strict --verbose=2 "${bundle}"
+
+            echo "${label}: executable '${executable_name}' and microphone usage description present."
+          }
+
+          app_path="$(find build -type d -name 'Practice Takes.app' -print -quit)"
+          verify_bundle "${app_path}" "built bundle"
+
+          package_path="dist/PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}.pkg"
+
+          # A relocatable payload installs over whatever copy of the bundle
+          # LaunchServices happens to know about rather than /Applications, so
+          # the install below would be testing an unpredictable destination.
+          rm -rf expanded
+          pkgutil --expand "${package_path}" expanded
+
+          if grep -q "<relocate>" expanded/PackageInfo; then
+            echo "The package payload is still relocatable:" >&2
+            cat expanded/PackageInfo >&2
+            exit 1
+          fi
+
+          sudo installer -pkg "${package_path}" -target / -verbose
+
+          installed_path="/Applications/Practice Takes.app"
+
+          if [[ ! -d "${installed_path}" ]]; then
+            echo "The installer did not place the bundle at ${installed_path}." >&2
+            pkgutil --pkg-info org.derekrneilson.practicetakes.pkg >&2 || true
+            pkgutil --files org.derekrneilson.practicetakes.pkg >&2 || true
+            ls -l /Applications >&2
+            exit 1
+          fi
+
+          verify_bundle "${installed_path}" "installed bundle"
 
       # Notarization turns on when the repository owner creates, alongside the
       # APPLE_DEVELOPER_ID_* secrets above:
@@ -758,13 +870,13 @@ jobs:
         if: ${{ inputs.version != '' }}
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-        run: python3 scripts/release/version.py set "${RELEASE_VERSION}"
+        run: python3 tools/scripts/release/version.py set "${RELEASE_VERSION}"
 
       - name: Read build metadata
         id: metadata
         shell: bash
         run: |
-          echo "version=$(python3 scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
+          echo "version=$(python3 tools/scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
           echo "source_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
 
       - name: Download platform artifacts

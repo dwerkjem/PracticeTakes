@@ -400,28 +400,35 @@ class PracticeTakesApplication final : public juce::JUCEApplication
 
                     if (channelRequested)
                     {
-                        testControlTarget.onApplyState =
-                            [this](const testcontrol::ApprovedWindowState& approved)
-                        { return content != nullptr && content->applyTestControlState(approved); };
-                        testControlTarget.onClick = [this](const std::string& id)
-                        { return content != nullptr && content->clickTestControlTarget(id); };
-                        testControlTarget.onGeometry = [this](const std::string& geometry)
-                        {
-                            return content != nullptr &&
-                                   content->applyTestControlGeometry(geometry);
-                        };
-                        testControlTarget.onCurrentStateId = [this]
-                        {
-                            return content != nullptr ? content->currentTestControlStateId()
-                                                      : std::string{};
-                        };
-                        testControlTarget.onQuit = []
-                        { juce::JUCEApplication::getInstance()->systemRequestedQuit(); };
-
-                        testControlChannel =
-                            std::make_unique<testcontrol::TestControlChannel>(testControlTarget);
+                        openTestControlChannel();
                     }
                 });
+        }
+
+        // Wiring the channel to the shell, at class scope rather than nested
+        // inside startTestControl's timer callback. Five levels of indentation
+        // left these lambdas straddling the column limit, which two
+        // clang-format versions then disagreed about -- 21 accepted what 18
+        // rejected, so CI failed on formatting that was locally clean.
+        void openTestControlChannel()
+        {
+            testControlTarget.onApplyState = [this](const testcontrol::ApprovedWindowState& state)
+            { return content != nullptr && content->applyTestControlState(state); };
+
+            testControlTarget.onClick = [this](const std::string& id)
+            { return content != nullptr && content->clickTestControlTarget(id); };
+
+            testControlTarget.onGeometry = [this](const std::string& geometry)
+            { return content != nullptr && content->applyTestControlGeometry(geometry); };
+
+            testControlTarget.onCurrentStateId = [this]
+            { return content != nullptr ? content->currentTestControlStateId() : std::string{}; };
+
+            testControlTarget.onQuit = []
+            { juce::JUCEApplication::getInstance()->systemRequestedQuit(); };
+
+            testControlChannel =
+                std::make_unique<testcontrol::TestControlChannel>(testControlTarget);
         }
 
         testcontrol::FunctionTestControlTarget testControlTarget;
