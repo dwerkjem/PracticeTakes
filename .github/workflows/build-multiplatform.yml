@@ -588,11 +588,38 @@ jobs:
             codesign --force --deep --sign - "${app_path}"
           fi
 
+          # pkgbuild marks bundles relocatable by default, which makes the
+          # installer ask LaunchServices for an existing copy of this bundle ID
+          # and install over that instead of /Applications. Anyone who kept an
+          # old copy of the app outside /Applications would have it silently
+          # overwritten and see nothing installed where they expected. Staging
+          # through --root is what allows --component-plist, which is the only
+          # way to turn relocation off.
+          rm -rf staging
+          mkdir staging
+          ditto "${app_path}" "staging/$(basename "${app_path}")"
+
+          pkgbuild --analyze --root staging component.plist
+          plutil -replace 0.BundleIsRelocatable -bool false component.plist
+
+          if ! plutil -convert xml1 component.plist -o - \
+            | grep -A1 "<key>BundleIsRelocatable</key>" | grep -q "<false/>"; then
+            echo "BundleIsRelocatable was not turned off:" >&2
+            plutil -convert xml1 component.plist -o - >&2
+            exit 1
+          fi
+
+          # --root preserves the build user's ownership by default, which would
+          # install an app owned by a uid that means nothing on the user's
+          # machine. "recommended" hands it to root:wheel like any other
+          # /Applications install.
           pkgbuild \
-            --component "${app_path}" \
+            --root staging \
+            --component-plist component.plist \
             --identifier org.derekrneilson.practicetakes.pkg \
             --version "${{ steps.version.outputs.version }}" \
             --install-location /Applications \
+            --ownership recommended \
             "dist/${artifact_name}.pkg"
 
           pkgutil --payload-files "dist/${artifact_name}.pkg" | \
@@ -662,12 +689,27 @@ jobs:
           verify_bundle "${app_path}" "built bundle"
 
           package_path="dist/PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}.pkg"
+
+          # A relocatable payload installs over whatever copy of the bundle
+          # LaunchServices happens to know about rather than /Applications, so
+          # the install below would be testing an unpredictable destination.
+          rm -rf expanded
+          pkgutil --expand "${package_path}" expanded
+
+          if grep -q "<relocate>" expanded/PackageInfo; then
+            echo "The package payload is still relocatable:" >&2
+            cat expanded/PackageInfo >&2
+            exit 1
+          fi
+
           sudo installer -pkg "${package_path}" -target / -verbose
 
           installed_path="/Applications/Practice Takes.app"
 
           if [[ ! -d "${installed_path}" ]]; then
             echo "The installer did not place the bundle at ${installed_path}." >&2
+            pkgutil --pkg-info org.derekrneilson.practicetakes.pkg >&2 || true
+            pkgutil --files org.derekrneilson.practicetakes.pkg >&2 || true
             ls -l /Applications >&2
             exit 1
           fi
