@@ -22,6 +22,10 @@ broader music-practice and digital-audio workstation application.
 - [Architecture](architecture/ARCHITECTURE.md) — application ownership, audio flow, and UI structure
 - [Design and architecture review checklist](architecture/ARCHITECTURE_QA.md) — what reviewers check on pull requests beyond formatting/linting
 
+### `formats/`
+
+- [Supported MusicXML subset](formats/musicxml-subset.md) — what the score importer reads, what it drops with a diagnostic, and what it refuses
+
 ### `quality/`
 
 - [Code quality](quality/QUALITY.md) — clang-format, clang-tidy, pre-commit, and VS Code diagnostics
