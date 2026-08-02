@@ -9,9 +9,9 @@
       for this change (layering, ownership/lifetime, audio-thread boundary,
       coupling/testability, scope/consistency).
 - [ ] I ran the relevant test suite locally and it passes:
-  - `PracticeTakesTests` for changes under `src/**` or `tests/**`
-  - `npm run check` and `npm run test` from `services/` for changes under
-    `services/**`
+  - `PracticeTakesTests` for changes under `src/**` or `src/tests/**`
+  - `npm run check` and `npm run test` from `src/services/` for changes under
+    `src/services/**`
 - [ ] I did not need to bypass or disable any formatting/lint checks
       (`clang-format`, `clang-tidy`) without a documented justification.
 

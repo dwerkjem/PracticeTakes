@@ -6,7 +6,7 @@ which plaintext files are managed. Encrypted files are written below
 `.secrets/` while preserving the original relative path:
 
 ```text
-services/feedback-intake/.dev.vars
+src/services/feedback-intake/.dev.vars
     -> .secrets/services/feedback-intake/.dev.vars.sops
 ```
 
@@ -194,7 +194,7 @@ python3 tools/scripts/secrets/secrets_manager.py audit
 ```
 
 `tools/secret-patterns` selects `.env`, `.dev.vars`, `*.secret`, `*.secrets`, the
-deployed `services/feedback-intake/wrangler.jsonc`, and everything below the
+deployed `src/services/feedback-intake/wrangler.jsonc`, and everything below the
 repository-root `secrets/` directory. Example and template files stay plaintext.
 
 Every decrypted copy the manager writes outside the working tree — sync

@@ -2,7 +2,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "services/audio/AudioSampleFifo.h"
+#include "platform/audio/AudioSampleFifo.h"
 
 #include <array>
 

@@ -110,20 +110,20 @@ The build step is required because JUCE generates `JuceHeader.h` during the buil
 Run without modifying files:
 
 ```bash
-python tools/scripts/quality/run_clang_tidy.py $(find src -type f -name "*.cpp" | sort)
+python tools/scripts/quality/run_clang_tidy.py $(find src -type f -name "*.cpp" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
 ```
 
 Run with supported fixes enabled:
 
 ```bash
-python tools/scripts/quality/run_clang_tidy.py --fix $(find src -type f -name "*.cpp" | sort)
-python tools/scripts/quality/run_clang_format.py $(find src -type f \( -name "*.cpp" -o -name "*.h" \) | sort)
+python tools/scripts/quality/run_clang_tidy.py --fix $(find src -type f -name "*.cpp" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
+python tools/scripts/quality/run_clang_format.py $(find src -type f \( -name "*.cpp" -o -name "*.h" \) -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
 ```
 
 Use a different build directory with:
 
 ```bash
-CLANG_TIDY_BUILD_DIR=out/dev python tools/scripts/quality/run_clang_tidy.py $(find src -type f -name "*.cpp" | sort)
+CLANG_TIDY_BUILD_DIR=out/dev python tools/scripts/quality/run_clang_tidy.py $(find src -type f -name "*.cpp" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
 ```
 
 Set explicit executable paths when LLVM tools are not on `PATH`:
@@ -131,7 +131,7 @@ Set explicit executable paths when LLVM tools are not on `PATH`:
 ```bash
 CLANG_FORMAT=/path/to/clang-format \
 CLANG_TIDY=/path/to/clang-tidy \
-python tools/scripts/quality/run_clang_tidy.py --fix $(find src -type f -name "*.cpp" | sort)
+python tools/scripts/quality/run_clang_tidy.py --fix $(find src -type f -name "*.cpp" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
 ```
 
 ## Resolving VS Code errors

@@ -1,7 +1,7 @@
 # In-app feedback client
 
 The feedback form uses the version 1 contract in
-`contracts/feedback/v1.schema.json`. Production builds default to
+`docs/contracts/feedback/v1.schema.json`. Production builds default to
 `https://practice-takes-feedback-intake.derekrneilson.workers.dev`. Override
 the intake service at CMake configure time when testing another deployment:
 

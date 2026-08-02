@@ -210,7 +210,7 @@ detection SHALL block the deployment.
 The graph contains model-written prose summarising every analysed file, so its
 contents are not reviewable by reading the source diff alone. The repository's
 `.understandignore` already excludes `.secrets/`, environment files, and
-`services/feedback-intake/wrangler.jsonc`; this requirement verifies that
+`src/services/feedback-intake/wrangler.jsonc`; this requirement verifies that
 outcome at the point of publication rather than trusting it.
 
 #### Scenario: The built output is clean

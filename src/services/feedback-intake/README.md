@@ -75,7 +75,7 @@ that value separately as `diagnosticContext` and leaves the user-authored conten
   styling, and browser-side behavior.
 - `migrations/` contains the D1 schema migrations.
 - `test/` contains the intake and administration test suites.
-- [`contracts/feedback/v1.schema.json`](../../contracts/feedback/v1.schema.json) defines the wire
+- [`docs/contracts/feedback/v1.schema.json`](../../../docs/contracts/feedback/v1.schema.json) defines the wire
   format shared with the desktop application.
 
 ## Local development
@@ -120,7 +120,7 @@ cloud-hosted D1 database; the container queries it through Cloudflare's D1 API. 
 be scoped to D1 read and write access for only the required account and rotated independently from
 the submission signing key.
 
-From `services/feedback-intake`, copy `.env.example` to `.env` and provide the Cloudflare account
+From `src/services/feedback-intake`, copy `.env.example` to `.env` and provide the Cloudflare account
 ID, D1 database ID, scoped API token, administrator email, and a password of at least 16
 characters. Then run:
 
@@ -173,7 +173,7 @@ installed unit still runs from the checkout. Pass `--pull-source` to perform a f
 7. Enable Cloudflare Email Service for the sender domain and verify the administrator address as
    a permitted destination. The notification sender must use that onboarded domain.
 8. Put a short-lived setup token scoped to **Access: Apps and Policies Write** and **Workers
-   Scripts Write** in the ignored `services/feedback-intake/.env` file. Configure the following
+   Scripts Write** in the ignored `src/services/feedback-intake/.env` file. Configure the following
    values there, then run the idempotent setup:
 
    ```bash
@@ -210,7 +210,7 @@ encrypted secrets; it never receives the account-level setup token.
 ## Submission protocol
 
 The canonical application/service contract is
-[`contracts/feedback/v1.schema.json`](../../contracts/feedback/v1.schema.json). Both sides should
+[`docs/contracts/feedback/v1.schema.json`](../../../docs/contracts/feedback/v1.schema.json). Both sides should
 change the schema version when making a breaking protocol change.
 
 Request an authorization:

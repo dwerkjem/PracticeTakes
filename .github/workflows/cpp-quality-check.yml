@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "src/**"
+      - "!src/services/**"
       - ".clang-format"
       - ".clang-tidy"
       - "CMakeLists.txt"
@@ -66,8 +67,8 @@ jobs:
       - name: Check clang-format compliance
         shell: bash
         run: |
-          mapfile -t cpp_files < <(find src -type f -name "*.cpp" | sort)
-          mapfile -t header_files < <(find src -type f -name "*.h" | sort)
+          mapfile -t cpp_files < <(find src -type f -name "*.cpp" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
+          mapfile -t header_files < <(find src -type f -name "*.h" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
           if [ "${#cpp_files[@]}" -eq 0 ]; then
             echo "::error::No .cpp files discovered under src/ - refusing to report success on zero analyzed files."
             exit 1
@@ -77,7 +78,7 @@ jobs:
       - name: Check clang-tidy findings
         shell: bash
         run: |
-          mapfile -t cpp_files < <(find src -type f -name "*.cpp" | sort)
+          mapfile -t cpp_files < <(find src -type f -name "*.cpp" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
           if [ "${#cpp_files[@]}" -eq 0 ]; then
             echo "::error::No .cpp files discovered under src/ - refusing to report success on zero analyzed files."
             exit 1

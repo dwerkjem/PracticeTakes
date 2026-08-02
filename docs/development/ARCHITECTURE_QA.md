@@ -15,10 +15,10 @@ touches ownership/lifetime does.
 
 - [ ] New code lives in the layer that matches its role: `src/bootstrap`
       (app entry/top-level window), `src/application` (shell, configuration,
-      theme), `src/features` (user-facing tools), `src/services` (shared
+      theme), `src/features` (user-facing tools), `src/platform` (shared
       infrastructure). See [Architecture § Source organization](ARCHITECTURE.md#source-organization).
 - [ ] A `src/features/*` tool does not reach into another tool's internals.
-      Shared behavior belongs in `src/services` or `src/application`, not in
+      Shared behavior belongs in `src/platform` or `src/application`, not in
       one feature depending directly on another.
 - [ ] A new subdirectory is justified by more than one file, or by a
       responsibility that's clearly distinct from its siblings — avoid
@@ -62,7 +62,7 @@ touches ownership/lifetime does.
       separated from JUCE `Component`/UI code so it can be unit tested
       without a display — e.g. `ui/workspace/model/WorkspaceLayoutState.h`
       has no JUCE dependency and is covered by
-      `tests/WorkspaceLayoutStateTests.cpp`.
+      `src/tests/WorkspaceLayoutStateTests.cpp`.
       New non-trivial logic should follow the same split rather than being
       embedded directly in a `Component` subclass.
 - [ ] A grep for a removed/renamed member or type covers the whole `src/`

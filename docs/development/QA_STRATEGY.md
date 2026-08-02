@@ -27,16 +27,16 @@ exist.
   `Linux x64` leg of [build-multiplatform.yml](../../.github/workflows/build-multiplatform.yml)
   (`run_tests: true`). Linux arm64, Windows x64/arm64, and macOS legs build
   but never execute tests.
-- **TypeScript service** (`services/feedback-intake`, a Cloudflare Worker):
+- **TypeScript service** (`src/services/feedback-intake`, a Cloudflare Worker):
   has `tsc --noEmit` (`npm run check`) and `vitest` (`npm run test`,
   4 suites) defined, and a workspace-level aggregator at
-  `services/package.json`, but **no GitHub Actions workflow runs either one**.
+  `src/services/package.json`, but **no GitHub Actions workflow runs either one**.
 - **Security scanning**: none (no CodeQL or equivalent for C++ or TS).
 - **Dependency hygiene**: no Dependabot/Renovate config. GitHub Actions are
   pinned by mutable tag (`@v6`, `@v4`, `@v5`), not commit SHA. JUCE and
   Catch2 are pinned by immutable git tag in `CMakeLists.txt` (already good).
 - **Performance**: one Catch2 benchmark exists today
-  (`tests/PitchDetectorTests.cpp`, tag `[.benchmark]`, comparing FFT vs.
+  (`src/tests/PitchDetectorTests.cpp`, tag `[.benchmark]`, comparing FFT vs.
   scalar autocorrelation) but it is never executed in CI, has no other
   pipeline covered (spectrogram FFT, harmonic analyzer, audio FIFO), and has
   no baseline/regression comparison.
@@ -45,12 +45,12 @@ exist.
 
 ## 1. TypeScript service CI
 
-**Problem**: `services/feedback-intake` can merge with a failing type-check
+**Problem**: `src/services/feedback-intake` can merge with a failing type-check
 or failing test and nothing blocks it.
 
 **Plan**: Add a workflow (e.g. `.github/workflows/services-check.yml`)
-triggered on `pull_request`/`push` for changes under `services/**`, running
-`npm ci` then `npm run check` and `npm run test` from `services/` (the
+triggered on `pull_request`/`push` for changes under `src/services/**`, running
+`npm ci` then `npm run check` and `npm run test` from `src/services/` (the
 existing `--workspaces --if-present` aggregator already fans out to
 `feedback-intake` and any future service without editing the workflow).
 
@@ -81,7 +81,7 @@ move is silently pulled in on the next run.
 
 **Plan**:
 - Add a Dependabot config (`.github/dependabot.yml`) covering `github-actions`
-  and `npm` (scoped to `services/feedback-intake`) ecosystems.
+  and `npm` (scoped to `src/services/feedback-intake`) ecosystems.
 - Re-pin existing `actions/*@vN` references to commit SHAs (keep the version
   as a trailing comment, e.g. `actions/checkout@<sha> # v6.x.x`), matching
   common OpenSSF/OWASP supply-chain guidance for CI.
@@ -127,7 +127,7 @@ alongside other items.
 and [Code style § Real-time audio rules](CODE_STYLE.md#real-time-audio-rules)),
 but nothing measures whether a change quietly regresses the analysis
 pipelines' performance. One Catch2 benchmark exists
-(`tests/PitchDetectorTests.cpp`, `[.benchmark]` tag) but it's never run in
+(`src/tests/PitchDetectorTests.cpp`, `[.benchmark]` tag) but it's never run in
 CI and there's no comparable coverage for the spectrogram FFT path, harmonic
 analyzer, or `AudioSampleFifo` push/pop under load.
 
@@ -169,7 +169,7 @@ SQL and schema drift were invisible. Separately, `tools/scripts/` held 3,651 lin
 with one test file that no workflow and no pre-commit hook ever ran.
 
 **Outcome**:
-- `services/feedback-intake/test/support/database.ts` builds an in-memory
+- `src/services/feedback-intake/test/support/database.ts` builds an in-memory
   `node:sqlite` database from the real migration files and exposes the D1
   surface the worker uses. All three fakes are gone.
 - `test/migrations.test.ts` applies the migration set and names any file that
@@ -222,7 +222,7 @@ Python tests live and how CI runs them; this fills in the largest gap.
 
 ### 12. Feedback wire-contract conformance
 
-**Problem**: `contracts/feedback/v1.schema.json` is documentation only. The C++
+**Problem**: `docs/contracts/feedback/v1.schema.json` is documentation only. The C++
 client hand-builds the JSON, the worker hand-validates it, and no test on
 either side checks either against the schema, so the two can drift apart while
 both remain internally consistent.

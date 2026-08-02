@@ -12,7 +12,7 @@ shared microphone-capture shell. It is maintained by a single developer, so
 process is intentionally light — see `CONTRIBUTING.md` for when a change needs
 an OpenSpec proposal (`openspec/changes/`) versus a straight PR.
 
-There is also a small Cloudflare Worker service, `services/feedback-intake`
+There is also a small Cloudflare Worker service, `src/services/feedback-intake`
 (TypeScript), that receives in-app feedback submissions.
 
 ## Commands
@@ -77,9 +77,9 @@ cmake -S . -B build -DPRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=ON
 ```bash
 pre-commit install                                   # once per clone
 pre-commit run --all-files                            # or: pre-commit run clang-format --all-files
-python tools/scripts/quality/run_clang_tidy.py $(find src -type f -name "*.cpp" | sort)
-python tools/scripts/quality/run_clang_tidy.py --fix $(find src -type f -name "*.cpp" | sort)
-python tools/scripts/quality/run_clang_format.py $(find src -type f \( -name "*.cpp" -o -name "*.h" \) | sort)
+python tools/scripts/quality/run_clang_tidy.py $(find src -type f -name "*.cpp" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
+python tools/scripts/quality/run_clang_tidy.py --fix $(find src -type f -name "*.cpp" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
+python tools/scripts/quality/run_clang_format.py $(find src -type f \( -name "*.cpp" -o -name "*.h" \) -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
 ```
 
 `clang-tidy` requires a built tree first (JUCE generates `JuceHeader.h` during
@@ -87,10 +87,10 @@ build). `CLANG_FORMAT`/`CLANG_TIDY`/`CLANG_TIDY_BUILD_DIR` env vars override
 tool paths / build dir. Local pre-commit only runs `clang-format`; `clang-tidy`
 runs in CI (PR check-only, plus an auto-fix commit to `main`).
 
-### TypeScript service (`services/feedback-intake`)
+### TypeScript service (`src/services/feedback-intake`)
 
 ```bash
-cd services && npm ci
+cd src/services && npm ci
 npm run check   # tsc --noEmit, fans out to every workspace
 npm run test    # vitest run, fans out to every workspace
 ```
@@ -122,18 +122,21 @@ Summary:
 
 ### Repository root (hard constraint)
 
-The root is kept minimal on purpose. Tracked top-level entries are `src/`,
-`tests/`, `docs/`, `services/`, `contracts/`, `openspec/`, `tools/`,
-`README.md`, `CMakeLists.txt`, `CLAUDE.md`, `LICENSE`, and dotfiles whose
-tooling requires root placement. `CLAUDE.md` is a stub that imports
-`docs/development/AGENT_GUIDE.md` — edit the guide, not the stub.
+The root is kept minimal on purpose. The only tracked top-level entries are
+`src/`, `docs/`, `openspec/`, `tools/`, `README.md`, `CMakeLists.txt`,
+`CLAUDE.md`, `LICENSE`, and dotfiles whose tooling requires root placement.
+`CLAUDE.md` is a stub that imports this guide — edit the guide, not the stub.
 
-**Never add a new top-level file or directory.** Build/packaging/tooling
-inputs go under `tools/` (`tools/cmake`, `tools/packaging`, `tools/scripts`,
-`tools/secret-patterns`, `tools/VERSION`, `tools/vcpkg.json`);
-community-health files go under `.github/`; documentation goes under `docs/`.
-If something genuinely cannot work outside the root, say so explicitly rather
-than adding it silently.
+**Never add a new top-level file or directory.** Source of any language goes
+under `src/` (`src/services` is the TypeScript worker, `src/tests` the C++
+tests); build/packaging/tooling inputs under `tools/` (`tools/cmake`,
+`tools/packaging`, `tools/scripts`, `tools/secret-patterns`, `tools/VERSION`,
+`tools/vcpkg.json`); community-health files under `.github/`; documentation
+and shared schemas under `docs/` (`docs/contracts`). `openspec/` is the one
+exception that could not move: its CLI searches upward for an `openspec/`
+directory, so it would not be found from a subdirectory. If something else
+genuinely cannot work outside the root, say so explicitly rather than adding
+it silently.
 
 ### Source layering (`src/`)
 
@@ -147,11 +150,11 @@ than adding it silently.
   across files by responsibility rather than defined in one giant source file.
 - `src/features` — user-facing tools: `analysis/{tuner,spectrogram,harmonics}`,
   `feedback`, `performance` (Performance Lab / benchmarking).
-- `src/services` — shared infrastructure, chiefly `audio/AudioInputService`
+- `src/platform` — shared infrastructure, chiefly `audio/AudioInputService`
   and `AudioSampleFifo`.
 
 A `src/features/*` tool must never reach into another tool's internals —
-shared behavior belongs in `src/services` or `src/application`.
+shared behavior belongs in `src/platform` or `src/application`.
 
 ### Ownership model
 
@@ -184,7 +187,7 @@ checklist version of these rules.
 Pure logic (state machines, layout trees, policy decisions) is deliberately
 split out of JUCE `Component` classes so it can be unit tested without a
 display — e.g. `ui/workspace/model/WorkspaceLayoutState.h` has no JUCE
-dependency and is covered by `tests/WorkspaceLayoutStateTests.cpp`. Follow
+dependency and is covered by `src/tests/WorkspaceLayoutStateTests.cpp`. Follow
 this split for new non-trivial logic rather than embedding it directly in a
 `Component` subclass. Roughly a third of `src/` (the JUCE `Component`-heavy
 files: `AudioInputService.cpp`, `FeedbackComponent.cpp`, `TunerComponent`,
@@ -203,9 +206,9 @@ or copy the version elsewhere.
 
 ### Feedback service contract
 
-`contracts/feedback/v1.schema.json` documents the wire format shared by the
+`docs/contracts/feedback/v1.schema.json` documents the wire format shared by the
 C++ feedback client (`src/features/feedback`) and the
-`services/feedback-intake` worker, but nothing currently validates either side
+`src/services/feedback-intake` worker, but nothing currently validates either side
 against it — they can drift (`docs/development/QA_STRATEGY.md` area 12).
 
 ## Workflow notes
@@ -220,6 +223,6 @@ against it — they can drift (`docs/development/QA_STRATEGY.md` area 12).
   generated, browsable graph of the whole repo — useful for finding where a
   change belongs before starting.
 - Run the relevant test suite before requesting review: `PracticeTakesTests`
-  for C++ changes under `src/**`/`tests/**`; `npm run check && npm run test`
-  from `services/` for `services/**`; `python tools/scripts/run_tests.py` for
+  for C++ changes under `src/**`/`src/tests/**`; `npm run check && npm run test`
+  from `src/services/` for `src/services/**`; `python tools/scripts/run_tests.py` for
   `tools/scripts/**`.

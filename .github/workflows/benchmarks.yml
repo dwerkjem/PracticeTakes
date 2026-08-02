@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "src/**"
-      - "tests/**"
+      - "!src/services/**"
       - "CMakeLists.txt"
       - "tools/cmake/**"
       - "tools/scripts/quality/format_benchmarks.py"

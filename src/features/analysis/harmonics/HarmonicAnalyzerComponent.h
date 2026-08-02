@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../../application/theme/Theme.h"
-#include "../../../services/audio/AudioInputService.h"
+#include "../../../platform/audio/AudioInputService.h"
 #include "HarmonicAnalyzer.h"
 
 #include <JuceHeader.h>

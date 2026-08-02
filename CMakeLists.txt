@@ -262,10 +262,10 @@ target_sources(PracticeTakes
         src/features/feedback/FeedbackComponent.cpp
         src/features/feedback/FeedbackComponent.h
         src/features/feedback/FeedbackInvitationPolicy.h
-        src/services/audio/AudioInputService.cpp
-        src/services/audio/AudioInputService.h
-        src/services/audio/AudioRecoveryPolicy.h
-        src/services/audio/AudioSampleFifo.h
+        src/platform/audio/AudioInputService.cpp
+        src/platform/audio/AudioInputService.h
+        src/platform/audio/AudioRecoveryPolicy.h
+        src/platform/audio/AudioSampleFifo.h
 )
 
 target_compile_definitions(PracticeTakes
@@ -299,45 +299,45 @@ endif()
 
 if(BUILD_TESTING)
     add_executable(PracticeTakesTests
-        tests/AppDefaultsTests.cpp
-        tests/ApplicationLaunchTimerTests.cpp
-        tests/AudioRecoveryPolicyTests.cpp
-        tests/AudioSampleFifoTests.cpp
-        tests/BenchmarkFakesTests.cpp
-        tests/BenchmarkInterfacesTests.cpp
-        tests/BenchmarkComparabilityTests.cpp
-        tests/BenchmarkComparisonTests.cpp
-        tests/BenchmarkRecordCodecTests.cpp
-        tests/BenchmarkRecordStoreTests.cpp
-        tests/BenchmarkRunnerTests.cpp
-        tests/BenchmarkTypesTests.cpp
-        tests/FeedbackInvitationPolicyTests.cpp
-        tests/HarmonicAnalyzerTests.cpp
-        tests/InTreeOptimizationStrategyTests.cpp
-        tests/NonRealTimeTelemetryCollectorTests.cpp
-        tests/NamedWorkspaceServiceTests.cpp
-        tests/PerformanceLabControllerTests.cpp
-        tests/PitchDetectorTests.cpp
-        tests/PlatformProvenanceProviderTests.cpp
-        tests/RealTimeEventCaptureTests.cpp
-        tests/SettingsPersistenceTests.cpp
-        tests/SettingsTransferCodecTests.cpp
-        tests/StrategyRegistryTests.cpp
-        tests/SustainedAudioAnalysisScenarioTests.cpp
-        tests/ThemeContrastTests.cpp
-        tests/TrialAggregatorTests.cpp
-        tests/WorkspaceBuiltInsTests.cpp
-        tests/WorkspaceCatalogCodecTests.cpp
-        tests/WorkspaceDocumentsTests.cpp
-        tests/WorkspaceRecoveryTests.cpp
-        tests/WorkspaceLayoutStateTests.cpp
-        tests/WorkspaceMenuModelTests.cpp
-        tests/WorkspacePresentationComponentsTests.cpp
-        tests/WorkspaceSnapshotApplyTests.cpp
-        tests/WorkspaceSnapshotCaptureTests.cpp
-        tests/WorkspaceSessionLifecycleTests.cpp
-        tests/WorkspaceStartupSequenceTests.cpp
-        tests/WorkspaceToolStateTests.cpp
+        src/tests/AppDefaultsTests.cpp
+        src/tests/ApplicationLaunchTimerTests.cpp
+        src/tests/AudioRecoveryPolicyTests.cpp
+        src/tests/AudioSampleFifoTests.cpp
+        src/tests/BenchmarkFakesTests.cpp
+        src/tests/BenchmarkInterfacesTests.cpp
+        src/tests/BenchmarkComparabilityTests.cpp
+        src/tests/BenchmarkComparisonTests.cpp
+        src/tests/BenchmarkRecordCodecTests.cpp
+        src/tests/BenchmarkRecordStoreTests.cpp
+        src/tests/BenchmarkRunnerTests.cpp
+        src/tests/BenchmarkTypesTests.cpp
+        src/tests/FeedbackInvitationPolicyTests.cpp
+        src/tests/HarmonicAnalyzerTests.cpp
+        src/tests/InTreeOptimizationStrategyTests.cpp
+        src/tests/NonRealTimeTelemetryCollectorTests.cpp
+        src/tests/NamedWorkspaceServiceTests.cpp
+        src/tests/PerformanceLabControllerTests.cpp
+        src/tests/PitchDetectorTests.cpp
+        src/tests/PlatformProvenanceProviderTests.cpp
+        src/tests/RealTimeEventCaptureTests.cpp
+        src/tests/SettingsPersistenceTests.cpp
+        src/tests/SettingsTransferCodecTests.cpp
+        src/tests/StrategyRegistryTests.cpp
+        src/tests/SustainedAudioAnalysisScenarioTests.cpp
+        src/tests/ThemeContrastTests.cpp
+        src/tests/TrialAggregatorTests.cpp
+        src/tests/WorkspaceBuiltInsTests.cpp
+        src/tests/WorkspaceCatalogCodecTests.cpp
+        src/tests/WorkspaceDocumentsTests.cpp
+        src/tests/WorkspaceRecoveryTests.cpp
+        src/tests/WorkspaceLayoutStateTests.cpp
+        src/tests/WorkspaceMenuModelTests.cpp
+        src/tests/WorkspacePresentationComponentsTests.cpp
+        src/tests/WorkspaceSnapshotApplyTests.cpp
+        src/tests/WorkspaceSnapshotCaptureTests.cpp
+        src/tests/WorkspaceSessionLifecycleTests.cpp
+        src/tests/WorkspaceStartupSequenceTests.cpp
+        src/tests/WorkspaceToolStateTests.cpp
         src/application/configuration/SettingsPersistence.cpp
         src/application/configuration/SettingsTransferCodec.cpp
         src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp

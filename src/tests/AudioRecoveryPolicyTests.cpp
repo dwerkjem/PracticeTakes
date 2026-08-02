@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "services/audio/AudioRecoveryPolicy.h"
+#include "platform/audio/AudioRecoveryPolicy.h"
 
 TEST_CASE("audio recovery never replaces an open backend", "[audio][recovery]")
 {

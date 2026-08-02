@@ -38,7 +38,7 @@ class PatternTests(unittest.TestCase):
     def test_double_star_matches_root_and_nested_files(self) -> None:
         self.assertTrue(secrets_manager.pattern_matches(".env", "**/.env"))
         self.assertTrue(
-            secrets_manager.pattern_matches("services/api/.env", "**/.env")
+            secrets_manager.pattern_matches("src/services/api/.env", "**/.env")
         )
 
     def test_ordered_exclusion_wins(self) -> None:
@@ -53,10 +53,10 @@ class PatternTests(unittest.TestCase):
         )
 
     def test_mirror_mapping_round_trips(self) -> None:
-        source = "services/feedback-intake/.dev.vars"
+        source = "src/services/feedback-intake/.dev.vars"
         mirror = secrets_manager.mirror_relative_path(source)
         self.assertEqual(
-            mirror, ".secrets/services/feedback-intake/.dev.vars.sops"
+            mirror, ".secrets/src/services/feedback-intake/.dev.vars.sops"
         )
         self.assertEqual(secrets_manager.source_relative_path(mirror), source)
 
@@ -96,9 +96,9 @@ class RepositoryPatternTests(unittest.TestCase):
         for relative in (
             ".env",
             ".env.local",
-            "services/feedback-intake/.env",
-            "services/feedback-intake/.dev.vars",
-            "services/feedback-intake/wrangler.jsonc",
+            "src/services/feedback-intake/.env",
+            "src/services/feedback-intake/.dev.vars",
+            "src/services/feedback-intake/wrangler.jsonc",
             "secrets/cloudflare.env",
             "tools/deploy.secret",
         ):
@@ -110,10 +110,10 @@ class RepositoryPatternTests(unittest.TestCase):
     def test_templates_and_sources_are_not_selected(self) -> None:
         for relative in (
             ".env.example",
-            "services/feedback-intake/.env.example",
-            "services/feedback-intake/.dev.vars.example",
-            "services/feedback-intake/wrangler.example.jsonc",
-            ".secrets/services/feedback-intake/.env.sops",
+            "src/services/feedback-intake/.env.example",
+            "src/services/feedback-intake/.dev.vars.example",
+            "src/services/feedback-intake/wrangler.example.jsonc",
+            ".secrets/src/services/feedback-intake/.env.sops",
             "README.md",
             "src/Main.cpp",
         ):
@@ -136,12 +136,12 @@ class InitTests(unittest.TestCase):
             assert match is not None
             pattern = match.group(1)
             self.assertRegex(".secrets/services/api/.env.sops", pattern)
-            self.assertNotRegex("services/api/.env", pattern)
+            self.assertNotRegex("src/services/api/.env", pattern)
 
 
 class SyncConflictTests(unittest.TestCase):
     def test_conflict_copies_are_removed_once_resolved(self) -> None:
-        relative = "services/api/.env"
+        relative = "src/services/api/.env"
         with temporary_repository() as root:
             secrets_manager.record_sync_conflict(
                 root, relative, b"TOKEN=local\n", b"TOKEN=encrypted\n"

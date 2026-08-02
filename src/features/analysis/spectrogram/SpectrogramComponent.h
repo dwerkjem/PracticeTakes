@@ -3,7 +3,7 @@
 #include <JuceHeader.h>
 
 #include "../../../application/theme/Theme.h"
-#include "../../../services/audio/AudioInputService.h"
+#include "../../../platform/audio/AudioInputService.h"
 
 #include <array>
 #include <atomic>

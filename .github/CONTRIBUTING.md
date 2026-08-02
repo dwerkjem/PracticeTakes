@@ -33,12 +33,15 @@ request.
 The repository root is kept deliberately small — it holds only the entry
 points a newcomer or a tool needs to find immediately:
 
-- `src/` — application source
-- `tests/` — C++ unit tests
-- `docs/` — all developer documentation
-- `services/` — the Cloudflare Worker services
-- `contracts/` — shared wire-format schemas
-- `openspec/` — change proposals and specs
+- `src/` — all source, in any language:
+  - `src/bootstrap/`, `src/application/`, `src/features/`, `src/platform/` —
+    the C++ application
+  - `src/services/` — the Cloudflare Worker services (TypeScript)
+  - `src/tests/` — C++ unit tests
+- `docs/` — developer documentation, plus `docs/contracts/` for the shared
+  wire-format schemas
+- `openspec/` — change proposals and specs. It stays at the root because the
+  OpenSpec CLI searches *upward* for an `openspec/` directory
 - `tools/` — everything that builds, packages, versions, or checks the
   project: `tools/cmake/`, `tools/packaging/`, `tools/scripts/`,
   `tools/secret-patterns`, `tools/VERSION`, and `tools/vcpkg.json`
@@ -73,7 +76,7 @@ checklist pass](../docs/development/ARCHITECTURE_QA.md) for the criteria.
 - Follow the pull request template's checklist.
 - Run the relevant test suite locally before requesting review
   (`PracticeTakesTests` for C++ changes, `npm run check`/`npm run test`
-  from `services/` for changes under `services/**`).
+  from `src/services/` for changes under `src/services/**`).
 - `clang-format` runs automatically on commit via pre-commit; `clang-tidy`
   and the services type-check/test suite run automatically on pull
   requests. See [Code quality](../docs/development/QUALITY.md) for details.

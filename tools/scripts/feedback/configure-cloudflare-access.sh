@@ -19,7 +19,7 @@ feedback dashboard. The resulting JWT audience, team domain, and single
 administrator and notification email settings are stored as encrypted Worker
 secrets.
 
-Configuration is loaded from services/feedback-intake/.env. Variables already
+Configuration is loaded from src/services/feedback-intake/.env. Variables already
 exported by the caller take precedence over values in the file.
 
 Required values:
@@ -47,7 +47,7 @@ fi
 
 if [[ ! -f ${environment_file} ]]; then
     printf 'Error: environment file not found: %s\n' "${environment_file}" >&2
-    echo "Copy services/feedback-intake/.env.example to .env and configure it." >&2
+    echo "Copy src/services/feedback-intake/.env.example to .env and configure it." >&2
     exit 1
 fi
 

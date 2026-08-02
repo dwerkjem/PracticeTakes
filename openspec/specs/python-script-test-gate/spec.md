@@ -34,7 +34,7 @@ files under `tools/scripts/` or the check's own workflow file, so changes limite
 the C++ application, the services workspace, or documentation do not run it.
 
 #### Scenario: Change outside tools/scripts/ does not trigger the check
-- **WHEN** a pull request modifies only files under `src/**` or `services/**`
+- **WHEN** a pull request modifies only files under `src/**` or `src/services/**`
 - **THEN** the Python check workflow does not run
 
 ### Requirement: Release version calculation is tested
