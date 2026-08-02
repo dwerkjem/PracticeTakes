@@ -2,14 +2,14 @@
 
 set -euo pipefail
 
-PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SERVICE_DIR="$PROJECT_ROOT/services/feedback-intake"
 MODE=local
 USE_WRANGLER_LOGIN=false
 
 usage() {
     cat <<'EOF'
-Usage: ./scripts/feedback/migrate-feedback-database.sh [--local | --remote] [--wrangler-login]
+Usage: ./tools/scripts/feedback/migrate-feedback-database.sh [--local | --remote] [--wrangler-login]
 
 Apply pending feedback-service D1 migrations.
 

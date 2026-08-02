@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
 BUILD_TYPE="${BUILD_TYPE:-Debug}"
 BUILD_DIR="${BUILD_DIR:-${PROJECT_ROOT}/build}"
 TARGET_NAME="${TARGET_NAME:-PracticeTakes}"
@@ -90,7 +90,7 @@ if [[ "$BUILD_ONLY" == true ]]; then
     if [[ ! -f "$BUILD_DIR/CMakeCache.txt" ]]; then
         printf 'Error: --build-only requires an existing configured build at %s.\n' \
             "$BUILD_DIR" >&2
-        printf 'Run ./scripts/build/build-and-run.sh once without --build-only.\n' >&2
+        printf 'Run ./tools/scripts/build/build-and-run.sh once without --build-only.\n' >&2
         exit 1
     fi
 
@@ -117,7 +117,7 @@ if [[ "$INSTALL_DEPENDENCIES" == true ]]; then
     dependency_check_args+=(--install)
 fi
 
-bash "$PROJECT_ROOT/scripts/build/check-linux-build-dependencies.sh" "${dependency_check_args[@]}"
+bash "$PROJECT_ROOT/tools/scripts/build/check-linux-build-dependencies.sh" "${dependency_check_args[@]}"
 
 if [[ "$CLEAN" == true ]]; then
     rm -rf -- "$BUILD_DIR"
@@ -192,13 +192,13 @@ cmake_args+=(
 vcpkg_toolchain=""
 
 if [[ "$USE_VCPKG" == true && -n "${VCPKG_ROOT:-}" && \
-      -f "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" ]]; then
-    vcpkg_toolchain="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+      -f "$VCPKG_ROOT/tools/scripts/buildsystems/vcpkg.cmake" ]]; then
+    vcpkg_toolchain="$VCPKG_ROOT/tools/scripts/buildsystems/vcpkg.cmake"
 elif [[ "$USE_VCPKG" == true ]] && command -v vcpkg >/dev/null 2>&1; then
     detected_vcpkg_root="$(cd -- "$(dirname -- "$(command -v vcpkg)")" && pwd)"
 
-    if [[ -f "$detected_vcpkg_root/scripts/buildsystems/vcpkg.cmake" ]]; then
-        vcpkg_toolchain="$detected_vcpkg_root/scripts/buildsystems/vcpkg.cmake"
+    if [[ -f "$detected_vcpkg_root/tools/scripts/buildsystems/vcpkg.cmake" ]]; then
+        vcpkg_toolchain="$detected_vcpkg_root/tools/scripts/buildsystems/vcpkg.cmake"
     fi
 fi
 
@@ -225,7 +225,7 @@ if [[ -n "$vcpkg_toolchain" ]]; then
     if [[ -n "$vcpkg_triplet" ]]; then
         cmake_args+=(
             -DVCPKG_TARGET_TRIPLET="$vcpkg_triplet"
-            -DVCPKG_OVERLAY_TRIPLETS="$PROJECT_ROOT/cmake/triplets"
+            -DVCPKG_OVERLAY_TRIPLETS="$PROJECT_ROOT/tools/cmake/triplets"
         )
 
         if [[ "$(uname -m)" == "x86_64" ]]; then
@@ -278,7 +278,7 @@ if [[ -n "${vcpkg_prefix:-}" && "$(uname -s)" == "Linux" ]]; then
     for library_pattern in 'libX11.so*' 'libXext.so*'; do
         if ! compgen -G "$vcpkg_prefix/lib/$library_pattern" >/dev/null; then
             printf 'Error: vcpkg did not install shared %s libraries.\n' "$library_pattern" >&2
-            printf 'Run ./scripts/build/build-and-run.sh --clean after pulling the latest triplet.\n' >&2
+            printf 'Run ./tools/scripts/build/build-and-run.sh --clean after pulling the latest triplet.\n' >&2
             exit 1
         fi
     done

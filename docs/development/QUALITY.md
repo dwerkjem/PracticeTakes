@@ -2,7 +2,7 @@
 
 Practice Takes separates fast local formatting from slower repository-wide static analysis:
 
-- The SOPS secrets hook encrypts and stages configured secret mirrors before every local commit, and a companion audit hook rejects any tracked file that matches `secret-patterns`.
+- The SOPS secrets hook encrypts and stages configured secret mirrors before every local commit, and a companion audit hook rejects any tracked file that matches `tools/secret-patterns`.
 - `clang-format` rewrites C and C++ files to match `.clang-format` before every local commit.
 - `clang-tidy` runs after relevant changes land on `main`, applies supported safe fixes, and commits those source changes back to `main`.
 - Pull requests run a check-only `clang-format`/`clang-tidy` gate across every `.cpp`/`.h` file under `src/`, failing the PR without modifying or committing anything.
@@ -31,7 +31,7 @@ pre-commit install
 
 Every commit runs `clang-format` against staged C and C++ files. When formatting changes a file, the commit stops so the result can be reviewed and staged. Run the commit again after staging the formatted files.
 
-The same hook run protects files selected by `secret-patterns`. It removes
+The same hook run protects files selected by `tools/secret-patterns`. It removes
 newly added plaintext secrets from the index and stages only their encrypted
 mirrors below `.secrets/`. See [SOPS secret management](SECRETS.md) for setup,
 synchronization, and conflict resolution.
@@ -110,20 +110,20 @@ The build step is required because JUCE generates `JuceHeader.h` during the buil
 Run without modifying files:
 
 ```bash
-python scripts/quality/run_clang_tidy.py $(find src -type f -name "*.cpp" | sort)
+python tools/scripts/quality/run_clang_tidy.py $(find src -type f -name "*.cpp" | sort)
 ```
 
 Run with supported fixes enabled:
 
 ```bash
-python scripts/quality/run_clang_tidy.py --fix $(find src -type f -name "*.cpp" | sort)
-python scripts/quality/run_clang_format.py $(find src -type f \( -name "*.cpp" -o -name "*.h" \) | sort)
+python tools/scripts/quality/run_clang_tidy.py --fix $(find src -type f -name "*.cpp" | sort)
+python tools/scripts/quality/run_clang_format.py $(find src -type f \( -name "*.cpp" -o -name "*.h" \) | sort)
 ```
 
 Use a different build directory with:
 
 ```bash
-CLANG_TIDY_BUILD_DIR=out/dev python scripts/quality/run_clang_tidy.py $(find src -type f -name "*.cpp" | sort)
+CLANG_TIDY_BUILD_DIR=out/dev python tools/scripts/quality/run_clang_tidy.py $(find src -type f -name "*.cpp" | sort)
 ```
 
 Set explicit executable paths when LLVM tools are not on `PATH`:
@@ -131,7 +131,7 @@ Set explicit executable paths when LLVM tools are not on `PATH`:
 ```bash
 CLANG_FORMAT=/path/to/clang-format \
 CLANG_TIDY=/path/to/clang-tidy \
-python scripts/quality/run_clang_tidy.py --fix $(find src -type f -name "*.cpp" | sort)
+python tools/scripts/quality/run_clang_tidy.py --fix $(find src -type f -name "*.cpp" | sort)
 ```
 
 ## Resolving VS Code errors
@@ -156,9 +156,9 @@ When configuration succeeds but stale diagnostics remain, run **C/C++: Reset Int
 - `.clang-format` defines source formatting.
 - `.clang-tidy` defines static-analysis checks.
 - `.pre-commit-config.yaml` runs clang-format before local commits.
-- `secret-patterns` selects plaintext files managed by the SOPS pre-commit hook.
-- `scripts/secrets/secrets_manager.py` encrypts, synchronizes, and resolves conflicts for secrets.
+- `tools/secret-patterns` selects plaintext files managed by the SOPS pre-commit hook.
+- `tools/scripts/secrets/secrets_manager.py` encrypts, synchronizes, and resolves conflicts for secrets.
 - `.github/workflows/clang-tidy-main.yml` fixes and verifies C++ after changes land on `main`.
-- `scripts/quality/run_clang_format.py` locates and invokes clang-format.
-- `scripts/quality/run_clang_tidy.py` locates and invokes clang-tidy with the build directory and optional safe fixes.
+- `tools/scripts/quality/run_clang_format.py` locates and invokes clang-format.
+- `tools/scripts/quality/run_clang_tidy.py` locates and invokes clang-tidy with the build directory and optional safe fixes.
 - `.vscode/settings.json` connects VS Code to CMake Tools and the compilation database.

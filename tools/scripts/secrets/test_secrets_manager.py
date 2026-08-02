@@ -14,7 +14,7 @@ import unittest
 
 
 MODULE_PATH = Path(__file__).with_name("secrets_manager.py")
-REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 SPEC = importlib.util.spec_from_file_location("secrets_manager", MODULE_PATH)
 assert SPEC and SPEC.loader
 secrets_manager = importlib.util.module_from_spec(SPEC)
@@ -67,7 +67,9 @@ class PatternTests(unittest.TestCase):
     def test_patterns_containing_whitespace_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            (root / secrets_manager.PATTERN_FILE).write_text(
+            pattern_file = root / secrets_manager.PATTERN_FILE
+            pattern_file.parent.mkdir(parents=True, exist_ok=True)
+            pattern_file.write_text(
                 "**/.dev.vars Plaintext secret files to mirror with SOPS.\n",
                 encoding="utf-8",
             )
@@ -85,7 +87,7 @@ class PatternTests(unittest.TestCase):
 
 
 class RepositoryPatternTests(unittest.TestCase):
-    """Guard the live secret-patterns file against silently dead rules."""
+    """Guard the live tools/secret-patterns file against silently dead rules."""
 
     def setUp(self) -> None:
         self.rules = secrets_manager.read_patterns(REPOSITORY_ROOT)

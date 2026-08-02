@@ -58,7 +58,7 @@ openspec/changes/archive/
 benchmark-results/
 
 # Kept on purpose: .github/workflows/ (real CI topology), docs/,
-# tests/, openspec/specs/, scripts/.
+# tests/, openspec/specs/, tools/scripts/.
 
 # --- From .gitignore (uncomment to exclude) ---
 
@@ -200,13 +200,13 @@ benchmark-results/
 # marimo/_lsp/
 # __marimo__/
 # .streamlit/secrets.toml
-!/scripts/build/
+!/tools/scripts/build/
 # benchmark-results/
 
 # --- Detected directories (uncomment to exclude) ---
 
 # docs/
-# scripts/
+# tools/scripts/
 # tests/
 
 # --- Test file patterns (uncomment to exclude) ---

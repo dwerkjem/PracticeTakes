@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Run every ``test_*.py`` under ``scripts/``.
+"""Run every ``test_*.py`` under ``tools/scripts/``.
 
 ``python -m unittest discover`` cannot be used for this tree. The script
 directories are not importable packages, so discovery reports ``NO TESTS RAN``
 and exits successfully — a CI job wired to it would stay green while running
-nothing. ``scripts/secrets`` would also shadow the standard library's
+nothing. ``tools/scripts/secrets`` would also shadow the standard library's
 ``secrets`` module if it were made importable by name.
 
 This loader finds test files by path instead, so a test added in any

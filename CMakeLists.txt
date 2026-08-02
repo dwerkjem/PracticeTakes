@@ -92,17 +92,17 @@ if(BUILD_TESTING)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PatchJuceAlsaChannelMismatch.cmake")
-    include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PatchJuceAlsaInputStartup.cmake")
+    include("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/PatchJuceAlsaChannelMismatch.cmake")
+    include("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/PatchJuceAlsaInputStartup.cmake")
     practice_takes_patch_juce_alsa_channel_mismatch("${juce_SOURCE_DIR}")
     practice_takes_patch_juce_alsa_input_startup("${juce_SOURCE_DIR}")
 endif()
 
 # The icon artwork is generated from the design system by
-# scripts/design/generate_app_icons.py; see packaging/icons/README.md. JUCE
+# tools/scripts/design/generate_app_icons.py; see tools/packaging/icons/README.md. JUCE
 # turns ICON_BIG/ICON_SMALL into the macOS .icns and the Windows executable
 # icon, and ignores them elsewhere.
-set(PRACTICE_TAKES_ICON_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons")
+set(PRACTICE_TAKES_ICON_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/tools/packaging/icons")
 
 juce_add_gui_app(PracticeTakes
     ${PRACTICE_TAKES_JUCE_APP_OPTIONS}
@@ -132,7 +132,7 @@ juce_add_binary_data(PracticeTakesIcon
 )
 
 # The space-free binary name is what the Debian package, the NSIS installer,
-# and the tooling scripts under scripts/ all expect. Apple is deliberately
+# and the tooling scripts under tools/scripts/ all expect. Apple is deliberately
 # excluded: juce_add_gui_app names both the bundle and its executable after
 # PRODUCT_NAME and bakes that same name into the configure-time Info.plist as
 # CFBundleExecutable, so renaming the binary afterwards leaves the bundle
@@ -385,4 +385,4 @@ if(BUILD_TESTING)
     catch_discover_tests(PracticeTakesTests)
 endif()
 
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Packaging.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/Packaging.cmake")

@@ -12,7 +12,7 @@ api_base=https://api.cloudflare.com/client/v4
 
 usage() {
     cat <<'EOF'
-Usage: ./scripts/feedback/configure-cloudflare-access.sh
+Usage: ./tools/scripts/feedback/configure-cloudflare-access.sh
 
 Create or update the path-scoped Cloudflare Access application for the hosted
 feedback dashboard. The resulting JWT audience, team domain, and single

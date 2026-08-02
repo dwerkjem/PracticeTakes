@@ -14,15 +14,15 @@ both the raster and the vector output self-contained.
 
 Outputs, regenerated in place and committed:
 
-    packaging/icons/practice-takes.svg
-    packaging/icons/practice-takes-<size>.png
-    packaging/icons/practice-takes.ico
-    packaging/icons/practice-takes-light.svg
-    packaging/icons/practice-takes-light-<size>.png
+    tools/packaging/icons/practice-takes.svg
+    tools/packaging/icons/practice-takes-<size>.png
+    tools/packaging/icons/practice-takes.ico
+    tools/packaging/icons/practice-takes-light.svg
+    tools/packaging/icons/practice-takes-light-<size>.png
 
 Run from the repository root:
 
-    uv run --no-project --with pillow scripts/design/generate_app_icons.py
+    uv run --no-project --with pillow tools/scripts/design/generate_app_icons.py
 
 Pillow is imported lazily, so every geometry helper below stays importable — and
 unit-testable — without it.
@@ -36,8 +36,8 @@ import math
 from pathlib import Path
 from typing import Sequence
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-OUTPUT_DIRECTORY = REPO_ROOT / "packaging" / "icons"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+OUTPUT_DIRECTORY = REPO_ROOT / "tools" / "packaging" / "icons"
 
 CANVAS = 1024
 """Both source layouts render into a 1024x1024 body with ``overflow: hidden``."""
@@ -532,7 +532,7 @@ def _pillow():
     except ModuleNotFoundError as error:  # pragma: no cover - depends on the environment
         raise SystemExit(
             "Pillow is required to render the icons. Run:\n"
-            "  uv run --no-project --with pillow scripts/design/generate_app_icons.py"
+            "  uv run --no-project --with pillow tools/scripts/design/generate_app_icons.py"
         ) from error
     return Image, ImageChops, ImageDraw, ImageFilter
 
@@ -647,7 +647,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--output-directory",
         type=Path,
         default=OUTPUT_DIRECTORY,
-        help="where the icon files are written (default: packaging/icons)",
+        help="where the icon files are written (default: tools/packaging/icons)",
     )
     arguments = parser.parse_args(argv)
 

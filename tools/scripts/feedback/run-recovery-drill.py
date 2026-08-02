@@ -33,7 +33,7 @@ def apply_migrations(database: sqlite3.Connection, migrations: Path) -> None:
 
 
 def main() -> None:
-    repository = Path(__file__).resolve().parents[2]
+    repository = Path(__file__).resolve().parents[3]
     migrations = repository / "services" / "feedback-intake" / "migrations"
 
     with tempfile.TemporaryDirectory(prefix="practice-takes-feedback-recovery-") as directory:

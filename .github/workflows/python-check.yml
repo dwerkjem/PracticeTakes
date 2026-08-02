@@ -3,13 +3,13 @@ name: Python quality check
 on:
   pull_request:
     paths:
-      - "scripts/**"
+      - "tools/scripts/**"
       - ".github/workflows/python-check.yml"
   push:
     branches:
       - main
     paths:
-      - "scripts/**"
+      - "tools/scripts/**"
       - ".github/workflows/python-check.yml"
 
 permissions:
@@ -35,4 +35,4 @@ jobs:
       # preinstalled Python — the same interpreter the release, secret-scan,
       # and clang-tidy workflows already invoke these scripts with.
       - name: Run tests
-        run: python3 scripts/run_tests.py
+        run: python3 tools/scripts/run_tests.py

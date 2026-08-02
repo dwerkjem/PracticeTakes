@@ -10,7 +10,7 @@ install(TARGETS PracticeTakes
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     install(FILES
-        "${CMAKE_CURRENT_SOURCE_DIR}/packaging/linux/org.derekrneilson.practicetakes.desktop"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/packaging/linux/org.derekrneilson.practicetakes.desktop"
         DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
     )
 

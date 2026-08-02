@@ -15,7 +15,7 @@ on:
       - ".ua/knowledge-graph.json"
       - ".ua/meta.json"
       - ".ua/config.json"
-      - "scripts/pages/**"
+      - "tools/scripts/pages/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
     inputs:
@@ -64,7 +64,7 @@ jobs:
       # structural regression against the previously published graph.
       - name: Verify the graph
         run: |
-          node scripts/pages/verify-graph.mjs \
+          node tools/scripts/pages/verify-graph.mjs \
             ${{ inputs.allow_regression && '--allow-regression' || '' }}
 
       - name: Check out the Understand-Anything dashboard

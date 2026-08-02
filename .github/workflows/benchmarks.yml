@@ -8,8 +8,8 @@ on:
       - "src/**"
       - "tests/**"
       - "CMakeLists.txt"
-      - "cmake/**"
-      - "scripts/quality/format_benchmarks.py"
+      - "tools/cmake/**"
+      - "tools/scripts/quality/format_benchmarks.py"
       - ".github/workflows/benchmarks.yml"
   schedule:
     # Every Monday at 04:00 UTC — gives a weekly baseline even without code changes.
@@ -29,7 +29,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install build dependencies
-        run: bash scripts/build/check-linux-build-dependencies.sh --install
+        run: bash tools/scripts/build/check-linux-build-dependencies.sh --install
 
       - name: Configure
         run: |
@@ -64,7 +64,7 @@ jobs:
 
       - name: Format and post step summary
         run: |
-          python3 scripts/quality/format_benchmarks.py \
+          python3 tools/scripts/quality/format_benchmarks.py \
             benchmark.xml startup.json \
             >> "$GITHUB_STEP_SUMMARY"
 

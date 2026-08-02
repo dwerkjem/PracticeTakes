@@ -15,12 +15,12 @@ Run scripts from the repository root unless a script says otherwise. For
 example:
 
 ```bash
-./scripts/build/build-and-run.sh
-./scripts/feedback/migrate-feedback-database.sh --remote
-./scripts/feedback/configure-cloudflare-access.sh
-./scripts/feedback/run-recovery-drill.py
-./scripts/quality/run-performance-lab.sh
-./scripts/quality/ui-validation/run-ui-golden.zsh
+./tools/scripts/build/build-and-run.sh
+./tools/scripts/feedback/migrate-feedback-database.sh --remote
+./tools/scripts/feedback/configure-cloudflare-access.sh
+./tools/scripts/feedback/run-recovery-drill.py
+./tools/scripts/quality/run-performance-lab.sh
+./tools/scripts/quality/ui-validation/run-ui-golden.zsh
 ```
 
 The Performance Lab script starts the application, calibrates instrumentation,

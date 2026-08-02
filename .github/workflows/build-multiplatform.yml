@@ -119,15 +119,15 @@ jobs:
         if: ${{ inputs.version != '' }}
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-        run: python3 scripts/release/version.py set "${RELEASE_VERSION}"
+        run: python3 tools/scripts/release/version.py set "${RELEASE_VERSION}"
 
       - name: Read application version
         id: version
         shell: bash
-        run: echo "version=$(python3 scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
+        run: echo "version=$(python3 tools/scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
 
       - name: Install Linux build dependencies
-        run: bash scripts/build/check-linux-build-dependencies.sh --install
+        run: bash tools/scripts/build/check-linux-build-dependencies.sh --install
 
       - name: Configure
         run: |
@@ -242,13 +242,13 @@ jobs:
         shell: pwsh
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-        run: python scripts/release/version.py set "${env:RELEASE_VERSION}"
+        run: python tools/scripts/release/version.py set "${env:RELEASE_VERSION}"
 
       - name: Read application version
         id: version
         shell: pwsh
         run: |
-          $version = (python scripts/release/version.py current).Trim()
+          $version = (python tools/scripts/release/version.py current).Trim()
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Install Windows build tools
@@ -495,12 +495,12 @@ jobs:
         if: ${{ inputs.version != '' }}
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-        run: python3 scripts/release/version.py set "${RELEASE_VERSION}"
+        run: python3 tools/scripts/release/version.py set "${RELEASE_VERSION}"
 
       - name: Read application version
         id: version
         shell: bash
-        run: echo "version=$(python3 scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
+        run: echo "version=$(python3 tools/scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
 
       - name: Configure
         run: |
@@ -870,13 +870,13 @@ jobs:
         if: ${{ inputs.version != '' }}
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-        run: python3 scripts/release/version.py set "${RELEASE_VERSION}"
+        run: python3 tools/scripts/release/version.py set "${RELEASE_VERSION}"
 
       - name: Read build metadata
         id: metadata
         shell: bash
         run: |
-          echo "version=$(python3 scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
+          echo "version=$(python3 tools/scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
           echo "source_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
 
       - name: Download platform artifacts

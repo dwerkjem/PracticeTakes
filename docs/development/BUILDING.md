@@ -17,17 +17,17 @@ through the repository's `vcpkg.json` manifest and custom triplets.
 The simplest supported local workflow on Linux is:
 
 ```bash
-./scripts/build/build-and-run.sh
+./tools/scripts/build/build-and-run.sh
 ```
 
 Useful options:
 
 ```bash
-./scripts/build/build-and-run.sh --build-only
-./scripts/build/build-and-run.sh --clean
-BUILD_TYPE=Release ./scripts/build/build-and-run.sh
-./scripts/build/build-and-run.sh --install-dependencies
-./scripts/build/build-and-run.sh --jobs 2
+./tools/scripts/build/build-and-run.sh --build-only
+./tools/scripts/build/build-and-run.sh --clean
+BUILD_TYPE=Release ./tools/scripts/build/build-and-run.sh
+./tools/scripts/build/build-and-run.sh --install-dependencies
+./tools/scripts/build/build-and-run.sh --jobs 2
 ```
 
 On Debian and Ubuntu, the script first checks every required system package.
@@ -78,7 +78,7 @@ makes `find_package(X11)` fail. Dependencies located through `pkg-config` are
 unaffected, so X11 is usually the only thing that breaks. Configuring with the
 wrong toolchain also rewrites `build/CMakeCache.txt`, which forces the next
 `build-and-run.sh` run to reconfigure from scratch and surface the failure
-there. `scripts/build/build-and-run.sh` selects the system toolchain for you.
+there. `tools/scripts/build/build-and-run.sh` selects the system toolchain for you.
 
 ## Compilation database
 

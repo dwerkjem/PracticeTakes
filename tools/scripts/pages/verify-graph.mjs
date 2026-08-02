@@ -16,7 +16,7 @@
  * re-analyzed file, still produces a graph that parses and validates. Only a
  * comparison against the previous revision separates cleanup from damage.
  *
- * Usage: node scripts/pages/verify-graph.mjs [--allow-regression]
+ * Usage: node tools/scripts/pages/verify-graph.mjs [--allow-regression]
  * Exits non-zero on failure. Warnings go to stderr and do not fail the run.
  */
 

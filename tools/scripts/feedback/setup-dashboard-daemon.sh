@@ -116,7 +116,7 @@ image_preflight=
 while IFS= read -r image; do
     [[ -n ${image} ]] || continue
     require_unit_safe "the image name ${image}" "${image}"
-    image_preflight+="ExecStartPre=/bin/sh -c '${docker_binary} image inspect ${image} >/dev/null 2>&1 || { echo \"Image ${image} is not present. Run scripts/feedback/update-dashboard-daemon.sh from the Practice Takes checkout to rebuild it.\" >&2; exit 1; }'"$'\n'
+    image_preflight+="ExecStartPre=/bin/sh -c '${docker_binary} image inspect ${image} >/dev/null 2>&1 || { echo \"Image ${image} is not present. Run tools/scripts/feedback/update-dashboard-daemon.sh from the Practice Takes checkout to rebuild it.\" >&2; exit 1; }'"$'\n'
 done < <(docker compose --project-name "${compose_project}" --env-file "${environment_file}" \
     -f "${compose_file}" config --images)
 
@@ -143,7 +143,7 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=${runtime_dir}
-# Images come from scripts/feedback/update-dashboard-daemon.sh, which builds
+# Images come from tools/scripts/feedback/update-dashboard-daemon.sh, which builds
 # them in the checkout. This unit only starts images that already exist, so
 # check for them first and say what to run when one has been pruned.
 ${image_preflight}

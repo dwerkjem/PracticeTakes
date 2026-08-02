@@ -140,7 +140,7 @@ export CLOUDFLARE_ACCOUNT_ID='...'
 export CLOUDFLARE_API_TOKEN='...'
 export D1_DATABASE_ID='...'
 export ADMIN_EMAIL='developer@example.com'
-./scripts/feedback/setup-dashboard-daemon.sh
+./tools/scripts/feedback/setup-dashboard-daemon.sh
 ```
 
 The script creates a mode-`0600` `.env` file and generates the dashboard password. The password is
@@ -151,7 +151,7 @@ directory, so the boot-time service never reads the checkout. Existing installat
 the daemon after changing the checkout with:
 
 ```bash
-./scripts/feedback/update-dashboard-daemon.sh
+./tools/scripts/feedback/update-dashboard-daemon.sh
 ```
 
 The update script rebuilds the image, refreshes the root-owned runtime copies, and warns when the
@@ -187,7 +187,7 @@ installed unit still runs from the checkout. Pass `--pull-source` to perform a f
    From the repository root:
 
    ```bash
-   ./scripts/feedback/configure-cloudflare-access.sh
+   ./tools/scripts/feedback/configure-cloudflare-access.sh
    ```
 
    The script creates or updates one default-deny Access application with an exact-email Allow
@@ -351,7 +351,7 @@ The repository includes a credential-free local drill that applies every migrati
 fixture database, restores it, and verifies integrity and content:
 
 ```bash
-./scripts/feedback/run-recovery-drill.py
+./tools/scripts/feedback/run-recovery-drill.py
 ```
 
 Run the local drill after schema changes and perform a staging D1 restore at least quarterly.

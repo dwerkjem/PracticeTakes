@@ -9,10 +9,10 @@ on:
       - ".clang-format"
       - ".clang-tidy"
       - "CMakeLists.txt"
-      - "cmake/**"
-      - "scripts/quality/run_clang_format.py"
-      - "scripts/quality/run_clang_tidy.py"
-      - "scripts/build/check-linux-build-dependencies.sh"
+      - "tools/cmake/**"
+      - "tools/scripts/quality/run_clang_format.py"
+      - "tools/scripts/quality/run_clang_tidy.py"
+      - "tools/scripts/build/check-linux-build-dependencies.sh"
 
 permissions:
   contents: write
@@ -37,7 +37,7 @@ jobs:
 
       - name: Install analysis dependencies
         run: |
-          bash scripts/build/check-linux-build-dependencies.sh --install
+          bash tools/scripts/build/check-linux-build-dependencies.sh --install
           sudo apt-get install --yes clang-format clang-tidy
 
       - name: Configure compilation database
@@ -59,7 +59,7 @@ jobs:
           fi
           # clang-tidy can return a non-zero status while still applying valid
           # fix-its. Preserve those edits and verify unresolved findings later.
-          python3 scripts/quality/run_clang_tidy.py --fix "${cpp_files[@]}" || true
+          python3 tools/scripts/quality/run_clang_tidy.py --fix "${cpp_files[@]}" || true
 
       - name: Format automatic edits
         shell: bash
@@ -70,7 +70,7 @@ jobs:
             echo "::error::No .cpp files discovered under src/ - refusing to report success on zero analyzed files."
             exit 1
           fi
-          python3 scripts/quality/run_clang_format.py "${cpp_files[@]}" "${header_files[@]}"
+          python3 tools/scripts/quality/run_clang_format.py "${cpp_files[@]}" "${header_files[@]}"
 
       - name: Validate automatic edits
         shell: bash
@@ -81,7 +81,7 @@ jobs:
             echo "::error::No .cpp files discovered under src/ - refusing to report success on zero analyzed files."
             exit 1
           fi
-          python3 scripts/quality/run_clang_tidy.py "${cpp_files[@]}"
+          python3 tools/scripts/quality/run_clang_tidy.py "${cpp_files[@]}"
 
       - name: Commit automatic fixes
         shell: bash

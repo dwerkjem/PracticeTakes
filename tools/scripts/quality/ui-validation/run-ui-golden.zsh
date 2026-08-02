@@ -5,7 +5,7 @@ zmodload zsh/datetime
 zmodload zsh/zselect
 
 readonly script_dir=${0:A:h}
-readonly repository_root=${script_dir:h:h:h}
+readonly repository_root=${script_dir:h:h:h:h}
 readonly validation_root=$repository_root/build/ui-validation
 readonly evidence_dir=$validation_root/step-7
 readonly profiles_dir=$evidence_dir/profiles

@@ -18,12 +18,12 @@ There is also a small Cloudflare Worker service, `services/feedback-intake`
 ### Build and run (C++, Linux)
 
 ```bash
-./scripts/build/build-and-run.sh                    # configure, build, run
-./scripts/build/build-and-run.sh --build-only        # configure + build only
-./scripts/build/build-and-run.sh --clean
-./scripts/build/build-and-run.sh --jobs 2            # limit parallel compiles
-BUILD_TYPE=Release ./scripts/build/build-and-run.sh
-./scripts/build/build-and-run.sh --install-dependencies
+./tools/scripts/build/build-and-run.sh                    # configure, build, run
+./tools/scripts/build/build-and-run.sh --build-only        # configure + build only
+./tools/scripts/build/build-and-run.sh --clean
+./tools/scripts/build/build-and-run.sh --jobs 2            # limit parallel compiles
+BUILD_TYPE=Release ./tools/scripts/build/build-and-run.sh
+./tools/scripts/build/build-and-run.sh --install-dependencies
 ```
 
 Generic CMake (any platform):
@@ -67,7 +67,7 @@ configure flag:
 
 ```bash
 cmake -S . -B build -DPRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=ON
-./scripts/quality/run-performance-lab.sh
+./tools/scripts/quality/run-performance-lab.sh
 ```
 
 ### C++ formatting and static analysis
@@ -75,9 +75,9 @@ cmake -S . -B build -DPRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=ON
 ```bash
 pre-commit install                                   # once per clone
 pre-commit run --all-files                            # or: pre-commit run clang-format --all-files
-python scripts/quality/run_clang_tidy.py $(find src -type f -name "*.cpp" | sort)
-python scripts/quality/run_clang_tidy.py --fix $(find src -type f -name "*.cpp" | sort)
-python scripts/quality/run_clang_format.py $(find src -type f \( -name "*.cpp" -o -name "*.h" \) | sort)
+python tools/scripts/quality/run_clang_tidy.py $(find src -type f -name "*.cpp" | sort)
+python tools/scripts/quality/run_clang_tidy.py --fix $(find src -type f -name "*.cpp" | sort)
+python tools/scripts/quality/run_clang_format.py $(find src -type f \( -name "*.cpp" -o -name "*.h" \) | sort)
 ```
 
 `clang-tidy` requires a built tree first (JUCE generates `JuceHeader.h` during
@@ -93,20 +93,20 @@ npm run check   # tsc --noEmit, fans out to every workspace
 npm run test    # vitest run, fans out to every workspace
 ```
 
-### Python scripts (`scripts/`)
+### Python scripts (`tools/scripts/`)
 
 ```bash
-python scripts/run_tests.py
+python tools/scripts/run_tests.py
 ```
 
-Discovers every `test_*.py` under `scripts/` by path (not
+Discovers every `test_*.py` under `tools/scripts/` by path (not
 `unittest discover`, which silently finds nothing here — see the script's
 docstring). An empty result is a hard error, not a silent pass.
 
 ### UI golden-image validation
 
 ```bash
-./scripts/quality/ui-validation/run-ui-golden.zsh
+./tools/scripts/quality/ui-validation/run-ui-golden.zsh
 ```
 
 Captures first-launch and restored-workspace reference screenshots and times
@@ -117,6 +117,19 @@ fresh launches against them; writes evidence to `build/ui-validation/step-7/`.
 Full detail lives in `docs/development/ARCHITECTURE.md` — read it before any
 change that touches ownership, the audio thread, or adds a new tool/service.
 Summary:
+
+### Repository root (hard constraint)
+
+The root is kept minimal on purpose. Tracked top-level entries are `src/`,
+`tests/`, `docs/`, `services/`, `contracts/`, `openspec/`, `tools/`,
+`README.md`, `CMakeLists.txt`, `CLAUDE.md`, `LICENSE`, `VERSION`,
+`vcpkg.json`, and dotfiles whose tooling requires root placement.
+
+**Never add a new top-level file or directory.** Build/packaging/tooling
+inputs go under `tools/` (`tools/cmake`, `tools/packaging`, `tools/scripts`,
+`tools/secret-patterns`); community-health files go under `.github/`;
+documentation goes under `docs/`. If something genuinely cannot work outside
+the root, say so explicitly rather than adding it silently.
 
 ### Source layering (`src/`)
 
@@ -202,5 +215,5 @@ against it — they can drift (`docs/development/QA_STRATEGY.md` area 12).
   change belongs before starting.
 - Run the relevant test suite before requesting review: `PracticeTakesTests`
   for C++ changes under `src/**`/`tests/**`; `npm run check && npm run test`
-  from `services/` for `services/**`; `python scripts/run_tests.py` for
-  `scripts/**`.
+  from `services/` for `services/**`; `python tools/scripts/run_tests.py` for
+  `tools/scripts/**`.

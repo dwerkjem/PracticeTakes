@@ -5,11 +5,11 @@ faint staff systems, drawn from the application's own accent colour
 (`#64AAFF` dark, `#3770C4` light — see `src/application/theme/Theme.cpp`).
 
 Every file here is generated. Edit the geometry in
-[`scripts/design/generate_app_icons.py`](../../scripts/design/generate_app_icons.py)
+[`tools/scripts/design/generate_app_icons.py`](../../tools/scripts/design/generate_app_icons.py)
 rather than the artwork, then regenerate:
 
 ```bash
-uv run --no-project --with pillow scripts/design/generate_app_icons.py
+uv run --no-project --with pillow tools/scripts/design/generate_app_icons.py
 ```
 
 Pillow is the only dependency and is not needed to build or test the
@@ -29,7 +29,7 @@ application — the generated files are committed.
 JUCE turns `ICON_BIG`/`ICON_SMALL` into the macOS `.icns` and the Windows
 executable icon, but ignores them on Linux, where window managers read the icon
 from `_NET_WM_ICON` and launchers read it from the `.desktop` entry. Both paths
-are wired up: see `CMakeLists.txt`, `cmake/Packaging.cmake`, and
+are wired up: see `CMakeLists.txt`, `tools/cmake/Packaging.cmake`, and
 `src/bootstrap/main.cpp`.
 
 A 256x256 image is too large for `_NET_WM_ICON` — the property exceeds the X11

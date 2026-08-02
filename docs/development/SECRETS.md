@@ -1,7 +1,7 @@
 # SOPS secret management
 
 Practice Takes stores local plaintext secrets outside Git and commits only
-SOPS-encrypted mirrors. The repository-level `secret-patterns` file determines
+SOPS-encrypted mirrors. The repository-level `tools/secret-patterns` file determines
 which plaintext files are managed. Encrypted files are written below
 `.secrets/` while preserving the original relative path:
 
@@ -25,7 +25,7 @@ Keep the `AGE-SECRET-KEY-...` identity private. Use the printed `age1...`
 public recipient to configure this repository:
 
 ```bash
-python3 scripts/secrets/secrets_manager.py init --age-recipient age1...
+python3 tools/scripts/secrets/secrets_manager.py init --age-recipient age1...
 ```
 
 Then install the Git hooks. **Every clone needs this step.** The hook is the
@@ -114,19 +114,19 @@ least once a year otherwise:
 Encrypt local files and stage only their encrypted mirrors:
 
 ```bash
-python scripts/secrets/secrets_manager.py encrypt
+python tools/scripts/secrets/secrets_manager.py encrypt
 ```
 
 Restore plaintext after cloning:
 
 ```bash
-python scripts/secrets/secrets_manager.py decrypt
+python tools/scripts/secrets/secrets_manager.py decrypt
 ```
 
 Safely synchronize both directions:
 
 ```bash
-python scripts/secrets/secrets_manager.py sync
+python tools/scripts/secrets/secrets_manager.py sync
 ```
 
 The sync command records plaintext hashes only in `.git/sops-secret-state.json`;
@@ -136,8 +136,8 @@ local-only comparison files below `.git/sops-secret-conflicts/`. Review them,
 then explicitly choose:
 
 ```bash
-python scripts/secrets/secrets_manager.py sync --prefer-local
-python scripts/secrets/secrets_manager.py sync --prefer-encrypted
+python tools/scripts/secrets/secrets_manager.py sync --prefer-local
+python tools/scripts/secrets/secrets_manager.py sync --prefer-encrypted
 ```
 
 `--prefer-encrypted` overwrites the local plaintext. Use it only after
@@ -149,7 +149,7 @@ Do not edit conflicted `.sops` ciphertext manually. Decrypt and three-way merge
 the Git stages with:
 
 ```bash
-python scripts/secrets/secrets_manager.py resolve
+python tools/scripts/secrets/secrets_manager.py resolve
 ```
 
 Clean plaintext merges are re-encrypted and staged automatically. If Git
@@ -158,14 +158,14 @@ file below `.git/sops-secret-conflicts/`. Edit that file, remove all conflict
 markers, and continue:
 
 ```bash
-python scripts/secrets/secrets_manager.py resolve --continue
+python tools/scripts/secrets/secrets_manager.py resolve --continue
 ```
 
 To choose one side without merging:
 
 ```bash
-python scripts/secrets/secrets_manager.py resolve --ours
-python scripts/secrets/secrets_manager.py resolve --theirs
+python tools/scripts/secrets/secrets_manager.py resolve --ours
+python tools/scripts/secrets/secrets_manager.py resolve --theirs
 ```
 
 `.gitattributes` marks `.secrets/` as binary and disables Git's ciphertext
@@ -176,7 +176,7 @@ stages.
 
 The `sops-secrets` hook:
 
-1. Reads the ordered globs in `secret-patterns`.
+1. Reads the ordered globs in `tools/secret-patterns`.
 2. Mirrors those patterns into the clone-local `.git/info/exclude`.
 3. Removes newly added matching plaintext files from the index.
 4. Encrypts each matching plaintext file as binary SOPS JSON.
@@ -185,15 +185,15 @@ The `sops-secrets` hook:
    encrypted secret still has a Git conflict.
 
 The `sops-secret-audit` hook then scans the whole index, not just the staged
-change, and fails if any tracked path matches `secret-patterns`. It catches
+change, and fails if any tracked path matches `tools/secret-patterns`. It catches
 plaintext that reached the repository through a bypassed hook or a merge. Run
 the same check by hand, or from CI, with:
 
 ```bash
-python3 scripts/secrets/secrets_manager.py audit
+python3 tools/scripts/secrets/secrets_manager.py audit
 ```
 
-`secret-patterns` selects `.env`, `.dev.vars`, `*.secret`, `*.secrets`, the
+`tools/secret-patterns` selects `.env`, `.dev.vars`, `*.secret`, `*.secrets`, the
 deployed `services/feedback-intake/wrangler.jsonc`, and everything below the
 repository-root `secrets/` directory. Example and template files stay plaintext.
 

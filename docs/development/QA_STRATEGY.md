@@ -165,7 +165,7 @@ once, but isn't strictly blocked by it.
 The feedback worker's suites ran against three hand-written fakes that
 dispatched on SQL *substring* matching, so no statement was ever parsed or
 executed and the seven files under `migrations/` were never applied — invalid
-SQL and schema drift were invisible. Separately, `scripts/` held 3,651 lines
+SQL and schema drift were invisible. Separately, `tools/scripts/` held 3,651 lines
 with one test file that no workflow and no pre-commit hook ever ran.
 
 **Outcome**:
@@ -174,9 +174,9 @@ with one test file that no workflow and no pre-commit hook ever ran.
   surface the worker uses. All three fakes are gone.
 - `test/migrations.test.ts` applies the migration set and names any file that
   fails.
-- `scripts/run_tests.py` plus `.github/workflows/python-check.yml` run the
-  Python suite on every pull request touching `scripts/`, and
-  `scripts/release/version.py` — which the release workflow depends on — now
+- `tools/scripts/run_tests.py` plus `.github/workflows/python-check.yml` run the
+  Python suite on every pull request touching `tools/scripts/`, and
+  `tools/scripts/release/version.py` — which the release workflow depends on — now
   has tests.
 
 ## Follow-up test-coverage areas
@@ -216,7 +216,7 @@ now makes the first two straightforward.
 
 ### 11. Roadmap tooling tests
 
-**Problem**: `scripts/practice_takes_roadmap` is 2,046 lines that call the
+**Problem**: `tools/scripts/practice_takes_roadmap` is 2,046 lines that call the
 GitHub API and mutate persisted state, with no tests. Area 7 established where
 Python tests live and how CI runs them; this fills in the largest gap.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Manage Practice Takes secret files as SOPS-encrypted Git mirrors.
 
-Plaintext files matched by ``secret-patterns`` stay local. Their encrypted
+Plaintext files matched by ``tools/secret-patterns`` stay local. Their encrypted
 counterparts are stored at ``.secrets/<original path>.sops`` and may be
 committed safely.
 """
@@ -21,7 +21,7 @@ import tempfile
 from typing import Iterable, Sequence
 
 
-PATTERN_FILE = "secret-patterns"
+PATTERN_FILE = "tools/secret-patterns"
 SECRET_DIRECTORY = ".secrets"
 SOPS_SUFFIX = ".sops"
 STATE_FILENAME = "sops-secret-state.json"
@@ -124,10 +124,10 @@ def validate_relative_path(value: str) -> str:
 
 
 def read_patterns(root: Path) -> list[tuple[bool, str]]:
-    """Read ordered include/exclude rules from ``secret-patterns``."""
+    """Read ordered include/exclude rules from ``tools/secret-patterns``."""
     path = root / PATTERN_FILE
     if not path.is_file():
-        raise SecretsError(f"Missing {PATTERN_FILE} at the repository root")
+        raise SecretsError(f"Missing {PATTERN_FILE} in the repository")
 
     rules: list[tuple[bool, str]] = []
     for number, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
@@ -298,7 +298,7 @@ def require_sops(root: Path) -> str:
     if not config.exists() and not os.environ.get("SOPS_AGE_RECIPIENTS"):
         raise SecretsError(
             "No .sops.yaml or SOPS_AGE_RECIPIENTS found. Run "
-            "'python scripts/secrets/secrets_manager.py init --age-recipient age1...'."
+            "'python tools/scripts/secrets/secrets_manager.py init --age-recipient age1...'."
         )
     if config.exists() and "REPLACE_WITH_" in config.read_text(
         encoding="utf-8", errors="replace"
@@ -754,7 +754,7 @@ def resolve_command(
         raise SecretsError(
             "Manual plaintext conflict resolution is required. Edit these local-only files:\n"
             f"  {locations}\nThen run "
-            "'python scripts/secrets/secrets_manager.py resolve --continue'."
+            "'python tools/scripts/secrets/secrets_manager.py resolve --continue'."
         )
     print(f"Resolved {len(conflicts)} encrypted secret conflict(s).")
     return 0
@@ -815,7 +815,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     subparsers.add_parser(
-        "audit", help="fail if any tracked file matches secret-patterns"
+        "audit", help="fail if any tracked file matches tools/secret-patterns"
     )
 
     resolve = subparsers.add_parser(
