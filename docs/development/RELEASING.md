@@ -1,10 +1,10 @@
 # Releasing Practice Takes
 
 Practice Takes has one source of truth for its version: the root
-[`VERSION`](../../VERSION) file. CMake, JUCE application metadata, the C++
+[`tools/VERSION`](../../tools/VERSION) file. CMake, JUCE application metadata, the C++
 application version, window titles, package names, tags, build artifacts, and
 GitHub Releases all derive from that value. When the version helper writes a
-release version, it also synchronizes the `version-string` in `vcpkg.json`.
+release version, it also synchronizes the `version-string` in `tools/vcpkg.json`.
 
 Do not copy the version into `CMakeLists.txt` or C++ source files.
 
@@ -182,7 +182,7 @@ python3 tools/scripts/release/version.py next minor
 python3 tools/scripts/release/version.py next major
 ```
 
-To update the local `VERSION` file and synchronize `vcpkg.json`:
+To update the local `tools/VERSION` file and synchronize `tools/vcpkg.json`:
 
 ```bash
 python3 tools/scripts/release/version.py bump patch

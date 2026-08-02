@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.25)
 
-set(PRACTICE_TAKES_VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/VERSION")
+# The vcpkg manifest lives under tools/ to keep the repository root small. The
+# vcpkg toolchain only auto-discovers a manifest in CMAKE_SOURCE_DIR, so it has
+# to be pointed at the real directory before project() loads the toolchain.
+set(VCPKG_MANIFEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tools")
+
+set(PRACTICE_TAKES_VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/tools/VERSION")
 
 if(NOT EXISTS "${PRACTICE_TAKES_VERSION_FILE}")
     message(FATAL_ERROR

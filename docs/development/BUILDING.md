@@ -10,7 +10,7 @@ Practice Takes requires:
 - platform audio and window-system development libraries
 
 JUCE is downloaded by CMake at configure time. Linux's dependencies are managed
-through the repository's `vcpkg.json` manifest and custom triplets.
+through the repository's `tools/vcpkg.json` manifest and custom triplets.
 
 ## Linux helper script
 

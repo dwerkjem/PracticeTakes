@@ -68,7 +68,9 @@ services/feedback-intake/wrangler.jsonc
 coverage/
 
 # vcpkg
-/vcpkg_installed/
+# Not root-anchored: the manifest lives in tools/, so vcpkg writes its install
+# tree there when it is invoked outside a CMake build directory.
+vcpkg_installed/
 
 # Test output and caches
 Testing/

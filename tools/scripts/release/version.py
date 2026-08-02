@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Manage the Practice Takes semantic version stored in the root VERSION file."""
+"""Manage the Practice Takes semantic version stored in ``tools/VERSION``."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Final
 
 PROJECT_ROOT: Final = Path(__file__).resolve().parents[3]
-VERSION_FILE: Final = PROJECT_ROOT / "VERSION"
-VCPKG_MANIFEST_FILE: Final = PROJECT_ROOT / "vcpkg.json"
+VERSION_FILE: Final = PROJECT_ROOT / "tools" / "VERSION"
+VCPKG_MANIFEST_FILE: Final = PROJECT_ROOT / "tools" / "vcpkg.json"
 VERSION_PATTERN: Final = re.compile(
     r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
 )
@@ -36,7 +36,7 @@ def format_version(version: tuple[int, int, int]) -> str:
 
 
 def read_version() -> tuple[int, int, int]:
-    """Read the current version from VERSION."""
+    """Read the current version from ``tools/VERSION``."""
     try:
         return parse_version(VERSION_FILE.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
@@ -44,7 +44,7 @@ def read_version() -> tuple[int, int, int]:
 
 
 def write_version(version: tuple[int, int, int]) -> str:
-    """Write a validated version to VERSION and the vcpkg manifest."""
+    """Write a validated version to ``tools/VERSION`` and the vcpkg manifest."""
     value = format_version(version)
     manifest = json.loads(VCPKG_MANIFEST_FILE.read_text(encoding="utf-8"))
     manifest["version-string"] = value
@@ -84,7 +84,7 @@ def build_parser() -> argparse.ArgumentParser:
     set_parser = subparsers.add_parser("set", help="write an exact version")
     set_parser.add_argument("version")
 
-    bump_parser = subparsers.add_parser("bump", help="increment and write VERSION")
+    bump_parser = subparsers.add_parser("bump", help="increment and write tools/VERSION")
     bump_parser.add_argument("bump", choices=("patch", "minor", "major"))
 
     return parser

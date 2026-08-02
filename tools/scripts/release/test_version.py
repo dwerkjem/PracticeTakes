@@ -22,7 +22,7 @@ SPEC.loader.exec_module(version)
 
 @contextlib.contextmanager
 def temporary_project(current: str = "1.2.3\n") -> Iterator[tuple[Path, Path]]:
-    """Yield throwaway VERSION and vcpkg.json files bound to the module."""
+    """Yield throwaway version and manifest files bound to the module."""
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary)
         version_file = root / "VERSION"
@@ -119,7 +119,7 @@ class VersionFileTests(unittest.TestCase):
             self.assertEqual(version.read_version(), (1, 3, 0))
 
     def test_leaves_the_repository_version_untouched(self) -> None:
-        repository_version = version.PROJECT_ROOT / "VERSION"
+        repository_version = version.VERSION_FILE
         before = repository_version.read_text(encoding="utf-8")
         with temporary_project():
             version.write_version((9, 9, 9))
