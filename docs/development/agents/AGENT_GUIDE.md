@@ -114,6 +114,25 @@ docstring). An empty result is a hard error, not a silent pass.
 Captures first-launch and restored-workspace reference screenshots and times
 fresh launches against them; writes evidence to `build/ui-validation/step-7/`.
 
+### Manual verification (the testing suite)
+
+A standalone application under `tools/scripts/testing_suite/`, not part of
+Practice Takes. Capture is unattended; review happens later over a grid of every
+surface at every resolution:
+
+```bash
+cmake -S . -B build-tc -DCMAKE_BUILD_TYPE=Debug -DPRACTICE_TAKES_ENABLE_TEST_CONTROL=ON
+cmake --build build-tc --target PracticeTakes --parallel
+uv run test-suite capture     # unattended
+uv run test-suite attend      # only the questions an image cannot answer
+uv run test-suite review      # the grid, in a browser
+uv run test-suite export      # the record the release gate reads
+```
+
+Runs accumulate in a machine-local SQLite store; the exported record under
+`docs/development/quality/manual-runs/` stays the release gate's only input. See
+`docs/development/quality/TESTING_SUITE.md`. No CI check runs any of it.
+
 ## Architecture
 
 Full detail lives in `docs/development/architecture/ARCHITECTURE.md` — read it before any

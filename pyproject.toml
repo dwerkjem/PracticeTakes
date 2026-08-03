@@ -15,14 +15,22 @@ requires-python = ">=3.13"
 dependencies = []
 
 [project.scripts]
-# `uv run ui-test` -- the manual GUI verification harness.
-ui-test = "manual_gui.__main__:main"
+# `uv run test-suite` -- the standalone testing suite: unattended capture, the
+# grid review, ingest, and the run record the release gate reads.
+test-suite = "testing_suite.__main__:main"
 
 [dependency-groups]
-# Installed by default for developers (see [tool.uv] below), so `uv run ui-test`
-# works without anyone having to remember an extra flag. A dependency group is
-# not a published dependency, so this does not leak into `dependencies`.
-manual-gui = ["textual>=8.2,<9"]
+# Installed by default for developers (see [tool.uv] below), so `uv run
+# test-suite` works without anyone having to remember an extra flag. A
+# dependency group is not a published dependency, so this does not leak into
+# `dependencies`.
+#
+# Pillow is the suite's one real dependency, and only the capture pass touches
+# it: `xwindow_capture` writes PPM, which no browser can show and which is
+# several megabytes per window. Everything else here -- the store, the plan, the
+# review server, the exporter -- is standard library, so the tests run on a
+# machine that has never installed it.
+testing-suite = ["pillow>=11,<12"]
 
 [project.optional-dependencies]
 # Pinned developer tooling. CI installs what it needs directly; the scripts
@@ -38,12 +46,12 @@ manual-gui = ["textual>=8.2,<9"]
 coverage = ["gcovr>=8,<9", "coverage>=7", "clang-format==18.1.8"]
 
 [tool.uv]
-default-groups = ["manual-gui"]
+default-groups = ["testing-suite"]
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-package-dir = { "" = "scripts" }
-packages = ["manual_gui"]
+package-dir = { "" = "tools/scripts" }
+packages = ["testing_suite"]

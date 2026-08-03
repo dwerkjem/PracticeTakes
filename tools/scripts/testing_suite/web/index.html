@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Practice Takes — verification review</title>
+    <link rel="stylesheet" href="/web/style.css" />
+  </head>
+  <body>
+    <header>
+      <div id="run-summary">Loading…</div>
+      <div id="toolbar">
+        <span id="selection-count">nothing selected</span>
+        <span id="tag-buttons"></span>
+        <button id="add-tag" type="button">+ tag</button>
+        <span id="tag-hint">click a tag to apply · shift-click to remove</span>
+      </div>
+      <div id="outstanding"></div>
+    </header>
+
+    <main id="grid" aria-label="Captured surfaces"></main>
+
+    <div id="zoom" hidden>
+      <div id="zoom-caption"></div>
+      <img id="zoom-image" alt="" />
+    </div>
+
+    <div id="rubber-band" hidden></div>
+
+    <script src="/web/app.js"></script>
+  </body>
+</html>

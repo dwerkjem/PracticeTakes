@@ -210,9 +210,11 @@ that used to be in this document.
 2026-08-02, after `tools/scripts/practice_takes_roadmap` was deleted, and does
 not share the `efb65ec7b5fb` stamp. The old reading — 29% (584/2025) — was
 dominated by that package sitting at 0%. Removing it, plus the Python added
-since (`manual_gui/`, `git/`), moved both halves of the fraction; the two
-numbers are not a before/after of the same tree. `manual_gui/__main__.py` and
-`manual_gui/app.py` are now the largest remaining 0% files.
+since (the testing suite, `git/`), moved both halves of the fraction; the two
+numbers are not a before/after of the same tree. The reading predates the
+testing suite replacing the terminal harness, which deleted `manual_gui/app.py`
+— the largest 0% file at the time — and added `testing_suite/`, whose only
+uncovered parts are the browser page and the X plumbing.
 
 **The C++ figure needs its caveat attached every time it is quoted.** 89.7% is
 measured over the 25 translation units compiled into `PracticeTakesTests` — out

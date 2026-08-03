@@ -1,17 +1,26 @@
 #!/usr/bin/env python3
-"""What the manual GUI harness asks about, as data.
+"""What the testing suite verifies, as data.
 
-A surface is one approved application state plus the questions to ask while
-looking at it. Surfaces are declarative on purpose: adding one is an edit to
-this list, not a change to the harness, and the list is the reviewable record of
-what gets verified before a release.
+A surface is one approved application state plus the questions to ask about it.
+Surfaces are declarative on purpose: adding one is an edit to this list, not a
+change to the suite, and the list is the reviewable record of what gets verified
+before a release.
 
 Every surface is scored on the same three axes, so runs stay comparable — you
 can see that presentation regressed on the tuner between two versions, which a
 bespoke question set per surface could never tell you. Surfaces may add their
 own questions, recorded separately so they do not dilute that comparable core.
 
-Standard library only, so the harness's tests run without Textual installed.
+Questions come in two kinds, and the difference decides which pass asks them. A
+question about *appearance* can be answered from a captured image, so it belongs
+to the unattended capture and the later grid review. A question about
+*behaviour* — does the tuner react to sound, does the divider drag, did the
+layout survive a restart — cannot be answered from a still image at all, and is
+marked `behavioural` so the short attended pass asks it against a live
+application instead. Getting that split wrong is how a screenshot workflow
+quietly stops verifying that anything works.
+
+Standard library only.
 """
 
 from __future__ import annotations
@@ -24,16 +33,23 @@ FIXED_AXES: tuple[Question, ...]  # forward reference, defined below
 QUICK = "quick"
 FULL = "full"
 
-# Window geometries the optional sweep repeats each surface at. "default" is
-# what a surface gets when the sweep is off.
+# The resolutions a run captures each surface at. Configuration rather than a
+# fixed list: `--resolutions` overrides it, and the set a run covered is
+# recorded with the run so two runs covering different sets are comparable on
+# purpose rather than by accident.
 DEFAULT_GEOMETRY = "default"
 SWEEP_GEOMETRIES = (DEFAULT_GEOMETRY, "constrained", "maximised")
+DEFAULT_RESOLUTIONS = SWEEP_GEOMETRIES
 
 
 @dataclass(frozen=True)
 class Question:
     id: str
     prompt: str
+
+    # True when only a live application can answer it. Asked by the attended
+    # pass; never inferred from an image.
+    behavioural: bool = False
 
 
 FIXED_AXES = (
@@ -94,7 +110,11 @@ SURFACES: tuple[Surface, ...] = (
         title="The tuner, docked",
         modes=frozenset({QUICK, FULL}),
         extras=(
-            Question("live-input", "Does the tuner respond to sound from the microphone?"),
+            Question(
+                "live-input",
+                "Does the tuner respond to sound from the microphone?",
+                behavioural=True,
+            ),
         ),
     ),
     Surface(
@@ -107,7 +127,11 @@ SURFACES: tuple[Surface, ...] = (
         title="The spectrogram, docked",
         modes=frozenset({FULL}),
         extras=(
-            Question("live-input", "Does the spectrogram respond to sound from the microphone?"),
+            Question(
+                "live-input",
+                "Does the spectrogram respond to sound from the microphone?",
+                behavioural=True,
+            ),
         ),
     ),
     Surface(
@@ -115,7 +139,11 @@ SURFACES: tuple[Surface, ...] = (
         title="The harmonic analyser, docked",
         modes=frozenset({FULL}),
         extras=(
-            Question("live-input", "Does the analyser respond to sound from the microphone?"),
+            Question(
+                "live-input",
+                "Does the analyser respond to sound from the microphone?",
+                behavioural=True,
+            ),
         ),
     ),
     Surface(
@@ -123,7 +151,9 @@ SURFACES: tuple[Surface, ...] = (
         title="The tuner in a floating window",
         modes=frozenset({FULL}),
         extras=(
-            Question("moveable", "Can the floating window be moved and resized?"),
+            Question(
+                "moveable", "Can the floating window be moved and resized?", behavioural=True
+            ),
         ),
     ),
     Surface(
@@ -131,7 +161,9 @@ SURFACES: tuple[Surface, ...] = (
         title="Two tools tiled side by side",
         modes=frozenset({FULL}),
         extras=(
-            Question("divider", "Can the divider between the two be dragged?"),
+            Question(
+                "divider", "Can the divider between the two be dragged?", behavioural=True
+            ),
         ),
     ),
     Surface(
@@ -139,7 +171,9 @@ SURFACES: tuple[Surface, ...] = (
         title="Two tools sharing a tab strip",
         modes=frozenset({FULL}),
         extras=(
-            Question("switching", "Does switching tabs show the other tool?"),
+            Question(
+                "switching", "Does switching tabs show the other tool?", behavioural=True
+            ),
         ),
     ),
     Surface(
@@ -147,7 +181,9 @@ SURFACES: tuple[Surface, ...] = (
         title="All three tools open at once",
         modes=frozenset({FULL}),
         extras=(
-            Question("all-live", "Do all three respond to sound at the same time?"),
+            Question(
+                "all-live", "Do all three respond to sound at the same time?", behavioural=True
+            ),
         ),
     ),
     Surface(
@@ -156,7 +192,11 @@ SURFACES: tuple[Surface, ...] = (
         modes=frozenset({FULL}),
         fixed_geometry=True,
         extras=(
-            Question("hamburger", "Does the collapsed menu open and list the same actions?"),
+            Question(
+                "hamburger",
+                "Does the collapsed menu open and list the same actions?",
+                behavioural=True,
+            ),
         ),
     ),
     Surface(
@@ -164,7 +204,9 @@ SURFACES: tuple[Surface, ...] = (
         title="Fullscreen",
         modes=frozenset({FULL}),
         fixed_geometry=True,
-        extras=(Question("escape", "Does Escape or F11 leave fullscreen?"),),
+        extras=(
+            Question("escape", "Does Escape or F11 leave fullscreen?", behavioural=True),
+        ),
     ),
     Surface(
         state="microphone-muted",
@@ -172,7 +214,9 @@ SURFACES: tuple[Surface, ...] = (
         modes=frozenset({FULL}),
         extras=(
             Question("mute-obvious", "Is it obvious at a glance that input is muted?"),
-            Question("mute-silences", "Do the tools stop responding to sound?"),
+            Question(
+                "mute-silences", "Do the tools stop responding to sound?", behavioural=True
+            ),
         ),
     ),
     Surface(
@@ -181,7 +225,9 @@ SURFACES: tuple[Surface, ...] = (
         modes=frozenset({FULL}),
         extras=(
             Question("actionable", "Does the warning say what to do about it?"),
-            Question("dismissable", "Can it be dismissed?"),
+            Question(
+                "dismissable", "Can it be dismissed?", behavioural=True
+            ),
         ),
     ),
     Surface(
@@ -190,7 +236,11 @@ SURFACES: tuple[Surface, ...] = (
         modes=frozenset({FULL}),
         instruction="Switch to a different input device, then back.",
         extras=(
-            Question("switching", "Did switching device take effect without a restart?"),
+            Question(
+                "switching",
+                "Did switching device take effect without a restart?",
+                behavioural=True,
+            ),
         ),
     ),
     Surface(
@@ -198,7 +248,9 @@ SURFACES: tuple[Surface, ...] = (
         title="Settings: appearance and theme",
         modes=frozenset({FULL}),
         instruction="Change the theme, and look at a tool with it applied.",
-        extras=(Question("theme-applies", "Did the theme apply everywhere?"),),
+        extras=(Question(
+                "theme-applies", "Did the theme apply everywhere?", behavioural=True
+            ),),
     ),
     Surface(
         state="settings-open",
@@ -208,8 +260,16 @@ SURFACES: tuple[Surface, ...] = (
             "Export settings to a file, change something, then import the file back."
         ),
         extras=(
-            Question("round-trip", "Did importing restore exactly what was exported?"),
-            Question("reports", "Did it say clearly whether the import succeeded?"),
+            Question(
+                "round-trip",
+                "Did importing restore exactly what was exported?",
+                behavioural=True,
+            ),
+            Question(
+                "reports",
+                "Did it say clearly whether the import succeeded?",
+                behavioural=True,
+            ),
         ),
     ),
     Surface(
@@ -227,7 +287,9 @@ SURFACES: tuple[Surface, ...] = (
             "see against the layout that was open before."
         ),
         extras=(
-            Question("layout-restored", "Was the workspace layout restored?"),
+            Question(
+                "layout-restored", "Was the workspace layout restored?", behavioural=True
+            ),
         ),
     ),
 )
@@ -238,6 +300,49 @@ def questions_for(surface: Surface) -> tuple[Question, ...]:
     return FIXED_AXES + surface.extras
 
 
+def attended_questions(surface: Surface) -> tuple[Question, ...]:
+    """Questions a captured image cannot answer.
+
+    A surface carrying an instruction has all of its extras here: the tester has
+    to do something before any of them mean anything, and by then they are
+    looking at a live application rather than a screenshot.
+    """
+    if surface.instruction:
+        return surface.extras
+
+    return tuple(question for question in surface.extras if question.behavioural)
+
+
+def review_questions(surface: Surface) -> tuple[Question, ...]:
+    """Questions answerable from the captured image: the axes plus appearance extras."""
+    attended = {question.id for question in attended_questions(surface)}
+
+    return FIXED_AXES + tuple(
+        question for question in surface.extras if question.id not in attended
+    )
+
+
+def find(state: str, title: str) -> Surface | None:
+    """The surface a stored capture came from.
+
+    Matched on both state and title because one state serves several surfaces —
+    `tuner-docked` is both "the tuner, docked" and "workspace layout after a
+    restart", which ask different questions.
+    """
+    for surface in SURFACES:
+        if surface.state == state and surface.title == title:
+            return surface
+
+    return None
+
+
+def surfaces_needing_attendance(mode: str) -> tuple[Surface, ...]:
+    """The subset the attended pass covers — deliberately much smaller than the run."""
+    return tuple(
+        surface for surface in surfaces_for_mode(mode) if attended_questions(surface)
+    )
+
+
 def surfaces_for_mode(mode: str) -> tuple[Surface, ...]:
     """Every surface a run in `mode` presents, in order."""
     if mode not in (QUICK, FULL):
@@ -246,33 +351,27 @@ def surfaces_for_mode(mode: str) -> tuple[Surface, ...]:
     return tuple(surface for surface in SURFACES if mode in surface.modes)
 
 
-def geometries_for(sweep: bool) -> tuple[str, ...]:
-    """Geometries each surface is presented at.
+def resolutions_for_surface(surface: Surface, resolutions: tuple[str, ...]) -> tuple[str, ...]:
+    """Resolutions a particular surface is captured at.
 
-    Off by default because it multiplies how many prompts a run asks, and most
-    runs do not need it.
-    """
-    return SWEEP_GEOMETRIES if sweep else (DEFAULT_GEOMETRY,)
-
-
-def geometries_for_surface(surface: Surface, sweep: bool) -> tuple[str, ...]:
-    """Geometries a particular surface is presented at.
-
-    A surface that is about its own window size is presented once regardless of
-    the sweep, because resizing it would destroy what is under test.
+    A surface that is about its own window size is captured once regardless of
+    the configured set, because resizing it would destroy what is under test.
     """
     if surface.fixed_geometry:
         return (DEFAULT_GEOMETRY,)
 
-    return geometries_for(sweep)
+    return resolutions
 
 
-def plan(mode: str, sweep: bool) -> tuple[tuple[Surface, str], ...]:
-    """The full ordered list of (surface, geometry) pairs a run will present."""
+def plan(mode: str, resolutions: tuple[str, ...] = DEFAULT_RESOLUTIONS) -> tuple[tuple[Surface, str], ...]:
+    """The full ordered list of (surface, resolution) pairs a run captures."""
+    if not resolutions:
+        raise ValueError("A run must cover at least one resolution.")
+
     return tuple(
         (surface, geometry)
         for surface in surfaces_for_mode(mode)
-        for geometry in geometries_for_surface(surface, sweep)
+        for geometry in resolutions_for_surface(surface, resolutions)
     )
 
 

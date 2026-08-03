@@ -1,41 +1,8 @@
 ## Purpose
 
-Defines the interactive harness that drives the application to each surface, asks a tester about it, records the run, and gates releases on a current full run.
+Defines what a manual verification run must ask, what its record must say, and how releases are gated on a current full run. How the run is produced — unattended capture, attended pass, grid review — is `ui-capture-and-review`; where it accumulates is `verification-run-store`.
 
 ## Requirements
-
-### Requirement: Manual verification is driven by an interactive harness
-Manual GUI verification SHALL be performed through a harness that launches the
-application, navigates it to each surface under test, and prompts the tester in
-a terminal UI, rather than through a document the tester reads and follows by
-hand.
-
-#### Scenario: A verification run is started
-- **WHEN** the tester starts the harness
-- **THEN** the application is launched and brought to the first surface under
-  test without the tester navigating to it manually
-
-#### Scenario: The tester is never asked to find something themselves
-- **WHEN** the harness prompts about a surface
-- **THEN** that surface is already displayed, so the prompt is about what is on
-  screen rather than about something the tester must first locate
-
-### Requirement: The harness advances through surfaces automatically
-After each surface is answered, the harness SHALL drive the application to the
-next surface in the run without tester intervention, and SHALL report a surface
-it could not reach as a failure of that surface rather than silently skipping
-it.
-
-#### Scenario: Advancing after an answer
-- **WHEN** the tester submits their answers for a surface
-- **THEN** the application is driven to the next surface and the next prompt is
-  shown
-
-#### Scenario: A surface cannot be reached
-- **WHEN** the harness cannot navigate to a surface — a control is missing, or
-  the application stops responding
-- **THEN** that surface is recorded as failed with the reason, and the run
-  continues to the next surface
 
 ### Requirement: Every surface is scored on three fixed axes
 For every surface, the harness SHALL ask the same three questions — whether it
@@ -97,57 +64,83 @@ mode SHALL be recorded with the run.
   it happened to contain
 
 ### Requirement: An optional flag repeats surfaces at multiple window sizes
-The harness SHALL accept a flag that, when set, presents each surface at several
-window geometries — including a constrained size, the default size, and a
-maximised window — so that layout problems that only appear at some sizes are
-caught. When the flag is not set, each surface is presented once at the default
-geometry.
+A run SHALL cover a configured set of window resolutions — including a
+constrained size, the default size, and a maximised window — capturing and
+scoring each surface once per resolution, so that layout problems that only
+appear at some sizes are caught. The set SHALL be configuration rather than a
+fixed list in code, and the resolutions a run covered SHALL be recorded with it.
+A run MAY be restricted to the default resolution alone, and its record SHALL
+then state that only the default geometry was covered.
 
-#### Scenario: The scaling flag is set
-- **WHEN** the harness runs with the geometry flag enabled
-- **THEN** each surface is presented and scored once per configured geometry,
-  and each answer records which geometry it applied to
+#### Scenario: A run covers several resolutions
+- **WHEN** a run is captured with several resolutions configured
+- **THEN** each surface is captured and scored once per resolution, and each
+  answer records which resolution it applied to
 
-#### Scenario: The scaling flag is not set
-- **WHEN** the harness runs without the flag
-- **THEN** each surface is presented once and the record states that only the
+#### Scenario: A run covers the default size only
+- **WHEN** a run is restricted to the default resolution
+- **THEN** each surface is captured once and the record states that only the
   default geometry was covered
 
+#### Scenario: The resolution set changes between runs
+- **WHEN** two runs covering different resolution sets are compared
+- **THEN** each record states which resolutions it covered, so the difference is
+  visible rather than inferred from which answers happen to exist
+
 ### Requirement: The harness covers the audio and workspace surfaces
-The full run SHALL include, at minimum: microphone device selection and
-switching, the global mute and gain controls, each analysis tool opening and
-displaying live input, moving a tool between docked, floating, and tabbed
-presentation, workspace layout persisting across a restart, and the settings
-import and export round trip.
+A full run SHALL include, at minimum: microphone device selection and switching,
+the global mute and gain controls, each analysis tool opening and displaying
+live input, moving a tool between docked, floating, and tabbed presentation,
+workspace layout persisting across a restart, and the settings import and export
+round trip. Those of these that are questions about behaviour rather than
+appearance SHALL be covered by the attended pass, and a full run SHALL NOT be
+complete until that pass has answered them.
 
 #### Scenario: A full run completes
 - **WHEN** a full run finishes
-- **THEN** every listed surface has been presented and scored
+- **THEN** every listed surface has been captured, scored, and — where it asks
+  about behaviour — answered in the attended pass
+
+#### Scenario: Only the captures were reviewed
+- **WHEN** a full run's captures are all scored but its attended questions are
+  unanswered
+- **THEN** the run is incomplete and the release gate treats it as such
 
 ### Requirement: The harness writes the run record itself
-On completion the harness SHALL write a record containing the date, the commit
-verified, the platform, the audio device in use, the mode, whether the geometry
-flag was set, and every answer with its notes. The tester SHALL NOT have to
-transcribe results by hand.
+On completion the suite SHALL export a record containing the date, the commit
+verified, the platform, the audio device in use, the mode, which resolutions
+were covered, and every answer with its notes — generated from the stored run
+rather than transcribed by hand. Tags and comments SHALL be exported alongside
+the answers as additional detail.
 
 #### Scenario: A run finishes
-- **WHEN** the last surface is answered
-- **THEN** a complete record is written without further tester action
+- **WHEN** the last surface is scored
+- **THEN** a complete record is exported without further tester action
 
 #### Scenario: The record identifies what was verified
 - **WHEN** a record is read later
 - **THEN** it names the commit, platform, and audio device, so it is clear what
   the results apply to
 
-### Requirement: An interrupted run preserves what was answered
-If a run is interrupted, the harness SHALL preserve the answers already given
-and mark the run incomplete, so that a long full run is not lost and an
-incomplete run is never mistaken for a passing one.
+#### Scenario: A reviewer's tags and comments are kept
+- **WHEN** a run whose images were tagged and commented is exported
+- **THEN** the tags and comments appear in the record alongside the answers they
+  relate to
 
-#### Scenario: The tester interrupts a full run
-- **WHEN** a run is interrupted partway
-- **THEN** the answers given so far are written and the record is marked
-  incomplete
+### Requirement: An interrupted run preserves what was answered
+If a capture pass or a review is interrupted, the suite SHALL preserve what was
+already captured, scored, tagged, and commented, and SHALL mark the run
+incomplete, so that a long run is not lost and an incomplete run is never
+mistaken for a passing one.
+
+#### Scenario: A capture pass is interrupted
+- **WHEN** an unattended capture pass is interrupted partway
+- **THEN** the captures already produced are kept and the run is resumable
+  without recapturing them
+
+#### Scenario: The reviewer interrupts a review
+- **WHEN** a review is closed partway through scoring
+- **THEN** the answers given so far are kept and the run is marked incomplete
 
 #### Scenario: An incomplete record is read
 - **WHEN** an incomplete record is compared against a complete one
@@ -290,13 +283,13 @@ release-affecting files changed since the verified commit.
   release-affecting files that changed since it
 
 ### Requirement: The harness is not required to run in CI
-The harness SHALL be a local development tool. No CI check SHALL invoke it,
-since it requires a real display, a real audio device, and a human. CI reads the
-records it produces; it never runs it.
+The suite SHALL be a local development tool. No CI check SHALL invoke its
+capture, attended, or review passes, since they require a real display, a real
+audio device, and a human. CI reads the records it exports; it never runs it.
 
 #### Scenario: CI runs without a display or a tester
 - **WHEN** CI runs
-- **THEN** no check invokes the manual harness
+- **THEN** no check invokes any pass of the testing suite
 
 #### Scenario: An ordinary pull request
 - **WHEN** a pull request that is not a release runs CI
