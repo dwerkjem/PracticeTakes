@@ -15,9 +15,6 @@ const std::map<std::string, std::string>& unsupportedConstructs()
         {"harmony", "Chord symbols are not imported."},
         {"figured-bass", "Figured bass is not imported."},
         {"unpitched", "Percussion and other unpitched notes are not imported."},
-        {"transpose",
-         "This part is written for a transposing instrument. The importer keeps the written "
-         "pitches, so the part will sound a interval away from where it is notated."},
         {"multiple-rest", "Multi-measure rests are imported as ordinary rests."},
         {"print", "Page and system layout is the renderer's to decide, so it was ignored."},
         {"defaults", "Engraving defaults such as fonts and page size are not part of the score."},
@@ -84,6 +81,11 @@ const std::unordered_set<std::string>& knownElements()
         "clef-octave-change",
         "staves",
         "instruments",
+        "transpose",
+        "diatonic",
+        "chromatic",
+        "octave-change",
+        "double",
         "staff-details",
         "measure-style",
         // Time and events

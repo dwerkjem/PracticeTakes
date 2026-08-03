@@ -24,7 +24,7 @@ beethoven-3-vom-tode.mxl                             |  2 |   49 |   564480 |   
 berg-1-nacht.mxl                                     |  2 |   38 |   583680 |   14
 boulanger-5-au-pied-de-mon-lit.mxl                   |  2 |   39 |   706560 |   12
 brahms-6-du-sprichst-dass-ich-mich-taeuschte.mxl     |  2 |   43 |   660480 |    4
-burgk-a-solis-ortus.mxl                              |  5 |  173 |  5199360 |    8
+burgk-a-solis-ortus.mxl                              |  5 |  173 |  5199360 |    7
 debussy-2-il-pleure-dans-mon-coeur.mxl               |  2 |   80 |   921600 |   10
 faure-4-a-clymene.mxl                                |  2 |   71 |  1217280 |    8
 french-abyssinia.mxl                                 |  5 |   22 |   203520 |    2
@@ -34,15 +34,15 @@ holyoke-acworth-2v.mxl                               |  2 |   33 |   506880 |   
 holyoke-acworth.mxl                                  |  4 |   33 |   506880 |    2
 jenks-anthem-for-thanksgiving.mxl                    |  6 |  185 |  2396160 |    3
 joplin-please-say-you-will.mxl                       |  2 |  104 |  1198080 |    1
-king-abbeville.mxl                                   |  4 |   15 |   172800 |    2
+king-abbeville.mxl                                   |  4 |   15 |   172800 |    1
 liliuokalani-aloha-oe.mxl                            |  4 |   23 |   353280 |    4
 liszt-2-pace-non-trovo.mxl                           |  3 |  111 |  1720320 |   15
 mahler-4-die-zwei-blauen-augen-von-meinem-schatz.mxl |  2 |   68 |  1056000 |   11
-marenzio-ahime-tal-fu-d-amore-e-l-esca-e-l-amo.mxl   |  6 |   47 |  1413120 |    7
+marenzio-ahime-tal-fu-d-amore-e-l-esca-e-l-amo.mxl   |  6 |   47 |  1413120 |    6
 mel-asiso-sovra-un-sasso.mxl                         |  7 |   42 |  1320960 |    5
 mendelssohn-3-die-liebende-schreibt-mwv-k-66.mxl     |  2 |   47 |   721920 |    8
 mendelssohn-hark-the-herald-angels-sing.mxl          |  1 |   20 |   307200 |    8
-morley-a-la-strada-a-dio.mxl                         |  5 |   90 |  1428480 |    9
+morley-a-la-strada-a-dio.mxl                         |  5 |   90 |  1428480 |    8
 prez-allegez-moy.mxl                                 |  6 |   45 |  1382400 |    3
 satie-5-chanson-du-chat.mxl                          |  2 |   23 |   176640 |    5
 schubert-12-am-meer.mxl                              |  2 |   45 |   691200 |    6

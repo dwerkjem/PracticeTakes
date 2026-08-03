@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "MusicalTime.h"
+#include "Pitch.h"
 
 // Notated attributes that apply from a point in the score onwards: clef, key,
 // time signature, and the tempo/dynamic directions attached to a position.
@@ -73,11 +74,22 @@ struct AttributeChanges
 
     std::optional<KeySignature> key;
     std::optional<TimeSignature> time;
+
+    // One entry per staff whose transposition changes. Usually empty; a
+    // clarinettist swapping from the A to the B-flat instrument mid-movement is
+    // the case that makes this a per-measure change rather than a per-part
+    // constant.
+    //
+    // The importer has already applied these to every note's sounding pitch.
+    // They are kept because a renderer may want to label the staff -- "Clarinet
+    // in B-flat" -- and because #39 will want to round-trip what the file said.
+    std::vector<Transposition> transpositions;
 };
 
 [[nodiscard]] inline bool isEmpty(const AttributeChanges& changes) noexcept
 {
-    return changes.clefs.empty() && !changes.key.has_value() && !changes.time.has_value();
+    return changes.clefs.empty() && !changes.key.has_value() && !changes.time.has_value() &&
+           changes.transpositions.empty();
 }
 
 enum class DirectionKind

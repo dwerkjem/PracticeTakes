@@ -46,7 +46,9 @@ Tick rescaleDuration(
     return rescaled.ticks;
 }
 
-// Read a <pitch> into the model, or nothing if it is unreadable.
+// Read a <pitch> into the model, or nothing if it is unreadable. This is the
+// *written* pitch; the caller applies the staff's transposition to get what it
+// sounds.
 std::optional<Pitch>
 readPitch(const XmlNode& pitchNode, ReadContext& context, const DiagnosticLocation& location)
 {
@@ -94,11 +96,30 @@ PendingTie readTieMarkings(const XmlNode& noteNode)
     return tie;
 }
 
+// The transposition in force on `staff`, or none, in which case the staff
+// sounds as written.
+Transposition transpositionFor(const PartCursorState& state, int staff)
+{
+    const auto found = state.transpositions.find(staff);
+
+    return found != state.transpositions.end() ? found->second : Transposition{};
+}
+
 // Append a note and its tie markings together, so `event.notes` and `noteTies`
 // cannot drift out of step.
-void appendNote(PendingEvent& pending, const Pitch& pitch, const PendingTie& tie)
+//
+// The sounding pitch is computed here, once, from the written pitch and the
+// staff's transposition -- rather than stored as a transposition for consumers
+// to apply, which is the arrangement where one consumer forgetting makes a
+// whole wind section silently play in the wrong key.
+void appendNote(
+    PendingEvent& pending,
+    const Pitch& written,
+    const Transposition& transposition,
+    const PendingTie& tie)
 {
-    pending.event.notes.push_back(Note{pitch, std::nullopt, std::nullopt});
+    pending.event.notes.push_back(
+        Note{written, transposed(written, transposition), std::nullopt, std::nullopt});
     pending.noteTies.push_back(tie);
 }
 
@@ -222,10 +243,30 @@ void readAttributes(
         measure.attributes.clefs.push_back(clef);
     }
 
-    if (findChild(attributesNode, "transpose") != nullptr)
+    for (const XmlNode* transposeNode : findChildren(attributesNode, "transpose"))
     {
-        context.diagnostics.addUnsupported(
-            locationOf(part, measure), "transpose", unsupportedConstructs().at("transpose"));
+        Transposition transposition;
+        transposition.staff = intAttribute(*transposeNode, "number").value_or(1);
+        transposition.diatonic =
+            static_cast<int>(parseInteger(childValue(*transposeNode, "diatonic")).value_or(0));
+        transposition.chromatic =
+            static_cast<int>(parseInteger(childValue(*transposeNode, "chromatic")).value_or(0));
+        transposition.octaveChange =
+            static_cast<int>(parseInteger(childValue(*transposeNode, "octave-change")).value_or(0));
+
+        // <double/> means "and also sound an octave lower", used for instruments
+        // notated at one octave and played at another. Folding it into the
+        // octave change is exactly what it means.
+        if (findChild(*transposeNode, "double") != nullptr)
+        {
+            --transposition.octaveChange;
+        }
+
+        state.transpositions[transposition.staff] = transposition;
+
+        // Kept on the measure so a renderer can label the staff and #39 can
+        // round-trip what the file said. The notes already carry the result.
+        measure.attributes.transpositions.push_back(transposition);
     }
 }
 
@@ -286,7 +327,9 @@ void readNote(
                 // The tie markings belong to *this* note of the chord, not to
                 // the chord. Folding them onto the event would sustain notes
                 // that were re-struck and drop ties that were written.
-                appendNote(target, *pitch, readTieMarkings(noteNode));
+                appendNote(
+                    target, *pitch, transpositionFor(state, target.event.staff),
+                    readTieMarkings(noteNode));
                 target.event.kind = EventKind::chord;
             }
         }
@@ -329,7 +372,9 @@ void readNote(
             pitch.has_value())
         {
             pending.event.kind = EventKind::note;
-            appendNote(pending, *pitch, readTieMarkings(noteNode));
+            appendNote(
+                pending, *pitch, transpositionFor(state, pending.event.staff),
+                readTieMarkings(noteNode));
         }
         else
         {

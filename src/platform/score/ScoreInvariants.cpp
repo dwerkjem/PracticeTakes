@@ -67,23 +67,29 @@ int enforceConsistentPitches(Score& score)
                 {
                     for (Note& note : event.notes)
                     {
-                        Pitch& pitch = note.pitch;
-
-                        if (isConsistent(pitch))
+                        // Both pitches are checked, and independently. They
+                        // differ only on a transposing instrument's part, and
+                        // that is exactly where an inconsistency would hide:
+                        // the written pitch renders correctly while the
+                        // sounding one plays a semitone out, or the reverse.
+                        for (Pitch* pitch : {&note.written, &note.sounding})
                         {
-                            continue;
+                            if (isConsistent(*pitch))
+                            {
+                                continue;
+                            }
+
+                            // The spelling is what the engraver wrote; the
+                            // number is derived. So the spelling wins.
+                            pitch->midiNoteNumber =
+                                midiNoteNumberFor(pitch->step, pitch->alter, pitch->octave);
+
+                            ++repairs;
+                            addRepair(
+                                score, locate(part, measure, voice), "pitch",
+                                "a pitch's number disagreed with its notated spelling; "
+                                "recomputed from the spelling");
                         }
-
-                        // The spelling is what the engraver wrote; the number
-                        // is derived. So the spelling wins.
-                        pitch.midiNoteNumber =
-                            midiNoteNumberFor(pitch.step, pitch.alter, pitch.octave);
-
-                        ++repairs;
-                        addRepair(
-                            score, locate(part, measure, voice), "pitch",
-                            "sounding pitch disagreed with its notated spelling; "
-                            "recomputed from the spelling");
                     }
                 }
             }
@@ -471,7 +477,7 @@ int enforceTieIntegrity(Score& score)
                                 (isForward ? target->tiedFrom : target->tiedTo) == self;
 
                             const bool sameSound =
-                                target != nullptr && soundsSameAs(note.pitch, target->pitch);
+                                target != nullptr && soundsSameAs(note.sounding, target->sounding);
 
                             if (mirrored && sameSound)
                             {

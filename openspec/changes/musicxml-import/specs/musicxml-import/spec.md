@@ -40,10 +40,10 @@ importer's behaviour SHALL match that document.
 
 ### Requirement: The importer converts supported notation into the score model
 The importer SHALL convert parts including multi-staff parts, measures, notes,
-rests, chords, voices, ties, pitches with their spelling, clef, key and time
-signatures including mid-score changes, tempo markings, lyric syllables with
-their verse number and syllabic position, and dynamics, into the normalized
-score model.
+rests, chords, voices, ties, pitches with their spelling, instrument
+transpositions, clef, key and time signatures including mid-score changes,
+tempo markings, lyric syllables with their verse number and syllabic position,
+and dynamics, into the normalized score model.
 
 #### Scenario: A vocal score with lyrics imports
 - **WHEN** a multi-part vocal score with several lyric verses is imported
@@ -73,6 +73,13 @@ score model.
   signature
 - **THEN** the measure is imported as a pickup without being reported as an
   error, and subsequent measures start at the correct positions
+
+#### Scenario: A part is written for a transposing instrument
+- **WHEN** a part declares a transposition, whether at its start or partway
+  through the score
+- **THEN** each of its notes carries both the pitch as written and the pitch as
+  sounded, and the sounding pitch is spelled correctly rather than merely
+  sounding correct
 
 #### Scenario: Ties are distinguished from slurs
 - **WHEN** a score contains both a tie between two notes of the same pitch and a

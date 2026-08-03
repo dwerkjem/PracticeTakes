@@ -426,6 +426,7 @@ if(BUILD_TESTING)
         src/tests/platform/score/musicxml/read/MusicXmlNoteTests.cpp
         src/tests/platform/score/musicxml/read/MusicXmlPercussionTests.cpp
         src/tests/platform/score/musicxml/read/MusicXmlTimingTests.cpp
+        src/tests/platform/score/musicxml/read/MusicXmlTranspositionTests.cpp
         src/tests/support/BenchmarkFakesTests.cpp
         src/application/configuration/SettingsPersistence.cpp
         src/application/configuration/SettingsTransferCodec.cpp

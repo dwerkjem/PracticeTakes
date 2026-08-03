@@ -330,7 +330,8 @@ TEST_CASE("every corpus score satisfies the model's invariants", "[score][musicx
                         // Invariant 5: spelling and sounding pitch agree.
                         for (const Note& note : event.notes)
                         {
-                            CHECK(isConsistent(note.pitch));
+                            CHECK(isConsistent(note.written));
+                            CHECK(isConsistent(note.sounding));
                         }
 
                         previousEnd = event.onset + event.duration;

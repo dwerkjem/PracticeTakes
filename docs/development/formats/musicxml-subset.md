@@ -84,6 +84,12 @@ Everything here reaches the model and is covered by tests.
 - Pitched notes, with `<step>`, `<alter>`, and `<octave>` kept **and** the
   sounding MIDI number derived. Both, always — a C-sharp and a D-flat are the
   same number and different staff positions.
+- `<transpose>`, including `<octave-change>`, `<double/>`, and a per-staff
+  `number`, and including a change partway through the score. Every note carries
+  **both** its written and its sounding pitch: the renderer draws `written`,
+  playback and pitch matching use `sounding`. Spelling is transposed
+  diatonically as well as chromatically, so a B-flat clarinet's written C
+  sounds a B-flat rather than an A-sharp.
 - Rests, including whole-measure rests (`<rest measure="yes">`), whose duration
   comes from the bar when the file omits it.
 - Chords: a run of `<note>` elements where every note after the first carries
@@ -134,7 +140,6 @@ phrase, and one diagnostic each would bury every real finding.
 | `<harmony>` | Chord symbols |
 | `<figured-bass>` | |
 | `<unpitched>` | Percussion |
-| `<transpose>` | **See below** |
 | `<multiple-rest>` | Imported as ordinary rests |
 | `<print>` | Page and system layout is the renderer's to decide |
 | `<defaults>` | Fonts, page size — engraving, not score |
@@ -142,14 +147,6 @@ phrase, and one diagnostic each would bury every real finding.
 
 `<notations><tied>` is the engraved counterpart of a tie and creates no link;
 the sounding `<tie>` does.
-
-### Transposing instruments are a known gap
-
-A part with `<transpose>` is imported **at written pitch**, so a B-flat clarinet
-part will sound and display a whole tone away from where it is notated. This is
-acceptable for an MVP aimed at singers and piano and unacceptable the moment
-anyone loads a band score. It is flagged with a diagnostic on every affected
-part rather than left to be discovered, and there is a follow-up issue for it.
 
 ## Unrecognised elements
 

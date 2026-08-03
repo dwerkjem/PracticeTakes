@@ -68,13 +68,13 @@ TEST_CASE(
 
     REQUIRE(voice.events.size() == 2);
 
-    const Pitch& sharp = voice.events[0].notes.front().pitch;
+    const Pitch& sharp = voice.events[0].notes.front().written;
     CHECK(sharp.step == Step::c);
     CHECK(sharp.alter == 1);
     CHECK(sharp.octave == 4);
     CHECK(sharp.midiNoteNumber == 61);
 
-    const Pitch& flat = voice.events[1].notes.front().pitch;
+    const Pitch& flat = voice.events[1].notes.front().written;
     CHECK(flat.step == Step::d);
     CHECK(flat.alter == -1);
     CHECK(flat.midiNoteNumber == 61);
@@ -105,9 +105,9 @@ TEST_CASE("a three-note chord is one event consuming one duration", "[score][mus
     CHECK(chord.kind == EventKind::chord);
     CHECK(chord.duration == whole);
     REQUIRE(chord.notes.size() == 3);
-    CHECK(chord.notes[0].pitch.midiNoteNumber == 60);
-    CHECK(chord.notes[1].pitch.midiNoteNumber == 64);
-    CHECK(chord.notes[2].pitch.midiNoteNumber == 67);
+    CHECK(chord.notes[0].written.midiNoteNumber == 60);
+    CHECK(chord.notes[1].written.midiNoteNumber == 64);
+    CHECK(chord.notes[2].written.midiNoteNumber == 67);
 }
 
 TEST_CASE("an unpitched chord tone consumes no time", "[score][musicxml][note]")
@@ -187,8 +187,8 @@ TEST_CASE(
     // The unpitched tone contributes no pitch and costs no time; the pitched
     // one still lands.
     REQUIRE(voice.events.front().notes.size() == 2);
-    CHECK(voice.events.front().notes[0].pitch.midiNoteNumber == 60);
-    CHECK(voice.events.front().notes[1].pitch.midiNoteNumber == 64);
+    CHECK(voice.events.front().notes[0].written.midiNoteNumber == 60);
+    CHECK(voice.events.front().notes[1].written.midiNoteNumber == 64);
 }
 
 TEST_CASE(

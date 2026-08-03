@@ -78,11 +78,11 @@ TEST_CASE("a pitch contradicting its spelling is recomputed", "[score][invariant
     Score score = scoreOf({barOf({noteAt(0, quarter)})});
 
     // A note that renders on one line and sounds as another.
-    score.parts.front().measures[0].voices[0].events[0].notes[0].pitch.midiNoteNumber = 61;
+    score.parts.front().measures[0].voices[0].events[0].notes[0].written.midiNoteNumber = 61;
 
     CHECK(enforceConsistentPitches(score) == 1);
 
-    const Pitch& repaired = firstVoice(score).events[0].notes.front().pitch;
+    const Pitch& repaired = firstVoice(score).events[0].notes.front().written;
 
     CHECK(repaired.midiNoteNumber == 60);
     CHECK(isConsistent(repaired));
@@ -476,7 +476,7 @@ TEST_CASE("the full pass repairs a thoroughly broken score without throwing", "[
     // produce something a musician can still practise with.
     Score score = scoreOf({barOf({noteAt(quarter * 2, quarter * 9), noteAt(0, -quarter)})}, "");
 
-    score.parts.front().measures[0].voices[0].events[0].notes[0].pitch.midiNoteNumber = 7;
+    score.parts.front().measures[0].voices[0].events[0].notes[0].written.midiNoteNumber = 7;
     score.parts.front().measures[0].voices[0].events[0].notes.front().tiedTo = NoteRef{9, 9, 9};
 
     REQUIRE_NOTHROW(enforceInvariants(score));
@@ -492,7 +492,7 @@ TEST_CASE("the full pass repairs a thoroughly broken score without throwing", "[
 
         for (const Note& note : event.notes)
         {
-            CHECK(isConsistent(note.pitch));
+            CHECK(isConsistent(note.written));
         }
     }
 }

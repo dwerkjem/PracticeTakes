@@ -184,7 +184,7 @@ TEST_CASE(
     // The music survived intact.
     const Voice& voice = result.score->parts.front().measures.front().voices.front();
     REQUIRE(voice.events.size() == 1);
-    CHECK(voice.events.front().notes.front().pitch.midiNoteNumber == 72);
+    CHECK(voice.events.front().notes.front().written.midiNoteNumber == 72);
 
     // And every category was reported.
     CHECK(find(result.diagnostics, "print") != nullptr);
@@ -193,35 +193,6 @@ TEST_CASE(
     CHECK(find(result.diagnostics, "articulations") != nullptr);
     CHECK(find(result.diagnostics, "ornaments") != nullptr);
     CHECK(find(result.diagnostics, "something-from-the-future") != nullptr);
-}
-
-TEST_CASE(
-    "a transposing instrument is imported at written pitch and flagged",
-    "[score][musicxml][diagnostics]")
-{
-    // A real gap, deliberately taken: a B-flat part will sound and display a
-    // whole tone off. Acceptable for an MVP aimed at singers and piano,
-    // unacceptable the moment anyone loads a band score -- so it says so rather
-    // than being discovered later.
-    const std::string transposing =
-        "      <attributes>\n"
-        "        <divisions>1</divisions>\n"
-        "        <time><beats>4</beats><beat-type>4</beat-type></time>\n"
-        "        <transpose><diatonic>-1</diatonic><chromatic>-2</chromatic></transpose>\n"
-        "      </attributes>\n";
-
-    const MusicXmlImportResult result =
-        importMusicXmlDocument(scoreDocument(measure("1", transposing + note("D", 5, 4))));
-
-    REQUIRE(succeeded(result.status));
-
-    const Diagnostic* transpose = find(result.diagnostics, "transpose");
-    REQUIRE(transpose != nullptr);
-    CHECK(transpose->severity == DiagnosticSeverity::unsupported);
-
-    // Written pitch, unchanged.
-    const Voice& voice = result.score->parts.front().measures.front().voices.front();
-    CHECK(voice.events.front().notes.front().pitch.midiNoteNumber == 74);
 }
 
 TEST_CASE("a clean file produces no diagnostics at all", "[score][musicxml][diagnostics]")

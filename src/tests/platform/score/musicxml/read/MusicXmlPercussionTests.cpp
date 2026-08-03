@@ -208,6 +208,6 @@ TEST_CASE(
     REQUIRE(voice.events.size() == 1);
     CHECK(voice.events.front().duration == whole);
     REQUIRE(voice.events.front().notes.size() == 1);
-    CHECK(voice.events.front().notes.front().pitch.midiNoteNumber == 60);
+    CHECK(voice.events.front().notes.front().written.midiNoteNumber == 60);
     CHECK(bar.nominalDuration == whole);
 }

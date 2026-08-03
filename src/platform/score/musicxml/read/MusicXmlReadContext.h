@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -58,6 +59,10 @@ struct PartCursorState
 
     TimeSignature time;
     int staffCount = 1;
+
+    // Transposition in force per staff, by staff number. Absent means the staff
+    // sounds as written, which is every staff of most scores.
+    std::map<int, Transposition> transpositions;
 };
 
 struct ReadContext

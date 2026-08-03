@@ -534,7 +534,8 @@ resolved decision 1:
   Tie linkage sits here rather than on the event because a chord may tie some of
   its notes and not others; see invariant 4.
 - **`Pitch`** — step, alter, octave, **and** the derived MIDI note number. Both,
-  always. The renderer needs the spelling to choose a staff line and an
+  always. A `Note` carries two of them, `written` and `sounding`, which differ
+  only on a transposing instrument's part. The renderer needs the spelling to choose a staff line and an
   accidental; playback needs the number. Deriving the spelling back from a MIDI
   number is not possible, so a model that stores only the number cannot be
   rendered correctly, and a model that stores only the spelling makes every
@@ -675,10 +676,16 @@ produce thousands.
   by invariant 7 (a voice may not exceed the measure) plus explicit tests for
   two- and four-voice measures, backup to a non-zero position, and forward past
   the end of a measure.
-- **[Risk] Transposing instruments are dropped, so a B-flat part will sound and
-  display a whole tone off.** Acceptable for an MVP aimed at singers and piano;
-  unacceptable the moment anyone loads a band score. Should be a follow-up issue
-  opened at the same time as this change lands, not discovered later.
+- **[Risk, resolved] Transposing instruments.** Originally dropped, which would
+  have put every wind and brass part in the wrong key — silently, since nothing
+  crashes. Opened as #127 and then fixed inside this change: `<transpose>` is
+  read, and every note carries both its written and its sounding pitch.
+
+  Storing both rather than storing the transposition and asking consumers to
+  apply it is the point. The alternative works until one consumer forgets, and
+  then a whole section plays a tone out with nothing to say so. The fields are
+  named `written` and `sounding` rather than one of them being `pitch`, so
+  choosing between them is unavoidable.
 - **[Risk] Exporter dialects differ more than the format suggests.** Finale
   emits divisions and voice numbering unlike MuseScore's; Sibelius emits large
   volumes of layout elements. Decision 6 is the mitigation, and it only works if

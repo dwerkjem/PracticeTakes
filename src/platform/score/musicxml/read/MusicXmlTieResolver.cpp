@@ -54,7 +54,7 @@ void resolveTies(
                     }
 
                     const std::pair<int, int> key{
-                        voice.number, pending.event.notes[noteIndex].pitch.midiNoteNumber};
+                        voice.number, pending.event.notes[noteIndex].sounding.midiNoteNumber};
                     const NoteRef self{measureIndex, voiceIndex, eventIndex, noteIndex};
 
                     // Stop first, then start. A note in the middle of a chain

@@ -165,7 +165,7 @@ TEST_CASE("a tie links two events in both directions", "[score][model]")
 
     // Invariant 4 also requires both ends to sound the same pitch -- a file may
     // legitimately spell them differently either side of a barline.
-    CHECK(soundsSameAs(start.notes.front().pitch, stop.notes.front().pitch));
+    CHECK(soundsSameAs(start.notes.front().written, stop.notes.front().written));
 }
 
 TEST_CASE("a plain event carries no tuplet ratio", "[score][model]")

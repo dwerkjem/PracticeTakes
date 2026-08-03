@@ -57,9 +57,29 @@ struct NoteRef
     return !(lhs == rhs);
 }
 
-// One sounding note: its pitch, and where it ties.
+// One note: what is written, what it sounds, and where it ties.
 //
-// Set on the note a tie *starts* at, pointing to where it stops, and vice
+// **The two pitches are both stored, and neither is "the" pitch.** For most
+// music they are equal. For a transposing instrument they are not: a B-flat
+// clarinet's written C sounds a B-flat, and a horn in F written C sounds an F
+// a fifth below. Deriving either from the other needs the part's transposition,
+// which lives elsewhere in the score, so a note that carried only one of them
+// would make every consumer look it up -- and one consumer that forgot would be
+// silently, consistently wrong in a way nothing crashes on.
+//
+// So the fields are named symmetrically rather than one being `pitch` and the
+// other an afterthought. Choosing is the point:
+//
+//  - **`written`** is what the engraver put on the staff, and what the renderer
+//    draws. It is the file's own spelling, against the part's own (transposed)
+//    key signature.
+//  - **`sounding`** is what is heard, and what playback and any pitch-matching
+//    against live audio must use.
+//
+// Both satisfy invariant 5 independently: each one's MIDI number agrees with
+// its own spelling.
+//
+// Ties: set on the note a tie *starts* at, pointing to where it stops, and vice
 // versa. Invariant 4 requires both ends to exist, refer to a real note, and
 // sound the same pitch; unmatched ends are dropped with a diagnostic rather
 // than left dangling, because a half-linked tie is a null dereference waiting
@@ -71,11 +91,19 @@ struct NoteRef
 // it explicitly.
 struct Note
 {
-    Pitch pitch;
+    Pitch written;
+    Pitch sounding;
 
     std::optional<NoteRef> tiedTo;
     std::optional<NoteRef> tiedFrom;
 };
+
+// Whether this note sounds where it is written -- true for everything except a
+// transposing instrument's part.
+[[nodiscard]] inline bool soundsAsWritten(const Note& note) noexcept
+{
+    return note.written == note.sounding;
+}
 
 // The ratio a tuplet compresses time by: `actual` notes played in the time of
 // `normal`. A triplet is {3, 2}. The *bracket* a notation program draws is
