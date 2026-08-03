@@ -57,7 +57,9 @@ class ReviewTestCase(unittest.TestCase):
 
     def add_capture(self, surface, geometry: str = "default", failure: str = "",
                     theme: str = "dark") -> int:
-        image = self.root / f"{surface.state}-{geometry}-{theme}.png"
+        images = self.root / "images" / "run-1"
+        images.mkdir(parents=True, exist_ok=True)
+        image = images / f"{surface.state}-{geometry}-{theme}.png"
 
         if not failure:
             image.write_bytes(b"png")

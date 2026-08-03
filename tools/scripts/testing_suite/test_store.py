@@ -7,6 +7,7 @@ the developer's real store and never needs a display, an application, or Pillow.
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 import sqlite3
 import sys
@@ -153,6 +154,40 @@ class MigrationTests(StoreTestCase):
         self.assertEqual(migrated.captures(1)[0].theme, "dark")
         self.assertEqual(len(migrated.verdicts(1)), 1)
         self.assertEqual(migrated.tags_for(1), ["broken"])
+
+    def test_the_capture_rebuild_is_one_transaction(self) -> None:
+        """A reader in another process must see the old table or the new one.
+
+        `executescript` commits between statements, so without an explicit BEGIN
+        the DROP and the RENAME are separate transactions and a hub left open in
+        another terminal can read a table that is half of each -- which showed up
+        as a 500 with a NULL width.
+        """
+        source = inspect.getsource(store_module._migration_3)
+
+        self.assertIn("BEGIN IMMEDIATE", source)
+        self.assertIn("COMMIT", source)
+        self.assertLess(source.index("BEGIN IMMEDIATE"), source.index("DROP TABLE capture"))
+        self.assertGreater(source.index("COMMIT"), source.index("RENAME TO capture"))
+
+    def test_a_row_missing_a_number_reads_as_zero_rather_than_throwing(self) -> None:
+        """One unreadable row should cost that tile, not the request."""
+        row = {"id": 3, "run_id": 1, "surface_state": "empty", "surface_title": "The shell",
+               "geometry": "default", "theme": None, "image_path": None, "thumbnail_path": "",
+               "width": None, "height": 800, "digest": "", "failure": "", "pruned": 0,
+               "notice": ""}
+        capture = store_module._capture_row(row)
+
+        self.assertEqual(capture.width, 0)
+        self.assertEqual(capture.height, 800)
+        self.assertEqual(capture.theme, "dark")
+        self.assertEqual(capture.image_path, "")
+
+    def test_a_row_missing_a_column_entirely_still_reads(self) -> None:
+        capture = store_module._capture_row({"id": 5, "surface_title": "The shell"})
+
+        self.assertEqual(capture.id, 5)
+        self.assertEqual(capture.geometry, "")
 
     def test_the_tag_vocabulary_starts_populated(self) -> None:
         self.assertEqual(

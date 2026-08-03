@@ -77,7 +77,11 @@ class SuiteTestCase(unittest.TestCase):
         )
 
     def add_capture(self, surface, geometry: str = "default") -> int:
-        image = self.root / f"{surface.state}-{geometry}.png"
+        # Where the capture pass actually puts them, which the server now
+        # requires: a row in the database is not a licence to read any file.
+        images = self.root / "images" / "run-1"
+        images.mkdir(parents=True, exist_ok=True)
+        image = images / f"{surface.state}-{geometry}.png"
         image.write_bytes(b"png")
 
         return self.store.record_capture(
@@ -379,6 +383,51 @@ class ServerTests(SuiteTestCase):
         status, _ = self.request("POST", "/api/score-many", {"capture_ids": [], "verdict": "pass"})
 
         self.assertEqual(status, 400)
+
+    def test_a_static_path_cannot_escape_the_web_directory(self) -> None:
+        """Serving is a lookup in a fixed table, so there is no traversal to get wrong."""
+        for attempt in (
+            "/web/../store.py",
+            "/web/../../../../etc/passwd",
+            "/web/%2e%2e/store.py",
+            "/web//etc/passwd",
+            "/web/vendor/../../server.py",
+        ):
+            with self.subTest(path=attempt):
+                status, _ = self.request("GET", attempt)
+
+                self.assertEqual(status, 404)
+
+    def test_the_files_the_page_needs_are_served(self) -> None:
+        for path in ("/web/app.js", "/web/style.css", "/web/vendor/chart.umd.js"):
+            with self.subTest(path=path):
+                status, _ = self.request("GET", path)
+
+                self.assertEqual(status, 200)
+
+    def test_content_types_come_from_a_table_not_from_the_request(self) -> None:
+        """A guessed type is a response header built from a user-supplied value."""
+        connection = http.client.HTTPConnection(server_module.HOST, self.port, timeout=5)
+        connection.request("GET", "/web/style.css")
+        response = connection.getresponse()
+        response.read()
+        connection.close()
+
+        self.assertEqual(response.getheader("Content-Type"), "text/css; charset=utf-8")
+
+    def test_an_image_outside_the_store_is_refused(self) -> None:
+        """A row is not a licence to read any file on the disk."""
+        elsewhere = self.root / "secret.png"
+        elsewhere.write_bytes(b"not a capture")
+        capture_id = self.store.record_capture(
+            self.run_id, state="empty", title="The shell with no tool open",
+            geometry="default", image_path=str(elsewhere), thumbnail_path=str(elsewhere),
+        )
+
+        status, payload = self.request("GET", f"/image?id={capture_id}")
+
+        self.assertEqual(status, 404)
+        self.assertIn("not in the store", payload["error"])
 
     def test_the_server_stays_on_loopback(self) -> None:
         """The store holds screenshots of unreleased software on a workstation."""

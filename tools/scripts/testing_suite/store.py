@@ -93,22 +93,42 @@ class CaptureRow:
         return bool(self.failure)
 
 
+def _text(row: sqlite3.Row, name: str) -> str:
+    try:
+        return row[name] or ""
+    except (IndexError, KeyError):
+        return ""
+
+
+def _number(row: sqlite3.Row, name: str) -> int:
+    try:
+        return int(row[name] or 0)
+    except (IndexError, KeyError, TypeError, ValueError):
+        return 0
+
+
 def _capture_row(row: sqlite3.Row) -> CaptureRow:
+    """One row, read defensively.
+
+    A review tool that cannot render a row it can read is worse than one that
+    renders it with an unknown size: the grid says "missing" and the reviewer
+    moves on, rather than getting a traceback and a dead request.
+    """
     return CaptureRow(
-        id=int(row["id"]),
-        run_id=int(row["run_id"]),
-        surface_state=row["surface_state"],
-        surface_title=row["surface_title"],
-        geometry=row["geometry"],
-        theme=row["theme"],
-        image_path=row["image_path"],
-        thumbnail_path=row["thumbnail_path"],
-        width=int(row["width"]),
-        height=int(row["height"]),
-        digest=row["digest"],
-        failure=row["failure"],
-        pruned=bool(row["pruned"]),
-        notice=row["notice"],
+        id=_number(row, "id"),
+        run_id=_number(row, "run_id"),
+        surface_state=_text(row, "surface_state"),
+        surface_title=_text(row, "surface_title"),
+        geometry=_text(row, "geometry"),
+        theme=_text(row, "theme") or "dark",
+        image_path=_text(row, "image_path"),
+        thumbnail_path=_text(row, "thumbnail_path"),
+        width=_number(row, "width"),
+        height=_number(row, "height"),
+        digest=_text(row, "digest"),
+        failure=_text(row, "failure"),
+        pruned=bool(_number(row, "pruned")),
+        notice=_text(row, "notice"),
     )
 
 
@@ -246,6 +266,13 @@ def _migration_3(connection: sqlite3.Connection) -> None:
     constraint in place. Existing rows predate palettes and are recorded as
     dark, which is what they were.
 
+    **The rebuild is one transaction.** `executescript` commits between
+    statements, so without an explicit BEGIN another process reading the store --
+    a hub someone left open in the other terminal -- can catch it between the
+    DROP and the RENAME and read a table that is half of each. That produced a
+    500 on an image request with a NULL width, which is the only symptom such a
+    race is ever going to show.
+
     **Foreign keys are off for the rebuild, and that is the whole trick.**
     Verdicts, tags, and comments reference capture(id) ON DELETE CASCADE, so
     dropping the old table with enforcement on deletes every one of them. The
@@ -268,6 +295,8 @@ def _migration_3(connection: sqlite3.Connection) -> None:
 
     connection.executescript(
         """
+        BEGIN IMMEDIATE;
+
         CREATE TABLE capture_v3 (
             id             INTEGER PRIMARY KEY,
             run_id         INTEGER NOT NULL REFERENCES run(id) ON DELETE CASCADE,
@@ -297,6 +326,8 @@ def _migration_3(connection: sqlite3.Connection) -> None:
         DROP TABLE capture;
         ALTER TABLE capture_v3 RENAME TO capture;
         CREATE INDEX capture_by_run ON capture (run_id);
+
+        COMMIT;
         """
     )
 

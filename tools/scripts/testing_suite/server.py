@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
-import mimetypes
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -32,6 +31,39 @@ from store import Store
 
 WEB_ROOT = Path(__file__).resolve().parent / "web"
 HOST = "127.0.0.1"
+
+# Content types are chosen from this table rather than guessed, so nothing a
+# request supplies can reach a response header.
+CONTENT_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".json": "application/json",
+    ".png": "image/png",
+    ".svg": "image/svg+xml",
+    ".md": "text/plain; charset=utf-8",
+}
+
+
+def web_assets(root: Path = WEB_ROOT) -> dict[str, Path]:
+    """Every file the page may ask for, mapped from its request path.
+
+    Built once by walking the directory, so serving a static file is a lookup
+    in a fixed table rather than arithmetic on a path from the URL. A request
+    either names something in here or gets a 404 -- there is no traversal to
+    get wrong, and nothing outside this directory is reachable however the path
+    is spelled.
+    """
+    resolved = root.resolve()
+
+    return {
+        str(path.relative_to(resolved).as_posix()): path
+        for path in sorted(resolved.rglob("*"))
+        if path.is_file() and path.suffix in CONTENT_TYPES
+    }
+
+
+WEB_FILES = web_assets()
 
 
 class ReviewSession:
@@ -154,6 +186,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _send_file(self, path: Path, status: int = 200) -> None:
+        """Send a file this server chose — never one a request named directly."""
         try:
             body = path.read_bytes()
         except OSError:
@@ -161,9 +194,10 @@ class ReviewHandler(BaseHTTPRequestHandler):
 
             return
 
-        kind, _ = mimetypes.guess_type(str(path))
         self.send_response(status)
-        self.send_header("Content-Type", kind or "application/octet-stream")
+        self.send_header(
+            "Content-Type", CONTENT_TYPES.get(path.suffix, "application/octet-stream")
+        )
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -203,16 +237,43 @@ class ReviewHandler(BaseHTTPRequestHandler):
 
             return
 
-        self._send_file(Path(capture.thumbnail_path if thumbnail else capture.image_path))
+        wanted = Path(capture.thumbnail_path if thumbnail else capture.image_path).resolve()
+        images = (self.store.path.parent / "images").resolve()
+
+        # A row in the database is not a licence to read any file on the disk.
+        # Captures live under the store's own image directory; anything else is
+        # a store that has been edited, and is refused rather than served.
+        if images not in wanted.parents:
+            self._send_json({"error": "that image is not in the store"}, status=404)
+
+            return
+
+        self._send_file(wanted)
 
     # --- Routes -------------------------------------------------------------
 
     def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler's name
+        # A review is a long session over a store another process may be
+        # writing. One request that hits something unreadable should say so and
+        # leave the rest of the page working, rather than printing a traceback
+        # to the terminal and dropping the connection.
+        try:
+            self._get()
+        except Exception as error:  # noqa: BLE001 - the last line before a dead request
+            self._send_json({"error": f"{type(error).__name__}: {error}"}, status=500)
+
+    def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler's name
+        try:
+            self._post()
+        except Exception as error:  # noqa: BLE001 - the last line before a dead request
+            self._send_json({"error": f"{type(error).__name__}: {error}"}, status=500)
+
+    def _get(self) -> None:
         parsed = urlparse(self.path)
         query = parse_qs(parsed.query)
 
         if parsed.path in ("/", "/index.html"):
-            self._send_file(WEB_ROOT / "index.html")
+            self._send_file(WEB_FILES["index.html"])
         elif parsed.path == "/api/run":
             run_id = self.run_id
 
@@ -251,16 +312,16 @@ class ReviewHandler(BaseHTTPRequestHandler):
         elif parsed.path == "/thumbnail":
             self._image(query, thumbnail=True)
         elif parsed.path.startswith("/web/"):
-            candidate = (WEB_ROOT / parsed.path[len("/web/"):]).resolve()
+            asset = WEB_FILES.get(parsed.path[len("/web/"):])
 
-            if WEB_ROOT.resolve() in candidate.parents and candidate.is_file():
-                self._send_file(candidate)
-            else:
+            if asset is None:
                 self._send_json({"error": "not found"}, status=404)
+            else:
+                self._send_file(asset)
         else:
             self._send_json({"error": "not found"}, status=404)
 
-    def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler's name
+    def _post(self) -> None:
         parsed = urlparse(self.path)
         payload = self._read_json()
 

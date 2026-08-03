@@ -38,7 +38,6 @@ broader music-practice and digital-audio workstation application.
 ### `performance/`
 
 - [Audio-thread safety](performance/audio-thread-safety.md) — the real-time capture and telemetry contract
-- [Hardware acceptance](performance/hardware-acceptance.md) — the physical-hardware evidence protocol for the Performance Lab
 
 ### `operations/`
 

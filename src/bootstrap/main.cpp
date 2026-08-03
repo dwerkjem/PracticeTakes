@@ -95,7 +95,6 @@ class PracticeTakesApplication final : public juce::JUCEApplication
 
         juce::StringArray arguments;
         arguments.addTokens(argument, true);
-        const auto automatePerformanceLab = arguments.contains("--automate-performance-lab");
         const auto muteMicrophoneForSession = arguments.contains("--mute-microphone");
         juce::String uiValidationScenario;
         if (const auto scenarioIndex = arguments.indexOf("--ui-validation-scenario");
@@ -122,21 +121,11 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         }
 #endif
 
-#if !PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
-        if (automatePerformanceLab)
-        {
-            std::cerr << "Performance Lab is disabled; rebuild with "
-                         "-DPRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=ON\n";
-            setApplicationReturnValue(2);
-            quit();
-            return;
-        }
-#endif
         const auto windowTitle = getApplicationName() + " v" + getApplicationVersion();
 
         mainWindow = std::make_unique<MainWindow>(
-            windowTitle, automatePerformanceLab, muteMicrophoneForSession, uiValidationScenario,
-            testControlState, testControlChannelRequested);
+            windowTitle, muteMicrophoneForSession, uiValidationScenario, testControlState,
+            testControlChannelRequested);
     }
 
     void shutdown() override
@@ -158,7 +147,6 @@ class PracticeTakesApplication final : public juce::JUCEApplication
       public:
         MainWindow(
             const juce::String& title,
-            bool automatePerformanceLab,
             bool muteMicrophoneForSession,
             const juce::String& uiValidationScenario,
             const juce::String& testControlState,
@@ -204,23 +192,6 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             startTestControl(testControlState, testControlChannelRequested);
 #else
             juce::ignoreUnused(testControlState, testControlChannelRequested);
-#endif
-#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
-            if (automatePerformanceLab)
-            {
-                content->automatePerformanceLab(
-                    [](bool succeeded)
-                    {
-                        std::cout
-                            << (succeeded ? "Performance Lab automation completed\n"
-                                          : "Performance Lab automation failed\n");
-                        auto* application = juce::JUCEApplication::getInstance();
-                        application->setApplicationReturnValue(succeeded ? 0 : 1);
-                        application->quit();
-                    });
-            }
-#else
-            juce::ignoreUnused(automatePerformanceLab);
 #endif
         }
 

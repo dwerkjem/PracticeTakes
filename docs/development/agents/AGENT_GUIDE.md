@@ -67,13 +67,10 @@ build/PracticeTakesTests "[.benchmark]"          # opt-in perf benchmarks
 `PracticeTakesTests` links into the build root, not `build/bin/` — only
 `PracticeTakes` sets a `RUNTIME_OUTPUT_DIRECTORY`.
 
-Performance Lab (manual, opt-in instrumentation window) needs a separate
-configure flag:
-
-```bash
-cmake -S . -B build -DPRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=ON
-./tools/scripts/quality/run-performance-lab.sh
-```
+Performance work runs through the testing suite rather than inside the
+application — `uv run test-suite run --kind performance` runs the `[.benchmark]`
+cases and records every measurement against the machine it ran on. The
+in-application Performance Lab was retired for that reason.
 
 ### C++ formatting and static analysis
 
@@ -190,7 +187,7 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   entry in each and no shell change. See
   `docs/development/architecture/adding-a-tool.md`.
 - `src/features` — user-facing tools: `analysis/{tuner,spectrogram,harmonics}`,
-  `feedback`, `performance` (Performance Lab / benchmarking).
+  `feedback`, `performance` (launch timing).
 - `src/platform` — shared infrastructure, chiefly `audio/AudioInputService`
   and `AudioSampleFifo`.
 

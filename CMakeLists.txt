@@ -41,9 +41,6 @@ set(PRACTICE_TAKES_FEEDBACK_ENDPOINT
     "https://practice-takes-feedback-intake.derekrneilson.workers.dev" CACHE STRING
     "HTTPS base URL for the Practice Takes feedback intake service")
 
-option(PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
-    "Enable the development-only Performance Lab window" OFF)
-
 # The manual GUI harness drives the application through this channel. It is a
 # control surface over the application's own state, so it must never be present
 # in a shipped build -- default off, and the release workflow does not set it.
@@ -200,7 +197,6 @@ target_sources(PracticeTakes
         src/application/shell/state/testcontrol/MainComponentTestControl.cpp
         src/application/shell/ui/main_window/MainTitleBar.h
         src/application/shell/ui/main_window/MicrophoneWarning.h
-        src/application/shell/ui/performance/PerformanceLabWindow.h
         src/application/shell/ui/feedback/FeedbackWindow.h
         src/application/shell/ui/feedback/MainComponentFeedback.cpp
         src/application/shell/ui/settings/MainComponentSettings.cpp
@@ -269,33 +265,6 @@ target_sources(PracticeTakes
         src/features/analysis/tuner/TunerDrawing.cpp
         src/features/performance/ApplicationLaunchTimer.cpp
         src/features/performance/ApplicationLaunchTimer.h
-        src/features/performance/BenchmarkRecordCodec.cpp
-        src/features/performance/BenchmarkRecordCodec.h
-        src/features/performance/BenchmarkRecordStore.cpp
-        src/features/performance/BenchmarkRecordStore.h
-        src/features/performance/BenchmarkComparability.cpp
-        src/features/performance/BenchmarkComparability.h
-        src/features/performance/BenchmarkComparison.cpp
-        src/features/performance/BenchmarkComparison.h
-        src/features/performance/BenchmarkRunner.cpp
-        src/features/performance/BenchmarkRunner.h
-        src/features/performance/HarmonicAnalysisActions.cpp
-        src/features/performance/HarmonicAnalysisActions.h
-        src/features/performance/InTreeOptimizationStrategy.cpp
-        src/features/performance/InTreeOptimizationStrategy.h
-        src/features/performance/NonRealTimeTelemetryCollector.cpp
-        src/features/performance/NonRealTimeTelemetryCollector.h
-        src/features/performance/PerformanceLabController.cpp
-        src/features/performance/PerformanceLabController.h
-        src/features/performance/PlatformProvenanceProvider.cpp
-        src/features/performance/PlatformProvenanceProvider.h
-        src/features/performance/RealTimeEventCapture.h
-        src/features/performance/SustainedAudioAnalysisScenario.cpp
-        src/features/performance/SustainedAudioAnalysisScenario.h
-        src/features/performance/StrategyRegistry.cpp
-        src/features/performance/StrategyRegistry.h
-        src/features/performance/TrialAggregator.cpp
-        src/features/performance/TrialAggregator.h
         src/features/feedback/FeedbackComponent.cpp
         src/features/feedback/FeedbackComponent.h
         src/features/feedback/FeedbackInvitationPolicy.h
@@ -360,7 +329,6 @@ target_compile_definitions(PracticeTakes
         PRACTICE_TAKES_ENABLE_TEST_CONTROL=$<BOOL:${PRACTICE_TAKES_ENABLE_TEST_CONTROL}>
         PRACTICE_TAKES_INSTRUMENTATION_VERSION="1"
         PRACTICE_TAKES_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
-        PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=$<BOOL:${PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB}>
 )
 
 target_link_libraries(PracticeTakes
@@ -410,21 +378,6 @@ if(BUILD_TESTING)
         src/tests/features/analysis/tuner/PitchDetectorTests.cpp
         src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
         src/tests/features/performance/ApplicationLaunchTimerTests.cpp
-        src/tests/features/performance/BenchmarkComparabilityTests.cpp
-        src/tests/features/performance/BenchmarkComparisonTests.cpp
-        src/tests/features/performance/BenchmarkInterfacesTests.cpp
-        src/tests/features/performance/BenchmarkRecordCodecTests.cpp
-        src/tests/features/performance/BenchmarkRecordStoreTests.cpp
-        src/tests/features/performance/BenchmarkRunnerTests.cpp
-        src/tests/features/performance/BenchmarkTypesTests.cpp
-        src/tests/features/performance/InTreeOptimizationStrategyTests.cpp
-        src/tests/features/performance/NonRealTimeTelemetryCollectorTests.cpp
-        src/tests/features/performance/PerformanceLabControllerTests.cpp
-        src/tests/features/performance/PlatformProvenanceProviderTests.cpp
-        src/tests/features/performance/RealTimeEventCaptureTests.cpp
-        src/tests/features/performance/StrategyRegistryTests.cpp
-        src/tests/features/performance/SustainedAudioAnalysisScenarioTests.cpp
-        src/tests/features/performance/TrialAggregatorTests.cpp
         src/tests/platform/audio/AudioRecoveryPolicyTests.cpp
         src/tests/platform/audio/AudioSampleFifoLoadTests.cpp
         src/tests/platform/audio/AudioSampleFifoTests.cpp
@@ -442,7 +395,6 @@ if(BUILD_TESTING)
         src/tests/platform/score/musicxml/read/MusicXmlPercussionTests.cpp
         src/tests/platform/score/musicxml/read/MusicXmlTimingTests.cpp
         src/tests/platform/score/musicxml/read/MusicXmlTranspositionTests.cpp
-        src/tests/support/BenchmarkFakesTests.cpp
         src/application/configuration/SettingsPersistence.cpp
         src/application/configuration/SettingsTransferCodec.cpp
         src/features/analysis/tuner/TunerSettingsCodec.cpp
@@ -455,19 +407,6 @@ if(BUILD_TESTING)
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
         src/features/analysis/tuner/PitchDetector.cpp
         src/features/performance/ApplicationLaunchTimer.cpp
-        src/features/performance/BenchmarkRecordCodec.cpp
-        src/features/performance/BenchmarkRecordStore.cpp
-        src/features/performance/BenchmarkComparability.cpp
-        src/features/performance/BenchmarkComparison.cpp
-        src/features/performance/BenchmarkRunner.cpp
-        src/features/performance/HarmonicAnalysisActions.cpp
-        src/features/performance/InTreeOptimizationStrategy.cpp
-        src/features/performance/NonRealTimeTelemetryCollector.cpp
-        src/features/performance/PerformanceLabController.cpp
-        src/features/performance/PlatformProvenanceProvider.cpp
-        src/features/performance/SustainedAudioAnalysisScenario.cpp
-        src/features/performance/StrategyRegistry.cpp
-        src/features/performance/TrialAggregator.cpp
         src/platform/score/ScoreBuilder.cpp
         src/platform/score/ScoreInvariants.cpp
         src/platform/score/TempoMap.cpp
