@@ -396,12 +396,26 @@ come from the DTD, and MusicXML content uses nothing else.
   Committing them is acceptable: the repertoire is public domain and the export
   files are ours.
 
-  A second notation program is **not** available, so the corpus covers only
-  MuseScore's dialect. This is a known gap — Finale's divisions and voice
-  numbering differ, and Sibelius emits far more layout elements — and per task
-  8.5 it must be stated in `MusicXmlCorpusTests.cpp` so a later reader is not
-  misled about what "real-score coverage" means here. Adding a Finale or Dorico
-  export later is cheap and remains worth doing.
+  **Both premises were wrong in our favour, and the outcome is better than the
+  decision.** "Export them ourselves" assumed no permissively-licensed corpus
+  existed; OpenScore publishes 1,462 songs under CC0, and CPDL states a licence
+  per edition. "MuseScore-dialect only" assumed no second notation program was
+  available; CPDL's editors use whichever they own, so the corpus arrived with
+  six — MuseScore, Finale, Sibelius, Dorico, Harmony Assistant, and PDFtoMusic
+  Pro — without a notation program being installed at all.
+
+  So the corpus is 36 scores rather than four to six, and task 8.5's
+  MuseScore-only disclaimer was replaced by a statement of what is genuinely
+  uncovered: percussion, orchestral scoring, and uncompressed documents.
+
+  What the decision got right is the part that mattered: **licence provenance is
+  checked per file, not inherited from a source.** Three candidates were
+  rejected on the evidence of their own `<rights>` metadata — two were
+  Non-Commercial or unlicensed arrangements of public-domain music, and the
+  PDMX dataset was rejected wholesale because it rests on MuseScore uploader
+  self-declaration with a 12% internal-metadata conflict rate by its own
+  authors' measurement. Public-domain *music* is not a public-domain *file*:
+  the composition, the arrangement, and the file each carry their own rights.
 
 ## Context
 

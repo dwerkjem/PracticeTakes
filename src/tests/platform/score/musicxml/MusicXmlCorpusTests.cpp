@@ -10,24 +10,39 @@
 
 // Real scores, imported end to end.
 //
-// ============================================================================
-//  THIS CORPUS IS MUSESCORE EXPORTS ONLY.
-// ============================================================================
+// The synthetic fixtures elsewhere in this tree only contain the bugs someone
+// already thought of. Real exporter output is what contains the rest, and it
+// delivered: every non-MuseScore dialect here found a defect on arrival --
+// unpitched chord tones advancing the voice cursor, ties flattened from
+// per-note to per-chord, and bars trusting a mensuration sign over their own
+// content. None of the three was reachable from a hand-written fixture.
 //
-// Read that before reading anything below as "real-score coverage". No second
-// notation program was available when this was written, so every file here
-// comes from one exporter and this suite proves nothing about the others.
-// Finale emits <divisions> values and voice numbering unlike MuseScore's, and
-// Sibelius emits far more layout elements; neither is exercised. A Finale,
-// Sibelius, or Dorico export would be a cheap and worthwhile addition, and
-// there is a follow-up issue for it.
+// So the assertions are deliberately coarse -- part count, measure count,
+// musical length, diagnostic count -- and pinned in `expectations.txt`, so that
+// a change in how a real file converts fails rather than passing silently.
 //
-// What this suite is for, given that: the synthetic fixtures elsewhere in this
-// tree only contain the bugs we already thought of. Real exporter output is
-// what contains the rest. So these assertions are deliberately coarse -- part
-// count, measure count, musical length, diagnostic count -- and pinned in
-// `expectations.txt`, so that a change in how a real file converts fails rather
-// than passing silently.
+// WHAT IS AND IS NOT COVERED
+//
+// Thirty-six scores, from two sources with licences checked per file:
+// twenty CC0 songs from the OpenScore Lieder Corpus (voice and piano), and
+// sixteen Public Domain or CC-BY choral works from CPDL.
+//
+// Covered: six exporters (MuseScore 2/3, Finale v25-v27, Sibelius 7-22,
+// Dorico 5, Harmony Assistant, PDFtoMusic Pro); one to eleven parts; SATB in
+// open score and in closed score, the latter being two staves carrying two
+// voices each through <backup>; Renaissance polyphony through early
+// modernism.
+//
+// **Not** covered, so nobody reads "real-score coverage" as more than it is:
+//
+//  - **No percussion.** CPDL is a choral library and has none, and the
+//    public-domain MuseScore-derived datasets rest on uploader
+//    self-declaration this project does not accept. MusicXmlPercussionTests
+//    covers the idiom against a fixture reproduced from a real export instead.
+//  - **No orchestral score** mixing transposing winds, percussion, and strings
+//    in one file.
+//  - **No uncompressed document.** Every corpus file is a `.mxl` container;
+//    plain `.musicxml` and `.xml` input is covered only by the fixtures.
 using namespace score;
 using namespace score::musicxml;
 

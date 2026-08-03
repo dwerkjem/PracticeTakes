@@ -199,26 +199,43 @@ All headers in `src/platform/score/`, `namespace score`.
 
 ## 8. Real-score corpus
 
-- [ ] 8.1 **(blocked on you)** Assemble the corpus agreed in decision 6: four to six public-domain
-      scores exported by us from **MuseScore**, covering at least one multi-part
-      vocal score (e.g. a Bach chorale, SATB) and one piano score (e.g. a
-      Clementi sonatina). No second notation program is available, so the corpus
-      is MuseScore-dialect only — see 8.5.
-- [ ] 8.2 **(blocked on 8.1)** Record each file's provenance and licence status
-      in the README beside the corpus. The README, the provenance table, and the
-      `expectations.txt` manifest are in place and waiting for rows.
+> **What decision 6 asked for, and what was actually built.** The decision was
+> four to six public-domain scores *exported by us from MuseScore*, on the
+> grounds that no second notation program was available and exporting them
+> ourselves sidestepped licensing. Both premises turned out to be wrong in our
+> favour: OpenScore publishes 1,462 songs under CC0, and CPDL states a licence
+> per edition, so 36 scores from six exporters were assembled without needing
+> a notation program at all. Task 8.5's MuseScore-only disclaimer went with it.
+
+- [x] 8.1 Assemble the corpus. **36 scores, not four to six, and none exported
+      by us**: twenty CC0 songs from the OpenScore Lieder Corpus (voice and
+      piano, Beethoven to Webern) and sixteen Public Domain or CC-BY choral
+      works from CPDL (one to eleven parts). Covers the multi-part vocal score
+      decision 6 asked for — SATB in open *and* closed score, plus double-choir
+      writing at ten and eleven parts. The piano score it also asked for is
+      covered by the OpenScore songs' accompaniments rather than by solo piano
+      repertoire.
+- [x] 8.2 Record each file's provenance and licence status in the README beside
+      the corpus. Composer, death year, work, and source for all 36, plus the
+      per-layer licence procedure — composition, arrangement, file — that
+      rejected three candidates on the evidence of their own `<rights>`
+      metadata.
 - [x] 8.3 Wire `src/tests/resources/musicxml/` into the test target as a
       `PRACTICE_TAKES_TEST_RESOURCES_DIR` compile definition, following the
       `PRACTICE_TAKES_SOURCE_DIR` precedent on the app target.
 - [x] 8.4 Add `src/tests/platform/score/musicxml/MusicXmlCorpusTests.cpp` asserting each file's part count,
       measure count, total musical length, and diagnostic count, so a change in
       conversion fails rather than passing silently.
-- [x] 8.5 State plainly at the top of `src/tests/platform/score/musicxml/MusicXmlCorpusTests.cpp` that the corpus
-      is **MuseScore exports only**, so nobody reads "real-score coverage" as
-      cross-dialect coverage. Finale's divisions and voice numbering differ, and
-      Sibelius emits far more layout elements; neither is exercised here.
+- [x] 8.5 State plainly at the top of `src/tests/platform/score/musicxml/MusicXmlCorpusTests.cpp` what the
+      corpus does and does not cover. **The original instruction — say it is
+      MuseScore exports only — became false**, so what is stated instead is the
+      six exporters and part range that *are* covered, and the three gaps that
+      remain: no percussion, no orchestral score, no uncompressed document.
 - [x] 8.6 Open a follow-up issue to add a Finale, Sibelius, or Dorico export to
-      the corpus when a second program becomes available. *Opened as #128.*
+      the corpus when a second program becomes available. *Opened as #128 and
+      then satisfied within this change — the corpus carries Finale, Sibelius,
+      Dorico, Harmony Assistant, and PDFtoMusic Pro exports, so the issue was
+      closed rather than left open against work already done.*
 
 ## 9. Documentation and verification
 
