@@ -270,15 +270,38 @@ button:hover { border-color: var(--accent); }
 #zoom {
   position: fixed;
   inset: 0;
-  background: rgba(10, 11, 14, 0.94);
+  background: rgba(10, 11, 14, 0.97);
   z-index: 10;
   overflow: auto;
-  padding: 24px;
-  cursor: zoom-out;
+  padding: 0 0 24px;
 }
 
-#zoom-caption { margin-bottom: 12px; color: var(--muted); }
-#zoom-image { display: block; margin: 0 auto; image-rendering: pixelated; }
+#zoom-bar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+#zoom-bar .grow { flex: 1; }
+#zoom-caption { color: var(--text); font-size: 13px; }
+#zoom-verdicts { padding: 8px 14px; display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; }
+#zoom-verdicts .muted { color: var(--muted); }
+
+/* Fits the window by default, so "maximise the preview" is what opening it
+   does. Click the image itself for true full size when a detail needs it. */
+#zoom-image {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  cursor: zoom-in;
+}
+
+#zoom-image.actual-size { max-width: none; image-rendering: pixelated; cursor: zoom-out; }
 
 #rubber-band {
   position: fixed;
@@ -387,3 +410,20 @@ button:hover { border-color: var(--accent); }
 .chip-button.on .count { color: var(--accent); }
 
 #filter-summary { color: var(--muted); font-size: 12px; }
+
+/* A live application opened from a capture. Sticky with the toolbar, because
+   "which surface is open" is worth knowing from anywhere in the grid. */
+.launch {
+  position: sticky;
+  top: calc(var(--header-height, 84px) + 52px);
+  z-index: 3;
+  background: #22303f;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.launch.failed { background: #2e2126; border-color: var(--fail); color: var(--fail); }
+.card .open-in-app { border-color: var(--accent); color: var(--accent); }

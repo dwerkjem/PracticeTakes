@@ -51,6 +51,12 @@ SHALL NOT introduce a second mechanism for driving or for capturing.
 - **THEN** it comes from the existing capture utility rather than from a
   separate implementation
 
+#### Scenario: The pointer during a capture
+- **WHEN** a capture is taken for review
+- **THEN** the pointer is left where it is, because a window capture does not
+  include the cursor and only pixel-for-pixel comparison is affected by hover
+  state
+
 ### Requirement: Every surface is captured at every configured resolution
 The capture pass SHALL capture each surface in the run at each resolution in the
 run's configured set, and SHALL record which resolution each image was captured
@@ -126,6 +132,40 @@ the state created is drawn in it.
 - **WHEN** a surface's state opens tools and the palette is then applied
 - **THEN** the tools it created are drawn in that palette rather than the
   previous one
+
+### Requirement: A capture can be judged at the size it is judgeable
+Opening a capture SHALL present it large enough to judge, and SHALL allow it to
+be approved or rejected from there without returning to the grid, moving on to
+the next capture in the current selection.
+
+#### Scenario: Judging from the enlarged view
+- **WHEN** the reviewer approves an enlarged capture
+- **THEN** every question answerable from that image is recorded as passed and
+  the next capture in the filtered set is shown
+
+#### Scenario: Moving without judging
+- **WHEN** the reviewer steps forward or back from an enlarged capture
+- **THEN** the neighbouring capture in the filtered set is shown and no verdict
+  is recorded
+
+### Requirement: The application can be opened on the surface under review
+The review SHALL offer, for any capture, to open the application in that
+capture's state, palette, and window size, so that a question a still image
+cannot settle can be answered by the application itself. Only one such instance
+SHALL be open at a time, and it SHALL NOT be opened while a capture pass is
+running.
+
+#### Scenario: Opening a surface from its capture
+- **WHEN** the reviewer opens the application from a capture
+- **THEN** it starts in that capture's state, palette, and window size
+
+#### Scenario: Opening another surface
+- **WHEN** the reviewer opens a second surface
+- **THEN** the first instance is closed rather than left running alongside it
+
+#### Scenario: A capture pass is running
+- **WHEN** the reviewer tries to open a surface while a capture is in progress
+- **THEN** it is refused with the reason, and the capture is unaffected
 
 ### Requirement: A review can be narrowed to a subset and approved together
 The review SHALL let a reviewer narrow the grid by the properties of a capture —

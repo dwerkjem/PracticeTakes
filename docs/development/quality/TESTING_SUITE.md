@@ -115,9 +115,15 @@ just created.
 Themes are the outer loop of a run, so switching palette — one command, instant
 — happens once per pass rather than between every resize.
 
-For each surface at each resolution the pass opens the approved state, asks the
-application for the geometry, waits for the window to settle, parks the pointer,
-captures, and converts the result to PNG plus a thumbnail.
+For each surface at each resolution the pass opens the approved state, applies
+the palette, asks the application for the geometry, waits for the window to
+settle, captures, and converts the result to PNG plus a thumbnail.
+
+**The pointer is not parked**, unlike `run-ui-golden.zsh`. An X capture of a
+window never includes the cursor, so parking changes only hover state — which
+matters when images are compared pixel for pixel, as the golden-image and
+launch-timing validation does, and does not matter here, where a person looks at
+them.
 
 **A geometry is confirmed, not assumed.** The window is polled until its size
 stops changing, and a resolution that produced the same size as another one is
@@ -158,6 +164,32 @@ alternatives (a capture is dark *or* light), **between** facets they all have to
 hold. "Settings, light" is twelve captures; "three tools, constrained" is the
 handful that found the clipped workspace.
 
+### Judging from the zoom
+
+Opening an image fills the window, which is the size at which a layout is
+actually judgeable — so the verdict belongs there rather than back in the grid.
+**Approve** and **Reject** answer every image-answerable question on that
+capture and move to the next one in the filtered set, so a pass over twenty
+captures is twenty keystrokes. ← and → walk the set without judging. Clicking
+the image toggles between fit-to-window and actual size for a detail that needs
+it.
+
+### Opening the real thing
+
+Every capture carries **open in app**, which puts a live application into
+exactly that state, palette, and window size. A screenshot answers "does this
+look right" and stops; the moment it raises a question — is that control really
+disabled, does that menu open — the only answer is the application itself, and
+this saves remembering which of 27 states produced the image.
+
+One instance at a time: opening another replaces it, and it closes with the hub.
+It refuses while a capture is running, because two instances would fight over
+the audio device and over which window a capture belongs to.
+
+```bash
+uv run test-suite open tuner-docked --theme light --geometry constrained
+```
+
 **Approve all shown** answers every image-answerable question `pass` across the
 whole filtered set, leaving anything already answered alone. That is the
 intended rhythm: narrow to a group you can judge at a glance, look, approve,
@@ -173,7 +205,11 @@ so an approval never silently covers captures you did not look at.
 | Click a tag button | Apply it to the whole selection |
 | Shift-click a tag button | Remove it from the whole selection |
 | `+ tag` | Add a tag to the vocabulary, immediately usable |
-| Click an image | Open it at captured size; Escape returns |
+| Click an image | Open it large; Escape returns |
+| In zoom: A / F | Approve or reject, then move to the next |
+| In zoom: ← / → | Walk the filtered set without closing |
+| In zoom: click the image | Toggle fit-to-window and actual size |
+| `open in app` | Launch the real application on that surface |
 | `comment` | Free text on that one image |
 | P / F / S | Score an axis; a fail asks for a reason, which is optional |
 | Pass/Fail/Skip selected | Score every selected image at once |

@@ -222,9 +222,6 @@ class CapturePassTests(unittest.TestCase):
         requested: list[str] = []
 
         class TestablePass(capture_module.CapturePass):
-            def park_pointer(inner) -> None:  # noqa: N805 - test double
-                return
-
             def read_size(inner, title: str = ""):  # noqa: N805 - test double
                 return sizes.get(requested[-1] if requested else "default")
 
@@ -242,7 +239,7 @@ class CapturePassTests(unittest.TestCase):
             store=self.store,
             run_id=self.run_id,
             driver=self.driver,
-            tooling=capture_module.Tooling(Path("capture"), Path("control"), Path("pointer")),
+            tooling=capture_module.Tooling(Path("capture"), Path("control")),
             image_directory=self.root / "images",
             settle_seconds=2.0,
             poll_interval=0.0,

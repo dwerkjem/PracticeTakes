@@ -40,6 +40,7 @@ import suites as suites_module  # noqa: E402
 import export as export_module  # noqa: E402
 import history as history_module  # noqa: E402
 import ingest as ingest_module  # noqa: E402
+import launcher as launcher_module  # noqa: E402
 import machine as machine_module  # noqa: E402
 import review as review_module  # noqa: E402
 import server as server_module  # noqa: E402
@@ -224,7 +225,40 @@ def command_hub(arguments) -> int:
     except KeyboardInterrupt:
         print("\nStopped.")
     finally:
+        # Anything opened for a closer look goes with the hub; leaving a
+        # test-control instance running after the tool that started it is a
+        # surprise nobody needs.
+        httpd.session.launch.close()
         httpd.server_close()
+
+    return 0
+
+
+def command_open(arguments) -> int:
+    """Open a live application on one surface, for a closer look."""
+    store = open_store(arguments)
+    launch = launcher_module.ManualLaunch(arguments.executable)
+
+    try:
+        opened = launch.open(
+            state=arguments.state, geometry=arguments.geometry, theme=arguments.theme
+        )
+    except launcher_module.LaunchError as error:
+        print(str(error), file=sys.stderr)
+
+        return 1
+
+    print(f"{opened['state']} open in {opened['theme']}, {opened['geometry']} size.")
+    print("Close the window, or press Enter here, to stop it.")
+
+    try:
+        input()
+    except (EOFError, KeyboardInterrupt):
+        pass
+    finally:
+        launch.close()
+
+    del store
 
     return 0
 
@@ -563,6 +597,15 @@ def build_parser() -> argparse.ArgumentParser:
     history_parser.add_argument("--machine", default="", help="Defaults to this machine.")
     history_parser.add_argument("--limit", type=int, default=15)
     history_parser.set_defaults(handler=command_history)
+
+    open_parser = subparsers.add_parser(
+        "open", help="Open a live application on one surface, for a closer look."
+    )
+    open_parser.add_argument("state", help="An approved state, as named in surfaces.py.")
+    open_parser.add_argument("--executable", type=Path, default=DEFAULT_EXECUTABLE)
+    open_parser.add_argument("--geometry", default="", choices=["", *surfaces.SWEEP_GEOMETRIES])
+    open_parser.add_argument("--theme", default="", choices=["", *surfaces.THEMES])
+    open_parser.set_defaults(handler=command_open)
 
     prune_parser = subparsers.add_parser("prune", help="Delete old images, keeping every decision.")
     prune_parser.add_argument("--keep", type=int, default=5)

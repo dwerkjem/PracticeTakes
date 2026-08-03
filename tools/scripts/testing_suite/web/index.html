@@ -83,6 +83,7 @@
       <!-- Filters in one row above the grid. With a hundred captures in a full
            run, "every settings window in the light palette" is how a review
            becomes finishable. -->
+      <div id="launch-banner" class="launch" hidden></div>
       <div id="filters"></div>
       <div id="outstanding" class="muted small"></div>
       <div id="grid" aria-label="Captured surfaces"></div>
@@ -134,8 +135,20 @@
       </section>
     </main>
 
+    <!-- Zoom is where the judging actually happens: the image is big enough to
+         judge, so the verdict belongs here rather than back in the grid. -->
     <div id="zoom" hidden>
-      <div id="zoom-caption"></div>
+      <div id="zoom-bar">
+        <span id="zoom-caption"></span>
+        <span class="grow"></span>
+        <button type="button" id="zoom-prev" title="Previous capture (←)">←</button>
+        <button type="button" id="zoom-next" title="Next capture (→)">→</button>
+        <button type="button" id="zoom-approve" class="verdict-pass" title="Approve (A)">Approve</button>
+        <button type="button" id="zoom-reject" class="verdict-fail" title="Reject (F)">Reject</button>
+        <button type="button" id="zoom-open" title="Open this surface in the application">open in app</button>
+        <button type="button" id="zoom-close" title="Close (Esc)">✕</button>
+      </div>
+      <div id="zoom-verdicts"></div>
       <img id="zoom-image" alt="" />
     </div>
 

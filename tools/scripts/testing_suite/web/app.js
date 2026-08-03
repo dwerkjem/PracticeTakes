@@ -14,6 +14,7 @@ const state = {
   selected: new Set(),
   lastClicked: null,
   polling: null,
+  zoomed: null,
   // Previews default to large: the grid exists so you can see what is being
   // reviewed, and a thumbnail you have to squint at defeats the whole thing.
   size: window.localStorage.getItem("preview-size") || "large",
@@ -320,6 +321,19 @@ function renderCard(capture) {
     });
     card.appendChild(list);
   }
+
+  // The answer to anything a screenshot cannot settle: open the real
+  // application on this exact surface, palette, and size.
+  const open = document.createElement("button");
+  open.type = "button";
+  open.className = "open-in-app";
+  open.textContent = "open in app";
+  open.title = `Launch ${capture.state} in ${capture.theme}, ${capture.geometry} size`;
+  open.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openInApp(capture);
+  });
+  card.appendChild(open);
 
   const comment = document.createElement("button");
   comment.type = "button";
@@ -684,6 +698,49 @@ document.querySelectorAll("button.size").forEach((button) => {
   button.addEventListener("click", () => applySize(button.dataset.size));
 });
 
+// --- Opening the application -----------------------------------------------
+
+async function openInApp(capture) {
+  const banner = element("launch-banner");
+  banner.hidden = false;
+  banner.textContent = `Opening ${capture.surface} …`;
+
+  const { ok, data } = await api("/api/launch", { capture_id: capture.id });
+
+  if (!ok) {
+    banner.textContent = data.error || "could not open it";
+    banner.className = "launch failed";
+    return;
+  }
+
+  banner.className = "launch";
+  renderLaunch(data, capture.surface);
+}
+
+function renderLaunch(status, surfaceName) {
+  const banner = element("launch-banner");
+
+  if (!status || !status.running) {
+    banner.hidden = true;
+    return;
+  }
+
+  banner.hidden = false;
+  banner.className = "launch";
+  banner.innerHTML = "";
+  banner.append(
+    `Open in the application: ${surfaceName || status.state} · ${status.theme} · ${status.geometry} `);
+
+  const close = document.createElement("button");
+  close.type = "button";
+  close.textContent = "close it";
+  close.addEventListener("click", async () => {
+    await api("/api/launch/close", {});
+    renderLaunch({ running: false });
+  });
+  banner.appendChild(close);
+}
+
 // --- Actions ---------------------------------------------------------------
 
 async function applyTag(name, remove) {
@@ -728,21 +785,130 @@ async function addComment(captureId) {
   await reload();
 }
 
+function capturesInOrder() {
+  const shown = [];
+
+  (state.data.groups || []).forEach((group) => {
+    group.captures.forEach((capture) => {
+      if (matchesFilters(capture)) shown.push(capture);
+    });
+  });
+
+  return shown;
+}
+
+// Zoom is where judging happens: the image is finally big enough to judge, so
+// the verdict lives here rather than back in the grid, and ← → walk the
+// filtered set without closing.
 function zoom(capture) {
+  state.zoomed = capture;
+
   const overlay = element("zoom");
   const image = element("zoom-image");
+  const answered = capture.questions.filter((question) => question.verdict).length;
 
   element("zoom-caption").textContent =
-    `${capture.surface} · ${capture.geometry} · ${capture.width}×${capture.height}`;
+    `${capture.surface} · ${capture.geometry} · ${capture.theme} · ` +
+    `${capture.width}×${capture.height}` +
+    (capture.tags.length ? `  ·  ${capture.tags.join(", ")}` : "") +
+    `  ·  ${answered} of ${capture.questions.length} answered`;
+
+  element("zoom-verdicts").innerHTML = capture.questions.map((question) =>
+    `<span>${question.prompt} ${verdictMarkup(question)}</span>`).join("");
+
   image.src = `/image?id=${capture.id}`;
   image.alt = `${capture.surface} at ${capture.geometry}`;
+  image.classList.remove("actual-size");
   overlay.hidden = false;
 }
 
 function closeZoom() {
   element("zoom").hidden = true;
+  state.zoomed = null;
 }
 
+function stepZoom(direction) {
+  if (!state.zoomed) return;
+
+  const shown = capturesInOrder();
+  const at = shown.findIndex((capture) => capture.id === state.zoomed.id);
+
+  if (at === -1) return;
+
+  const next = shown[at + direction];
+
+  if (next) zoom(next);
+}
+
+// Approving from zoom answers every question the image can answer, then moves
+// on -- which is the rhythm the whole grid is for.
+async function judgeZoomed(verdict) {
+  if (!state.zoomed) return;
+
+  let note = "";
+
+  if (verdict === "fail") {
+    note = window.prompt(
+      `What is wrong with "${state.zoomed.surface}" at ${state.zoomed.geometry}? (optional)`) || "";
+  }
+
+  const { ok, data } = await api("/api/score-many", {
+    capture_ids: [state.zoomed.id],
+    verdict,
+    note,
+    overwrite: true,
+  });
+
+  if (!ok) {
+    window.alert((data.problems || [data.error || "could not record that"]).join("\n"));
+    return;
+  }
+
+  const shown = capturesInOrder();
+  const at = shown.findIndex((capture) => capture.id === state.zoomed.id);
+  const next = shown[at + 1];
+
+  await reload();
+
+  // reload() rebuilt the view, so the next capture has to be found again.
+  const refreshed = capturesInOrder().find((capture) => next && capture.id === next.id);
+
+  if (refreshed) zoom(refreshed);
+  else closeZoom();
+}
+
+element("zoom-approve").addEventListener("click", () => judgeZoomed("pass"));
+element("zoom-reject").addEventListener("click", () => judgeZoomed("fail"));
+element("zoom-prev").addEventListener("click", () => stepZoom(-1));
+element("zoom-next").addEventListener("click", () => stepZoom(1));
+element("zoom-close").addEventListener("click", closeZoom);
+element("zoom-open").addEventListener("click", () => {
+  if (state.zoomed) openInApp(state.zoomed);
+});
+
+// Clicking the image toggles fit-to-window and actual size; clicking the
+// backdrop closes. Clicking the bar does neither.
+element("zoom-image").addEventListener("click", (event) => {
+  event.stopPropagation();
+  event.currentTarget.classList.toggle("actual-size");
+});
+
+element("zoom").addEventListener("click", (event) => {
+  if (event.target.id === "zoom") closeZoom();
+});
+
+window.addEventListener("keydown", (event) => {
+  if (element("zoom").hidden) return;
+
+  if (event.key === "Escape") closeZoom();
+  else if (event.key === "ArrowLeft") stepZoom(-1);
+  else if (event.key === "ArrowRight") stepZoom(1);
+  else if (event.key === "a" || event.key === "A") judgeZoomed("pass");
+  else if (event.key === "f" || event.key === "F") judgeZoomed("fail");
+  else return;
+
+  event.preventDefault();
+});
 
 // --- History ---------------------------------------------------------------
 //
@@ -1043,13 +1209,6 @@ element("add-tag").addEventListener("click", async () => {
   await reload();
 });
 
-// Closing the zoom leaves scroll position and selection untouched, because it
-// is an overlay over the same grid rather than a page of its own.
-element("zoom").addEventListener("click", closeZoom);
-window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") closeZoom();
-});
-
 async function reload() {
   const scroll = window.scrollY;
   const { data } = await api("/api/run");
@@ -1062,6 +1221,7 @@ async function reload() {
   renderResults(data);
   renderFilters(data);
   renderGrid(data);
+  renderLaunch(data.launch);
   renderJob(data.job);
   document.querySelectorAll("button.size").forEach((button) => {
     button.classList.toggle("active", button.dataset.size === state.size);

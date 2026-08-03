@@ -23,6 +23,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import history as history_module
+import launcher as launcher_module
 import review
 import runner as runner_module
 import suites as suites_module
@@ -46,6 +47,10 @@ class ReviewSession:
         self.store = store
         self._run_id = run_id
         self.job = runner_module.Job(store=store)
+
+        # One live application a reviewer can open on a surface, so a question
+        # a screenshot raises can be answered by the thing itself.
+        self.launch = launcher_module.ManualLaunch(runner_module.CONTROL_BUILD / "bin" / "PracticeTakes")
 
     @property
     def run_id(self) -> int | None:
@@ -94,6 +99,7 @@ class ReviewSession:
             "builds": runner_module.build_overview(),
             "display": runner_module.display_available(),
             "job": self.job.status(),
+            "launch": self.launch.status(),
             "modes": [surfaces.QUICK, surfaces.FULL],
             "resolutions": list(surfaces.SWEEP_GEOMETRIES),
             "themes": list(surfaces.THEMES),
@@ -305,6 +311,33 @@ class ReviewHandler(BaseHTTPRequestHandler):
             # Whatever the job produces is what the page should show next.
             self.session.select(None)
             self._send_json(self.session.job.status())
+        elif parsed.path == "/api/launch":
+            if self.session.job.running:
+                # Two instances would fight over the audio device, and a capture
+                # pass has a very definite opinion about which window is which.
+                self._send_json(
+                    {"error": "something is running — wait for it to finish"}, status=409
+                )
+
+                return
+
+            capture = (
+                self.store.capture(int(payload["capture_id"]))
+                if payload.get("capture_id")
+                else None
+            )
+            state = str(payload.get("state") or (capture.surface_state if capture else ""))
+            geometry = str(payload.get("geometry") or (capture.geometry if capture else ""))
+            theme = str(payload.get("theme") or (capture.theme if capture else ""))
+
+            try:
+                self._send_json(
+                    self.session.launch.open(state=state, geometry=geometry, theme=theme)
+                )
+            except launcher_module.LaunchError as error:
+                self._send_json({"error": str(error)}, status=400)
+        elif parsed.path == "/api/launch/close":
+            self._send_json(self.session.launch.close())
         elif parsed.path == "/api/sync":
             self._send_json(history_module.sync(self.store))
         elif parsed.path == "/api/select":

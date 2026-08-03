@@ -56,11 +56,17 @@ class CaptureError(RuntimeError):
 
 @dataclass(frozen=True)
 class Tooling:
-    """The three X utilities, compiled on demand."""
+    """The X utilities this pass needs, compiled on demand.
+
+    `pointer_control` is deliberately not among them. An X capture of a window
+    does not include the cursor, so the only thing parking the pointer changes
+    is hover state -- which matters when images are compared pixel for pixel, as
+    the golden-image validation does, and does not matter here, where a person
+    looks at them. `run-ui-golden.zsh` still parks for exactly that reason.
+    """
 
     capture: Path
     window_control: Path
-    pointer: Path
 
     @classmethod
     def ensure(cls, build_directory: Path = TOOL_BUILD_DIRECTORY) -> "Tooling":
@@ -68,7 +74,6 @@ class Tooling:
         binaries = {
             "xwindow_capture": ("x11",),
             "window_control": ("x11",),
-            "pointer_control": ("x11", "xtst"),
         }
         built: dict[str, Path] = {}
 
@@ -90,7 +95,7 @@ class Tooling:
 
             built[name] = binary
 
-        return cls(built["xwindow_capture"], built["window_control"], built["pointer_control"])
+        return cls(built["xwindow_capture"], built["window_control"])
 
 
 def _pkg_config(libraries: tuple[str, ...]) -> list[str]:
@@ -273,10 +278,6 @@ class CapturePass:
         except ValueError:
             return None
 
-    def park_pointer(self) -> None:
-        """Move the pointer out of the way so no capture shows a hover state."""
-        subprocess.run([str(self.tooling.pointer), "--park"], capture_output=True, check=False)
-
     def _capture_to(self, destination: Path, title: str = "") -> str:
         pid = self.driver.pid
 
@@ -356,7 +357,6 @@ class CapturePass:
 
             return None
 
-        self.park_pointer()
         size = settled_size(
             lambda: self.read_size(surface.window_title),
             settle_seconds=self.settle_seconds,
