@@ -27,7 +27,7 @@ namespace score
 // first because later steps sort and bound by duration; voice ordering and
 // measure bounds come next because they can drop events; cross-part alignment
 // then fixes up indices and start ticks; ties are validated **last**, once no
-// step can still move or remove an event out from under an EventRef.
+// step can still move or remove a note out from under a NoteRef.
 void enforceInvariants(Score& score);
 
 // The individual invariants, exposed so each can be tested on its own with a
@@ -68,10 +68,14 @@ int enforceMeasureAlignment(Score& score);
 // two parts sharing an id makes that impossible.
 int enforceUniquePartIds(Score& score);
 
-// Invariant 4: a tie links two events that both exist and sound the same
+// Invariant 4: a tie links two **notes** that both exist and sound the same
 // pitch, and the link is mirrored at both ends. Anything else is dropped
 // rather than left dangling, because a half-linked tie is a null dereference
 // waiting to happen in every consumer.
+//
+// Notes rather than events, because a chord may tie some of its notes and not
+// others -- a pianist holding a bass note while the upper voices move. An
+// event-level tie could not express that.
 int enforceTieIntegrity(Score& score);
 
 // Invariant 8: the tempo map is non-empty, sorted, and free of duplicate

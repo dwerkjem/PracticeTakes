@@ -76,14 +76,30 @@ readPitch(const XmlNode& pitchNode, ReadContext& context, const DiagnosticLocati
 // engraved counterpart and <slur> is a different thing entirely. The three look
 // alike on the page and this is the distinction most often got wrong, so it is
 // made in exactly one place.
-void readTieFlags(const XmlNode& noteNode, PendingEvent& pending)
+//
+// Read per <note>, because that is the granularity MusicXML writes it at and
+// the granularity the model stores it at: a chord may tie some of its notes
+// and not others.
+PendingTie readTieMarkings(const XmlNode& noteNode)
 {
-    for (const XmlNode* tie : findChildren(noteNode, "tie"))
+    PendingTie tie;
+
+    for (const XmlNode* marking : findChildren(noteNode, "tie"))
     {
-        const std::string type = attributeValue(*tie, "type");
-        pending.tieStart = pending.tieStart || type == "start";
-        pending.tieStop = pending.tieStop || type == "stop";
+        const std::string type = attributeValue(*marking, "type");
+        tie.start = tie.start || type == "start";
+        tie.stop = tie.stop || type == "stop";
     }
+
+    return tie;
+}
+
+// Append a note and its tie markings together, so `event.notes` and `noteTies`
+// cannot drift out of step.
+void appendNote(PendingEvent& pending, const Pitch& pitch, const PendingTie& tie)
+{
+    pending.event.notes.push_back(Note{pitch, std::nullopt, std::nullopt});
+    pending.noteTies.push_back(tie);
 }
 
 void readLyrics(const XmlNode& noteNode, ScoreEvent& event)
@@ -248,21 +264,47 @@ void readNote(
     // new one, and consumes no additional time. Invariant 2 depends on it: "no
     // two events in a voice overlap" only means anything if a chord is one
     // event rather than several simultaneous ones.
-    if (isChordTone && !voice.events.empty() && pitchNode != nullptr)
+    //
+    // The test is <chord/> alone, deliberately -- **not** <chord/> plus a
+    // readable <pitch>. A chord tone carries a <duration> that the cursor must
+    // not advance by, whether or not this importer has anywhere to put its
+    // pitch. Requiring a pitch here meant every percussion chord (a kick and a
+    // hi-hat struck together, which is most of a drum part) advanced the cursor
+    // once per stacked note and pushed the whole voice past its barline. Real
+    // MuseScore exports carry hundreds of them; see the corpus tests.
+    if (isChordTone && !voice.events.empty())
     {
         PendingEvent& target = voice.events.back();
 
-        if (const std::optional<Pitch> pitch = readPitch(*pitchNode, context, location);
-            pitch.has_value())
+        // Merging the pitch is what is conditional. An unpitched chord tone
+        // contributes nothing to the model and still consumes no time.
+        if (pitchNode != nullptr)
         {
-            target.event.pitches.push_back(*pitch);
-            target.event.kind = EventKind::chord;
-            readTieFlags(noteNode, target);
+            if (const std::optional<Pitch> pitch = readPitch(*pitchNode, context, location);
+                pitch.has_value())
+            {
+                // The tie markings belong to *this* note of the chord, not to
+                // the chord. Folding them onto the event would sustain notes
+                // that were re-struck and drop ties that were written.
+                appendNote(target, *pitch, readTieMarkings(noteNode));
+                target.event.kind = EventKind::chord;
+            }
         }
 
         ++context.eventCount;
 
         return;
+    }
+
+    // <chord/> on the first note of a voice has nothing to attach to. The file
+    // is wrong; treating it as an ordinary note is the reading that loses the
+    // least, but it is worth saying so rather than silently inventing a note.
+    if (isChordTone)
+    {
+        context.diagnostics.addRepair(
+            location, "chord",
+            "A note is marked as part of a chord but is the first note in its voice, so it was "
+            "imported as a note of its own.");
     }
 
     PendingEvent pending;
@@ -287,7 +329,7 @@ void readNote(
             pitch.has_value())
         {
             pending.event.kind = EventKind::note;
-            pending.event.pitches.push_back(*pitch);
+            appendNote(pending, *pitch, readTieMarkings(noteNode));
         }
         else
         {
@@ -327,7 +369,6 @@ void readNote(
         }
     }
 
-    readTieFlags(noteNode, pending);
     readLyrics(noteNode, pending.event);
 
     if (const XmlNode* notations = findChild(noteNode, "notations"); notations != nullptr)

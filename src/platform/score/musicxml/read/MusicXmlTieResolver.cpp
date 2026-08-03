@@ -7,11 +7,12 @@ namespace score::musicxml
 {
 namespace
 {
-ScoreEvent& eventAt(Part& part, const EventRef& reference)
+Note& noteAt(Part& part, const NoteRef& reference)
 {
     return part.measures[reference.measureIndex]
         .voices[reference.voiceIndex]
-        .events[reference.eventIndex];
+        .events[reference.eventIndex]
+        .notes[reference.noteIndex];
 }
 } // namespace
 
@@ -23,7 +24,13 @@ void resolveTies(
     // A tie start waiting for its stop, keyed by voice number and **sounding**
     // pitch rather than by spelling: a file may legitimately tie a G-sharp to
     // an A-flat across a barline, and refusing that would drop a real tie.
-    std::map<std::pair<int, int>, EventRef> pendingStarts;
+    //
+    // Keyed per note rather than per event, which is what lets a chord tie some
+    // of its notes and not others. Matching on the event's first pitch -- the
+    // obvious shortcut -- silently drops a tie whenever the chord changes shape
+    // across the barline, and silently sustains the whole chord when only one
+    // note was held.
+    std::map<std::pair<int, int>, NoteRef> pendingStarts;
 
     for (std::size_t measureIndex = 0; measureIndex < pendingByMeasure.size(); ++measureIndex)
     {
@@ -37,36 +44,46 @@ void resolveTies(
             {
                 const PendingEvent& pending = voice.events[eventIndex];
 
-                if (pending.event.pitches.empty())
+                for (std::size_t noteIndex = 0; noteIndex < pending.event.notes.size(); ++noteIndex)
                 {
-                    continue;
-                }
+                    const PendingTie& tie = pending.noteTies[noteIndex];
 
-                const std::pair<int, int> key{
-                    voice.number, pending.event.pitches.front().midiNoteNumber};
-                const EventRef self{measureIndex, voiceIndex, eventIndex};
-
-                if (pending.tieStop)
-                {
-                    const auto start = pendingStarts.find(key);
-
-                    if (start == pendingStarts.end())
+                    if (!tie.start && !tie.stop)
                     {
-                        context.diagnostics.addRepair(
-                            locationOf(part, part.measures[measureIndex], voice.number), "tie",
-                            "A tie ends on a note that nothing ties to, so the tie was dropped.");
+                        continue;
                     }
-                    else
-                    {
-                        eventAt(part, start->second).tiedTo = self;
-                        eventAt(part, self).tiedFrom = start->second;
-                        pendingStarts.erase(start);
-                    }
-                }
 
-                if (pending.tieStart)
-                {
-                    pendingStarts[key] = self;
+                    const std::pair<int, int> key{
+                        voice.number, pending.event.notes[noteIndex].pitch.midiNoteNumber};
+                    const NoteRef self{measureIndex, voiceIndex, eventIndex, noteIndex};
+
+                    // Stop first, then start. A note in the middle of a chain
+                    // carries both, and it must close the chain behind it
+                    // before opening the one ahead -- otherwise it would match
+                    // against itself.
+                    if (tie.stop)
+                    {
+                        const auto start = pendingStarts.find(key);
+
+                        if (start == pendingStarts.end())
+                        {
+                            context.diagnostics.addRepair(
+                                locationOf(part, part.measures[measureIndex], voice.number), "tie",
+                                "A tie ends on a note that nothing ties to, so the tie was "
+                                "dropped.");
+                        }
+                        else
+                        {
+                            noteAt(part, start->second).tiedTo = self;
+                            noteAt(part, self).tiedFrom = start->second;
+                            pendingStarts.erase(start);
+                        }
+                    }
+
+                    if (tie.start)
+                    {
+                        pendingStarts[key] = self;
+                    }
                 }
             }
         }

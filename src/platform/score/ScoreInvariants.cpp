@@ -65,8 +65,10 @@ int enforceConsistentPitches(Score& score)
             {
                 for (ScoreEvent& event : voice.events)
                 {
-                    for (Pitch& pitch : event.pitches)
+                    for (Note& note : event.notes)
                     {
+                        Pitch& pitch = note.pitch;
+
                         if (isConsistent(pitch))
                         {
                             continue;
@@ -399,9 +401,10 @@ int enforceTieIntegrity(Score& score)
 
     for (Part& part : score.parts)
     {
-        // Resolve an EventRef against this part, or nullptr if it names
-        // something that does not exist.
-        const auto resolve = [&part](const EventRef& reference) -> const ScoreEvent*
+        // Resolve a NoteRef against this part, or nullptr if it names something
+        // that does not exist. Resolution goes all the way down to the note,
+        // because a tie links notes rather than chords.
+        const auto resolve = [&part](const NoteRef& reference) -> const Note*
         {
             if (reference.measureIndex >= part.measures.size())
             {
@@ -422,7 +425,14 @@ int enforceTieIntegrity(Score& score)
                 return nullptr;
             }
 
-            return &voice.events[reference.eventIndex];
+            const ScoreEvent& event = voice.events[reference.eventIndex];
+
+            if (reference.noteIndex >= event.notes.size())
+            {
+                return nullptr;
+            }
+
+            return &event.notes[reference.noteIndex];
         };
 
         for (std::size_t measureIndex = 0; measureIndex < part.measures.size(); ++measureIndex)
@@ -436,53 +446,57 @@ int enforceTieIntegrity(Score& score)
                 for (std::size_t eventIndex = 0; eventIndex < voice.events.size(); ++eventIndex)
                 {
                     ScoreEvent& event = voice.events[eventIndex];
-                    const EventRef self{measureIndex, voiceIndex, eventIndex};
 
-                    const auto check = [&](std::optional<EventRef>& link, bool isForward) -> bool
+                    for (std::size_t noteIndex = 0; noteIndex < event.notes.size(); ++noteIndex)
                     {
-                        if (!link.has_value())
+                        Note& note = event.notes[noteIndex];
+                        const NoteRef self{measureIndex, voiceIndex, eventIndex, noteIndex};
+
+                        const auto check = [&](std::optional<NoteRef>& link, bool isForward) -> bool
                         {
-                            return false;
+                            if (!link.has_value())
+                            {
+                                return false;
+                            }
+
+                            const Note* target = resolve(*link);
+
+                            // The far end must exist, mirror the link back, and
+                            // agree on pitch. A tie may legitimately be spelled
+                            // differently either side of a barline -- a G-sharp
+                            // tied to an A-flat -- so this compares sounding
+                            // pitch, not spelling.
+                            const bool mirrored =
+                                target != nullptr &&
+                                (isForward ? target->tiedFrom : target->tiedTo) == self;
+
+                            const bool sameSound =
+                                target != nullptr && soundsSameAs(note.pitch, target->pitch);
+
+                            if (mirrored && sameSound)
+                            {
+                                return false;
+                            }
+
+                            link.reset();
+                            return true;
+                        };
+
+                        if (check(note.tiedTo, true))
+                        {
+                            ++repairs;
+                            addRepair(
+                                score, locate(part, measure, voice), "tie",
+                                "tie start had no matching end; dropped");
                         }
 
-                        const ScoreEvent* target = resolve(*link);
-
-                        // The far end must exist, sound something, mirror the
-                        // link back, and agree on pitch. A tie may legitimately
-                        // be spelled differently either side of a barline, so
-                        // this compares sounding pitch, not spelling.
-                        const bool mirrored =
-                            target != nullptr &&
-                            (isForward ? target->tiedFrom : target->tiedTo) == self;
-
-                        const bool sameSound =
-                            target != nullptr && !event.pitches.empty() &&
-                            !target->pitches.empty() &&
-                            soundsSameAs(event.pitches.front(), target->pitches.front());
-
-                        if (mirrored && sameSound)
+                        if (check(note.tiedFrom, false))
                         {
-                            return false;
+                            ++repairs;
+                            addRepair(
+                                score, locate(part, measure, voice), "tie",
+                                "tie end had no matching start; dropped");
                         }
-
-                        link.reset();
-                        return true;
-                    };
-
-                    if (check(event.tiedTo, true))
-                    {
-                        ++repairs;
-                        addRepair(
-                            score, locate(part, measure, voice), "tie",
-                            "tie start had no matching end; dropped");
-                    }
-
-                    if (check(event.tiedFrom, false))
-                    {
-                        ++repairs;
-                        addRepair(
-                            score, locate(part, measure, voice), "tie",
-                            "tie end had no matching start; dropped");
                     }
                 }
             }
@@ -563,7 +577,7 @@ int enforceDiagnosticLocations(Score& score)
 void enforceInvariants(Score& score)
 {
     // Order is load-bearing -- see the header. Anything that can move or remove
-    // an event must run before tie validation, which resolves EventRefs.
+    // an event must run before tie validation, which resolves NoteRefs.
     enforceConsistentPitches(score);
     enforceNonNegativeDurations(score);
     enforceVoiceOrdering(score);

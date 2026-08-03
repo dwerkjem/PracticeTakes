@@ -1,9 +1,12 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "support/ScoreFixtures.h"
+
 #include "platform/score/ScoreBuilder.h"
 #include "platform/score/ScoreInvariants.h"
 
 using namespace score;
+using testing::score::notesOf;
 
 namespace
 {
@@ -16,7 +19,7 @@ constexpr Tick bar = ticksPerQuarterNote * 4;
     event.kind = EventKind::note;
     event.onset = onset;
     event.duration = duration;
-    event.pitches = {pitchFromSpelling(step, 0, octave)};
+    event.notes = notesOf({pitchFromSpelling(step, 0, octave)});
 
     return event;
 }
@@ -75,11 +78,11 @@ TEST_CASE("a pitch contradicting its spelling is recomputed", "[score][invariant
     Score score = scoreOf({barOf({noteAt(0, quarter)})});
 
     // A note that renders on one line and sounds as another.
-    score.parts.front().measures[0].voices[0].events[0].pitches[0].midiNoteNumber = 61;
+    score.parts.front().measures[0].voices[0].events[0].notes[0].pitch.midiNoteNumber = 61;
 
     CHECK(enforceConsistentPitches(score) == 1);
 
-    const Pitch& repaired = firstVoice(score).events[0].pitches.front();
+    const Pitch& repaired = firstVoice(score).events[0].notes.front().pitch;
 
     CHECK(repaired.midiNoteNumber == 60);
     CHECK(isConsistent(repaired));
@@ -175,9 +178,9 @@ TEST_CASE("a chord does not count as overlapping itself", "[score][invariants]")
     chord.kind = EventKind::chord;
     chord.onset = 0;
     chord.duration = bar;
-    chord.pitches = {
-        pitchFromSpelling(Step::c, 0, 4), pitchFromSpelling(Step::e, 0, 4),
-        pitchFromSpelling(Step::g, 0, 4)};
+    chord.notes = notesOf(
+        {pitchFromSpelling(Step::c, 0, 4), pitchFromSpelling(Step::e, 0, 4),
+         pitchFromSpelling(Step::g, 0, 4)});
 
     Score score = scoreOf({barOf({chord})});
 
@@ -340,11 +343,11 @@ TEST_CASE("a properly matched tie survives", "[score][invariants]")
 {
     Score score = scoreOf({barOf({noteAt(0, bar)}), barOf({noteAt(0, bar)}, "2")});
 
-    score.parts.front().measures[0].voices[0].events[0].tiedTo = EventRef{1, 0, 0};
-    score.parts.front().measures[1].voices[0].events[0].tiedFrom = EventRef{0, 0, 0};
+    score.parts.front().measures[0].voices[0].events[0].notes.front().tiedTo = NoteRef{1, 0, 0};
+    score.parts.front().measures[1].voices[0].events[0].notes.front().tiedFrom = NoteRef{0, 0, 0};
 
     CHECK(enforceTieIntegrity(score) == 0);
-    CHECK(score.parts.front().measures[0].voices[0].events[0].tiedTo.has_value());
+    CHECK(score.parts.front().measures[0].voices[0].events[0].notes.front().tiedTo.has_value());
 }
 
 TEST_CASE("a tie is matched by sounding pitch, not spelling", "[score][invariants]")
@@ -352,13 +355,13 @@ TEST_CASE("a tie is matched by sounding pitch, not spelling", "[score][invariant
     // A file may legitimately tie a G-sharp to an A-flat across a barline.
     Score score = scoreOf({barOf({noteAt(0, bar)}), barOf({noteAt(0, bar)}, "2")});
 
-    score.parts.front().measures[0].voices[0].events[0].pitches = {
-        pitchFromSpelling(Step::g, 1, 4)};
-    score.parts.front().measures[1].voices[0].events[0].pitches = {
-        pitchFromSpelling(Step::a, -1, 4)};
+    score.parts.front().measures[0].voices[0].events[0].notes =
+        notesOf({pitchFromSpelling(Step::g, 1, 4)});
+    score.parts.front().measures[1].voices[0].events[0].notes =
+        notesOf({pitchFromSpelling(Step::a, -1, 4)});
 
-    score.parts.front().measures[0].voices[0].events[0].tiedTo = EventRef{1, 0, 0};
-    score.parts.front().measures[1].voices[0].events[0].tiedFrom = EventRef{0, 0, 0};
+    score.parts.front().measures[0].voices[0].events[0].notes.front().tiedTo = NoteRef{1, 0, 0};
+    score.parts.front().measures[1].voices[0].events[0].notes.front().tiedFrom = NoteRef{0, 0, 0};
 
     CHECK(enforceTieIntegrity(score) == 0);
 }
@@ -367,10 +370,11 @@ TEST_CASE("a tie with no matching end is dropped", "[score][invariants]")
 {
     Score score = scoreOf({barOf({noteAt(0, bar)})});
 
-    score.parts.front().measures[0].voices[0].events[0].tiedTo = EventRef{7, 0, 0};
+    score.parts.front().measures[0].voices[0].events[0].notes.front().tiedTo = NoteRef{7, 0, 0};
 
     CHECK(enforceTieIntegrity(score) > 0);
-    CHECK_FALSE(score.parts.front().measures[0].voices[0].events[0].tiedTo.has_value());
+    CHECK_FALSE(
+        score.parts.front().measures[0].voices[0].events[0].notes.front().tiedTo.has_value());
     CHECK_FALSE(score.diagnostics.empty());
 }
 
@@ -379,11 +383,12 @@ TEST_CASE("a tie whose ends disagree on pitch is dropped", "[score][invariants]"
     Score score =
         scoreOf({barOf({noteAt(0, bar, Step::c)}), barOf({noteAt(0, bar, Step::e)}, "2")});
 
-    score.parts.front().measures[0].voices[0].events[0].tiedTo = EventRef{1, 0, 0};
-    score.parts.front().measures[1].voices[0].events[0].tiedFrom = EventRef{0, 0, 0};
+    score.parts.front().measures[0].voices[0].events[0].notes.front().tiedTo = NoteRef{1, 0, 0};
+    score.parts.front().measures[1].voices[0].events[0].notes.front().tiedFrom = NoteRef{0, 0, 0};
 
     CHECK(enforceTieIntegrity(score) > 0);
-    CHECK_FALSE(score.parts.front().measures[0].voices[0].events[0].tiedTo.has_value());
+    CHECK_FALSE(
+        score.parts.front().measures[0].voices[0].events[0].notes.front().tiedTo.has_value());
 }
 
 TEST_CASE("a one-sided tie link is dropped", "[score][invariants]")
@@ -392,10 +397,11 @@ TEST_CASE("a one-sided tie link is dropped", "[score][invariants]")
     // consumer, so it does not survive.
     Score score = scoreOf({barOf({noteAt(0, bar)}), barOf({noteAt(0, bar)}, "2")});
 
-    score.parts.front().measures[0].voices[0].events[0].tiedTo = EventRef{1, 0, 0};
+    score.parts.front().measures[0].voices[0].events[0].notes.front().tiedTo = NoteRef{1, 0, 0};
 
     CHECK(enforceTieIntegrity(score) > 0);
-    CHECK_FALSE(score.parts.front().measures[0].voices[0].events[0].tiedTo.has_value());
+    CHECK_FALSE(
+        score.parts.front().measures[0].voices[0].events[0].notes.front().tiedTo.has_value());
 }
 
 // --- Invariant 8: tempo map ----------------------------------------------------
@@ -470,8 +476,8 @@ TEST_CASE("the full pass repairs a thoroughly broken score without throwing", "[
     // produce something a musician can still practise with.
     Score score = scoreOf({barOf({noteAt(quarter * 2, quarter * 9), noteAt(0, -quarter)})}, "");
 
-    score.parts.front().measures[0].voices[0].events[0].pitches[0].midiNoteNumber = 7;
-    score.parts.front().measures[0].voices[0].events[0].tiedTo = EventRef{9, 9, 9};
+    score.parts.front().measures[0].voices[0].events[0].notes[0].pitch.midiNoteNumber = 7;
+    score.parts.front().measures[0].voices[0].events[0].notes.front().tiedTo = NoteRef{9, 9, 9};
 
     REQUIRE_NOTHROW(enforceInvariants(score));
 
@@ -482,11 +488,11 @@ TEST_CASE("the full pass repairs a thoroughly broken score without throwing", "[
     {
         CHECK(event.duration >= 0);
         CHECK(endOf(event) <= score.parts.front().measures[0].nominalDuration);
-        CHECK_FALSE(event.tiedTo.has_value());
+        CHECK_FALSE(event.notes.front().tiedTo.has_value());
 
-        for (const Pitch& pitch : event.pitches)
+        for (const Note& note : event.notes)
         {
-            CHECK(isConsistent(pitch));
+            CHECK(isConsistent(note.pitch));
         }
     }
 }

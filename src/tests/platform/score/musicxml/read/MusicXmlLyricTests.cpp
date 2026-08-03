@@ -142,7 +142,7 @@ TEST_CASE(
     const Voice& voice = score->parts.front().measures.front().voices.front();
 
     REQUIRE(voice.events.size() == 1);
-    CHECK(voice.events.front().pitches.size() == 3);
+    CHECK(voice.events.front().notes.size() == 3);
 
     REQUIRE(voice.events.front().lyrics.size() == 1);
     CHECK(voice.events.front().lyrics.front().text == "Sing");

@@ -1,8 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "support/ScoreFixtures.h"
+
 #include "platform/score/Score.h"
 
 using namespace score;
+using testing::score::notesOf;
 
 namespace
 {
@@ -15,7 +18,7 @@ namespace
     note.kind = EventKind::note;
     note.onset = 0;
     note.duration = ticksPerQuarterNote;
-    note.pitches = {pitchFromSpelling(Step::c, 0, 4)};
+    note.notes = notesOf({pitchFromSpelling(Step::c, 0, 4)});
 
     Voice voice;
     voice.number = 1;
@@ -100,11 +103,11 @@ TEST_CASE("a chord is one event carrying several pitches", "[score][model]")
     ScoreEvent chord;
     chord.kind = EventKind::chord;
     chord.duration = ticksPerQuarterNote;
-    chord.pitches = {
-        pitchFromSpelling(Step::c, 0, 4), pitchFromSpelling(Step::e, 0, 4),
-        pitchFromSpelling(Step::g, 0, 4)};
+    chord.notes = notesOf(
+        {pitchFromSpelling(Step::c, 0, 4), pitchFromSpelling(Step::e, 0, 4),
+         pitchFromSpelling(Step::g, 0, 4)});
 
-    CHECK(chord.pitches.size() == 3);
+    CHECK(chord.notes.size() == 3);
     CHECK(isPitched(chord));
     CHECK(endOf(chord) == ticksPerQuarterNote);
 }
@@ -116,7 +119,7 @@ TEST_CASE("a rest carries no pitch", "[score][model]")
     rest.duration = ticksPerQuarterNote;
 
     CHECK_FALSE(isPitched(rest));
-    CHECK(rest.pitches.empty());
+    CHECK(rest.notes.empty());
 }
 
 TEST_CASE("a grace note has zero duration", "[score][model]")
@@ -127,7 +130,7 @@ TEST_CASE("a grace note has zero duration", "[score][model]")
     grace.kind = EventKind::note;
     grace.isGrace = true;
     grace.duration = 0;
-    grace.pitches = {pitchFromSpelling(Step::d, 0, 5)};
+    grace.notes = notesOf({pitchFromSpelling(Step::d, 0, 5)});
 
     CHECK(grace.isGrace);
     CHECK(endOf(grace) == grace.onset);
@@ -137,32 +140,32 @@ TEST_CASE("event references compare by all three coordinates", "[score][model]")
 {
     // Tie linkage relies on these, and a tie can cross a barline, so the
     // measure index has to be part of the identity.
-    const EventRef reference{1, 0, 2};
+    const NoteRef reference{1, 0, 2};
 
-    CHECK(reference == EventRef{1, 0, 2});
-    CHECK(reference != EventRef{2, 0, 2});
-    CHECK(reference != EventRef{1, 1, 2});
-    CHECK(reference != EventRef{1, 0, 3});
+    CHECK(reference == NoteRef{1, 0, 2});
+    CHECK(reference != NoteRef{2, 0, 2});
+    CHECK(reference != NoteRef{1, 1, 2});
+    CHECK(reference != NoteRef{1, 0, 3});
 }
 
 TEST_CASE("a tie links two events in both directions", "[score][model]")
 {
     ScoreEvent start;
     start.kind = EventKind::note;
-    start.pitches = {pitchFromSpelling(Step::g, 0, 4)};
-    start.tiedTo = EventRef{1, 0, 0};
+    start.notes = notesOf({pitchFromSpelling(Step::g, 0, 4)});
+    start.notes.front().tiedTo = NoteRef{1, 0, 0};
 
     ScoreEvent stop;
     stop.kind = EventKind::note;
-    stop.pitches = {pitchFromSpelling(Step::g, 0, 4)};
-    stop.tiedFrom = EventRef{0, 0, 0};
+    stop.notes = notesOf({pitchFromSpelling(Step::g, 0, 4)});
+    stop.notes.front().tiedFrom = NoteRef{0, 0, 0};
 
-    REQUIRE(start.tiedTo.has_value());
-    REQUIRE(stop.tiedFrom.has_value());
+    REQUIRE(start.notes.front().tiedTo.has_value());
+    REQUIRE(stop.notes.front().tiedFrom.has_value());
 
     // Invariant 4 also requires both ends to sound the same pitch -- a file may
     // legitimately spell them differently either side of a barline.
-    CHECK(soundsSameAs(start.pitches.front(), stop.pitches.front()));
+    CHECK(soundsSameAs(start.notes.front().pitch, stop.notes.front().pitch));
 }
 
 TEST_CASE("a plain event carries no tuplet ratio", "[score][model]")
@@ -300,7 +303,7 @@ TEST_CASE("a note can carry several verses at once", "[score][model][lyrics]")
 {
     ScoreEvent note;
     note.kind = EventKind::note;
-    note.pitches = {pitchFromSpelling(Step::c, 0, 4)};
+    note.notes = notesOf({pitchFromSpelling(Step::c, 0, 4)});
     note.lyrics = {
         LyricSyllable{1, SyllabicPosition::single, "Praise", false},
         LyricSyllable{2, SyllabicPosition::single, "Sing", false}};

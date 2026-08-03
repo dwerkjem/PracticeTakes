@@ -19,16 +19,26 @@
 // nothing here outlives the import.
 namespace score::musicxml
 {
-// An event plus the tie flags the file wrote on it.
+// The tie markings MusicXML wrote on one note. A note may carry both, which is
+// what a note in the middle of a chain of ties looks like.
+struct PendingTie
+{
+    bool start = false;
+    bool stop = false;
+};
+
+// An event plus the tie flags the file wrote on each of its notes.
 //
-// The flags live beside the event rather than on it because a tie is resolved
-// against an EventRef, and an EventRef is only knowable once a voice's events
-// are in their final order -- which is after the measure has been read.
+// The flags live beside the event rather than on it because a tie resolves to a
+// NoteRef, and a NoteRef is only knowable once a voice's events are in their
+// final order -- which is after the measure has been read.
+//
+// One entry per note, kept in step with `event.notes`. They are appended
+// together and never separately, which is what keeps the two aligned.
 struct PendingEvent
 {
     ScoreEvent event;
-    bool tieStart = false;
-    bool tieStop = false;
+    std::vector<PendingTie> noteTies;
 };
 
 struct PendingVoice

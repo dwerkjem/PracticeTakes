@@ -83,9 +83,14 @@ Everything here reaches the model and is covered by tests.
 - Rests, including whole-measure rests (`<rest measure="yes">`), whose duration
   comes from the bar when the file omits it.
 - Chords: a run of `<note>` elements where every note after the first carries
-  `<chord/>` becomes **one event with several pitches**, consuming one duration.
-- Ties (`<tie>`), matched by sounding pitch so a G-sharp may tie to an A-flat.
-  Unmatched ends are dropped with a diagnostic.
+  `<chord/>` becomes **one event with several notes**, consuming one duration.
+  A chord tone consumes no time whether or not it has a pitch the model can
+  store — an unpitched percussion chord still costs one duration, not several.
+- Ties (`<tie>`), **per note rather than per chord**. A chord may tie some of
+  its notes and not others — a pianist holding the bass while the upper voices
+  move — and the model records that faithfully. Matched by sounding pitch, so a
+  G-sharp may tie to an A-flat across a barline. Unmatched ends are dropped with
+  a diagnostic.
 - Grace notes, as zero-duration events that do not advance the cursor.
 - Tuplet **ratios** from `<time-modification>`.
 

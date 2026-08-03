@@ -184,7 +184,7 @@ TEST_CASE(
     // The music survived intact.
     const Voice& voice = result.score->parts.front().measures.front().voices.front();
     REQUIRE(voice.events.size() == 1);
-    CHECK(voice.events.front().pitches.front().midiNoteNumber == 72);
+    CHECK(voice.events.front().notes.front().pitch.midiNoteNumber == 72);
 
     // And every category was reported.
     CHECK(find(result.diagnostics, "print") != nullptr);
@@ -221,7 +221,7 @@ TEST_CASE(
 
     // Written pitch, unchanged.
     const Voice& voice = result.score->parts.front().measures.front().voices.front();
-    CHECK(voice.events.front().pitches.front().midiNoteNumber == 74);
+    CHECK(voice.events.front().notes.front().pitch.midiNoteNumber == 74);
 }
 
 TEST_CASE("a clean file produces no diagnostics at all", "[score][musicxml][diagnostics]")

@@ -68,13 +68,13 @@ TEST_CASE(
 
     REQUIRE(voice.events.size() == 2);
 
-    const Pitch& sharp = voice.events[0].pitches.front();
+    const Pitch& sharp = voice.events[0].notes.front().pitch;
     CHECK(sharp.step == Step::c);
     CHECK(sharp.alter == 1);
     CHECK(sharp.octave == 4);
     CHECK(sharp.midiNoteNumber == 61);
 
-    const Pitch& flat = voice.events[1].pitches.front();
+    const Pitch& flat = voice.events[1].notes.front().pitch;
     CHECK(flat.step == Step::d);
     CHECK(flat.alter == -1);
     CHECK(flat.midiNoteNumber == 61);
@@ -104,10 +104,115 @@ TEST_CASE("a three-note chord is one event consuming one duration", "[score][mus
     const ScoreEvent& chord = voice.events.front();
     CHECK(chord.kind == EventKind::chord);
     CHECK(chord.duration == whole);
-    REQUIRE(chord.pitches.size() == 3);
-    CHECK(chord.pitches[0].midiNoteNumber == 60);
-    CHECK(chord.pitches[1].midiNoteNumber == 64);
-    CHECK(chord.pitches[2].midiNoteNumber == 67);
+    REQUIRE(chord.notes.size() == 3);
+    CHECK(chord.notes[0].pitch.midiNoteNumber == 60);
+    CHECK(chord.notes[1].pitch.midiNoteNumber == 64);
+    CHECK(chord.notes[2].pitch.midiNoteNumber == 67);
+}
+
+TEST_CASE("an unpitched chord tone consumes no time", "[score][musicxml][note]")
+{
+    // Found by the real-score corpus, not by reasoning. A percussion chord --
+    // a kick and a hi-hat struck together, which is most of a drum part -- is a
+    // run of <note> elements carrying <chord/> and <unpitched> rather than
+    // <pitch>. Percussion is outside the supported subset, so there is nowhere
+    // to put the sound; the *timing* still has to be right.
+    //
+    // The importer originally required a readable <pitch> before treating a
+    // note as a chord tone, so each of these advanced the cursor by its own
+    // duration and pushed the voice past its barline. MuseScore exports carry
+    // hundreds of them: one file in the corpus has 412.
+    const std::string unpitchedChordTone =
+        "      <note>\n"
+        "        <chord/>\n"
+        "        <unpitched><display-step>G</display-step>"
+        "<display-octave>5</display-octave></unpitched>\n"
+        "        <duration>4</duration>\n"
+        "        <voice>1</voice>\n"
+        "      </note>\n";
+    const std::string unpitchedHead =
+        "      <note>\n"
+        "        <unpitched><display-step>F</display-step>"
+        "<display-octave>4</display-octave></unpitched>\n"
+        "        <duration>4</duration>\n"
+        "        <voice>1</voice>\n"
+        "      </note>\n";
+
+    const std::string body =
+        measure("1", attributes(1, 4, 4) + unpitchedHead + unpitchedChordTone + unpitchedChordTone);
+
+    const MusicXmlImportResult result = importMusicXmlDocument(scoreDocument(body));
+
+    REQUIRE(succeeded(result.status));
+
+    const Measure& bar = result.score->parts.front().measures.front();
+    const Voice& voice = bar.voices.front();
+
+    // Three <note> elements, one whole note of time -- not three.
+    REQUIRE(voice.events.size() == 1);
+    CHECK(voice.events.front().onset == 0);
+    CHECK(voice.events.front().duration == whole);
+    CHECK(voice.events.front().onset + voice.events.front().duration == bar.nominalDuration);
+
+    // Nothing was truncated to make that true, which is what would have
+    // happened if the cursor had over-advanced.
+    const auto truncated = std::any_of(
+        result.diagnostics.begin(), result.diagnostics.end(),
+        [](const Diagnostic& diagnostic) { return diagnostic.elementName == "measure"; });
+    CHECK_FALSE(truncated);
+}
+
+TEST_CASE(
+    "a chord tone mixing pitched and unpitched notes keeps the pitches it can",
+    "[score][musicxml][note]")
+{
+    const std::string unpitchedChordTone =
+        "      <note>\n"
+        "        <chord/>\n"
+        "        <unpitched><display-step>G</display-step>"
+        "<display-octave>5</display-octave></unpitched>\n"
+        "        <duration>4</duration>\n"
+        "        <voice>1</voice>\n"
+        "      </note>\n";
+    const std::string body = measure(
+        "1", attributes(1, 4, 4) + note("C", 4, 4) + unpitchedChordTone +
+                 note("E", 4, 4, 1, "        <chord/>\n"));
+
+    const auto score = importOrFail(scoreDocument(body));
+    const Voice& voice = score->parts.front().measures.front().voices.front();
+
+    REQUIRE(voice.events.size() == 1);
+    CHECK(voice.events.front().duration == whole);
+
+    // The unpitched tone contributes no pitch and costs no time; the pitched
+    // one still lands.
+    REQUIRE(voice.events.front().notes.size() == 2);
+    CHECK(voice.events.front().notes[0].pitch.midiNoteNumber == 60);
+    CHECK(voice.events.front().notes[1].pitch.midiNoteNumber == 64);
+}
+
+TEST_CASE(
+    "a chord marking on the first note of a voice is repaired and reported",
+    "[score][musicxml][note]")
+{
+    // <chord/> means "stack this on the note before it", and there is no note
+    // before it. The file is wrong; importing it as an ordinary note loses the
+    // least, but inventing a note silently would be worse than saying so.
+    const std::string body =
+        measure("1", attributes(1, 4, 4) + note("C", 5, 4, 1, "        <chord/>\n"));
+
+    const MusicXmlImportResult result = importMusicXmlDocument(scoreDocument(body));
+
+    REQUIRE(succeeded(result.status));
+
+    const Voice& voice = result.score->parts.front().measures.front().voices.front();
+    REQUIRE(voice.events.size() == 1);
+    CHECK(voice.events.front().duration == whole);
+
+    const auto reported = std::any_of(
+        result.diagnostics.begin(), result.diagnostics.end(),
+        [](const Diagnostic& diagnostic) { return diagnostic.elementName == "chord"; });
+    CHECK(reported);
 }
 
 TEST_CASE("a tie across a barline links both events", "[score][musicxml][note]")
@@ -124,15 +229,112 @@ TEST_CASE("a tie across a barline links both events", "[score][musicxml][note]")
     const ScoreEvent& start = part.measures[0].voices.front().events.front();
     const ScoreEvent& stop = part.measures[1].voices.front().events.front();
 
-    REQUIRE(start.tiedTo.has_value());
-    REQUIRE(stop.tiedFrom.has_value());
+    REQUIRE(start.notes.front().tiedTo.has_value());
+    REQUIRE(stop.notes.front().tiedFrom.has_value());
 
     // Both ends point at each other. A half-linked tie is a null dereference
     // waiting to happen in every consumer, so invariant 4 requires the mirror.
-    CHECK(start.tiedTo->measureIndex == 1);
-    CHECK(start.tiedTo->eventIndex == 0);
-    CHECK(stop.tiedFrom->measureIndex == 0);
-    CHECK(stop.tiedFrom->eventIndex == 0);
+    CHECK(start.notes.front().tiedTo->measureIndex == 1);
+    CHECK(start.notes.front().tiedTo->eventIndex == 0);
+    CHECK(stop.notes.front().tiedFrom->measureIndex == 0);
+    CHECK(stop.notes.front().tiedFrom->eventIndex == 0);
+}
+
+TEST_CASE("a chord can tie some of its notes and not others", "[score][musicxml][note]")
+{
+    // The case an event-level tie could not express, and the reason tie linkage
+    // lives on the note. A pianist holds the bass of a chord while the upper
+    // voices move -- common rather than exotic: in one real guitar score in the
+    // corpus, 44 of 256 chords do exactly this.
+    //
+    // Flattening it to "the whole chord is tied" is wrong in both directions at
+    // once: it sustains notes that were re-struck, and it drops ties that were
+    // written.
+    const std::string chordExtra = "        <chord/>\n";
+    const std::string tieStart = "        <tie type=\"start\"/>\n";
+    const std::string tieStop = "        <tie type=\"stop\"/>\n";
+
+    // Bar 1: C-E-G, with only the C tied over. Bar 2: C-F-A, only the C tied in.
+    const std::string body =
+        measure(
+            "1", attributes(1, 4, 4) + note("C", 4, 4, 1, tieStart) +
+                     note("E", 4, 4, 1, chordExtra) + note("G", 4, 4, 1, chordExtra)) +
+        measure(
+            "2", note("C", 4, 4, 1, tieStop) + note("F", 4, 4, 1, chordExtra) +
+                     note("A", 4, 4, 1, chordExtra));
+
+    const MusicXmlImportResult result = importMusicXmlDocument(scoreDocument(body));
+
+    REQUIRE(succeeded(result.status));
+
+    const Part& part = result.score->parts.front();
+    const ScoreEvent& first = part.measures[0].voices.front().events.front();
+    const ScoreEvent& second = part.measures[1].voices.front().events.front();
+
+    REQUIRE(first.notes.size() == 3);
+    REQUIRE(second.notes.size() == 3);
+
+    // The C ties across, and it is the C specifically -- note index 0 at both
+    // ends, not "the event".
+    REQUIRE(first.notes[0].tiedTo.has_value());
+    CHECK(first.notes[0].tiedTo->measureIndex == 1);
+    CHECK(first.notes[0].tiedTo->eventIndex == 0);
+    CHECK(first.notes[0].tiedTo->noteIndex == 0);
+
+    REQUIRE(second.notes[0].tiedFrom.has_value());
+    CHECK(second.notes[0].tiedFrom->noteIndex == 0);
+
+    // The E and G were re-struck as F and A, so they tie to nothing.
+    CHECK_FALSE(first.notes[1].tiedTo.has_value());
+    CHECK_FALSE(first.notes[2].tiedTo.has_value());
+    CHECK_FALSE(second.notes[1].tiedFrom.has_value());
+    CHECK_FALSE(second.notes[2].tiedFrom.has_value());
+
+    // hasAnyTie is the event-level question; it must not be confused with the
+    // per-note one.
+    CHECK(hasAnyTie(first));
+
+    // Nothing was dropped to achieve that.
+    const auto dropped = std::any_of(
+        result.diagnostics.begin(), result.diagnostics.end(),
+        [](const Diagnostic& diagnostic) { return diagnostic.elementName == "tie"; });
+    CHECK_FALSE(dropped);
+}
+
+TEST_CASE(
+    "an inner voice of a chord ties independently of the outer one",
+    "[score][musicxml][note]")
+{
+    // The mirror image: the chord keeps its top note while the bass moves. An
+    // importer that matched on the event's *first* pitch would drop this,
+    // because the first pitch differs at the two ends.
+    const std::string chordExtra = "        <chord/>\n";
+    const std::string body =
+        measure(
+            "1", attributes(1, 4, 4) + note("C", 4, 4) +
+                     note("G", 4, 4, 1, chordExtra + "        <tie type=\"start\"/>\n")) +
+        measure(
+            "2",
+            note("E", 4, 4) + note("G", 4, 4, 1, chordExtra + "        <tie type=\"stop\"/>\n"));
+
+    const MusicXmlImportResult result = importMusicXmlDocument(scoreDocument(body));
+
+    REQUIRE(succeeded(result.status));
+
+    const Part& part = result.score->parts.front();
+    const ScoreEvent& first = part.measures[0].voices.front().events.front();
+    const ScoreEvent& second = part.measures[1].voices.front().events.front();
+
+    REQUIRE(first.notes.size() == 2);
+    REQUIRE(second.notes.size() == 2);
+
+    // The G ties; the bass, which changed from C to E, does not.
+    REQUIRE(first.notes[1].tiedTo.has_value());
+    CHECK(first.notes[1].tiedTo->noteIndex == 1);
+    CHECK_FALSE(first.notes[0].tiedTo.has_value());
+
+    REQUIRE(second.notes[1].tiedFrom.has_value());
+    CHECK_FALSE(second.notes[0].tiedFrom.has_value());
 }
 
 TEST_CASE("a tie that never ends is dropped with a diagnostic", "[score][musicxml][note]")
@@ -147,7 +349,7 @@ TEST_CASE("a tie that never ends is dropped with a diagnostic", "[score][musicxm
 
     const ScoreEvent& dangling =
         result.score->parts.front().measures[0].voices.front().events.front();
-    CHECK_FALSE(dangling.tiedTo.has_value());
+    CHECK_FALSE(dangling.notes.front().tiedTo.has_value());
 
     const auto reported = std::any_of(
         result.diagnostics.begin(), result.diagnostics.end(),
@@ -168,7 +370,7 @@ TEST_CASE(
 
     const ScoreEvent& orphan =
         result.score->parts.front().measures[1].voices.front().events.front();
-    CHECK_FALSE(orphan.tiedFrom.has_value());
+    CHECK_FALSE(orphan.notes.front().tiedFrom.has_value());
     CHECK_FALSE(result.diagnostics.empty());
 }
 
@@ -193,8 +395,8 @@ TEST_CASE("a slur is not a tie", "[score][musicxml][note]")
 
     for (const ScoreEvent& event : voice.events)
     {
-        CHECK_FALSE(event.tiedTo.has_value());
-        CHECK_FALSE(event.tiedFrom.has_value());
+        CHECK_FALSE(event.notes.front().tiedTo.has_value());
+        CHECK_FALSE(event.notes.front().tiedFrom.has_value());
     }
 
     // Dropped, and said so -- a slur is in the recognised-but-unsupported list,
@@ -229,7 +431,7 @@ TEST_CASE("a whole-measure rest lasts the measure", "[score][musicxml][note]")
     const ScoreEvent& rest = bar.voices.front().events.front();
     CHECK(rest.kind == EventKind::rest);
     CHECK(rest.duration == quarter * 3);
-    CHECK(rest.pitches.empty());
+    CHECK(rest.notes.empty());
 }
 
 TEST_CASE("a grace note takes no time and does not move the cursor", "[score][musicxml][note]")
@@ -329,6 +531,6 @@ TEST_CASE(
 
     const ScoreEvent& event = firstEvent(*result.score);
     CHECK(event.kind == EventKind::rest);
-    CHECK(event.pitches.empty());
+    CHECK(event.notes.empty());
     CHECK_FALSE(result.diagnostics.empty());
 }

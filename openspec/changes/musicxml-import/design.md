@@ -515,7 +515,10 @@ resolved decision 1:
   resolved.
 - **`Event`** — one of note, chord, or rest; staff number, onset tick relative
   to the measure start, duration in ticks, a grace flag (zero duration), a
-  tuplet ratio when present, tie linkage, and lyric syllables.
+  tuplet ratio when present, its notes, and lyric syllables.
+- **`Note`** — one sounding note of an event: a `Pitch` plus its tie linkage.
+  Tie linkage sits here rather than on the event because a chord may tie some of
+  its notes and not others; see invariant 4.
 - **`Pitch`** — step, alter, octave, **and** the derived MIDI note number. Both,
   always. The renderer needs the spelling to choose a staff line and an
   accidental; playback needs the number. Deriving the spelling back from a MIDI
@@ -545,9 +548,11 @@ the parser.
 2. Events within a voice are in ascending onset order, and no two events in a
    voice overlap. A chord is one event, not several.
 3. Every duration is non-negative. Only grace notes have zero duration.
-4. A tie chain has exactly one start and one stop, and every link points at an
-   event that exists and has the same pitch. Unmatched tie ends are dropped with
-   a diagnostic rather than left dangling.
+4. A tie chain has exactly one start and one stop, and every link points at a
+   **note** that exists and sounds the same pitch. Notes rather than events: a
+   chord may tie some of its notes and not others, and an event-level tie could
+   not express that. Unmatched tie ends are dropped with a diagnostic rather
+   than left dangling.
 5. Every note's MIDI number is consistent with its spelling.
 6. Part ids are unique and non-empty. A file with duplicate or missing ids gets
    generated ids and a diagnostic.

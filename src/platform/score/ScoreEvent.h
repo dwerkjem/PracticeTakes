@@ -25,25 +25,57 @@ enum class EventKind
     rest
 };
 
-// Identifies an event within a part, for tie linkage. A tie can cross a
-// barline, so a measure-relative index is not enough on its own.
-struct EventRef
+// Identifies one note within a part, for tie linkage.
+//
+// Down to the note rather than the event, because **a tie is a property of a
+// note, not of a chord**. A pianist holding the bass of a chord while the upper
+// voices move is writing exactly that, and it is common rather than exotic: in
+// one real guitar score in the test corpus, 44 of 256 chords tie only some of
+// their notes. An event-level tie cannot express it, and flattening it to "the
+// whole chord is tied" is silently wrong in both directions -- it sustains
+// notes that were re-struck and drops ties that were written.
+//
+// A tie can cross a barline, so the measure index is part of the identity.
+struct NoteRef
 {
     std::size_t measureIndex = 0;
     std::size_t voiceIndex = 0;
     std::size_t eventIndex = 0;
+
+    // Which note of the event's chord. Zero for a single note.
+    std::size_t noteIndex = 0;
 };
 
-[[nodiscard]] constexpr bool operator==(const EventRef& lhs, const EventRef& rhs) noexcept
+[[nodiscard]] constexpr bool operator==(const NoteRef& lhs, const NoteRef& rhs) noexcept
 {
     return lhs.measureIndex == rhs.measureIndex && lhs.voiceIndex == rhs.voiceIndex &&
-           lhs.eventIndex == rhs.eventIndex;
+           lhs.eventIndex == rhs.eventIndex && lhs.noteIndex == rhs.noteIndex;
 }
 
-[[nodiscard]] constexpr bool operator!=(const EventRef& lhs, const EventRef& rhs) noexcept
+[[nodiscard]] constexpr bool operator!=(const NoteRef& lhs, const NoteRef& rhs) noexcept
 {
     return !(lhs == rhs);
 }
+
+// One sounding note: its pitch, and where it ties.
+//
+// Set on the note a tie *starts* at, pointing to where it stops, and vice
+// versa. Invariant 4 requires both ends to exist, refer to a real note, and
+// sound the same pitch; unmatched ends are dropped with a diagnostic rather
+// than left dangling, because a half-linked tie is a null dereference waiting
+// to happen in every consumer.
+//
+// This is the sounding tie (MusicXML <tie>), never the visual slur (<slur>)
+// and never its engraved counterpart (<notations><tied>). All three look alike
+// on the page and are routinely confused, which is why the importer tests for
+// it explicitly.
+struct Note
+{
+    Pitch pitch;
+
+    std::optional<NoteRef> tiedTo;
+    std::optional<NoteRef> tiedFrom;
+};
 
 // The ratio a tuplet compresses time by: `actual` notes played in the time of
 // `normal`. A triplet is {3, 2}. The *bracket* a notation program draws is
@@ -86,19 +118,9 @@ struct ScoreEvent
 
     TupletRatio tuplet;
 
-    // Empty for a rest, one entry for a note, two or more for a chord.
-    std::vector<Pitch> pitches;
-
-    // Set on the event a tie *starts* at, pointing to where it stops, and vice
-    // versa. Invariant 4 requires both ends to exist, refer to a real event, and
-    // sound the same pitch; unmatched ends are dropped with a diagnostic rather
-    // than left dangling.
-    //
-    // This is the sounding tie (MusicXML <tie>), never the visual slur
-    // (<slur>). The two look alike on the page and are routinely confused,
-    // which is why the importer tests for it explicitly.
-    std::optional<EventRef> tiedTo;
-    std::optional<EventRef> tiedFrom;
+    // Empty for a rest, one entry for a note, two or more for a chord. Each
+    // carries its own tie linkage; see Note.
+    std::vector<Note> notes;
 
     // Lyrics attached to this event. Multiple entries mean multiple verses, not
     // multiple syllables in sequence. Empty on a rest and on most instrumental
@@ -114,6 +136,22 @@ struct ScoreEvent
 
 [[nodiscard]] inline bool isPitched(const ScoreEvent& event) noexcept
 {
-    return event.kind != EventKind::rest && !event.pitches.empty();
+    return event.kind != EventKind::rest && !event.notes.empty();
+}
+
+// Whether any note of this event ties, in either direction. A chord may tie
+// some of its notes and not others, so this is a question about the event and
+// `Note::tiedTo`/`tiedFrom` is the question about a note.
+[[nodiscard]] inline bool hasAnyTie(const ScoreEvent& event) noexcept
+{
+    for (const Note& note : event.notes)
+    {
+        if (note.tiedTo.has_value() || note.tiedFrom.has_value())
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 } // namespace score
