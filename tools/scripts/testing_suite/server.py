@@ -22,6 +22,7 @@ import mimetypes
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+import history as history_module
 import review
 import runner as runner_module
 import suites as suites_module
@@ -219,6 +220,16 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self._send_json(self.session.overview())
         elif parsed.path == "/api/job":
             self._send_json(self.session.job.status())
+        elif parsed.path == "/api/history":
+            machine = query.get("machine", [""])[0]
+            entries = history_module.collect(self.store)
+
+            if not machine and entries:
+                # Default to the machine you are sitting at: a trend line that
+                # silently mixes two machines is worse than no trend line.
+                machine = entries[-1]["machine"]
+
+            self._send_json(history_module.series(entries, machine))
         elif parsed.path == "/api/tags":
             self._send_json([{"name": row["name"], "description": row["description"]}
                              for row in self.store.tags()])
@@ -284,6 +295,8 @@ class ReviewHandler(BaseHTTPRequestHandler):
             # Whatever the job produces is what the page should show next.
             self.session.select(None)
             self._send_json(self.session.job.status())
+        elif parsed.path == "/api/sync":
+            self._send_json(history_module.sync(self.store))
         elif parsed.path == "/api/select":
             self.session.select(payload.get("run_id"))
             self._send_json(self.session.overview())

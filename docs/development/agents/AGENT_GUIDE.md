@@ -131,11 +131,14 @@ uv run test-suite run --all              # same thing without a browser
 uv run test-suite run --kind performance
 uv run test-suite attend                 # only the questions an image cannot answer
 uv run test-suite export                 # the record the release gate reads
+uv run test-suite sync                   # share run history through git
 ```
 
 Runs accumulate in a machine-local SQLite store — captures, verdicts, suite
 results, measurements, all against one run — while the exported record under
-`docs/development/quality/manual-runs/` stays the release gate's only input. See
+`docs/development/quality/manual-runs/` stays the release gate's only input.
+`sync` writes one JSON file per run to `docs/development/quality/run-history/`
+so pass rates and performance trends travel through git; images never do. See
 `docs/development/quality/TESTING_SUITE.md`. No CI check runs any of it.
 
 ## Architecture

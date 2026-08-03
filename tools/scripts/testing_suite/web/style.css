@@ -283,3 +283,63 @@ button:hover { border-color: var(--accent); }
   z-index: 4;
   pointer-events: none;
 }
+
+/* --- History -------------------------------------------------------------
+   Chart colours are roles, not raw hex, so the two that ever share a chart --
+   the series line and the failure marker -- are stated once. Both were checked
+   against this surface for contrast and for colour-vision separation; a failure
+   also gets a bigger ringed marker and a caption, so colour never carries the
+   meaning alone. */
+
+:root {
+  --series-1: #3987e5;
+  --grid: #2c313c;
+}
+
+#history-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.tiles { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+
+.tile {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 14px;
+  min-width: 200px;
+}
+
+.tile-label { color: var(--muted); font-size: 12px; }
+.tile-value { font-size: 30px; font-weight: 600; line-height: 1.2; }
+.tile-value.bad { color: var(--fail); }
+.tile-detail { margin-top: 2px; }
+
+/* Chart.js needs a sized box to be responsive into; without one it grows on
+   every redraw. The container owns the height, the canvas fills it. */
+.plot { position: relative; height: 260px; }
+.plot.small { height: 190px; }
+.plot canvas { width: 100% !important; height: 100% !important; }
+
+.small-multiples {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 14px;
+}
+
+.multiple {
+  margin: 0;
+  background: #191c22;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.multiple figcaption { font-size: 13px; margin-bottom: 4px; }
+.multiple figcaption .small { display: block; }
+
+#history-tables h3 { font-size: 13px; margin: 14px 0 6px; }

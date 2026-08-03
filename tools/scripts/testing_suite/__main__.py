@@ -38,6 +38,7 @@ import capture as capture_module  # noqa: E402
 import runner as runner_module  # noqa: E402
 import suites as suites_module  # noqa: E402
 import export as export_module  # noqa: E402
+import history as history_module  # noqa: E402
 import ingest as ingest_module  # noqa: E402
 import machine as machine_module  # noqa: E402
 import review as review_module  # noqa: E402
@@ -367,6 +368,54 @@ def command_export(arguments) -> int:
     return 0
 
 
+def command_sync(arguments) -> int:
+    """Write this machine's runs into the git-tracked history directory."""
+    store = open_store(arguments)
+    result = history_module.sync(store, arguments.directory)
+
+    print(f"{len(result['written'])} run(s) written, {result['unchanged']} already current.")
+    print(f"{result['total']} run(s) now in {result['directory']}")
+
+    if result["written"]:
+        print("\nCommit them to share this history:")
+        print(f"  git add {result['directory']} && git commit -m 'chore: record test runs'")
+
+    print("\nImages stay on this machine; only the numbers are shared.")
+
+    return 0
+
+
+def command_history(arguments) -> int:
+    """The same numbers the graphs draw, for a terminal."""
+    store = open_store(arguments)
+    entries = history_module.collect(store, arguments.directory)
+
+    if not entries:
+        print("No runs recorded yet.")
+
+        return 0
+
+    machine = arguments.machine or entries[-1]["machine"]
+    data = history_module.series(entries, machine)
+
+    print(f"{len(data['runs'])} scored run(s) on machine {machine[:8]} "
+          f"({data['synced']} synced, {data['local_only']} local only)\n")
+
+    for run in data["runs"][-arguments.limit :]:
+        print(f"  {run['started_at']}  {run['commit'][:8]}  {run['mode']:<5}  "
+              f"{run['pass_percent']:>5}% passed  ({run['failed']} failed)")
+
+    if data["metrics"]:
+        print("\nMeasurements (latest, and change from the run before):")
+
+        for metric in data["metrics"]:
+            summary = history_module.trend(metric["points"])
+            delta = "" if summary.get("delta") is None else f"  {summary['delta']:+g}"
+            print(f"  {metric['metric']:<45} {summary['latest']:>10g} {metric['unit']:<3}{delta}")
+
+    return 0
+
+
 def command_prune(arguments) -> int:
     store = open_store(arguments)
     removed = store.prune_images(arguments.keep)
@@ -491,6 +540,18 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser.add_argument("--directory", type=Path, default=None)
     add_run_option(export_parser)
     export_parser.set_defaults(handler=command_export)
+
+    sync_parser = subparsers.add_parser(
+        "sync", help="Write this machine's runs into the git-tracked history."
+    )
+    sync_parser.add_argument("--directory", type=Path, default=None)
+    sync_parser.set_defaults(handler=command_sync)
+
+    history_parser = subparsers.add_parser("history", help="Runs and measurements over time.")
+    history_parser.add_argument("--directory", type=Path, default=None)
+    history_parser.add_argument("--machine", default="", help="Defaults to this machine.")
+    history_parser.add_argument("--limit", type=int, default=15)
+    history_parser.set_defaults(handler=command_history)
 
     prune_parser = subparsers.add_parser("prune", help="Delete old images, keeping every decision.")
     prune_parser.add_argument("--keep", type=int, default=5)

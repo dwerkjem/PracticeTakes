@@ -26,6 +26,8 @@ The hub has three views:
   and the live output are on the same page.
 - **Review** — the captured surfaces as a grid: tag, comment, and score.
 - **Results** — what the suites said about this run, and what was measured.
+- **History** — the graphs: pass rate per run over time, and one chart per
+  performance metric. Shared through git.
 
 ### What it can run
 
@@ -248,6 +250,41 @@ digest.
 ```bash
 uv run test-suite prune --keep 5    # drop old images, keep every decision
 ```
+
+## History and sharing it
+
+A single run answers "is this build all right". The questions worth a database
+are the ones only a sequence answers, and the History view draws them:
+
+- **Verification over time** — the share of answered questions that passed, per
+  run. Skips count against it: an area nobody examined is not a pass. Runs with
+  failures are drawn as larger red points.
+- **Performance over time** — one chart per metric, each on its own scale in its
+  own unit. Two measures never share an axis, which is why a run's ten
+  benchmarks are ten small charts rather than one crowded plot.
+
+Both are filtered to one machine, always. A launch time from another processor
+is not a point on this machine's line, and the store refuses to compare across
+machines for the same reason.
+
+```bash
+uv run test-suite sync        # write this machine's runs into git
+uv run test-suite history     # the same numbers, in a terminal
+```
+
+`sync` writes one JSON file per run into
+`docs/development/quality/run-history/`. One file per run is what makes it
+mergeable: two machines committing different runs never conflict. Commit that
+directory and pull it elsewhere, and the other machine's runs appear on the
+graphs.
+
+**Images are never shared.** A full run is several megabytes of PNG that would
+bloat the repository forever and cannot be diffed, so screenshots stay in the
+local store and only the numbers travel. The history files carry counts,
+measurements, and suite results.
+
+The graphs use Chart.js, vendored under `web/vendor/` so the hub works with no
+network — see the note there.
 
 ### Machine provenance
 

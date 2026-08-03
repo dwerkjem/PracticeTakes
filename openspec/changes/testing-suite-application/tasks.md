@@ -149,21 +149,35 @@
   terminal-only session
 - [x] 10.9 Test the registry, the parsers, the job, and the page's wiring
 
-## 11. Prune and housekeeping
+## 11. History and sharing
 
-- [x] 11.1 Implement `prune`: delete image files for runs beyond the keep count
+- [x] 11.1 Add `history.py`: pass rate and measurements per run, merged from the
+  local store and the version-controlled directory, keyed so a run known from
+  both is counted once
+- [x] 11.2 `test-suite sync` — one JSON file per run, so two machines never
+  conflict; no image, thumbnail, or path leaves the machine
+- [x] 11.3 A History view: pass rate over time, one chart per metric, stat tiles,
+  machine picker, and a table view of the same numbers
+- [x] 11.4 Vendor Chart.js under `web/vendor/` so the graphs work with no network
+- [x] 11.5 Never merge machines in a series, and say so on the page
+- [x] 11.6 `test-suite history` for a terminal-only session
+- [x] 11.7 Test the pass-rate rule, the merge, the sync, and what is shared
+
+## 12. Prune and housekeeping
+
+- [x] 12.1 Implement `prune`: delete image files for runs beyond the keep count
   while keeping verdicts, tags, comments, measurements, and results
-- [x] 11.2 Ignore the data directory in `.gitignore` if any part of it can land
+- [x] 12.2 Ignore the data directory in `.gitignore` if any part of it can land
   inside the repository
 
-## 12. Documentation and specs
+## 13. Documentation and specs
 
-- [x] 12.1 Write the workflow document under `docs/development/quality/` —
+- [x] 13.1 Write the workflow document under `docs/development/quality/` —
   capture, attend, review, ingest, export, prune — and index it in
   `docs/development/README.md`
-- [x] 12.2 Update `docs/development/agents/AGENT_GUIDE.md` where it describes the
+- [x] 13.2 Update `docs/development/agents/AGENT_GUIDE.md` where it describes the
   manual verification commands
-- [x] 12.3 Run `openspec validate testing-suite-application --strict`
-- [x] 12.4 Sync the delta into `openspec/specs/manual-gui-verification/spec.md`
+- [x] 13.3 Run `openspec validate testing-suite-application --strict`
+- [x] 13.4 Sync the delta into `openspec/specs/manual-gui-verification/spec.md`
   and add the new capability specs
-- [ ] 12.5 Close issue #143 with a link to the run record the new suite produced
+- [ ] 13.5 Close issue #143 with a link to the run record the new suite produced

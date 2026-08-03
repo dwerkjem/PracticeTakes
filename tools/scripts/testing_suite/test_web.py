@@ -28,7 +28,18 @@ def script() -> str:
 
 
 def declared_ids() -> set[str]:
-    return set(re.findall(r'id="([^"]+)"', markup()))
+    """Ids the page has: written in the markup, or built by the script itself.
+
+    The script creates some — the canvases, the empty-state button — inside
+    template strings, and those are just as real as the ones in the file.
+    """
+    from_markup = set(re.findall(r'id="([^"]+)"', markup()))
+    from_script = set(re.findall(r'id="([^"$]+)"', script()))
+    interpolated = {
+        name.replace("${index}", "") for name in re.findall(r'id="([^"]*\$\{[^"]*)"', script())
+    }
+
+    return from_markup | from_script | interpolated
 
 
 def referenced_ids() -> set[str]:
@@ -41,9 +52,13 @@ def referenced_ids() -> set[str]:
 
 class PageWiringTests(unittest.TestCase):
     def test_every_id_the_script_uses_exists_in_the_markup(self) -> None:
-        # `capture-now` is created by the script itself for the empty state, so
-        # it is the one id that legitimately is not in the file.
-        missing = referenced_ids() - declared_ids() - {"capture-now"}
+        missing = {
+            # The per-metric canvases are numbered at render time; the pair of
+            # patterns cannot be matched literally, so they are checked by
+            # test_every_canvas_the_script_draws_into_is_created_by_it instead.
+            name for name in referenced_ids() - declared_ids()
+            if not name.startswith("canvas-metric")
+        }
 
         self.assertEqual(missing, set(), f"the script reaches for ids that do not exist: {missing}")
 
@@ -81,6 +96,26 @@ class PageWiringTests(unittest.TestCase):
     def test_the_stylesheet_and_script_are_linked(self) -> None:
         self.assertIn('href="/web/style.css"', markup())
         self.assertIn('src="/web/app.js"', markup())
+
+    def test_the_charting_library_is_vendored_and_loaded(self) -> None:
+        """It ships with the tool so the graphs work with no network."""
+        self.assertIn('src="/web/vendor/chart.umd.js"', markup())
+        self.assertTrue((WEB_ROOT / "vendor" / "chart.umd.js").is_file())
+        self.assertTrue((WEB_ROOT / "vendor" / "chart.js-LICENSE.md").is_file())
+
+    def test_the_library_is_loaded_before_the_page_script(self) -> None:
+        text = markup()
+
+        self.assertLess(text.index("vendor/chart.umd.js"), text.index("/web/app.js"))
+
+    def test_every_canvas_the_script_draws_into_is_created_by_it(self) -> None:
+        """A canvas id that no markup or script creates is a chart that never appears."""
+        script = globals()["script"]()
+        drawn = set(re.findall(r'element\(`?canvas-([\w-]+?)(?:-\$\{index\})?`?\)', script))
+        created = set(re.findall(r'id="canvas-([\w-]+?)(?:-\$\{index\})?"', script))
+
+        self.assertTrue(drawn)
+        self.assertEqual(drawn - created, set())
 
 
 if __name__ == "__main__":

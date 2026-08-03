@@ -33,7 +33,10 @@ const element = (id) => document.getElementById(id);
 
 function showView(name) {
   state.view = name;
-  ["run", "review", "results"].forEach((view) => {
+
+  if (name === "history") loadHistory(element("history-machine").value);
+
+  ["run", "review", "results", "history"].forEach((view) => {
     element(`view-${view}`).hidden = view !== name;
   });
   document.querySelectorAll("#tabs button").forEach((button) => {
@@ -591,6 +594,273 @@ function zoom(capture) {
 function closeZoom() {
   element("zoom").hidden = true;
 }
+
+
+// --- History ---------------------------------------------------------------
+//
+// Chart.js (vendored in web/vendor/, MIT) draws these. Two rules shape what it
+// is asked to draw, both from getting them wrong being worse than not drawing
+// them at all:
+//
+//   * **One axis per chart.** Launch time in ms and a FIFO push in ns never
+//     share a y-scale, so performance is small multiples — one metric, one
+//     chart, its own scale, its own unit — rather than one crowded plot.
+//   * **One machine per view.** A timing from another processor is not a point
+//     on this machine's line.
+//
+// Colours: one series hue for the line, and the critical status colour for runs
+// that had failures. Those two were checked against this surface for contrast
+// and for colour-vision separation; a failing run also gets a larger ringed
+// point and says so in the caption, so colour never carries it alone.
+
+const INK = {
+  series: "#3987e5",
+  bad: "#d03b3b",
+  grid: "#2c313c",
+  text: "#9aa3b2",
+  surface: "#191c22",
+};
+
+const charts = new Map();
+
+function baseOptions({ unit = "", suggestedMin, suggestedMax, yTitle = "" } = {}) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      // One series per chart, so the title names it and a legend box would be
+      // a label for something already labelled.
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: "#12141a",
+        borderColor: INK.grid,
+        borderWidth: 1,
+        titleColor: "#e6e8ee",
+        bodyColor: "#e6e8ee",
+        callbacks: {
+          label: (item) => ` ${formatValue(item.parsed.y)}${unit ? " " + unit : ""}`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: { color: INK.grid, drawTicks: false },
+        border: { color: INK.grid },
+        ticks: { color: INK.text, maxRotation: 0, autoSkipPadding: 24, font: { size: 11 } },
+      },
+      y: {
+        suggestedMin,
+        suggestedMax,
+        title: yTitle ? { display: true, text: yTitle, color: INK.text } : undefined,
+        grid: { color: INK.grid, drawTicks: false },
+        border: { display: false },
+        ticks: { color: INK.text, font: { size: 11 } },
+      },
+    },
+  };
+}
+
+function drawChart(canvas, config) {
+  const existing = charts.get(canvas.id);
+
+  if (existing) existing.destroy();
+
+  charts.set(canvas.id, new window.Chart(canvas, config));
+}
+
+function formatValue(value) {
+  if (value === null || value === undefined) return "—";
+  if (Math.abs(value) >= 1000) return value.toFixed(0);
+  if (Math.abs(value) >= 10) return value.toFixed(1);
+
+  return Number(value.toFixed(3)).toString();
+}
+
+function shortDate(iso) {
+  return iso.slice(5, 16).replace("T", " ");
+}
+
+function statTile(label, value, detail, tone = "") {
+  return `<div class="tile">
+    <div class="tile-label">${label}</div>
+    <div class="tile-value ${tone}">${value}</div>
+    <div class="tile-detail muted small">${detail || ""}</div>
+  </div>`;
+}
+
+function renderQualityChart(runs) {
+  const holder = element("chart-quality");
+
+  if (!runs.length) {
+    holder.innerHTML = '<p class="muted">No scored runs yet.</p>';
+    return;
+  }
+
+  holder.innerHTML = `<div class="plot"><canvas id="canvas-quality"></canvas></div>
+    <p class="muted small">Percentage of answered questions that passed. Skips count against it —
+    an area nobody examined is not a pass. Larger red points are runs that had failures.</p>`;
+
+  const lowest = Math.min(...runs.map((run) => run.pass_percent));
+
+  drawChart(element("canvas-quality"), {
+    type: "line",
+    data: {
+      labels: runs.map((run) => `${shortDate(run.started_at)}  ${run.commit.slice(0, 7)}`),
+      datasets: [{
+        data: runs.map((run) => run.pass_percent),
+        borderColor: INK.series,
+        backgroundColor: "rgba(57, 135, 229, 0.12)",
+        borderWidth: 2,
+        fill: true,
+        tension: 0.15,
+        pointRadius: runs.map((run) => (run.failed || run.capture_failures ? 6 : 4)),
+        pointBackgroundColor: runs.map((run) =>
+          (run.failed || run.capture_failures ? INK.bad : INK.series)),
+        pointBorderColor: INK.surface,
+        pointBorderWidth: 2,
+      }],
+    },
+    // Zoomed to the data rather than pinned to zero: the interesting band for a
+    // pass rate is the top few points, and a 0–100 axis draws every run as the
+    // same flat line at the ceiling. Capped at 100 so the scale cannot imply
+    // more than everything.
+    options: baseOptions({
+      unit: "%",
+      suggestedMin: Math.max(0, Math.floor(lowest - 3)),
+      suggestedMax: 100,
+      yTitle: "% passing",
+    }),
+  });
+}
+
+function renderMetricCharts(metrics) {
+  const holder = element("chart-metrics");
+
+  if (!metrics.length) {
+    holder.innerHTML = '<p class="muted">No measurements yet — run the Benchmarks suite.</p>';
+    return;
+  }
+
+  holder.innerHTML = metrics.map((metric, index) => {
+    const points = metric.points;
+    const last = points[points.length - 1].value;
+    const first = points[0].value;
+    const change = points.length > 1 && first
+      ? `${last > first ? "+" : ""}${(((last - first) / first) * 100).toFixed(1)}% since the first run`
+      : "one run so far";
+
+    return `<figure class="multiple">
+      <figcaption>${metric.metric}
+        <span class="muted small">${formatValue(last)} ${metric.unit} · ${change}</span>
+      </figcaption>
+      <div class="plot small"><canvas id="canvas-metric-${index}"></canvas></div>
+    </figure>`;
+  }).join("");
+
+  metrics.forEach((metric, index) => {
+    drawChart(element(`canvas-metric-${index}`), {
+      type: "line",
+      data: {
+        labels: metric.points.map((point) =>
+          `${shortDate(point.started_at)}  ${point.commit.slice(0, 7)}`),
+        datasets: [{
+          data: metric.points.map((point) => point.value),
+          borderColor: INK.series,
+          backgroundColor: "rgba(57, 135, 229, 0.12)",
+          borderWidth: 2,
+          fill: true,
+          tension: 0.15,
+          pointRadius: 4,
+          pointBackgroundColor: INK.series,
+          pointBorderColor: INK.surface,
+          pointBorderWidth: 2,
+        }],
+      },
+      options: baseOptions({ unit: metric.unit, yTitle: metric.unit }),
+    });
+  });
+}
+
+function renderHistory(data) {
+  state.history = data;
+
+  const machines = element("history-machine");
+  machines.innerHTML = (data.machines || []).map((entry) =>
+    `<option value="${entry.identity}" ${entry.identity === data.machine ? "selected" : ""}>` +
+    `${entry.description || entry.identity.slice(0, 8)}</option>`).join("");
+
+  element("history-summary").textContent =
+    `${data.runs.length} scored run(s) · ${data.metrics.length} metric(s) tracked · ` +
+    `${data.synced} synced, ${data.local_only} on this machine only`;
+
+  const runs = data.runs;
+  const latest = runs.length ? runs[runs.length - 1] : null;
+  const previous = runs.length > 1 ? runs[runs.length - 2] : null;
+  const delta = latest && previous
+    ? (latest.pass_percent - previous.pass_percent).toFixed(1) : null;
+
+  element("history-tiles").innerHTML = [
+    statTile("Passing, latest run",
+      latest ? `${latest.pass_percent}%` : "—",
+      latest ? `${latest.passed} passed · ${latest.failed} failed · ${latest.skipped} skipped`
+             : "nothing scored yet",
+      latest && latest.failed ? "bad" : ""),
+    statTile("Change from the run before",
+      delta === null ? "—" : `${delta > 0 ? "+" : ""}${delta} pts`,
+      previous ? `against ${previous.commit.slice(0, 8)}` : "no earlier run"),
+    statTile("Runs recorded", String(runs.length),
+      data.machines.length > 1 ? `${data.machines.length} machines known` : "this machine"),
+  ].join("");
+
+  renderQualityChart(runs);
+  renderMetricCharts(data.metrics);
+
+  element("table-runs").innerHTML = "<h3>Runs</h3>" + table(runs, [
+    { key: "started_at", label: "Started" },
+    { label: "Commit", render: (row) => row.commit.slice(0, 8) },
+    { key: "mode", label: "Mode" },
+    { label: "Passing", render: (row) => `${row.pass_percent}%` },
+    { key: "passed", label: "Passed" },
+    { key: "failed", label: "Failed" },
+    { key: "skipped", label: "Skipped" },
+  ]);
+
+  element("table-metrics").innerHTML = "<h3>Measurements</h3>" + table(
+    data.metrics.map((metric) => ({
+      metric: metric.metric,
+      unit: metric.unit,
+      latest: formatValue(metric.points[metric.points.length - 1].value),
+      points: metric.points.length,
+    })), [
+      { key: "metric", label: "Metric" },
+      { key: "latest", label: "Latest" },
+      { key: "unit", label: "Unit" },
+      { key: "points", label: "Runs" },
+    ]);
+}
+
+async function loadHistory(machine) {
+  const { data } = await api(`/api/history${machine ? `?machine=${encodeURIComponent(machine)}` : ""}`);
+  renderHistory(data);
+}
+
+element("history-machine").addEventListener("change", (event) => loadHistory(event.target.value));
+
+element("sync-history").addEventListener("click", async () => {
+  const { data } = await api("/api/sync", {});
+  window.alert(
+    `${data.written.length} run(s) written to ${data.directory}\n` +
+    `${data.total} run(s) in the history directory.\n\n` +
+    "Commit that directory to share this history. Images stay on this machine.");
+  await loadHistory(element("history-machine").value);
+});
+
+element("toggle-tables").addEventListener("click", () => {
+  const tables = element("history-tables");
+  tables.hidden = !tables.hidden;
+  element("toggle-tables").textContent = tables.hidden ? "Show as tables" : "Hide tables";
+});
 
 // --- Wiring ----------------------------------------------------------------
 

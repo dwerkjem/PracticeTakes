@@ -1,6 +1,6 @@
 ## Purpose
 
-Defines the front door of the testing suite: every automated suite the project has in one place, runnable individually, by kind, or all at once, with what each needs built first and every result recorded against the same run.
+Defines the front door of the testing suite: every automated suite the project has in one place, runnable individually, by kind, or all at once, with what each needs built first, every result recorded against the same run, and history across runs graphed and shared.
 
 ## Requirements
 
@@ -142,3 +142,64 @@ that the suite works over a terminal-only session and can be scripted.
 #### Scenario: A machine with no browser
 - **WHEN** the suite is used on a machine with no browser
 - **THEN** every suite can still be run and every result read
+
+### Requirement: History across runs is graphed
+The hub SHALL present history across runs: the share of answered questions that
+passed, per run over time, and each performance metric over time. A run in which
+nothing was scored SHALL NOT appear as a point on the pass-rate line.
+
+#### Scenario: Several runs exist
+- **WHEN** the history view is opened
+- **THEN** the pass rate per run is drawn over time, and each measured metric is
+  drawn over time
+
+#### Scenario: A run scored nothing
+- **WHEN** a run recorded no verdicts
+- **THEN** it contributes no point to the pass-rate line rather than appearing
+  as zero or as a gap
+
+#### Scenario: Skipped questions
+- **WHEN** a run's pass rate is computed
+- **THEN** skipped questions count against it, because an area nobody examined
+  is not a pass
+
+### Requirement: Each metric is graphed on its own scale
+Performance SHALL be drawn as one chart per metric, each with its own scale and
+its own unit. Two metrics SHALL NOT share an axis.
+
+#### Scenario: Metrics in different units
+- **WHEN** a run measures both milliseconds and nanoseconds
+- **THEN** each is drawn in its own chart, labelled with its own unit
+
+### Requirement: A trend never crosses machines
+Every graph SHALL be for one machine, and SHALL offer the machines known to it
+rather than merging them. A measurement from another machine SHALL NOT appear on
+this machine's line.
+
+#### Scenario: History from two machines
+- **WHEN** history contains runs from two machines
+- **THEN** the view shows one machine's runs and offers the other as a choice
+
+### Requirement: History is shared as text, and images are not
+The suite SHALL write one file per run into a version-controlled directory,
+carrying the run's verdict counts, measurements, and automated results. Captured
+images SHALL NOT be written there.
+
+#### Scenario: History is synced
+- **WHEN** history is synced
+- **THEN** one file per run is written, and a run already written unchanged is
+  not rewritten
+
+#### Scenario: Two machines record runs
+- **WHEN** two machines sync different runs and both are committed
+- **THEN** the files merge without conflict, and both machines' runs are
+  available to whoever pulls them
+
+#### Scenario: Images stay local
+- **WHEN** a run with captures is synced
+- **THEN** no image, thumbnail, or image path is written to the shared directory
+
+#### Scenario: A run known from both places
+- **WHEN** a run exists both locally and in the shared directory
+- **THEN** it is counted once, and the local copy is preferred because it may
+  have gained answers since it was written out
