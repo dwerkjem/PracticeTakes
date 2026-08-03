@@ -771,9 +771,15 @@ where I guessed and want the guess on the record.
 - What is a reasonable maximum score size? `SettingsTransferCodec` uses 4 MB,
   which is far too small for notation. I would guess 64 MB uncompressed, but
   that is a guess with no data behind it.
-- Should the import diagnostics be surfaced to users at all in this stage, or
-  only logged? #31 says "malformed files fail with useful messages" but there is
-  no UI in this change to show one.
+- ~~Should the import diagnostics be surfaced to users at all in this stage, or
+  only logged?~~ **Answered: yes, and in a follow-up change.** #31 says
+  "malformed files fail with useful messages" and this change gave them nowhere
+  to appear — the importer's only caller is the test suite, so the criterion is
+  unmet and the specified background-thread handoff has never been performed by
+  the application. `openspec/changes/score-import-command/` adds the File menu,
+  the chooser, the off-message-thread import, and the summary and diagnostics
+  window. It deliberately draws no notation: that stays with #32, for the same
+  reason this change landed the model before the renderer.
 - Does the MVP need multi-movement or multi-`<work>` files, or is one score per
   file sufficient?
 - Should `<part-group>` bracketing (which parts brace together on the page) be
