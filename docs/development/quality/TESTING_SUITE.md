@@ -294,9 +294,19 @@ run whose failures carry no notes still exports.
   shell, the tuner, and the settings window.
 - **`--mode full`** — every surface. What a release is verified with.
 
-`--resolutions` chooses the window sizes, defaulting to all three. The
-constrained size (800×600) is below the 900px threshold at which the title bar
-collapses to the hamburger menu, so it exercises the responsive layout.
+`--resolutions` chooses the window sizes, defaulting to all four:
+
+| Name | Size | Why |
+|---|---|---|
+| `default` | 1280×800 | what most people open it at |
+| `constrained` | 800×600 | below the 900px threshold at which the title bar collapses to the hamburger menu |
+| `tiny` | 640×480 | smaller than a window manager would let a user drag it — the size at which a docked tool has to choose what to drop |
+| `maximised` | the display | where a layout stretches empty space instead of showing more |
+
+`tiny` exists because most of what a run finds is a layout out of room. It is
+the question #113 asks, asked of every tool at once, and it is reachable only
+because the application resizes itself through the control channel — the window
+advertises a 980px minimum that a window manager honours.
 
 Resizing goes through the control channel, so the application resizes *itself*.
 An external resize cannot do this job: the window advertises a 980px minimum

@@ -223,6 +223,18 @@ bool MainComponent::applyTestControlGeometry(const std::string& geometry)
         return true;
     }
 
+    // Smaller than any window manager would let a user make it, deliberately.
+    // Most of what manual verification finds is a layout running out of room,
+    // and 640x480 is where a docked tool has to choose what to drop -- the
+    // question #113 asks, asked of every tool at once.
+    if (geometry == "tiny")
+    {
+        window->setFullScreen(false);
+        window->setSize(640, 480);
+
+        return true;
+    }
+
     if (geometry == "maximised")
     {
         window->setFullScreen(false);

@@ -52,7 +52,11 @@ DEFAULT_THEMES = THEMES
 # recorded with the run so two runs covering different sets are comparable on
 # purpose rather than by accident.
 DEFAULT_GEOMETRY = "default"
-SWEEP_GEOMETRIES = (DEFAULT_GEOMETRY, "constrained", "maximised")
+
+# "tiny" is 640x480 -- smaller than a window manager would let a user drag it,
+# and deliberately so. Most of what a run finds is a layout out of room, and
+# this is the size at which a docked tool has to choose what to drop.
+SWEEP_GEOMETRIES = (DEFAULT_GEOMETRY, "constrained", "tiny", "maximised")
 DEFAULT_RESOLUTIONS = SWEEP_GEOMETRIES
 
 

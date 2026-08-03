@@ -221,7 +221,8 @@ const std::vector<std::string>& approvedThemeNames()
 
 const std::vector<std::string>& approvedGeometryNames()
 {
-    static const std::vector<std::string> names{"normal", "narrow", "maximised", "fullscreen"};
+    static const std::vector<std::string> names{
+        "normal", "narrow", "tiny", "maximised", "fullscreen"};
 
     return names;
 }
