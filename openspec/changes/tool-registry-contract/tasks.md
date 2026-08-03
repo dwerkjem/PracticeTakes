@@ -129,6 +129,6 @@
       **Still owed: a human GUI pass** covering docked/floating/tiled/tabbed
       moves and the Tools menu, since MainComponent remains outside
       `PracticeTakesTests`.
-- [ ] 8.5 Open the PR against `main` referencing issue #24, and note in the
+- [x] 8.5 Open the PR against `main` referencing issue #24, and note in the
       description that multi-instance is declared-only with the seams recorded
       in `design.md`.
