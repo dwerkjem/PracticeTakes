@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Folding evidence produced elsewhere into a run.
 
-The suite does not measure performance and does not run the automated suites.
-The Performance Lab measures; `ctest`, `vitest`, and `run_tests.py` run. What
-this file does is attach their output to the run that a reviewer looked at, so
-one record answers "what state was this build in" rather than three.
+What this file does is attach evidence produced elsewhere to the run a reviewer
+looked at, so one record answers "what state was this build in" rather than
+three. `ctest`, `vitest`, and `run_tests.py` run themselves; the benchmark cases
+are run by the suite and stored directly. A measurement export is read by its
+shape rather than by who produced it, so anything that can emit metric, value,
+and unit lands here -- which is what let the in-application Performance Lab be
+retired without losing a way in.
 
 Ingestion is all-or-nothing. A half-ingested export leaves a run looking like it
 measured less than it did, which is a worse outcome than a failed ingest that
@@ -22,7 +25,7 @@ import xml.etree.ElementTree as ElementTree
 
 from store import Store, StoreError
 
-PERFORMANCE_LAB = "performance-lab"
+MEASUREMENT_SOURCE = "ingested"
 
 
 class IngestError(RuntimeError):
@@ -30,7 +33,7 @@ class IngestError(RuntimeError):
 
 
 def measurements_from(document: dict) -> list[dict]:
-    """The measurement list inside a Performance Lab export.
+    """The measurement list inside a measurement export.
 
     Tolerant about where the list lives — top level, under "measurements", or
     under "results" — and strict about what a measurement is. A metric with no
@@ -83,7 +86,7 @@ def measurements_from(document: dict) -> list[dict]:
 
 
 def performance_export(store: Store, run_id: int, path: Path) -> int:
-    """Ingest a Performance Lab export. Returns how many measurements landed."""
+    """Ingest a measurement export. Returns how many measurements landed."""
     try:
         document = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
@@ -92,7 +95,7 @@ def performance_export(store: Store, run_id: int, path: Path) -> int:
     measurements = measurements_from(document)
 
     try:
-        return store.record_measurements(run_id, measurements, PERFORMANCE_LAB)
+        return store.record_measurements(run_id, measurements, MEASUREMENT_SOURCE)
     except StoreError as error:
         raise IngestError(str(error)) from error
 

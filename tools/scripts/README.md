@@ -17,15 +17,8 @@ example:
 ./tools/scripts/feedback/migrate-feedback-database.sh --remote
 ./tools/scripts/feedback/configure-cloudflare-access.sh
 ./tools/scripts/feedback/run-recovery-drill.py
-./tools/scripts/quality/run-performance-lab.sh
 ./tools/scripts/quality/ui-validation/run-ui-golden.zsh
 ```
-
-The Performance Lab script starts the application, calibrates instrumentation,
-runs the baseline and parameterized strategies, saves each immutable result in
-the normal local and repository result stores, and exits without user input.
-Configure the build with `-DPRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=ON` before
-running it.
 
 The UI golden script uses isolated profiles to capture settled seven-second
 first-launch and representative restored-workspace references, then times fresh

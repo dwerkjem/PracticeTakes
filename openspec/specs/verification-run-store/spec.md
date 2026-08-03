@@ -56,12 +56,11 @@ rather than silently starting a new one.
   compared against the previous hardware's
 
 ### Requirement: Measurements are ingested rather than measured
-The store SHALL accept performance measurements produced elsewhere — the
-Performance Lab's machine-readable export — and SHALL record each with its
-metric name, value, unit, and the scenario that produced it. The testing suite
-SHALL NOT measure performance itself.
+The store SHALL accept performance measurements produced elsewhere, read by the
+shape of the export rather than by which tool wrote it, and SHALL record each
+with its metric name, value, unit, and the scenario that produced it.
 
-#### Scenario: A Performance Lab export is ingested
+#### Scenario: A measurement export is ingested
 - **WHEN** an export is ingested against a run
 - **THEN** each measurement in it is stored with its metric, value, unit, and
   scenario, attached to that run

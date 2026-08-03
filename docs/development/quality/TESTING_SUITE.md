@@ -368,11 +368,12 @@ against somebody else's hardware.
 
 ### Ingesting evidence
 
-The suite does not measure performance and does not run the automated suites; it
-stores what they produced, against the run a reviewer looked at:
+The suite runs the benchmark cases itself (the Benchmarks suite) and stores what
+they measured. `ingest` is for measurements produced somewhere else — it reads an
+export by shape, not by producer:
 
 ```bash
-uv run test-suite ingest --performance build/performance-lab-export.json
+uv run test-suite ingest --performance some-measurements.json
 uv run test-suite ingest --suite PracticeTakesTests --report build/ctest.log
 uv run test-suite ingest --suite services --cases 42 --failures 0
 ```
@@ -439,7 +440,7 @@ edit to that list.
 | `suites.py` | Every runnable suite — id, kind, command, what it needs — data |
 | `runner.py` | The background job: builds what is missing, runs, records |
 | `attend.py` | The short attended pass |
-| `ingest.py` | Performance Lab exports and automated suite results |
+| `ingest.py` | Measurement exports and automated suite results |
 | `export.py` | The record the release gate reads |
 
 Everything except `web/` is standard-library only apart from `images.py`, and is

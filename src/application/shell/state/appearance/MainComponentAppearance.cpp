@@ -3,9 +3,6 @@
 #include "../../ui/feedback/FeedbackWindow.h"
 #include "../../ui/main_window/MicrophoneWarning.h"
 #include "../../ui/settings/SettingsWindow.h"
-#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
-#include "../../ui/performance/PerformanceLabWindow.h"
-#endif
 
 void MainComponent::setTheme(Theme theme)
 {
@@ -117,10 +114,4 @@ void MainComponent::applyAppearanceToOpenWindows()
         feedbackWindow->sendLookAndFeelChange();
         feedbackWindow->repaint();
     }
-#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
-    if (performanceLabWindow != nullptr)
-    {
-        performanceLabWindow->applyAppearance(&appLookAndFeel, palette.background);
-    }
-#endif
 }
