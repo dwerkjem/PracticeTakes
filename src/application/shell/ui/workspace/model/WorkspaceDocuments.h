@@ -1,5 +1,7 @@
 #pragma once
 
+#include "application/tools/ToolSettingsPayload.h"
+
 #include <algorithm>
 #include <map>
 #include <memory>
@@ -36,14 +38,6 @@ struct WorkspaceBounds
     int height = 0;
 
     bool operator==(const WorkspaceBounds&) const = default;
-};
-
-struct ToolSettingsPayload
-{
-    int version = 1;
-    std::string data;
-
-    bool operator==(const ToolSettingsPayload&) const = default;
 };
 
 struct WorkspaceNode

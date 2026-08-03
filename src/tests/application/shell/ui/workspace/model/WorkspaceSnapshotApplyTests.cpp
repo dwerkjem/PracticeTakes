@@ -30,7 +30,7 @@ TEST_CASE(
     snapshot.focusedTool = "harmonic-analyzer";
     snapshot.toolSettings.emplace("tuner", ToolSettingsPayload{1, R"({"displayMode":2})"});
 
-    const WorkspaceToolRegistry registry;
+    const ToolCatalog& registry = builtInToolCatalog();
     const auto plan = WorkspaceSnapshotApply::plan(snapshot, registry, toolBindings());
 
     REQUIRE(plan.has_value());
@@ -54,7 +54,7 @@ TEST_CASE("workspace apply plan rejects duplicate dock placement", "[workspace][
     WorkspaceSnapshot snapshot;
     snapshot.dockRoot = WorkspaceNode::tabGroup({"tuner", "tuner"}, "tuner");
 
-    const WorkspaceToolRegistry registry;
+    const ToolCatalog& registry = builtInToolCatalog();
     CHECK_FALSE(WorkspaceSnapshotApply::plan(snapshot, registry, toolBindings()).has_value());
 }
 
@@ -66,7 +66,7 @@ TEST_CASE(
     snapshot.dockRoot = WorkspaceNode::leaf("tuner");
     snapshot.floating = {{"tuner", {20, 30, 900, 700}}};
 
-    const WorkspaceToolRegistry registry;
+    const ToolCatalog& registry = builtInToolCatalog();
     CHECK_FALSE(WorkspaceSnapshotApply::plan(snapshot, registry, toolBindings()).has_value());
 }
 

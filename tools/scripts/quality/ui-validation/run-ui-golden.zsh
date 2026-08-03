@@ -23,6 +23,9 @@ readonly settle_seconds=7
 readonly baseline_ms=414.134
 readonly constrained_width=800
 readonly constrained_height=600
+# Settings moved under the XDG config directory in 5ab9b85; the app resolves
+# this from $HOME, which every profile below overrides.
+readonly settings_relative_path=.config/PracticeTakes/PracticeTakes.settings
 
 if [[ ! -x "$app" ]]; then
     print -u2 -- "Build Practice Takes before running visual validation"
@@ -140,7 +143,7 @@ prepare_restored_seed()
         --ui-validation-scenario prepare-restored
     wait_parked 2.0
     stop_app
-    if [[ ! -f "$home/PracticeTakes/PracticeTakes.settings" ]]; then
+    if [[ ! -f "$home/$settings_relative_path" ]]; then
         print -u2 -- "The representative restored profile was not persisted"
         return 1
     fi

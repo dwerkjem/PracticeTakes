@@ -11,6 +11,8 @@ The source tree groups code first by architectural role, then by feature:
   and workspace layout. Its `ui` and `state` branches keep immediate folder
   fan-out small. `MainComponent` implementations live beside the shell
   responsibility they implement instead of in one monolithic source file.
+- `src/application/tools` defines the contract every analysis tool is declared
+  and built through — see [Adding a tool](adding-a-tool.md).
 - `src/features` contains user-facing analysis and feedback features.
 - `src/platform` contains shared infrastructure such as microphone capture
   and the normalized score model.
@@ -132,6 +134,81 @@ The Settings input-volume control applies a shared 0–200% software gain before
 fan-out. The live level meter displays the post-gain peak, and the clipping
 state is held briefly so it remains visible without requiring UI work in the
 callback.
+
+## Tool registry
+
+Analysis tools are declared, not wired in. `src/application/tools` holds the
+contract; `MainComponent` names no tool.
+
+The layer splits in two so most of it can be tested without a display:
+
+- `ToolCatalog` is free of JUCE and holds a tool's identity — id, display name,
+  historical aliases, instance policy, settings version, preferred size.
+  `WorkspaceNormalizer` and `WorkspaceSnapshotApply` depend on it, and so does
+  the test control surface, which previously kept a hand-maintained copy of the
+  tool names because the old `ToolType` enum lived behind `JuceHeader`.
+- `ToolRegistry` adds the JUCE half: the factory that builds each tool's
+  component. It reports drift between the two, so a catalog entry with no
+  factory fails at startup rather than becoming a menu item that cannot open.
+
+`builtInToolCatalog()` and `builtInToolRegistry()` are the single registration
+site. Adding a tool is one entry in each; nothing in the shell changes.
+
+### Tools and instances
+
+A **tool** is a kind of tool. An **instance** is one live copy. The registry is
+keyed by tool id; workspace topology, floating bounds, focus, and settings
+payloads are keyed by *instance* id.
+
+`ToolInstanceId` is a string. The first instance of a tool is spelled exactly as
+the tool id — `"tuner"` — and a later one would be `"tuner#2"`. Because every
+shipped tool is single-instance, every id written today is byte-identical to
+what the pre-registry code wrote, so `WorkspaceCatalog` stays at version 1 and
+existing saved workspaces load unchanged.
+
+Each `ToolDefinition` declares an instance policy of `single` or `multi`, and
+the shell enforces it: opening an already-open single-instance tool focuses it
+rather than duplicating it. **Every shipped tool is `single`.** `multi` is
+implemented and tested but deliberately unexercised in production — the
+deduplication in `WorkspaceNormalizer` and `WorkspaceSnapshotApply` already keys
+on instance ids, so enabling a duplicatable tool later does not mean revisiting
+the workspace model or migrating the persisted format.
+
+### Services and lifetime
+
+A tool reaches shared state only through `ToolServices`, passed to its factory.
+It is a struct rather than a widening parameter list so a new service — a
+transport, when reference tempo lands — is one field instead of a signature
+change at every factory.
+
+`MainComponent` holds one `LiveTool` per instance: the component, its docked and
+floating chrome, its presentation state, its last floating bounds, and its last
+settings payload. The entry outlives the component, so a closed tool reopens
+where it was with the settings it had.
+
+**Tools are destroyed before the services they borrow, by construction.**
+`liveTools` is declared after `audioInputService` and `appLookAndFeel`, so
+reverse-order member destruction tears every tool down first. There is no
+runtime check; moving that declaration would silently break the guarantee.
+
+Presentation is not ownership. `DockedToolPanel` and `ToolWindow` hold a tool's
+chrome, never the tool, which is what lets a tool move between docked and
+floating without its analysis restarting or its audio registration dropping.
+
+### Settings
+
+A tool serialises its own settings through `ToolComponent::captureSettings` and
+`applySettings`, exchanging an opaque `ToolSettingsPayload` the shell never
+interprets. The catalog declares the version; a stored payload at any other
+version is discarded and the tool starts at its defaults, so a tool may change
+its format freely at the cost of one restore falling back.
+
+Two exceptions remain where the shell still names a tool, both deliberate:
+presets are a tuner concept with no general form in the contract, and the stored
+`.ptsettings` schema predates the registry and names three tools in fixed
+fields. `applyLegacyToolState`/`captureLegacyToolState` in
+`MainComponentSettings.cpp` are the single adapter between that schema and the
+id-keyed runtime.
 
 ## Score model
 

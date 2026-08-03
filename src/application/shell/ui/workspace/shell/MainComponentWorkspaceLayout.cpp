@@ -12,15 +12,15 @@ void MainComponent::setWorkspaceLayout(WorkspaceLayoutState::Layout layout)
     rebuildWorkspaceContainer();
 }
 
-std::vector<MainComponent::ToolType> MainComponent::dockedTools()
+std::vector<ToolInstanceId> MainComponent::dockedTools()
 {
-    std::vector<ToolType> docked;
-    for (const auto tool : allToolTypes)
+    std::vector<ToolInstanceId> docked;
+    for (const auto& entry : liveTools)
     {
-        if (stateFor(tool).presentation() == WorkspaceToolState::Presentation::docked &&
-            dockFor(tool) != nullptr)
+        if (entry.state.presentation() == WorkspaceToolState::Presentation::docked &&
+            entry.dock != nullptr)
         {
-            docked.push_back(tool);
+            docked.push_back(entry.id);
         }
     }
     return docked;
@@ -43,7 +43,8 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
 
     if (node->kind == WorkspaceLayoutState::NodeKind::leaf)
     {
-        return dockFor(static_cast<ToolType>(node->tool)).get();
+        auto* entry = findLiveTool(node->tool);
+        return entry != nullptr ? entry->dock.get() : nullptr;
     }
 
     if (node->kind == WorkspaceLayoutState::NodeKind::tabs)
@@ -54,10 +55,14 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
             juce::TabbedButtonBar::TabsAtTop,
             [safeThis, nodeId](WorkspaceLayoutState::Tool tool)
             {
-                if (safeThis != nullptr)
+                if (safeThis == nullptr)
                 {
-                    static_cast<void>(safeThis->workspaceLayoutState.setActiveTab(nodeId, tool));
-                    safeThis->recordToolFocus(static_cast<ToolType>(tool));
+                    return;
+                }
+                static_cast<void>(safeThis->workspaceLayoutState.setActiveTab(nodeId, tool));
+                if (const auto* entry = safeThis->findLiveTool(tool))
+                {
+                    safeThis->recordToolFocus(entry->id);
                 }
             });
         tabs->setTabBarDepth(38);
@@ -65,23 +70,28 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
 
         for (size_t index = 0; index < node->tabs.size(); ++index)
         {
-            const auto tool = static_cast<ToolType>(node->tabs[index]);
+            auto* entry = findLiveTool(node->tabs[index]);
+            if (entry == nullptr)
+            {
+                continue;
+            }
+            const auto instance = entry->id;
             // Dragging this tab's label is a workspace tool drag like any
             // other drag source, but with a "picked up" drag image -- a
             // snapshot of the tab button itself -- instead of the default
             // empty image the other sources use.
-            const auto dragHandler = [safeThis, tool](juce::Component& source)
+            const auto dragHandler = [safeThis, instance](juce::Component& source)
             {
                 if (safeThis != nullptr)
                 {
                     safeThis->beginToolDrag(
-                        tool, source,
+                        instance, source,
                         juce::ScaledImage(source.createComponentSnapshot(source.getLocalBounds())));
                 }
             };
             tabs->addToolTab(
-                node->tabs[index], toolName(tool), appPaletteFor(currentTheme).panel,
-                dockFor(tool).get(), dragHandler);
+                node->tabs[index], toolName(instance), appPaletteFor(currentTheme).panel,
+                entry->dock.get(), dragHandler);
         }
         tabs->restoreActiveTool(node->activeTab);
 
@@ -145,14 +155,13 @@ void MainComponent::detachWorkspaceContainer()
     // Belt-and-braces: whatever the previous tree shape was, make sure every
     // dock is detached from its actual current parent before the tree is
     // rebuilt from scratch below.
-    for (const auto tool : allToolTypes)
+    for (auto& entry : liveTools)
     {
-        auto& dock = dockFor(tool);
-        if (dock != nullptr)
+        if (entry.dock != nullptr)
         {
-            if (auto* parent = dock->getParentComponent())
+            if (auto* parent = entry.dock->getParentComponent())
             {
-                parent->removeChildComponent(dock.get());
+                parent->removeChildComponent(entry.dock.get());
             }
         }
     }

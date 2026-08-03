@@ -63,6 +63,7 @@
             "practicetakes",
             "RAII",
             "RELWITHDEBINFO",
+            "serialise",
             "STREQUAL",
             "testcontrol",
             "XCURSOR"

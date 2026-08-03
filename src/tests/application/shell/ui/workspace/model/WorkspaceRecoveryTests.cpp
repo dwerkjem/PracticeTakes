@@ -86,3 +86,46 @@ TEST_CASE(
     CHECK(result.snapshot.dockRoot->toolId == "tuner");
     CHECK(result.snapshot.focusedTool == "tuner");
 }
+
+TEST_CASE(
+    "a snapshot naming a single-instance tool twice restores one instance",
+    "[workspace][recovery][tools]")
+{
+    // "tuner#2" is a well-formed instance id, so it survives deduplication --
+    // the two ids genuinely differ. It is dropped by the instance policy
+    // instead, because the tuner is declared single-instance. This is the
+    // seam multi-instance would be enabled through: flip the policy and this
+    // snapshot restores two tuners rather than one.
+    WorkspaceSnapshot snapshot;
+    snapshot.dockRoot = WorkspaceNode::split(
+        WorkspaceOrientation::horizontal, 0.5, WorkspaceNode::leaf("tuner"),
+        WorkspaceNode::leaf("tuner#2"));
+    snapshot.focusedTool = "tuner";
+
+    const auto result = WorkspaceNormalizer::normalize(snapshot, {{0, 0, 1280, 720}});
+
+    REQUIRE(result.snapshot.dockRoot.has_value());
+    CHECK_FALSE(result.report.usedFallback);
+    // The split collapsed to the one surviving leaf rather than the whole
+    // workspace being refused.
+    CHECK(result.snapshot.dockRoot->kind == WorkspaceNodeKind::leaf);
+    CHECK(result.snapshot.dockRoot->toolId == "tuner");
+    CHECK(result.snapshot.focusedTool == "tuner");
+}
+
+TEST_CASE(
+    "a floating duplicate of a single-instance tool is dropped",
+    "[workspace][recovery][tools]")
+{
+    WorkspaceSnapshot snapshot;
+    snapshot.dockRoot = WorkspaceNode::leaf("spectrogram");
+    snapshot.floating.push_back({"spectrogram#2", {40, 40, 600, 400}});
+    snapshot.toolSettings.emplace("tuner#4", ToolSettingsPayload{1, "{}"});
+
+    const auto result = WorkspaceNormalizer::normalize(snapshot, {{0, 0, 1280, 720}});
+
+    CHECK(result.snapshot.floating.empty());
+    // Settings keyed to an instance that cannot exist go with it, rather than
+    // lingering as an entry nothing will ever read.
+    CHECK(result.snapshot.toolSettings.empty());
+}

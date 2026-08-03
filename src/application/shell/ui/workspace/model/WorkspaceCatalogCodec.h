@@ -1,7 +1,7 @@
 #pragma once
 
 #include "WorkspaceDocuments.h"
-#include "WorkspaceToolRegistry.h"
+#include "application/tools/BuiltInToolCatalog.h"
 
 #include <cstddef>
 #include <optional>
@@ -37,5 +37,5 @@ class WorkspaceCatalogCodec
     [[nodiscard]] static WorkspaceCatalogDecodeResult decode(
         std::string_view document,
         const std::vector<WorkspaceBounds>& displayAreas,
-        const WorkspaceToolRegistry& registry = WorkspaceToolRegistry());
+        const ToolCatalog& registry = builtInToolCatalog());
 };

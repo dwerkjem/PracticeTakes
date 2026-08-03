@@ -20,6 +20,7 @@ broader music-practice and digital-audio workstation application.
 ### `architecture/`
 
 - [Architecture](architecture/ARCHITECTURE.md) — application ownership, audio flow, and UI structure
+- [Adding a tool](architecture/adding-a-tool.md) — the two entries that register an analysis tool, and the lifecycle it runs through
 - [Design and architecture review checklist](architecture/ARCHITECTURE_QA.md) — what reviewers check on pull requests beyond formatting/linting
 
 ### `formats/`

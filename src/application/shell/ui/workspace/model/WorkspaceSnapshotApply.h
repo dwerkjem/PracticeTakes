@@ -2,8 +2,8 @@
 
 #include "WorkspaceDocuments.h"
 #include "WorkspaceLayoutState.h"
-#include "WorkspaceToolRegistry.h"
 #include "WorkspaceToolState.h"
+#include "application/tools/BuiltInToolCatalog.h"
 
 #include <algorithm>
 #include <functional>
@@ -52,7 +52,7 @@ class WorkspaceSnapshotApply
 
     [[nodiscard]] static std::optional<Plan> plan(
         const WorkspaceSnapshot& snapshot,
-        const WorkspaceToolRegistry& registry,
+        const ToolCatalog& registry,
         const std::vector<ToolBinding>& bindings)
     {
         Context context{registry, bindings, {}, {}, {}};
@@ -69,8 +69,9 @@ class WorkspaceSnapshotApply
 
         for (const auto& floating : snapshot.floating)
         {
-            const auto resolved = registry.resolve(floating.toolId);
-            const auto* binding = resolved.has_value() ? findBinding(bindings, *resolved) : nullptr;
+            const auto resolved = registry.resolveInstance(ToolInstanceId(floating.toolId));
+            const auto* binding =
+                resolved.has_value() ? findBinding(bindings, resolved->value()) : nullptr;
             if (binding == nullptr || !context.placed.insert(binding->id).second)
             {
                 return std::nullopt;
@@ -80,8 +81,11 @@ class WorkspaceSnapshotApply
 
         for (const auto& binding : bindings)
         {
-            const auto canonicalId = registry.resolve(binding.id);
-            if (!canonicalId.has_value() || *canonicalId != binding.id)
+            // Bindings are supplied by the shell from its live instances, so
+            // a non-canonical one is a programming error rather than bad saved
+            // data -- refuse the plan rather than silently repair it.
+            const auto canonicalId = registry.resolveInstance(ToolInstanceId(binding.id));
+            if (!canonicalId.has_value() || canonicalId->value() != binding.id)
             {
                 return std::nullopt;
             }
@@ -112,10 +116,10 @@ class WorkspaceSnapshotApply
 
         if (snapshot.focusedTool.has_value())
         {
-            const auto resolved = registry.resolve(*snapshot.focusedTool);
-            if (resolved.has_value() && context.placed.contains(*resolved))
+            const auto resolved = registry.resolveInstance(ToolInstanceId(*snapshot.focusedTool));
+            if (resolved.has_value() && context.placed.contains(resolved->value()))
             {
-                result.focusedTool = *resolved;
+                result.focusedTool = resolved->value();
             }
         }
         return result;
@@ -168,7 +172,7 @@ class WorkspaceSnapshotApply
 
     struct Context
     {
-        const WorkspaceToolRegistry& registry;
+        const ToolCatalog& registry;
         const std::vector<ToolBinding>& bindings;
         std::unordered_set<std::string> placed;
         std::unordered_set<std::string> docked;
@@ -189,9 +193,9 @@ class WorkspaceSnapshotApply
     {
         if (node.kind == WorkspaceNodeKind::leaf)
         {
-            const auto resolved = context.registry.resolve(node.toolId);
+            const auto resolved = context.registry.resolveInstance(ToolInstanceId(node.toolId));
             const auto* binding =
-                resolved.has_value() ? findBinding(context.bindings, *resolved) : nullptr;
+                resolved.has_value() ? findBinding(context.bindings, resolved->value()) : nullptr;
             if (binding == nullptr || !context.placed.insert(binding->id).second)
             {
                 return nullptr;
@@ -205,9 +209,10 @@ class WorkspaceSnapshotApply
             std::vector<WorkspaceLayoutState::Tool> tabs;
             for (const auto& id : node.tabs)
             {
-                const auto resolved = context.registry.resolve(id);
+                const auto resolved = context.registry.resolveInstance(ToolInstanceId(id));
                 const auto* binding =
-                    resolved.has_value() ? findBinding(context.bindings, *resolved) : nullptr;
+                    resolved.has_value() ? findBinding(context.bindings, resolved->value())
+                                         : nullptr;
                 if (binding == nullptr || !context.placed.insert(binding->id).second)
                 {
                     return nullptr;
@@ -216,9 +221,9 @@ class WorkspaceSnapshotApply
                 tabs.push_back(binding->tool);
             }
 
-            const auto activeId = context.registry.resolve(node.activeTab);
+            const auto activeId = context.registry.resolveInstance(ToolInstanceId(node.activeTab));
             const auto* active =
-                activeId.has_value() ? findBinding(context.bindings, *activeId) : nullptr;
+                activeId.has_value() ? findBinding(context.bindings, activeId->value()) : nullptr;
             if (tabs.size() < 2 || active == nullptr ||
                 std::find(tabs.begin(), tabs.end(), active->tool) == tabs.end())
             {

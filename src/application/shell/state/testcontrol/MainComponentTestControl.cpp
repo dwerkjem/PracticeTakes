@@ -29,11 +29,12 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
 
     // Reset first, so states do not accumulate across a run and each one is
     // reached the same way regardless of what preceded it.
-    for (const auto tool : {ToolType::tuner, ToolType::spectrogram, ToolType::harmonics})
+    for (const auto& definition : builtInToolRegistry().tools())
     {
-        if (toolIsOpen(tool))
+        const auto instance = instanceIdToOpen(definition.id);
+        if (toolIsOpen(instance))
         {
-            closeTool(tool);
+            closeTool(instance);
         }
     }
 
@@ -58,34 +59,23 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
             ? WorkspaceToolState::Presentation::floating
             : WorkspaceToolState::Presentation::docked;
 
-    std::vector<ToolType> opened;
+    std::vector<ToolInstanceId> opened;
 
     for (const std::string& name : state.tools)
     {
-        std::optional<ToolType> tool;
-
-        if (name == "tuner")
-        {
-            tool = ToolType::tuner;
-        }
-        else if (name == "spectrogram")
-        {
-            tool = ToolType::spectrogram;
-        }
-        else if (name == "harmonics")
-        {
-            tool = ToolType::harmonics;
-        }
-
-        if (!tool.has_value())
+        // Resolved through the catalog, including its aliases, so the approved
+        // list can keep using a tool's historical name.
+        const auto toolId = builtInToolRegistry().catalog().resolve(name);
+        if (!toolId.has_value())
         {
             // The approved list named a tool this build does not have, which
             // means the two have drifted. Failing is the point.
             return false;
         }
 
-        openTool(*tool, presentation);
-        opened.push_back(*tool);
+        const auto instance = instanceIdToOpen(*toolId);
+        openTool(instance, presentation);
+        opened.push_back(instance);
     }
 
     if (state.arrangement == WorkspaceArrangement::tabbed)
@@ -101,10 +91,14 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
         // to be asked for explicitly, by placing each tool beside the previous.
         for (std::size_t index = 1; index < opened.size(); ++index)
         {
+            const auto* current = findLiveTool(opened[index]);
+            const auto* previous = findLiveTool(opened[index - 1]);
+            if (current == nullptr || previous == nullptr)
+            {
+                return false;
+            }
             workspaceLayoutState.insert(
-                static_cast<WorkspaceLayoutState::Tool>(opened[index]),
-                static_cast<WorkspaceLayoutState::Tool>(opened[index - 1]),
-                WorkspaceLayoutState::DropZone::right);
+                current->handle, previous->handle, WorkspaceLayoutState::DropZone::right);
         }
 
         rebuildWorkspaceContainer();

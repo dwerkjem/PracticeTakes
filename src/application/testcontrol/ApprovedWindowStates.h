@@ -75,10 +75,9 @@ struct ApprovedWindowState
     // Wire name, kebab-case, used by `open-state`.
     std::string id;
 
-    // Which tools the state opens: "tuner", "spectrogram", "harmonics".
-    // Strings rather than the application's ToolType enum, because that enum
-    // lives in a JUCE header and this list has to stay testable without one;
-    // the glue maps them.
+    // Which tools the state opens, by tool id or by any historical alias of
+    // one -- "harmonics" for the harmonic analyzer, say. ToolCatalog resolves
+    // them, and the tests check every name here resolves.
     std::vector<std::string> tools;
 
     ToolPresentation presentation = ToolPresentation::none;
@@ -132,8 +131,4 @@ struct ApprovedClickTarget
 // resize can never reach the collapsed menu.
 [[nodiscard]] const std::vector<std::string>& approvedGeometryNames();
 
-// Every tool name any approved state may reference. The glue maps these onto
-// ToolType, and the tests pin the two lists together -- ToolType itself cannot
-// be named here because it lives behind JuceHeader.
-[[nodiscard]] const std::vector<std::string>& knownToolNames();
 } // namespace testcontrol

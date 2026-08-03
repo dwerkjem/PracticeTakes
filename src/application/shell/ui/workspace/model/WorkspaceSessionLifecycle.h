@@ -2,7 +2,7 @@
 
 #include "WorkspaceBuiltIns.h"
 #include "WorkspaceNormalizer.h"
-#include "WorkspaceToolRegistry.h"
+#include "application/tools/BuiltInToolCatalog.h"
 
 #include <algorithm>
 #include <string>
@@ -21,7 +21,7 @@ class WorkspaceSessionLifecycle
     [[nodiscard]] static RestoreResult restore(
         WorkspaceCatalog catalog,
         const std::vector<WorkspaceBounds>& displayAreas,
-        const WorkspaceToolRegistry& registry = WorkspaceToolRegistry())
+        const ToolCatalog& registry = builtInToolCatalog())
     {
         bool recovered = false;
 

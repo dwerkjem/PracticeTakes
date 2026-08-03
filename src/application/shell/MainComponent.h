@@ -6,15 +6,19 @@
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
 #include "../theme/Theme.h"
+#include "../tools/BuiltInTools.h"
+#include "../tools/ToolInstanceId.h"
 #include "ui/workspace/model/NamedWorkspaceService.h"
 #include "ui/workspace/model/WorkspaceDocuments.h"
 #include "ui/workspace/model/WorkspaceLayoutState.h"
 #include "ui/workspace/model/WorkspaceSessionLifecycle.h"
 #include "ui/workspace/model/WorkspaceToolState.h"
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 #if PRACTICE_TAKES_ENABLE_TEST_CONTROL
@@ -69,19 +73,8 @@ class MainComponent final
 #endif
 
   private:
-    enum class ToolType
-    {
-        tuner,
-        spectrogram,
-        harmonics
-    };
-
-    // The single place a new tool needs to be registered for the drag/drop
-    // and tab/tile system below to know it exists. Everything else in that
-    // system (rebuildWorkspaceContainer, layoutWorkspace, itemDropped, ...)
-    // loops over this list generically instead of naming tools directly.
-    static constexpr ToolType allToolTypes[] = {
-        ToolType::tuner, ToolType::spectrogram, ToolType::harmonics};
+    class ToolWindow;
+    class DockedToolPanel;
 
     // What a drag-and-drop point in the workspace resolves to: a zone, plus
     // (if the point landed on a specific docked tool's pane rather than open
@@ -91,11 +84,42 @@ class MainComponent final
     struct DropTarget
     {
         WorkspaceLayoutState::DropZone zone = WorkspaceLayoutState::DropZone::none;
-        std::optional<ToolType> pane;
+        std::optional<ToolInstanceId> pane;
     };
 
-    class ToolWindow;
-    class DockedToolPanel;
+    // One tool instance and everything the shell holds on its behalf.
+    //
+    // An entry outlives its component: closing a tool releases the component
+    // but keeps the entry, so a reopened tool comes back where it was, with the
+    // settings it had. `component` being null is how "closed" is represented
+    // alongside `state`.
+    //
+    // Presentation is deliberately not ownership -- `window` and `dock` hold
+    // the chrome, never the tool itself, which is what lets a tool move between
+    // docked and floating without its analysis restarting.
+    struct LiveTool
+    {
+        ToolInstanceId id;
+
+        // This instance's opaque handle in workspaceLayoutState's tiling tree.
+        // Assigned once from a counter and never reused, so the tree can hold
+        // a handle across a rebuild without it silently coming to mean a
+        // different instance.
+        WorkspaceLayoutState::Tool handle{};
+
+        std::unique_ptr<ToolComponent> component;
+        std::unique_ptr<ToolWindow> window;
+        std::unique_ptr<DockedToolPanel> dock;
+        WorkspaceToolState state;
+
+        // Where this instance's floating window last was, kept across closing
+        // so reopening restores the position rather than recentring.
+        juce::Rectangle<int> savedBounds;
+
+        // The settings this instance last reported, kept for the same reason.
+        // Opaque here: only the tool that produced it can read it.
+        std::optional<ToolSettingsPayload> savedSettings;
+    };
     class SettingsWindow;
     class FeedbackWindow;
 #if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
@@ -124,13 +148,20 @@ class MainComponent final
     [[nodiscard]] const NamedWorkspace* activeNamedWorkspace() const;
     void showSettingsMenu();
     void openTool(
-        ToolType tool,
+        const ToolInstanceId& instance,
         WorkspaceToolState::Presentation presentation = WorkspaceToolState::Presentation::docked);
-    void presentTool(ToolType tool, WorkspaceToolState::Presentation presentation);
-    void constructToolPresentation(ToolType tool, WorkspaceToolState::Presentation presentation);
-    void focusTool(ToolType tool);
-    void recordToolFocus(ToolType tool);
-    void closeTool(ToolType tool);
+    // Opens a tool by id, honouring its instance policy: a single-instance
+    // tool that is already live is focused rather than duplicated.
+    void openToolById(
+        std::string_view toolId,
+        WorkspaceToolState::Presentation presentation = WorkspaceToolState::Presentation::docked);
+    void presentTool(const ToolInstanceId& instance, WorkspaceToolState::Presentation presentation);
+    void constructToolPresentation(
+        const ToolInstanceId& instance,
+        WorkspaceToolState::Presentation presentation);
+    void focusTool(const ToolInstanceId& instance);
+    void recordToolFocus(const ToolInstanceId& instance);
+    void closeTool(const ToolInstanceId& instance);
     void showSettings();
     void importSettings();
     void confirmSettingsImport(SettingsTransferModel model);
@@ -158,22 +189,29 @@ class MainComponent final
     void saveSettings(bool explicitSave = false);
     void loadSettings();
     [[nodiscard]] AppSettings::State captureSettingsState();
+    // Adapter between the id-keyed runtime and the fixed per-tool fields the
+    // stored .ptsettings schema still uses. See MainComponentSettings.cpp.
+    void applyLegacyToolState(const AppSettings::State& state);
+    void captureLegacyToolState(AppSettings::State& state);
     void captureActiveWorkspace();
     [[nodiscard]] bool applyWorkspaceSnapshot(const WorkspaceSnapshot& snapshot);
 
-    [[nodiscard]] std::unique_ptr<juce::Component> createToolComponent(ToolType tool);
-    [[nodiscard]] juce::String toolName(ToolType tool) const;
-    [[nodiscard]] juce::Point<int> preferredToolWindowSize(ToolType tool) const;
-    [[nodiscard]] bool toolIsOpen(ToolType tool) const;
-    [[nodiscard]] WorkspaceToolState& stateFor(ToolType tool);
-    [[nodiscard]] const WorkspaceToolState& stateFor(ToolType tool) const;
-    [[nodiscard]] std::unique_ptr<juce::Component>& componentFor(ToolType tool);
-    [[nodiscard]] std::unique_ptr<ToolWindow>& windowFor(ToolType tool);
-    [[nodiscard]] std::unique_ptr<DockedToolPanel>& dockFor(ToolType tool);
-    void detachToolPresentation(ToolType tool);
-    void applyAppearanceToTool(ToolType tool);
+    // Ensures an entry exists for this instance and returns it. Null only when
+    // the instance names a tool that is not registered.
+    [[nodiscard]] LiveTool* ensureLiveTool(const ToolInstanceId& instance);
+    [[nodiscard]] LiveTool* findLiveTool(const ToolInstanceId& instance);
+    [[nodiscard]] const LiveTool* findLiveTool(const ToolInstanceId& instance) const;
+    [[nodiscard]] LiveTool* findLiveTool(WorkspaceLayoutState::Tool handle);
+    [[nodiscard]] const ToolDefinition* definitionFor(const ToolInstanceId& instance) const;
+    // The instance id a single-instance tool always uses, and the id the next
+    // instance of a multi-instance tool would take.
+    [[nodiscard]] ToolInstanceId instanceIdToOpen(std::string_view toolId) const;
+    [[nodiscard]] juce::String toolName(const ToolInstanceId& instance) const;
+    [[nodiscard]] bool toolIsOpen(const ToolInstanceId& instance) const;
+    void detachToolPresentation(const ToolInstanceId& instance);
+    void applyAppearanceToTool(const ToolInstanceId& instance);
     void beginToolDrag(
-        ToolType tool,
+        const ToolInstanceId& instance,
         juce::Component& source,
         const juce::ScaledImage& dragImage = juce::ScaledImage());
     void setWorkspaceLayout(WorkspaceLayoutState::Layout layout);
@@ -181,10 +219,10 @@ class MainComponent final
     void rebuildWorkspaceContainer();
     void layoutWorkspace(juce::Rectangle<int> bounds);
     [[nodiscard]] juce::Component* buildWorkspaceNode(const WorkspaceLayoutState::Node* node);
-    [[nodiscard]] std::vector<ToolType> dockedTools();
-    [[nodiscard]] std::optional<ToolType> dockedToolAt(juce::Point<int> position);
+    [[nodiscard]] std::vector<ToolInstanceId> dockedTools();
+    [[nodiscard]] std::optional<ToolInstanceId> dockedToolAt(juce::Point<int> position);
     [[nodiscard]] DropTarget resolveDropTarget(juce::Point<int> position);
-    [[nodiscard]] std::optional<ToolType>
+    [[nodiscard]] std::optional<ToolInstanceId>
     draggedTool(const juce::DragAndDropTarget::SourceDetails& details) const;
     bool isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails& details) override;
     void itemDragEnter(const juce::DragAndDropTarget::SourceDetails& details) override;
@@ -217,12 +255,19 @@ class MainComponent final
     juce::TextButton helpButton{"Help"};
     juce::TextButton microphoneButton;
 
-    std::unique_ptr<ToolWindow> tunerWindow;
-    std::unique_ptr<ToolWindow> spectrogramWindow;
-    std::unique_ptr<ToolWindow> harmonicWindow;
-    std::unique_ptr<DockedToolPanel> tunerDock;
-    std::unique_ptr<DockedToolPanel> spectrogramDock;
-    std::unique_ptr<DockedToolPanel> harmonicDock;
+    // Every tool instance the session knows about, live or closed.
+    //
+    // Declared after audioInputService and appLookAndFeel on purpose: members
+    // are destroyed in reverse declaration order, so this dies first and every
+    // tool is torn down before the services it borrowed. That ordering is the
+    // whole of how "a tool cannot outlive its shared services" is enforced --
+    // there is no runtime check, so do not move this declaration above them.
+    std::vector<LiveTool> liveTools;
+
+    // Source of handle values for LiveTool::handle. Monotonic and never reset,
+    // so a handle is never reused by a later instance.
+    std::uint64_t nextToolHandle = 0;
+
     // Owns every split-pane/tab-strip container built for the current shape
     // of workspaceLayoutState's tree; torn down and rebuilt from scratch on
     // every change. The per-tool docks above are NOT stored here -- they're
@@ -231,9 +276,6 @@ class MainComponent final
     // Non-owning: whichever single component (a dock, or an entry in
     // workspaceContainers) is currently the top of the workspace tree.
     juce::Component* workspaceRoot = nullptr;
-    std::unique_ptr<juce::Component> tunerComponent;
-    std::unique_ptr<juce::Component> spectrogramComponent;
-    std::unique_ptr<juce::Component> harmonicComponent;
     std::unique_ptr<SettingsWindow> settingsWindow;
     std::unique_ptr<juce::FileChooser> settingsTransferChooser;
     std::unique_ptr<FeedbackWindow> feedbackWindow;
@@ -243,19 +285,12 @@ class MainComponent final
     std::unique_ptr<MicrophoneWarning> microphoneWarning;
 
     Theme currentTheme = Theme::light;
-    ToolType currentTool = ToolType::tuner;
-    WorkspaceToolState tunerState;
-    WorkspaceToolState spectrogramState;
-    WorkspaceToolState harmonicState;
+    ToolInstanceId currentTool;
     WorkspaceLayoutState workspaceLayoutState;
     WorkspaceCatalog workspaceCatalog;
     WorkspaceSnapshot activeWorkspaceSnapshot;
     DropTarget activeDropTarget;
-    AppDefaults::TunerSettings savedTunerSettings = AppDefaults::tunerDefaults();
     AppSettings::FullscreenMode selectedFullscreenMode = AppSettings::FullscreenMode::normal;
-    juce::Rectangle<int> savedTunerBounds;
-    juce::Rectangle<int> savedSpectrogramBounds;
-    juce::Rectangle<int> savedHarmonicBounds;
     juce::Rectangle<int> savedSettingsBounds;
     bool isMicrophoneWarningDismissed = false;
 

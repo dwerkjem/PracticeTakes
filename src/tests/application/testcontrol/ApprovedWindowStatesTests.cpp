@@ -4,6 +4,7 @@
 #include <set>
 
 #include "application/testcontrol/ApprovedWindowStates.h"
+#include "application/tools/BuiltInToolCatalog.h"
 
 using namespace testcontrol;
 
@@ -80,17 +81,15 @@ TEST_CASE("tools and presentation agree", "[testcontrol][approved]")
 
 TEST_CASE("states only name tools the application has", "[testcontrol][approved]")
 {
-    // ToolType lives in a JUCE header so it cannot be referenced here, which
-    // means this list could drift from it. Pinning the names is what catches
-    // that.
-    const std::set<std::string> known(knownToolNames().begin(), knownToolNames().end());
-
+    // Checked against the real catalog rather than a hand-maintained copy of
+    // it: a state naming a tool the application does not register now fails
+    // here instead of at run time.
     for (const ApprovedWindowState& state : approvedWindowStates())
     {
         for (const std::string& tool : state.tools)
         {
             INFO("state " << state.id << " tool " << tool);
-            CHECK(known.count(tool) == 1);
+            CHECK(builtInToolCatalog().resolve(tool).has_value());
         }
     }
 }
@@ -111,8 +110,9 @@ TEST_CASE("every tool is reachable in at least one state", "[testcontrol][approv
 {
     // A tool with no approved state cannot be manually verified at all, which
     // is the kind of gap that is invisible until a release.
-    for (const std::string& tool : knownToolNames())
+    for (const auto& definition : builtInToolCatalog().tools())
     {
+        const auto& tool = definition.id;
         INFO("tool " << tool);
 
         const auto& states = approvedWindowStates();
@@ -120,7 +120,11 @@ TEST_CASE("every tool is reachable in at least one state", "[testcontrol][approv
             states.begin(), states.end(),
             [&tool](const ApprovedWindowState& state)
             {
-                return std::find(state.tools.begin(), state.tools.end(), tool) != state.tools.end();
+                // Resolved rather than compared directly: a state is free to
+                // name a tool by a historical alias.
+                return std::any_of(
+                    state.tools.begin(), state.tools.end(), [&tool](const std::string& named)
+                    { return builtInToolCatalog().resolve(named) == tool; });
             });
 
         CHECK(reachable);
@@ -195,7 +199,7 @@ TEST_CASE("all three tools can be open at once", "[testcontrol][approved]")
     // capture path simultaneously.
     const ApprovedWindowState& state = require("all-tools-docked");
 
-    CHECK(state.tools.size() == knownToolNames().size());
+    CHECK(state.tools.size() == builtInToolCatalog().tools().size());
     CHECK(state.arrangement == WorkspaceArrangement::split);
 }
 

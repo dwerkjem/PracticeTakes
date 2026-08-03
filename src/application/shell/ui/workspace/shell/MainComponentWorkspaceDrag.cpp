@@ -5,7 +5,7 @@
 namespace
 {
 // Tool identity is encoded as an integer suffix so beginToolDrag/draggedTool
-// never need a per-tool branch -- adding a new ToolType just works.
+// never need a per-tool branch -- registering a new tool just works.
 constexpr auto workspaceToolDragPrefix = "workspace-tool:";
 
 [[nodiscard]] juce::Rectangle<int>
@@ -87,17 +87,19 @@ void paintDropZone(
 } // namespace
 
 void MainComponent::beginToolDrag(
-    ToolType tool,
+    const ToolInstanceId& instance,
     juce::Component& source,
     const juce::ScaledImage& dragImage)
 {
     activeDropTarget = {};
-    const auto description =
-        juce::String(workspaceToolDragPrefix) + juce::String(static_cast<int>(tool));
+    // The drag payload carries the instance id itself rather than a numeric
+    // handle, so it stays meaningful even if the workspace is rebuilt
+    // mid-drag.
+    const auto description = juce::String(workspaceToolDragPrefix) + juce::String(instance.value());
     startDragging(description, &source, dragImage, true);
 }
 
-std::optional<MainComponent::ToolType>
+std::optional<ToolInstanceId>
 MainComponent::draggedTool(const juce::DragAndDropTarget::SourceDetails& details) const
 {
     const auto description = details.description.toString();
@@ -107,25 +109,20 @@ MainComponent::draggedTool(const juce::DragAndDropTarget::SourceDetails& details
     }
 
     const auto id =
-        description.substring(juce::String(workspaceToolDragPrefix).length()).getIntValue();
-    for (const auto candidate : allToolTypes)
-    {
-        if (static_cast<int>(candidate) == id)
-        {
-            return candidate;
-        }
-    }
-    return std::nullopt;
+        description.substring(juce::String(workspaceToolDragPrefix).length()).toStdString();
+    const auto instance = ToolInstanceId(id);
+    return findLiveTool(instance) != nullptr ? std::optional<ToolInstanceId>(instance)
+                                             : std::nullopt;
 }
 
 // Hit-tests every currently docked tool's pane (however deeply nested inside
 // split panes/tab groups it is) and returns whichever one contains
 // `position` (in MainComponent's own coordinate space), if any.
-std::optional<MainComponent::ToolType> MainComponent::dockedToolAt(juce::Point<int> position)
+std::optional<ToolInstanceId> MainComponent::dockedToolAt(juce::Point<int> position)
 {
-    for (const auto tool : allToolTypes)
+    for (auto& entry : liveTools)
     {
-        auto& dock = dockFor(tool);
+        auto& dock = entry.dock;
         if (dock == nullptr || dock->getParentComponent() == nullptr || !dock->isVisible())
         {
             continue;
@@ -133,7 +130,7 @@ std::optional<MainComponent::ToolType> MainComponent::dockedToolAt(juce::Point<i
         const auto local = dock->getLocalPoint(this, position);
         if (dock->getLocalBounds().contains(local))
         {
-            return tool;
+            return entry.id;
         }
     }
     return std::nullopt;
@@ -155,7 +152,12 @@ MainComponent::DropTarget MainComponent::resolveDropTarget(juce::Point<int> posi
 
     if (const auto pane = dockedToolAt(position); pane.has_value())
     {
-        auto* dock = dockFor(*pane).get();
+        auto* entry = findLiveTool(*pane);
+        auto* dock = entry != nullptr ? entry->dock.get() : nullptr;
+        if (dock == nullptr)
+        {
+            return {workspaceZone, std::nullopt};
+        }
         const auto local = dock->getLocalPoint(this, position);
         auto zone = WorkspaceLayoutState::dropZoneForPosition(
             local.x, local.y, dock->getWidth(), dock->getHeight());
@@ -213,31 +215,39 @@ void MainComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& de
         return;
     }
 
-    const auto draggedType = *tool;
+    const auto& dragged = *tool;
+    auto* draggedEntry = findLiveTool(dragged);
+    if (draggedEntry == nullptr)
+    {
+        return;
+    }
+    const auto draggedHandle = draggedEntry->handle;
 
     if (target.zone == WorkspaceLayoutState::DropZone::floating)
     {
-        workspaceLayoutState.remove(static_cast<WorkspaceLayoutState::Tool>(draggedType));
-        presentTool(draggedType, WorkspaceToolState::Presentation::floating);
+        workspaceLayoutState.remove(draggedHandle);
+        presentTool(dragged, WorkspaceToolState::Presentation::floating);
         rebuildWorkspaceContainer();
         return;
     }
 
-    if (stateFor(draggedType).presentation() != WorkspaceToolState::Presentation::docked)
+    if (draggedEntry->state.presentation() != WorkspaceToolState::Presentation::docked)
     {
-        presentTool(draggedType, WorkspaceToolState::Presentation::docked);
+        presentTool(dragged, WorkspaceToolState::Presentation::docked);
     }
 
-    const auto paneTool =
-        target.pane.has_value()
-            ? std::optional<WorkspaceLayoutState::Tool>(
-                  static_cast<WorkspaceLayoutState::Tool>(*target.pane))
-            : std::nullopt;
-    workspaceLayoutState.insert(
-        static_cast<WorkspaceLayoutState::Tool>(draggedType), paneTool, target.zone);
+    auto paneHandle = std::optional<WorkspaceLayoutState::Tool>{};
+    if (target.pane.has_value())
+    {
+        if (const auto* paneEntry = findLiveTool(*target.pane))
+        {
+            paneHandle = paneEntry->handle;
+        }
+    }
+    workspaceLayoutState.insert(draggedHandle, paneHandle, target.zone);
 
-    currentTool = draggedType;
-    focusTool(draggedType);
+    currentTool = dragged;
+    focusTool(dragged);
     rebuildWorkspaceContainer();
 }
 
@@ -269,9 +279,10 @@ void MainComponent::paintOverChildren(juce::Graphics& graphics)
     auto paneBounds = workspace;
     if (activeDropTarget.pane.has_value())
     {
-        if (auto* dock = dockFor(*activeDropTarget.pane).get())
+        if (auto* entry = findLiveTool(*activeDropTarget.pane);
+            entry != nullptr && entry->dock != nullptr)
         {
-            paneBounds = getLocalArea(dock, dock->getLocalBounds());
+            paneBounds = getLocalArea(entry->dock.get(), entry->dock->getLocalBounds());
         }
     }
 
