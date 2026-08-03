@@ -62,6 +62,12 @@ score model.
 - **THEN** each voice's events are ordered by position in the model and no voice
   is displaced in time
 
+#### Scenario: A measure holds more music than its time signature
+- **WHEN** a measure's content is longer than the prevailing time signature
+  allows, as in an edition using a mensuration sign rather than a bar length
+- **THEN** the measure is widened to hold all of its music, a diagnostic
+  reports the disagreement, and no note is shortened or dropped
+
 #### Scenario: A pickup measure does not fill its time signature
 - **WHEN** a score begins with a pickup measure shorter than the prevailing time
   signature

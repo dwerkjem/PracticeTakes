@@ -73,7 +73,11 @@ Everything here reaches the model and is covered by tests.
   rescaled into the model's fixed 3840 ticks per quarter note. A conversion that
   is not exact rounds and emits a diagnostic rather than drifting silently.
 - Time signatures, including mid-score changes, which set each measure's
-  nominal duration.
+  nominal duration — **unless the bar's own content is longer**, in which case
+  the bar is widened to fit and the disagreement is reported. Renaissance
+  editions routinely carry `<time symbol="cut">` as a *mensuration sign* while
+  every bar holds a breve; trusting the signature there halves every note in
+  the piece. An importer never destroys notes to satisfy a number it inferred.
 
 ### Notes
 

@@ -52,9 +52,15 @@ int enforceNonNegativeDurations(Score& score);
 int enforceVoiceOrdering(Score& score);
 
 // Invariant 7: a voice does not extend past its measure's nominal duration,
-// except in a pickup measure, where it may be shorter. Over-full measures are
-// truncated -- events starting past the end are dropped, and one straddling it
-// is shortened.
+// except in a pickup measure, where it may be shorter.
+//
+// This is a *backstop*, for scores built by hand rather than by the importer.
+// The importer widens a bar to fit its content instead, because trusting a
+// time signature over the notes destroyed music in real files: a Renaissance
+// edition carrying cut time as a mensuration sign while every bar holds a
+// breve had every note in the piece halved. By the time a score reaches here it
+// should already fit; anything still over-full is a programming error in the
+// caller, and truncating is the safe response to that.
 int enforceMeasureBounds(Score& score);
 
 // Invariant 1: every part has the same number of measures, and measure n has

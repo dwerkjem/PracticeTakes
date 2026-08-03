@@ -424,6 +424,7 @@ if(BUILD_TESTING)
         src/tests/platform/score/musicxml/read/MusicXmlDiagnosticsTests.cpp
         src/tests/platform/score/musicxml/read/MusicXmlLyricTests.cpp
         src/tests/platform/score/musicxml/read/MusicXmlNoteTests.cpp
+        src/tests/platform/score/musicxml/read/MusicXmlPercussionTests.cpp
         src/tests/platform/score/musicxml/read/MusicXmlTimingTests.cpp
         src/tests/support/BenchmarkFakesTests.cpp
         src/application/configuration/SettingsPersistence.cpp

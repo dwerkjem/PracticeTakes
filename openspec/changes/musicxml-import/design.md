@@ -557,8 +557,17 @@ the parser.
 6. Part ids are unique and non-empty. A file with duplicate or missing ids gets
    generated ids and a diagnostic.
 7. A voice's events do not extend past the measure's nominal duration, except in
-   an implicit (pickup) measure, where they may be shorter. Over-full measures
-   are truncated with a diagnostic.
+   an implicit (pickup) measure, where they may be shorter. A bar whose content
+   exceeds its time signature is **widened to fit**, with a diagnostic; the
+   model's truncation is a backstop for hand-built scores only.
+
+   This was originally "over-full measures are truncated", and real files
+   overturned it. Renaissance editions carry `<time symbol="cut">2/2</time>` as
+   a mensuration sign while every bar holds a breve — twice the signature.
+   Truncating there silently halved every note of every part in several corpus
+   scores. The rule that replaced it: an importer never destroys notes to
+   satisfy a number it inferred. The signature is what the engraver wrote at the
+   top of the staff; the notes are the music.
 8. The tempo map is non-empty (a default of 120 BPM is inserted if the file
    declares none), sorted by tick, and has no duplicate ticks.
 9. Diagnostics never reference a part, measure, or voice that is not in the

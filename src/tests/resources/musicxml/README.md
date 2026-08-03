@@ -1,7 +1,12 @@
 # Real-score corpus
 
-Twenty songs from the [OpenScore Lieder Corpus](https://github.com/OpenScore/Lieder),
-imported end to end by `MusicXmlCorpusTests`.
+Thirty-six scores imported end to end by `MusicXmlCorpusTests`, from two
+sources:
+
+- **Twenty songs** from the [OpenScore Lieder Corpus](https://github.com/OpenScore/Lieder)
+  — CC0, voice and piano, Beethoven to Webern.
+- **Sixteen choral works** from [CPDL](https://www.cpdl.org) — Public Domain or
+  CC-BY, one to eleven parts, exported by six different notation programs.
 
 The synthetic fixtures in `src/tests/support/MusicXmlFixtures.h` fail
 informatively when a rule breaks, because each contains exactly the construct
@@ -13,13 +18,16 @@ being flattened from per-note to per-chord.
 
 ## Licence
 
-Everything here is **CC0 1.0 Universal** (public domain dedication), from
-OpenScore, whose repository is CC0 in full and whose files each carry
-`<rights>OpenScore (CC0)</rights>` in their own metadata.
+**OpenScore files:** CC0 1.0 Universal. The repository is CC0 in full and each
+file carries `<rights>OpenScore (CC0)</rights>` in its own metadata. OpenScore
+requests — but does not require — credit, so: these are transcriptions by the
+OpenScore Lieder Corpus from public-domain editions on IMSLP.
 
-OpenScore requests — but does not require — credit. So: these are transcriptions
-by the OpenScore Lieder Corpus, from public-domain editions on IMSLP. Each
-file's `<identification>` names the IMSLP source it was transcribed from.
+**CPDL files:** each edition's licence was read from its work page before
+download, and only `Public Domain` and `Creative Commons Attribution` editions
+were taken. Anything Non-Commercial, No-Derivatives, or Share-Alike was
+excluded — NC is incompatible with this project's BSD-3-Clause terms, which
+permit commercial use.
 
 ## `expectations.txt` is the corpus manifest
 
@@ -101,17 +109,28 @@ keeping the spelling *and* the sounding number matters most; Liszt is the
 longest and most texturally complex; Joplin and Liliʻuokalani are idioms
 unlike the German lied.
 
-## What this corpus does not cover
+## What this corpus covers
 
-**One exporter, one genre.** Every file is a MuseScore export of a solo song.
-That is not the cross-dialect coverage design decision 6 wanted:
+| Axis | Coverage |
+|---|---|
+| Exporters | MuseScore 2/3, Finale v25–v27, Sibelius 7–22, Dorico 5, Harmony Assistant, PDFtoMusic Pro |
+| Parts | 1, 2, 4, 5, 6, 7, 10, 11 |
+| SATB | Open score (`holyoke-acworth`, four parts) **and closed score** (`holyoke-acworth-2v`, two staves × two voices via `<backup>` — the case cursor handling is hardest for) |
+| Double choir | `gabrieli-ave-regina` (10 parts), `usper-la-battaglia-a-8` (11 parts, 1836 bars) |
+| Eras | Renaissance polyphony, shape-note hymnody, nineteenth-century lieder, early modernism |
 
-- **No second notation program.** Finale writes `<divisions>` and voice
-  numbering unlike MuseScore's; Sibelius emits far more layout elements.
-  Neither is exercised.
-- **No SATB choral score.** The corpus is voice and piano, so four-voice
-  writing on two staves — the case `<backup>` handling is hardest for — is
-  covered only by the synthetic fixtures. CPDL is the place to fix this.
-- **No large multi-part score.** Nothing here has more than four parts.
-- **No percussion.** The unpitched-chord-tone bug was found against a local
-  copyrighted file, and nothing committed here would have caught it.
+Each of the three non-MuseScore dialects found bugs on arrival; see the git
+history for `readMeasure`.
+
+## What this corpus still does not cover
+
+- **No percussion.** CPDL is a choral library and has none, and the
+  public-domain MuseScore-derived datasets rely on uploader self-declaration
+  this project does not accept. Percussion is covered instead by
+  `MusicXmlPercussionTests`, against a drum-kit fixture reproduced from a real
+  export — see the note at the top of that file. If a permissively-licensed
+  real percussion score turns up, it belongs here.
+- **No orchestral score.** Nothing here mixes transposing winds, percussion,
+  and strings in one file.
+- **No `.musicxml`/`.xml` file.** Every corpus score is a compressed `.mxl`;
+  uncompressed input is covered only by the synthetic fixtures.

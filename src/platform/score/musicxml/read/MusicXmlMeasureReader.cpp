@@ -698,6 +698,41 @@ void readMeasure(
         measure.nominalDuration = nominalTicks(TimeSignature{});
     }
 
+    // Widen the bar to fit its content rather than truncating music that runs
+    // past the time signature.
+    //
+    // This looks like tolerating broken files and is the opposite. Renaissance
+    // editions routinely carry <time symbol="cut">2/2</time> as a *mensuration
+    // sign* while every bar holds a breve -- twice the signature. Several such
+    // editions are in the corpus, from Finale and Sibelius alike. Trusting the
+    // signature over the notes there truncated a breve to a whole note in
+    // every bar of every part, which is silent, systematic corruption of a
+    // perfectly valid score.
+    //
+    // The rule this settles: **an importer never destroys notes to satisfy a
+    // number it inferred.** The signature is what the engraver wrote at the
+    // top of the staff; the notes are the music. Where they disagree, the notes
+    // win and the disagreement is reported.
+    Tick occupied = 0;
+
+    for (const PendingVoice& voice : pendingVoices)
+    {
+        for (const PendingEvent& pending : voice.events)
+        {
+            occupied = std::max(occupied, endOf(pending.event));
+        }
+    }
+
+    if (occupied > measure.nominalDuration)
+    {
+        context.diagnostics.addRepair(
+            locationOf(part, measure), "measure",
+            "This bar holds more music than its time signature allows, so the bar was widened to "
+            "fit rather than the music being cut short.");
+
+        measure.nominalDuration = occupied;
+    }
+
     freezeVoices(pendingVoices, measure);
     part.measures.push_back(std::move(measure));
 }

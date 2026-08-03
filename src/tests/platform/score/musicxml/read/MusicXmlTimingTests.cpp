@@ -160,7 +160,7 @@ TEST_CASE("a forward skips the cursor ahead without writing anything", "[score][
     CHECK(voice.events[1].onset == quarter * 3);
 }
 
-TEST_CASE("an event pushed past the end of the measure is truncated", "[score][musicxml][timing]")
+TEST_CASE("an event pushed past the end of the measure widens the bar", "[score][musicxml][timing]")
 {
     const std::string body =
         measure("1", attributes(1, 4, 4) + note("C", 5, 4) + forward(4) + note("E", 5, 4));
@@ -171,12 +171,13 @@ TEST_CASE("an event pushed past the end of the measure is truncated", "[score][m
 
     const Measure& bar = result.score->parts.front().measures.front();
 
-    // The second note starts exactly at the barline, so it holds no time
-    // inside this measure at all and is dropped rather than left overhanging.
-    for (const ScoreEvent& event : bar.voices.front().events)
-    {
-        CHECK(event.onset + event.duration <= bar.nominalDuration);
-    }
+    // Two whole notes with a whole-note gap between them: three bars' worth of
+    // time written into one bar. The bar grows to hold it rather than the
+    // second note being thrown away.
+    REQUIRE(bar.voices.front().events.size() == 2);
+    CHECK(bar.nominalDuration == whole * 3);
+    CHECK(bar.voices.front().events[1].onset == whole * 2);
+    CHECK(bar.voices.front().events[1].duration == whole);
 
     CHECK_FALSE(result.diagnostics.empty());
 }
@@ -252,9 +253,18 @@ TEST_CASE("a pickup measure may hold less than its time signature", "[score][mus
     CHECK_FALSE(complained);
 }
 
-TEST_CASE("an over-full measure is truncated and reported", "[score][musicxml][timing]")
+TEST_CASE(
+    "an over-full measure widens rather than losing its last note",
+    "[score][musicxml][timing]")
 {
-    // Five quarter notes in a 4/4 bar. The fifth starts past the barline.
+    // Five quarter notes in a 4/4 bar. Real editions do this: a Renaissance
+    // score may carry cut time as a mensuration sign while every bar holds a
+    // breve, and truncating there silently halves every note in the piece.
+    //
+    // So an importer never destroys notes to satisfy a number it inferred. The
+    // time signature is what the engraver wrote at the top of the staff; the
+    // notes are the music. Where they disagree the notes win, and the
+    // disagreement is reported.
     const std::string body = measure(
         "1", attributes(1, 4, 4) + note("C", 5, 1) + note("D", 5, 1) + note("E", 5, 1) +
                  note("F", 5, 1) + note("G", 5, 1));
@@ -265,12 +275,21 @@ TEST_CASE("an over-full measure is truncated and reported", "[score][musicxml][t
 
     const Measure& bar = result.score->parts.front().measures.front();
 
-    for (const ScoreEvent& event : bar.voices.front().events)
+    // All five survive, in order, at their written positions.
+    REQUIRE(bar.voices.front().events.size() == 5);
+
+    for (std::size_t index = 0; index < 5; ++index)
     {
-        CHECK(event.onset + event.duration <= bar.nominalDuration);
+        CHECK(bar.voices.front().events[index].onset == quarter * static_cast<Tick>(index));
+        CHECK(bar.voices.front().events[index].duration == quarter);
     }
 
-    CHECK_FALSE(result.diagnostics.empty());
+    CHECK(bar.nominalDuration == quarter * 5);
+
+    const auto reported = std::any_of(
+        result.diagnostics.begin(), result.diagnostics.end(),
+        [](const Diagnostic& diagnostic) { return diagnostic.elementName == "measure"; });
+    CHECK(reported);
 }
 
 TEST_CASE("an under-full measure that is not a pickup is left alone", "[score][musicxml][timing]")

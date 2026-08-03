@@ -67,6 +67,73 @@ inline std::string multiPartDocument(const std::vector<std::string>& partBodies)
 )";
 }
 
+// A drum-kit part, in the shape MuseScore actually exports one.
+//
+// This is a fixture rather than a corpus file because no permissively-licensed
+// real percussion MusicXML was found: CPDL is a choral library and has none,
+// and the MuseScore-derived public-domain datasets rely on uploader
+// self-declaration, which is exactly the provenance this project does not
+// accept. So the idiom is reproduced here from a real export instead.
+//
+// What makes percussion different, and what the importer has to get right:
+//
+//  - The notes carry <unpitched> with a <display-step>/<display-octave> giving
+//    a *staff position*, not a sounding pitch. Percussion is outside the
+//    supported subset, so they become rests -- but their timing must survive.
+//  - The part declares several <score-instrument>s and matching
+//    <midi-instrument>s carrying <midi-unpitched>, and each note names one
+//    with <instrument>. One <part>, many instruments.
+//  - Simultaneous strokes are written as chords. A kick under a hi-hat is a
+//    <note> with <chord/> and <unpitched>, and it consumes no time -- the bug
+//    that made this fixture necessary.
+inline std::string drumKitDocument(const std::string& measures)
+{
+    return R"(<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <part-list>
+    <score-part id="P1">
+      <part-name>Drumset</part-name>
+      <score-instrument id="P1-I36"><instrument-name>Bass Drum 1</instrument-name></score-instrument>
+      <score-instrument id="P1-I38"><instrument-name>Acoustic Snare</instrument-name></score-instrument>
+      <score-instrument id="P1-I42"><instrument-name>Closed Hi-Hat</instrument-name></score-instrument>
+      <midi-instrument id="P1-I36"><midi-channel>10</midi-channel><midi-unpitched>36</midi-unpitched></midi-instrument>
+      <midi-instrument id="P1-I38"><midi-channel>10</midi-channel><midi-unpitched>38</midi-unpitched></midi-instrument>
+      <midi-instrument id="P1-I42"><midi-channel>10</midi-channel><midi-unpitched>42</midi-unpitched></midi-instrument>
+    </score-part>
+  </part-list>
+  <part id="P1">
+)" + measures +
+           R"(  </part>
+</score-partwise>
+)";
+}
+
+// One percussion stroke. `instrument` is a <score-instrument> id from
+// drumKitDocument; `step`/`octave` are the staff position, not a pitch.
+inline std::string drumNote(
+    const std::string& instrument,
+    const std::string& step,
+    int octave,
+    int duration,
+    int voice = 1,
+    bool chord = false)
+{
+    return "      <note>\n" + std::string(chord ? "        <chord/>\n" : "") +
+           "        <unpitched><display-step>" + step + "</display-step><display-octave>" +
+           std::to_string(octave) +
+           "</display-octave></unpitched>\n"
+           "        <duration>" +
+           std::to_string(duration) +
+           "</duration>\n"
+           "        <instrument id=\"" +
+           instrument +
+           "\"/>\n"
+           "        <voice>" +
+           std::to_string(voice) +
+           "</voice>\n"
+           "      </note>\n";
+}
+
 // <attributes> declaring divisions and a time signature, which nearly every
 // fixture's first measure needs.
 inline std::string attributes(int divisions, int beats, int beatType)
