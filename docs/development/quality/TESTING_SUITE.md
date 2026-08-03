@@ -153,16 +153,38 @@ browser loses nothing.
 ### Filtering
 
 A full run is around a hundred captures — 27 surfaces, three resolutions, two
-palettes — which is only reviewable if you can ask it a question. The filter row
-above the grid offers every value actually present in the run, with counts:
-palette, resolution, area (workspace, settings, audio, feedback, shell),
-presentation (docked, floating, split, tabbed), which tools are open, how many,
-and the state.
+palettes — which is only reviewable if you can ask it a question. Each facet is a
+dropdown above the grid, offering every value actually present in the run with
+its count:
+
+| Facet | Values |
+|---|---|
+| `review` | unreviewed · part reviewed · reviewed |
+| `verdict` | unanswered · passed · skipped · failed |
+| `tag` | whatever you have applied, plus `untagged` |
+| `capture` | ok · flagged · failed |
+| `theme`, `resolution` | the palettes and sizes the run covered |
+| `area` | workspace · settings · audio · feedback · shell |
+| `presentation`, `tools`, `tool_count`, `state` | what the surface opens and how |
+
+`verdict` reports the worst thing said about a capture: a failure anywhere makes
+it failed, and a skip outranks a pass, because an area nobody examined is not a
+pass and a surface with one failure is not a passing surface.
+
+**Clicking a value cycles it**: keep ✓ → exclude ✕ → off. Keeping narrows to
+what you named; excluding removes it and leaves everything else — which is what
+makes a second pass finishable, since "everything except what I already
+approved" is `review: exclude reviewed`. Excluding beats keeping if a value is
+somehow both.
 
 Filters combine the way people expect: **within** a facet the values are
 alternatives (a capture is dark *or* light), **between** facets they all have to
 hold. "Settings, light" is twelve captures; "three tools, constrained" is the
-handful that found the clipped workspace.
+handful that found the clipped workspace; "unreviewed, not settings" is what is
+left to do.
+
+What you have chosen shows as chips under the menus — click one to drop it —
+with a count of how many captures the filters are hiding.
 
 ### Judging from the zoom
 

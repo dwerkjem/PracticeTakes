@@ -110,23 +110,39 @@ class PageWiringTests(unittest.TestCase):
         """Redrawing only the grid leaves the chips and the summary stale."""
         body = script()
         start = body.index("function applyFilters()")
-        end = body.index("function toggleFilter")
+        end = body.index("function cycleFilter")
         apply_body = body[start:end]
 
         self.assertIn("renderFilters(", apply_body)
         self.assertIn("renderGrid(", apply_body)
 
         # And every filter change goes through it.
-        toggle = body[body.index("function toggleFilter"):body.index("function facetLabel")]
+        cycle = body[body.index("function cycleFilter"):body.index("function clearValue")]
 
-        self.assertIn("applyFilters()", toggle)
+        self.assertIn("applyFilters()", cycle)
 
     def test_an_emptied_facet_stops_being_a_filter(self) -> None:
-        """A facet holding an empty set would match nothing and hide everything."""
+        """A facet holding empty sets would match nothing and hide everything."""
         body = script()
-        toggle = body[body.index("function toggleFilter"):body.index("function facetLabel")]
+        cycle = body[body.index("function cycleFilter"):body.index("function clearValue")]
 
-        self.assertIn("delete state.filters[name]", toggle)
+        self.assertIn("delete state.filters[name]", cycle)
+
+    def test_a_value_cycles_through_keep_exclude_and_off(self) -> None:
+        body = script()
+        cycle = body[body.index("function cycleFilter"):body.index("function clearValue")]
+
+        # include -> exclude -> off, in that order.
+        self.assertLess(cycle.index("include.has(value)"), cycle.index("exclude.has(value)"))
+        self.assertIn("exclude.add(value)", cycle)
+        self.assertIn("exclude.delete(value)", cycle)
+
+    def test_excluding_beats_including(self) -> None:
+        """Naming a value in both is a contradiction; dropping it is the safer reading."""
+        body = script()
+        matches = body[body.index("function matchesFilters"):body.index("// Everything that depends")]
+
+        self.assertLess(matches.index("sets.exclude.has(value)"), matches.index("sets.include.size"))
 
     def test_the_facets_are_dropdowns(self) -> None:
         body = script()

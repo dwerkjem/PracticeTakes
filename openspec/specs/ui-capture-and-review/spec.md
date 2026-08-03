@@ -170,9 +170,17 @@ running.
 ### Requirement: A review can be narrowed to a subset and approved together
 The review SHALL let a reviewer narrow the grid by the properties of a capture —
 at minimum its palette, its resolution, the part of the application it belongs
-to, how its tools are presented, and which tools are open — offering only the
+to, how its tools are presented, which tools are open, whether it has been
+reviewed, how it was judged, and what it is tagged with — offering only the
 values the run actually contains. Several filters SHALL combine: alternatives
 within one property, and all of them together across properties.
+
+A value SHALL be usable to **exclude** as well as to keep, so that a reviewer can
+ask for everything except a group they have already dealt with. Where a value is
+both kept and excluded, it SHALL be excluded.
+
+A capture's judged state SHALL report the worst verdict given to it: a failure
+anywhere makes it failed, and a skip outranks a pass.
 
 The reviewer SHALL be able to approve everything currently shown in one action,
 and the review SHALL state how many captures are shown and how many are hidden,
@@ -186,6 +194,15 @@ so that an approval never silently covers captures nobody looked at.
 #### Scenario: Two values of one property
 - **WHEN** the reviewer chooses two palettes
 - **THEN** captures in either are shown, rather than none
+
+#### Scenario: Excluding what has been dealt with
+- **WHEN** the reviewer excludes the reviewed captures
+- **THEN** every capture that is not fully reviewed is shown, and the reviewed
+  ones are hidden
+
+#### Scenario: A capture with one failing answer
+- **WHEN** a capture has passes and one failure
+- **THEN** it is reported as failed, so a filter for failures finds it
 
 #### Scenario: Approving a filtered set
 - **WHEN** the reviewer approves everything shown

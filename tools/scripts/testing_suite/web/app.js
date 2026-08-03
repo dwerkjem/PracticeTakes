@@ -442,23 +442,40 @@ function renderGrid(view) {
 // the other, so requiring both would match nothing). Between facets, every one
 // has to hold. That is the combination people expect without being told.
 
-function chosen(name) {
-  return state.filters[name] || new Set();
+// A filter is two sets: what to keep and what to drop. Include narrows to the
+// values you name; exclude removes them and leaves everything else. Both are
+// needed for different questions -- "only the settings window" and "everything
+// except what I already approved" are not the same request, and the second one
+// is what makes a second pass over a hundred captures finishable.
+
+function filterFor(name) {
+  return state.filters[name] || { include: new Set(), exclude: new Set() };
 }
 
 function activeFilters() {
-  return Object.entries(state.filters).filter(([, values]) => values.size);
+  return Object.entries(state.filters)
+    .filter(([, sets]) => sets.include.size || sets.exclude.size);
+}
+
+function valuesOf(capture, name) {
+  const actual = capture.facets ? capture.facets[name] : undefined;
+
+  if (actual === undefined || actual === null) return [];
+
+  return Array.isArray(actual) ? actual : [actual];
 }
 
 function matchesFilters(capture) {
-  return Object.entries(state.filters).every(([name, values]) => {
-    if (!values.size) return true;
+  return Object.entries(state.filters).every(([name, sets]) => {
+    const values = valuesOf(capture, name);
 
-    const actual = capture.facets ? capture.facets[name] : undefined;
+    // Excluded wins over included: naming a value in both is a contradiction,
+    // and dropping it is the safer reading of it.
+    if (values.some((value) => sets.exclude.has(value))) return false;
 
-    if (Array.isArray(actual)) return actual.some((entry) => values.has(entry));
+    if (!sets.include.size) return true;
 
-    return values.has(actual);
+    return values.some((value) => sets.include.has(value));
   });
 }
 
@@ -470,14 +487,38 @@ function applyFilters() {
   renderGrid(state.data);
 }
 
-function toggleFilter(name, value) {
-  const values = new Set(chosen(name));
+// Click cycles a value: off -> include -> exclude -> off. Three states in one
+// control, because a separate button per direction doubles the row and still
+// has to say which one is on.
+function cycleFilter(name, value) {
+  const sets = filterFor(name);
+  const include = new Set(sets.include);
+  const exclude = new Set(sets.exclude);
 
-  if (values.has(value)) values.delete(value);
-  else values.add(value);
+  if (include.has(value)) {
+    include.delete(value);
+    exclude.add(value);
+  } else if (exclude.has(value)) {
+    exclude.delete(value);
+  } else {
+    include.add(value);
+  }
 
-  if (values.size) state.filters[name] = values;
-  else delete state.filters[name];   // An empty set is no filter, not a filter of nothing.
+  if (include.size || exclude.size) state.filters[name] = { include, exclude };
+  else delete state.filters[name];   // Empty sets are no filter, not a filter of nothing.
+
+  applyFilters();
+}
+
+function clearValue(name, value) {
+  const sets = filterFor(name);
+  const include = new Set(sets.include);
+  const exclude = new Set(sets.exclude);
+  include.delete(value);
+  exclude.delete(value);
+
+  if (include.size || exclude.size) state.filters[name] = { include, exclude };
+  else delete state.filters[name];
 
   applyFilters();
 }
@@ -490,23 +531,28 @@ function facetMenu(name, values) {
   const menu = document.createElement("details");
   menu.className = "facet-menu";
 
-  const picked = chosen(name);
+  const sets = filterFor(name);
+  const chosenCount = sets.include.size + sets.exclude.size;
   const summary = document.createElement("summary");
   summary.innerHTML = `${facetLabel(name)}` +
-    (picked.size ? ` <span class="badge">${picked.size}</span>` : "") +
+    (chosenCount ? ` <span class="badge">${chosenCount}</span>` : "") +
     ` <span class="caret">▾</span>`;
   menu.appendChild(summary);
 
   const panel = document.createElement("div");
   panel.className = "facet-panel";
+  panel.innerHTML = '<div class="facet-hint">click to keep · again to exclude · again to clear</div>';
 
   values.forEach(([value, count]) => {
-    const row = document.createElement("label");
-    row.className = "facet-option";
+    const state_ = sets.include.has(value) ? "include"
+      : sets.exclude.has(value) ? "exclude" : "off";
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = `facet-option ${state_}`;
     row.innerHTML =
-      `<input type="checkbox" ${picked.has(value) ? "checked" : ""} />` +
-      `<span>${value}</span><span class="count">${count}</span>`;
-    row.querySelector("input").addEventListener("change", () => toggleFilter(name, value));
+      `<span class="mark">${state_ === "include" ? "✓" : state_ === "exclude" ? "✕" : ""}</span>` +
+      `<span class="value">${value}</span><span class="count">${count}</span>`;
+    row.addEventListener("click", () => cycleFilter(name, value));
     panel.appendChild(row);
   });
 
@@ -543,25 +589,29 @@ function renderFilters(view) {
 
   holder.appendChild(row);
 
-  // What is chosen is shown outside the menus, because a filter you cannot see
-  // is a grid that is lying about how much of the run you have looked at.
+  // What is chosen shows outside the menus, because a filter you cannot see is
+  // a grid lying about how much of the run you have looked at.
   const active = document.createElement("div");
   active.className = "active-filters";
   const picked = activeFilters();
 
-  if (picked.length) {
-    picked.forEach(([name, values]) => {
-      values.forEach((value) => {
-        const chip = document.createElement("button");
-        chip.type = "button";
-        chip.className = "chip-button on";
-        chip.innerHTML = `${facetLabel(name)}: ${value} <span class="remove">✕</span>`;
-        chip.title = "Remove this filter";
-        chip.addEventListener("click", () => toggleFilter(name, value));
-        active.appendChild(chip);
-      });
-    });
+  picked.forEach(([name, sets]) => {
+    const chip = (value, excluded) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `chip-button ${excluded ? "excluded" : "on"}`;
+      button.innerHTML = `${excluded ? "not " : ""}${facetLabel(name)}: ${value}` +
+        ` <span class="remove">✕</span>`;
+      button.title = "Remove this filter";
+      button.addEventListener("click", () => clearValue(name, value));
+      active.appendChild(button);
+    };
 
+    sets.include.forEach((value) => chip(value, false));
+    sets.exclude.forEach((value) => chip(value, true));
+  });
+
+  if (picked.length) {
     const clear = document.createElement("button");
     clear.type = "button";
     clear.className = "chip-button";
@@ -579,7 +629,7 @@ function renderFilters(view) {
   summary.id = "filter-summary";
   summary.textContent = picked.length
     ? ""   // Filled in by the grid, which is what knows the counts.
-    : "Showing everything. Open a menu to narrow it; several filters combine.";
+    : "Showing everything. Open a menu to keep or exclude values; filters combine.";
   holder.appendChild(summary);
 }
 
