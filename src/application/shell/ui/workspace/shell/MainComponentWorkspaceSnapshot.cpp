@@ -139,7 +139,7 @@ bool MainComponent::applyWorkspaceSnapshot(const WorkspaceSnapshot& snapshot)
         {"spectrogram", static_cast<WorkspaceLayoutState::Tool>(ToolType::spectrogram)},
         {"harmonic-analyzer", static_cast<WorkspaceLayoutState::Tool>(ToolType::harmonics)},
     };
-    auto plan = WorkspaceSnapshotApply::plan(snapshot, WorkspaceToolRegistry{}, bindings);
+    auto plan = WorkspaceSnapshotApply::plan(snapshot, builtInToolCatalog(), bindings);
     if (!plan.has_value())
     {
         return false;

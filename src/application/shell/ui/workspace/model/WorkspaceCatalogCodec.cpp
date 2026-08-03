@@ -409,7 +409,7 @@ std::string WorkspaceCatalogCodec::encode(const WorkspaceCatalog& catalog)
 WorkspaceCatalogDecodeResult WorkspaceCatalogCodec::decode(
     std::string_view document,
     const std::vector<WorkspaceBounds>& displayAreas,
-    const WorkspaceToolRegistry& registry)
+    const ToolCatalog& registry)
 {
     if (document.size() > maximumDocumentBytes)
     {

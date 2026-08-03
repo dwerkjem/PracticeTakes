@@ -2,8 +2,8 @@
 
 #include "WorkspaceDocuments.h"
 #include "WorkspaceLayoutState.h"
-#include "WorkspaceToolRegistry.h"
 #include "WorkspaceToolState.h"
+#include "application/tools/BuiltInToolCatalog.h"
 
 #include <algorithm>
 #include <functional>
@@ -52,7 +52,7 @@ class WorkspaceSnapshotApply
 
     [[nodiscard]] static std::optional<Plan> plan(
         const WorkspaceSnapshot& snapshot,
-        const WorkspaceToolRegistry& registry,
+        const ToolCatalog& registry,
         const std::vector<ToolBinding>& bindings)
     {
         Context context{registry, bindings, {}, {}, {}};
@@ -168,7 +168,7 @@ class WorkspaceSnapshotApply
 
     struct Context
     {
-        const WorkspaceToolRegistry& registry;
+        const ToolCatalog& registry;
         const std::vector<ToolBinding>& bindings;
         std::unordered_set<std::string> placed;
         std::unordered_set<std::string> docked;

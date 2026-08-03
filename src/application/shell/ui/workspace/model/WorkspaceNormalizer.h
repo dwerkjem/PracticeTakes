@@ -2,7 +2,7 @@
 
 #include "WorkspaceBuiltIns.h"
 #include "WorkspaceDocuments.h"
-#include "WorkspaceToolRegistry.h"
+#include "application/tools/BuiltInToolCatalog.h"
 
 #include <algorithm>
 #include <cmath>
@@ -37,7 +37,7 @@ class WorkspaceNormalizer
     [[nodiscard]] static WorkspaceNormalizationResult normalize(
         const WorkspaceSnapshot& source,
         const std::vector<WorkspaceBounds>& displayAreas,
-        const WorkspaceToolRegistry& registry = WorkspaceToolRegistry())
+        const ToolCatalog& registry = builtInToolCatalog())
     {
         Context context{registry, displayAreas, {}, {}, {}};
         WorkspaceSnapshot normalized;
@@ -111,7 +111,7 @@ class WorkspaceNormalizer
   private:
     struct Context
     {
-        const WorkspaceToolRegistry& registry;
+        const ToolCatalog& registry;
         const std::vector<WorkspaceBounds>& displayAreas;
         std::unordered_set<std::string> placed;
         std::vector<std::string> visibleOrder;

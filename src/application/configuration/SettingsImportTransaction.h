@@ -101,7 +101,7 @@ class SettingsImportTransaction
     [[nodiscard]] static SettingsImportStageResult stage(
         const juce::File& source,
         const std::vector<WorkspaceBounds>& displayAreas,
-        const WorkspaceToolRegistry& registry = WorkspaceToolRegistry())
+        const ToolCatalog& registry = builtInToolCatalog())
     {
         if (source == juce::File{})
         {

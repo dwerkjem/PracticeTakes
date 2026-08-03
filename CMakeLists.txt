@@ -222,7 +222,6 @@ target_sources(PracticeTakes
         src/application/shell/ui/workspace/model/WorkspaceNormalizer.h
         src/application/shell/ui/workspace/model/WorkspaceSnapshotApply.h
         src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h
-        src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h
         src/application/shell/ui/workspace/model/WorkspaceSessionLifecycle.h
         src/application/shell/ui/workspace/model/WorkspaceToolState.h
         src/application/shell/ui/workspace/shell/MainComponentWorkspaceDrag.cpp
@@ -245,6 +244,9 @@ target_sources(PracticeTakes
         src/application/theme/Theme.cpp
         src/application/theme/Theme.h
         src/application/theme/ThemeType.h
+        src/application/tools/BuiltInToolCatalog.h
+        src/application/tools/ToolCatalog.h
+        src/application/tools/ToolInstanceId.h
         src/features/analysis/spectrogram/SpectrogramComponent.cpp
         src/features/analysis/spectrogram/SpectrogramComponent.h
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
@@ -387,6 +389,8 @@ if(BUILD_TESTING)
         src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp
         src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
         src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp
+        src/tests/application/tools/ToolCatalogTests.cpp
+        src/tests/application/tools/ToolInstanceIdTests.cpp
         src/tests/application/testcontrol/TestControlClickerTests.cpp
         src/tests/application/testcontrol/TestControlCommandTests.cpp
         src/tests/application/testcontrol/TestControlSessionTests.cpp

@@ -61,5 +61,5 @@ class SettingsTransferCodec
     [[nodiscard]] static SettingsTransferDecodeResult decode(
         std::string_view document,
         const std::vector<WorkspaceBounds>& displayAreas,
-        const WorkspaceToolRegistry& registry = WorkspaceToolRegistry());
+        const ToolCatalog& registry = builtInToolCatalog());
 };
