@@ -203,5 +203,5 @@ absent; there is no partial score on failure.
 
 - [Architecture](../architecture/ARCHITECTURE.md) § Score model — ownership,
   immutability, and why the audio thread never reads a score.
-- `openspec/changes/musicxml-import/design.md` — why the subset is drawn here,
+- `openspec/changes/archive/2026-08-02-musicxml-import/design.md` — why the subset is drawn here,
   and the six decisions behind the model.

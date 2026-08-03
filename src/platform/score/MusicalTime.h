@@ -10,7 +10,7 @@
 // Neither is usable directly as a model-wide unit, so every source duration is
 // rescaled into one fixed score-wide tick base.
 //
-// Per design decision 2 (openspec/changes/musicxml-import/design.md), that base
+// Per design decision 2 (openspec/changes/archive/2026-08-02-musicxml-import/design.md), that base
 // is 3840 ticks per quarter note. 3840 == 2^8 * 15, so it divides exactly by 2,
 // 3, and 5 -- every power of two up to a 256th note, plus triplets and
 // quintuplets, land on an integer tick. Consumers get cheap integer arithmetic

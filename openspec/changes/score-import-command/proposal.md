@@ -74,10 +74,11 @@ Deliberately **not** in scope:
 
 ### Modified Capabilities
 
-None. `musicxml-import` and `normalized-score-model` are still unarchived
-changes rather than published specs, and this change alters neither's
-requirements: it consumes the importer exactly as specified and adds no
-behaviour to it.
+None. `musicxml-import` and `normalized-score-model` are published specs as of
+2026-08-02, and this change alters neither's requirements: it consumes the
+importer through its existing entry points and adds no behaviour to it. If the
+summary needs something the model does not already expose, that is a finding to
+record against those specs rather than a licence to widen them here.
 
 ## Impact
 
