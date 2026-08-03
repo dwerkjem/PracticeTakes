@@ -111,9 +111,14 @@ class JobTests(unittest.TestCase):
         runner_module.machine_module.provenance = lambda: PROVENANCE
         self.addCleanup(setattr, runner_module.machine_module, "provenance", original)
 
-        # Whether a target needs building is a fact about the developer's disk,
-        # so it is controlled here rather than inherited from it.
+        # Everything below is a fact about the developer's disk -- whether a
+        # target is built, whether node_modules is installed, whether npm is on
+        # the PATH -- so it is controlled here rather than inherited. Inheriting
+        # it meant these passed on a machine that had done the work and failed
+        # on CI, which had not.
+        self.root = Path(self.directory.name)
         self.present: set[str] = set()
+
         original_state = runner_module.build_state
         runner_module.build_state = lambda target="PracticeTakes": {
             "target": target,
@@ -122,6 +127,30 @@ class JobTests(unittest.TestCase):
             "reason": "",
         }
         self.addCleanup(setattr, runner_module, "build_state", original_state)
+
+        # A built binary exists wherever the test says it does, so a command
+        # naming a target resolves without a real build tree.
+        binary = self.root / "PracticeTakesTests"
+        binary.write_text("#!/bin/sh\n")
+        binary.chmod(0o755)
+        original_binary = runner_module.binary_path
+        runner_module.binary_path = lambda target: binary
+        self.addCleanup(setattr, runner_module, "binary_path", original_binary)
+
+        # Programs are installed unless a test says otherwise.
+        original_missing = runner_module.missing_program
+        runner_module.missing_program = lambda command: ""
+        self.addCleanup(setattr, runner_module, "missing_program", original_missing)
+
+        # A repository root of its own, so "is node_modules there?" is this
+        # test's decision rather than the checkout's.
+        original_root = runner_module.REPOSITORY_ROOT
+        runner_module.REPOSITORY_ROOT = self.root
+        self.addCleanup(setattr, runner_module, "REPOSITORY_ROOT", original_root)
+
+    def install_dependencies(self) -> None:
+        """Make a suite's prepare step unnecessary."""
+        (self.root / "src" / "services" / "node_modules").mkdir(parents=True, exist_ok=True)
 
     def make_job(self) -> runner_module.Job:
         outer = self
@@ -177,6 +206,7 @@ class JobTests(unittest.TestCase):
         self.assertEqual(self.store.test_results(status["run_id"])[0]["cases"], 0)
 
     def test_several_suites_run_in_order(self) -> None:
+        self.install_dependencies()
         status = self.run_job(["python", "services"])
 
         self.assertEqual([entry[0] for entry in self.commands], ["python3", "npm"])
@@ -228,11 +258,9 @@ class JobTests(unittest.TestCase):
 
     def test_a_missing_program_is_unavailable_rather_than_failed(self) -> None:
         """`npm` not installed is not a failing test — the suite never ran."""
-        original = runner_module.missing_program
         runner_module.missing_program = lambda command: (
             "`npm` is not installed, or is not on your PATH" if command == "npm" else ""
         )
-        self.addCleanup(setattr, runner_module, "missing_program", original)
 
         status = self.run_job(["services"])
 
@@ -248,18 +276,17 @@ class JobTests(unittest.TestCase):
         self.assertIn("printed nothing", status["results"]["python"]["message"])
 
     def test_dependencies_are_installed_when_missing(self) -> None:
-        original = runner_module.REPOSITORY_ROOT
-        runner_module.REPOSITORY_ROOT = Path(self.directory.name)
-        self.addCleanup(setattr, runner_module, "REPOSITORY_ROOT", original)
-
         self.run_job(["services"])
 
         self.assertIn(["npm", "ci"], self.commands)
 
+    def test_dependencies_already_installed_are_not_reinstalled(self) -> None:
+        self.install_dependencies()
+        self.run_job(["services"])
+
+        self.assertNotIn(["npm", "ci"], self.commands)
+
     def test_a_failed_preparation_makes_the_suite_unavailable(self) -> None:
-        original = runner_module.REPOSITORY_ROOT
-        runner_module.REPOSITORY_ROOT = Path(self.directory.name)
-        self.addCleanup(setattr, runner_module, "REPOSITORY_ROOT", original)
         self.exit_code = 1
 
         status = self.run_job(["services"])
@@ -267,10 +294,16 @@ class JobTests(unittest.TestCase):
         self.assertEqual(status["results"]["services"]["state"], "unavailable")
 
     def test_suites_run_in_the_developers_own_environment(self) -> None:
-        """The sanitised PATH is right for compiling and wrong for npm and zsh."""
-        self.assertNotEqual(
-            runner_module.suite_environment().get("PATH"), runner_module.BUILD_PATH
-        )
+        """The sanitised PATH is right for compiling and wrong for npm and zsh.
+
+        Asserted against the ambient environment rather than against
+        BUILD_PATH: on a machine whose PATH happens to be exactly the sanitised
+        one, the two are equal and comparing them proves nothing.
+        """
+        import os
+
+        self.assertEqual(runner_module.suite_environment().get("PATH"), os.environ.get("PATH"))
+        self.assertEqual(runner_module.build_environment()["PATH"], runner_module.BUILD_PATH)
 
     def test_one_job_at_a_time(self) -> None:
         job = self.make_job()
