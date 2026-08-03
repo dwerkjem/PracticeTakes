@@ -34,7 +34,11 @@ def declared_ids() -> set[str]:
     template strings, and those are just as real as the ones in the file.
     """
     from_markup = set(re.findall(r'id="([^"]+)"', markup()))
-    from_script = set(re.findall(r'id="([^"$]+)"', script()))
+    from_script = set(re.findall(r'id="([^"$]+)"', script())) | set(
+        # `element.id = "name"`, which is how the script names a node it built
+        # rather than templated.
+        re.findall(r'\.id = "([^"]+)"', script())
+    )
     interpolated = {
         name.replace("${index}", "") for name in re.findall(r'id="([^"]*\$\{[^"]*)"', script())
     }

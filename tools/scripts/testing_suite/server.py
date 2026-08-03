@@ -96,6 +96,7 @@ class ReviewSession:
             "job": self.job.status(),
             "modes": [surfaces.QUICK, surfaces.FULL],
             "resolutions": list(surfaces.SWEEP_GEOMETRIES),
+            "themes": list(surfaces.THEMES),
             "results": [
                 {
                     "suite": row["suite"],
@@ -274,6 +275,14 @@ class ReviewHandler(BaseHTTPRequestHandler):
 
                 return
 
+            themes = tuple(payload.get("themes") or surfaces.DEFAULT_THEMES)
+            bad = [name for name in themes if name not in surfaces.THEMES]
+
+            if bad:
+                self._send_json({"error": f"unknown theme(s): {', '.join(bad)}"}, status=400)
+
+                return
+
             if not requested:
                 self._send_json({"error": "choose at least one suite"}, status=400)
 
@@ -283,6 +292,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
                 requested,
                 mode=str(payload.get("mode", surfaces.FULL)),
                 resolutions=resolutions,
+                themes=themes,
                 rebuild=bool(payload.get("rebuild", False)),
                 run_id=payload.get("run_id"),
             )

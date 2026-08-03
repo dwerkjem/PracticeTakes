@@ -100,9 +100,20 @@ correctly, with its counts left unknown rather than reported as zero failures.
 
 ```bash
 uv run test-suite capture --mode full --resolutions default constrained maximised
+uv run test-suite capture --themes dark light
 uv run test-suite capture --mode quick
 uv run test-suite capture --run 12          # resume; already-captured surfaces are skipped
 ```
+
+A capture is a surface, at a resolution, **in a palette**. Themes are a
+dimension rather than a property of a surface, for the same reason resolutions
+are: every surface exists in both, and folding the palette into the surface list
+would double it. The theme is applied *after* the state, because opening a state
+rebuilds the workspace and a palette set first would be stale for whatever it
+just created.
+
+Themes are the outer loop of a run, so switching palette — one command, instant
+— happens once per pass rather than between every resize.
 
 For each surface at each resolution the pass opens the approved state, asks the
 application for the geometry, waits for the window to settle, parks the pointer,
@@ -132,6 +143,26 @@ uv run test-suite review --run 12 --port 8730
 
 Opens a local page bound to loopback. Everything is saved as you go; closing the
 browser loses nothing.
+
+### Filtering
+
+A full run is around a hundred captures — 27 surfaces, three resolutions, two
+palettes — which is only reviewable if you can ask it a question. The filter row
+above the grid offers every value actually present in the run, with counts:
+palette, resolution, area (workspace, settings, audio, feedback, shell),
+presentation (docked, floating, split, tabbed), which tools are open, how many,
+and the state.
+
+Filters combine the way people expect: **within** a facet the values are
+alternatives (a capture is dark *or* light), **between** facets they all have to
+hold. "Settings, light" is twelve captures; "three tools, constrained" is the
+handful that found the clipped workspace.
+
+**Approve all shown** answers every image-answerable question `pass` across the
+whole filtered set, leaving anything already answered alone. That is the
+intended rhythm: narrow to a group you can judge at a glance, look, approve,
+move on. The grid says how many are shown and how many the filters are hiding,
+so an approval never silently covers captures you did not look at.
 
 | Doing | Gets |
 |---|---|

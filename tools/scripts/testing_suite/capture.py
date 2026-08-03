@@ -297,8 +297,13 @@ class CapturePass:
 
     # --- The pass -----------------------------------------------------------
 
-    def move_to(self, surface: surfaces.Surface, geometry: str) -> str:
-        """Put the application on a surface at a resolution. Returns a reason on failure."""
+    def move_to(self, surface: surfaces.Surface, geometry: str, theme: str = "") -> str:
+        """Put the application on a surface, at a resolution, in a palette.
+
+        The theme is applied after the state, not before: opening a state
+        rebuilds the workspace, and a palette set first would be correct for the
+        shell and stale for whatever the state just created.
+        """
         try:
             if surface.restart_before:
                 self.driver.restart()
@@ -307,6 +312,12 @@ class CapturePass:
 
             if not reply.success:
                 return reply.error
+
+            if theme:
+                reason = self.driver.set_theme(theme)
+
+                if reason:
+                    return reason
 
             if not surface.fixed_geometry:
                 return self.driver.set_geometry(geometry)
@@ -321,6 +332,7 @@ class CapturePass:
         geometry: str,
         seen: dict[str, tuple[int, int]],
         digests: dict[tuple[str, str], str] | None = None,
+        theme: str = surfaces.DARK,
     ) -> tuple[int, int] | None:
         """Capture one surface at one resolution, recording whatever happened.
 
@@ -333,10 +345,11 @@ class CapturePass:
                 state=surface.state,
                 title=surface.title,
                 geometry=geometry,
+                theme=theme,
                 failure=reason,
             )
 
-        reason = self.move_to(surface, geometry)
+        reason = self.move_to(surface, geometry, theme)
 
         if reason:
             fail(f"could not reach the surface: {reason}")
@@ -356,7 +369,7 @@ class CapturePass:
 
             return None
 
-        stem = f"{slug(surface.state)}--{slug(surface.title)}--{slug(geometry)}"
+        stem = f"{slug(surface.state)}--{slug(surface.title)}--{slug(geometry)}--{slug(theme)}"
         ppm_path = self.image_directory / f"{stem}.ppm"
         png_path = self.image_directory / f"{stem}.png"
         thumbnail_path = self.image_directory / f"{stem}.thumb.png"
@@ -378,18 +391,22 @@ class CapturePass:
         finally:
             ppm_path.unlink(missing_ok=True)
 
+        # Keyed by palette as well: the same surface in dark and in light is
+        # expected to differ, and two surfaces matching in one palette says
+        # nothing about the other.
         notice = duplicate_problem(
-            surface.state, geometry, digest, digests if digests is not None else {}
+            surface.state, f"{geometry}/{theme}", digest, digests if digests is not None else {}
         )
 
         if digests is not None:
-            digests.setdefault((geometry, digest), surface.state)
+            digests.setdefault((f"{geometry}/{theme}", digest), surface.state)
 
         self.store.record_capture(
             self.run_id,
             state=surface.state,
             title=surface.title,
             geometry=geometry,
+            theme=theme,
             image_path=str(png_path),
             thumbnail_path=str(thumbnail_path),
             width=width,
@@ -402,7 +419,7 @@ class CapturePass:
 
     def run(
         self,
-        plan: tuple[tuple[surfaces.Surface, str], ...],
+        plan: tuple[tuple[surfaces.Surface, str, str], ...],
         *,
         resume: bool = True,
         progress: Callable[[dict], None] | None = None,
@@ -423,8 +440,8 @@ class CapturePass:
         failed = 0
         skipped = 0
 
-        for surface, geometry in plan:
-            if (surface.state, surface.title, geometry) in already:
+        for surface, geometry, theme in plan:
+            if (surface.state, surface.title, geometry, theme) in already:
                 skipped += 1
 
                 continue
@@ -434,13 +451,17 @@ class CapturePass:
                     {
                         "surface": surface.title,
                         "geometry": geometry,
+                        "theme": theme,
                         "done": captured + failed + skipped,
                         "total": len(plan),
                     }
                 )
 
-            seen = sizes.setdefault(surface.title, {})
-            size = self.capture_one(surface, geometry, seen, digests)
+            # Sizes are compared within one palette: a theme change does not
+            # resize anything, but keying them apart keeps the check honest if
+            # that ever stops being true.
+            seen = sizes.setdefault(f"{surface.title}/{theme}", {})
+            size = self.capture_one(surface, geometry, seen, digests, theme)
 
             if size is None:
                 failed += 1

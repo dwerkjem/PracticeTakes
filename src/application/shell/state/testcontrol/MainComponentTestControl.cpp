@@ -123,6 +123,14 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
             {
                 panel = "Appearance";
             }
+            else if (state.settingsPanel == "practice")
+            {
+                panel = "Practice";
+            }
+            else if (state.settingsPanel == "reset")
+            {
+                panel = "Reset & support";
+            }
 
             if (panel.isEmpty() || settingsWindow == nullptr || !settingsWindow->showPanel(panel))
             {
@@ -161,6 +169,29 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     testControlStateId = state.id;
 
     return true;
+}
+
+bool MainComponent::applyTestControlTheme(const std::string& theme)
+{
+    // Goes through setTheme rather than repainting anything here, so a
+    // captured surface is in exactly the palette a user would get from the
+    // appearance settings -- including the settings window and any floating
+    // tool, which setTheme already reaches.
+    if (theme == "dark")
+    {
+        setTheme(Theme::dark);
+
+        return true;
+    }
+
+    if (theme == "light")
+    {
+        setTheme(Theme::light);
+
+        return true;
+    }
+
+    return false;
 }
 
 bool MainComponent::applyTestControlGeometry(const std::string& geometry)

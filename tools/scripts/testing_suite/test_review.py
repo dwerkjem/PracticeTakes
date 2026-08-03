@@ -55,8 +55,9 @@ class ReviewTestCase(unittest.TestCase):
             audio_device="Built-in Audio",
         )
 
-    def add_capture(self, surface, geometry: str = "default", failure: str = "") -> int:
-        image = self.root / f"{surface.state}-{geometry}.png"
+    def add_capture(self, surface, geometry: str = "default", failure: str = "",
+                    theme: str = "dark") -> int:
+        image = self.root / f"{surface.state}-{geometry}-{theme}.png"
 
         if not failure:
             image.write_bytes(b"png")
@@ -66,6 +67,7 @@ class ReviewTestCase(unittest.TestCase):
             state=surface.state,
             title=surface.title,
             geometry=geometry,
+            theme=theme,
             image_path="" if failure else str(image),
             thumbnail_path="" if failure else str(image),
             width=1280,
@@ -210,6 +212,59 @@ class GridViewTests(ReviewTestCase):
         ]
 
         self.assertEqual(len(showing), 1)
+
+
+class FacetTests(ReviewTestCase):
+    """What a reviewer can narrow a hundred captures by."""
+
+    def test_a_capture_carries_the_facets_of_its_surface(self) -> None:
+        capture_id = self.add_capture(TUNER, "constrained")
+        facets = review.facets_of(self.store.capture(capture_id))
+
+        self.assertEqual(facets["resolution"], "constrained")
+        self.assertEqual(facets["theme"], "dark")
+        self.assertEqual(facets["tools"], ["tuner"])
+        self.assertEqual(facets["presentation"], "docked")
+        self.assertEqual(facets["area"], "workspace")
+        self.assertEqual(facets["tool_count"], "1")
+
+    def test_a_surface_with_no_tools_says_so_rather_than_nothing(self) -> None:
+        """An empty facet would drop the capture out of that filter entirely."""
+        capture_id = self.add_capture(SHELL)
+        facets = review.facets_of(self.store.capture(capture_id))
+
+        self.assertEqual(facets["tools"], ["none"])
+        self.assertEqual(facets["presentation"], "none")
+        self.assertEqual(facets["tool_count"], "0")
+
+    def test_a_capture_of_a_surface_since_removed_still_has_the_basics(self) -> None:
+        capture_id = self.store.record_capture(
+            self.run_id, state="gone", title="A surface that no longer exists",
+            geometry="default", theme="light",
+        )
+        facets = review.facets_of(self.store.capture(capture_id))
+
+        self.assertEqual(facets["theme"], "light")
+        self.assertEqual(facets["resolution"], "default")
+        self.assertEqual(facets["tools"], ["none"])
+
+    def test_the_view_offers_every_value_present_with_its_count(self) -> None:
+        self.add_capture(TUNER, "default")
+        self.add_capture(TUNER, "constrained")
+        self.add_capture(SHELL, "default")
+
+        facets = review.run_view(self.store, self.run_id)["facets"]
+
+        self.assertEqual(dict(facets["resolution"]), {"default": 2, "constrained": 1})
+        self.assertEqual(dict(facets["tools"]), {"tuner": 2, "none": 1})
+        self.assertEqual(dict(facets["area"]), {"workspace": 2, "shell": 1})
+
+    def test_a_filter_offers_only_what_the_run_contains(self) -> None:
+        """A fixed list would offer values that match nothing in this run."""
+        self.add_capture(SHELL)
+        facets = review.run_view(self.store, self.run_id)["facets"]
+
+        self.assertEqual(dict(facets["theme"]), {"dark": 1})
 
 
 class SelectionTests(ReviewTestCase):

@@ -60,6 +60,7 @@
         <button type="button" id="select-none">none</button>
 
         <span class="divider"></span>
+        <button type="button" id="approve-shown" class="primary">Approve all shown</button>
         <button type="button" id="bulk-pass" class="verdict-pass">Pass selected</button>
         <button type="button" id="bulk-fail" class="verdict-fail">Fail selected…</button>
         <button type="button" id="bulk-skip">Skip selected</button>
@@ -79,6 +80,10 @@
         <button type="button" class="size" data-size="large">L</button>
         <button type="button" class="size" data-size="full">full width</button>
       </div>
+      <!-- Filters in one row above the grid. With a hundred captures in a full
+           run, "every settings window in the light palette" is how a review
+           becomes finishable. -->
+      <div id="filters"></div>
       <div id="outstanding" class="muted small"></div>
       <div id="grid" aria-label="Captured surfaces"></div>
     </main>

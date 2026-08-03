@@ -39,6 +39,14 @@ FULL = "full"
 SETTINGS_WINDOW = "Settings"
 FEEDBACK_WINDOW = "Send feedback"
 
+# The palettes a run captures each surface in. A capture dimension rather than a
+# property of a surface, for the same reason resolution is: every surface exists
+# in both palettes, and folding the theme into the surface list would double it.
+DARK = "dark"
+LIGHT = "light"
+THEMES = (DARK, LIGHT)
+DEFAULT_THEMES = THEMES
+
 # The resolutions a run captures each surface at. Configuration rather than a
 # fixed list: `--resolutions` overrides it, and the set a run covered is
 # recorded with the run so two runs covering different sets are comparable on
@@ -101,6 +109,18 @@ class Surface:
     # because the sweep set them both back to the default size.
     fixed_geometry: bool = False
 
+    # What this surface is, for filtering a review by it. A grid of a hundred
+    # captures is only reviewable if you can ask it for "every settings window
+    # in the light palette" or "everything with three tools open" and approve
+    # those together, so these are data rather than something inferred from the
+    # title by eye.
+    #
+    # `tools` names what the state opens, `presentation` how they are shown, and
+    # `area` what part of the application the surface belongs to.
+    tools: tuple[str, ...] = ()
+    presentation: str = ""
+    area: str = "workspace"
+
     # The title of the top-level window this surface is about, when that is not
     # the main window. Settings, feedback, and a floating tool are each their
     # own X window, and a capture that does not name one photographs whichever
@@ -121,11 +141,14 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="empty",
         title="The shell with no tool open",
+        area="shell",
         modes=frozenset({QUICK, FULL}),
     ),
     Surface(
         state="tuner-docked",
         title="The tuner, docked",
+        tools=("tuner",),
+        presentation="docked",
         modes=frozenset({QUICK, FULL}),
         extras=(
             Question(
@@ -138,12 +161,15 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="settings-open",
         title="The settings window",
+        area="settings",
         modes=frozenset({QUICK, FULL}),
         window_title=SETTINGS_WINDOW,
     ),
     Surface(
         state="spectrogram-docked",
         title="The spectrogram, docked",
+        tools=("spectrogram",),
+        presentation="docked",
         modes=frozenset({FULL}),
         extras=(
             Question(
@@ -156,6 +182,8 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="harmonics-docked",
         title="The harmonic analyser, docked",
+        tools=("harmonics",),
+        presentation="docked",
         modes=frozenset({FULL}),
         extras=(
             Question(
@@ -168,6 +196,8 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="tuner-floating",
         title="The tuner in a floating window",
+        tools=("tuner",),
+        presentation="floating",
         modes=frozenset({FULL}),
         window_title="Tuner",
         extras=(
@@ -177,8 +207,50 @@ SURFACES: tuple[Surface, ...] = (
         ),
     ),
     Surface(
+        state="spectrogram-floating",
+        title="The spectrogram in a floating window",
+        tools=("spectrogram",),
+        presentation="floating",
+        modes=frozenset({FULL}),
+        window_title="Spectrogram",
+    ),
+    Surface(
+        state="harmonics-floating",
+        title="The harmonic analyser in a floating window",
+        tools=("harmonics",),
+        presentation="floating",
+        modes=frozenset({FULL}),
+        window_title="Harmonic Analyzer",
+    ),
+    Surface(
+        state="tuner-harmonics-split",
+        title="The tuner and the analyser tiled",
+        tools=("tuner", "harmonics"),
+        presentation="split",
+        modes=frozenset({FULL}),
+        extras=(
+            Question("divider", "Can the divider between the two be dragged?", behavioural=True),
+        ),
+    ),
+    Surface(
+        state="three-tools-tabbed",
+        title="All three tools sharing a tab strip",
+        tools=("tuner", "spectrogram", "harmonics"),
+        presentation="tabbed",
+        modes=frozenset({FULL}),
+        extras=(
+            Question(
+                "switching",
+                "Does switching tabs show each of the three?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    Surface(
         state="two-tools-split",
         title="Two tools tiled side by side",
+        tools=("tuner", "spectrogram"),
+        presentation="split",
         modes=frozenset({FULL}),
         extras=(
             Question(
@@ -189,6 +261,8 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="two-tools-tabbed",
         title="Two tools sharing a tab strip",
+        tools=("tuner", "spectrogram"),
+        presentation="tabbed",
         modes=frozenset({FULL}),
         extras=(
             Question(
@@ -199,6 +273,8 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="all-tools-docked",
         title="All three tools open at once",
+        tools=("tuner", "spectrogram", "harmonics"),
+        presentation="split",
         modes=frozenset({FULL}),
         extras=(
             Question(
@@ -209,6 +285,8 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="narrow-window",
         title="A narrow window with the collapsed menu",
+        tools=("tuner",),
+        presentation="docked",
         modes=frozenset({FULL}),
         fixed_geometry=True,
         extras=(
@@ -220,8 +298,17 @@ SURFACES: tuple[Surface, ...] = (
         ),
     ),
     Surface(
+        state="narrow-empty",
+        title="A narrow window with no tool open",
+        area="shell",
+        modes=frozenset({FULL}),
+        fixed_geometry=True,
+    ),
+    Surface(
         state="fullscreen",
         title="Fullscreen",
+        tools=("tuner",),
+        presentation="docked",
         modes=frozenset({FULL}),
         fixed_geometry=True,
         extras=(
@@ -231,6 +318,9 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="microphone-muted",
         title="Global microphone mute engaged",
+        tools=("tuner",),
+        presentation="docked",
+        area="audio",
         modes=frozenset({FULL}),
         extras=(
             Question("mute-obvious", "Is it obvious at a glance that input is muted?"),
@@ -240,8 +330,24 @@ SURFACES: tuple[Surface, ...] = (
         ),
     ),
     Surface(
+        state="muted-all-tools",
+        title="Every tool at once, microphone muted",
+        tools=("tuner", "spectrogram", "harmonics"),
+        presentation="split",
+        area="audio",
+        modes=frozenset({FULL}),
+        extras=(
+            Question(
+                "all-silent",
+                "Do all three stop responding to sound together?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    Surface(
         state="microphone-warning",
         title="The no-usable-input warning",
+        area="audio",
         modes=frozenset({FULL}),
         extras=(
             Question("actionable", "Does the warning say what to do about it?"),
@@ -253,6 +359,7 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="settings-audio-device",
         title="Settings: audio device selection",
+        area="settings",
         modes=frozenset({FULL}),
         window_title=SETTINGS_WINDOW,
         instruction="Switch to a different input device, then back.",
@@ -267,6 +374,7 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="settings-appearance",
         title="Settings: appearance and theme",
+        area="settings",
         modes=frozenset({FULL}),
         window_title=SETTINGS_WINDOW,
         instruction="Change the theme, and look at a tool with it applied.",
@@ -277,6 +385,7 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="settings-open",
         title="Settings: import and export round trip",
+        area="settings",
         modes=frozenset({FULL}),
         window_title=SETTINGS_WINDOW,
         instruction=(
@@ -296,14 +405,39 @@ SURFACES: tuple[Surface, ...] = (
         ),
     ),
     Surface(
+        state="settings-practice",
+        title="Settings: practice presets",
+        area="settings",
+        modes=frozenset({FULL}),
+        window_title=SETTINGS_WINDOW,
+    ),
+    Surface(
+        state="settings-reset",
+        title="Settings: reset and support",
+        area="settings",
+        modes=frozenset({FULL}),
+        window_title=SETTINGS_WINDOW,
+    ),
+    Surface(
+        state="feedback-over-tool",
+        title="The feedback form over a tool in use",
+        tools=("tuner",),
+        area="feedback",
+        modes=frozenset({FULL}),
+        window_title=FEEDBACK_WINDOW,
+    ),
+    Surface(
         state="feedback-open",
         title="The feedback form",
+        area="feedback",
         modes=frozenset({FULL}),
         window_title=FEEDBACK_WINDOW,
     ),
     Surface(
         state="tuner-docked",
         title="Workspace layout after a restart",
+        tools=("tuner",),
+        presentation="docked",
         modes=frozenset({FULL}),
         restart_before=True,
         instruction=(
@@ -387,13 +521,31 @@ def resolutions_for_surface(surface: Surface, resolutions: tuple[str, ...]) -> t
     return resolutions
 
 
-def plan(mode: str, resolutions: tuple[str, ...] = DEFAULT_RESOLUTIONS) -> tuple[tuple[Surface, str], ...]:
-    """The full ordered list of (surface, resolution) pairs a run captures."""
+def plan(
+    mode: str,
+    resolutions: tuple[str, ...] = DEFAULT_RESOLUTIONS,
+    themes: tuple[str, ...] = DEFAULT_THEMES,
+) -> tuple[tuple[Surface, str, str], ...]:
+    """The full ordered list of (surface, resolution, theme) a run captures.
+
+    Themes are the outer loop: switching palette is one command and repainting
+    is instant, while a resize has to settle, so grouping by theme keeps the
+    number of resizes the same as it was before palettes existed.
+    """
     if not resolutions:
         raise ValueError("A run must cover at least one resolution.")
 
+    if not themes:
+        raise ValueError("A run must cover at least one theme.")
+
+    unknown = [theme for theme in themes if theme not in THEMES]
+
+    if unknown:
+        raise ValueError(f"Unknown theme(s): {', '.join(unknown)}")
+
     return tuple(
-        (surface, geometry)
+        (surface, geometry, theme)
+        for theme in themes
         for surface in surfaces_for_mode(mode)
         for geometry in resolutions_for_surface(surface, resolutions)
     )

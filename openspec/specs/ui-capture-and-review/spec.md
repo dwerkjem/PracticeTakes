@@ -111,6 +111,48 @@ comparison rather than by memory.
 - **WHEN** a surface was captured at several resolutions
 - **THEN** those images appear beside one another
 
+### Requirement: Every surface is captured in every configured palette
+A run SHALL cover a configured set of palettes, capturing each surface in each
+one, and SHALL record which palette each image was captured in. The palette
+SHALL be applied after the surface's state is established, so that everything
+the state created is drawn in it.
+
+#### Scenario: A run covering two palettes
+- **WHEN** a run is captured with the light and dark palettes configured
+- **THEN** each surface produces one image per palette, each labelled with the
+  palette it used
+
+#### Scenario: A state that rebuilds the workspace
+- **WHEN** a surface's state opens tools and the palette is then applied
+- **THEN** the tools it created are drawn in that palette rather than the
+  previous one
+
+### Requirement: A review can be narrowed to a subset and approved together
+The review SHALL let a reviewer narrow the grid by the properties of a capture —
+at minimum its palette, its resolution, the part of the application it belongs
+to, how its tools are presented, and which tools are open — offering only the
+values the run actually contains. Several filters SHALL combine: alternatives
+within one property, and all of them together across properties.
+
+The reviewer SHALL be able to approve everything currently shown in one action,
+and the review SHALL state how many captures are shown and how many are hidden,
+so that an approval never silently covers captures nobody looked at.
+
+#### Scenario: Narrowing to a question
+- **WHEN** the reviewer filters to one palette and one area
+- **THEN** only captures matching both are shown, and the count of hidden
+  captures is stated
+
+#### Scenario: Two values of one property
+- **WHEN** the reviewer chooses two palettes
+- **THEN** captures in either are shown, rather than none
+
+#### Scenario: Approving a filtered set
+- **WHEN** the reviewer approves everything shown
+- **THEN** every image-answerable question on those captures is answered pass,
+  captures hidden by the filters are untouched, and questions already answered
+  are left as they were
+
 ### Requirement: An image can be opened at full size
 The reviewer SHALL be able to open any image at its captured size from the grid,
 and return to the grid without losing scroll position or selection.

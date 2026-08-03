@@ -73,6 +73,30 @@ def image_available(capture) -> str:
     return ""
 
 
+def facets_of(capture) -> dict:
+    """What a reviewer can filter this capture by.
+
+    Computed from the surface list rather than stored, so adding a facet is an
+    edit to `surfaces.py` and every run -- including ones captured months ago --
+    gains it. A capture whose surface has since been removed keeps the facets a
+    capture always has (its palette and its size) and simply offers no others.
+    """
+    surface = surfaces.find(capture.surface_state, capture.surface_title)
+    tools = list(surface.tools) if surface else []
+
+    return {
+        "theme": capture.theme,
+        "resolution": capture.geometry,
+        "area": surface.area if surface else "",
+        "presentation": (surface.presentation if surface else "") or "none",
+        "tools": tools or ["none"],
+        # A count is worth its own facet: "everything with three tools open" is
+        # the question that found the clipped workspace.
+        "tool_count": str(len(tools)),
+        "state": capture.surface_state,
+    }
+
+
 def capture_view(store: Store, capture, *, include_attended: bool = True) -> dict:
     verdicts = {row["question"]: row for row in store.verdicts(capture.id)}
     attended = (
@@ -88,6 +112,8 @@ def capture_view(store: Store, capture, *, include_attended: bool = True) -> dic
         "surface": capture.surface_title,
         "state": capture.surface_state,
         "geometry": capture.geometry,
+        "theme": capture.theme,
+        "facets": facets_of(capture),
         "width": capture.width,
         "height": capture.height,
         "failure": capture.failure,
@@ -132,6 +158,19 @@ def run_view(store: Store, run_id: int) -> dict:
             )
         )
 
+    # Every value present in this run, so the filter row offers exactly what is
+    # there rather than a fixed list that might match nothing.
+    available: dict[str, dict[str, int]] = {}
+
+    for group in groups:
+        for capture in group["captures"]:
+            for name, value in capture["facets"].items():
+                counts = available.setdefault(name, {})
+
+                for entry in (value if isinstance(value, list) else [value]):
+                    if entry:
+                        counts[entry] = counts.get(entry, 0) + 1
+
     return {
         "run": {
             "id": run_id,
@@ -152,6 +191,10 @@ def run_view(store: Store, run_id: int) -> dict:
         },
         "groups": groups,
         "tags": [{"name": row["name"], "description": row["description"]} for row in store.tags()],
+        "facets": {
+            name: sorted(counts.items(), key=lambda entry: entry[0])
+            for name, counts in sorted(available.items())
+        },
         "outstanding": outstanding(store, run_id),
     }
 

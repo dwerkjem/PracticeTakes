@@ -157,6 +157,12 @@ class ApplicationDriver:
     def pid(self) -> int | None:
         return self._process.pid if self._process is not None else None
 
+    def set_theme(self, theme: str) -> str:
+        """Switch the palette. Returns a reason on failure, empty on success."""
+        reply = self.send(f"theme {theme}")
+
+        return "" if reply.success else reply.error
+
     def set_geometry(self, geometry: str) -> str:
         """Apply a sweep geometry. Returns a reason on failure, empty on success."""
         name = GEOMETRY_NAMES.get(geometry)

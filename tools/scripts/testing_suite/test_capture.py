@@ -42,6 +42,7 @@ class FakeDriver:
         self.refuse = refuse or set()
         self.opened: list[str] = []
         self.geometries: list[str] = []
+        self.themes: list[str] = []
         self.restarts = 0
 
     def restart(self) -> None:
@@ -57,6 +58,11 @@ class FakeDriver:
 
     def set_geometry(self, geometry: str) -> str:
         self.geometries.append(geometry)
+
+        return ""
+
+    def set_theme(self, theme: str) -> str:
+        self.themes.append(theme)
 
         return ""
 
@@ -227,10 +233,10 @@ class CapturePassTests(unittest.TestCase):
 
                 return overrides.get("capture_failure", "")
 
-            def move_to(inner, surface, geometry):  # noqa: N805 - test double
+            def move_to(inner, surface, geometry, theme=""):  # noqa: N805 - test double
                 requested.append(geometry)
 
-                return capture_module.CapturePass.move_to(inner, surface, geometry)
+                return capture_module.CapturePass.move_to(inner, surface, geometry, theme)
 
         return TestablePass(
             store=self.store,
@@ -243,7 +249,7 @@ class CapturePassTests(unittest.TestCase):
         )
 
     def plan(self) -> tuple:
-        return surfaces.plan(surfaces.QUICK, ("default", "constrained"))
+        return surfaces.plan(surfaces.QUICK, ("default", "constrained"), (surfaces.DARK,))
 
     def test_every_surface_is_captured_at_every_resolution(self) -> None:
         result = self.make_pass().run(self.plan())
@@ -314,8 +320,9 @@ class CapturePassTests(unittest.TestCase):
     def test_a_fixed_geometry_surface_is_captured_once(self) -> None:
         """Resizing it would destroy the thing under test."""
         fullscreen = next(s for s in surfaces.SURFACES if s.state == "fullscreen")
-        plan = surfaces.plan(surfaces.FULL, ("default", "constrained", "maximised"))
-        entries = [geometry for surface, geometry in plan if surface is fullscreen]
+        plan = surfaces.plan(surfaces.FULL, ("default", "constrained", "maximised"),
+                             (surfaces.DARK,))
+        entries = [geometry for surface, geometry, _ in plan if surface is fullscreen]
 
         self.assertEqual(entries, ["default"])
 
@@ -324,6 +331,22 @@ class CapturePassTests(unittest.TestCase):
         self.make_pass().capture_one(restarting, "default", {})
 
         self.assertEqual(self.driver.restarts, 1)
+
+    def test_the_palette_is_applied_after_the_state(self) -> None:
+        """Opening a state rebuilds the workspace; a palette set first goes stale."""
+        surface = surfaces.SURFACES[0]
+        self.make_pass().capture_one(surface, "default", {}, {}, surfaces.LIGHT)
+
+        self.assertEqual(self.driver.themes, [surfaces.LIGHT])
+        self.assertEqual(self.driver.opened, [surface.state])
+
+    def test_each_palette_is_captured_separately(self) -> None:
+        plan = surfaces.plan(surfaces.QUICK, ("default",), surfaces.THEMES)
+        self.make_pass().run(plan)
+        captures = self.store.captures(self.run_id)
+
+        self.assertEqual(len(captures), len(plan))
+        self.assertEqual({capture.theme for capture in captures}, set(surfaces.THEMES))
 
 
 if __name__ == "__main__":

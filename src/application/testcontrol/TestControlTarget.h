@@ -36,6 +36,10 @@ class TestControlTarget
     // approved but could not be applied.
     [[nodiscard]] virtual bool applyGeometry(const std::string& geometry) = 0;
 
+    // Switch the application's palette. Returns false when the name is not one
+    // the application knows how to apply.
+    [[nodiscard]] virtual bool applyTheme(const std::string& theme) = 0;
+
     // The id of the state the application is currently in, or empty if it is
     // not in an approved state (at startup, or after a click changed things).
     [[nodiscard]] virtual std::string currentStateId() const = 0;

@@ -103,6 +103,23 @@ Response TestControlSession::handle(const Command& command)
         return succeeded();
     }
 
+    case CommandKind::theme:
+    {
+        const auto& names = approvedThemeNames();
+
+        if (std::find(names.begin(), names.end(), command.argument) == names.end())
+        {
+            return failed("no approved theme '" + command.argument + "'");
+        }
+
+        if (!target_.applyTheme(command.argument))
+        {
+            return failed("could not apply theme '" + command.argument + "'");
+        }
+
+        return succeeded();
+    }
+
     case CommandKind::listStates:
     {
         std::vector<std::string> items;

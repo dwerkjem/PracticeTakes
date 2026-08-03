@@ -291,6 +291,7 @@ class Job:
         *,
         mode: str = surfaces.FULL,
         resolutions: tuple[str, ...] = surfaces.DEFAULT_RESOLUTIONS,
+        themes: tuple[str, ...] = surfaces.DEFAULT_THEMES,
         rebuild: bool = False,
         run_id: int | None = None,
     ) -> bool:
@@ -319,7 +320,7 @@ class Job:
         self._thread = threading.Thread(
             target=self._work,
             kwargs={"chosen": chosen, "mode": mode, "resolutions": tuple(resolutions),
-                    "rebuild": rebuild},
+                    "themes": tuple(themes), "rebuild": rebuild},
             daemon=True,
         )
         self._thread.start()
@@ -333,7 +334,8 @@ class Job:
 
     # --- The work -----------------------------------------------------------
 
-    def _work(self, *, chosen: list[str], mode: str, resolutions: tuple[str, ...], rebuild: bool) -> None:
+    def _work(self, *, chosen: list[str], mode: str, resolutions: tuple[str, ...],
+              themes: tuple[str, ...], rebuild: bool) -> None:
         try:
             run_id = self.run_id or self.store.start_run(
                 provenance=machine_module.provenance(),
@@ -366,6 +368,7 @@ class Job:
                     run_id=run_id,
                     mode=mode,
                     resolutions=resolutions,
+                    themes=themes,
                     floor=base,
                     ceiling=40 + int(60 * (index + 1) / len(chosen)),
                 )
@@ -483,6 +486,7 @@ class Job:
         run_id: int,
         mode: str,
         resolutions: tuple[str, ...],
+        themes: tuple[str, ...],
         floor: int,
         ceiling: int,
     ) -> None:
@@ -500,7 +504,7 @@ class Job:
         started = _datetime.datetime.now()
 
         if suite.id == "ui-capture":
-            self._capture(run_id=run_id, mode=mode, resolutions=resolutions,
+            self._capture(run_id=run_id, mode=mode, resolutions=resolutions, themes=themes,
                           floor=floor, ceiling=ceiling)
 
             return
@@ -622,6 +626,7 @@ class Job:
         run_id: int,
         mode: str,
         resolutions: tuple[str, ...],
+        themes: tuple[str, ...],
         floor: int,
         ceiling: int,
     ) -> None:
@@ -630,7 +635,7 @@ class Job:
         if problems:
             raise RuntimeError("the surface list is malformed: " + "; ".join(problems))
 
-        plan = surfaces.plan(mode, resolutions)
+        plan = surfaces.plan(mode, resolutions, themes)
         self._say("building the capture utilities", percent=floor)
         tooling = capture_module.Tooling.ensure()
 
@@ -653,6 +658,7 @@ class Job:
                 fraction = entry["done"] / max(1, entry["total"])
                 self._say(
                     f"capturing {entry['surface']} at {entry['geometry']} "
+                    f"in {entry.get('theme', 'dark')} "
                     f"({entry['done'] + 1} of {entry['total']})",
                     percent=int(floor + (ceiling - floor) * fraction),
                 )

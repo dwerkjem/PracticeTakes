@@ -25,6 +25,7 @@ class FunctionTestControlTarget final : public TestControlTarget
     std::function<bool(const ApprovedWindowState&)> onApplyState;
     std::function<bool(const std::string&)> onClick;
     std::function<bool(const std::string&)> onGeometry;
+    std::function<bool(const std::string&)> onTheme;
     std::function<std::string()> onCurrentStateId;
     std::function<void()> onQuit;
 
@@ -41,6 +42,11 @@ class FunctionTestControlTarget final : public TestControlTarget
     bool applyGeometry(const std::string& geometry) override
     {
         return onGeometry && onGeometry(geometry);
+    }
+
+    bool applyTheme(const std::string& theme) override
+    {
+        return onTheme && onTheme(theme);
     }
 
     [[nodiscard]] std::string currentStateId() const override

@@ -122,6 +122,14 @@ struct ApprovedClickTarget
 [[nodiscard]] const ApprovedWindowState* findApprovedWindowState(const std::string& id);
 [[nodiscard]] const ApprovedClickTarget* findApprovedClickTarget(const std::string& id);
 
+// Named themes the `theme` command accepts.
+//
+// A capture dimension rather than a field on each state, for the same reason
+// geometry is: a state describes what is on screen, and every one of them can be
+// looked at in either palette. Baking the theme into the state list would double
+// it and would couple "which surfaces exist" to "which palettes exist".
+[[nodiscard]] const std::vector<std::string>& approvedThemeNames();
+
 // Named geometries the `geometry` command accepts. A closed vocabulary for the
 // same reason states are: an unrecognised name is an error, not a guess.
 //

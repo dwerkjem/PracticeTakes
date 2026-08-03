@@ -44,6 +44,11 @@ enum class CommandKind
     // resizing itself can.
     geometry,
 
+    // `theme <name>` -- switch the palette the application draws itself in, so
+    // every surface can be captured in each one without doubling the state
+    // list.
+    theme,
+
     // `list-states` / `list-objects` -- discovery, so the harness can check the
     // vocabulary it expects still exists before relying on it.
     listStates,

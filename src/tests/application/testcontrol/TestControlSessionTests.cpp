@@ -17,12 +17,14 @@ struct FakeTarget : TestControlTarget
     std::vector<std::string> appliedStates;
     std::vector<std::string> clicked;
     std::vector<std::string> geometries;
+    std::vector<std::string> themes;
     std::string current;
     bool quitRequested = false;
 
     bool refuseState = false;
     bool refuseClick = false;
     bool refuseGeometry = false;
+    bool refuseTheme = false;
 
     bool applyState(const ApprovedWindowState& state) override
     {
@@ -45,6 +47,18 @@ struct FakeTarget : TestControlTarget
         }
 
         clicked.push_back(id);
+
+        return true;
+    }
+
+    bool applyTheme(const std::string& theme) override
+    {
+        if (refuseTheme)
+        {
+            return false;
+        }
+
+        themes.push_back(theme);
 
         return true;
     }
@@ -359,4 +373,48 @@ TEST_CASE("every approved geometry name is accepted", "[testcontrol][session]")
         INFO("geometry " << name);
         CHECK(session.handleLine("geometry " + name).success);
     }
+}
+
+TEST_CASE("theme applies an approved palette", "[testcontrol][session]")
+{
+    FakeTarget target;
+    TestControlSession session{target};
+
+    const auto response = session.handleLine("theme light");
+
+    REQUIRE(response.success);
+    REQUIRE(target.themes == std::vector<std::string>{"light"});
+}
+
+TEST_CASE("an unapproved theme is refused by name", "[testcontrol][session]")
+{
+    FakeTarget target;
+    TestControlSession session{target};
+
+    const auto response = session.handleLine("theme neon");
+
+    REQUIRE_FALSE(response.success);
+    REQUIRE(response.error.find("neon") != std::string::npos);
+    REQUIRE(target.themes.empty());
+}
+
+TEST_CASE("a theme the application cannot apply is a failure", "[testcontrol][session]")
+{
+    FakeTarget target;
+    target.refuseTheme = true;
+    TestControlSession session{target};
+
+    const auto response = session.handleLine("theme dark");
+
+    REQUIRE_FALSE(response.success);
+}
+
+TEST_CASE("every approved theme is one the vocabulary lists", "[testcontrol][session]")
+{
+    // The suite captures each surface in each of these, so an unlisted name
+    // would silently drop a whole palette from verification.
+    const auto& names = testcontrol::approvedThemeNames();
+
+    REQUIRE(std::find(names.begin(), names.end(), "dark") != names.end());
+    REQUIRE(std::find(names.begin(), names.end(), "light") != names.end());
 }

@@ -100,7 +100,8 @@ def command_capture(arguments) -> int:
         return 1
 
     resolutions = tuple(arguments.resolutions)
-    plan = surfaces.plan(arguments.mode, resolutions)
+    themes = tuple(arguments.themes)
+    plan = surfaces.plan(arguments.mode, resolutions, themes)
     store = open_store(arguments)
 
     try:
@@ -248,7 +249,8 @@ def command_run(arguments) -> int:
     seen = 0
 
     if not job.start(chosen, mode=arguments.mode, resolutions=tuple(arguments.resolutions),
-                     rebuild=arguments.rebuild, run_id=arguments.run):
+                     themes=tuple(arguments.themes), rebuild=arguments.rebuild,
+                     run_id=arguments.run):
         print("Nothing to run.", file=sys.stderr)
 
         return 2
@@ -490,6 +492,8 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--mode", choices=(surfaces.QUICK, surfaces.FULL), default=surfaces.FULL)
     run_parser.add_argument("--resolutions", nargs="+", default=list(surfaces.DEFAULT_RESOLUTIONS),
                             choices=list(surfaces.SWEEP_GEOMETRIES))
+    run_parser.add_argument("--themes", nargs="+", default=list(surfaces.DEFAULT_THEMES),
+                            choices=list(surfaces.THEMES))
     run_parser.add_argument("--rebuild", action="store_true")
     add_run_option(run_parser)
     run_parser.set_defaults(handler=command_run)
@@ -503,6 +507,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=list(surfaces.DEFAULT_RESOLUTIONS),
         choices=list(surfaces.SWEEP_GEOMETRIES),
         help="Which window sizes to capture each surface at.",
+    )
+    capture_parser.add_argument(
+        "--themes",
+        nargs="+",
+        default=list(surfaces.DEFAULT_THEMES),
+        choices=list(surfaces.THEMES),
+        help="Which palettes to capture each surface in.",
     )
     capture_parser.add_argument("--build-config", default="", help="How the build under test was configured.")
     capture_parser.add_argument("--audio-device", default="", help="The input device in use.")

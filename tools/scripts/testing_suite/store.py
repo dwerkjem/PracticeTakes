@@ -31,7 +31,7 @@ import sqlite3
 import threading
 
 # Bumped by adding a migration below, never by editing one that shipped.
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # The tag vocabulary a fresh store starts with. Data rather than a constant the
 # code branches on: a reviewer adds to this during a review.
@@ -78,6 +78,7 @@ class CaptureRow:
     surface_state: str
     surface_title: str
     geometry: str
+    theme: str
     image_path: str
     thumbnail_path: str
     width: int
@@ -99,6 +100,7 @@ def _capture_row(row: sqlite3.Row) -> CaptureRow:
         surface_state=row["surface_state"],
         surface_title=row["surface_title"],
         geometry=row["geometry"],
+        theme=row["theme"],
         image_path=row["image_path"],
         thumbnail_path=row["thumbnail_path"],
         width=int(row["width"]),
@@ -235,10 +237,83 @@ def _migration_2(connection: sqlite3.Connection) -> None:
     connection.execute("ALTER TABLE capture ADD COLUMN notice TEXT NOT NULL DEFAULT ''")
 
 
+def _migration_3(connection: sqlite3.Connection) -> None:
+    """A capture is now a surface at a resolution *in a palette*.
+
+    The theme has to be part of what makes a capture unique, or the light and
+    dark captures of one surface overwrite each other -- so this rebuilds the
+    table rather than adding a column, since SQLite cannot alter a UNIQUE
+    constraint in place. Existing rows predate palettes and are recorded as
+    dark, which is what they were.
+
+    **Foreign keys are off for the rebuild, and that is the whole trick.**
+    Verdicts, tags, and comments reference capture(id) ON DELETE CASCADE, so
+    dropping the old table with enforcement on deletes every one of them. The
+    first version of this migration did exactly that and threw away a run's
+    entire review. Ids are preserved, so the children are still correct
+    afterwards -- which `foreign_key_check` confirms before this returns.
+    """
+    # PRAGMA foreign_keys is a silent no-op inside a transaction, and an earlier
+    # migration in the same open() will have left one running. Committing first
+    # is what makes the pragma take; reading it back is what stops this failing
+    # silently again if that ever stops being true.
+    connection.commit()
+    connection.execute("PRAGMA foreign_keys = OFF")
+
+    if connection.execute("PRAGMA foreign_keys").fetchone()[0]:
+        raise StoreError(
+            "could not disable foreign keys to rebuild the capture table; refusing to "
+            "continue, because doing so would delete every verdict, tag, and comment"
+        )
+
+    connection.executescript(
+        """
+        CREATE TABLE capture_v3 (
+            id             INTEGER PRIMARY KEY,
+            run_id         INTEGER NOT NULL REFERENCES run(id) ON DELETE CASCADE,
+            surface_state  TEXT NOT NULL,
+            surface_title  TEXT NOT NULL,
+            geometry       TEXT NOT NULL,
+            theme          TEXT NOT NULL DEFAULT 'dark',
+            image_path     TEXT NOT NULL DEFAULT '',
+            thumbnail_path TEXT NOT NULL DEFAULT '',
+            width          INTEGER NOT NULL DEFAULT 0,
+            height         INTEGER NOT NULL DEFAULT 0,
+            digest         TEXT NOT NULL DEFAULT '',
+            failure        TEXT NOT NULL DEFAULT '',
+            notice         TEXT NOT NULL DEFAULT '',
+            pruned         INTEGER NOT NULL DEFAULT 0,
+            captured_at    TEXT NOT NULL,
+            UNIQUE (run_id, surface_state, surface_title, geometry, theme)
+        );
+
+        INSERT INTO capture_v3
+            (id, run_id, surface_state, surface_title, geometry, theme, image_path,
+             thumbnail_path, width, height, digest, failure, notice, pruned, captured_at)
+        SELECT id, run_id, surface_state, surface_title, geometry, 'dark', image_path,
+               thumbnail_path, width, height, digest, failure, notice, pruned, captured_at
+        FROM capture;
+
+        DROP TABLE capture;
+        ALTER TABLE capture_v3 RENAME TO capture;
+        CREATE INDEX capture_by_run ON capture (run_id);
+        """
+    )
+
+    broken = connection.execute("PRAGMA foreign_key_check").fetchall()
+    connection.execute("PRAGMA foreign_keys = ON")
+
+    if broken:
+        raise StoreError(
+            f"migrating the capture table orphaned {len(broken)} row(s); the store was "
+            f"left unchanged"
+        )
+
+
 # Forward only. The recovery path for a bad migration is a copy of the file,
 # which is one `cp` because the store is one file — cheaper and more honest than
 # maintaining down-migrations nobody exercises.
-MIGRATIONS = (_migration_1, _migration_2)
+MIGRATIONS = (_migration_1, _migration_2, _migration_3)
 
 
 class Store:
@@ -439,6 +514,7 @@ class Store:
         state: str,
         title: str,
         geometry: str,
+        theme: str = "dark",
         image_path: str = "",
         thumbnail_path: str = "",
         width: int = 0,
@@ -451,10 +527,10 @@ class Store:
         cursor = self.execute(
             """
             INSERT INTO capture
-                (run_id, surface_state, surface_title, geometry, image_path,
+                (run_id, surface_state, surface_title, geometry, theme, image_path,
                  thumbnail_path, width, height, digest, failure, notice, captured_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT (run_id, surface_state, surface_title, geometry) DO UPDATE SET
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (run_id, surface_state, surface_title, geometry, theme) DO UPDATE SET
                 image_path = excluded.image_path,
                 thumbnail_path = excluded.thumbnail_path,
                 width = excluded.width,
@@ -470,6 +546,7 @@ class Store:
                 state,
                 title,
                 geometry,
+                theme,
                 image_path,
                 thumbnail_path,
                 width,
@@ -485,15 +562,18 @@ class Store:
         if cursor.lastrowid:
             return int(cursor.lastrowid)
 
-        return int(self.capture_id(run_id, state, title, geometry) or 0)
+        return int(self.capture_id(run_id, state, title, geometry, theme) or 0)
 
-    def capture_id(self, run_id: int, state: str, title: str, geometry: str) -> int | None:
+    def capture_id(
+        self, run_id: int, state: str, title: str, geometry: str, theme: str = "dark"
+    ) -> int | None:
         row = self.execute(
             """
             SELECT id FROM capture
             WHERE run_id = ? AND surface_state = ? AND surface_title = ? AND geometry = ?
+              AND theme = ?
             """,
-            (run_id, state, title, geometry),
+            (run_id, state, title, geometry, theme),
         ).fetchone()
 
         return int(row["id"]) if row else None
@@ -512,10 +592,10 @@ class Store:
 
         return [_capture_row(row) for row in rows]
 
-    def captured_keys(self, run_id: int) -> set[tuple[str, str, str]]:
+    def captured_keys(self, run_id: int) -> set[tuple[str, str, str, str]]:
         """What a resumed capture pass does not need to capture again."""
         return {
-            (capture.surface_state, capture.surface_title, capture.geometry)
+            (capture.surface_state, capture.surface_title, capture.geometry, capture.theme)
             for capture in self.captures(run_id)
             if capture.image_path or capture.failure
         }

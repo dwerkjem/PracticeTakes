@@ -56,8 +56,8 @@ class SurfaceListTests(unittest.TestCase):
             surfaces.surfaces_for_mode("thorough")
 
     def test_a_run_covers_every_configured_resolution(self) -> None:
-        plain = surfaces.plan(surfaces.FULL, (surfaces.DEFAULT_GEOMETRY,))
-        swept = surfaces.plan(surfaces.FULL, surfaces.SWEEP_GEOMETRIES)
+        plain = surfaces.plan(surfaces.FULL, (surfaces.DEFAULT_GEOMETRY,), (surfaces.DARK,))
+        swept = surfaces.plan(surfaces.FULL, surfaces.SWEEP_GEOMETRIES, (surfaces.DARK,))
 
         # Two kinds of surface are captured once whatever the set says: one that
         # is about its own size, and one whose subject is a window the main
@@ -74,6 +74,28 @@ class SurfaceListTests(unittest.TestCase):
     def test_a_run_must_cover_something(self) -> None:
         with self.assertRaises(ValueError):
             surfaces.plan(surfaces.FULL, ())
+
+        with self.assertRaises(ValueError):
+            surfaces.plan(surfaces.FULL, surfaces.SWEEP_GEOMETRIES, ())
+
+    def test_a_run_covers_every_configured_palette(self) -> None:
+        """Every surface exists in both palettes; the theme is a dimension, not a state."""
+        one = surfaces.plan(surfaces.FULL, surfaces.SWEEP_GEOMETRIES, (surfaces.DARK,))
+        both = surfaces.plan(surfaces.FULL, surfaces.SWEEP_GEOMETRIES, surfaces.THEMES)
+
+        self.assertEqual(len(both), len(one) * 2)
+        self.assertEqual({theme for _, _, theme in both}, set(surfaces.THEMES))
+
+    def test_an_unknown_palette_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            surfaces.plan(surfaces.FULL, surfaces.SWEEP_GEOMETRIES, ("neon",))
+
+    def test_a_palette_is_captured_in_one_pass_before_the_next(self) -> None:
+        """Switching palette is instant; a resize has to settle, so themes go outside."""
+        themes = [theme for _, _, theme in surfaces.plan(surfaces.QUICK)]
+
+        self.assertEqual(themes, sorted(themes, key=lambda name: themes.index(name)))
+        self.assertEqual(len(set(themes)), len(surfaces.THEMES))
 
     def test_a_surface_about_its_own_size_is_never_swept(self) -> None:
         """Resizing it would destroy the thing under test.
@@ -93,11 +115,12 @@ class SurfaceListTests(unittest.TestCase):
     def test_the_geometry_surfaces_are_the_exempt_ones(self) -> None:
         exempt = {s.state for s in surfaces.SURFACES if s.fixed_geometry}
 
-        self.assertEqual(exempt, {"narrow-window", "fullscreen"})
+        self.assertEqual(exempt, {"narrow-window", "narrow-empty", "fullscreen"})
 
     def test_the_plan_records_which_geometry_each_entry_is_for(self) -> None:
-        for _, geometry in surfaces.plan(surfaces.QUICK, surfaces.SWEEP_GEOMETRIES):
+        for _, geometry, theme in surfaces.plan(surfaces.QUICK, surfaces.SWEEP_GEOMETRIES):
             self.assertIn(geometry, surfaces.SWEEP_GEOMETRIES)
+            self.assertIn(theme, surfaces.THEMES)
 
     def test_the_spec_required_surfaces_are_covered(self) -> None:
         """The surfaces the change committed to verifying."""

@@ -57,6 +57,12 @@ const std::vector<ApprovedWindowState>& states()
         {"two-tools-tabbed", Tools{"tuner", "spectrogram"}, ToolPresentation::docked,
          WorkspaceArrangement::tabbed, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "The tuner and spectrogram sharing one tab strip"},
+        {"tuner-harmonics-split", Tools{"tuner", "harmonics"}, ToolPresentation::docked,
+         WorkspaceArrangement::split, WindowGeometry::normal, MicrophoneCondition::available, false,
+         "", false, "The tuner and the harmonic analyser tiled side by side"},
+        {"three-tools-tabbed", Tools{"tuner", "spectrogram", "harmonics"}, ToolPresentation::docked,
+         WorkspaceArrangement::tabbed, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false, "All three tools sharing one tab strip"},
         {"all-tools-docked", Tools{"tuner", "spectrogram", "harmonics"}, ToolPresentation::docked,
          WorkspaceArrangement::split, WindowGeometry::normal, MicrophoneCondition::available, false,
          "", false, "All three tools tiled at once, each consuming live audio"},
@@ -68,11 +74,17 @@ const std::vector<ApprovedWindowState>& states()
         {"fullscreen", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
          WindowGeometry::fullscreen, MicrophoneCondition::available, false, "", false,
          "The application in fullscreen"},
+        {"narrow-empty", Tools{}, ToolPresentation::none, WorkspaceArrangement::single,
+         WindowGeometry::narrow, MicrophoneCondition::available, false, "", false,
+         "The empty shell in a narrow window, with the collapsed menu and no tool"},
 
         // --- Audio conditions ---
         {"microphone-muted", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
          WindowGeometry::normal, MicrophoneCondition::muted, false, "", false,
          "The tuner with the global microphone mute engaged"},
+        {"muted-all-tools", Tools{"tuner", "spectrogram", "harmonics"}, ToolPresentation::docked,
+         WorkspaceArrangement::split, WindowGeometry::normal, MicrophoneCondition::muted, false, "",
+         false, "Every tool at once with the microphone muted"},
         {"microphone-warning",
          {},
          ToolPresentation::none,
@@ -115,6 +127,29 @@ const std::vector<ApprovedWindowState>& states()
          "appearance",
          false,
          "The settings window showing appearance and theme"},
+        {"settings-practice",
+         {},
+         ToolPresentation::none,
+         WorkspaceArrangement::single,
+         WindowGeometry::normal,
+         MicrophoneCondition::available,
+         true,
+         "practice",
+         false,
+         "The settings window showing practice presets"},
+        {"settings-reset",
+         {},
+         ToolPresentation::none,
+         WorkspaceArrangement::single,
+         WindowGeometry::normal,
+         MicrophoneCondition::available,
+         true,
+         "reset",
+         false,
+         "The settings window showing reset and support"},
+        {"feedback-over-tool", Tools{"tuner"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", true, "The feedback form opened over a tool that is already in use"},
         {"feedback-open",
          {},
          ToolPresentation::none,
@@ -175,6 +210,13 @@ const ApprovedWindowState* findApprovedWindowState(const std::string& id)
 const ApprovedClickTarget* findApprovedClickTarget(const std::string& id)
 {
     return findById(targets(), id);
+}
+
+const std::vector<std::string>& approvedThemeNames()
+{
+    static const std::vector<std::string> names{"dark", "light"};
+
+    return names;
 }
 
 const std::vector<std::string>& approvedGeometryNames()

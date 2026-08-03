@@ -89,6 +89,71 @@ class MigrationTests(StoreTestCase):
 
         self.assertIn("newer", str(raised.exception))
 
+    def test_a_migration_that_rebuilds_a_table_keeps_what_hangs_off_it(self) -> None:
+        """Verdicts, tags, and comments reference capture(id) ON DELETE CASCADE.
+
+        Rebuilding the capture table with foreign keys enforced deletes every
+        one of them -- which the first version of migration 3 did, throwing away
+        a whole run's review. This is that regression, pinned.
+        """
+        run_id = self.start_run()
+        capture_id = self.capture(run_id)
+        self.store.record_verdict(
+            capture_id, question="works", prompt="Does it work?", verdict="pass"
+        )
+        self.store.apply_tag([capture_id], "ugly")
+        self.store.add_comment(capture_id, "worth another look")
+        self.store.close()
+
+        reopened = Store.open(self.path)
+        self.addCleanup(reopened.close)
+
+        self.assertEqual(len(reopened.verdicts(capture_id)), 1)
+        self.assertEqual(reopened.tags_for(capture_id), ["ugly"])
+        self.assertEqual(len(reopened.comments_for(capture_id)), 1)
+
+    def test_migrating_from_the_first_schema_keeps_a_review(self) -> None:
+        """The real path: a store written before palettes existed, opened now."""
+        connection = sqlite3.connect(self.path)
+        connection.executescript("DELETE FROM schema_version;")
+        connection.commit()
+        connection.close()
+
+        # A schema-1 store built by hand, holding a capture with a review on it.
+        fresh = Path(self.directory.name) / "old.db"
+        old = sqlite3.connect(fresh)
+        old.executescript("CREATE TABLE schema_version (version INTEGER NOT NULL)")
+        store_module._migration_1(old)
+        old.execute("INSERT INTO schema_version (version) VALUES (1)")
+        old.execute(
+            "INSERT INTO machine (identity, processor, cores, memory_bytes, graphics, "
+            "operating_system, display, first_seen, last_seen) "
+            "VALUES ('m', 'cpu', 8, 0, 'gpu', 'os', '1x1', 'then', 'then')"
+        )
+        old.execute(
+            "INSERT INTO run (machine_id, commit_hash, mode, started_at) VALUES (1, 'aaa', 'full', 'then')"
+        )
+        old.execute(
+            "INSERT INTO capture (run_id, surface_state, surface_title, geometry, captured_at) "
+            "VALUES (1, 'empty', 'The shell', 'default', 'then')"
+        )
+        old.execute(
+            "INSERT INTO axis_verdict (capture_id, question, prompt, verdict, answered_at) "
+            "VALUES (1, 'works', '?', 'fail', 'then')"
+        )
+        old.execute("INSERT INTO capture_tag (capture_id, tag_id, applied_at) VALUES (1, 1, 'then')")
+        old.commit()
+        old.close()
+
+        migrated = Store.open(fresh)
+        self.addCleanup(migrated.close)
+
+        self.assertEqual(migrated._current_version(), store_module.SCHEMA_VERSION)
+        self.assertEqual(len(migrated.captures(1)), 1)
+        self.assertEqual(migrated.captures(1)[0].theme, "dark")
+        self.assertEqual(len(migrated.verdicts(1)), 1)
+        self.assertEqual(migrated.tags_for(1), ["broken"])
+
     def test_the_tag_vocabulary_starts_populated(self) -> None:
         self.assertEqual(
             {row["name"] for row in self.store.tags()}, {"broken", "ugly", "illegible"}
@@ -177,8 +242,8 @@ class CaptureRecordingTests(StoreTestCase):
 
         keys = self.store.captured_keys(run_id)
 
-        self.assertIn(("tuner-docked", "The tuner, docked", "default"), keys)
-        self.assertIn(("empty", "The shell with no tool open", "default"), keys)
+        self.assertIn(("tuner-docked", "The tuner, docked", "default", "dark"), keys)
+        self.assertIn(("empty", "The shell with no tool open", "default", "dark"), keys)
 
 
 class VerdictTests(StoreTestCase):

@@ -69,6 +69,7 @@ class MainComponent final
     [[nodiscard]] bool applyTestControlState(const testcontrol::ApprovedWindowState& state);
     [[nodiscard]] bool clickTestControlTarget(const std::string& id);
     [[nodiscard]] bool applyTestControlGeometry(const std::string& geometry);
+    [[nodiscard]] bool applyTestControlTheme(const std::string& theme);
     [[nodiscard]] std::string currentTestControlStateId() const;
 #endif
 

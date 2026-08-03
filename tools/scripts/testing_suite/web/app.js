@@ -17,6 +17,10 @@ const state = {
   // Previews default to large: the grid exists so you can see what is being
   // reviewed, and a thumbnail you have to squint at defeats the whole thing.
   size: window.localStorage.getItem("preview-size") || "large",
+  // facet name -> Set of chosen values. Empty means "no opinion", which is what
+  // makes several filters compose: within a facet the choices are alternatives,
+  // between facets they all have to hold.
+  filters: {},
 };
 
 async function api(path, body) {
@@ -368,7 +372,19 @@ function renderGrid(view) {
     element("tag-buttons").appendChild(button);
   });
 
+  let hidden = 0;
+
   view.groups.forEach((group) => {
+    const shown = group.captures.filter((capture) => {
+      const keep = matchesFilters(capture);
+
+      if (!keep) hidden += 1;
+
+      return keep;
+    });
+
+    if (!shown.length) return;
+
     const section = document.createElement("section");
     section.className = "surface-group";
     section.innerHTML = `<h2>${group.surface} <span class="state">${group.state}</span></h2>`;
@@ -376,7 +392,7 @@ function renderGrid(view) {
     const row = document.createElement("div");
     row.className = `captures ${state.size}`;
 
-    group.captures.forEach((capture) => {
+    shown.forEach((capture) => {
       state.order.push(capture.id);
       row.appendChild(renderCard(capture));
     });
@@ -385,7 +401,111 @@ function renderGrid(view) {
     grid.appendChild(section);
   });
 
+  if (!state.order.length) {
+    grid.innerHTML = '<p class="muted">Nothing matches these filters.</p>';
+  }
+
+  // Said out loud, because a filtered grid that looks complete is how a
+  // reviewer approves a run they only saw half of.
+  const filtered = element("filter-summary");
+
+  if (filtered && hidden) {
+    filtered.textContent += `  ·  ${state.order.length} shown, ${hidden} hidden`;
+  }
+
   paintSelection();
+}
+
+
+// --- Filters ---------------------------------------------------------------
+//
+// A full run is around a hundred captures. Reviewing that in one pass is only
+// possible if you can narrow it to a question worth answering -- every settings
+// window, everything in the light palette, everything with three tools open --
+// and approve that set together.
+//
+// Within a facet, choosing two values means "either" (a capture is one theme or
+// the other, so requiring both would match nothing). Between facets, every one
+// has to hold. That is the combination people expect without being told.
+
+function chosen(name) {
+  return state.filters[name] || new Set();
+}
+
+function matchesFilters(capture) {
+  return Object.entries(state.filters).every(([name, values]) => {
+    if (!values.size) return true;
+
+    const actual = capture.facets ? capture.facets[name] : undefined;
+
+    if (Array.isArray(actual)) return actual.some((entry) => values.has(entry));
+
+    return values.has(actual);
+  });
+}
+
+function toggleFilter(name, value) {
+  const values = new Set(chosen(name));
+
+  if (values.has(value)) values.delete(value);
+  else values.add(value);
+
+  state.filters[name] = values;
+  renderGrid(state.data);
+}
+
+function renderFilters(view) {
+  const holder = element("filters");
+  const facets = view.facets || {};
+
+  if (!Object.keys(facets).length) {
+    holder.innerHTML = "";
+    return;
+  }
+
+  holder.innerHTML = "";
+
+  Object.entries(facets).forEach(([name, values]) => {
+    if (values.length < 2) return;   // A facet with one value filters nothing.
+
+    const row = document.createElement("div");
+    row.className = "facet";
+    row.innerHTML = `<span class="facet-name">${name.replace("_", " ")}</span>`;
+
+    values.forEach(([value, count]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `chip-button${chosen(name).has(value) ? " on" : ""}`;
+      button.innerHTML = `${value}<span class="count">${count}</span>`;
+      button.addEventListener("click", () => toggleFilter(name, value));
+      row.appendChild(button);
+    });
+
+    holder.appendChild(row);
+  });
+
+  const summary = document.createElement("div");
+  summary.id = "filter-summary";
+  const active = Object.entries(state.filters).filter(([, values]) => values.size);
+
+  if (active.length) {
+    summary.textContent = active
+      .map(([name, values]) => `${name}: ${[...values].join(" or ")}`).join("  ·  ");
+    const clear = document.createElement("button");
+    clear.type = "button";
+    clear.className = "chip-button";
+    clear.textContent = "clear filters";
+    clear.addEventListener("click", () => {
+      state.filters = {};
+      renderGrid(state.data);
+    });
+    summary.appendChild(document.createTextNode("  "));
+    summary.appendChild(clear);
+  } else {
+    summary.textContent = "Showing everything. Choose values to narrow it; several filters combine.";
+  }
+
+  holder.appendChild(summary);
 }
 
 // --- Selection -------------------------------------------------------------
@@ -509,11 +629,39 @@ async function scoreSelection(verdict) {
   await reload();
 }
 
+element("approve-shown").addEventListener("click", async () => {
+  if (!state.order.length) {
+    window.alert("Nothing is shown to approve.");
+    return;
+  }
+
+  const filters = Object.entries(state.filters).filter(([, values]) => values.size);
+  const describe = filters.length
+    ? filters.map(([name, values]) => `${name}: ${[...values].join(" or ")}`).join(", ")
+    : "the whole run";
+
+  if (!window.confirm(
+    `Approve ${state.order.length} capture(s) — ${describe}?\n\n` +
+    "Every question they can be asked from the image is answered pass. " +
+    "Anything already answered is left alone.")) return;
+
+  const { ok, data } = await api("/api/score-many", {
+    capture_ids: state.order,
+    verdict: "pass",
+  });
+
+  if (!ok) window.alert((data.problems || ["could not record that"]).join("\n"));
+
+  await reload();
+});
+
 element("bulk-pass").addEventListener("click", () => scoreSelection("pass"));
 element("bulk-fail").addEventListener("click", () => scoreSelection("fail"));
 element("bulk-skip").addEventListener("click", () => scoreSelection("skip"));
 
 element("select-all").addEventListener("click", () => {
+  // Everything *shown*, not everything in the run: with filters on, selecting
+  // what is hidden is never what was meant.
   state.order.forEach((id) => state.selected.add(id));
   paintSelection();
 });
@@ -912,6 +1060,7 @@ async function reload() {
   renderSuites(data);
   renderSummary(data);
   renderResults(data);
+  renderFilters(data);
   renderGrid(data);
   renderJob(data.job);
   document.querySelectorAll("button.size").forEach((button) => {

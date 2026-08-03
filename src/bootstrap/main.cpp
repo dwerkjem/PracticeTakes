@@ -421,6 +421,9 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             testControlTarget.onGeometry = [this](const std::string& geometry)
             { return content != nullptr && content->applyTestControlGeometry(geometry); };
 
+            testControlTarget.onTheme = [this](const std::string& theme)
+            { return content != nullptr && content->applyTestControlTheme(theme); };
+
             testControlTarget.onCurrentStateId = [this]
             { return content != nullptr ? content->currentTestControlStateId() : std::string{}; };
 
