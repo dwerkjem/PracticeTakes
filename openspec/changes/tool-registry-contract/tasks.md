@@ -1,43 +1,43 @@
 ## 1. Pure tool identity and catalog
 
-- [ ] 1.1 Add `src/application/tools/ToolInstanceId.h`: a string-backed instance
+- [x] 1.1 Add `src/application/tools/ToolInstanceId.h`: a string-backed instance
       id with `toolId()` (text before `#`), `ordinal()`, and a factory that
       builds the nth instance id for a tool id. No JUCE include.
-- [ ] 1.2 Add `src/application/tools/ToolCatalog.h`: `ToolDefinition { id,
+- [x] 1.2 Add `src/application/tools/ToolCatalog.h`: `ToolDefinition { id,
       displayName, aliases, instancePolicy, settingsVersion, preferredSize }`
       plus `find`/`resolve`, carrying over `WorkspaceToolRegistry`'s alias
       behaviour. Reject a tool id containing `#` at construction. No JUCE
       include.
-- [ ] 1.3 Add `src/tests/application/tools/ToolInstanceIdTests.cpp` and
+- [x] 1.3 Add `src/tests/application/tools/ToolInstanceIdTests.cpp` and
       `ToolCatalogTests.cpp`: id round-trip, `#`-in-tool-id rejection, alias
       resolution, unknown-id miss. Register both in `CMakeLists.txt`.
-- [ ] 1.4 Delete `WorkspaceToolRegistry.h` and point `WorkspaceNormalizer.h`,
+- [x] 1.4 Delete `WorkspaceToolRegistry.h` and point `WorkspaceNormalizer.h`,
       `WorkspaceSnapshotApply.h`, and their tests at `ToolCatalog`. Behaviour
       unchanged; the existing workspace model tests must pass untouched.
 
 ## 2. Tool contract and registry
 
-- [ ] 2.1 Add `src/application/tools/ToolComponent.h`: `ToolComponent :
+- [x] 2.1 Add `src/application/tools/ToolComponent.h`: `ToolComponent :
       public juce::Component` with `setTheme(Theme)` and the settings
       capture/apply hooks.
-- [ ] 2.2 Add `src/application/tools/ToolServices.h`: the shared-service bundle
+- [x] 2.2 Add `src/application/tools/ToolServices.h`: the shared-service bundle
       passed to factories. Resolve the design's open question on whether theme
       travels in the bundle or stays a `setTheme` push.
-- [ ] 2.3 Add `src/application/tools/ToolRegistry.h`: wraps a `ToolCatalog` and
+- [x] 2.3 Add `src/application/tools/ToolRegistry.h`: wraps a `ToolCatalog` and
       adds per-tool factory and settings codec. Resolve the design's open
       question on where `preferredSize` lives.
-- [ ] 2.4 Add `src/application/tools/BuiltInTools.cpp`: the one place tuner,
+- [x] 2.4 Add `src/application/tools/BuiltInTools.cpp`: the one place tuner,
       spectrogram, and harmonic analyzer are registered, all single-instance,
       with the ids and aliases the current `WorkspaceToolRegistry` declares.
 
 ## 3. Make the three existing tools conform
 
-- [ ] 3.1 Make `TunerComponent`, `SpectrogramComponent`, and
+- [x] 3.1 Make `TunerComponent`, `SpectrogramComponent`, and
       `HarmonicAnalyzerComponent` derive from `ToolComponent`.
-- [ ] 3.2 Move the tuner's settings capture/apply behind its registry-declared
+- [x] 3.2 Move the tuner's settings capture/apply behind its registry-declared
       codec, replacing `MainComponent::savedTunerSettings` and the
       `dynamic_cast<TunerComponent*>` in `closeTool`.
-- [ ] 3.3 Confirm the spectrogram and harmonic analyzer declare no settings
+- [x] 3.3 Confirm the spectrogram and harmonic analyzer declare no settings
       codec and restore to defaults, matching current behaviour.
 
 ## 4. Replace MainComponent's per-tool storage

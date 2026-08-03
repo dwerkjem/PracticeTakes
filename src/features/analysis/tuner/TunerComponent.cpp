@@ -1,5 +1,7 @@
 #include "TunerComponent.h"
 
+#include "TunerSettingsCodec.h"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -130,6 +132,23 @@ AppDefaults::TunerSettings TunerComponent::settings() const
 {
     return {displayModeBox.getSelectedId(), easingSlider.getValue(),  averagingSlider.getValue(),
             thresholdSlider.getValue(),     dropoutSlider.getValue(), durationSlider.getValue()};
+}
+
+std::optional<ToolSettingsPayload> TunerComponent::captureSettings() const
+{
+    return TunerSettingsCodec::encode(settings());
+}
+
+void TunerComponent::applySettings(const ToolSettingsPayload& payload)
+{
+    // A payload that does not parse leaves the tuner as it is rather than
+    // resetting it: the workspace that carried it is refused upstream, and
+    // wiping a working tuner on top of that would lose the user's settings
+    // twice over.
+    if (const auto decoded = TunerSettingsCodec::decode(payload); decoded.has_value())
+    {
+        applySettings(*decoded);
+    }
 }
 
 //==============================================================================

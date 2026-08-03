@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include "../../../application/theme/Theme.h"
+#include "../../../application/tools/ToolComponent.h"
 #include "../../../platform/audio/AudioInputService.h"
 
 #include <array>
@@ -11,7 +12,7 @@
 // SpectrogramComponent converts microphone audio into a scrolling frequency
 // image. Audio capture and FFT processing are deliberately kept separate.
 class SpectrogramComponent final
-    : public juce::Component,
+    : public ToolComponent,
       private AudioInputService::Listener,
       private juce::Timer
 {
@@ -21,8 +22,8 @@ class SpectrogramComponent final
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
-    void setTheme(Theme theme);
-    void resetToDefaults();
+    void setTheme(Theme theme) override;
+    void resetToDefaults() override;
 
   private:
     static constexpr int fifoCapacity = 65536;

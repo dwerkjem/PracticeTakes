@@ -245,8 +245,14 @@ target_sources(PracticeTakes
         src/application/theme/Theme.h
         src/application/theme/ThemeType.h
         src/application/tools/BuiltInToolCatalog.h
+        src/application/tools/BuiltInTools.cpp
+        src/application/tools/BuiltInTools.h
         src/application/tools/ToolCatalog.h
+        src/application/tools/ToolComponent.h
         src/application/tools/ToolInstanceId.h
+        src/application/tools/ToolRegistry.h
+        src/application/tools/ToolServices.h
+        src/application/tools/ToolSettingsPayload.h
         src/features/analysis/spectrogram/SpectrogramComponent.cpp
         src/features/analysis/spectrogram/SpectrogramComponent.h
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
@@ -257,6 +263,8 @@ target_sources(PracticeTakes
         src/features/analysis/tuner/PitchDetector.h
         src/features/analysis/tuner/TunerComponent.cpp
         src/features/analysis/tuner/TunerComponent.h
+        src/features/analysis/tuner/TunerSettingsCodec.cpp
+        src/features/analysis/tuner/TunerSettingsCodec.h
         src/features/analysis/tuner/TunerDrawing.cpp
         src/features/performance/ApplicationLaunchTimer.cpp
         src/features/performance/ApplicationLaunchTimer.h
@@ -434,6 +442,7 @@ if(BUILD_TESTING)
         src/tests/support/BenchmarkFakesTests.cpp
         src/application/configuration/SettingsPersistence.cpp
         src/application/configuration/SettingsTransferCodec.cpp
+        src/features/analysis/tuner/TunerSettingsCodec.cpp
         src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
         src/application/testcontrol/ApprovedWindowStates.cpp
         src/application/testcontrol/TestControlClicker.cpp

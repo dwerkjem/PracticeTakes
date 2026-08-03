@@ -4,17 +4,19 @@
 
 #include "../../../application/configuration/AppDefaults.h"
 #include "../../../application/theme/Theme.h"
+#include "../../../application/tools/ToolComponent.h"
 #include "../../../platform/audio/AudioInputService.h"
 #include "PitchDetector.h"
 
 #include <array>
 #include <atomic>
+#include <optional>
 #include <vector>
 
 // TunerComponent captures microphone samples, estimates their fundamental
 // frequency, smooths the result, and renders it in one of three display modes.
 class TunerComponent final
-    : public juce::Component,
+    : public ToolComponent,
       private AudioInputService::Listener,
       private juce::Timer
 {
@@ -24,11 +26,17 @@ class TunerComponent final
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
-    void setTheme(Theme theme);
-    void resetToDefaults();
+    void setTheme(Theme theme) override;
+    void resetToDefaults() override;
     void applyPreset(AppDefaults::Preset preset);
+
+    // The typed pair the settings window and presets use directly, alongside
+    // the opaque pair the shell uses to move settings into a workspace.
     void applySettings(const AppDefaults::TunerSettings& settings);
     [[nodiscard]] AppDefaults::TunerSettings settings() const;
+
+    [[nodiscard]] std::optional<ToolSettingsPayload> captureSettings() const override;
+    void applySettings(const ToolSettingsPayload& payload) override;
 
   private:
     enum class DisplayMode

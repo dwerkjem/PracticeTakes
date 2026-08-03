@@ -1,5 +1,6 @@
 #include "SettingsPersistence.h"
 
+#include "../../features/analysis/tuner/TunerSettingsCodec.h"
 #include "../shell/ui/workspace/model/WorkspaceCatalogCodec.h"
 
 #include <array>
@@ -139,24 +140,13 @@ loadValidWindowBounds(const juce::PropertySet& properties, const char* key)
     return value >= 1 && value <= 3 ? value : AppDefaults::Tuner::displayMode;
 }
 
-[[nodiscard]] ToolSettingsPayload tunerPayload(const AppDefaults::TunerSettings& settings)
-{
-    auto* object = new juce::DynamicObject;
-    object->setProperty("displayMode", settings.displayMode);
-    object->setProperty("easing", settings.easing);
-    object->setProperty("averaging", settings.averaging);
-    object->setProperty("noteSwitchSemitones", settings.noteSwitchSemitones);
-    object->setProperty("dropoutFrames", settings.dropoutFrames);
-    object->setProperty("graphDurationSeconds", settings.graphDurationSeconds);
-    return {1, juce::JSON::toString(juce::var(object)).toStdString()};
-}
-
 [[nodiscard]] WorkspaceCatalog
 migratedWorkspaceCatalog(const AppDefaults::TunerSettings& tunerSettings)
 {
     WorkspaceCatalog catalog;
     catalog.active = WorkspaceBuiltIns::pitchPractice().snapshot;
-    catalog.active.toolSettings.insert_or_assign("tuner", tunerPayload(tunerSettings));
+    catalog.active.toolSettings.insert_or_assign(
+        "tuner", TunerSettingsCodec::encode(tunerSettings));
     catalog.activeSource = WorkspaceBuiltIns::pitchPractice().id;
     return catalog;
 }

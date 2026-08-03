@@ -191,14 +191,21 @@ tool ids; built-in workspaces and saved `.ptsettings` files load unchanged.
 Rollback is a branch revert — nothing written by this change is unreadable by
 the current code.
 
-## Open Questions
+## Resolved Questions
 
-- Does `ToolServices` carry an appearance *service* or just the current `Theme`?
-  Today `setTheme` is pushed at tools by the shell. A pull-based service is
-  tidier but is a second refactor; leaning toward keeping the push and putting
-  only audio and settings in the bundle, with theme delivered via
-  `ToolComponent::setTheme`. Resolve during task 2.
-- Should `preferredSize` stay in the pure `ToolCatalog` as a plain
-  `{ width, height }` pair, or move to the JUCE registry as a
-  `juce::Point<int>`? Keeping it pure lets more of the shell be tested headless;
-  leaning that way.
+- **Does `ToolServices` carry an appearance service or just the current
+  `Theme`?** Resolved in task 2: the bundle carries `initialTheme` so a tool is
+  built already correct, and later changes arrive through
+  `ToolComponent::setTheme`, because a theme change has to trigger a repaint and
+  not merely update state. One source of truth per concern — construction reads
+  the bundle, changes come through the virtual.
+- **Where does `preferredSize` live?** Resolved in task 1: it stays in the pure
+  `ToolCatalog` as `ToolPreferredSize { int width, height }`, which keeps window
+  sizing testable without a display.
+- **Does the settings codec belong on the registry or the component?** Not
+  anticipated, but it came up building task 2. It went on `ToolComponent` as
+  `captureSettings`/`applySettings`, with the *version* declared in the catalog.
+  A tool serialising its own settings is cohesive and needs no `dynamic_cast`;
+  putting the codec in the registry entry would have pushed per-tool glue back
+  into the registration site, which is the thing this change removes.
+  `ToolRegistry` therefore holds only factories.
