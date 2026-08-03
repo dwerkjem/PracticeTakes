@@ -94,6 +94,46 @@ TunerComponent::~TunerComponent()
     audioInputService.removeListener(this);
 }
 
+bool TunerComponent::showView(const juce::String& view)
+{
+    // The tuner's own vocabulary. A screenshot of the graph says nothing about
+    // the bar or the meter, so each is a surface of its own.
+    const auto selectMode = [this](DisplayMode mode)
+    { displayModeBox.setSelectedId(static_cast<int>(mode), juce::sendNotificationSync); };
+
+    if (view == "graph")
+    {
+        selectMode(DisplayMode::graph);
+
+        return true;
+    }
+
+    if (view == "bar")
+    {
+        selectMode(DisplayMode::bar);
+
+        return true;
+    }
+
+    if (view == "meter")
+    {
+        selectMode(DisplayMode::meter);
+
+        return true;
+    }
+
+    if (view == "advanced")
+    {
+        areAdvancedSettingsExpanded = true;
+        updateAdvancedSettingsVisibility();
+        resized();
+
+        return true;
+    }
+
+    return false;
+}
+
 void TunerComponent::resetToDefaults()
 {
     displayModeBox.setSelectedId(AppDefaults::Tuner::displayMode, juce::sendNotificationSync);

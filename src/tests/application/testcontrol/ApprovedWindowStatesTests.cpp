@@ -363,3 +363,50 @@ TEST_CASE("both vocabularies are non-empty", "[testcontrol][approved]")
     CHECK_FALSE(approvedWindowStates().empty());
     CHECK_FALSE(approvedClickTargets().empty());
 }
+
+TEST_CASE("a state naming a tool view names a tone as well", "[testcontrol]")
+{
+    // A view of an analysis tool with nothing to analyse is a screenshot of it
+    // waiting, which is the thing the tone exists to stop.
+    for (const auto& state : approvedWindowStates())
+    {
+        if (state.toolView.empty() || state.toolView == "advanced")
+        {
+            continue;
+        }
+
+        INFO("state " << state.id);
+        CHECK(state.toneHz > 0.0);
+    }
+}
+
+TEST_CASE("a state with a tone opens a tool to hear it", "[testcontrol]")
+{
+    for (const auto& state : approvedWindowStates())
+    {
+        if (state.toneHz <= 0.0)
+        {
+            continue;
+        }
+
+        INFO("state " << state.id);
+        CHECK_FALSE(state.tools.empty());
+    }
+}
+
+TEST_CASE("tones are musical pitches rather than arbitrary numbers", "[testcontrol]")
+{
+    // Every tone is within an octave of A440, so what a tuner should read from
+    // it is obvious to whoever is looking at the capture.
+    for (const auto& state : approvedWindowStates())
+    {
+        if (state.toneHz <= 0.0)
+        {
+            continue;
+        }
+
+        INFO("state " << state.id << " at " << state.toneHz << " Hz");
+        CHECK(state.toneHz >= 200.0);
+        CHECK(state.toneHz <= 900.0);
+    }
+}

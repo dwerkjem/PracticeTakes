@@ -119,6 +119,20 @@ For each surface at each resolution the pass opens the approved state, applies
 the palette, asks the application for the geometry, waits for the window to
 settle, captures, and converts the result to PNG plus a thumbnail.
 
+**Analysis tools are fed a synthetic tone.** A state can name a frequency, and
+the audio service generates it in its own callback instead of the device's
+input — the same path a microphone takes, through the same FIFO, at the same
+gain. So a capture of the tuner reads `A4 · 440.0 Hz · +0.0 cents` rather than
+"Play or sing a sustained note", it reads the same thing on every run, and it
+works on a machine with no microphone at all. The tone is a table read and a
+phase increment in the callback, never `sin` per sample, because the audio
+thread may not do unbounded work.
+
+The tuner is captured in tune, sharp, and flat, in each of its three views
+(graph, bar, meter), and with its advanced settings expanded — six surfaces
+where there was one, because a screenshot of the graph says nothing about the
+meter.
+
 **The pointer is not parked**, unlike `run-ui-golden.zsh`. An X capture of a
 window never includes the cursor, so parking changes only hover state — which
 matters when images are compared pixel for pixel, as the golden-image and

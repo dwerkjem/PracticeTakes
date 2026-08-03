@@ -169,6 +169,74 @@ SURFACES: tuple[Surface, ...] = (
         modes=frozenset({QUICK, FULL}),
         window_title=SETTINGS_WINDOW,
     ),
+    # The tuner is not one surface. It has three ways of drawing the same
+    # analysis, an expandable settings panel, and it looks different depending
+    # on what it hears -- and a screenshot of one of those says nothing about
+    # the others. Each of these feeds a synthetic tone, so the capture shows the
+    # tool working rather than the tool waiting.
+    Surface(
+        state="tuner-in-tune",
+        title="The tuner, dead in tune",
+        tools=("tuner",),
+        presentation="docked",
+        modes=frozenset({QUICK, FULL}),
+    ),
+    Surface(
+        state="tuner-sharp",
+        title="The tuner, reading sharp",
+        tools=("tuner",),
+        presentation="docked",
+        modes=frozenset({FULL}),
+    ),
+    Surface(
+        state="tuner-flat",
+        title="The tuner, reading flat",
+        tools=("tuner",),
+        presentation="docked",
+        modes=frozenset({FULL}),
+    ),
+    Surface(
+        state="tuner-bar",
+        title="The tuner in its bar view",
+        tools=("tuner",),
+        presentation="docked",
+        modes=frozenset({FULL}),
+    ),
+    Surface(
+        state="tuner-meter",
+        title="The tuner in its meter view",
+        tools=("tuner",),
+        presentation="docked",
+        modes=frozenset({FULL}),
+    ),
+    Surface(
+        state="tuner-advanced",
+        title="The tuner with advanced settings open",
+        tools=("tuner",),
+        presentation="docked",
+        modes=frozenset({FULL}),
+    ),
+    Surface(
+        state="spectrogram-tone",
+        title="The spectrogram with a tone in it",
+        tools=("spectrogram",),
+        presentation="docked",
+        modes=frozenset({FULL}),
+    ),
+    Surface(
+        state="harmonics-tone",
+        title="The analyser reading a sustained pitch",
+        tools=("harmonics",),
+        presentation="docked",
+        modes=frozenset({FULL}),
+    ),
+    Surface(
+        state="all-tools-tone",
+        title="Every tool analysing the same tone",
+        tools=("tuner", "spectrogram", "harmonics"),
+        presentation="split",
+        modes=frozenset({FULL}),
+    ),
     Surface(
         state="spectrogram-docked",
         title="The spectrogram, docked",
