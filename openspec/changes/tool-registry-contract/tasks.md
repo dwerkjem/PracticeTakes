@@ -103,14 +103,14 @@
 
 ## 8. Documentation and verification
 
-- [ ] 8.1 Document the lifecycle and the shared-service contract in
+- [x] 8.1 Document the lifecycle and the shared-service contract in
       `docs/development/architecture/ARCHITECTURE.md`, and note the tool-registry
       layer in the source-layering section of
       `docs/development/agents/AGENT_GUIDE.md`.
-- [ ] 8.2 Write `docs/development/architecture/adding-a-tool.md`: the single
+- [x] 8.2 Write `docs/development/architecture/adding-a-tool.md`: the single
       registry entry, what each field means, and the instance-policy field with
       a note that `multi` is declared but unexercised.
-- [ ] 8.3 Run `ctest --test-dir build --output-on-failure`, then
+- [x] 8.3 Run `ctest --test-dir build --output-on-failure`, then
       `python tools/scripts/quality/run_clang_tidy.py` over the changed sources
       and `pre-commit run --all-files`.
 - [ ] 8.4 Run `./tools/scripts/quality/ui-validation/run-ui-golden.zsh` and a

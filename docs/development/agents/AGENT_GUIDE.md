@@ -155,25 +155,42 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   `shell/ui/{main_window,feedback,settings,workspace}` and `shell/state/{appearance,audio}`
   keep this from becoming one monolithic folder; `MainComponent` is split
   across files by responsibility rather than defined in one giant source file.
+- `src/application/tools` — the contract every analysis tool is declared and
+  built through: `ToolCatalog` (JUCE-free identity, aliases, instance policy),
+  `ToolRegistry` (factories), `ToolComponent` (what the shell may assume of a
+  tool), `ToolServices` (the shared-service bundle). `BuiltInToolCatalog.h` and
+  `BuiltInTools.cpp` are the single registration site — adding a tool is one
+  entry in each and no shell change. See
+  `docs/development/architecture/adding-a-tool.md`.
 - `src/features` — user-facing tools: `analysis/{tuner,spectrogram,harmonics}`,
   `feedback`, `performance` (Performance Lab / benchmarking).
 - `src/platform` — shared infrastructure, chiefly `audio/AudioInputService`
   and `AudioSampleFifo`.
 
 A `src/features/*` tool must never reach into another tool's internals —
-shared behavior belongs in `src/platform` or `src/application`.
+shared behavior belongs in `src/platform` or `src/application`. A tool reaches
+application state only through the `ToolServices` bundle it is constructed with,
+never by reaching back into the shell.
 
 ### Ownership model
 
 `PracticeTakesApplication` owns the main window, which owns one
 `MainComponent` — the application shell. `MainComponent` owns the single
-shared `AudioDeviceManager`, the app `LookAndFeel`, the Settings window, one
-live component per open tool, and each tool's docked/floating presentation
-container. **Presentation containers (`DockedToolPanel`, `ToolWindow`, tab
+shared `AudioDeviceManager`, the app `LookAndFeel`, the Settings window, and one
+`LiveTool` entry per tool instance — holding that instance's component, its
+docked/floating presentation container, its presentation state, and its last
+saved bounds and settings. `MainComponent` names no individual tool; it
+discovers them through the registry. **Presentation containers (`DockedToolPanel`, `ToolWindow`, tab
 components) never own the tool component** — moving a tool between docked,
 floating, and tabbed presentation reparents it without destroying its
 analysis state or shared-audio registration. Use `std::unique_ptr`/RAII for
 single-owner objects; references for shared long-lived services.
+
+`MainComponent::liveTools` is declared **after** the services tools borrow
+(`audioInputService`, `appLookAndFeel`), so reverse-order member destruction
+destroys every tool first. That ordering is the whole of how "a tool cannot
+outlive its shared services" is enforced — there is no runtime check. Do not
+move the declaration.
 
 ### Audio-thread boundary (hard constraint)
 

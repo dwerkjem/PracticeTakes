@@ -215,7 +215,7 @@ void MainComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& de
         return;
     }
 
-    const auto dragged = *tool;
+    const auto& dragged = *tool;
     auto* draggedEntry = findLiveTool(dragged);
     if (draggedEntry == nullptr)
     {
