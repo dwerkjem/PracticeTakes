@@ -320,11 +320,3 @@ __marimo__/
 # Per-machine Claude Code permission grants. These capture whole command lines
 # verbatim, so they must never be shared through the repository.
 /.claude/settings.local.json
-
-# The MusicXML corpus is public-domain repertoire only (see
-# src/tests/resources/musicxml/README.md). Copyrighted scores are useful to test
-# against locally and must not be committed to a public repository, so every
-# score file in that directory is ignored by default and the two public-domain
-# ones are force-added.
-src/tests/resources/musicxml/*.mxl
-src/tests/resources/musicxml/*.musicxml
