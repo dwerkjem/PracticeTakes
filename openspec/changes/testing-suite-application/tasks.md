@@ -116,7 +116,7 @@
 - [x] 8.3 Mark a run incomplete when captures are unscored or attended questions
   unanswered, and name what was missing
 - [x] 8.4 Refuse to export while a failed axis has no note
-- [ ] 8.5 Run a real verification end to end and confirm
+- [x] 8.5 Run a real verification end to end and confirm
   `tools/scripts/release/check_manual_verification.py` accepts the exported
   record and still reads the historical TUI records in the same directory
 - [x] 8.6 Test: export of a stored run produces a record the gate's loader parses

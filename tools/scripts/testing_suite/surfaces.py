@@ -33,6 +33,12 @@ FIXED_AXES: tuple[Question, ...]  # forward reference, defined below
 QUICK = "quick"
 FULL = "full"
 
+# Titles the application gives its other top-level windows, from
+# SettingsWindow.h and FeedbackWindow.h. A capture of one of those surfaces has
+# to name the window or it photographs the main one instead.
+SETTINGS_WINDOW = "Settings"
+FEEDBACK_WINDOW = "Send feedback"
+
 # The resolutions a run captures each surface at. Configuration rather than a
 # fixed list: `--resolutions` overrides it, and the set a run covered is
 # recorded with the run so two runs covering different sets are comparable on
@@ -95,6 +101,18 @@ class Surface:
     # because the sweep set them both back to the default size.
     fixed_geometry: bool = False
 
+    # The title of the top-level window this surface is about, when that is not
+    # the main window. Settings, feedback, and a floating tool are each their
+    # own X window, and a capture that does not name one photographs whichever
+    # window the window manager lists first -- which is the main one. A real run
+    # caught this: the settings surface came back byte-identical to the empty
+    # shell, at both resolutions.
+    #
+    # These surfaces are also captured once rather than at every resolution: the
+    # geometry command resizes the *main* window, so sweeping would produce the
+    # same image under three different labels.
+    window_title: str = ""
+
 
 # The surface set. Ordered as a run presents them: cheapest and most
 # fundamental first, so a broken build fails early rather than after a tester
@@ -121,6 +139,7 @@ SURFACES: tuple[Surface, ...] = (
         state="settings-open",
         title="The settings window",
         modes=frozenset({QUICK, FULL}),
+        window_title=SETTINGS_WINDOW,
     ),
     Surface(
         state="spectrogram-docked",
@@ -150,6 +169,7 @@ SURFACES: tuple[Surface, ...] = (
         state="tuner-floating",
         title="The tuner in a floating window",
         modes=frozenset({FULL}),
+        window_title="Tuner",
         extras=(
             Question(
                 "moveable", "Can the floating window be moved and resized?", behavioural=True
@@ -234,6 +254,7 @@ SURFACES: tuple[Surface, ...] = (
         state="settings-audio-device",
         title="Settings: audio device selection",
         modes=frozenset({FULL}),
+        window_title=SETTINGS_WINDOW,
         instruction="Switch to a different input device, then back.",
         extras=(
             Question(
@@ -247,6 +268,7 @@ SURFACES: tuple[Surface, ...] = (
         state="settings-appearance",
         title="Settings: appearance and theme",
         modes=frozenset({FULL}),
+        window_title=SETTINGS_WINDOW,
         instruction="Change the theme, and look at a tool with it applied.",
         extras=(Question(
                 "theme-applies", "Did the theme apply everywhere?", behavioural=True
@@ -256,6 +278,7 @@ SURFACES: tuple[Surface, ...] = (
         state="settings-open",
         title="Settings: import and export round trip",
         modes=frozenset({FULL}),
+        window_title=SETTINGS_WINDOW,
         instruction=(
             "Export settings to a file, change something, then import the file back."
         ),
@@ -276,6 +299,7 @@ SURFACES: tuple[Surface, ...] = (
         state="feedback-open",
         title="The feedback form",
         modes=frozenset({FULL}),
+        window_title=FEEDBACK_WINDOW,
     ),
     Surface(
         state="tuner-docked",
@@ -357,7 +381,7 @@ def resolutions_for_surface(surface: Surface, resolutions: tuple[str, ...]) -> t
     A surface that is about its own window size is captured once regardless of
     the configured set, because resizing it would destroy what is under test.
     """
-    if surface.fixed_geometry:
+    if surface.fixed_geometry or surface.window_title:
         return (DEFAULT_GEOMETRY,)
 
     return resolutions

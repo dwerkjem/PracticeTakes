@@ -59,10 +59,17 @@ class SurfaceListTests(unittest.TestCase):
         plain = surfaces.plan(surfaces.FULL, (surfaces.DEFAULT_GEOMETRY,))
         swept = surfaces.plan(surfaces.FULL, surfaces.SWEEP_GEOMETRIES)
 
-        exempt = sum(1 for s in surfaces.surfaces_for_mode(surfaces.FULL) if s.fixed_geometry)
+        # Two kinds of surface are captured once whatever the set says: one that
+        # is about its own size, and one whose subject is a window the main
+        # window's geometry does not govern.
+        once = sum(
+            1
+            for surface in surfaces.surfaces_for_mode(surfaces.FULL)
+            if surface.fixed_geometry or surface.window_title
+        )
 
-        self.assertTrue(exempt)
-        self.assertEqual(len(swept), (len(plain) - exempt) * 3 + exempt)
+        self.assertTrue(once)
+        self.assertEqual(len(swept), (len(plain) - once) * 3 + once)
 
     def test_a_run_must_cover_something(self) -> None:
         with self.assertRaises(ValueError):

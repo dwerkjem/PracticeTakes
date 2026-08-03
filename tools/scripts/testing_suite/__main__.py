@@ -123,7 +123,9 @@ def command_capture(arguments) -> int:
 
             return 1
 
-        run_id = int(arguments.run) if arguments.run else store.start_run(
+        # Resuming names an existing run; asking the store for it first turns a
+        # mistyped id into a message rather than a foreign-key traceback.
+        run_id = int(store.run(int(arguments.run))["id"]) if arguments.run else store.start_run(
             provenance=machine_module.provenance(),
             commit=current_commit(),
             mode=arguments.mode,
@@ -323,7 +325,19 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Store to use. Defaults to the XDG data directory.",
     )
-    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # The same option again on every subcommand, because `test-suite capture
+    # --database ...` is what anyone would type and refusing it is a papercut.
+    # SUPPRESS rather than a default, so a value given before the subcommand is
+    # not silently overwritten by the subcommand's unset copy.
+    shared = argparse.ArgumentParser(add_help=False)
+    shared.add_argument("--database", type=Path, default=argparse.SUPPRESS)
+
+    subparsers = parser.add_subparsers(
+        dest="command",
+        required=True,
+        parser_class=lambda **kwargs: argparse.ArgumentParser(parents=[shared], **kwargs),
+    )
 
     def add_run_option(target: argparse.ArgumentParser) -> None:
         target.add_argument("--run", type=int, default=None, help="Run id (default: the newest).")

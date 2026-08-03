@@ -123,6 +123,44 @@ class GeometryVerificationTests(unittest.TestCase):
         self.assertEqual(capture_module.geometry_problem("default", (1280, 800), {}), "")
 
 
+class DuplicateCaptureTests(unittest.TestCase):
+    """The backstop for photographing the wrong window."""
+
+    def test_two_states_with_identical_pixels_is_a_failure(self) -> None:
+        problem = capture_module.duplicate_problem("settings-open", "abc", {"abc": "empty"})
+
+        self.assertIn("byte-identical to 'empty'", problem)
+
+    def test_the_same_state_twice_is_expected(self) -> None:
+        """One state serves several surfaces; those images should match."""
+        self.assertEqual(
+            capture_module.duplicate_problem("settings-open", "abc", {"abc": "settings-open"}), ""
+        )
+
+    def test_a_new_image_is_no_problem(self) -> None:
+        self.assertEqual(capture_module.duplicate_problem("empty", "abc", {"def": "other"}), "")
+
+
+class WindowTargetingTests(unittest.TestCase):
+    """Surfaces whose subject is not the main window."""
+
+    def test_the_settings_surfaces_name_their_window(self) -> None:
+        for surface in surfaces.SURFACES:
+            if surface.state.startswith("settings"):
+                with self.subTest(surface=surface.title):
+                    self.assertEqual(surface.window_title, surfaces.SETTINGS_WINDOW)
+
+    def test_a_surface_with_its_own_window_is_captured_once(self) -> None:
+        """The geometry command resizes the main window, not this one."""
+        for surface in surfaces.SURFACES:
+            if surface.window_title:
+                with self.subTest(surface=surface.title):
+                    self.assertEqual(
+                        surfaces.resolutions_for_surface(surface, surfaces.SWEEP_GEOMETRIES),
+                        (surfaces.DEFAULT_GEOMETRY,),
+                    )
+
+
 class CapturePassTests(unittest.TestCase):
     def setUp(self) -> None:
         self.directory = tempfile.TemporaryDirectory()
@@ -137,6 +175,7 @@ class CapturePassTests(unittest.TestCase):
             resolutions=("default", "constrained"),
         )
         self.driver = FakeDriver()
+        self.converted = 0
 
         # The one dependency the pass has on a real image library.
         self.original_convert = images.convert
@@ -146,8 +185,11 @@ class CapturePassTests(unittest.TestCase):
     def fake_convert(self, source: Path, png_path: Path, thumbnail_path: Path):
         png_path.write_bytes(b"png")
         thumbnail_path.write_bytes(b"thumb")
+        self.converted += 1
 
-        return 1280, 800, "digest"
+        # Distinct per capture: identical digests across surfaces are what the
+        # duplicate check treats as a capture of the wrong window.
+        return 1280, 800, f"digest-{self.converted}"
 
     def make_pass(self, sizes: dict[str, tuple[int, int]] | None = None, **overrides):
         sizes = sizes or {"default": (1280, 800), "constrained": (800, 600), "maximised": (2560, 1440)}
@@ -157,10 +199,10 @@ class CapturePassTests(unittest.TestCase):
             def park_pointer(inner) -> None:  # noqa: N805 - test double
                 return
 
-            def read_size(inner):  # noqa: N805 - test double
+            def read_size(inner, title: str = ""):  # noqa: N805 - test double
                 return sizes.get(requested[-1] if requested else "default")
 
-            def _capture_to(inner, destination: Path) -> str:  # noqa: N805 - test double
+            def _capture_to(inner, destination: Path, title: str = "") -> str:  # noqa: N805
                 destination.write_bytes(b"P6 fake")
 
                 return overrides.get("capture_failure", "")
@@ -197,7 +239,7 @@ class CapturePassTests(unittest.TestCase):
 
         self.assertTrue(Path(capture.image_path).exists())
         self.assertTrue(Path(capture.thumbnail_path).exists())
-        self.assertEqual(capture.digest, "digest")
+        self.assertTrue(capture.digest.startswith("digest-"))
 
     def test_a_window_that_never_resized_is_recorded_as_a_failure(self) -> None:
         stuck = self.make_pass(sizes={"default": (1280, 800), "constrained": (1280, 800)})

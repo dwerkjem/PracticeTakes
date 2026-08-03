@@ -171,6 +171,32 @@ def geometry_problem(
     return ""
 
 
+def duplicate_problem(state: str, digest: str, seen: dict[str, str]) -> str:
+    """Whether this capture is byte-identical to a *different* state's.
+
+    The backstop for photographing the wrong window. `seen` maps a digest to the
+    state that produced it; two different states producing identical pixels means
+    one of them captured something that was not its subject.
+
+    The first real run found exactly this: the settings surface came back
+    byte-identical to the empty shell, because nothing named the settings window
+    and the X utilities take the first window the manager lists for the process.
+    Nothing else in the pass could notice — the geometry was right, the capture
+    succeeded, the image was of a real window. Just not that one.
+
+    Two surfaces sharing a *state* are expected to match, and do not fail.
+    """
+    other = seen.get(digest)
+
+    if other is None or other == state:
+        return ""
+
+    return (
+        f"this capture is byte-identical to '{other}', so it photographed that "
+        f"window rather than this surface's"
+    )
+
+
 class CapturePass:
     """One unattended walk through the plan."""
 
@@ -197,17 +223,26 @@ class CapturePass:
 
     # --- X plumbing ---------------------------------------------------------
 
-    def _window_arguments(self) -> list[str]:
-        return ["--title", self.window_title] if self.window_title else []
+    def _window_arguments(self, title: str = "") -> list[str]:
+        """Which window to act on: the surface's own, or the run's default.
 
-    def read_size(self) -> tuple[int, int] | None:
+        A surface that owns a top-level window -- settings, feedback, a floating
+        tool -- must name it. Without a title the X utilities take whichever
+        window the window manager lists first for the process, which is the main
+        one, and the capture silently photographs the wrong thing.
+        """
+        chosen = title or self.window_title or ""
+
+        return ["--title", chosen] if chosen else []
+
+    def read_size(self, title: str = "") -> tuple[int, int] | None:
         pid = self.driver.pid
 
         if pid is None:
             return None
 
         completed = subprocess.run(
-            [str(self.tooling.window_control), str(pid), "geometry", *self._window_arguments()],
+            [str(self.tooling.window_control), str(pid), "geometry", *self._window_arguments(title)],
             capture_output=True,
             text=True,
             check=False,
@@ -230,14 +265,14 @@ class CapturePass:
         """Move the pointer out of the way so no capture shows a hover state."""
         subprocess.run([str(self.tooling.pointer), "--park"], capture_output=True, check=False)
 
-    def _capture_to(self, destination: Path) -> str:
+    def _capture_to(self, destination: Path, title: str = "") -> str:
         pid = self.driver.pid
 
         if pid is None:
             return "the application is not running"
 
         completed = subprocess.run(
-            [str(self.tooling.capture), str(pid), str(destination), *self._window_arguments()],
+            [str(self.tooling.capture), str(pid), str(destination), *self._window_arguments(title)],
             capture_output=True,
             text=True,
             check=False,
@@ -269,7 +304,11 @@ class CapturePass:
             return str(error)
 
     def capture_one(
-        self, surface: surfaces.Surface, geometry: str, seen: dict[str, tuple[int, int]]
+        self,
+        surface: surfaces.Surface,
+        geometry: str,
+        seen: dict[str, tuple[int, int]],
+        digests: dict[str, str] | None = None,
     ) -> tuple[int, int] | None:
         """Capture one surface at one resolution, recording whatever happened.
 
@@ -294,7 +333,9 @@ class CapturePass:
 
         self.park_pointer()
         size = settled_size(
-            self.read_size, settle_seconds=self.settle_seconds, interval=self.poll_interval
+            lambda: self.read_size(surface.window_title),
+            settle_seconds=self.settle_seconds,
+            interval=self.poll_interval,
         )
         problem = geometry_problem(geometry, size, seen)
 
@@ -309,7 +350,7 @@ class CapturePass:
         thumbnail_path = self.image_directory / f"{stem}.thumb.png"
         self.image_directory.mkdir(parents=True, exist_ok=True)
 
-        reason = self._capture_to(ppm_path)
+        reason = self._capture_to(ppm_path, surface.window_title)
 
         if reason:
             fail(f"the window could not be captured: {reason}")
@@ -324,6 +365,18 @@ class CapturePass:
             return None
         finally:
             ppm_path.unlink(missing_ok=True)
+
+        duplicate = duplicate_problem(surface.state, digest, digests if digests is not None else {})
+
+        if duplicate:
+            png_path.unlink(missing_ok=True)
+            thumbnail_path.unlink(missing_ok=True)
+            fail(duplicate)
+
+            return None
+
+        if digests is not None:
+            digests.setdefault(digest, surface.state)
 
         self.store.record_capture(
             self.run_id,
@@ -343,6 +396,10 @@ class CapturePass:
         """Walk the plan. Never raises for one surface's sake."""
         already = self.store.captured_keys(self.run_id) if resume else set()
         sizes: dict[str, dict[str, tuple[int, int]]] = {}
+
+        # Digest -> the state that produced it, across the whole run: two states
+        # with the same pixels means one captured the wrong window.
+        digests: dict[str, str] = {}
         captured = 0
         failed = 0
         skipped = 0
@@ -354,7 +411,7 @@ class CapturePass:
                 continue
 
             seen = sizes.setdefault(surface.title, {})
-            size = self.capture_one(surface, geometry, seen)
+            size = self.capture_one(surface, geometry, seen, digests)
 
             if size is None:
                 failed += 1
