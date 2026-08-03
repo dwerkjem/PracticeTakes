@@ -61,6 +61,9 @@ kinds of evidence one durable store fixes the second.
 - `ui-capture-and-review`: the two-phase workflow — an unattended capture pass
   that renders every surface at every configured resolution, and an attended
   grid review with zoom, multi-select tagging, and per-image comments.
+- `test-suite-hub`: the front door — every automated suite the project has,
+  listed in one place, runnable individually or all at once, building what each
+  needs first and recording every result against the same run.
 
 ### Modified Capabilities
 

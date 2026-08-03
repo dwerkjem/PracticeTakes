@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
 """The testing suite's command line.
 
-    test-suite capture --executable build-tc/bin/PracticeTakes
+    test-suite                    # the hub: pick what to run, run it, review it
+
+Everything the hub does has a subcommand too, for scripting and for a machine
+with no browser:
+
+    test-suite run --suites cpp python      # or --all, --kind performance
+    test-suite capture
     test-suite attend
     test-suite review
     test-suite ingest --performance lab-export.json
     test-suite export
     test-suite prune --keep 5
 
-Capture needs a build made with -DPRACTICE_TAKES_ENABLE_TEST_CONTROL=ON, a real
-display, and nobody at all. Review needs a person and a browser, and neither the
-application nor a build tree. That separation is the point: it is what lets the
-slow half run unattended and the judgement half happen in one pass over a grid.
+The hub is the default because remembering five commands, three build
+directories, and which of them needs a display is exactly the friction this
+exists to remove. It builds what a suite needs before running it.
 
 No CI check runs any of this.
 """
@@ -30,6 +35,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import attend as attend_module  # noqa: E402
 import capture as capture_module  # noqa: E402
+import runner as runner_module  # noqa: E402
+import suites as suites_module  # noqa: E402
 import export as export_module  # noqa: E402
 import ingest as ingest_module  # noqa: E402
 import machine as machine_module  # noqa: E402
@@ -189,6 +196,84 @@ def command_attend(arguments) -> int:
     return 0
 
 
+def command_hub(arguments) -> int:
+    """Serve the hub. Works against an empty store — that is the normal first visit."""
+    store = open_store(arguments)
+    run_id = None if getattr(arguments, "run", None) is None else int(arguments.run)
+    httpd = server_module.serve(store, run_id, arguments.port)
+    address = f"http://{server_module.HOST}:{arguments.port}/"
+    latest = store.latest_run()
+
+    print(f"Testing suite at {address}")
+
+    if latest is None:
+        print("The store is empty — pick some suites in the Run tab and the hub will")
+        print("build whatever they need first.")
+    else:
+        print(f"Newest run: {latest['id']} ({latest['mode']}, {latest['started_at']})")
+
+    print("Ctrl-C when you are done; everything is saved as you go.")
+
+    if not arguments.no_browser:
+        threading.Timer(0.5, lambda: webbrowser.open(address)).start()
+
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopped.")
+    finally:
+        httpd.server_close()
+
+    return 0
+
+
+def command_run(arguments) -> int:
+    """Run suites from the command line, with the same job the hub uses."""
+    store = open_store(arguments)
+    chosen = list(arguments.suites or [])
+
+    if arguments.all:
+        chosen = [suite.id for suite in suites_module.SUITES]
+    elif arguments.kind:
+        chosen = [suite.id for suite in suites_module.of_kind(arguments.kind)]
+
+    if not chosen:
+        print("Name some suites with --suites, or use --all or --kind.", file=sys.stderr)
+        print("Available: " + ", ".join(suite.id for suite in suites_module.SUITES), file=sys.stderr)
+
+        return 2
+
+    job = runner_module.Job(store=store)
+    seen = 0
+
+    if not job.start(chosen, mode=arguments.mode, resolutions=tuple(arguments.resolutions),
+                     rebuild=arguments.rebuild, run_id=arguments.run):
+        print("Nothing to run.", file=sys.stderr)
+
+        return 2
+
+    while True:
+        status = job.status()
+
+        for line in status["log"][seen:]:
+            print(line)
+
+        seen = len(status["log"])
+
+        if not status["running"]:
+            break
+
+        job.wait(0.4)
+
+    status = job.status()
+    failed = [entry for entry in status["results"].values() if entry.get("state") == "failed"]
+
+    for entry in status["results"].values():
+        print(f"  {entry['id']:<16} {entry.get('state', '?')}")
+
+    return 1 if failed or status["state"] == runner_module.FAILED else 0
+
+
 def command_review(arguments) -> int:
     store = open_store(arguments)
     run_id = resolve_run(store, arguments)
@@ -335,12 +420,30 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(
         dest="command",
-        required=True,
+        required=False,
         parser_class=lambda **kwargs: argparse.ArgumentParser(parents=[shared], **kwargs),
     )
 
     def add_run_option(target: argparse.ArgumentParser) -> None:
         target.add_argument("--run", type=int, default=None, help="Run id (default: the newest).")
+
+    hub_parser = subparsers.add_parser("hub", help="The hub (also what a bare `test-suite` opens).")
+    hub_parser.add_argument("--port", type=int, default=8730)
+    hub_parser.add_argument("--no-browser", action="store_true")
+    add_run_option(hub_parser)
+    hub_parser.set_defaults(handler=command_hub)
+
+    run_parser = subparsers.add_parser("run", help="Run suites without a browser.")
+    run_parser.add_argument("--suites", nargs="+", default=[],
+                            choices=[suite.id for suite in suites_module.SUITES])
+    run_parser.add_argument("--all", action="store_true", help="Every suite.")
+    run_parser.add_argument("--kind", choices=list(suites_module.KINDS))
+    run_parser.add_argument("--mode", choices=(surfaces.QUICK, surfaces.FULL), default=surfaces.FULL)
+    run_parser.add_argument("--resolutions", nargs="+", default=list(surfaces.DEFAULT_RESOLUTIONS),
+                            choices=list(surfaces.SWEEP_GEOMETRIES))
+    run_parser.add_argument("--rebuild", action="store_true")
+    add_run_option(run_parser)
+    run_parser.set_defaults(handler=command_run)
 
     capture_parser = subparsers.add_parser("capture", help="Photograph every surface, unattended.")
     capture_parser.add_argument("--executable", type=Path, default=DEFAULT_EXECUTABLE)
@@ -401,7 +504,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    arguments = build_parser().parse_args(argv)
+    parser = build_parser()
+    arguments = parser.parse_args(argv)
+
+    # No subcommand means the hub. Typing the program's name should get you
+    # somewhere useful, not a usage message.
+    if getattr(arguments, "handler", None) is None:
+        arguments = parser.parse_args(["hub", *(argv or [])])
 
     try:
         return arguments.handler(arguments)

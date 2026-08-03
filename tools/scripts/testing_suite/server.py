@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The HTTP layer under the grid review. Deliberately the thinnest part.
+"""The HTTP layer under the hub. Deliberately the thinnest part.
 
 Every decision lives in `review.py` and `store.py`; this file routes, serialises,
 and serves files. That is why there is no web framework here — the API is eight
@@ -23,17 +23,112 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import review
+import runner as runner_module
+import suites as suites_module
+import surfaces
 from store import Store
 
 WEB_ROOT = Path(__file__).resolve().parent / "web"
 HOST = "127.0.0.1"
 
 
-class ReviewHandler(BaseHTTPRequestHandler):
-    """One review session's requests. The store is attached by `serve`."""
+class ReviewSession:
+    """What the hub is looking at, and the job that can give it something to look at.
 
-    store: Store
-    run_id: int
+    The run is not fixed at startup. A store with nothing in it is the normal way
+    to arrive here -- it is what happens the first time anyone opens the hub -- so
+    the session starts empty, the page offers to run something, and the session
+    moves to whatever run that produces.
+    """
+
+    def __init__(self, store: Store, run_id: int | None = None) -> None:
+        self.store = store
+        self._run_id = run_id
+        self.job = runner_module.Job(store=store)
+
+    @property
+    def run_id(self) -> int | None:
+        """The run being reviewed: the chosen one, the one just captured, or the newest."""
+        if self.job.run_id is not None and self._run_id is None:
+            return self.job.run_id
+
+        if self._run_id is not None:
+            return self._run_id
+
+        newest = self.store.latest_run()
+
+        return int(newest["id"]) if newest is not None else None
+
+    def select(self, run_id: int | None) -> None:
+        self._run_id = run_id
+
+    def overview(self) -> dict:
+        """Enough for the page to render even when there is nothing to review."""
+        run_id = self.run_id
+
+        return {
+            "run_id": run_id,
+            "runs": [
+                {
+                    "id": int(row["id"]),
+                    "started_at": row["started_at"],
+                    "mode": row["mode"],
+                    "commit": row["commit_hash"],
+                    "complete": bool(row["complete"]),
+                }
+                for row in self.store.runs()
+            ],
+            "suites": [
+                {
+                    "id": suite.id,
+                    "label": suite.label,
+                    "kind": suite.kind,
+                    "description": suite.description,
+                    "needs_display": suite.needs_display,
+                    "needs": list(suite.needs),
+                }
+                for suite in suites_module.SUITES
+            ],
+            "kinds": list(suites_module.KINDS),
+            "builds": runner_module.build_overview(),
+            "display": runner_module.display_available(),
+            "job": self.job.status(),
+            "modes": [surfaces.QUICK, surfaces.FULL],
+            "resolutions": list(surfaces.SWEEP_GEOMETRIES),
+            "results": [
+                {
+                    "suite": row["suite"],
+                    "cases": row["cases"],
+                    "failures": row["failures"],
+                    "duration_seconds": row["duration_seconds"],
+                    "recorded_at": row["recorded_at"],
+                }
+                for row in (self.store.test_results(run_id) if run_id else [])
+            ],
+            "measurements": [
+                {
+                    "metric": row["metric"],
+                    "value": row["value"],
+                    "unit": row["unit"],
+                    "scenario": row["scenario"],
+                }
+                for row in (self.store.measurements(run_id) if run_id else [])
+            ],
+        }
+
+
+class ReviewHandler(BaseHTTPRequestHandler):
+    """One review session's requests. The session is attached by `serve`."""
+
+    session: ReviewSession
+
+    @property
+    def store(self) -> Store:
+        return self.session.store
+
+    @property
+    def run_id(self) -> int | None:
+        return self.session.run_id
 
     # Quiet by default: a page load is a dozen requests and the reviewer does
     # not need a log of them.
@@ -111,14 +206,28 @@ class ReviewHandler(BaseHTTPRequestHandler):
         if parsed.path in ("/", "/index.html"):
             self._send_file(WEB_ROOT / "index.html")
         elif parsed.path == "/api/run":
-            self._send_json(review.run_view(self.store, self.run_id))
+            run_id = self.run_id
+
+            if run_id is None:
+                # Nothing captured yet. Not an error: it is the first thing that
+                # happens to anyone, and the page has a button for it.
+                self._send_json({"empty": True, **self.session.overview()})
+            else:
+                self._send_json({"empty": False, **review.run_view(self.store, run_id),
+                                 **self.session.overview()})
+        elif parsed.path == "/api/session":
+            self._send_json(self.session.overview())
+        elif parsed.path == "/api/job":
+            self._send_json(self.session.job.status())
         elif parsed.path == "/api/tags":
             self._send_json([{"name": row["name"], "description": row["description"]}
                              for row in self.store.tags()])
         elif parsed.path == "/api/outstanding":
-            self._send_json(review.outstanding(self.store, self.run_id))
+            run_id = self.run_id
+            self._send_json(review.outstanding(self.store, run_id) if run_id else [])
         elif parsed.path == "/api/failures":
-            self._send_json(review.failures(self.store, self.run_id))
+            run_id = self.run_id
+            self._send_json(review.failures(self.store, run_id) if run_id else [])
         elif parsed.path == "/image":
             self._image(query, thumbnail=False)
         elif parsed.path == "/thumbnail":
@@ -137,7 +246,48 @@ class ReviewHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         payload = self._read_json()
 
-        if parsed.path == "/api/score":
+        if parsed.path == "/api/run-suites":
+            requested = [str(value) for value in payload.get("suites", [])]
+            unknown = [name for name in requested if suites_module.by_id(name) is None]
+
+            if unknown:
+                self._send_json({"error": f"unknown suite(s): {', '.join(unknown)}"}, status=400)
+
+                return
+
+            resolutions = tuple(payload.get("resolutions") or surfaces.DEFAULT_RESOLUTIONS)
+            bad = [name for name in resolutions if name not in surfaces.SWEEP_GEOMETRIES]
+
+            if bad:
+                self._send_json({"error": f"unknown resolution(s): {', '.join(bad)}"}, status=400)
+
+                return
+
+            if not requested:
+                self._send_json({"error": "choose at least one suite"}, status=400)
+
+                return
+
+            started = self.session.job.start(
+                requested,
+                mode=str(payload.get("mode", surfaces.FULL)),
+                resolutions=resolutions,
+                rebuild=bool(payload.get("rebuild", False)),
+                run_id=payload.get("run_id"),
+            )
+
+            if not started:
+                self._send_json({"error": "something is already running"}, status=409)
+
+                return
+
+            # Whatever the job produces is what the page should show next.
+            self.session.select(None)
+            self._send_json(self.session.job.status())
+        elif parsed.path == "/api/select":
+            self.session.select(payload.get("run_id"))
+            self._send_json(self.session.overview())
+        elif parsed.path == "/api/score":
             problems = review.score(
                 self.store,
                 int(payload.get("capture_id", 0)),
@@ -179,8 +329,15 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "not found"}, status=404)
 
 
-def serve(store: Store, run_id: int, port: int = 8730) -> ThreadingHTTPServer:
-    """A review server for one run. The caller owns its lifetime."""
-    handler = type("BoundReviewHandler", (ReviewHandler,), {"store": store, "run_id": run_id})
+def serve(store: Store, run_id: int | None = None, port: int = 8730) -> ThreadingHTTPServer:
+    """The hub's server. The caller owns its lifetime.
 
-    return ThreadingHTTPServer((HOST, port), handler)
+    `run_id` may be None: an empty store is how this looks the first time, and
+    the page offers to run something rather than refusing to open.
+    """
+    session = ReviewSession(store, run_id)
+    handler = type("BoundReviewHandler", (ReviewHandler,), {"session": session})
+    httpd = ThreadingHTTPServer((HOST, port), handler)
+    httpd.session = session  # type: ignore[attr-defined]
+
+    return httpd

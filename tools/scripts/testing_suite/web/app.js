@@ -1,17 +1,19 @@
-// The thin part. Every decision — which questions a capture owes, what a tag
-// means, whether the run is finished — is answered by the server; this fetches
-// and renders, and posts back what the reviewer did.
+// The thin part. Every decision — which suites exist, what a suite needs built,
+// which questions a capture still owes, whether the run is finished — is
+// answered by the server; this fetches, renders, and posts back.
 //
-// The one piece of real behaviour here is selection, because multi-select is
-// inherently a pointer thing: click, shift-click for a range, ctrl-click to
-// toggle, drag a band across the grid. Everything a selection is then used for
-// is one POST.
+// Two pieces of real behaviour live here because both are inherently pointer
+// things: multi-select in the grid (click, shift-click, ctrl-click, drag), and
+// polling a running job so the page says what is happening instead of freezing
+// for the ten minutes a cold build takes.
 
 const state = {
-  run: null,
+  view: "run",
+  data: null,
   order: [],          // capture ids, in the order they are rendered
   selected: new Set(),
   lastClicked: null,
+  polling: null,
 };
 
 async function api(path, body) {
@@ -22,44 +24,200 @@ async function api(path, body) {
   return { ok: response.ok, data: await response.json().catch(() => ({})) };
 }
 
-// --- Rendering -------------------------------------------------------------
+const element = (id) => document.getElementById(id);
 
-function summarise(run, machine) {
-  const status = run.complete ? "complete" : "incomplete";
-  const resolutions = JSON.parse(run.resolutions || "[]").join(", ") || "default";
+// --- Views -----------------------------------------------------------------
 
-  document.getElementById("run-summary").innerHTML =
-    `Run ${run.id} · ${run.mode} · ${status} · <code>${run.commit}</code>` +
-    `<span class="muted"> — ${resolutions} — ${machine.processor}, ${machine.display}</span>`;
+function showView(name) {
+  state.view = name;
+  ["run", "review", "results"].forEach((view) => {
+    element(`view-${view}`).hidden = view !== name;
+  });
+  document.querySelectorAll("#tabs button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.view === name);
+  });
 }
 
-function renderOutstanding(outstanding) {
-  const element = document.getElementById("outstanding");
+document.querySelectorAll("#tabs button").forEach((button) => {
+  button.addEventListener("click", () => showView(button.dataset.view));
+});
 
-  if (!outstanding.length) {
-    element.textContent = "Everything is scored.";
+// --- The run view ----------------------------------------------------------
+
+function renderBuilds(view) {
+  const holder = element("build-state");
+  const missing = (view.builds || []).filter((build) => !build.present);
+  const stale = (view.builds || []).filter((build) => build.present && build.stale);
+  const lines = [];
+
+  // Said up front rather than discovered ten minutes in: a cold build is the
+  // slowest thing here by far, and knowing it is coming changes what you click.
+  missing.forEach((build) => lines.push(
+    `<div class="notice">${build.target} is not built — ${build.reason}. Running anything that needs it will build it first (several minutes).</div>`));
+  stale.forEach((build) => lines.push(
+    `<div class="notice subtle">${build.target} was built before your latest source change. Tick "rebuild" to be sure.</div>`));
+
+  if (!view.display) {
+    lines.push('<div class="notice">No display detected — UI suites will be skipped rather than failing.</div>');
+  }
+
+  holder.innerHTML = lines.join("");
+}
+
+function suiteRow(suite, result) {
+  const verdict = result ? result.state : "";
+  const detail = result && result.state && result.state !== "queued"
+    ? `<span class="verdict-${verdict}">${verdict}${result.cases ? ` · ${result.cases} case(s)` : ""}` +
+      `${result.failures ? ` · ${result.failures} failure(s)` : ""}` +
+      `${result.seconds ? ` · ${result.seconds}s` : ""}</span>`
+    : "";
+
+  return `
+    <label class="suite">
+      <input type="checkbox" name="suite" value="${suite.id}" />
+      <span class="suite-label">${suite.label}</span>
+      <span class="muted small">${suite.description}</span>
+      ${suite.needs_display ? '<span class="chip">needs a display</span>' : ""}
+      ${suite.needs.length ? `<span class="chip">builds ${suite.needs.join(", ")}</span>` : ""}
+      ${detail}
+    </label>`;
+}
+
+function renderSuites(view) {
+  const results = (view.job && view.job.results) || {};
+  const holder = element("suite-groups");
+  const titles = { tests: "Tests", performance: "Performance", ui: "User interface" };
+
+  holder.innerHTML = view.kinds.map((kind) => `
+    <section class="panel">
+      <h2>${titles[kind] || kind}
+        <button type="button" class="link" data-kind="${kind}">select all</button>
+      </h2>
+      ${view.suites.filter((suite) => suite.kind === kind)
+        .map((suite) => suiteRow(suite, results[suite.id])).join("")}
+    </section>`).join("");
+
+  holder.querySelectorAll("button[data-kind]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const wanted = view.suites.filter((suite) => suite.kind === button.dataset.kind)
+        .map((suite) => suite.id);
+      document.querySelectorAll('input[name="suite"]').forEach((box) => {
+        if (wanted.includes(box.value)) box.checked = true;
+      });
+    });
+  });
+}
+
+function renderOptions(view) {
+  const mode = element("mode");
+
+  if (!mode.options.length) {
+    view.modes.forEach((name) => mode.add(new Option(name, name, name === "full", name === "full")));
+    element("resolution-boxes").innerHTML = view.resolutions.map((name) =>
+      `<label class="inline"><input type="checkbox" name="resolution" value="${name}" checked /> ${name}</label>`
+    ).join("");
+  }
+}
+
+function chosenSuites() {
+  return [...document.querySelectorAll('input[name="suite"]:checked')].map((box) => box.value);
+}
+
+function chosenOptions() {
+  return {
+    mode: element("mode").value,
+    resolutions: [...document.querySelectorAll('input[name="resolution"]:checked')].map((b) => b.value),
+    rebuild: element("rebuild").checked,
+  };
+}
+
+async function runSuites(ids) {
+  if (!ids.length) {
+    window.alert("Tick at least one suite, or use one of the run-everything buttons.");
     return;
   }
 
-  const attended = outstanding.filter((entry) => entry.attended).length;
-  element.textContent =
-    `${outstanding.length} unanswered (${attended} need the attended pass: ` +
-    `\`test-suite attend\`). The run exports as incomplete until they are answered.`;
+  const { ok, data } = await api("/api/run-suites", { suites: ids, ...chosenOptions() });
+
+  if (!ok) {
+    window.alert(data.error || "could not start");
+    return;
+  }
+
+  showView("run");
+  poll();
 }
 
-function tagButtons(tags) {
-  const holder = document.getElementById("tag-buttons");
-  holder.innerHTML = "";
+element("run-selected").addEventListener("click", () => runSuites(chosenSuites()));
+element("run-all").addEventListener("click", () =>
+  runSuites(state.data.suites.map((suite) => suite.id)));
+["tests", "performance", "ui"].forEach((kind) => {
+  element(`run-${kind === "tests" ? "tests" : kind}`).addEventListener("click", () =>
+    runSuites(state.data.suites.filter((suite) => suite.kind === kind).map((suite) => suite.id)));
+});
 
-  tags.forEach((tag) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = tag.name;
-    button.title = tag.description || "";
-    button.addEventListener("click", (event) => applyTag(tag.name, event.shiftKey));
-    holder.appendChild(button);
-  });
+// --- Progress --------------------------------------------------------------
+
+function renderJob(job) {
+  const bar = element("progress");
+  bar.hidden = !job || (!job.running && job.state === "idle");
+
+  if (!job || job.state === "idle") return;
+
+  element("progress-fill").style.width = `${job.percent}%`;
+  element("progress-fill").className = job.state === "failed" ? "failed" : "";
+  element("progress-message").textContent =
+    `${job.state}${job.message ? ` — ${job.message}` : ""}`;
+
+  if (job.log && job.log.length) element("log").textContent = job.log.join("\n");
+  element("log").scrollTop = element("log").scrollHeight;
 }
+
+function poll() {
+  if (state.polling) return;
+
+  state.polling = window.setInterval(async () => {
+    const { data } = await api("/api/job");
+    renderJob(data);
+
+    if (!data.running) {
+      window.clearInterval(state.polling);
+      state.polling = null;
+      // Whatever it produced is what the page should now be showing.
+      await reload();
+    }
+  }, 1000);
+}
+
+// --- Results ---------------------------------------------------------------
+
+function table(rows, columns) {
+  if (!rows.length) return '<p class="muted">Nothing recorded for this run yet.</p>';
+
+  return `<table><thead><tr>${columns.map((c) => `<th>${c.label}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map((row) => `<tr>${columns.map((c) =>
+      `<td>${c.render ? c.render(row) : row[c.key] ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+
+function renderResults(view) {
+  element("results-table").innerHTML = table(view.results || [], [
+    { key: "suite", label: "Suite" },
+    { key: "cases", label: "Cases" },
+    { label: "Failures", render: (row) =>
+      row.failures ? `<span class="verdict-failed">${row.failures}</span>` : "0" },
+    { label: "Seconds", render: (row) => Math.round(row.duration_seconds * 10) / 10 },
+    { key: "recorded_at", label: "Recorded" },
+  ]);
+
+  element("measurements-table").innerHTML = table(view.measurements || [], [
+    { key: "metric", label: "Metric" },
+    { key: "value", label: "Value" },
+    { key: "unit", label: "Unit" },
+    { key: "scenario", label: "Scenario" },
+  ]);
+}
+
+// --- The review grid -------------------------------------------------------
 
 function verdictMarkup(question) {
   if (!question.verdict) return `<span class="muted">unanswered</span>`;
@@ -158,16 +316,42 @@ function renderCard(capture) {
   return card;
 }
 
-function render(view) {
-  state.run = view;
+function renderGrid(view) {
   state.order = [];
 
-  summarise(view.run, view.machine);
-  tagButtons(view.tags);
-  renderOutstanding(view.outstanding);
-
-  const grid = document.getElementById("grid");
+  const grid = element("grid");
   grid.innerHTML = "";
+
+  if (view.empty || !view.groups) {
+    grid.innerHTML = `<div class="empty">
+      <p>Nothing has been captured yet.</p>
+      <p class="muted">Run the <strong>UI capture</strong> suite from the Run tab —
+      it builds the application if it has to, then photographs every surface.</p>
+      <button type="button" id="capture-now" class="primary">Capture a run now</button>
+    </div>`;
+    const button = element("capture-now");
+
+    if (button) button.addEventListener("click", () => runSuites(["ui-capture"]));
+
+    return;
+  }
+
+  const outstanding = view.outstanding || [];
+  const attended = outstanding.filter((entry) => entry.attended).length;
+  element("outstanding").textContent = outstanding.length
+    ? `${outstanding.length} unanswered (${attended} need the attended pass: \`test-suite attend\`). ` +
+      "The run exports as incomplete until they are answered."
+    : "Everything is scored.";
+
+  element("tag-buttons").innerHTML = "";
+  (view.tags || []).forEach((tag) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = tag.name;
+    button.title = tag.description || "";
+    button.addEventListener("click", (event) => applyTag(tag.name, event.shiftKey));
+    element("tag-buttons").appendChild(button);
+  });
 
   view.groups.forEach((group) => {
     const section = document.createElement("section");
@@ -189,13 +373,6 @@ function render(view) {
   paintSelection();
 }
 
-async function reload() {
-  const { data } = await api("/api/run");
-  const scroll = window.scrollY;
-  render(data);
-  window.scrollTo(0, scroll);
-}
-
 // --- Selection -------------------------------------------------------------
 
 function paintSelection() {
@@ -204,7 +381,7 @@ function paintSelection() {
   });
 
   const count = state.selected.size;
-  document.getElementById("selection-count").textContent =
+  element("selection-count").textContent =
     count === 0 ? "nothing selected" : `${count} selected`;
 }
 
@@ -228,10 +405,10 @@ function selectFrom(id, event) {
 }
 
 function bandSelect() {
-  const band = document.getElementById("rubber-band");
+  const band = element("rubber-band");
   let origin = null;
 
-  document.getElementById("grid").addEventListener("mousedown", (event) => {
+  element("grid").addEventListener("mousedown", (event) => {
     if (event.target.closest("button") || event.target.tagName === "IMG") return;
 
     origin = { x: event.clientX, y: event.clientY };
@@ -324,10 +501,10 @@ async function addComment(captureId) {
 }
 
 function zoom(capture) {
-  const overlay = document.getElementById("zoom");
-  const image = document.getElementById("zoom-image");
+  const overlay = element("zoom");
+  const image = element("zoom-image");
 
-  document.getElementById("zoom-caption").textContent =
+  element("zoom-caption").textContent =
     `${capture.surface} · ${capture.geometry} · ${capture.width}×${capture.height}`;
   image.src = `/image?id=${capture.id}`;
   image.alt = `${capture.surface} at ${capture.geometry}`;
@@ -335,12 +512,34 @@ function zoom(capture) {
 }
 
 function closeZoom() {
-  document.getElementById("zoom").hidden = true;
+  element("zoom").hidden = true;
 }
 
 // --- Wiring ----------------------------------------------------------------
 
-document.getElementById("add-tag").addEventListener("click", async () => {
+function renderSummary(view) {
+  const picker = element("run-picker");
+  picker.innerHTML = (view.runs || []).map((run) =>
+    `<option value="${run.id}" ${run.id === view.run_id ? "selected" : ""}>` +
+    `run ${run.id} · ${run.mode} · ${run.started_at}</option>`).join("") ||
+    '<option value="">no runs yet</option>';
+
+  const summary = view.run
+    ? `run ${view.run.id} · ${view.run.mode} · ${view.run.complete ? "complete" : "incomplete"} · ${view.run.commit}`
+    : "no runs in the store";
+  element("run-summary").textContent = summary;
+}
+
+element("run-picker").addEventListener("change", async (event) => {
+  const value = event.target.value;
+
+  if (!value) return;
+
+  await api("/api/select", { run_id: Number(value) });
+  await reload();
+});
+
+element("add-tag").addEventListener("click", async () => {
   const name = window.prompt("New tag:");
 
   if (!name || !name.trim()) return;
@@ -351,10 +550,28 @@ document.getElementById("add-tag").addEventListener("click", async () => {
 
 // Closing the zoom leaves scroll position and selection untouched, because it
 // is an overlay over the same grid rather than a page of its own.
-document.getElementById("zoom").addEventListener("click", closeZoom);
+element("zoom").addEventListener("click", closeZoom);
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeZoom();
 });
+
+async function reload() {
+  const scroll = window.scrollY;
+  const { data } = await api("/api/run");
+  state.data = data;
+
+  renderBuilds(data);
+  renderOptions(data);
+  renderSuites(data);
+  renderSummary(data);
+  renderResults(data);
+  renderGrid(data);
+  renderJob(data.job);
+
+  if (data.job && data.job.running) poll();
+
+  window.scrollTo(0, scroll);
+}
 
 bandSelect();
 reload();

@@ -9,33 +9,68 @@ It is a **separate application** from Practice Takes. It has to verify a build i
 is not part of, it adds nothing to the shipping binary, and it keeps working when
 the build under test does not.
 
-Work happens in two passes, and the split is the whole point:
+## Running it
+
+```bash
+uv run test-suite
+```
+
+That opens the hub: every suite the project has in one place, with a button on
+each. Nothing else has to be set up first — if a suite needs a build that does
+not exist, the hub builds it, saying so before it starts, because a cold build is
+by far the slowest thing here.
+
+The hub has three views:
+
+- **Run** — pick suites, or run everything, or everything of one kind. Progress
+  and the live output are on the same page.
+- **Review** — the captured surfaces as a grid: tag, comment, and score.
+- **Results** — what the suites said about this run, and what was measured.
+
+### What it can run
+
+| Suite | Kind | Needs |
+|---|---|---|
+| C++ unit tests | tests | builds `PracticeTakesTests` |
+| Python script tests | tests | — |
+| Service tests, service type check | tests | `npm ci` in `src/services` |
+| Smoke test | tests | a build with the control channel, and a display |
+| Benchmarks | performance | builds `PracticeTakesTests` |
+| UI golden images | ui | a build, and a display |
+| UI capture | ui | a build with the control channel, and a display |
+
+A suite that needs a display is **skipped with that reason** on a headless
+machine rather than failing.
+
+### Without a browser
+
+Every button has a command, so the suite works over a terminal-only session:
+
+```bash
+uv run test-suite run --all                     # everything
+uv run test-suite run --kind performance        # one kind
+uv run test-suite run --suites cpp python       # a selection
+uv run test-suite capture                       # unattended captures only
+uv run test-suite attend                        # the behavioural questions, live
+uv run test-suite review                        # the grid, in a browser
+uv run test-suite export                        # the record the release gate reads
+uv run test-suite status                        # what is in the store
+```
+
+The UI work is still three passes, and the split is the whole point:
 
 - **Capture** drives the application to every surface at every configured
   resolution and photographs each one. Nobody is present.
 - **Review** shows all of it in one grid, later, and takes verdicts, tags, and
   comments. The application does not need to be running — or buildable.
+- A deliberately short **attended** pass covers the questions a photograph
+  cannot answer.
 
-A third, deliberately short **attended** pass covers the questions a photograph
-cannot answer.
-
-## Running it
-
-Capture needs a build with the control channel:
+If you would rather build by hand first:
 
 ```bash
 cmake -S . -B build-tc -DCMAKE_BUILD_TYPE=Debug -DPRACTICE_TAKES_ENABLE_TEST_CONTROL=ON
 cmake --build build-tc --target PracticeTakes --parallel
-```
-
-Then:
-
-```bash
-uv run test-suite capture                  # unattended; walk away
-uv run test-suite attend                   # the behavioural questions, live
-uv run test-suite review                   # opens the grid in a browser
-uv run test-suite export                   # the record the release gate reads
-uv run test-suite status                   # what is in the store
 ```
 
 **Use `uv run`, not a bare `python3`.** `uv sync` installs into `.venv`, and a
@@ -50,6 +85,14 @@ virtual environment directly:
 
 Every command takes `--run` to work on a run other than the newest, and
 `--database` to use a store other than the default.
+
+**A run is one build under test**, holding everything anybody learned about it:
+captures, verdicts, suite results, and measurements. That is what makes "what
+state was this build in" one question rather than five.
+
+**A suite's verdict is its exit status.** Counts scraped out of output are
+detail; a suite whose output cannot be parsed still reports pass or fail
+correctly, with its counts left unknown rather than reported as zero failures.
 
 ## Capture
 
@@ -287,7 +330,9 @@ edit to that list.
 | `machine.py` | Machine provenance and identity |
 | `review.py` | What the review decides — outstanding questions, tags, failures |
 | `server.py` | The HTTP layer, deliberately thin |
-| `web/` | The grid page: fetches and renders, decides nothing |
+| `web/` | The hub page: fetches and renders, decides nothing |
+| `suites.py` | Every runnable suite — id, kind, command, what it needs — data |
+| `runner.py` | The background job: builds what is missing, runs, records |
 | `attend.py` | The short attended pass |
 | `ingest.py` | Performance Lab exports and automated suite results |
 | `export.py` | The record the release gate reads |

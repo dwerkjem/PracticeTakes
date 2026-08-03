@@ -131,21 +131,39 @@
 - [x] 9.4 Confirm `python tools/scripts/run_tests.py` still discovers tests and
   passes
 
-## 10. Prune and housekeeping
+## 10. The hub
 
-- [x] 10.1 Implement `prune`: delete image files for runs beyond the keep count
+- [x] 10.1 Add `suites.py`: every runnable suite as data — id, kind, command,
+  build dependencies, output parser, whether it needs a display
+- [x] 10.2 Generalise the background job in `runner.py` to run any selection of
+  suites, building missing targets first and once per target
+- [x] 10.3 Build with a sanitised `PATH`, so Nix's loader cannot shadow the
+  system one and break `juceaide` halfway through
+- [x] 10.4 Report progress, streamed output, and a per-suite verdict taken from
+  the exit status rather than from parsed counts
+- [x] 10.5 Record every suite result and every benchmark measurement against the run
+- [x] 10.6 Skip display-needing suites with a reason when there is no display
+- [x] 10.7 Serve the hub: suite list, build state, run/selection endpoints, job
+  status, and the review grid as one page with three views
+- [x] 10.8 Make a bare `test-suite` open the hub, and add `test-suite run` for a
+  terminal-only session
+- [x] 10.9 Test the registry, the parsers, the job, and the page's wiring
+
+## 11. Prune and housekeeping
+
+- [x] 11.1 Implement `prune`: delete image files for runs beyond the keep count
   while keeping verdicts, tags, comments, measurements, and results
-- [x] 10.2 Ignore the data directory in `.gitignore` if any part of it can land
+- [x] 11.2 Ignore the data directory in `.gitignore` if any part of it can land
   inside the repository
 
-## 11. Documentation and specs
+## 12. Documentation and specs
 
-- [x] 11.1 Write the workflow document under `docs/development/quality/` —
+- [x] 12.1 Write the workflow document under `docs/development/quality/` —
   capture, attend, review, ingest, export, prune — and index it in
   `docs/development/README.md`
-- [x] 11.2 Update `docs/development/agents/AGENT_GUIDE.md` where it describes the
+- [x] 12.2 Update `docs/development/agents/AGENT_GUIDE.md` where it describes the
   manual verification commands
-- [x] 11.3 Run `openspec validate testing-suite-application --strict`
-- [x] 11.4 Sync the delta into `openspec/specs/manual-gui-verification/spec.md`
-  and add the two new capability specs
-- [ ] 11.5 Close issue #143 with a link to the run record the new suite produced
+- [x] 12.3 Run `openspec validate testing-suite-application --strict`
+- [x] 12.4 Sync the delta into `openspec/specs/manual-gui-verification/spec.md`
+  and add the new capability specs
+- [ ] 12.5 Close issue #143 with a link to the run record the new suite produced

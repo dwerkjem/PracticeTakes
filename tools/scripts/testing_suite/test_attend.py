@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import attend as attend_module  # noqa: E402
 import review  # noqa: E402
 import server as server_module  # noqa: E402
+import suites as suites_module  # noqa: E402
 import surfaces  # noqa: E402
 from driver import Reply  # noqa: E402
 from store import Store  # noqa: E402
@@ -225,7 +226,7 @@ class ServerTests(SuiteTestCase):
         status, body = self.request("GET", "/")
 
         self.assertEqual(status, 200)
-        self.assertIn(b"verification review", body)
+        self.assertIn(b"testing suite", body)
 
     def test_an_image_is_served(self) -> None:
         status, body = self.request("GET", f"/image?id={self.capture_id}")
@@ -306,6 +307,45 @@ class ServerTests(SuiteTestCase):
         status, _ = self.request("GET", "/api/whatever")
 
         self.assertEqual(status, 404)
+
+    def test_the_hub_lists_every_suite(self) -> None:
+        _, view = self.request("GET", "/api/session")
+
+        self.assertEqual(
+            {entry["id"] for entry in view["suites"]},
+            {suite.id for suite in suites_module.SUITES},
+        )
+
+    def test_the_hub_reports_what_needs_building(self) -> None:
+        """Said up front, because a cold build is the slowest thing here."""
+        _, view = self.request("GET", "/api/session")
+
+        self.assertTrue(view["builds"])
+        self.assertTrue(all("present" in entry for entry in view["builds"]))
+
+    def test_an_unknown_suite_is_refused(self) -> None:
+        status, payload = self.request("POST", "/api/run-suites", {"suites": ["invented"]})
+
+        self.assertEqual(status, 400)
+        self.assertIn("invented", payload["error"])
+
+    def test_running_nothing_is_refused(self) -> None:
+        status, _ = self.request("POST", "/api/run-suites", {"suites": []})
+
+        self.assertEqual(status, 400)
+
+    def test_a_run_can_be_selected(self) -> None:
+        status, view = self.request("POST", "/api/select", {"run_id": self.run_id})
+
+        self.assertEqual(status, 200)
+        self.assertEqual(view["run_id"], self.run_id)
+
+    def test_the_job_status_is_readable_before_anything_runs(self) -> None:
+        status, job = self.request("GET", "/api/job")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(job["state"], "idle")
+        self.assertFalse(job["running"])
 
     def test_the_server_stays_on_loopback(self) -> None:
         """The store holds screenshots of unreleased software on a workstation."""

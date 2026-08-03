@@ -114,22 +114,24 @@ docstring). An empty result is a hard error, not a silent pass.
 Captures first-launch and restored-workspace reference screenshots and times
 fresh launches against them; writes evidence to `build/ui-validation/step-7/`.
 
-### Manual verification (the testing suite)
+### The testing suite
 
 A standalone application under `tools/scripts/testing_suite/`, not part of
-Practice Takes. Capture is unattended; review happens later over a grid of every
-surface at every resolution:
+Practice Takes. `uv run test-suite` with no arguments opens a hub listing every
+suite the project has — C++ tests, Python script tests, service tests, the smoke
+test, benchmarks, golden images, UI capture — and builds whatever a selected
+suite needs before running it.
 
 ```bash
-cmake -S . -B build-tc -DCMAKE_BUILD_TYPE=Debug -DPRACTICE_TAKES_ENABLE_TEST_CONTROL=ON
-cmake --build build-tc --target PracticeTakes --parallel
-uv run test-suite capture     # unattended
-uv run test-suite attend      # only the questions an image cannot answer
-uv run test-suite review      # the grid, in a browser
-uv run test-suite export      # the record the release gate reads
+uv run test-suite                        # the hub
+uv run test-suite run --all              # same thing without a browser
+uv run test-suite run --kind performance
+uv run test-suite attend                 # only the questions an image cannot answer
+uv run test-suite export                 # the record the release gate reads
 ```
 
-Runs accumulate in a machine-local SQLite store; the exported record under
+Runs accumulate in a machine-local SQLite store — captures, verdicts, suite
+results, measurements, all against one run — while the exported record under
 `docs/development/quality/manual-runs/` stays the release gate's only input. See
 `docs/development/quality/TESTING_SUITE.md`. No CI check runs any of it.
 

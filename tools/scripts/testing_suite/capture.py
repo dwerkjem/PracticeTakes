@@ -392,8 +392,19 @@ class CapturePass:
 
         return size
 
-    def run(self, plan: tuple[tuple[surfaces.Surface, str], ...], *, resume: bool = True) -> dict:
-        """Walk the plan. Never raises for one surface's sake."""
+    def run(
+        self,
+        plan: tuple[tuple[surfaces.Surface, str], ...],
+        *,
+        resume: bool = True,
+        progress: Callable[[dict], None] | None = None,
+    ) -> dict:
+        """Walk the plan. Never raises for one surface's sake.
+
+        `progress` is called after each surface, so a caller running this in the
+        background -- the review page's capture button -- can say what is
+        happening rather than showing a spinner for ten minutes.
+        """
         already = self.store.captured_keys(self.run_id) if resume else set()
         sizes: dict[str, dict[str, tuple[int, int]]] = {}
 
@@ -409,6 +420,16 @@ class CapturePass:
                 skipped += 1
 
                 continue
+
+            if progress is not None:
+                progress(
+                    {
+                        "surface": surface.title,
+                        "geometry": geometry,
+                        "done": captured + failed + skipped,
+                        "total": len(plan),
+                    }
+                )
 
             seen = sizes.setdefault(surface.title, {})
             size = self.capture_one(surface, geometry, seen, digests)

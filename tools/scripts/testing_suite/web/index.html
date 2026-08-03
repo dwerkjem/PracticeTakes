@@ -3,22 +3,77 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Practice Takes — verification review</title>
+    <title>Practice Takes — testing suite</title>
     <link rel="stylesheet" href="/web/style.css" />
   </head>
   <body>
     <header>
-      <div id="run-summary">Loading…</div>
+      <div class="row">
+        <strong>Practice Takes testing suite</strong>
+        <nav id="tabs">
+          <button type="button" data-view="run" class="active">Run</button>
+          <button type="button" data-view="review">Review</button>
+          <button type="button" data-view="results">Results</button>
+        </nav>
+        <span id="run-summary" class="muted">Loading…</span>
+        <select id="run-picker" title="Which run to look at"></select>
+      </div>
+      <div id="progress" hidden>
+        <div id="progress-bar"><span id="progress-fill"></span></div>
+        <div id="progress-message" class="muted"></div>
+      </div>
+    </header>
+
+    <!-- Run: pick what to run, and run it. The landing view, because an empty
+         store is what everyone sees first and it needs a way forward. -->
+    <main id="view-run" class="view">
+      <div id="build-state"></div>
+      <div id="suite-groups"></div>
+
+      <section class="panel">
+        <h2>Options</h2>
+        <label>Mode <select id="mode"></select></label>
+        <label>Resolutions <span id="resolution-boxes"></span></label>
+        <label><input type="checkbox" id="rebuild" /> Rebuild first, even if a build exists</label>
+      </section>
+
+      <div class="actions">
+        <button type="button" id="run-selected" class="primary">Run selected</button>
+        <button type="button" id="run-all">Run everything</button>
+        <button type="button" id="run-tests">Tests only</button>
+        <button type="button" id="run-performance">Performance only</button>
+        <button type="button" id="run-ui">UI only</button>
+      </div>
+
+      <section class="panel">
+        <h2>Log</h2>
+        <pre id="log">Nothing has run yet.</pre>
+      </section>
+    </main>
+
+    <!-- Review: the captured grid. -->
+    <main id="view-review" class="view" hidden>
       <div id="toolbar">
         <span id="selection-count">nothing selected</span>
         <span id="tag-buttons"></span>
         <button id="add-tag" type="button">+ tag</button>
-        <span id="tag-hint">click a tag to apply · shift-click to remove</span>
+        <span class="muted small">click a tag to apply · shift-click to remove</span>
       </div>
-      <div id="outstanding"></div>
-    </header>
+      <div id="outstanding" class="muted small"></div>
+      <div id="grid" aria-label="Captured surfaces"></div>
+    </main>
 
-    <main id="grid" aria-label="Captured surfaces"></main>
+    <!-- Results: what the suites said about this run. -->
+    <main id="view-results" class="view" hidden>
+      <section class="panel">
+        <h2>Automated suites</h2>
+        <div id="results-table"></div>
+      </section>
+      <section class="panel">
+        <h2>Measurements</h2>
+        <div id="measurements-table"></div>
+      </section>
+    </main>
 
     <div id="zoom" hidden>
       <div id="zoom-caption"></div>
