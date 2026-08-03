@@ -180,4 +180,4 @@
 - [x] 13.3 Run `openspec validate testing-suite-application --strict`
 - [x] 13.4 Sync the delta into `openspec/specs/manual-gui-verification/spec.md`
   and add the new capability specs
-- [ ] 13.5 Close issue #143 with a link to the run record the new suite produced
+- [x] 13.5 Close issue #143 with a link to the run record the new suite produced
