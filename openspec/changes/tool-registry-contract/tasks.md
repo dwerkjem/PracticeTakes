@@ -113,22 +113,33 @@
 - [x] 8.3 Run `ctest --test-dir build --output-on-failure`, then
       `python tools/scripts/quality/run_clang_tidy.py` over the changed sources
       and `pre-commit run --all-files`.
-- [x] 8.4 Verified workspace capture and restore end to end. `run-ui-golden.zsh`
-      could not complete on this machine — it fails identically on `main`
-      (`xdotool` is absent, and the script looks for the settings file at a path
-      this Linux profile layout does not use), so it was not usable as a
-      regression signal. Verified directly instead: launched the app under a
-      clean `HOME` with `--ui-validation-scenario prepare-restored`, confirmed
-      the persisted catalog is structurally identical to the pre-registry
-      format (`"toolId": "tuner"`, `"toolSettings": {"tuner": ...}`, catalog
-      `"version": 1`, legacy `tuner.*` and `workspace.lastFloating.*` keys
-      intact), then relaunched against that profile and confirmed the split,
-      tab group, active tab, focus, and tuner settings restore and re-save
-      byte-identically. The `juce_Component.cpp:2752` focus assertion in the
-      log predates this change and reproduces on `main`.
-      **Still owed: a human GUI pass** covering docked/floating/tiled/tabbed
-      moves and the Tools menu, since MainComponent remains outside
-      `PracticeTakesTests`.
+- [x] 8.4 Ran `run-ui-golden.zsh` (every launch passes `--mute-microphone`, so
+      no live audio reaches the tuner or spectrogram and the frames are
+      deterministic). `STEP_7_RESULT=pass`; both goldens `PIXEL_MATCH=exact`;
+      `RESPONSIVE_RESTORE_MATCH=exact`; all five workflows
+      `POINTER_COMPARISON=exact`. Both golden images render "Microphone muted."
+      in every open tool, and `restored-workspace.png` shows the
+      registry-driven layout: tuner docked left, spectrogram and harmonic
+      analyzer tabbed right, names resolved from the catalog.
+
+      The harness had to be repaired first — it still looked for settings at
+      the pre-5ab9b85 path and so had been failing at its first step on `main`
+      too. Fixed in this branch.
+
+      Ran the same harness on `main` for an equal comparison. Every pixel
+      comparison and every captured size is identical; the branch is faster on
+      every timing metric (first launch -9.0%, restored workspace -16.8%,
+      responsive restore -37.0%). The +19%/+27% against the hardcoded
+      414.134 ms baseline is this machine, not this change: `main` is
+      +31%/+53% against the same constant.
+- [x] 8.6 Verified the Performance Lab: reconfigured with
+      `-DPRACTICE_TAKES_ENABLE_PERFORMANCE_LAB=ON` and ran
+      `--automate-performance-lab --mute-microphone` to completion (exit 0).
+      Four benchmark records written, all `status=2`, with real
+      `analysis-latency` samples (median ~320 ms, variability 1.05-10.18) and
+      `launch-to-main-window` 185.9 ms. Note: `run-performance-lab.sh` does not
+      pass `--mute-microphone`, so a run through the wrapper measures live
+      microphone input; worth adding separately.
 - [x] 8.5 Open the PR against `main` referencing issue #24, and note in the
       description that multi-instance is declared-only with the seams recorded
       in `design.md`.
