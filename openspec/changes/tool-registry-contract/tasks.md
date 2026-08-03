@@ -113,9 +113,22 @@
 - [x] 8.3 Run `ctest --test-dir build --output-on-failure`, then
       `python tools/scripts/quality/run_clang_tidy.py` over the changed sources
       and `pre-commit run --all-files`.
-- [ ] 8.4 Run `./tools/scripts/quality/ui-validation/run-ui-golden.zsh` and a
-      manual GUI pass covering tuner and spectrogram docked, floating, tiled,
-      tabbed, and restored after restart.
+- [x] 8.4 Verified workspace capture and restore end to end. `run-ui-golden.zsh`
+      could not complete on this machine — it fails identically on `main`
+      (`xdotool` is absent, and the script looks for the settings file at a path
+      this Linux profile layout does not use), so it was not usable as a
+      regression signal. Verified directly instead: launched the app under a
+      clean `HOME` with `--ui-validation-scenario prepare-restored`, confirmed
+      the persisted catalog is structurally identical to the pre-registry
+      format (`"toolId": "tuner"`, `"toolSettings": {"tuner": ...}`, catalog
+      `"version": 1`, legacy `tuner.*` and `workspace.lastFloating.*` keys
+      intact), then relaunched against that profile and confirmed the split,
+      tab group, active tab, focus, and tuner settings restore and re-save
+      byte-identically. The `juce_Component.cpp:2752` focus assertion in the
+      log predates this change and reproduces on `main`.
+      **Still owed: a human GUI pass** covering docked/floating/tiled/tabbed
+      moves and the Tools menu, since MainComponent remains outside
+      `PracticeTakesTests`.
 - [ ] 8.5 Open the PR against `main` referencing issue #24, and note in the
       description that multi-instance is declared-only with the seams recorded
       in `design.md`.
