@@ -142,7 +142,8 @@ browser loses nothing.
 | `+ tag` | Add a tag to the vocabulary, immediately usable |
 | Click an image | Open it at captured size; Escape returns |
 | `comment` | Free text on that one image |
-| P / F / S | Score an axis; a fail asks for the reason |
+| P / F / S | Score an axis; a fail asks for a reason, which is optional |
+| Pass/Fail/Skip selected | Score every selected image at once |
 
 Resolutions of one surface sit beside one another, which is the comparison the
 whole workflow exists for — a problem like "too much information in too small an
@@ -165,7 +166,7 @@ something first — are asked by `test-suite attend` against a live application,
 one at a time:
 
 ```
-Enter = pass · f <reason> = fail · s = skip · q = stop
+Enter = pass · f [reason] = fail · s = skip · q = stop
 ```
 
 They are asked **once per surface**, not once per resolution: the answer does not
@@ -191,10 +192,10 @@ separately so they do not dilute that core.
 which is what keeps a record from the suite comparable against every record the
 old terminal harness wrote.
 
-**A failure requires a note.** The export refuses to write without one. A
-recorded failure with no detail costs more than it saves: it says something is
-wrong without saying what, so the surface has to be looked at again to learn
-anything.
+**A failure prompts for a note and does not require one.** Leave it empty and
+the failure is still recorded. A note is worth giving — a failure with no detail
+says something is wrong without saying what — but nothing blocks on it, and a
+run whose failures carry no notes still exports.
 
 ## Modes and resolutions
 

@@ -24,15 +24,14 @@ import surfaces
 from driver import ApplicationDriver, ChannelError
 from store import FAIL, PASS, SKIP, Store
 
-PROMPT_HELP = "Enter = pass · f <reason> = fail · s = skip · q = stop"
+PROMPT_HELP = "Enter = pass · f [reason] = fail · s = skip · q = stop"
 
 
 def parse_answer(text: str) -> tuple[str, str, str]:
     """One typed line into (verdict, note, error).
 
     A line of text rather than a hotkey: it carries the reason in the same
-    breath as the verdict, and a failure without a reason is the one thing this
-    pass must not accept.
+    breath as the verdict, for the failures where there is one worth giving.
     """
     stripped = text.strip()
 
@@ -53,9 +52,8 @@ def parse_answer(text: str) -> tuple[str, str, str]:
         return SKIP, rest, ""
 
     if verb in ("f", "fail"):
-        if not rest:
-            return "", "", "A failure needs a reason: f <what you saw>"
-
+        # A reason is worth typing and is not required; `f` on its own records
+        # the failure, and `f <reason>` records it with the reason.
         return FAIL, rest, ""
 
     return "", "", f"'{verb}' is not one of: {PROMPT_HELP}"

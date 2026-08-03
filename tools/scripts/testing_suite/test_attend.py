@@ -103,12 +103,13 @@ class AnswerParsingTests(unittest.TestCase):
         self.assertEqual(note, "the needle never moves")
         self.assertEqual(error, "")
 
-    def test_a_failure_without_a_reason_is_refused(self) -> None:
-        """A failure with no detail costs a whole surface to learn anything from."""
-        verdict, _, error = attend_module.parse_answer("f")
+    def test_a_failure_without_a_reason_is_accepted(self) -> None:
+        """`f` on its own records the failure; the reason is optional."""
+        verdict, note, error = attend_module.parse_answer("f")
 
-        self.assertEqual(verdict, "")
-        self.assertTrue(error)
+        self.assertEqual(verdict, "fail")
+        self.assertEqual(note, "")
+        self.assertEqual(error, "")
 
     def test_skip_is_available_for_something_not_examined(self) -> None:
         self.assertEqual(attend_module.parse_answer("s")[0], "skip")
@@ -150,13 +151,21 @@ class AttendedPassTests(SuiteTestCase):
         self.assertEqual(stored["live-input"]["verdict"], "pass")
         self.assertTrue(stored["live-input"]["attended"])
 
-    def test_a_failure_without_a_reason_is_asked_again(self) -> None:
+    def test_a_failure_carries_a_reason_when_one_is_given(self) -> None:
         capture_id = self.add_capture(TUNER)
-        self.make_pass(["f", "f the needle never moves"]).run()
+        self.make_pass(["f the needle never moves"]).run()
         stored = {row["question"]: row for row in self.store.verdicts(capture_id)}
 
         self.assertEqual(stored["live-input"]["verdict"], "fail")
         self.assertEqual(stored["live-input"]["note"], "the needle never moves")
+
+    def test_a_bare_failure_is_recorded_without_one(self) -> None:
+        capture_id = self.add_capture(TUNER)
+        self.make_pass(["f"]).run()
+        stored = {row["question"]: row for row in self.store.verdicts(capture_id)}
+
+        self.assertEqual(stored["live-input"]["verdict"], "fail")
+        self.assertEqual(stored["live-input"]["note"], "")
 
     def test_stopping_leaves_the_rest_outstanding(self) -> None:
         self.add_capture(TUNER)
@@ -251,15 +260,15 @@ class ServerTests(SuiteTestCase):
         self.assertEqual(status, 200)
         self.assertEqual(payload["problems"], [])
 
-    def test_a_failure_without_a_note_is_refused_by_the_api(self) -> None:
+    def test_a_failure_without_a_note_is_accepted_by_the_api(self) -> None:
         status, payload = self.request(
             "POST",
             "/api/score",
             {"capture_id": self.capture_id, "question": "works", "verdict": "fail"},
         )
 
-        self.assertEqual(status, 400)
-        self.assertTrue(payload["problems"])
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["problems"], [])
 
     def test_tagging_a_selection_through_the_api(self) -> None:
         second = self.add_capture(SHELL)
@@ -358,13 +367,13 @@ class ServerTests(SuiteTestCase):
         self.assertTrue(payload["scored"])
         self.assertTrue(self.store.verdicts(second))
 
-    def test_a_bulk_failure_without_a_note_is_refused(self) -> None:
+    def test_a_bulk_failure_without_a_note_is_accepted(self) -> None:
         status, payload = self.request(
             "POST", "/api/score-many", {"capture_ids": [self.capture_id], "verdict": "fail"},
         )
 
-        self.assertEqual(status, 400)
-        self.assertTrue(payload["problems"])
+        self.assertEqual(status, 200)
+        self.assertTrue(payload["scored"])
 
     def test_bulk_scoring_an_empty_selection_is_refused(self) -> None:
         status, _ = self.request("POST", "/api/score-many", {"capture_ids": [], "verdict": "pass"})

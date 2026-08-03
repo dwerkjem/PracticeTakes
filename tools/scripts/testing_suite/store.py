@@ -534,17 +534,16 @@ class Store:
     ) -> list[str]:
         """Score one question. Returns problems, and stores nothing when there are any.
 
-        A failure with no note costs more than it saves: it says something is
-        wrong without saying what, so the surface has to be looked at again to
-        learn anything.
+        A note is encouraged on a failure and not required. It was required
+        once: a failure with no detail says something is wrong without saying
+        what, so the surface has to be looked at again to learn anything. In
+        practice that blocked the reviewer mid-pass over something they could
+        see perfectly well, so the prompt stays and the refusal does not.
         """
         problems: list[str] = []
 
         if verdict not in VERDICTS:
             problems.append(f"'{verdict}' is not one of {', '.join(VERDICTS)}.")
-
-        if verdict == FAIL and not note.strip():
-            problems.append(f"'{question}' failed without a note.")
 
         if problems:
             return problems

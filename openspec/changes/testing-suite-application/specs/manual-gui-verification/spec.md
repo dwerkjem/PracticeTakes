@@ -24,6 +24,24 @@ rather than a silent skip is carried over unchanged.
 
 ## MODIFIED Requirements
 
+### Requirement: Free-text notes can accompany any answer
+The suite SHALL allow the tester to attach a free-text note to any answer, and
+SHALL prompt for one when an answer is a failure. A note SHALL NOT be required:
+an answer without one is recorded, and the run is exportable.
+
+#### Scenario: A failure is recorded
+- **WHEN** the tester marks any question as failed
+- **THEN** a note is offered, and the failure is recorded whether or not one is
+  given
+
+#### Scenario: A note on a passing answer
+- **WHEN** the tester passes a question but wants to record an observation
+- **THEN** a note may be attached without changing the verdict
+
+#### Scenario: A run whose failures carry no notes
+- **WHEN** a run containing note-less failures is exported
+- **THEN** the record is written, and each failure appears in it
+
 ### Requirement: An optional flag repeats surfaces at multiple window sizes
 A run SHALL cover a configured set of window resolutions — including a
 constrained size, the default size, and a maximised window — capturing and

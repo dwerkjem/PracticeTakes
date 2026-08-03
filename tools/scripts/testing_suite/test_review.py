@@ -133,12 +133,12 @@ class OutstandingTests(ReviewTestCase):
 
 
 class ScoringTests(ReviewTestCase):
-    def test_a_failure_without_a_note_is_refused(self) -> None:
+    def test_a_failure_without_a_note_is_recorded(self) -> None:
         capture_id = self.add_capture(SHELL)
         problems = review.score(self.store, capture_id, "works", "fail")
 
-        self.assertTrue(problems)
-        self.assertEqual(self.store.verdicts(capture_id), [])
+        self.assertEqual(problems, [])
+        self.assertEqual(self.store.verdicts(capture_id)[0]["verdict"], "fail")
 
     def test_a_failure_with_a_note_is_recorded(self) -> None:
         capture_id = self.add_capture(SHELL)
@@ -270,20 +270,11 @@ class BulkScoringTests(ReviewTestCase):
 
         self.assertEqual(self.store.verdicts(self.ids[2]), [])
 
-    def test_a_bulk_fail_needs_a_note(self) -> None:
+    def test_a_bulk_fail_without_a_note_is_recorded(self) -> None:
         result = review.score_many(self.store, self.ids, "fail")
 
-        self.assertTrue(result["problems"])
-        self.assertEqual(result["scored"], 0)
-        self.assertEqual(self.store.verdicts(self.ids[0]), [])
-
-    def test_a_note_less_bulk_fail_is_refused_even_when_nothing_would_change(self) -> None:
-        """Otherwise it touches nothing, finds no problem, and reports success."""
-        review.score_many(self.store, self.ids, "pass")
-        result = review.score_many(self.store, self.ids, "fail")
-
-        self.assertTrue(result["problems"])
-        self.assertEqual(result["scored"], 0)
+        self.assertEqual(result["problems"], [])
+        self.assertEqual(result["scored"], len(surfaces.FIXED_AXES) * len(self.ids))
 
     def test_a_bulk_fail_with_a_note_is_recorded_on_all_of_them(self) -> None:
         result = review.score_many(self.store, self.ids, "fail", "the layout is cramped")

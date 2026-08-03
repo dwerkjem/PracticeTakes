@@ -179,11 +179,9 @@ class RecordTests(unittest.TestCase):
             note=note,
         )
 
-    def test_a_failure_without_a_note_is_rejected(self) -> None:
-        """A failure with no detail says something is wrong without saying what."""
-        problems = self.answer(record.FAIL).problems()
-
-        self.assertEqual(len(problems), 1)
+    def test_a_failure_without_a_note_is_accepted(self) -> None:
+        """Encouraged, not required: the export is never blocked over wording."""
+        self.assertEqual(self.answer(record.FAIL).problems(), [])
 
     def test_a_failure_with_a_note_is_accepted(self) -> None:
         self.assertEqual(self.answer(record.FAIL, "meter frozen").problems(), [])

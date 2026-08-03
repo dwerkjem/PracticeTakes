@@ -248,14 +248,9 @@ def score_many(
     nobody made. By default only unanswered questions are filled in, so a bulk
     pass cannot quietly overwrite a considered verdict; `overwrite` says to
     replace them anyway.
-    """
-    # Checked up front rather than per question: with everything already
-    # answered, a note-less bulk fail would otherwise touch nothing, find no
-    # problem to report, and come back as a success that changed nothing.
-    if verdict == FAIL and not note.strip():
-        return {"scored": 0, "left_alone": 0,
-                "problems": ["A bulk failure needs a note saying what is wrong."]}
 
+    A note is optional, including on a failure.
+    """
     scored = 0
     skipped = 0
     problems: list[str] = []

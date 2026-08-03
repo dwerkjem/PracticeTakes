@@ -16,8 +16,8 @@ The rules that matter here are about honesty rather than formatting:
 
 - An interrupted run is marked incomplete and keeps what was answered, so a long
   run is never lost and a partial run is never mistaken for a passing one.
-- A failed answer requires a note, so a recorded failure is actionable without
-  re-running the surface.
+- A failed answer carries a note when the reviewer gave one; it is encouraged
+  rather than required, so a review is never blocked over wording.
 - The mode and the geometry sweep are recorded, so a quick run cannot later be
   read as a release check.
 
@@ -58,12 +58,9 @@ class Answer:
         if self.verdict not in VERDICTS:
             problems.append(f"'{self.verdict}' is not one of {', '.join(VERDICTS)}.")
 
-        # A failure with no detail costs more than it saves: it says something
-        # is wrong without saying what, so the surface has to be run again to
-        # learn anything.
-        if self.verdict == FAIL and not self.note.strip():
-            problems.append(f"'{self.question}' on '{self.surface}' failed without a note.")
-
+        # A note on a failure is worth having and is not required. Blocking the
+        # export over one only moved the argument to the least convenient
+        # moment -- after the reviewing was done.
         return problems
 
 

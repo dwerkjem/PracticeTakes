@@ -483,9 +483,7 @@ async function scoreSelection(verdict) {
 
   if (verdict === "fail") {
     note = window.prompt(
-      `What is wrong with these ${state.selected.size} image(s)?`) || "";
-
-    if (!note.trim()) return;
+      `What is wrong with these ${state.selected.size} image(s)? (optional)`) || "";
   }
 
   const { ok, data } = await api("/api/score-many", {
@@ -548,14 +546,14 @@ async function applyTag(name, remove) {
 }
 
 async function score(captureId, question, verdict) {
-  // A failure without a reason says something is wrong without saying what, so
-  // the note is asked for here rather than rejected by the server.
+  // A reason is asked for on a failure and is not required: cancel or leave it
+  // empty and the failure is still recorded. Blocking here only interrupted
+  // somebody who could already see what was wrong.
   let note = question.note || "";
 
   if (verdict === "fail") {
-    note = window.prompt(`What is wrong with "${question.prompt}"?`, note) || "";
-
-    if (!note.trim()) return;
+    note = window.prompt(
+      `What is wrong with "${question.prompt}"? (optional)`, note) || "";
   }
 
   const { ok, data } = await api("/api/score", {

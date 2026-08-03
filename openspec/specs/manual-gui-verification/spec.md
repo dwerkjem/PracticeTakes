@@ -30,13 +30,18 @@ surface-specific checks do not dilute the comparable core.
   rather than as one of the three
 
 ### Requirement: Free-text notes can accompany any answer
-The harness SHALL allow the tester to attach a free-text note to any answer, and
-SHALL require one when an answer is a failure, so that a recorded failure is
-actionable without re-running the surface.
+The suite SHALL allow the tester to attach a free-text note to any answer, and
+SHALL prompt for one when an answer is a failure. A note SHALL NOT be required:
+an answer without one is recorded, and the run is exportable.
 
 #### Scenario: A failure is recorded
 - **WHEN** the tester marks any question as failed
-- **THEN** a note is required before the run can advance
+- **THEN** a note is offered, and the failure is recorded whether or not one is
+  given
+
+#### Scenario: A run whose failures carry no notes
+- **WHEN** a run containing note-less failures is exported
+- **THEN** the record is written, and each failure appears in it
 
 #### Scenario: A note on a passing answer
 - **WHEN** the tester passes a question but wants to record an observation

@@ -187,13 +187,14 @@ class VerdictTests(StoreTestCase):
         self.run_id = self.start_run()
         self.capture_id = self.capture(self.run_id)
 
-    def test_a_failure_without_a_note_is_refused(self) -> None:
+    def test_a_failure_without_a_note_is_recorded(self) -> None:
+        """A note is encouraged, not required — a review is never blocked over wording."""
         problems = self.store.record_verdict(
             self.capture_id, question="works", prompt="Does it work?", verdict="fail"
         )
 
-        self.assertTrue(problems)
-        self.assertEqual(self.store.verdicts(self.capture_id), [])
+        self.assertEqual(problems, [])
+        self.assertEqual(len(self.store.verdicts(self.capture_id)), 1)
 
     def test_a_failure_with_a_note_is_stored(self) -> None:
         problems = self.store.record_verdict(
