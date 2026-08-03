@@ -97,6 +97,43 @@ class PageWiringTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertIn(f'"{path}"', routes)
 
+    def test_the_filter_summary_is_set_rather_than_appended(self) -> None:
+        """Appending is why it read "6 shown, 32 hidden" three times over."""
+        self.assertNotIn("filter-summary", script().split("+=")[0][-200:])
+
+        for line in script().splitlines():
+            if "filtered.textContent" in line or "summary.textContent" in line:
+                with self.subTest(line=line.strip()):
+                    self.assertNotIn("+=", line)
+
+    def test_changing_a_filter_redraws_the_filter_row_too(self) -> None:
+        """Redrawing only the grid leaves the chips and the summary stale."""
+        body = script()
+        start = body.index("function applyFilters()")
+        end = body.index("function toggleFilter")
+        apply_body = body[start:end]
+
+        self.assertIn("renderFilters(", apply_body)
+        self.assertIn("renderGrid(", apply_body)
+
+        # And every filter change goes through it.
+        toggle = body[body.index("function toggleFilter"):body.index("function facetLabel")]
+
+        self.assertIn("applyFilters()", toggle)
+
+    def test_an_emptied_facet_stops_being_a_filter(self) -> None:
+        """A facet holding an empty set would match nothing and hide everything."""
+        body = script()
+        toggle = body[body.index("function toggleFilter"):body.index("function facetLabel")]
+
+        self.assertIn("delete state.filters[name]", toggle)
+
+    def test_the_facets_are_dropdowns(self) -> None:
+        body = script()
+
+        self.assertIn('createElement("details")', body)
+        self.assertIn("facet-panel", body)
+
     def test_the_stylesheet_and_script_are_linked(self) -> None:
         self.assertIn('href="/web/style.css"', markup())
         self.assertIn('src="/web/app.js"', markup())

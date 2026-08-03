@@ -378,22 +378,70 @@ button:hover { border-color: var(--accent); }
   flex-direction: column;
   gap: 6px;
   margin-bottom: 12px;
-}
-
-.facet {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  flex-wrap: wrap;
   user-select: none;
 }
 
-.facet-name {
-  color: var(--muted);
+/* One row of dropdowns rather than six rows of chips: the facets are a control
+   surface, and the grid is what the screen is for. */
+.filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.facet-menu { position: relative; }
+
+.facet-menu > summary {
+  list-style: none;
+  cursor: pointer;
+  background: #262b34;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 10px;
   font-size: 12px;
-  min-width: 11ch;
-  text-transform: capitalize;
+  white-space: nowrap;
 }
+
+.facet-menu > summary::-webkit-details-marker { display: none; }
+.facet-menu[open] > summary { border-color: var(--accent); color: var(--accent); }
+.facet-menu > summary:hover { border-color: var(--accent); }
+.facet-menu .caret { color: var(--muted); }
+
+.facet-menu .badge {
+  background: var(--accent);
+  color: #0d1117;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-weight: 600;
+}
+
+.facet-panel {
+  position: absolute;
+  z-index: 6;
+  margin-top: 4px;
+  min-width: 190px;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 6px;
+  box-shadow: 0 10px 26px rgba(10, 11, 14, 0.6);
+}
+
+.facet-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.facet-option:hover { background: #262b34; }
+.facet-option .count { margin-left: auto; color: var(--muted); }
+.facet-option input { accent-color: var(--accent); }
+
+.active-filters { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.active-filters:empty { display: none; }
+.chip-button .remove { color: var(--muted); margin-left: 4px; }
 
 .chip-button {
   background: #262b34;

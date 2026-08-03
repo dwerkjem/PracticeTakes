@@ -420,11 +420,11 @@ function renderGrid(view) {
   }
 
   // Said out loud, because a filtered grid that looks complete is how a
-  // reviewer approves a run they only saw half of.
+  // reviewer approves a run they only saw half of. Set, never appended.
   const filtered = element("filter-summary");
 
   if (filtered && hidden) {
-    filtered.textContent += `  ·  ${state.order.length} shown, ${hidden} hidden`;
+    filtered.textContent = `${state.order.length} shown, ${hidden} hidden by the filters above.`;
   }
 
   paintSelection();
@@ -446,6 +446,10 @@ function chosen(name) {
   return state.filters[name] || new Set();
 }
 
+function activeFilters() {
+  return Object.entries(state.filters).filter(([, values]) => values.size);
+}
+
 function matchesFilters(capture) {
   return Object.entries(state.filters).every(([name, values]) => {
     if (!values.size) return true;
@@ -458,67 +462,124 @@ function matchesFilters(capture) {
   });
 }
 
+// Everything that depends on the filters is redrawn from the filters, rather
+// than patched. Patching is what left "6 shown, 32 hidden" appended three times
+// over and a cleared filter still described in the summary.
+function applyFilters() {
+  renderFilters(state.data);
+  renderGrid(state.data);
+}
+
 function toggleFilter(name, value) {
   const values = new Set(chosen(name));
 
   if (values.has(value)) values.delete(value);
   else values.add(value);
 
-  state.filters[name] = values;
-  renderGrid(state.data);
+  if (values.size) state.filters[name] = values;
+  else delete state.filters[name];   // An empty set is no filter, not a filter of nothing.
+
+  applyFilters();
+}
+
+function facetLabel(name) {
+  return name.replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase());
+}
+
+function facetMenu(name, values) {
+  const menu = document.createElement("details");
+  menu.className = "facet-menu";
+
+  const picked = chosen(name);
+  const summary = document.createElement("summary");
+  summary.innerHTML = `${facetLabel(name)}` +
+    (picked.size ? ` <span class="badge">${picked.size}</span>` : "") +
+    ` <span class="caret">▾</span>`;
+  menu.appendChild(summary);
+
+  const panel = document.createElement("div");
+  panel.className = "facet-panel";
+
+  values.forEach(([value, count]) => {
+    const row = document.createElement("label");
+    row.className = "facet-option";
+    row.innerHTML =
+      `<input type="checkbox" ${picked.has(value) ? "checked" : ""} />` +
+      `<span>${value}</span><span class="count">${count}</span>`;
+    row.querySelector("input").addEventListener("change", () => toggleFilter(name, value));
+    panel.appendChild(row);
+  });
+
+  menu.appendChild(panel);
+
+  // One open at a time, so a row of dropdowns cannot cover the grid.
+  menu.addEventListener("toggle", () => {
+    if (!menu.open) return;
+
+    document.querySelectorAll("details.facet-menu").forEach((other) => {
+      if (other !== menu) other.open = false;
+    });
+  });
+
+  return menu;
 }
 
 function renderFilters(view) {
   const holder = element("filters");
   const facets = view.facets || {};
 
-  if (!Object.keys(facets).length) {
-    holder.innerHTML = "";
-    return;
-  }
-
   holder.innerHTML = "";
+
+  if (!Object.keys(facets).length) return;
+
+  const row = document.createElement("div");
+  row.className = "filter-row";
 
   Object.entries(facets).forEach(([name, values]) => {
     if (values.length < 2) return;   // A facet with one value filters nothing.
 
-    const row = document.createElement("div");
-    row.className = "facet";
-    row.innerHTML = `<span class="facet-name">${name.replace("_", " ")}</span>`;
-
-    values.forEach(([value, count]) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = `chip-button${chosen(name).has(value) ? " on" : ""}`;
-      button.innerHTML = `${value}<span class="count">${count}</span>`;
-      button.addEventListener("click", () => toggleFilter(name, value));
-      row.appendChild(button);
-    });
-
-    holder.appendChild(row);
+    row.appendChild(facetMenu(name, values));
   });
 
-  const summary = document.createElement("div");
-  summary.id = "filter-summary";
-  const active = Object.entries(state.filters).filter(([, values]) => values.size);
+  holder.appendChild(row);
 
-  if (active.length) {
-    summary.textContent = active
-      .map(([name, values]) => `${name}: ${[...values].join(" or ")}`).join("  ·  ");
+  // What is chosen is shown outside the menus, because a filter you cannot see
+  // is a grid that is lying about how much of the run you have looked at.
+  const active = document.createElement("div");
+  active.className = "active-filters";
+  const picked = activeFilters();
+
+  if (picked.length) {
+    picked.forEach(([name, values]) => {
+      values.forEach((value) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "chip-button on";
+        chip.innerHTML = `${facetLabel(name)}: ${value} <span class="remove">✕</span>`;
+        chip.title = "Remove this filter";
+        chip.addEventListener("click", () => toggleFilter(name, value));
+        active.appendChild(chip);
+      });
+    });
+
     const clear = document.createElement("button");
     clear.type = "button";
     clear.className = "chip-button";
-    clear.textContent = "clear filters";
+    clear.textContent = "clear all";
     clear.addEventListener("click", () => {
       state.filters = {};
-      renderGrid(state.data);
+      applyFilters();
     });
-    summary.appendChild(document.createTextNode("  "));
-    summary.appendChild(clear);
-  } else {
-    summary.textContent = "Showing everything. Choose values to narrow it; several filters combine.";
+    active.appendChild(clear);
   }
 
+  holder.appendChild(active);
+
+  const summary = document.createElement("div");
+  summary.id = "filter-summary";
+  summary.textContent = picked.length
+    ? ""   // Filled in by the grid, which is what knows the counts.
+    : "Showing everything. Open a menu to narrow it; several filters combine.";
   holder.appendChild(summary);
 }
 
