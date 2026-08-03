@@ -12,7 +12,8 @@ The source tree groups code first by architectural role, then by feature:
   fan-out small. `MainComponent` implementations live beside the shell
   responsibility they implement instead of in one monolithic source file.
 - `src/features` contains user-facing analysis and feedback features.
-- `src/platform` contains shared infrastructure such as microphone capture.
+- `src/platform` contains shared infrastructure such as microphone capture
+  and the normalized score model.
 
 Shell UI helpers are nested under `shell/ui/main_window`, `feedback`, `settings`,
 and `workspace`; appearance and audio state live under `shell/state`. This
@@ -131,6 +132,79 @@ The Settings input-volume control applies a shared 0–200% software gain before
 fan-out. The live level meter displays the post-gain peak, and the clipping
 state is held briefly so it remains visible without requiring UI work in the
 callback.
+
+## Score model
+
+`src/platform/score` holds the normalized, engraving-independent representation
+of a score: parts, measures, voices, notes, chords, rests, pitches with their
+notated spelling *and* their sounding MIDI number, clef/key/time changes, tempo
+and dynamic directions, and lyric syllables. `src/platform/score/musicxml`
+imports MusicXML into it. Nothing here draws anything.
+
+It sits in `platform` rather than `features` because four consumers read it —
+the engraved renderer, the score tool, playback, and the session file — across
+at least two feature directories, and a `src/features/*` tool may not reach into
+another's internals.
+
+### Ownership and immutability
+
+A score is a tree of value types assembled by `ScoreBuilder` and then **frozen**.
+`build()` applies every model invariant, repairing violations and recording a
+diagnostic for each, and hands back `std::shared_ptr<const Score>`.
+
+`const` is the enforcement mechanism, not a convention. A score is fully built
+before it is first shared and is never mutated afterwards, so any number of
+readers on any number of threads need no lock and no consumer can mutate a score
+another consumer is mid-way through reading. A single owner holds the current
+score — the importer's caller today, the session when #39 lands — and everything
+else holds a `shared_ptr<const Score>` copy, so a score stays alive as long as
+any reader is using it even if the owner swaps in a different one.
+
+Violations are always **a repair plus a diagnostic, never a throw**. A score
+arrives from a stranger's file, so "this file is wrong" has to produce something
+a musician can still practise with. The trade is explicit: the resulting score is
+complete and self-consistent, but no longer a faithful transcription, and the
+diagnostic is what says so.
+
+### Import runs on a background thread
+
+Reading, decompressing, and parsing a score is unbounded work with file I/O. It
+cannot run on the message thread without freezing the UI. `importMusicXmlFile`
+and `importMusicXmlDocument` are plain functions on the caller's thread: they
+start no threads, hold no global state, and touch nothing outside their
+arguments, so they are testable synchronously and safe to call from a background
+thread without further coordination.
+
+### The audio thread never touches a score
+
+Not even to read it. This is a hard rule, stated before any code exists that
+could violate it.
+
+A `shared_ptr` copy is a lock-free but *contended* atomic refcount write, and the
+score is pointer-chasing over heap nodes with unpredictable cache behaviour.
+Neither belongs in a callback that must be bounded, and both would violate the
+[audio-thread boundary](#audio-thread-boundary) above.
+
+When playback arrives (#35–#38), the message thread must flatten the score into
+a preallocated, POD, contiguous event array and publish that to the audio thread
+— the same shape `AudioSampleFifo` already uses to get data across the boundary
+in the other direction. The model is designed so that nobody is ever tempted to
+read it from a callback because it looked convenient.
+
+### Time
+
+Every duration and position is in **integer ticks at 3840 per quarter note**,
+fixed score-wide. 3840 is `2^8 x 15`, so it divides exactly by 2, 3, and 5 —
+every power of two up to a 256th note, plus triplets and quintuplets, land on an
+integer tick. Source units (`<divisions>`) are rescaled on import, and a
+conversion that is not exact emits a diagnostic rather than drifting silently.
+
+`TempoMap` converts between ticks and seconds. It is deliberately standalone —
+it knows nothing of `Score`, `Part`, or `Measure` — because #34's MIDI timeline
+is a separate model that shares this one time base rather than reinventing it.
+
+See [the supported MusicXML subset](../formats/musicxml-subset.md) for what the
+importer reads and what it drops.
 
 ## Tuner pipeline
 

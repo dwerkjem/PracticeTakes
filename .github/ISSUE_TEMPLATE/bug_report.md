@@ -2,7 +2,7 @@
 name: Bug report
 about: Report unexpected or incorrect behavior
 title: ""
-labels: bug
+labels: type:bug
 assignees: ""
 ---
 
@@ -26,7 +26,7 @@ What actually happened. Include screenshots if relevant.
 
 ## Environment
 
-- Practice Takes version (see Help or the root `VERSION` file):
+- Practice Takes version (see Help, the window title, or `tools/VERSION`):
 - Operating system and version:
 - Audio device/driver (if relevant to the issue):
 

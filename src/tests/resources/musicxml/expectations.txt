@@ -1,0 +1,55 @@
+# What each corpus file must import to.
+#
+# One row per score file in this directory, pipe-separated:
+#
+#   file name | parts | measures | total ticks | diagnostics
+#
+# Blank lines and lines starting with '#' are ignored.
+#
+# These are pinned so that a change in how the importer converts a real file
+# fails a test rather than passing silently. If a number here changes, that is
+# the point: work out why before updating it. "The importer changed" is not a
+# reason to edit this file, it is a reason to look at the diff.
+#
+# Total ticks is the score's musical length, in the model's 3840-per-quarter
+# base -- so one 4/4 bar is 15360.
+#
+# MusicXmlCorpusTests fails on any score file in this directory with no row
+# here, and reports the values it actually saw so a new row can be written.
+
+anonymous-accept-almighty-father.mxl                 |  2 |   15 |   230400 |    7
+anonymous-ad-laudes.mxl                              |  2 |   17 |   261120 |    6
+beach-1-o-mistress-mine.mxl                          |  2 |  107 |   821760 |   10
+beethoven-3-vom-tode.mxl                             |  2 |   49 |   564480 |    7
+berg-1-nacht.mxl                                     |  2 |   38 |   583680 |   14
+boulanger-5-au-pied-de-mon-lit.mxl                   |  2 |   39 |   706560 |   12
+brahms-6-du-sprichst-dass-ich-mich-taeuschte.mxl     |  2 |   43 |   660480 |    4
+burgk-a-solis-ortus.mxl                              |  5 |  173 |  5199360 |    7
+debussy-2-il-pleure-dans-mon-coeur.mxl               |  2 |   80 |   921600 |   10
+faure-4-a-clymene.mxl                                |  2 |   71 |  1217280 |    8
+french-abyssinia.mxl                                 |  5 |   22 |   203520 |    2
+gabrieli-ave-regina.mxl                              | 10 |   51 |   783360 |    5
+hensel-2-vorwurf.mxl                                 |  2 |   49 |   752640 |    6
+holyoke-acworth-2v.mxl                               |  2 |   33 |   506880 |    2
+holyoke-acworth.mxl                                  |  4 |   33 |   506880 |    2
+jenks-anthem-for-thanksgiving.mxl                    |  6 |  185 |  2396160 |    3
+joplin-please-say-you-will.mxl                       |  2 |  104 |  1198080 |    1
+king-abbeville.mxl                                   |  4 |   15 |   172800 |    1
+liliuokalani-aloha-oe.mxl                            |  4 |   23 |   353280 |    4
+liszt-2-pace-non-trovo.mxl                           |  3 |  111 |  1720320 |   15
+mahler-4-die-zwei-blauen-augen-von-meinem-schatz.mxl |  2 |   68 |  1056000 |   11
+marenzio-ahime-tal-fu-d-amore-e-l-esca-e-l-amo.mxl   |  6 |   47 |  1413120 |    6
+mel-asiso-sovra-un-sasso.mxl                         |  7 |   42 |  1320960 |    5
+mendelssohn-3-die-liebende-schreibt-mwv-k-66.mxl     |  2 |   47 |   721920 |    8
+mendelssohn-hark-the-herald-angels-sing.mxl          |  1 |   20 |   307200 |    8
+morley-a-la-strada-a-dio.mxl                         |  5 |   90 |  1428480 |    8
+prez-allegez-moy.mxl                                 |  6 |   45 |  1382400 |    3
+satie-5-chanson-du-chat.mxl                          |  2 |   23 |   176640 |    5
+schubert-12-am-meer.mxl                              |  2 |   45 |   691200 |    6
+schumann-1-was-weinst-du-bluemlein.mxl               |  2 |   69 |   529920 |    6
+schumann-4-die-stille.mxl                            |  2 |   40 |   460800 |    5
+strauss-2-caecilie.mxl                               |  2 |   56 |   860160 |   10
+usper-la-battaglia-a-8.mxl                           | 11 | 1836 | 33250080 |    6
+webern-5-ihr-tratet-zu-dem-herde.mxl                 |  2 |   16 |   161280 |   11
+wolf-9-der-schreckenberger.mxl                       |  2 |   55 |   633600 |   10
+wood-acton.mxl                                       |  4 |   17 |   399360 |    8
