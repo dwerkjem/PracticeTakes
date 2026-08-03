@@ -100,17 +100,12 @@ void MainComponent::applyAppearanceToOpenWindows()
     {
         microphoneWarning->setTheme(currentTheme);
     }
-    if (tunerState.isOpen())
+    for (const auto& entry : liveTools)
     {
-        applyAppearanceToTool(ToolType::tuner);
-    }
-    if (spectrogramState.isOpen())
-    {
-        applyAppearanceToTool(ToolType::spectrogram);
-    }
-    if (harmonicState.isOpen())
-    {
-        applyAppearanceToTool(ToolType::harmonics);
+        if (entry.state.isOpen())
+        {
+            applyAppearanceToTool(entry.id);
+        }
     }
     if (settingsWindow != nullptr)
     {

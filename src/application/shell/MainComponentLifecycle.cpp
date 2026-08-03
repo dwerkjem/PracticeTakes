@@ -99,15 +99,12 @@ MainComponent::~MainComponent()
     performanceLabWindow.reset();
 #endif
     workspaceContainers.clear();
-    tunerDock.reset();
-    spectrogramDock.reset();
-    harmonicDock.reset();
-    harmonicWindow.reset();
-    spectrogramWindow.reset();
-    tunerWindow.reset();
-    spectrogramComponent.reset();
-    harmonicComponent.reset();
-    tunerComponent.reset();
+    // Explicit, and before microphoneWarning, so every tool is gone while the
+    // audio service and look-and-feel it borrowed are still alive. Member
+    // destruction order would do this anyway -- see the liveTools declaration
+    // -- but a tool's destructor deregisters from audio, so making it visible
+    // here keeps that dependency from looking accidental.
+    liveTools.clear();
     microphoneWarning.reset();
     applicationProperties.closeFiles();
     setLookAndFeel(nullptr);

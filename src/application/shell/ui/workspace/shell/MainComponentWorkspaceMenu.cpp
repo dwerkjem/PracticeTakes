@@ -5,18 +5,18 @@
 namespace
 {
 constexpr int toolsMenuWidth = 190;
-constexpr int tunerMenuItemId = 1;
-constexpr int spectrogramMenuItemId = 2;
-constexpr int dockTunerMenuItemId = 11;
-constexpr int floatTunerMenuItemId = 12;
-constexpr int closeTunerMenuItemId = 13;
-constexpr int dockSpectrogramMenuItemId = 21;
-constexpr int floatSpectrogramMenuItemId = 22;
-constexpr int closeSpectrogramMenuItemId = 23;
-constexpr int harmonicMenuItemId = 3;
-constexpr int dockHarmonicMenuItemId = 41;
-constexpr int floatHarmonicMenuItemId = 42;
-constexpr int closeHarmonicMenuItemId = 43;
+
+// One block of four consecutive ids per registered tool, so the menu grows
+// with the registry instead of needing a hand-assigned id per tool. The base
+// leaves room below it for the fixed items and room above it, before
+// firstWorkspaceMenuItemId, for far more tools than the roadmap plans.
+constexpr int firstToolMenuItemId = 100;
+constexpr int toolMenuItemsPerTool = 4;
+constexpr int openToolMenuOffset = 0;
+constexpr int dockToolMenuOffset = 1;
+constexpr int floatToolMenuOffset = 2;
+constexpr int closeToolMenuOffset = 3;
+
 constexpr int horizontalLayoutMenuItemId = 31;
 constexpr int verticalLayoutMenuItemId = 32;
 constexpr int tabbedLayoutMenuItemId = 33;
@@ -33,49 +33,36 @@ constexpr int performanceLabMenuItemId = 50;
 
 void MainComponent::showToolsMenu()
 {
-    const auto tunerPresentation = tunerState.presentation();
-    const auto spectrogramPresentation = spectrogramState.presentation();
-
-    juce::PopupMenu tunerMenu;
-    tunerMenu.addItem(tunerMenuItemId, "Open or focus", true, tunerState.isOpen());
-    tunerMenu.addItem(
-        dockTunerMenuItemId, "Dock in workspace", true,
-        tunerPresentation == WorkspaceToolState::Presentation::docked);
-    tunerMenu.addItem(
-        floatTunerMenuItemId, "Float in window", true,
-        tunerPresentation == WorkspaceToolState::Presentation::floating);
-    tunerMenu.addSeparator();
-    tunerMenu.addItem(closeTunerMenuItemId, "Close", tunerState.isOpen());
-
-    juce::PopupMenu spectrogramMenu;
-    spectrogramMenu.addItem(
-        spectrogramMenuItemId, "Open or focus", true, spectrogramState.isOpen());
-    spectrogramMenu.addItem(
-        dockSpectrogramMenuItemId, "Dock in workspace", true,
-        spectrogramPresentation == WorkspaceToolState::Presentation::docked);
-    spectrogramMenu.addItem(
-        floatSpectrogramMenuItemId, "Float in window", true,
-        spectrogramPresentation == WorkspaceToolState::Presentation::floating);
-    spectrogramMenu.addSeparator();
-    spectrogramMenu.addItem(closeSpectrogramMenuItemId, "Close", spectrogramState.isOpen());
-
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
-    menu.addSubMenu("Tuner", tunerMenu);
-    menu.addSubMenu("Spectrogram", spectrogramMenu);
 
-    const auto harmonicPresentation = harmonicState.presentation();
-    juce::PopupMenu harmonicMenu;
-    harmonicMenu.addItem(harmonicMenuItemId, "Open or focus", true, harmonicState.isOpen());
-    harmonicMenu.addItem(
-        dockHarmonicMenuItemId, "Dock in workspace", true,
-        harmonicPresentation == WorkspaceToolState::Presentation::docked);
-    harmonicMenu.addItem(
-        floatHarmonicMenuItemId, "Float in window", true,
-        harmonicPresentation == WorkspaceToolState::Presentation::floating);
-    harmonicMenu.addSeparator();
-    harmonicMenu.addItem(closeHarmonicMenuItemId, "Close", harmonicState.isOpen());
-    menu.addSubMenu("Harmonic Analyzer", harmonicMenu);
+    // Every registered tool gets the same submenu, built from its definition.
+    // A new tool appears here by being registered -- there is nothing to add.
+    std::vector<ToolInstanceId> menuTools;
+    for (const auto& definition : builtInToolRegistry().tools())
+    {
+        const auto instance = instanceIdToOpen(definition.id);
+        const auto* entry = findLiveTool(instance);
+        const auto presentation = entry != nullptr ? entry->state.presentation()
+                                                   : WorkspaceToolState::Presentation::closed;
+        const auto isOpen = entry != nullptr && entry->state.isOpen();
+        const auto base =
+            firstToolMenuItemId + (static_cast<int>(menuTools.size()) * toolMenuItemsPerTool);
+
+        juce::PopupMenu toolMenu;
+        toolMenu.addItem(base + openToolMenuOffset, "Open or focus", true, isOpen);
+        toolMenu.addItem(
+            base + dockToolMenuOffset, "Dock in workspace", true,
+            presentation == WorkspaceToolState::Presentation::docked);
+        toolMenu.addItem(
+            base + floatToolMenuOffset, "Float in window", true,
+            presentation == WorkspaceToolState::Presentation::floating);
+        toolMenu.addSeparator();
+        toolMenu.addItem(base + closeToolMenuOffset, "Close", isOpen);
+
+        menu.addSubMenu(juce::String(definition.displayName), toolMenu);
+        menuTools.push_back(instance);
+    }
 
     const auto dockedCount = dockedTools().size();
     const auto canArrangeSplit = workspaceLayoutState.canSplitRoot();
@@ -128,64 +115,34 @@ void MainComponent::showToolsMenu()
         juce::PopupMenu::Options()
             .withTargetComponent(&toolsButton)
             .withMinimumWidth(toolsMenuWidth),
-        [safeThis, workspaceIds = std::move(workspaceIds)](int selectedItemId)
+        [safeThis, workspaceIds = std::move(workspaceIds),
+         menuTools = std::move(menuTools)](int selectedItemId)
         {
             if (safeThis == nullptr)
             {
                 return;
             }
 
-            if (selectedItemId == tunerMenuItemId)
+            const auto toolIndex = (selectedItemId - firstToolMenuItemId) / toolMenuItemsPerTool;
+            if (selectedItemId >= firstToolMenuItemId &&
+                toolIndex < static_cast<int>(menuTools.size()))
             {
-                safeThis->openTool(ToolType::tuner);
-            }
-            else if (selectedItemId == spectrogramMenuItemId)
-            {
-                safeThis->openTool(ToolType::spectrogram);
-            }
-            else if (selectedItemId == dockTunerMenuItemId)
-            {
-                safeThis->presentTool(ToolType::tuner, WorkspaceToolState::Presentation::docked);
-            }
-            else if (selectedItemId == floatTunerMenuItemId)
-            {
-                safeThis->presentTool(ToolType::tuner, WorkspaceToolState::Presentation::floating);
-            }
-            else if (selectedItemId == closeTunerMenuItemId)
-            {
-                safeThis->closeTool(ToolType::tuner);
-            }
-            else if (selectedItemId == dockSpectrogramMenuItemId)
-            {
-                safeThis->presentTool(
-                    ToolType::spectrogram, WorkspaceToolState::Presentation::docked);
-            }
-            else if (selectedItemId == floatSpectrogramMenuItemId)
-            {
-                safeThis->presentTool(
-                    ToolType::spectrogram, WorkspaceToolState::Presentation::floating);
-            }
-            else if (selectedItemId == closeSpectrogramMenuItemId)
-            {
-                safeThis->closeTool(ToolType::spectrogram);
-            }
-            else if (selectedItemId == harmonicMenuItemId)
-            {
-                safeThis->openTool(ToolType::harmonics);
-            }
-            else if (selectedItemId == dockHarmonicMenuItemId)
-            {
-                safeThis->presentTool(
-                    ToolType::harmonics, WorkspaceToolState::Presentation::docked);
-            }
-            else if (selectedItemId == floatHarmonicMenuItemId)
-            {
-                safeThis->presentTool(
-                    ToolType::harmonics, WorkspaceToolState::Presentation::floating);
-            }
-            else if (selectedItemId == closeHarmonicMenuItemId)
-            {
-                safeThis->closeTool(ToolType::harmonics);
+                const auto& instance = menuTools[static_cast<size_t>(toolIndex)];
+                switch ((selectedItemId - firstToolMenuItemId) % toolMenuItemsPerTool)
+                {
+                case openToolMenuOffset:
+                    safeThis->openTool(instance);
+                    break;
+                case dockToolMenuOffset:
+                    safeThis->presentTool(instance, WorkspaceToolState::Presentation::docked);
+                    break;
+                case floatToolMenuOffset:
+                    safeThis->presentTool(instance, WorkspaceToolState::Presentation::floating);
+                    break;
+                default:
+                    safeThis->closeTool(instance);
+                    break;
+                }
             }
             else if (selectedItemId == horizontalLayoutMenuItemId)
             {

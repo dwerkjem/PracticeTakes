@@ -42,37 +42,37 @@
 
 ## 4. Replace MainComponent's per-tool storage
 
-- [ ] 4.1 Add the `LiveTool` struct and `std::vector<LiveTool> liveTools` to
+- [x] 4.1 Add the `LiveTool` struct and `std::vector<LiveTool> liveTools` to
       `MainComponent.h`, declared after `audioInputService` and
       `appLookAndFeel`, with a comment stating that the declaration order is
       what guarantees instances die before their services.
-- [ ] 4.2 Delete `ToolType`, `allToolTypes`, the eleven per-tool members, and
+- [x] 4.2 Delete `ToolType`, `allToolTypes`, the eleven per-tool members, and
       the `stateFor`/`componentFor`/`windowFor`/`dockFor` accessors; replace
       with instance-id lookup over `liveTools`.
-- [ ] 4.3 Rewrite `MainComponentWorkspacePresentation.cpp` against the registry:
+- [x] 4.3 Rewrite `MainComponentWorkspacePresentation.cpp` against the registry:
       `createToolComponent` calls the factory, `toolName` and
       `preferredToolWindowSize` read the definition, `applyAppearanceToTool`
       calls `ToolComponent::setTheme` with no `dynamic_cast`.
-- [ ] 4.4 Add the single-instance policy check on the open path: opening a tool
+- [x] 4.4 Add the single-instance policy check on the open path: opening a tool
       that already has a live instance focuses it instead of creating a second.
-- [ ] 4.5 Assign `WorkspaceLayoutState::Tool` handles per live instance from a
+- [x] 4.5 Assign `WorkspaceLayoutState::Tool` handles per live instance from a
       counter; leave `WorkspaceLayoutState` itself unchanged.
 
 ## 5. Generalise the remaining shell call sites
 
-- [ ] 5.1 `MainComponentWorkspaceMenu.cpp`: build the Tools menu by iterating
+- [x] 5.1 `MainComponentWorkspaceMenu.cpp`: build the Tools menu by iterating
       registered tools instead of the three hardcoded blocks at lines 140-188.
-- [ ] 5.2 `MainComponentWorkspaceSnapshot.cpp`: build the `ToolBinding` list
+- [x] 5.2 `MainComponentWorkspaceSnapshot.cpp`: build the `ToolBinding` list
       from live instances instead of the hardcoded arrays at lines 112 and 138;
       key capture and restore by instance id.
-- [ ] 5.3 `MainComponentAppearance.cpp`: iterate live instances instead of the
+- [x] 5.3 `MainComponentAppearance.cpp`: iterate live instances instead of the
       three `applyAppearanceToTool` calls at lines 105-113.
-- [ ] 5.4 `MainComponentSettings.cpp`: replace the `currentTool` branches at
+- [x] 5.4 `MainComponentSettings.cpp`: replace the `currentTool` branches at
       lines 395-403, 525-529, and 590-598 with registry lookups.
-- [ ] 5.5 `MainComponentTestControl.cpp`: resolve approved state tool names
+- [x] 5.5 `MainComponentTestControl.cpp`: resolve approved state tool names
       through the catalog; retire `testcontrol::knownToolNames()` and its
       pinning test now that tool identity is JUCE-free.
-- [ ] 5.6 `MainComponentWorkspaceLayout.cpp` and `MainComponentWorkspaceDrag.cpp`:
+- [x] 5.6 `MainComponentWorkspaceLayout.cpp` and `MainComponentWorkspaceDrag.cpp`:
       swap `dockFor(tool)` for instance lookup.
 
 ## 6. Move dedup to instance ids

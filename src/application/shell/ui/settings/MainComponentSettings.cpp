@@ -1,8 +1,7 @@
 #include "../../MainComponent.h"
 
-#include "../../../../features/analysis/harmonics/HarmonicAnalyzerComponent.h"
-#include "../../../../features/analysis/spectrogram/SpectrogramComponent.h"
 #include "../../../../features/analysis/tuner/TunerComponent.h"
+#include "../../../../features/analysis/tuner/TunerSettingsCodec.h"
 #include "../../../configuration/SettingsImportPersistence.h"
 #include "../../../configuration/SettingsImportTransaction.h"
 #include "../../../configuration/SettingsTransferCodec.h"
@@ -375,6 +374,87 @@ void MainComponent::exportSettings()
         });
 }
 
+namespace
+{
+// The .ptsettings schema predates the tool registry and names three tools in
+// fixed fields. Rather than migrate that format, these two functions are the
+// single adapter between it and the id-keyed runtime -- the only place in the
+// shell that still spells a tool id out.
+constexpr auto tunerToolId = "tuner";
+constexpr auto spectrogramToolId = "spectrogram";
+constexpr auto harmonicToolId = "harmonic-analyzer";
+constexpr auto defaultToolId = tunerToolId;
+} // namespace
+
+void MainComponent::applyLegacyToolState(const AppSettings::State& state)
+{
+    const auto restore = [this](std::string_view toolId, const juce::String& bounds)
+    {
+        if (auto* entry = ensureLiveTool(instanceIdToOpen(toolId)))
+        {
+            entry->savedBounds = validWindowBounds(bounds);
+        }
+    };
+    restore(tunerToolId, state.tunerBounds);
+    restore(spectrogramToolId, state.spectrogramBounds);
+    restore(harmonicToolId, state.harmonicBounds);
+
+    if (auto* tuner = ensureLiveTool(instanceIdToOpen(tunerToolId)))
+    {
+        tuner->savedSettings = TunerSettingsCodec::encode(state.tuner);
+    }
+
+    switch (state.recentTool)
+    {
+    case AppSettings::RecentTool::spectrogram:
+        currentTool = instanceIdToOpen(spectrogramToolId);
+        break;
+    case AppSettings::RecentTool::harmonics:
+        currentTool = instanceIdToOpen(harmonicToolId);
+        break;
+    default:
+        currentTool = instanceIdToOpen(tunerToolId);
+        break;
+    }
+}
+
+void MainComponent::captureLegacyToolState(AppSettings::State& state)
+{
+    const auto boundsOf = [this](std::string_view toolId)
+    {
+        const auto* entry = findLiveTool(instanceIdToOpen(toolId));
+        return entry != nullptr ? entry->savedBounds : juce::Rectangle<int>{};
+    };
+    state.tunerBounds = boundsOf(tunerToolId).toString();
+    state.spectrogramBounds = boundsOf(spectrogramToolId).toString();
+    state.harmonicBounds = boundsOf(harmonicToolId).toString();
+
+    if (const auto* tuner = findLiveTool(instanceIdToOpen(tunerToolId));
+        tuner != nullptr && tuner->savedSettings.has_value())
+    {
+        state.tuner =
+            TunerSettingsCodec::decode(tuner->savedSettings).value_or(AppDefaults::tunerDefaults());
+    }
+    else
+    {
+        state.tuner = AppDefaults::tunerDefaults();
+    }
+
+    const auto focused = currentTool.toolId();
+    if (focused == spectrogramToolId)
+    {
+        state.recentTool = AppSettings::RecentTool::spectrogram;
+    }
+    else if (focused == harmonicToolId)
+    {
+        state.recentTool = AppSettings::RecentTool::harmonics;
+    }
+    else
+    {
+        state.recentTool = AppSettings::RecentTool::tuner;
+    }
+}
+
 bool MainComponent::applyTransferredSettings(const SettingsTransferModel& model)
 {
     const auto& state = model.state;
@@ -383,25 +463,9 @@ bool MainComponent::applyTransferredSettings(const SettingsTransferModel& model)
     feedbackInvitationsDisabledState = model.feedbackInvitationsDisabled;
     audioInputService.setMuted(state.microphoneMuted);
     audioInputService.setInputGain(static_cast<float>(state.inputGain));
-    savedTunerSettings = state.tuner;
-    savedTunerBounds = validWindowBounds(state.tunerBounds);
-    savedSpectrogramBounds = validWindowBounds(state.spectrogramBounds);
-    savedHarmonicBounds = validWindowBounds(state.harmonicBounds);
+    applyLegacyToolState(state);
     savedSettingsBounds = validWindowBounds(state.settingsBounds);
     workspaceCatalog = state.workspaceCatalog;
-
-    if (state.recentTool == AppSettings::RecentTool::spectrogram)
-    {
-        currentTool = ToolType::spectrogram;
-    }
-    else if (state.recentTool == AppSettings::RecentTool::harmonics)
-    {
-        currentTool = ToolType::harmonics;
-    }
-    else
-    {
-        currentTool = ToolType::tuner;
-    }
 
     if (auto audioState = juce::parseXML(state.audioDeviceState); audioState != nullptr)
     {
@@ -419,24 +483,14 @@ bool MainComponent::applyTransferredSettings(const SettingsTransferModel& model)
 
 void MainComponent::resetCurrentTool()
 {
-    auto& component = componentFor(currentTool);
-    if (component == nullptr)
+    auto* entry = findLiveTool(currentTool);
+    if (entry == nullptr || entry->component == nullptr)
     {
         return;
     }
 
-    if (auto* tuner = dynamic_cast<TunerComponent*>(component.get()))
-    {
-        tuner->resetToDefaults();
-    }
-    else if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(component.get()))
-    {
-        spectrogram->resetToDefaults();
-    }
-    else if (auto* harmonics = dynamic_cast<HarmonicAnalyzerComponent*>(component.get()))
-    {
-        harmonics->resetToDefaults();
-    }
+    entry->component->resetToDefaults();
+    entry->savedSettings.reset();
 }
 
 void MainComponent::resetAudio()
@@ -458,55 +512,43 @@ void MainComponent::resetAll()
     setTheme(AppDefaults::theme);
     selectedFullscreenMode = AppSettings::FullscreenMode::normal;
     resetAudio();
-    savedTunerSettings = AppDefaults::tunerDefaults();
-    currentTool = ToolType::tuner;
+    currentTool = instanceIdToOpen(defaultToolId);
 
-    if (auto* tuner = dynamic_cast<TunerComponent*>(tunerComponent.get()))
+    for (auto& entry : liveTools)
     {
-        tuner->resetToDefaults();
-    }
-    if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(spectrogramComponent.get()))
-    {
-        spectrogram->resetToDefaults();
-    }
-    if (auto* harmonics = dynamic_cast<HarmonicAnalyzerComponent*>(harmonicComponent.get()))
-    {
-        harmonics->resetToDefaults();
+        entry.savedSettings.reset();
+        if (entry.component != nullptr)
+        {
+            entry.component->resetToDefaults();
+        }
     }
     resetLayout();
 }
 
 void MainComponent::applyPreset(AppDefaults::Preset preset)
 {
-    if (!tunerState.isOpen())
+    const auto tuner = instanceIdToOpen(tunerToolId);
+    if (!toolIsOpen(tuner))
     {
-        openTool(ToolType::tuner);
+        openTool(tuner);
     }
-    if (auto* tuner = dynamic_cast<TunerComponent*>(tunerComponent.get()))
+    if (auto* entry = findLiveTool(tuner); entry != nullptr && entry->component != nullptr)
     {
-        tuner->applyPreset(preset);
+        // The only place the shell still names a specific tool: presets are a
+        // tuner concept, and there is no general "apply preset" in the
+        // contract to route them through.
+        if (auto* component = dynamic_cast<TunerComponent*>(entry->component.get()))
+        {
+            component->applyPreset(preset);
+        }
     }
 }
 
 AppSettings::State MainComponent::captureSettingsState()
 {
+    // Refreshes every instance's saved bounds and settings from its live
+    // component, so the legacy fields captured below are already current.
     captureActiveWorkspace();
-    if (tunerWindow != nullptr)
-    {
-        savedTunerBounds = tunerWindow->getBounds();
-    }
-    if (auto* tuner = dynamic_cast<TunerComponent*>(tunerComponent.get()))
-    {
-        savedTunerSettings = tuner->settings();
-    }
-    if (spectrogramWindow != nullptr)
-    {
-        savedSpectrogramBounds = spectrogramWindow->getBounds();
-    }
-    if (harmonicWindow != nullptr)
-    {
-        savedHarmonicBounds = harmonicWindow->getBounds();
-    }
     if (settingsWindow != nullptr)
     {
         savedSettingsBounds = settingsWindow->getBounds();
@@ -517,23 +559,8 @@ AppSettings::State MainComponent::captureSettingsState()
     state.microphoneMuted =
         sessionMicrophoneMuteEnabled ? persistedMicrophoneMuted : audioInputService.isMuted();
     state.inputGain = audioInputService.inputGain();
-    state.tuner = savedTunerSettings;
-    state.tunerBounds = savedTunerBounds.toString();
-    state.spectrogramBounds = savedSpectrogramBounds.toString();
-    state.harmonicBounds = savedHarmonicBounds.toString();
+    captureLegacyToolState(state);
     state.settingsBounds = savedSettingsBounds.toString();
-    if (currentTool == ToolType::tuner)
-    {
-        state.recentTool = AppSettings::RecentTool::tuner;
-    }
-    else if (currentTool == ToolType::spectrogram)
-    {
-        state.recentTool = AppSettings::RecentTool::spectrogram;
-    }
-    else
-    {
-        state.recentTool = AppSettings::RecentTool::harmonics;
-    }
     state.fullscreenMode = selectedFullscreenMode;
     WorkspaceSessionLifecycle::captureActive(workspaceCatalog, activeWorkspaceSnapshot);
     state.workspaceCatalog = workspaceCatalog;
@@ -583,20 +610,8 @@ void MainComponent::loadSettings()
     currentTheme = loaded.state.theme;
     audioInputService.setMuted(loaded.state.microphoneMuted);
     audioInputService.setInputGain(static_cast<float>(loaded.state.inputGain));
-    savedTunerSettings = loaded.state.tuner;
+    applyLegacyToolState(loaded.state);
     workspaceCatalog = loaded.state.workspaceCatalog;
-    if (loaded.state.recentTool == AppSettings::RecentTool::spectrogram)
-    {
-        currentTool = ToolType::spectrogram;
-    }
-    else if (loaded.state.recentTool == AppSettings::RecentTool::harmonics)
-    {
-        currentTool = ToolType::harmonics;
-    }
-    else
-    {
-        currentTool = ToolType::tuner;
-    }
     selectedFullscreenMode = loaded.state.fullscreenMode;
     feedbackInvitationsDisabledState =
         settingsFile->getBoolValue("feedback.invitationsDisabled", false);
@@ -606,9 +621,6 @@ void MainComponent::loadSettings()
         pendingAudioDeviceState = std::move(xml);
     }
 
-    savedTunerBounds = validWindowBounds(loaded.state.tunerBounds);
-    savedSpectrogramBounds = validWindowBounds(loaded.state.spectrogramBounds);
-    savedHarmonicBounds = validWindowBounds(loaded.state.harmonicBounds);
     savedSettingsBounds = validWindowBounds(loaded.state.settingsBounds);
 
     if (loaded.status == AppSettings::LoadStatus::recoveredFromCorruption)

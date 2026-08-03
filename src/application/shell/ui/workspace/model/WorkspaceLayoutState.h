@@ -21,7 +21,7 @@ class WorkspaceLayoutState
   public:
     // Opaque identifier for a workspace tool. This engine has no notion of a
     // fixed roster of tools -- callers map their own tool enumeration onto
-    // these ids (e.g. static_cast<Tool>(ToolType::tuner)).
+    // these ids (the shell assigns one per live tool instance).
     enum class Tool : int
     {
     };

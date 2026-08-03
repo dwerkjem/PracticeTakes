@@ -1,45 +1,169 @@
 #include "../../../MainComponent.h"
 
-#include "../../../../../features/analysis/harmonics/HarmonicAnalyzerComponent.h"
-#include "../../../../../features/analysis/spectrogram/SpectrogramComponent.h"
-#include "../../../../../features/analysis/tuner/TunerComponent.h"
+#include "../../../../tools/ToolServices.h"
 #include "../components/DockedToolPanel.h"
 #include "../components/ToolWindow.h"
 
-void MainComponent::openTool(ToolType tool, WorkspaceToolState::Presentation presentation)
+#include <utility>
+
+MainComponent::LiveTool* MainComponent::findLiveTool(const ToolInstanceId& instance)
 {
-    currentTool = tool;
-    if (toolIsOpen(tool))
+    for (auto& entry : liveTools)
     {
-        focusTool(tool);
-        return;
+        if (entry.id == instance)
+        {
+            return &entry;
+        }
     }
-    presentTool(tool, presentation);
+    return nullptr;
 }
 
-void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation presentation)
+const MainComponent::LiveTool* MainComponent::findLiveTool(const ToolInstanceId& instance) const
+{
+    for (const auto& entry : liveTools)
+    {
+        if (entry.id == instance)
+        {
+            return &entry;
+        }
+    }
+    return nullptr;
+}
+
+MainComponent::LiveTool* MainComponent::findLiveTool(WorkspaceLayoutState::Tool handle)
+{
+    for (auto& entry : liveTools)
+    {
+        if (entry.handle == handle)
+        {
+            return &entry;
+        }
+    }
+    return nullptr;
+}
+
+const ToolDefinition* MainComponent::definitionFor(const ToolInstanceId& instance) const
+{
+    return builtInToolRegistry().catalog().findForInstance(instance);
+}
+
+MainComponent::LiveTool* MainComponent::ensureLiveTool(const ToolInstanceId& instance)
+{
+    if (auto* existing = findLiveTool(instance))
+    {
+        return existing;
+    }
+    if (definitionFor(instance) == nullptr)
+    {
+        return nullptr;
+    }
+
+    LiveTool entry;
+    entry.id = instance;
+    entry.handle = static_cast<WorkspaceLayoutState::Tool>(nextToolHandle++);
+    liveTools.push_back(std::move(entry));
+    return &liveTools.back();
+}
+
+ToolInstanceId MainComponent::instanceIdToOpen(std::string_view toolId) const
+{
+    const auto* definition = builtInToolRegistry().catalog().find(toolId);
+    if (definition == nullptr)
+    {
+        return {};
+    }
+
+    // A single-instance tool always occupies ordinal 1, so reopening it lands
+    // on the same entry -- and the same saved bounds and settings -- it had
+    // before. A multi-instance tool takes the lowest ordinal not already live,
+    // which reuses the slot a closed instance gave up rather than counting
+    // upwards forever.
+    if (definition->instancePolicy == ToolInstancePolicy::single)
+    {
+        return ToolInstanceId::forOrdinal(toolId, 1);
+    }
+
+    for (std::size_t ordinal = 1;; ++ordinal)
+    {
+        auto candidate = ToolInstanceId::forOrdinal(toolId, ordinal);
+        const auto* existing = findLiveTool(candidate);
+        if (existing == nullptr || !existing->state.isOpen())
+        {
+            return candidate;
+        }
+    }
+}
+
+void MainComponent::openToolById(
+    std::string_view toolId,
+    WorkspaceToolState::Presentation presentation)
+{
+    const auto instance = instanceIdToOpen(toolId);
+    if (instance.empty())
+    {
+        return;
+    }
+    openTool(instance, presentation);
+}
+
+void MainComponent::openTool(
+    const ToolInstanceId& instance,
+    WorkspaceToolState::Presentation presentation)
+{
+    if (findLiveTool(instance) == nullptr && definitionFor(instance) == nullptr)
+    {
+        return;
+    }
+
+    currentTool = instance;
+    if (toolIsOpen(instance))
+    {
+        focusTool(instance);
+        return;
+    }
+    presentTool(instance, presentation);
+}
+
+void MainComponent::presentTool(
+    const ToolInstanceId& instance,
+    WorkspaceToolState::Presentation presentation)
 {
     if (presentation == WorkspaceToolState::Presentation::closed)
     {
-        closeTool(tool);
+        closeTool(instance);
         return;
     }
 
-    currentTool = tool;
-    auto& component = componentFor(tool);
-    if (component == nullptr)
+    auto* entry = ensureLiveTool(instance);
+    if (entry == nullptr)
     {
-        static_cast<void>(stateFor(tool).present(presentation));
-        component = createToolComponent(tool);
-    }
-    else if (stateFor(tool).presentation() == presentation)
-    {
-        focusTool(tool);
         return;
     }
 
-    detachToolPresentation(tool);
-    static_cast<void>(stateFor(tool).present(presentation));
+    currentTool = instance;
+    if (entry->component == nullptr)
+    {
+        static_cast<void>(entry->state.present(presentation));
+
+        const ToolServices services{audioInputService, currentTheme};
+        entry->component = builtInToolRegistry().create(instance.toolId(), services);
+        if (entry->component == nullptr)
+        {
+            return;
+        }
+        if (entry->savedSettings.has_value())
+        {
+            entry->component->applySettings(*entry->savedSettings);
+        }
+    }
+    else if (entry->state.presentation() == presentation)
+    {
+        focusTool(instance);
+        return;
+    }
+
+    detachToolPresentation(instance);
+    static_cast<void>(entry->state.present(presentation));
 
     // Keep the tiling tree in sync: docking places the tool somewhere in the
     // tree (auto-tabbing alongside whatever's already there, or becoming the
@@ -51,276 +175,198 @@ void MainComponent::presentTool(ToolType tool, WorkspaceToolState::Presentation 
     if (presentation == WorkspaceToolState::Presentation::docked)
     {
         workspaceLayoutState.insert(
-            static_cast<WorkspaceLayoutState::Tool>(tool), std::nullopt,
-            WorkspaceLayoutState::DropZone::centre);
+            entry->handle, std::nullopt, WorkspaceLayoutState::DropZone::centre);
     }
     else
     {
-        workspaceLayoutState.remove(static_cast<WorkspaceLayoutState::Tool>(tool));
+        workspaceLayoutState.remove(entry->handle);
     }
 
-    constructToolPresentation(tool, presentation);
+    constructToolPresentation(instance, presentation);
     rebuildWorkspaceContainer();
-    applyAppearanceToTool(tool);
-    focusTool(tool);
+    applyAppearanceToTool(instance);
+    focusTool(instance);
 }
 
 void MainComponent::constructToolPresentation(
-    ToolType tool,
+    const ToolInstanceId& instance,
     WorkspaceToolState::Presentation presentation)
 {
     jassert(presentation != WorkspaceToolState::Presentation::closed);
-    auto& component = componentFor(tool);
-    jassert(component != nullptr);
+    auto* entry = findLiveTool(instance);
+    if (entry == nullptr || entry->component == nullptr)
+    {
+        jassertfalse;
+        return;
+    }
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
-    const auto closeHandler = [safeThis, tool]
+    const auto closeHandler = [safeThis, instance]
     {
         if (safeThis != nullptr)
         {
-            safeThis->closeTool(tool);
+            safeThis->closeTool(instance);
         }
     };
-    const auto dragHandler = [safeThis, tool](juce::Component& source)
+    const auto dragHandler = [safeThis, instance](juce::Component& source)
     {
         if (safeThis != nullptr)
         {
-            safeThis->beginToolDrag(tool, source);
+            safeThis->beginToolDrag(instance, source);
         }
     };
-    const auto feedbackHandler = [safeThis, tool]
+    const auto feedbackHandler = [safeThis, instance]
     {
         if (safeThis != nullptr)
         {
-            safeThis->showFeedback(safeThis->toolName(tool));
+            safeThis->showFeedback(safeThis->toolName(instance));
         }
     };
-    const auto focusHandler = [safeThis, tool]
+    const auto focusHandler = [safeThis, instance]
     {
         if (safeThis != nullptr)
         {
-            safeThis->recordToolFocus(tool);
+            safeThis->recordToolFocus(instance);
         }
     };
 
     if (presentation == WorkspaceToolState::Presentation::docked)
     {
-        const auto floatHandler = [safeThis, tool]
+        const auto floatHandler = [safeThis, instance]
         {
             if (safeThis != nullptr)
             {
-                safeThis->presentTool(tool, WorkspaceToolState::Presentation::floating);
+                safeThis->presentTool(instance, WorkspaceToolState::Presentation::floating);
             }
         };
-        auto& dock = dockFor(tool);
-        dock = std::make_unique<DockedToolPanel>(
-            toolName(tool), *component, dragHandler, floatHandler, feedbackHandler, closeHandler,
-            focusHandler);
+        entry->dock = std::make_unique<DockedToolPanel>(
+            toolName(instance), *entry->component, dragHandler, floatHandler, feedbackHandler,
+            closeHandler, focusHandler);
     }
     else
     {
-        const auto dockHandler = [safeThis, tool]
+        const auto dockHandler = [safeThis, instance]
         {
             if (safeThis != nullptr)
             {
-                safeThis->presentTool(tool, WorkspaceToolState::Presentation::docked);
+                safeThis->presentTool(instance, WorkspaceToolState::Presentation::docked);
             }
         };
-        auto& window = windowFor(tool);
-        window = std::make_unique<ToolWindow>(
-            toolName(tool), *component, preferredToolWindowSize(tool), dragHandler, dockHandler,
+        const auto* definition = definitionFor(instance);
+        const auto preferredSize =
+            definition != nullptr
+                ? juce::Point<
+                      int>{definition->preferredSize.width, definition->preferredSize.height}
+                : juce::Point<int>{900, 700};
+        entry->window = std::make_unique<ToolWindow>(
+            toolName(instance), *entry->component, preferredSize, dragHandler, dockHandler,
             feedbackHandler, closeHandler, focusHandler);
-        const auto savedBounds =
-            tool == ToolType::tuner
-                ? savedTunerBounds
-                : (tool == ToolType::spectrogram ? savedSpectrogramBounds : savedHarmonicBounds);
-        if (!savedBounds.isEmpty())
+        if (!entry->savedBounds.isEmpty())
         {
-            window->setBounds(savedBounds);
+            entry->window->setBounds(entry->savedBounds);
         }
     }
 }
 
-void MainComponent::focusTool(ToolType tool)
+void MainComponent::focusTool(const ToolInstanceId& instance)
 {
-    if (auto& window = windowFor(tool); window != nullptr)
+    if (auto* entry = findLiveTool(instance))
     {
-        window->setVisible(true);
-        window->toFront(true);
+        if (entry->window != nullptr)
+        {
+            entry->window->setVisible(true);
+            entry->window->toFront(true);
+        }
+        else if (entry->dock != nullptr)
+        {
+            entry->dock->grabKeyboardFocus();
+        }
     }
-    else if (auto& dock = dockFor(tool); dock != nullptr)
-    {
-        dock->grabKeyboardFocus();
-    }
-    recordToolFocus(tool);
+    recordToolFocus(instance);
 }
 
-void MainComponent::recordToolFocus(ToolType tool)
+void MainComponent::recordToolFocus(const ToolInstanceId& instance)
 {
-    currentTool = tool;
+    currentTool = instance;
     captureActiveWorkspace();
 }
 
-void MainComponent::closeTool(ToolType tool)
+void MainComponent::closeTool(const ToolInstanceId& instance)
 {
-    if (!toolIsOpen(tool))
+    auto* entry = findLiveTool(instance);
+    if (entry == nullptr || !entry->state.isOpen())
     {
         return;
     }
 
-    if (auto& window = windowFor(tool); window != nullptr)
+    // Capture before destruction: once the component is gone its settings are
+    // unrecoverable, and reopening should bring the tool back as it was.
+    if (entry->component != nullptr)
     {
-        if (tool == ToolType::tuner)
-        {
-            savedTunerBounds = window->getBounds();
-        }
-        else if (tool == ToolType::spectrogram)
-        {
-            savedSpectrogramBounds = window->getBounds();
-        }
-        else
-        {
-            savedHarmonicBounds = window->getBounds();
-        }
-    }
-    if (auto* tuner = dynamic_cast<TunerComponent*>(componentFor(tool).get()))
-    {
-        savedTunerSettings = tuner->settings();
+        entry->savedSettings = entry->component->captureSettings();
     }
 
-    detachToolPresentation(tool);
-    workspaceLayoutState.remove(static_cast<WorkspaceLayoutState::Tool>(tool));
-    componentFor(tool).reset();
-    static_cast<void>(stateFor(tool).close());
+    detachToolPresentation(instance);
+    workspaceLayoutState.remove(entry->handle);
+    entry->component.reset();
+    static_cast<void>(entry->state.close());
     rebuildWorkspaceContainer();
     captureActiveWorkspace();
     recordSuccessfulToolUse();
 }
 
-std::unique_ptr<juce::Component> MainComponent::createToolComponent(ToolType tool)
+juce::String MainComponent::toolName(const ToolInstanceId& instance) const
 {
-    if (tool == ToolType::tuner)
+    const auto* definition = definitionFor(instance);
+    if (definition == nullptr)
     {
-        auto tuner = std::make_unique<TunerComponent>(audioInputService);
-        tuner->applySettings(savedTunerSettings);
-        tuner->setTheme(currentTheme);
-        return tuner;
+        return {};
     }
 
-    if (tool == ToolType::spectrogram)
-    {
-        auto spectrogram = std::make_unique<SpectrogramComponent>(audioInputService);
-        spectrogram->setTheme(currentTheme);
-        return spectrogram;
-    }
+    const auto name = juce::String(definition->displayName);
+    const auto ordinal = instance.ordinal().value_or(1);
 
-    auto harmonics = std::make_unique<HarmonicAnalyzerComponent>(audioInputService);
-    harmonics->setTheme(currentTheme);
-    return harmonics;
+    // Only a duplicate needs disambiguating; the first instance keeps the
+    // tool's plain name, which is what every existing workspace and screenshot
+    // expects to see.
+    return ordinal > 1 ? name + " " + juce::String(static_cast<int>(ordinal)) : name;
 }
 
-juce::String MainComponent::toolName(ToolType tool) const
+bool MainComponent::toolIsOpen(const ToolInstanceId& instance) const
 {
-    if (tool == ToolType::tuner)
-    {
-        return "Tuner";
-    }
-    return tool == ToolType::spectrogram ? "Spectrogram" : "Harmonic Analyzer";
+    const auto* entry = findLiveTool(instance);
+    return entry != nullptr && entry->state.isOpen();
 }
 
-juce::Point<int> MainComponent::preferredToolWindowSize(ToolType tool) const
+void MainComponent::detachToolPresentation(const ToolInstanceId& instance)
 {
-    if (tool == ToolType::tuner)
+    auto* entry = findLiveTool(instance);
+    if (entry == nullptr)
     {
-        return {920, 760};
+        return;
     }
-    return tool == ToolType::spectrogram ? juce::Point<int>{980, 650} : juce::Point<int>{980, 700};
-}
 
-bool MainComponent::toolIsOpen(ToolType tool) const
-{
-    return stateFor(tool).isOpen();
-}
-
-WorkspaceToolState& MainComponent::stateFor(ToolType tool)
-{
-    if (tool == ToolType::tuner)
+    if (entry->window != nullptr)
     {
-        return tunerState;
+        entry->savedBounds = entry->window->getBounds();
+        entry->window->releaseContent();
+        entry->window.reset();
     }
-    return tool == ToolType::spectrogram ? spectrogramState : harmonicState;
-}
-
-const WorkspaceToolState& MainComponent::stateFor(ToolType tool) const
-{
-    if (tool == ToolType::tuner)
+    if (entry->dock != nullptr)
     {
-        return tunerState;
-    }
-    return tool == ToolType::spectrogram ? spectrogramState : harmonicState;
-}
-
-std::unique_ptr<juce::Component>& MainComponent::componentFor(ToolType tool)
-{
-    if (tool == ToolType::tuner)
-    {
-        return tunerComponent;
-    }
-    return tool == ToolType::spectrogram ? spectrogramComponent : harmonicComponent;
-}
-
-std::unique_ptr<MainComponent::ToolWindow>& MainComponent::windowFor(ToolType tool)
-{
-    if (tool == ToolType::tuner)
-    {
-        return tunerWindow;
-    }
-    return tool == ToolType::spectrogram ? spectrogramWindow : harmonicWindow;
-}
-
-std::unique_ptr<MainComponent::DockedToolPanel>& MainComponent::dockFor(ToolType tool)
-{
-    if (tool == ToolType::tuner)
-    {
-        return tunerDock;
-    }
-    return tool == ToolType::spectrogram ? spectrogramDock : harmonicDock;
-}
-
-void MainComponent::detachToolPresentation(ToolType tool)
-{
-    if (auto& window = windowFor(tool); window != nullptr)
-    {
-        if (tool == ToolType::tuner)
-        {
-            savedTunerBounds = window->getBounds();
-        }
-        else if (tool == ToolType::spectrogram)
-        {
-            savedSpectrogramBounds = window->getBounds();
-        }
-        else
-        {
-            savedHarmonicBounds = window->getBounds();
-        }
-        window->releaseContent();
-        window.reset();
-    }
-    if (auto& dock = dockFor(tool); dock != nullptr)
-    {
-        dock->releaseContent();
+        entry->dock->releaseContent();
         // Detach from whatever the dock's actual current parent is -- a
         // TabbedComponent needs its tab explicitly removed first (it keeps
         // its own bookkeeping of tab-index-to-content-component), while any
         // other parent (WorkspaceSplitPane, or this MainComponent directly
         // for a lone docked tool) can just have the child removed directly.
-        if (auto* parent = dock->getParentComponent())
+        if (auto* parent = entry->dock->getParentComponent())
         {
             if (auto* tabs = dynamic_cast<juce::TabbedComponent*>(parent))
             {
                 for (int index = tabs->getNumTabs(); --index >= 0;)
                 {
-                    if (tabs->getTabContentComponent(index) == dock.get())
+                    if (tabs->getTabContentComponent(index) == entry->dock.get())
                     {
                         tabs->removeTab(index);
                     }
@@ -328,37 +374,37 @@ void MainComponent::detachToolPresentation(ToolType tool)
             }
             else
             {
-                parent->removeChildComponent(dock.get());
+                parent->removeChildComponent(entry->dock.get());
             }
         }
-        dock.reset();
+        entry->dock.reset();
     }
 }
 
-void MainComponent::applyAppearanceToTool(ToolType tool)
+void MainComponent::applyAppearanceToTool(const ToolInstanceId& instance)
 {
-    const auto palette = appPaletteFor(currentTheme);
-    if (auto& window = windowFor(tool); window != nullptr)
+    auto* entry = findLiveTool(instance);
+    if (entry == nullptr)
     {
-        window->applyAppearance(&appLookAndFeel, palette.background);
-    }
-    if (auto& dock = dockFor(tool); dock != nullptr)
-    {
-        dock->setLookAndFeel(&appLookAndFeel);
-        dock->sendLookAndFeelChange();
-        dock->repaint();
+        return;
     }
 
-    if (auto* tuner = dynamic_cast<TunerComponent*>(componentFor(tool).get()))
+    const auto palette = appPaletteFor(currentTheme);
+    if (entry->window != nullptr)
     {
-        tuner->setTheme(currentTheme);
+        entry->window->applyAppearance(&appLookAndFeel, palette.background);
     }
-    if (auto* spectrogram = dynamic_cast<SpectrogramComponent*>(componentFor(tool).get()))
+    if (entry->dock != nullptr)
     {
-        spectrogram->setTheme(currentTheme);
+        entry->dock->setLookAndFeel(&appLookAndFeel);
+        entry->dock->sendLookAndFeelChange();
+        entry->dock->repaint();
     }
-    if (auto* harmonics = dynamic_cast<HarmonicAnalyzerComponent*>(componentFor(tool).get()))
+
+    // No dynamic_cast ladder: every tool answers setTheme through the contract,
+    // so a tool the shell has never heard of is themed like any other.
+    if (entry->component != nullptr)
     {
-        harmonics->setTheme(currentTheme);
+        entry->component->setTheme(currentTheme);
     }
 }

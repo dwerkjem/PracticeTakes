@@ -183,11 +183,4 @@ const std::vector<std::string>& approvedGeometryNames()
 
     return names;
 }
-
-const std::vector<std::string>& knownToolNames()
-{
-    static const std::vector<std::string> names{"tuner", "spectrogram", "harmonics"};
-
-    return names;
-}
 } // namespace testcontrol
