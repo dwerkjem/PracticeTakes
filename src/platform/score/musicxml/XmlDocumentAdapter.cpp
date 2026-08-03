@@ -265,7 +265,7 @@ XmlParseResult parseXmlDocument(const std::string& document)
 
     if (root == nullptr)
     {
-        const juce::String error = parser.getLastParseError();
+        const juce::String& error = parser.getLastParseError();
 
         result.status = XmlParseStatus::malformed;
         result.error = error.isNotEmpty() ? error.toStdString()

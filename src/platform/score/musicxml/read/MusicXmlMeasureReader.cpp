@@ -515,7 +515,7 @@ void readDirection(
         if (const std::optional<double> tempo = parseDecimal(attributeValue(*sound, "tempo"));
             tempo.has_value() && *tempo > 0.0)
         {
-            soundTempo = *tempo;
+            soundTempo = tempo;
         }
     }
 
@@ -548,7 +548,7 @@ void readDirection(
     direction.onset = onset;
     direction.staff = staff;
     direction.text = tempoText;
-    direction.beatsPerMinute = *tempo;
+    direction.beatsPerMinute = tempo;
     measure.directions.push_back(std::move(direction));
 
     context.tempoEntries.push_back({measureStart + onset, *tempo});
