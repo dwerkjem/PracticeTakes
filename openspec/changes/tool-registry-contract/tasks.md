@@ -77,27 +77,27 @@
 
 ## 6. Move dedup to instance ids
 
-- [ ] 6.1 Change the uniqueness checks in `WorkspaceNormalizer` (lines 59, 147,
+- [x] 6.1 Change the uniqueness checks in `WorkspaceNormalizer` (lines 59, 147,
       195) and `WorkspaceSnapshotApply` (lines 74, 195, 212) to key on instance
       id rather than resolved tool id.
-- [ ] 6.2 Confirm `WorkspaceSnapshotApplyTests`, `WorkspaceRecoveryTests`,
+- [x] 6.2 Confirm `WorkspaceSnapshotApplyTests`, `WorkspaceRecoveryTests`,
       `WorkspaceLayoutStateTests`, and `WorkspaceCatalogCodecTests` pass with no
       edits — they pin the invariant this change preserves.
-- [ ] 6.3 Add a restoration test: a snapshot naming a single-instance tool twice
+- [x] 6.3 Add a restoration test: a snapshot naming a single-instance tool twice
       restores to exactly one instance and still succeeds.
 
 ## 7. Lifecycle and policy tests
 
-- [ ] 7.1 Add `src/tests/application/tools/ToolLifecycleTests.cpp` asserting the
+- [x] 7.1 Add `src/tests/application/tools/ToolLifecycleTests.cpp` asserting the
       create → restore-settings → attach → detach → capture-settings → destroy
       order without constructing a JUCE window. Register in `CMakeLists.txt`.
-- [ ] 7.2 Add a policy test registering a fake multi-instance tool and asserting
+- [x] 7.2 Add a policy test registering a fake multi-instance tool and asserting
       two distinct instance ids, so the `multi` branch is exercised even though
       no shipped tool uses it.
-- [ ] 7.3 Add a test that a settings payload whose version differs from the
+- [x] 7.3 Add a test that a settings payload whose version differs from the
       declared `settingsVersion` is discarded and the instance starts at
       defaults.
-- [ ] 7.4 Add the "new tool needs only a registry entry" regression test:
+- [x] 7.4 Add the "new tool needs only a registry entry" regression test:
       register a throwaway tool in a test build and assert it reaches the menu
       model, both presentations, and workspace capture.
 

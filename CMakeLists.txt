@@ -249,6 +249,7 @@ target_sources(PracticeTakes
         src/application/tools/BuiltInTools.h
         src/application/tools/ToolCatalog.h
         src/application/tools/ToolComponent.h
+        src/application/tools/ToolInstanceAllocator.h
         src/application/tools/ToolInstanceId.h
         src/application/tools/ToolRegistry.h
         src/application/tools/ToolServices.h
@@ -398,6 +399,8 @@ if(BUILD_TESTING)
         src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
         src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp
         src/tests/application/tools/ToolCatalogTests.cpp
+        src/tests/application/tools/ToolLifecycleTests.cpp
+        src/tests/application/tools/UnknownToolIntegrationTests.cpp
         src/tests/application/tools/ToolInstanceIdTests.cpp
         src/tests/application/testcontrol/TestControlClickerTests.cpp
         src/tests/application/testcontrol/TestControlCommandTests.cpp

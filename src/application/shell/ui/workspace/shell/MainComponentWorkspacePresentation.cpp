@@ -1,5 +1,6 @@
 #include "../../../MainComponent.h"
 
+#include "../../../../tools/ToolInstanceAllocator.h"
 #include "../../../../tools/ToolServices.h"
 #include "../components/DockedToolPanel.h"
 #include "../components/ToolWindow.h"
@@ -67,31 +68,15 @@ MainComponent::LiveTool* MainComponent::ensureLiveTool(const ToolInstanceId& ins
 
 ToolInstanceId MainComponent::instanceIdToOpen(std::string_view toolId) const
 {
-    const auto* definition = builtInToolRegistry().catalog().find(toolId);
-    if (definition == nullptr)
+    // The policy itself lives in ToolInstanceAllocator so it can be tested
+    // without a display; all the shell contributes is what is currently live.
+    const auto isLive = [this](const ToolInstanceId& candidate)
     {
-        return {};
-    }
-
-    // A single-instance tool always occupies ordinal 1, so reopening it lands
-    // on the same entry -- and the same saved bounds and settings -- it had
-    // before. A multi-instance tool takes the lowest ordinal not already live,
-    // which reuses the slot a closed instance gave up rather than counting
-    // upwards forever.
-    if (definition->instancePolicy == ToolInstancePolicy::single)
-    {
-        return ToolInstanceId::forOrdinal(toolId, 1);
-    }
-
-    for (std::size_t ordinal = 1;; ++ordinal)
-    {
-        auto candidate = ToolInstanceId::forOrdinal(toolId, ordinal);
         const auto* existing = findLiveTool(candidate);
-        if (existing == nullptr || !existing->state.isOpen())
-        {
-            return candidate;
-        }
-    }
+        return existing != nullptr && existing->state.isOpen();
+    };
+    return ToolInstanceAllocator::nextInstanceId(builtInToolRegistry().catalog(), toolId, isLive)
+        .value_or(ToolInstanceId{});
 }
 
 void MainComponent::openToolById(
