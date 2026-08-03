@@ -46,3 +46,10 @@
 - [x] 6.4 Verify output equivalence and scenario correctness before accepting each strategy comparison
 - [ ] 6.5 Complete an end-to-end hardware acceptance run covering configuration, execution, cancellation, persistence, reopening, comparison, and export
 - [x] 6.6 Keep the feature development-gated until repeatability, audio-thread safety, and report compatibility acceptance criteria are recorded and approved
+
+**6.2 and 6.5 are unplanned, not pending.** Both need a reference-hardware
+matrix — several machines, controlled ambient load, repeated interleaved runs —
+that a single-developer project does not have. The Performance Lab ships
+development-gated (6.6) and its results are interpreted per machine, so neither
+task blocks anything that depends on this change. Archived on this basis rather
+than left open as work someone is waiting for.

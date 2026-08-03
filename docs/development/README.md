@@ -33,7 +33,7 @@ broader music-practice and digital-audio workstation application.
 - [Code style](quality/CODE_STYLE.md) — readability and real-time audio guidelines
 - [QA strategy](quality/QA_STRATEGY.md) — the current CI/testing gap analysis and plan for closing it
 - [Test layout](quality/TEST_LAYOUT.md) — how `src/tests/` mirrors `src/`, where a new test goes, and what sits outside the mirror
-- [Manual GUI verification](quality/MANUAL_GUI_VERIFICATION.md) — the interactive harness that drives the app, asks about each surface, and records the run
+- [The testing suite](quality/TESTING_SUITE.md) — the standalone suite: unattended capture, the grid review, the run store, and the release record
 
 ### `performance/`
 

@@ -143,8 +143,8 @@ int main(int argc, char** argv)
     const auto requiredArguments = resize ? 5 : 3;
     if (argc != requiredArguments && argc != requiredArguments + 2)
     {
-        std::cerr << "usage: window_control PID activate|maximize|restore|resize [WIDTH HEIGHT] "
-                     "[--title WINDOW_TITLE]\n";
+        std::cerr << "usage: window_control PID activate|maximize|restore|resize|geometry "
+                     "[WIDTH HEIGHT] [--title WINDOW_TITLE]\n";
         return 2;
     }
     std::optional<std::string> title;
@@ -169,6 +169,24 @@ int main(int argc, char** argv)
     {
         XCloseDisplay(display);
         return 1;
+    }
+
+    // Reporting the size is not a window action, so it answers and returns
+    // before the action dispatch below. The testing suite polls this after
+    // asking the application to change geometry: a window that has not yet
+    // adopted the requested size would otherwise be captured at the old one,
+    // and nothing downstream could tell that from a real layout result.
+    if (action == "geometry")
+    {
+        XWindowAttributes attributes{};
+        const auto read = XGetWindowAttributes(display, *window, &attributes) != 0;
+        XCloseDisplay(display);
+        if (!read)
+        {
+            return 1;
+        }
+        std::cout << attributes.width << ' ' << attributes.height << '\n';
+        return 0;
     }
 
     auto sent = false;

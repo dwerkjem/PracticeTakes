@@ -28,7 +28,7 @@ import time
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
-sys.path.insert(0, str(REPOSITORY_ROOT / "tools" / "scripts" / "manual_gui"))
+sys.path.insert(0, str(REPOSITORY_ROOT / "tools" / "scripts" / "testing_suite"))
 
 from driver import ApplicationDriver, ChannelError  # noqa: E402
 

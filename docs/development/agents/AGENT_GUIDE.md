@@ -59,10 +59,13 @@ ctest --test-dir build --output-on-failure
 Run a single test / tag directly through the binary (Catch2 CLI):
 
 ```bash
-build/bin/PracticeTakesTests "Test name or wildcard*"
-build/bin/PracticeTakesTests "[tag]"
-build/bin/PracticeTakesTests "[.benchmark]"          # opt-in perf benchmarks
+build/PracticeTakesTests "Test name or wildcard*"
+build/PracticeTakesTests "[tag]"
+build/PracticeTakesTests "[.benchmark]"          # opt-in perf benchmarks
 ```
+
+`PracticeTakesTests` links into the build root, not `build/bin/` — only
+`PracticeTakes` sets a `RUNTIME_OUTPUT_DIRECTORY`.
 
 Performance Lab (manual, opt-in instrumentation window) needs a separate
 configure flag:
@@ -113,6 +116,30 @@ docstring). An empty result is a hard error, not a silent pass.
 
 Captures first-launch and restored-workspace reference screenshots and times
 fresh launches against them; writes evidence to `build/ui-validation/step-7/`.
+
+### The testing suite
+
+A standalone application under `tools/scripts/testing_suite/`, not part of
+Practice Takes. `uv run test-suite` with no arguments opens a hub listing every
+suite the project has — C++ tests, Python script tests, service tests, the smoke
+test, benchmarks, golden images, UI capture — and builds whatever a selected
+suite needs before running it.
+
+```bash
+uv run test-suite                        # the hub
+uv run test-suite run --all              # same thing without a browser
+uv run test-suite run --kind performance
+uv run test-suite attend                 # only the questions an image cannot answer
+uv run test-suite export                 # the record the release gate reads
+uv run test-suite sync                   # share run history through git
+```
+
+Runs accumulate in a machine-local SQLite store — captures, verdicts, suite
+results, measurements, all against one run — while the exported record under
+`docs/development/quality/manual-runs/` stays the release gate's only input.
+`sync` writes one JSON file per run to `docs/development/quality/run-history/`
+so pass rates and performance trends travel through git; images never do. See
+`docs/development/quality/TESTING_SUITE.md`. No CI check runs any of it.
 
 ## Architecture
 

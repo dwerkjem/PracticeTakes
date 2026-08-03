@@ -59,7 +59,7 @@ jobs:
       # The tag path has no workflow inputs, so it cannot carry a skip. Its
       # equivalent is a committed marker file, which is a reviewable decision
       # rather than a checkbox -- the asymmetry is deliberate and documented in
-      # docs/development/MANUAL_GUI_VERIFICATION.md.
+      # docs/development/quality/TESTING_SUITE.md.
       - name: Check for a committed skip marker
         id: marker
         shell: bash

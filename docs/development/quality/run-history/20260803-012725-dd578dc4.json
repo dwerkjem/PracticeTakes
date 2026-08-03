@@ -1,0 +1,23 @@
+{
+  "capture_failures": 0,
+  "captures": 38,
+  "commit": "97d5d8e2f3fe",
+  "complete": false,
+  "failed": 3,
+  "key": "dd578dc41161f931:2026-08-03T01:27:25:97d5d8e2f3fe",
+  "machine": "dd578dc41161f931",
+  "machine_description": "11th Gen Intel(R) Core(TM) i7-11700KF @ 3.60GHz \u00b7 3520x1080",
+  "measurements": [],
+  "mode": "full",
+  "passed": 100,
+  "skipped": 0,
+  "started_at": "2026-08-03T01:27:25",
+  "suites": [
+    {
+      "cases": 0,
+      "duration_seconds": 40.45516,
+      "failures": 0,
+      "suite": "UI golden images"
+    }
+  ]
+}

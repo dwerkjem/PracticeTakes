@@ -121,7 +121,7 @@ def check(records: list[dict], release_commit: str) -> str:
     if not records:
         raise GateFailure(
             f"No manual verification records found in {RECORDS_DIRECTORY}. "
-            f"Run `uv run ui-test --full` before releasing."
+            f"Run `uv run test-suite capture` and review it before releasing."
         )
 
     full_runs = [entry for entry in records if entry.get("mode") == FULL_MODE]
@@ -129,7 +129,7 @@ def check(records: list[dict], release_commit: str) -> str:
     if not full_runs:
         raise GateFailure(
             "No full-mode manual run found; only quick runs. A quick run is not "
-            "a release check — run `uv run ui-test --full`."
+            "a release check — run `uv run test-suite capture --mode full`."
         )
 
     newest = full_runs[0]
@@ -162,7 +162,7 @@ def check(records: list[dict], release_commit: str) -> str:
             f"The run in {newest['_path']} verified {verified}, and these "
             f"release-affecting files have changed since:\n  "
             + "\n  ".join(changed)
-            + "\nRe-run `uv run ui-test --full`."
+            + "\nRe-run `uv run test-suite capture --mode full`."
         )
 
     unwaived = [
