@@ -1,4 +1,17 @@
-# Worker database fidelity
+## Purpose
+
+Defines what a database-backed test of `src/services/feedback-intake` has to do
+to count: execute the worker's SQL against a real SQLite engine, against a
+schema built from the project's own migration files, exercising the constraints
+the production database enforces.
+
+The rule exists because of what it replaced. A fake that decided its answer by
+matching substrings of the SQL it was handed passed happily while the real
+query was wrong — it was testing that the code still contained certain words,
+not that it worked. A test that cannot fail when the query is broken is worse
+than no test, because it is counted as coverage.
+
+## Requirements
 
 ### Requirement: Worker tests execute SQL against a real database engine
 Automated tests for `src/services/feedback-intake` SHALL execute the worker's SQL

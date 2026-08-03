@@ -1,4 +1,17 @@
-# Knowledge graph site
+## Purpose
+
+Defines how the Understand-Anything knowledge graph is published as a static,
+credential-free site on GitHub Pages, so the repository's architecture can be
+explored from a link rather than by installing a plugin and running a local
+server.
+
+Most of what follows is about a published artifact being trustworthy rather
+than merely present: it is built from committed graph data, it names the commit
+it describes, a regression is caught before it goes live, third-party code
+carries its licence, no secret is disclosed, and a failed publish leaves the
+previous site standing rather than replacing it with a broken one.
+
+## Requirements
 
 ### Requirement: The knowledge graph is published as a static browsable site
 The project SHALL publish the Understand-Anything knowledge graph as a static

@@ -1,4 +1,16 @@
-# Python script test gate
+## Purpose
+
+Defines the CI gate over `tools/scripts/`: the Python test suite runs on every
+pull request and push to `main` that touches those scripts, and a failure
+blocks the check.
+
+The requirement that earns this capability its existence is discovery.
+`unittest discover` finds nothing in this tree — the script directories are not
+importable packages — so it reports success while running zero tests, and a
+gate wired to it stays green forever. Tests are therefore found by path, and an
+empty result is a hard error rather than a silent pass.
+
+## Requirements
 
 ### Requirement: Python tests run in CI
 The system SHALL run the repository's Python test suite in GitHub Actions on
