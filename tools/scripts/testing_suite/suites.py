@@ -40,8 +40,10 @@ class Suite:
     kind: str
     description: str
 
-    # Run from the repository root. Empty for a suite the runner handles itself
-    # (the UI capture, which is a pass rather than a command).
+    # Run from the repository root. A "{Target}" argument is replaced with
+    # wherever that build target actually ended up, since CMake does not put
+    # every target in the same directory. Empty for a suite the runner handles
+    # itself (the UI capture, which is a pass rather than a command).
     command: tuple[str, ...] = ()
     working_directory: str = "."
 
@@ -196,7 +198,7 @@ SUITES: tuple[Suite, ...] = (
         label="Benchmarks",
         kind=PERFORMANCE,
         description="The opt-in [.benchmark] Catch2 cases — analysis throughput and FIFO cost.",
-        command=("build/bin/PracticeTakesTests", "[.benchmark]"),
+        command=("{PracticeTakesTests}", "[.benchmark]"),
         needs=("PracticeTakesTests",),
         parser=parse_catch2_benchmarks,
     ),

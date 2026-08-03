@@ -62,20 +62,49 @@ FAILED = "failed"
 
 # How each build target is produced: where it goes, and what has to be switched
 # on for it to exist at all.
+#
+# Deliberately no single hardcoded output path. `PracticeTakes` has an explicit
+# RUNTIME_OUTPUT_DIRECTORY of `bin/`, while `PracticeTakesTests` has none and
+# links into the build root -- so assuming either layout for both is wrong, and
+# was: a build that succeeded was reported as "the build finished but the binary
+# is not there". The target is looked for instead.
 BUILD_TARGETS = {
     "PracticeTakes": {
         "directory": CONTROL_BUILD,
-        "binary": CONTROL_BUILD / "bin" / "PracticeTakes",
         "options": ("-DPRACTICE_TAKES_ENABLE_TEST_CONTROL=ON",),
         "why": "the application, with the control channel the suite drives it through",
     },
     "PracticeTakesTests": {
         "directory": TEST_BUILD,
-        "binary": TEST_BUILD / "bin" / "PracticeTakesTests",
         "options": ("-DBUILD_TESTING=ON",),
         "why": "the C++ unit and benchmark binary",
     },
 }
+
+# Where a generator might have put it, shallowest first.
+BINARY_LOCATIONS = ("bin/{target}", "{target}", "*/{target}")
+
+
+def binary_path(target: str) -> Path | None:
+    """Where a built target actually is, or None when it has not been built.
+
+    Searched rather than assumed: CMake puts these in different places depending
+    on whether the target sets an output directory, and a wrong guess turns a
+    successful build into a confusing failure.
+    """
+    entry = BUILD_TARGETS.get(target)
+
+    if entry is None:
+        return None
+
+    directory = entry["directory"]
+
+    for pattern in BINARY_LOCATIONS:
+        for candidate in sorted(directory.glob(pattern.format(target=target))):
+            if candidate.is_file() and os.access(candidate, os.X_OK):
+                return candidate
+
+    return None
 
 
 def _now() -> str:
@@ -137,9 +166,9 @@ def build_state(target: str = "PracticeTakes") -> dict:
     if entry is None:
         return {"target": target, "present": True, "stale": False, "reason": ""}
 
-    binary = entry["binary"]
+    binary = binary_path(target)
 
-    if not binary.is_file():
+    if binary is None:
         return {"target": target, "present": False, "stale": False,
                 "reason": f"not built yet — {entry['why']}"}
 
@@ -149,6 +178,7 @@ def build_state(target: str = "PracticeTakes") -> dict:
         "target": target,
         "present": True,
         "stale": stale,
+        "path": str(binary),
         "reason": "sources have changed since this was built" if stale else "",
     }
 
@@ -342,8 +372,12 @@ class Job:
             ceiling=ceiling,
         )
 
-        if not Path(entry["binary"]).is_file():
-            raise RuntimeError(f"the build finished but {entry['binary']} is not there")
+        if binary_path(target) is None:
+            looked = ", ".join(
+                str(entry["directory"] / pattern.format(target=target))
+                for pattern in BINARY_LOCATIONS
+            )
+            raise RuntimeError(f"the build finished but {target} is not in any of: {looked}")
 
     def _command(
         self,
@@ -429,7 +463,7 @@ class Job:
 
         output: list[str] = []
         code = self._command(
-            list(suite.command),
+            self._resolve(suite.command),
             label=suite.label,
             floor=floor,
             ceiling=ceiling,
@@ -473,6 +507,25 @@ class Job:
             percent=ceiling,
         )
 
+    def _resolve(self, command: tuple[str, ...]) -> list[str]:
+        """Substitute {Target} in a command with wherever that target was built."""
+        resolved: list[str] = []
+
+        for argument in command:
+            match = re.fullmatch(r"\{(\w+)\}", argument)
+
+            if match:
+                found = binary_path(match.group(1))
+
+                if found is None:
+                    raise RuntimeError(f"{match.group(1)} is not built")
+
+                resolved.append(str(found))
+            else:
+                resolved.append(argument)
+
+        return resolved
+
     def _capture(
         self,
         *,
@@ -492,7 +545,12 @@ class Job:
         tooling = capture_module.Tooling.ensure()
 
         self._say("launching the application", percent=floor + 1)
-        driver = ApplicationDriver(BUILD_TARGETS["PracticeTakes"]["binary"])
+        executable = binary_path("PracticeTakes")
+
+        if executable is None:
+            raise RuntimeError("PracticeTakes is not built")
+
+        driver = ApplicationDriver(executable)
         driver.start()
 
         try:

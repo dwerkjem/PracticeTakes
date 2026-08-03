@@ -59,10 +59,13 @@ ctest --test-dir build --output-on-failure
 Run a single test / tag directly through the binary (Catch2 CLI):
 
 ```bash
-build/bin/PracticeTakesTests "Test name or wildcard*"
-build/bin/PracticeTakesTests "[tag]"
-build/bin/PracticeTakesTests "[.benchmark]"          # opt-in perf benchmarks
+build/PracticeTakesTests "Test name or wildcard*"
+build/PracticeTakesTests "[tag]"
+build/PracticeTakesTests "[.benchmark]"          # opt-in perf benchmarks
 ```
+
+`PracticeTakesTests` links into the build root, not `build/bin/` — only
+`PracticeTakes` sets a `RUNTIME_OUTPUT_DIRECTORY`.
 
 Performance Lab (manual, opt-in instrumentation window) needs a separate
 configure flag:

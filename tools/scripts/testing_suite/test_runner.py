@@ -111,6 +111,18 @@ class JobTests(unittest.TestCase):
         runner_module.machine_module.provenance = lambda: PROVENANCE
         self.addCleanup(setattr, runner_module.machine_module, "provenance", original)
 
+        # Whether a target needs building is a fact about the developer's disk,
+        # so it is controlled here rather than inherited from it.
+        self.present: set[str] = set()
+        original_state = runner_module.build_state
+        runner_module.build_state = lambda target="PracticeTakes": {
+            "target": target,
+            "present": target in self.present,
+            "stale": False,
+            "reason": "",
+        }
+        self.addCleanup(setattr, runner_module, "build_state", original_state)
+
     def make_job(self) -> runner_module.Job:
         outer = self
 
@@ -180,6 +192,18 @@ class JobTests(unittest.TestCase):
 
         self.assertEqual(self.built.count("PracticeTakesTests"), 1)
 
+    def test_an_existing_build_is_not_rebuilt(self) -> None:
+        self.present.add("PracticeTakesTests")
+        self.run_job(["cpp"])
+
+        self.assertEqual(self.built, [])
+
+    def test_rebuild_forces_a_build_that_already_exists(self) -> None:
+        self.present.add("PracticeTakesTests")
+        self.run_job(["cpp"], rebuild=True)
+
+        self.assertEqual(self.built, ["PracticeTakesTests"])
+
     def test_benchmark_measurements_reach_the_store(self) -> None:
         self.output = (
             "pitch detector                                 100          1     4.2 ms\n"
@@ -225,6 +249,80 @@ class JobTests(unittest.TestCase):
         status = self.run_job(["python"])
 
         self.assertTrue(any("Python script tests" in line for line in status["log"]))
+
+
+class BinaryDiscoveryTests(unittest.TestCase):
+    """Where a built target actually is.
+
+    CMake puts `PracticeTakes` in `bin/` because it sets an output directory,
+    and `PracticeTakesTests` in the build root because it does not. Assuming
+    either layout for both turned a successful build into "the build finished
+    but the binary is not there".
+    """
+
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        self.original = dict(runner_module.BUILD_TARGETS["PracticeTakesTests"])
+        runner_module.BUILD_TARGETS["PracticeTakesTests"] = {
+            **self.original, "directory": self.root,
+        }
+        self.addCleanup(
+            runner_module.BUILD_TARGETS.__setitem__, "PracticeTakesTests", self.original
+        )
+
+    def place(self, relative: str) -> Path:
+        path = self.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("#!/bin/sh\n")
+        path.chmod(0o755)
+
+        return path
+
+    def test_a_binary_in_the_build_root_is_found(self) -> None:
+        expected = self.place("PracticeTakesTests")
+
+        self.assertEqual(runner_module.binary_path("PracticeTakesTests"), expected)
+
+    def test_a_binary_under_bin_is_found(self) -> None:
+        expected = self.place("bin/PracticeTakesTests")
+
+        self.assertEqual(runner_module.binary_path("PracticeTakesTests"), expected)
+
+    def test_bin_wins_when_both_exist(self) -> None:
+        expected = self.place("bin/PracticeTakesTests")
+        self.place("PracticeTakesTests")
+
+        self.assertEqual(runner_module.binary_path("PracticeTakesTests"), expected)
+
+    def test_a_target_that_was_never_built_is_none(self) -> None:
+        self.assertIsNone(runner_module.binary_path("PracticeTakesTests"))
+
+    def test_a_non_executable_file_does_not_count(self) -> None:
+        path = self.root / "PracticeTakesTests"
+        path.write_text("not a program")
+        path.chmod(0o644)
+
+        self.assertIsNone(runner_module.binary_path("PracticeTakesTests"))
+
+    def test_an_unknown_target_is_none(self) -> None:
+        self.assertIsNone(runner_module.binary_path("SomethingElse"))
+
+    def test_a_command_naming_a_target_is_resolved(self) -> None:
+        expected = self.place("PracticeTakesTests")
+        job = runner_module.Job(store=None)
+
+        self.assertEqual(
+            job._resolve(("{PracticeTakesTests}", "[.benchmark]")),
+            [str(expected), "[.benchmark]"],
+        )
+
+    def test_a_command_naming_an_unbuilt_target_says_so(self) -> None:
+        job = runner_module.Job(store=None)
+
+        with self.assertRaises(RuntimeError):
+            job._resolve(("{PracticeTakesTests}",))
 
 
 class BuildStateTests(unittest.TestCase):
