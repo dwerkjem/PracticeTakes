@@ -247,6 +247,14 @@ function renderCard(capture) {
       : `Image ${capture.unavailable}`;
     card.appendChild(box);
   } else {
+    if (capture.notice) {
+      // Not a failure: a hint to look, with the image still there to look at.
+      const note = document.createElement("div");
+      note.className = "capture-notice";
+      note.textContent = capture.notice;
+      card.appendChild(note);
+    }
+
     const image = document.createElement("img");
     image.src = state.size === "dense" ? `/thumbnail?id=${capture.id}` : `/image?id=${capture.id}`;
     image.loading = "lazy";
@@ -647,5 +655,20 @@ async function reload() {
   window.scrollTo(0, scroll);
 }
 
+// The toolbar sticks below the header, so its offset has to follow the header's
+// real height -- which changes when it wraps on a narrow window.
+function trackHeaderHeight() {
+  const header = document.querySelector("header");
+
+  const apply = () => document.documentElement.style.setProperty(
+    "--header-height", `${header.offsetHeight}px`);
+
+  apply();
+  window.addEventListener("resize", apply);
+
+  if (window.ResizeObserver) new window.ResizeObserver(apply).observe(header);
+}
+
+trackHeaderHeight();
 bandSelect();
 reload();

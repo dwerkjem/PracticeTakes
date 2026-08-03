@@ -143,12 +143,32 @@ button.size.active { border-color: var(--accent); color: var(--accent); }
 #outstanding { margin-bottom: 10px; }
 .muted { color: var(--muted); }
 
+/* The bulk buttons have to be reachable from wherever you have scrolled to:
+   selecting a row of images two screens down and then scrolling back up to
+   score them is the friction bulk actions exist to remove. `--header-height`
+   is measured in app.js, since the header wraps at narrow widths. */
 #toolbar {
+  position: sticky;
+  top: var(--header-height, 84px);
+  z-index: 4;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  padding: 8px 10px;
+  margin: -8px -10px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(10, 11, 14, 0.55);
   flex-wrap: wrap;
+}
+
+#outstanding {
+  position: sticky;
+  top: calc(var(--header-height, 84px) + 52px);
+  z-index: 3;
+  background: var(--background);
+  padding: 4px 0;
 }
 
 #selection-count { color: var(--muted); min-width: 12ch; }
@@ -211,6 +231,16 @@ button:hover { border-color: var(--accent); }
   border-radius: 3px;
   color: var(--fail);
   font-size: 12px;
+}
+
+.capture-notice {
+  font-size: 12px;
+  color: var(--skip);
+  border-left: 3px solid var(--skip);
+  padding: 4px 8px;
+  margin-bottom: 6px;
+  background: #23262e;
+  border-radius: 0 3px 3px 0;
 }
 
 .card .tags { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }

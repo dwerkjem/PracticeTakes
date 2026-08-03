@@ -171,29 +171,41 @@ def geometry_problem(
     return ""
 
 
-def duplicate_problem(state: str, digest: str, seen: dict[str, str]) -> str:
-    """Whether this capture is byte-identical to a *different* state's.
+def duplicate_problem(
+    state: str, geometry: str, digest: str, seen: dict[tuple[str, str], str]
+) -> str:
+    """Whether this capture is byte-identical to a *different* state's, at the same size.
 
-    The backstop for photographing the wrong window. `seen` maps a digest to the
-    state that produced it; two different states producing identical pixels means
-    one of them captured something that was not its subject.
+    The backstop for photographing the wrong window. `seen` maps (resolution,
+    digest) to the state that produced it; two different states producing
+    identical pixels at the same resolution means one of them captured something
+    that was not its subject. That is how the settings surface was caught coming
+    back byte-identical to the empty shell — nothing named the settings window,
+    so the X utilities took the first window the manager listed for the process.
 
-    The first real run found exactly this: the settings surface came back
-    byte-identical to the empty shell, because nothing named the settings window
-    and the X utilities take the first window the manager lists for the process.
-    Nothing else in the pass could notice — the geometry was right, the capture
-    succeeded, the image was of a real window. Just not that one.
+    **Compared only within one resolution**, because across resolutions
+    identical images are expected and correct: `narrow-window` *is* the tuner
+    docked at the narrow geometry, and the sweep's constrained resolution is
+    that same geometry, so those two captures are the same picture by
+    definition. Comparing across resolutions reported that as a failed capture.
 
-    Two surfaces sharing a *state* are expected to match, and do not fail.
+    Two surfaces sharing a *state* are expected to match, and say nothing.
+
+    The result is a **notice on a kept capture**, not a failure. It began as a
+    failure and threw away good images: `settings-appearance` is identical to
+    `settings-open` because the appearance panel is the settings window's
+    default panel, and `all-tools-docked` matched `two-tools-split` at 800x600.
+    Whether that is a bug is a judgement, which is the reviewer's to make with
+    the image in front of them — so it is flagged, not deleted.
     """
-    other = seen.get(digest)
+    other = seen.get((geometry, digest))
 
     if other is None or other == state:
         return ""
 
     return (
-        f"this capture is byte-identical to '{other}', so it photographed that "
-        f"window rather than this surface's"
+        f"identical to '{other}' at this resolution — either these surfaces really do "
+        f"look the same, or this one photographed that window instead"
     )
 
 
@@ -308,7 +320,7 @@ class CapturePass:
         surface: surfaces.Surface,
         geometry: str,
         seen: dict[str, tuple[int, int]],
-        digests: dict[str, str] | None = None,
+        digests: dict[tuple[str, str], str] | None = None,
     ) -> tuple[int, int] | None:
         """Capture one surface at one resolution, recording whatever happened.
 
@@ -366,17 +378,12 @@ class CapturePass:
         finally:
             ppm_path.unlink(missing_ok=True)
 
-        duplicate = duplicate_problem(surface.state, digest, digests if digests is not None else {})
-
-        if duplicate:
-            png_path.unlink(missing_ok=True)
-            thumbnail_path.unlink(missing_ok=True)
-            fail(duplicate)
-
-            return None
+        notice = duplicate_problem(
+            surface.state, geometry, digest, digests if digests is not None else {}
+        )
 
         if digests is not None:
-            digests.setdefault(digest, surface.state)
+            digests.setdefault((geometry, digest), surface.state)
 
         self.store.record_capture(
             self.run_id,
@@ -388,6 +395,7 @@ class CapturePass:
             width=width,
             height=height,
             digest=digest,
+            notice=notice,
         )
 
         return size
@@ -408,9 +416,9 @@ class CapturePass:
         already = self.store.captured_keys(self.run_id) if resume else set()
         sizes: dict[str, dict[str, tuple[int, int]]] = {}
 
-        # Digest -> the state that produced it, across the whole run: two states
-        # with the same pixels means one captured the wrong window.
-        digests: dict[str, str] = {}
+        # (resolution, digest) -> the state that produced it: two states with the
+        # same pixels at the same resolution means one captured the wrong window.
+        digests: dict[tuple[str, str], str] = {}
         captured = 0
         failed = 0
         skipped = 0

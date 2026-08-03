@@ -31,7 +31,7 @@ import sqlite3
 import threading
 
 # Bumped by adding a migration below, never by editing one that shipped.
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # The tag vocabulary a fresh store starts with. Data rather than a constant the
 # code branches on: a reviewer adds to this during a review.
@@ -85,6 +85,7 @@ class CaptureRow:
     digest: str
     failure: str
     pruned: bool
+    notice: str = ""
 
     @property
     def failed(self) -> bool:
@@ -105,6 +106,7 @@ def _capture_row(row: sqlite3.Row) -> CaptureRow:
         digest=row["digest"],
         failure=row["failure"],
         pruned=bool(row["pruned"]),
+        notice=row["notice"],
     )
 
 
@@ -222,10 +224,21 @@ def _migration_1(connection: sqlite3.Connection) -> None:
         )
 
 
+def _migration_2(connection: sqlite3.Connection) -> None:
+    """Something worth saying about a capture that is not a failure.
+
+    Added because "this image is identical to another surface's" started life as
+    a capture failure and threw away perfectly good images: some surfaces really
+    do look identical — the settings window's default panel *is* the appearance
+    panel. It is a hint for the reviewer, not a verdict.
+    """
+    connection.execute("ALTER TABLE capture ADD COLUMN notice TEXT NOT NULL DEFAULT ''")
+
+
 # Forward only. The recovery path for a bad migration is a copy of the file,
 # which is one `cp` because the store is one file — cheaper and more honest than
 # maintaining down-migrations nobody exercises.
-MIGRATIONS = (_migration_1,)
+MIGRATIONS = (_migration_1, _migration_2)
 
 
 class Store:
@@ -432,14 +445,15 @@ class Store:
         height: int = 0,
         digest: str = "",
         failure: str = "",
+        notice: str = "",
     ) -> int:
         """Store one capture, or the reason there is no image for it."""
         cursor = self.execute(
             """
             INSERT INTO capture
                 (run_id, surface_state, surface_title, geometry, image_path,
-                 thumbnail_path, width, height, digest, failure, captured_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 thumbnail_path, width, height, digest, failure, notice, captured_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (run_id, surface_state, surface_title, geometry) DO UPDATE SET
                 image_path = excluded.image_path,
                 thumbnail_path = excluded.thumbnail_path,
@@ -447,6 +461,7 @@ class Store:
                 height = excluded.height,
                 digest = excluded.digest,
                 failure = excluded.failure,
+                notice = excluded.notice,
                 pruned = 0,
                 captured_at = excluded.captured_at
             """,
@@ -461,6 +476,7 @@ class Store:
                 height,
                 digest,
                 failure,
+                notice,
                 now(),
             ),
         )

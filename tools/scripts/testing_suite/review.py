@@ -91,6 +91,7 @@ def capture_view(store: Store, capture, *, include_attended: bool = True) -> dic
         "width": capture.width,
         "height": capture.height,
         "failure": capture.failure,
+        "notice": capture.notice,
         "unavailable": image_available(capture),
         "tags": store.tags_for(capture.id),
         "comments": [row["body"] for row in store.comments_for(capture.id)],

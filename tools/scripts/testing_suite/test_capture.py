@@ -126,19 +126,39 @@ class GeometryVerificationTests(unittest.TestCase):
 class DuplicateCaptureTests(unittest.TestCase):
     """The backstop for photographing the wrong window."""
 
-    def test_two_states_with_identical_pixels_is_a_failure(self) -> None:
-        problem = capture_module.duplicate_problem("settings-open", "abc", {"abc": "empty"})
+    def test_two_states_with_identical_pixels_are_flagged(self) -> None:
+        problem = capture_module.duplicate_problem(
+            "settings-open", "default", "abc", {("default", "abc"): "empty"}
+        )
 
-        self.assertIn("byte-identical to 'empty'", problem)
+        self.assertIn("identical to 'empty'", problem)
+        self.assertIn("photographed that window", problem)
 
     def test_the_same_state_twice_is_expected(self) -> None:
         """One state serves several surfaces; those images should match."""
         self.assertEqual(
-            capture_module.duplicate_problem("settings-open", "abc", {"abc": "settings-open"}), ""
+            capture_module.duplicate_problem(
+                "settings-open", "default", "abc", {("default", "abc"): "settings-open"}
+            ),
+            "",
+        )
+
+    def test_the_same_picture_at_another_resolution_is_not_a_duplicate(self) -> None:
+        """`narrow-window` *is* the tuner at the narrow geometry, which is what
+        the sweep's constrained resolution asks for. Those two captures are the
+        same picture by definition, and flagging it failed a good capture."""
+        self.assertEqual(
+            capture_module.duplicate_problem(
+                "narrow-window", "default", "abc", {("constrained", "abc"): "tuner-docked"}
+            ),
+            "",
         )
 
     def test_a_new_image_is_no_problem(self) -> None:
-        self.assertEqual(capture_module.duplicate_problem("empty", "abc", {"def": "other"}), "")
+        self.assertEqual(
+            capture_module.duplicate_problem("empty", "default", "abc", {("default", "def"): "other"}),
+            "",
+        )
 
 
 class WindowTargetingTests(unittest.TestCase):
@@ -268,6 +288,21 @@ class CapturePassTests(unittest.TestCase):
 
         self.assertEqual(len(failures), len(self.plan()))
         self.assertIn("could not be captured", failures[0].failure)
+
+    def test_an_identical_capture_is_kept_with_a_notice(self) -> None:
+        """It began as a failure and threw away good images."""
+        self.converted_digest = "same"
+        images.convert = lambda source, png, thumb: (
+            png.write_bytes(b"png"), thumb.write_bytes(b"thumb"), (1280, 800, "same"))[2]
+
+        self.make_pass().run(self.plan())
+        captures = self.store.captures(self.run_id)
+        flagged = [capture for capture in captures if capture.notice]
+
+        self.assertTrue(flagged)
+        self.assertFalse([capture for capture in captures if capture.failed])
+        self.assertTrue(all(Path(capture.image_path).exists() for capture in captures))
+        self.assertIn("identical to", flagged[0].notice)
 
     def test_a_resumed_pass_does_not_recapture(self) -> None:
         self.make_pass().run(self.plan())
