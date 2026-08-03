@@ -208,6 +208,22 @@ class ReviewHandler(BaseHTTPRequestHandler):
     # --- Routes -------------------------------------------------------------
 
     def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler's name
+        # A review is a long session over a store another process may be
+        # writing. One request that hits something unreadable should say so and
+        # leave the rest of the page working, rather than printing a traceback
+        # to the terminal and dropping the connection.
+        try:
+            self._get()
+        except Exception as error:  # noqa: BLE001 - the last line before a dead request
+            self._send_json({"error": f"{type(error).__name__}: {error}"}, status=500)
+
+    def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler's name
+        try:
+            self._post()
+        except Exception as error:  # noqa: BLE001 - the last line before a dead request
+            self._send_json({"error": f"{type(error).__name__}: {error}"}, status=500)
+
+    def _get(self) -> None:
         parsed = urlparse(self.path)
         query = parse_qs(parsed.query)
 
@@ -260,7 +276,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
         else:
             self._send_json({"error": "not found"}, status=404)
 
-    def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler's name
+    def _post(self) -> None:
         parsed = urlparse(self.path)
         payload = self._read_json()
 

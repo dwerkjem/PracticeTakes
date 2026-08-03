@@ -227,8 +227,13 @@ def command_hub(arguments) -> int:
     finally:
         # Anything opened for a closer look goes with the hub; leaving a
         # test-control instance running after the tool that started it is a
-        # surprise nobody needs.
-        httpd.session.launch.close()
+        # surprise nobody needs. Impatience is expected here -- a second Ctrl-C
+        # while this is closing should stop the tool, not print a traceback.
+        try:
+            httpd.session.launch.close()
+        except KeyboardInterrupt:
+            print("Left the application running.")
+
         httpd.server_close()
 
     return 0
