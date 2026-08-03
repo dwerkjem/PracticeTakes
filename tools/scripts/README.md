@@ -7,9 +7,7 @@ Scripts are grouped by their purpose:
 - `feedback/` manages the feedback database and dashboard service.
 - `quality/` runs source-formatting and static-analysis checks.
 - `release/` manages application versions.
-- `roadmap/` sets up the roadmap tooling.
 - `secrets/` encrypts, synchronizes, and resolves configured SOPS secrets.
-- `practice_takes_roadmap/` contains the roadmap Python package.
 
 Run scripts from the repository root unless a script says otherwise. For
 example:

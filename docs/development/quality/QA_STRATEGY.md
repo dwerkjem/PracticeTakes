@@ -204,7 +204,15 @@ that used to be in this document.
 |---|---|---|
 | C++ | **89.7%** (3081/3434) | Over *instrumented* sources only — see the caveat below |
 | TypeScript | **76.2%** (499/655) | 72.8% statements, 67.2% branches, 6 files |
-| Python | **29%** (584/2025) | `practice_takes_roadmap` is 0%, `secrets_manager.py` 40% |
+| Python | **60%** (1132/1882) | Re-measured 2026-08-02 — see below; `secrets_manager.py` 40% |
+
+**The Python row is newer than the other two.** It was re-measured on
+2026-08-02, after `tools/scripts/practice_takes_roadmap` was deleted, and does
+not share the `efb65ec7b5fb` stamp. The old reading — 29% (584/2025) — was
+dominated by that package sitting at 0%. Removing it, plus the Python added
+since (`manual_gui/`, `git/`), moved both halves of the fraction; the two
+numbers are not a before/after of the same tree. `manual_gui/__main__.py` and
+`manual_gui/app.py` are now the largest remaining 0% files.
 
 **The C++ figure needs its caveat attached every time it is quoted.** 89.7% is
 measured over the 25 translation units compiled into `PracticeTakesTests` — out
@@ -251,9 +259,16 @@ now makes the first two straightforward.
 
 ### 11. Roadmap tooling tests
 
-**Problem**: `tools/scripts/practice_takes_roadmap` is 2,046 lines that call the
-GitHub API and mutate persisted state, with no tests. Area 7 established where
-Python tests live and how CI runs them; this fills in the largest gap.
+**Resolved on 2026-08-02 by deletion, not by tests.**
+`tools/scripts/practice_takes_roadmap` was 2,046 lines that called the GitHub
+API and mutated persisted state, with no tests — the largest Python gap. The
+tooling was no longer needed and the package was removed, so the gap is closed
+at the source. The GitHub Project board it used to manage
+(`Practice Takes Roadmap`) is now maintained by hand alongside the repository's
+milestones, `area:`/`type:`/`priority:` labels, and issue hierarchy.
+
+The number is kept so the areas below are not renumbered — `AGENT_GUIDE.md`
+cites these by number.
 
 ### 12. Feedback wire-contract conformance
 
