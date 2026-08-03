@@ -122,11 +122,35 @@ settle, captures, and converts the result to PNG plus a thumbnail.
 **Analysis tools are fed a synthetic tone.** A state can name a frequency, and
 the audio service generates it in its own callback instead of the device's
 input — the same path a microphone takes, through the same FIFO, at the same
-gain. So a capture of the tuner reads `A4 · 440.0 Hz · +0.0 cents` rather than
-"Play or sing a sustained note", it reads the same thing on every run, and it
-works on a machine with no microphone at all. The tone is a table read and a
-phase increment in the callback, never `sin` per sample, because the audio
-thread may not do unbounded work.
+gain. So a capture of the tuner reads a live pitch rather than "Play or sing a
+sustained note", and it works on a machine with no microphone at all. It is a
+table read and a phase increment in the callback, never `sin` per sample,
+because the audio thread may not do unbounded work.
+
+**It is a sung note, not a test tone**, because a pure sine draws a flat line on
+the tuner, one bar on the harmonic analyser, and a single stripe on the
+spectrogram — a state no real input produces, and one that hides every layout
+bug that only appears when a reading moves. So it carries:
+
+| | |
+|---|---|
+| a slow **drift** of ±45 cents at 0.55 Hz | the tuner's graph draws a wave; the tool smooths over ~0.75 s, so a fast vibrato alone averages back to a line |
+| a **vibrato** of ±12 cents at 5 Hz | moves the meter and bar views, which read the current frame |
+| second and third **partials** | the analyser shows H1, H2, H3, and the spectrogram three bands |
+| a **swell** of ±55% at 0.45 Hz | about 11 dB peak to trough, so a peak, RMS, or loudness meter has something to draw |
+| a little **noise** | pitch confidence lands where real input lands rather than at a suspicious 100% |
+
+The peak of the loudest moment lands exactly on the amplitude asked for — the
+swell is folded into the scaling — so deepening it never pushes the signal
+towards clipping and never lights a clipping indicator that has nothing to
+report.
+
+**Nothing is audible.** The generator only fills a buffer pushed into the
+analysis FIFOs; the device's output is cleared at the top of the callback and
+never written, and this is the only audio callback the application registers.
+
+Surfaces with a tone wait a couple of seconds before being captured, so a tool
+drawing a history has one to draw.
 
 The tuner is captured in tune, sharp, and flat, in each of its three views
 (graph, bar, meter), and with its advanced settings expanded — six surfaces

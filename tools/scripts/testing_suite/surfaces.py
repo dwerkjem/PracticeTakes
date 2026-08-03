@@ -125,6 +125,15 @@ class Surface:
     presentation: str = ""
     area: str = "workspace"
 
+    # Seconds to let the application run before capturing it.
+    #
+    # A tool drawing a history -- the tuner's graph, the spectrogram's
+    # waterfall -- has only as much to draw as the time it has been open, so a
+    # capture taken the instant a state settles shows a sliver. Surfaces fed a
+    # tone wait, so the picture is of a tool that has been listening rather than
+    # one that just started.
+    warmup_seconds: float = 0.0
+
     # The title of the top-level window this surface is about, when that is not
     # the main window. Settings, feedback, and a floating tool are each their
     # own X window, and a capture that does not name one photographs whichever
@@ -176,6 +185,7 @@ SURFACES: tuple[Surface, ...] = (
     # tool working rather than the tool waiting.
     Surface(
         state="tuner-in-tune",
+        warmup_seconds=2.5,
         title="The tuner, dead in tune",
         tools=("tuner",),
         presentation="docked",
@@ -183,6 +193,7 @@ SURFACES: tuple[Surface, ...] = (
     ),
     Surface(
         state="tuner-sharp",
+        warmup_seconds=2.5,
         title="The tuner, reading sharp",
         tools=("tuner",),
         presentation="docked",
@@ -190,6 +201,7 @@ SURFACES: tuple[Surface, ...] = (
     ),
     Surface(
         state="tuner-flat",
+        warmup_seconds=2.5,
         title="The tuner, reading flat",
         tools=("tuner",),
         presentation="docked",
@@ -197,6 +209,7 @@ SURFACES: tuple[Surface, ...] = (
     ),
     Surface(
         state="tuner-bar",
+        warmup_seconds=2.5,
         title="The tuner in its bar view",
         tools=("tuner",),
         presentation="docked",
@@ -204,6 +217,7 @@ SURFACES: tuple[Surface, ...] = (
     ),
     Surface(
         state="tuner-meter",
+        warmup_seconds=2.5,
         title="The tuner in its meter view",
         tools=("tuner",),
         presentation="docked",
@@ -211,6 +225,7 @@ SURFACES: tuple[Surface, ...] = (
     ),
     Surface(
         state="tuner-advanced",
+        warmup_seconds=2.5,
         title="The tuner with advanced settings open",
         tools=("tuner",),
         presentation="docked",
@@ -218,6 +233,7 @@ SURFACES: tuple[Surface, ...] = (
     ),
     Surface(
         state="spectrogram-tone",
+        warmup_seconds=2.5,
         title="The spectrogram with a tone in it",
         tools=("spectrogram",),
         presentation="docked",
@@ -225,6 +241,7 @@ SURFACES: tuple[Surface, ...] = (
     ),
     Surface(
         state="harmonics-tone",
+        warmup_seconds=2.5,
         title="The analyser reading a sustained pitch",
         tools=("harmonics",),
         presentation="docked",
@@ -232,6 +249,7 @@ SURFACES: tuple[Surface, ...] = (
     ),
     Surface(
         state="all-tools-tone",
+        warmup_seconds=2.5,
         title="Every tool analysing the same tone",
         tools=("tuner", "spectrogram", "harmonics"),
         presentation="split",

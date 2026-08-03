@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include "AudioSampleFifo.h"
+#include "SyntheticTone.h"
 
 #include <array>
 #include <atomic>
@@ -58,7 +59,7 @@ class AudioInputService final
     // Feed a synthetic tone instead of the device's input, so a captured
     // surface shows a tool analysing something without anybody making a noise
     // at a microphone. Zero hertz returns to the real input.
-    void setSyntheticTone(float frequencyHz, float amplitude = 0.25f);
+    void setSyntheticTone(float frequencyHz, float amplitude = 0.45f);
     [[nodiscard]] float syntheticTone() const noexcept;
 
     [[nodiscard]] float inputGain() const noexcept;
@@ -122,15 +123,12 @@ class AudioInputService final
     // same gain, the same peak measurement -- and a screenshot of a tool
     // analysing it is a screenshot of the tool working. Read from a table
     // computed once, because the callback may not do unbounded work.
-    // One cycle of a sine, and a scratch block big enough for any buffer size a
-    // device is going to ask for.
-    static constexpr std::size_t toneTableSize = 4096;
+    // A scratch block big enough for any buffer size a device will ask for.
     static constexpr std::size_t maximumToneBlock = 8192;
 
     std::atomic<float> toneFrequency{0.0f};
-    std::atomic<float> toneAmplitude{0.25f};
-    double tonePhase{0.0};
-    std::vector<float> toneTable;
+    std::atomic<float> toneAmplitude{0.45f};
+    SyntheticTone tone;
     std::vector<float> toneBlock;
     std::atomic<float> gain{1.0f};
     std::atomic<float> peakSinceLastTimer{0.0f};

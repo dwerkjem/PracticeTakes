@@ -290,27 +290,16 @@ std::unique_ptr<juce::XmlElement> AudioInputService::createDeviceState() const
 
 void AudioInputService::setSyntheticTone(float frequencyHz, float amplitude)
 {
-    if (toneTable.empty())
-    {
-        // One cycle, computed here rather than in the callback: the audio
-        // thread may not do unbounded work, and std::sin per sample is exactly
-        // that. Allocating on the message thread before the tone is switched on
-        // keeps the callback to a table read and a phase increment.
-        toneTable.resize(toneTableSize);
-
-        for (std::size_t index = 0; index < toneTableSize; ++index)
-        {
-            const auto turn = static_cast<double>(index) / static_cast<double>(toneTableSize);
-            toneTable[index] =
-                static_cast<float>(std::sin(turn * juce::MathConstants<double>::twoPi));
-        }
-    }
-
+    // Allocated here, on the message thread, before the tone is switched on --
+    // the callback only ever writes into a block that already exists.
     if (toneBlock.size() < maximumToneBlock)
     {
         toneBlock.resize(maximumToneBlock);
     }
 
+    // From a known point, so what a capture shows does not depend on how long
+    // the capture before it took.
+    tone.reset();
     toneAmplitude.store(juce::jlimit(0.0f, 1.0f, amplitude), std::memory_order_relaxed);
     toneFrequency.store(juce::jmax(0.0f, frequencyHz), std::memory_order_release);
 }
@@ -349,26 +338,14 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
     // read before the input pointers are even looked at -- so a machine with no
     // microphone still produces a surface with something to analyse, which is
     // the case verification cares about most.
-    const auto tone = toneFrequency.load(std::memory_order_acquire);
+    const auto frequency = toneFrequency.load(std::memory_order_acquire);
 
-    if (tone > 0.0f && !toneTable.empty() &&
-        static_cast<std::size_t>(numSamples) <= toneBlock.size())
+    if (frequency > 0.0f && static_cast<std::size_t>(numSamples) <= toneBlock.size())
     {
-        const auto sampleRate = currentSampleRate.load(std::memory_order_relaxed);
-        const auto amplitude = toneAmplitude.load(std::memory_order_relaxed);
-        const auto step = static_cast<double>(toneTableSize) * tone / juce::jmax(1.0, sampleRate);
-
-        for (int index = 0; index < numSamples; ++index)
-        {
-            const auto position = static_cast<std::size_t>(tonePhase) % toneTableSize;
-            toneBlock[static_cast<std::size_t>(index)] = toneTable[position] * amplitude;
-            tonePhase += step;
-
-            if (tonePhase >= static_cast<double>(toneTableSize))
-            {
-                tonePhase -= static_cast<double>(toneTableSize);
-            }
-        }
+        tone.render(
+            toneBlock.data(), static_cast<std::size_t>(numSamples), static_cast<double>(frequency),
+            currentSampleRate.load(std::memory_order_relaxed),
+            toneAmplitude.load(std::memory_order_relaxed));
 
         inputSamples = toneBlock.data();
     }

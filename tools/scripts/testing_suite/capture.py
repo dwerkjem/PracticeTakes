@@ -228,6 +228,7 @@ class CapturePass:
         window_title: str | None = None,
         settle_seconds: float = SETTLE_SECONDS,
         poll_interval: float = POLL_INTERVAL_SECONDS,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self.store = store
         self.run_id = run_id
@@ -237,6 +238,7 @@ class CapturePass:
         self.window_title = window_title
         self.settle_seconds = settle_seconds
         self.poll_interval = poll_interval
+        self.sleep = sleep
 
     # --- X plumbing ---------------------------------------------------------
 
@@ -362,6 +364,11 @@ class CapturePass:
             settle_seconds=self.settle_seconds,
             interval=self.poll_interval,
         )
+
+        # After settling, not instead of it: the window is already the right
+        # size, and this is time for the tool to have something to show.
+        if surface.warmup_seconds > 0:
+            self.sleep(surface.warmup_seconds)
         problem = geometry_problem(geometry, size, seen)
 
         if problem:
