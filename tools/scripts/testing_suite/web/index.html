@@ -55,9 +55,28 @@
     <main id="view-review" class="view" hidden>
       <div id="toolbar">
         <span id="selection-count">nothing selected</span>
+        <button type="button" id="select-all">select all</button>
+        <button type="button" id="select-none">none</button>
+
+        <span class="divider"></span>
+        <button type="button" id="bulk-pass" class="verdict-pass">Pass selected</button>
+        <button type="button" id="bulk-fail" class="verdict-fail">Fail selected…</button>
+        <button type="button" id="bulk-skip">Skip selected</button>
+        <label class="inline small" title="Off: only fill in what has not been answered.">
+          <input type="checkbox" id="overwrite" /> overwrite answered
+        </label>
+
+        <span class="divider"></span>
         <span id="tag-buttons"></span>
         <button id="add-tag" type="button">+ tag</button>
         <span class="muted small">click a tag to apply · shift-click to remove</span>
+
+        <span class="divider"></span>
+        <span class="small muted">size</span>
+        <button type="button" class="size" data-size="dense">S</button>
+        <button type="button" class="size" data-size="medium">M</button>
+        <button type="button" class="size" data-size="large">L</button>
+        <button type="button" class="size" data-size="full">full width</button>
       </div>
       <div id="outstanding" class="muted small"></div>
       <div id="grid" aria-label="Captured surfaces"></div>

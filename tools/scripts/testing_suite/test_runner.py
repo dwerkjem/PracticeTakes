@@ -131,7 +131,7 @@ class JobTests(unittest.TestCase):
                 outer.built.append(target)
 
             def _command(inner, arguments, *, label, floor, ceiling,  # noqa: N805 - test double
-                         working_directory=None, capture=None):
+                         working_directory=None, capture=None, sanitised=True):
                 outer.commands.append(list(arguments))
 
                 if capture is not None:
@@ -225,6 +225,52 @@ class JobTests(unittest.TestCase):
 
         self.assertEqual(status["results"]["smoke"]["state"], "skipped")
         self.assertEqual(status["state"], runner_module.FINISHED)
+
+    def test_a_missing_program_is_unavailable_rather_than_failed(self) -> None:
+        """`npm` not installed is not a failing test — the suite never ran."""
+        original = runner_module.missing_program
+        runner_module.missing_program = lambda command: (
+            "`npm` is not installed, or is not on your PATH" if command == "npm" else ""
+        )
+        self.addCleanup(setattr, runner_module, "missing_program", original)
+
+        status = self.run_job(["services"])
+
+        self.assertEqual(status["results"]["services"]["state"], "unavailable")
+        self.assertIn("npm", status["results"]["services"]["message"])
+        self.assertEqual(status["state"], runner_module.FINISHED)
+
+    def test_a_failure_with_no_output_says_so(self) -> None:
+        self.exit_code = 127
+        self.output = ""
+        status = self.run_job(["python"])
+
+        self.assertIn("printed nothing", status["results"]["python"]["message"])
+
+    def test_dependencies_are_installed_when_missing(self) -> None:
+        original = runner_module.REPOSITORY_ROOT
+        runner_module.REPOSITORY_ROOT = Path(self.directory.name)
+        self.addCleanup(setattr, runner_module, "REPOSITORY_ROOT", original)
+
+        self.run_job(["services"])
+
+        self.assertIn(["npm", "ci"], self.commands)
+
+    def test_a_failed_preparation_makes_the_suite_unavailable(self) -> None:
+        original = runner_module.REPOSITORY_ROOT
+        runner_module.REPOSITORY_ROOT = Path(self.directory.name)
+        self.addCleanup(setattr, runner_module, "REPOSITORY_ROOT", original)
+        self.exit_code = 1
+
+        status = self.run_job(["services"])
+
+        self.assertEqual(status["results"]["services"]["state"], "unavailable")
+
+    def test_suites_run_in_the_developers_own_environment(self) -> None:
+        """The sanitised PATH is right for compiling and wrong for npm and zsh."""
+        self.assertNotEqual(
+            runner_module.suite_environment().get("PATH"), runner_module.BUILD_PATH
+        )
 
     def test_one_job_at_a_time(self) -> None:
         job = self.make_job()

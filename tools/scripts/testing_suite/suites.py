@@ -51,6 +51,13 @@ class Suite:
     # rather than failing with "no such file".
     needs: tuple[str, ...] = ()
 
+    # A one-off preparation step: run `prepare` when `prepare_when_missing` is
+    # not there. Dependencies nobody installed are the same class of problem as
+    # a binary nobody built -- the hub does it rather than reporting a test
+    # failure that is nothing of the kind.
+    prepare: tuple[str, ...] = ()
+    prepare_when_missing: str = ""
+
     # Reads counts out of the output. Never decides pass or fail -- the exit
     # code does that.
     parser: Callable[[str], dict] | None = None
@@ -173,6 +180,8 @@ SUITES: tuple[Suite, ...] = (
         description="The feedback-intake worker: tsc --noEmit, then vitest.",
         command=("npm", "run", "test"),
         working_directory="src/services",
+        prepare=("npm", "ci"),
+        prepare_when_missing="src/services/node_modules",
         parser=parse_vitest,
     ),
     Suite(
@@ -182,6 +191,8 @@ SUITES: tuple[Suite, ...] = (
         description="tsc --noEmit across every workspace.",
         command=("npm", "run", "check"),
         working_directory="src/services",
+        prepare=("npm", "ci"),
+        prepare_when_missing="src/services/node_modules",
     ),
     Suite(
         id="smoke",
@@ -249,5 +260,10 @@ def validate() -> list[str]:
 
         if suite.working_directory != "." and not (REPOSITORY_ROOT / suite.working_directory).is_dir():
             problems.append(f"'{suite.id}' runs in {suite.working_directory}, which does not exist")
+
+        if bool(suite.prepare) != bool(suite.prepare_when_missing):
+            problems.append(
+                f"'{suite.id}' needs both a preparation command and the path that triggers it"
+            )
 
     return problems

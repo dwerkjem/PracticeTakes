@@ -297,6 +297,22 @@ class ReviewHandler(BaseHTTPRequestHandler):
                 attended=bool(payload.get("attended", False)),
             )
             self._send_json({"problems": problems}, status=200 if not problems else 400)
+        elif parsed.path == "/api/score-many":
+            ids = [int(value) for value in payload.get("capture_ids", [])]
+
+            if not ids:
+                self._send_json({"error": "select some images first"}, status=400)
+
+                return
+
+            result = review.score_many(
+                self.store,
+                ids,
+                str(payload.get("verdict", "")),
+                str(payload.get("note", "")),
+                overwrite=bool(payload.get("overwrite", False)),
+            )
+            self._send_json(result, status=400 if result["problems"] else 200)
         elif parsed.path == "/api/tag":
             ids = [int(value) for value in payload.get("capture_ids", [])]
             name = str(payload.get("tag", "")).strip()

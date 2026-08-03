@@ -244,6 +244,96 @@ class SelectionTests(ReviewTestCase):
         self.assertIn("error", result)
 
 
+class BulkScoringTests(ReviewTestCase):
+    """One verdict across a selection — the common case by far."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.ids = [
+            self.add_capture(TUNER, "default"),
+            self.add_capture(TUNER, "constrained"),
+            self.add_capture(SHELL, "default"),
+        ]
+
+    def test_a_bulk_pass_answers_every_image_in_the_selection(self) -> None:
+        result = review.score_many(self.store, self.ids[:2], "pass")
+
+        self.assertEqual(result["problems"], [])
+        self.assertEqual(result["scored"], len(surfaces.FIXED_AXES) * 2)
+
+        for capture_id in self.ids[:2]:
+            with self.subTest(capture=capture_id):
+                self.assertEqual(len(self.store.verdicts(capture_id)), len(surfaces.FIXED_AXES))
+
+    def test_an_image_outside_the_selection_is_untouched(self) -> None:
+        review.score_many(self.store, self.ids[:2], "pass")
+
+        self.assertEqual(self.store.verdicts(self.ids[2]), [])
+
+    def test_a_bulk_fail_needs_a_note(self) -> None:
+        result = review.score_many(self.store, self.ids, "fail")
+
+        self.assertTrue(result["problems"])
+        self.assertEqual(result["scored"], 0)
+        self.assertEqual(self.store.verdicts(self.ids[0]), [])
+
+    def test_a_note_less_bulk_fail_is_refused_even_when_nothing_would_change(self) -> None:
+        """Otherwise it touches nothing, finds no problem, and reports success."""
+        review.score_many(self.store, self.ids, "pass")
+        result = review.score_many(self.store, self.ids, "fail")
+
+        self.assertTrue(result["problems"])
+        self.assertEqual(result["scored"], 0)
+
+    def test_a_bulk_fail_with_a_note_is_recorded_on_all_of_them(self) -> None:
+        result = review.score_many(self.store, self.ids, "fail", "the layout is cramped")
+
+        self.assertEqual(result["problems"], [])
+
+        for capture_id in self.ids:
+            notes = {row["note"] for row in self.store.verdicts(capture_id)}
+
+            self.assertEqual(notes, {"the layout is cramped"})
+
+    def test_an_answered_question_is_left_alone_by_default(self) -> None:
+        """A bulk pass must not quietly overwrite a considered verdict."""
+        review.score(self.store, self.ids[0], "looks-good", "fail", "cramped")
+        result = review.score_many(self.store, self.ids[:1], "pass")
+
+        self.assertEqual(result["left_alone"], 1)
+
+        stored = {row["question"]: row["verdict"] for row in self.store.verdicts(self.ids[0])}
+
+        self.assertEqual(stored["looks-good"], "fail")
+        self.assertEqual(stored["works"], "pass")
+
+    def test_overwrite_replaces_answered_questions(self) -> None:
+        review.score(self.store, self.ids[0], "looks-good", "fail", "cramped")
+        review.score_many(self.store, self.ids[:1], "skip", overwrite=True)
+
+        stored = {row["question"]: row["verdict"] for row in self.store.verdicts(self.ids[0])}
+
+        self.assertEqual(set(stored.values()), {"skip"})
+
+    def test_attended_questions_are_never_bulk_answered(self) -> None:
+        """A live-input question passed from a grid is a claim nobody made."""
+        review.score_many(self.store, self.ids, "pass")
+        attended = review.outstanding(self.store, self.run_id, attended=True)
+
+        self.assertTrue(attended)
+        self.assertEqual([entry["question"] for entry in attended], ["live-input"])
+
+    def test_a_bulk_pass_clears_the_reviewable_outstanding_list(self) -> None:
+        review.score_many(self.store, self.ids, "pass")
+
+        self.assertEqual(review.outstanding(self.store, self.run_id, attended=False), [])
+
+    def test_an_unknown_capture_is_reported(self) -> None:
+        result = review.score_many(self.store, [9999], "pass")
+
+        self.assertTrue(result["problems"])
+
+
 class ExportTests(ReviewTestCase):
     def test_an_unfinished_review_exports_as_incomplete(self) -> None:
         """The failure mode that matters: unscored must never read as passed."""

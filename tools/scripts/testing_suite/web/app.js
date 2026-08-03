@@ -14,6 +14,9 @@ const state = {
   selected: new Set(),
   lastClicked: null,
   polling: null,
+  // Previews default to large: the grid exists so you can see what is being
+  // reviewed, and a thumbnail you have to squint at defeats the whole thing.
+  size: window.localStorage.getItem("preview-size") || "large",
 };
 
 async function api(path, body) {
@@ -245,7 +248,8 @@ function renderCard(capture) {
     card.appendChild(box);
   } else {
     const image = document.createElement("img");
-    image.src = `/thumbnail?id=${capture.id}`;
+    image.src = state.size === "dense" ? `/thumbnail?id=${capture.id}` : `/image?id=${capture.id}`;
+    image.loading = "lazy";
     image.alt = `${capture.surface} at ${capture.geometry}`;
     image.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -359,7 +363,7 @@ function renderGrid(view) {
     section.innerHTML = `<h2>${group.surface} <span class="state">${group.state}</span></h2>`;
 
     const row = document.createElement("div");
-    row.className = "captures";
+    row.className = `captures ${state.size}`;
 
     group.captures.forEach((capture) => {
       state.order.push(capture.id);
@@ -455,6 +459,73 @@ function bandSelect() {
     paintSelection();
   });
 }
+
+// --- Bulk actions ----------------------------------------------------------
+
+// Most surfaces are untouched by most changes: you look at a row of them,
+// nothing is wrong, and answering three axes each individually is friction for
+// no information.
+async function scoreSelection(verdict) {
+  if (!state.selected.size) {
+    window.alert("Select some images first — click, shift-click for a range, or drag across them.");
+    return;
+  }
+
+  let note = "";
+
+  if (verdict === "fail") {
+    note = window.prompt(
+      `What is wrong with these ${state.selected.size} image(s)?`) || "";
+
+    if (!note.trim()) return;
+  }
+
+  const { ok, data } = await api("/api/score-many", {
+    capture_ids: [...state.selected],
+    verdict,
+    note,
+    overwrite: element("overwrite").checked,
+  });
+
+  if (!ok) {
+    window.alert((data.problems || [data.error || "could not record that"]).join("\n"));
+  } else if (data.left_alone) {
+    // Said out loud, because silently skipping answered questions would look
+    // like the button did nothing.
+    element("outstanding").textContent =
+      `Scored ${data.scored}; left ${data.left_alone} already-answered question(s) alone ` +
+      "(tick “overwrite answered” to replace them).";
+  }
+
+  await reload();
+}
+
+element("bulk-pass").addEventListener("click", () => scoreSelection("pass"));
+element("bulk-fail").addEventListener("click", () => scoreSelection("fail"));
+element("bulk-skip").addEventListener("click", () => scoreSelection("skip"));
+
+element("select-all").addEventListener("click", () => {
+  state.order.forEach((id) => state.selected.add(id));
+  paintSelection();
+});
+
+element("select-none").addEventListener("click", () => {
+  state.selected.clear();
+  paintSelection();
+});
+
+function applySize(size) {
+  state.size = size;
+  window.localStorage.setItem("preview-size", size);
+  document.querySelectorAll("button.size").forEach((button) => {
+    button.classList.toggle("active", button.dataset.size === size);
+  });
+  reload();
+}
+
+document.querySelectorAll("button.size").forEach((button) => {
+  button.addEventListener("click", () => applySize(button.dataset.size));
+});
 
 // --- Actions ---------------------------------------------------------------
 
@@ -567,6 +638,9 @@ async function reload() {
   renderResults(data);
   renderGrid(data);
   renderJob(data.job);
+  document.querySelectorAll("button.size").forEach((button) => {
+    button.classList.toggle("active", button.dataset.size === state.size);
+  });
 
   if (data.job && data.job.running) poll();
 

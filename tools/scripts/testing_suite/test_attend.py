@@ -347,6 +347,30 @@ class ServerTests(SuiteTestCase):
         self.assertEqual(job["state"], "idle")
         self.assertFalse(job["running"])
 
+    def test_bulk_scoring_through_the_api(self) -> None:
+        second = self.add_capture(SHELL)
+        status, payload = self.request(
+            "POST", "/api/score-many",
+            {"capture_ids": [self.capture_id, second], "verdict": "pass"},
+        )
+
+        self.assertEqual(status, 200)
+        self.assertTrue(payload["scored"])
+        self.assertTrue(self.store.verdicts(second))
+
+    def test_a_bulk_failure_without_a_note_is_refused(self) -> None:
+        status, payload = self.request(
+            "POST", "/api/score-many", {"capture_ids": [self.capture_id], "verdict": "fail"},
+        )
+
+        self.assertEqual(status, 400)
+        self.assertTrue(payload["problems"])
+
+    def test_bulk_scoring_an_empty_selection_is_refused(self) -> None:
+        status, _ = self.request("POST", "/api/score-many", {"capture_ids": [], "verdict": "pass"})
+
+        self.assertEqual(status, 400)
+
     def test_the_server_stays_on_loopback(self) -> None:
         """The store holds screenshots of unreleased software on a workstation."""
         self.assertEqual(self.httpd.server_address[0], "127.0.0.1")

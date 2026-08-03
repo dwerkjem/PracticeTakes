@@ -227,6 +227,70 @@ def score(
     )
 
 
+def score_many(
+    store: Store,
+    capture_ids: list[int],
+    verdict: str,
+    note: str = "",
+    *,
+    overwrite: bool = False,
+) -> dict:
+    """Apply one verdict to every reviewable question on every selected capture.
+
+    The bulk case is the common one by far: most surfaces are untouched by most
+    changes, you look at a row of them, nothing is wrong, and answering three
+    axes each individually is friction for no information. The terminal harness
+    had the same shortcut for the same reason.
+
+    Only questions answerable from the image are touched — the attended ones
+    need a live application, and passing them from a grid would be a claim
+    nobody made. By default only unanswered questions are filled in, so a bulk
+    pass cannot quietly overwrite a considered verdict; `overwrite` says to
+    replace them anyway.
+    """
+    # Checked up front rather than per question: with everything already
+    # answered, a note-less bulk fail would otherwise touch nothing, find no
+    # problem to report, and come back as a success that changed nothing.
+    if verdict == FAIL and not note.strip():
+        return {"scored": 0, "left_alone": 0,
+                "problems": ["A bulk failure needs a note saying what is wrong."]}
+
+    scored = 0
+    skipped = 0
+    problems: list[str] = []
+
+    for capture_id in capture_ids:
+        capture = store.capture(capture_id)
+
+        if capture is None:
+            problems.append(f"No capture {capture_id}.")
+
+            continue
+
+        answered = {row["question"] for row in store.verdicts(capture_id)}
+
+        for question in _question_lookup(capture.surface_state, capture.surface_title, False):
+            if question.id in answered and not overwrite:
+                skipped += 1
+
+                continue
+
+            found = store.record_verdict(
+                capture_id,
+                question=question.id,
+                prompt=question.prompt,
+                verdict=verdict,
+                note=note,
+            )
+
+            if found:
+                problems.extend(found)
+            else:
+                scored += 1
+
+    return {"scored": scored, "left_alone": skipped, "problems": problems}
+
+
 def apply_tag(store: Store, capture_ids: list[int], tag: str) -> dict:
     if not capture_ids:
         return {"tagged": 0}

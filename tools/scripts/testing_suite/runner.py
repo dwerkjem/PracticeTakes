@@ -19,6 +19,13 @@ the ambient PATH puts Nix's loader in front of the system one and `juceaide` die
 with "libexpat.so.1 not found" partway through. That is a miserable failure to
 hit from a button, so it is prevented rather than diagnosed.
 
+**Suites run with the developer's own environment.** The sanitised PATH is right
+for compiling and wrong for everything else: `npm`, `node`, and `zsh` commonly
+live in a Nix profile or a version manager, and running the service tests with
+`/usr/bin:/bin` reported "npm: no such file" as a *test failure*. A tool that is
+not installed is not a failing test — it is a suite that could not run, and it
+says so.
+
 **A run is one build under test**, holding everything anybody learned about it:
 captures, verdicts, suite results, measurements. That is what makes "what state
 was this build in" one question rather than five.
@@ -34,6 +41,7 @@ import os
 from pathlib import Path
 import platform as _platform
 import re
+import shutil
 import subprocess
 import threading
 import time
@@ -109,6 +117,11 @@ def binary_path(target: str) -> Path | None:
 
 def _now() -> str:
     return _datetime.datetime.now().replace(microsecond=0).isoformat()
+
+
+def suite_environment() -> dict[str, str]:
+    """The developer's own environment, because that is where their tools are."""
+    return dict(os.environ)
 
 
 def build_environment() -> dict[str, str]:
@@ -189,6 +202,29 @@ def build_overview() -> list[dict]:
 
 def display_available() -> bool:
     return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+
+
+def missing_program(command: str) -> str:
+    """Why this command cannot be run at all, or "" when it can be.
+
+    Checked before running rather than after failing, so "npm is not installed"
+    reads as a suite that could not run rather than as a test that failed.
+    """
+    if not command or command.startswith("{"):
+        return ""
+
+    if "/" in command:
+        path = REPOSITORY_ROOT / command
+
+        if path.exists() and os.access(path, os.X_OK):
+            return ""
+
+        return f"`{command}` is not there, or is not executable"
+
+    if shutil.which(command, path=suite_environment().get("PATH", "")) is None:
+        return f"`{command}` is not installed, or is not on your PATH"
+
+    return ""
 
 
 @dataclass
@@ -337,7 +373,14 @@ class Job:
             failed = [
                 entry for entry in self.results.values() if entry.get("state") == "failed"
             ]
-            summary = f"{len(chosen) - len(failed)} of {len(chosen)} suite(s) passed"
+            ran = [
+                entry for entry in self.results.values()
+                if entry.get("state") not in ("skipped", "unavailable")
+            ]
+            summary = f"{len(ran) - len(failed)} of {len(ran)} suite(s) passed"
+
+            if len(ran) < len(chosen):
+                summary += f", {len(chosen) - len(ran)} could not run"
             self._say(summary, state=FINISHED if not failed else FAILED, percent=100)
         except Exception as error:  # noqa: BLE001 - a background job reports rather than crashes
             self._say(f"stopped: {error}", state=FAILED)
@@ -388,6 +431,7 @@ class Job:
         ceiling: int,
         working_directory: Path | None = None,
         capture: list[str] | None = None,
+        sanitised: bool = True,
     ) -> int:
         """Run a command, streaming its output into the log. Returns the exit code."""
         self._say(f"{label}…", percent=floor)
@@ -396,7 +440,7 @@ class Job:
             process = subprocess.Popen(
                 arguments,
                 cwd=working_directory or REPOSITORY_ROOT,
-                env=build_environment(),
+                env=build_environment() if sanitised else suite_environment(),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -461,6 +505,43 @@ class Job:
 
             return
 
+        unavailable = missing_program(suite.command[0] if suite.command else "")
+
+        if unavailable:
+            # Not a failing test: a tool that is not installed means the suite
+            # never ran, and saying "failed" about it would be a lie that costs
+            # somebody an afternoon.
+            self._record(suite.id, state="unavailable", message=unavailable)
+            self._say(f"{suite.label}: skipped — {unavailable}", percent=ceiling)
+
+            return
+
+        if suite.prepare and not (REPOSITORY_ROOT / suite.prepare_when_missing).exists():
+            self._say(
+                f"{suite.label}: {suite.prepare_when_missing} is missing — "
+                f"running `{' '.join(suite.prepare)}` first",
+                percent=floor,
+            )
+            prepared = self._command(
+                list(suite.prepare),
+                label=" ".join(suite.prepare),
+                floor=floor,
+                ceiling=floor,
+                working_directory=REPOSITORY_ROOT / suite.working_directory,
+                sanitised=False,
+            )
+
+            if prepared != 0:
+                self._record(
+                    suite.id,
+                    state="unavailable",
+                    message=f"`{' '.join(suite.prepare)}` failed, so the suite could not run",
+                )
+                self._say(f"{suite.label}: skipped — its dependencies would not install",
+                          percent=ceiling)
+
+                return
+
         output: list[str] = []
         code = self._command(
             self._resolve(suite.command),
@@ -469,6 +550,7 @@ class Job:
             ceiling=ceiling,
             working_directory=REPOSITORY_ROOT / suite.working_directory,
             capture=output,
+            sanitised=False,
         )
         seconds = (_datetime.datetime.now() - started).total_seconds()
         parsed = suite.parser("\n".join(output)) if suite.parser else {}
@@ -492,6 +574,14 @@ class Job:
         if measurements:
             self.store.record_measurements(run_id, measurements, suite.id)
 
+        # A failure with no output at all is the confusing one: something is
+        # wrong and the log says nothing about what. Say so rather than leaving
+        # an empty panel to interpret.
+        detail = f"exited {code}"
+
+        if code != 0 and not output:
+            detail = f"exited {code} and printed nothing — is `{suite.command[0]}` working?"
+
         self._record(
             suite.id,
             state="passed" if code == 0 else "failed",
@@ -499,10 +589,10 @@ class Job:
             failures=failures,
             seconds=round(seconds, 1),
             measurements=len(measurements),
-            message="" if code == 0 else f"exited {code}",
+            message="" if code == 0 else detail,
         )
         self._say(
-            f"{suite.label}: {'passed' if code == 0 else 'FAILED'} "
+            f"{suite.label}: {'passed' if code == 0 else 'FAILED — ' + detail} "
             f"({cases} case(s), {failures} failure(s))",
             percent=ceiling,
         )
