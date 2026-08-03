@@ -1,45 +1,117 @@
 # Real-score corpus
 
-Public-domain scores, exported by us, that `MusicXmlCorpusTests` imports and
-checks. The synthetic fixtures in `src/tests/support/MusicXmlFixtures.h` fail
-informatively when a rule breaks; these exist to catch the assumptions we did
-not know we were making, which only real exporter output contains.
+Twenty songs from the [OpenScore Lieder Corpus](https://github.com/OpenScore/Lieder),
+imported end to end by `MusicXmlCorpusTests`.
 
-**The corpus is empty right now.** `MusicXmlCorpusTests` reports that it was
-skipped rather than passing silently, so an empty corpus cannot be mistaken for
-a passing one.
+The synthetic fixtures in `src/tests/support/MusicXmlFixtures.h` fail
+informatively when a rule breaks, because each contains exactly the construct
+under test. These exist to catch the assumptions we did not know we were
+making, which only real exporter output contains. They earned that on arrival:
+the first run against real files found two bugs the synthetic fixtures could
+never have found — unpitched chord tones advancing the voice cursor, and ties
+being flattened from per-note to per-chord.
+
+## Licence
+
+Everything here is **CC0 1.0 Universal** (public domain dedication), from
+OpenScore, whose repository is CC0 in full and whose files each carry
+`<rights>OpenScore (CC0)</rights>` in their own metadata.
+
+OpenScore requests — but does not require — credit. So: these are transcriptions
+by the OpenScore Lieder Corpus, from public-domain editions on IMSLP. Each
+file's `<identification>` names the IMSLP source it was transcribed from.
+
+## `expectations.txt` is the corpus manifest
+
+A score is in the corpus **if and only if it has a row in `expectations.txt`**.
+The test iterates the manifest, not the directory.
+
+That distinction is deliberate. This directory may also hold scores that are
+useful to test against locally but cannot be committed, because the repertoire
+is under copyright and this is a public repository. `.gitignore` ignores every
+score file here by default; the CC0 ones are force-added. Local extras are
+still run through the model-invariant checks — they are real files and the
+invariants hold for any score — and reported as unpinned, but they cannot fail
+a build that does not have them.
 
 ## Adding a score
 
-1. Export a public-domain work from MuseScore as `.musicxml` or `.mxl` and put
-   it in this directory. Aim for four to six files covering at least one
-   multi-part vocal score (a Bach chorale, SATB) and one piano score (a Clementi
-   sonatina).
+**Check the licence before anything else.** Three layers all have to clear:
+
+| Layer | Cleared by |
+|---|---|
+| The composition | Composer long dead, or explicit release |
+| The **arrangement** | An arrangement of a public-domain work is a *new* copyright |
+| The **file** | The transcriber's terms, and the host's |
+
+"Mozart died in 1791" only clears the first. Read the file's own metadata:
+
+```bash
+unzip -p score.mxl '*.xml' | grep -E '<rights>|<source>|type="arranger"'
+```
+
+An absent `<rights>` means **unknown**, not free. A `<creator type="arranger">`
+naming a living person means layer 2 has not cleared. Anything with `NC` or
+`ND` in its licence is incompatible with this project's BSD-3-Clause terms.
+
+Then:
+
+1. Put the file in this directory and force-add it: `git add -f <file>`.
 2. Add a row to the provenance table below.
-3. Add a line to `expectations.txt` pinning what the importer produces. The
-   test fails on a file with no entry — a corpus file nobody asserts anything
-   about is a file that cannot catch a regression.
+3. Add a row to `expectations.txt`. Run
+   `PracticeTakesTests "[.corpus-report]" --success` to get the numbers and a
+   breakdown of the diagnostics behind them.
 
-To find the numbers for step 3, add the file and run the test; the failure
-message prints the values it actually got.
-
-## Licensing
-
-Only public-domain repertoire, exported by us. The music is out of copyright and
-the export file is ours, which sidesteps the redistribution question entirely
-rather than relying on a licence we would have to track. Do not add a file
-downloaded from a score-sharing site, whatever its stated licence.
+Good sources: [OpenScore](https://github.com/OpenScore/Lieder) (CC0),
+[CPDL](https://www.cpdl.org) (per-score licence, good for SATB), and
+[IMSLP](https://imslp.org) if you engrave it yourself — then the file is
+unambiguously ours.
 
 ## Provenance
 
-| File | Work | Composer | Died | Exported from | Notes |
-|---|---|---|---|---|---|
-| _(none yet)_ | | | | | |
+All twenty from OpenScore Lieder, CC0, transcribed from IMSLP editions. Voice
+and piano unless noted.
+
+| File | Composer | Died | Work |
+|---|---|---|---|
+| `beach-1-o-mistress-mine.mxl` | Amy Beach | 1944 | *3 Shakespeare Songs*, Op. 37 no. 1 |
+| `beethoven-3-vom-tode.mxl` | Ludwig van Beethoven | 1827 | *6 Lieder*, Op. 48 no. 3 |
+| `berg-1-nacht.mxl` | Alban Berg | 1935 | *7 frühe Lieder* no. 1 |
+| `boulanger-5-au-pied-de-mon-lit.mxl` | Lili Boulanger | 1918 | *Clairières dans le ciel* no. 5 |
+| `brahms-6-du-sprichst-dass-ich-mich-taeuschte.mxl` | Johannes Brahms | 1897 | *9 Lieder und Gesänge*, Op. 32 no. 6 |
+| `debussy-2-il-pleure-dans-mon-coeur.mxl` | Claude Debussy | 1918 | *Ariettes oubliées* no. 2 |
+| `faure-4-a-clymene.mxl` | Gabriel Fauré | 1924 | *Cinq mélodies*, Op. 58 no. 4 |
+| `hensel-2-vorwurf.mxl` | Fanny Hensel | 1847 | *5 Lieder*, Op. 10 no. 2 |
+| `joplin-please-say-you-will.mxl` | Scott Joplin | 1917 | *Please Say You Will* |
+| `liliuokalani-aloha-oe.mxl` | Queen Liliʻuokalani | 1917 | *Aloha ʻOe* — four parts |
+| `liszt-2-pace-non-trovo.mxl` | Franz Liszt | 1886 | *3 sonetti di Petrarca*, S.270b no. 2 — three parts |
+| `mahler-4-die-zwei-blauen-augen-von-meinem-schatz.mxl` | Gustav Mahler | 1911 | *Lieder eines fahrenden Gesellen* no. 4 |
+| `mendelssohn-3-die-liebende-schreibt-mwv-k-66.mxl` | Felix Mendelssohn | 1847 | *6 Gesänge*, Op. 86 no. 3 |
+| `satie-5-chanson-du-chat.mxl` | Erik Satie | 1925 | *Ludions* no. 5 |
+| `schubert-12-am-meer.mxl` | Franz Schubert | 1828 | *Schwanengesang*, D.957 no. 12 |
+| `schumann-1-was-weinst-du-bluemlein.mxl` | **Clara** Schumann | 1896 | *6 Lieder*, Op. 23 no. 1 |
+| `schumann-4-die-stille.mxl` | **Robert** Schumann | 1856 | *Liederkreis*, Op. 39 no. 4 |
+| `strauss-2-caecilie.mxl` | Richard Strauss | 1949 | *4 Lieder*, Op. 27 no. 2 |
+| `webern-5-ihr-tratet-zu-dem-herde.mxl` | Anton Webern | 1945 | *5 Lieder nach Gedichten von Stefan George*, Op. 4 no. 5 |
+| `wolf-9-der-schreckenberger.mxl` | Hugo Wolf | 1903 | *Eichendorff-Lieder* no. 9 |
+
+The range is deliberate. Beethoven through Webern covers a century and a half
+of notation practice; Berg and Webern exercise dense chromatic spelling, where
+keeping the spelling *and* the sounding number matters most; Liszt is the
+longest and most texturally complex; Joplin and Liliʻuokalani are idioms
+unlike the German lied.
 
 ## What this corpus does not cover
 
-**MuseScore exports only.** No second notation program is available, so this is
-single-dialect coverage and must not be read as cross-dialect coverage. Finale
-emits `<divisions>` values and voice numbering unlike MuseScore's, and Sibelius
-emits far more layout elements. Neither is exercised here. Adding a Finale,
-Sibelius, or Dorico export later is cheap and remains worth doing.
+**One exporter, one genre.** Every file is a MuseScore export of a solo song.
+That is not the cross-dialect coverage design decision 6 wanted:
+
+- **No second notation program.** Finale writes `<divisions>` and voice
+  numbering unlike MuseScore's; Sibelius emits far more layout elements.
+  Neither is exercised.
+- **No SATB choral score.** The corpus is voice and piano, so four-voice
+  writing on two staves — the case `<backup>` handling is hardest for — is
+  covered only by the synthetic fixtures. CPDL is the place to fix this.
+- **No large multi-part score.** Nothing here has more than four parts.
+- **No percussion.** The unpitched-chord-tone bug was found against a local
+  copyrighted file, and nothing committed here would have caught it.

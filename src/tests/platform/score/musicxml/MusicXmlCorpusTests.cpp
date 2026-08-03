@@ -116,72 +116,158 @@ TEST_CASE(
     "the real-score corpus imports as it did when each file was added",
     "[score][musicxml][corpus]")
 {
-    const std::vector<juce::File> files = corpusFiles();
+    // **expectations.txt is the corpus manifest.** A score is in the corpus if
+    // and only if it has a row there, and this iterates the manifest rather
+    // than the directory.
+    //
+    // That distinction matters because the directory may also hold scores that
+    // are useful to test against locally and cannot be committed -- the
+    // repertoire is under copyright and this is a public repository. Those are
+    // gitignored, exercised by the invariants case below, and reported as
+    // extras here. They must not fail a build that does not have them.
+    const std::map<std::string, Expectation> expectations = readExpectations();
 
-    if (files.empty())
+    if (expectations.empty())
     {
         // Reported rather than passed over in silence: an empty corpus is a gap
-        // in the safety net, not a clean result. `WARN` prints even when the
-        // suite passes, so the gap stays visible in every test run.
+        // in the safety net, not a clean result. WARN prints even when the
+        // suite passes, so the gap stays visible in every run.
         WARN(
-            "The MusicXML corpus at "
-            << corpusDirectory().getFullPathName()
-            << " is empty, so no real score was imported. "
-               "See its README.md for how to add one.");
+            "expectations.txt lists no scores, so no real score was checked. See "
+            << corpusDirectory().getFullPathName() << "/README.md.");
 
-        SUCCEED("corpus empty -- skipped");
+        SUCCEED("corpus manifest empty -- skipped");
 
         return;
     }
 
-    const std::map<std::string, Expectation> expectations = readExpectations();
-
-    for (const juce::File& file : files)
+    for (const auto& [name, expectation] : expectations)
     {
-        const std::string name = file.getFileName().toStdString();
-
         INFO("corpus file: " << name);
+
+        const juce::File file = corpusDirectory().getChildFile(juce::String(name));
+
+        // A row naming a file that is not there is a broken corpus, not a
+        // missing optional extra.
+        REQUIRE(file.existsAsFile());
 
         const MusicXmlImportResult result = importMusicXmlFile(file);
 
         REQUIRE(succeeded(result.status));
         REQUIRE(result.score != nullptr);
 
-        const int parts = static_cast<int>(result.score->parts.size());
-        const int measures = static_cast<int>(measureCount(*result.score));
-        const long long ticks = static_cast<long long>(totalLength(*result.score));
-        const int diagnostics = static_cast<int>(result.diagnostics.size());
+        CHECK(static_cast<int>(result.score->parts.size()) == expectation.parts);
+        CHECK(static_cast<int>(measureCount(*result.score)) == expectation.measures);
+        CHECK(static_cast<long long>(totalLength(*result.score)) == expectation.totalTicks);
+        CHECK(static_cast<int>(result.diagnostics.size()) == expectation.diagnostics);
+    }
 
-        const auto expectation = expectations.find(name);
+    // Anything on disk the manifest does not name. Not a failure -- see above --
+    // but worth saying, so a file added and never pinned does not sit there
+    // looking like coverage it is not providing.
+    for (const juce::File& file : corpusFiles())
+    {
+        const std::string name = file.getFileName().toStdString();
 
-        if (expectation == expectations.end())
+        if (expectations.count(name) > 0)
         {
-            // A corpus file nobody asserts anything about cannot catch a
-            // regression, so an unpinned file is a failure rather than a pass.
-            // The values it actually produced are printed so the row can be
-            // written without hunting for them.
-            FAIL(
-                "No row in expectations.txt for \""
-                << name << "\". Add this line:\n  " << name << " | " << parts << " | " << measures
-                << " | " << ticks << " | " << diagnostics);
+            continue;
+        }
+
+        WARN(
+            "\"" << name
+                 << "\" is in the corpus directory but not in expectations.txt, so nothing is "
+                    "pinned about it. Run \"[.corpus-report]\" to get its row.");
+    }
+}
+
+TEST_CASE("report what every corpus file imports to", "[.corpus-report]")
+{
+    // Hidden, opt-in, and printed rather than asserted -- run it with
+    //
+    //     PracticeTakesTests "[.corpus-report]" --success
+    //
+    // This is the tool the resources README points at for step 3 of adding a
+    // corpus file: it prints the row to paste into expectations.txt, and the
+    // diagnostic breakdown that says whether the number in that row is a
+    // healthy import or a warning sign.
+    //
+    // It asserts almost nothing on purpose. The pinned expectations are what
+    // catch a regression; this is for the human deciding what to pin.
+    for (const juce::File& file : corpusFiles())
+    {
+        const MusicXmlImportResult result = importMusicXmlFile(file);
+        const std::string name = file.getFileName().toStdString();
+
+        if (!succeeded(result.status))
+        {
+            WARN(name << "\n  FAILED: " << result.error);
 
             continue;
         }
 
-        CHECK(parts == expectation->second.parts);
-        CHECK(measures == expectation->second.measures);
-        CHECK(ticks == expectation->second.totalTicks);
-        CHECK(diagnostics == expectation->second.diagnostics);
+        const Score& score = *result.score;
+        const int measures = static_cast<int>(measureCount(score));
+        const long long ticks = static_cast<long long>(totalLength(score));
+
+        // Counted by element name so a large diagnostic total can be read as
+        // "one construct this importer drops, used everywhere" rather than
+        // "hundreds of separate problems".
+        std::map<std::string, int> byElement;
+        int unsupported = 0;
+        int repaired = 0;
+
+        for (const Diagnostic& diagnostic : result.diagnostics)
+        {
+            byElement[diagnostic.elementName] += diagnostic.occurrences;
+
+            if (diagnostic.severity == DiagnosticSeverity::unsupported)
+            {
+                ++unsupported;
+            }
+            else if (diagnostic.severity == DiagnosticSeverity::repaired)
+            {
+                ++repaired;
+            }
+        }
+
+        std::string report =
+            name + "\n  expectations.txt row:\n    " + name + " | " +
+            std::to_string(score.parts.size()) + " | " + std::to_string(measures) + " | " +
+            std::to_string(ticks) + " | " + std::to_string(result.diagnostics.size()) + "\n";
+
+        report +=
+            "  " + std::to_string(ticks / (ticksPerQuarterNote * 4)) + " whole notes of music, " +
+            std::to_string(score.tempoMap.entries().size()) + " tempo entries, first " +
+            std::to_string(static_cast<int>(score.tempoMap.beatsPerMinuteAt(0))) + " bpm\n";
+        report += "  written by: " +
+                  (score.metadata.encodingSoftware.empty() ? std::string{"(not stated)"}
+                                                           : score.metadata.encodingSoftware) +
+                  "\n";
+        report += "  diagnostics: " + std::to_string(result.diagnostics.size()) + " (" +
+                  std::to_string(unsupported) + " unsupported, " + std::to_string(repaired) +
+                  " repaired)\n";
+
+        for (const auto& [element, count] : byElement)
+        {
+            report += "    " + element + " x" + std::to_string(count) + "\n";
+        }
+
+        WARN(report);
     }
 }
 
 TEST_CASE("every corpus score satisfies the model's invariants", "[score][musicxml][corpus]")
 {
+    // Every score on disk, pinned or not. The invariants are the model's promise
+    // to its consumers and hold for any score whatever, so an uncommitted local
+    // file tests them just as well -- and this is where the copyrighted scores
+    // that cannot be committed still earn their keep.
     const std::vector<juce::File> files = corpusFiles();
 
     if (files.empty())
     {
-        SUCCEED("corpus empty -- skipped");
+        SUCCEED("no corpus scores on disk -- skipped");
 
         return;
     }
@@ -227,9 +313,9 @@ TEST_CASE("every corpus score satisfies the model's invariants", "[score][musicx
                         }
 
                         // Invariant 5: spelling and sounding pitch agree.
-                        for (const Pitch& pitch : event.pitches)
+                        for (const Note& note : event.notes)
                         {
-                            CHECK(isConsistent(pitch));
+                            CHECK(isConsistent(note.pitch));
                         }
 
                         previousEnd = event.onset + event.duration;
