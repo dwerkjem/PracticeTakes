@@ -9,8 +9,8 @@ that the repository root stays small.
 Practice Takes is an early-stage desktop music-practice application (JUCE 8,
 C++20, CMake) for Windows/Linux/macOS, currently a tuner + spectrogram with a
 shared microphone-capture shell. It is maintained by a single developer, so
-process is intentionally light — see `CONTRIBUTING.md` for when a change needs
-an OpenSpec proposal (`openspec/changes/`) versus a straight PR.
+process is intentionally light — see `.github/CONTRIBUTING.md` for when a change
+needs an OpenSpec proposal (`openspec/changes/`) versus a straight PR.
 
 There is also a small Cloudflare Worker service, `src/services/feedback-intake`
 (TypeScript), that receives in-app feedback submissions.
@@ -148,7 +148,10 @@ Summary:
 
 The root is kept minimal on purpose. The only tracked top-level entries are
 `src/`, `docs/`, `openspec/`, `tools/`, `README.md`, `CMakeLists.txt`,
-`CLAUDE.md`, `LICENSE`, and dotfiles whose tooling requires root placement.
+`CLAUDE.md`, `LICENSE`, `pyproject.toml`, `uv.lock`, and dotfiles whose tooling
+requires root placement. `pyproject.toml`/`uv.lock` are there because `uv`
+resolves the project from the root; the package itself still lives under
+`tools/scripts` via `[tool.setuptools] package-dir`.
 `CLAUDE.md` is a stub that imports this guide — edit the guide, not the stub.
 
 **Never add a new top-level file or directory.** Source of any language goes
@@ -165,7 +168,7 @@ it silently.
 The root is the only place kept flat. Everywhere below it, prefer nesting: a
 new document goes in the `docs/development/` subdirectory that matches its
 subject (`build/`, `architecture/`, `quality/`, `performance/`,
-`operations/`, `agents/`) rather than loose beside the index, and a new
+`operations/`, `formats/`, `agents/`) rather than loose beside the index, and a new
 subdirectory is the right answer when a subject grows. Add it to the index in
 `docs/development/README.md`.
 
@@ -186,10 +189,22 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   `BuiltInTools.cpp` are the single registration site — adding a tool is one
   entry in each and no shell change. See
   `docs/development/architecture/adding-a-tool.md`.
+- `src/application/testcontrol` — the stdin/stdout command channel the capture
+  harness drives the running application through, opened only when
+  `main.cpp` sees `--test-control`. Newline-delimited commands in, replies out,
+  no socket and no port; the channel dies with the process. It applies an
+  approved window state, clicks a named target, sets geometry/theme, and quits.
+  See `docs/development/quality/TESTING_SUITE.md`.
 - `src/features` — user-facing tools: `analysis/{tuner,spectrogram,harmonics}`,
   `feedback`, `performance` (launch timing).
-- `src/platform` — shared infrastructure, chiefly `audio/AudioInputService`
-  and `AudioSampleFifo`.
+- `src/platform` — shared infrastructure: `audio/` (`AudioInputService`,
+  `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`) and `score/` — a
+  JUCE-free score model (`Score`, `TempoMap`, `Pitch`, `MusicalTime`) plus a
+  MusicXML importer under `score/musicxml/`. `score/` has **no application
+  consumer yet**: it is reached only from `src/tests/platform/score/`, so it is
+  headless infrastructure landed ahead of the feature that will use it. What
+  the importer accepts, drops with a diagnostic, or refuses is specified in
+  `docs/development/formats/musicxml-subset.md`.
 
 A `src/features/*` tool must never reach into another tool's internals —
 shared behavior belongs in `src/platform` or `src/application`. A tool reaches
@@ -255,9 +270,12 @@ of the file it exercises rather than at the top level, and add its path to
 
 Both `src/` and `src/tests/` are on the test target's include path, so a test
 includes its subject as `"platform/score/TempoMap.h"` and a shared fixture as
-`"support/BenchmarkFakes.h"`, whatever depth it sits at. `src/tests/support/`
-holds fixtures shared across areas and is the one directory that mirrors
-nothing. `tools/scripts/quality/check_test_layout.py` enforces this in CI.
+`"support/ScoreFixtures.h"`, whatever depth it sits at. `src/tests/support/`
+holds fixtures shared across areas and is the one *code* directory that mirrors
+nothing — it is the sole entry in `NON_MIRRORED_DIRECTORIES` in
+`tools/scripts/quality/check_test_layout.py`, which enforces the mirror in CI.
+The checker only inspects `.cpp`/`.h`, so test *data* lives outside the mirror
+without an exemption: corpus files go under `src/tests/resources/`.
 
 ### Version
 
