@@ -47,7 +47,11 @@ void MainComponent::showToolsMenu()
             firstToolMenuItemId + (static_cast<int>(menuTools.size()) * toolMenuItemsPerTool);
 
         juce::PopupMenu toolMenu;
-        toolMenu.addItem(base + openToolMenuOffset, "Open or focus", true, isOpen);
+        // "Open or focus" is an action, not a state, so it carries no tick.
+        // Dock and Float are the state -- one of them ticked says the tool is
+        // open and says where it is, and neither ticked says it is closed.
+        // Ticking all three said the same thing twice.
+        toolMenu.addItem(base + openToolMenuOffset, "Open or focus", true, false);
         toolMenu.addItem(
             base + dockToolMenuOffset, "Dock in workspace", true,
             presentation == WorkspaceToolState::Presentation::docked);
