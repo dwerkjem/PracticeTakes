@@ -31,8 +31,8 @@ over time.
 The main window provides four top-level controls:
 
 - **File** — reserved for future project and audio-file commands
-- **Settings** — microphone selection, mute, input volume, live level and
-  buffering status, and light/dark appearance
+- **Settings** — microphone selection, mute, input volume, live level,
+  buffering status, appearance, and portable settings import/export
 - **Tools** — opens the tuner and spectrogram
 - **Help** — send feedback and manage feedback invitations
 
@@ -52,6 +52,28 @@ microphone setting.
 
 When no usable microphone is available, the main window shows a dismissible
 warning with a shortcut to Settings.
+
+### Workspaces and portable settings
+
+**Tools → Workspaces** includes four built-in arrangements: Vocal Warm-up,
+Pitch Practice, Spectrum Analysis, and Performance Preparation. You can also
+save the current arrangement under a name, apply it later, overwrite or rename
+it, and delete it. Named workspaces are independent saved copies. Resetting the
+workspace replaces only the current arrangement with Pitch Practice; it does
+not delete named workspaces or reset global preferences.
+
+The full Settings window can export a human-readable `.ptsettings` file. The
+bundle contains supported appearance, audio, fullscreen, feedback-invitation,
+tool, active-workspace, and named-workspace settings. It deliberately excludes
+feedback text and contact details, installation identity, use counters,
+invitation history, logs, benchmarks, and analysis data.
+
+Import validates and migrates a bundle before showing a replacement summary.
+Nothing changes until you confirm. A confirmed import replaces supported
+preferences and all named workspaces and takes effect immediately. A bundle
+from a newer unsupported version is left untouched and reports a compatibility
+error. Missing audio devices and off-screen window positions recover to safe
+available choices without rejecting the rest of the import.
 
 ## Feedback
 
@@ -85,6 +107,10 @@ native installers:
 Developer documentation, including architecture, local builds, code
 conventions, and release instructions, is kept in
 [`docs/development/`](docs/development/README.md).
+
+The [architecture map](https://dwerkjem.github.io/PracticeTakes/) is a
+browsable graph of the codebase — every file, its role, and what it connects
+to, with a guided tour. It needs no checkout or setup.
 
 ## License
 

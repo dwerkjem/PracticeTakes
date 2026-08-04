@@ -4,13 +4,14 @@ on:
   pull_request:
     paths:
       - "src/**"
+      - "!src/services/**"
       - ".clang-format"
       - ".clang-tidy"
       - "CMakeLists.txt"
-      - "cmake/**"
-      - "scripts/quality/run_clang_format.py"
-      - "scripts/quality/run_clang_tidy.py"
-      - "scripts/build/check-linux-build-dependencies.sh"
+      - "tools/cmake/**"
+      - "tools/scripts/quality/run_clang_format.py"
+      - "tools/scripts/quality/run_clang_tidy.py"
+      - "tools/scripts/build/check-linux-build-dependencies.sh"
       - ".github/workflows/cpp-quality-check.yml"
 
 permissions:
@@ -33,7 +34,7 @@ jobs:
 
       - name: Install analysis dependencies
         run: |
-          bash scripts/build/check-linux-build-dependencies.sh --install
+          bash tools/scripts/build/check-linux-build-dependencies.sh --install
           sudo apt-get install --yes ccache clang-format clang-tidy
 
       - name: Restore compiler cache
@@ -66,8 +67,8 @@ jobs:
       - name: Check clang-format compliance
         shell: bash
         run: |
-          mapfile -t cpp_files < <(find src -type f -name "*.cpp" | sort)
-          mapfile -t header_files < <(find src -type f -name "*.h" | sort)
+          mapfile -t cpp_files < <(find src -type f -name "*.cpp" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
+          mapfile -t header_files < <(find src -type f -name "*.h" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
           if [ "${#cpp_files[@]}" -eq 0 ]; then
             echo "::error::No .cpp files discovered under src/ - refusing to report success on zero analyzed files."
             exit 1
@@ -77,9 +78,9 @@ jobs:
       - name: Check clang-tidy findings
         shell: bash
         run: |
-          mapfile -t cpp_files < <(find src -type f -name "*.cpp" | sort)
+          mapfile -t cpp_files < <(find src -type f -name "*.cpp" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
           if [ "${#cpp_files[@]}" -eq 0 ]; then
             echo "::error::No .cpp files discovered under src/ - refusing to report success on zero analyzed files."
             exit 1
           fi
-          python3 scripts/quality/run_clang_tidy.py "${cpp_files[@]}"
+          python3 tools/scripts/quality/run_clang_tidy.py "${cpp_files[@]}"

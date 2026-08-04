@@ -6,7 +6,7 @@
       "type": "shell",
       "command": "bash",
       "args": [
-        "${workspaceFolder}/scripts/build/build-and-run.sh",
+        "${workspaceFolder}/tools/scripts/build/build-and-run.sh",
         "--build-only"
       ],
       "options": {

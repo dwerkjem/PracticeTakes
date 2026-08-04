@@ -1,5 +1,7 @@
 #include "../../MainComponent.h"
 
+#include <algorithm>
+
 #include "../../../../features/feedback/FeedbackInvitationPolicy.h"
 #include "FeedbackWindow.h"
 
@@ -108,7 +110,8 @@ void MainComponent::maybeOfferFeedbackInvitation()
         settingsFile->getIntValue(feedbackSuccessfulUsesKey, 0),
         settingsFile->getBoolValue(feedbackInvitationShownKey, false),
         settingsFile->getBoolValue(feedbackInvitationsDisabledKey, false)};
-    const auto isLiveSessionActive = tunerState.isOpen() || spectrogramState.isOpen();
+    const auto isLiveSessionActive = std::any_of(
+        liveTools.begin(), liveTools.end(), [](const auto& entry) { return entry.state.isOpen(); });
     if (!FeedbackInvitationPolicy::shouldInvite(state, isLiveSessionActive))
     {
         return;
@@ -142,6 +145,7 @@ void MainComponent::maybeOfferFeedbackInvitation()
 
 void MainComponent::setFeedbackInvitationsDisabled(bool disabled)
 {
+    feedbackInvitationsDisabledState = disabled;
     if (auto* settingsFile = applicationProperties.getUserSettings())
     {
         settingsFile->setValue(feedbackInvitationsDisabledKey, disabled);
@@ -155,9 +159,5 @@ void MainComponent::setFeedbackInvitationsDisabled(bool disabled)
 
 bool MainComponent::feedbackInvitationsDisabled()
 {
-    if (auto* settingsFile = applicationProperties.getUserSettings())
-    {
-        return settingsFile->getBoolValue(feedbackInvitationsDisabledKey, false);
-    }
-    return false;
+    return feedbackInvitationsDisabledState;
 }

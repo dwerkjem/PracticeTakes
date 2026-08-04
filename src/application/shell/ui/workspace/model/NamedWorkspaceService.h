@@ -50,10 +50,10 @@ class NamedWorkspaceService
     [[nodiscard]] Result
     save(WorkspaceCatalog& catalog, const std::optional<std::string>& name, bool confirmed) const
     {
-        const auto prepared = prepareName(name);
+        auto prepared = prepareName(name);
         if (prepared.status != ResultStatus::applied)
         {
-            return prepared;
+            return {prepared.status, std::move(prepared.workspaceId)};
         }
 
         const auto collision = findNamedByName(catalog, prepared.workspaceId);
@@ -120,10 +120,10 @@ class NamedWorkspaceService
             return {ResultStatus::notFound, std::string{id}};
         }
 
-        const auto prepared = prepareName(name);
+        auto prepared = prepareName(name);
         if (prepared.status != ResultStatus::applied)
         {
-            return prepared;
+            return {prepared.status, std::move(prepared.workspaceId)};
         }
 
         const auto collision = findNamedByName(catalog, prepared.workspaceId);

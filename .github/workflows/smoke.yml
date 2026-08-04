@@ -1,0 +1,88 @@
+name: Smoke tests
+
+# Launches the real built application and asserts the three things the unit
+# suite cannot: that it starts, that a tool opens, and that it shuts down
+# cleanly. Everything else in CI tests the pieces; this tests that they run.
+#
+# Deliberately separate from the C++ suite: these assertions are about process
+# lifecycle, need a display, and are the classic source of CI flakiness, so they
+# should be identifiable at a glance when one fails.
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "tools/scripts/quality/smoke_test.py"
+      - "tools/scripts/testing_suite/driver.py"
+      - ".github/workflows/smoke.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "tools/scripts/quality/smoke_test.py"
+      - "tools/scripts/testing_suite/driver.py"
+      - ".github/workflows/smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  smoke:
+    name: Launch the built application
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      # Xvfb because JUCE on Linux needs a real X server -- there is no
+      # offscreen mode that exercises the same window path, and the point here
+      # is the real one.
+      - name: Install build and display tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            libasound2-dev \
+            libcurl4-openssl-dev \
+            libfontconfig1-dev \
+            libfreetype-dev \
+            libgl1-mesa-dev \
+            libx11-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev \
+            ninja-build \
+            xvfb
+
+      # The control channel is how the smoke driver reaches the application
+      # without synthesising input. It is development-only and absent from any
+      # shipped build.
+      - name: Configure
+        run: |
+          cmake -S . -B build-smoke -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=OFF \
+            -DPRACTICE_TAKES_ENABLE_TEST_CONTROL=ON
+
+      - name: Build
+        run: cmake --build build-smoke --target PracticeTakes --parallel
+
+      # No audio capture device exists on a runner, and the suite must not
+      # depend on one -- it reports on startup, tool opening, and shutdown.
+      - name: Run the smoke tests
+        run: |
+          xvfb-run -a --server-args="-screen 0 1600x1000x24" \
+            python3 tools/scripts/quality/smoke_test.py \
+              --executable build-smoke/bin/PracticeTakes

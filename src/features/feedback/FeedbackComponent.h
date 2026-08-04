@@ -49,11 +49,14 @@ class FeedbackComponent final : public juce::Component, private juce::Thread
     [[nodiscard]] juce::String validate() const;
     [[nodiscard]] Draft currentDraft() const;
     [[nodiscard]] juce::String previewText(const Draft& draft) const;
+    [[nodiscard]] juce::String previewSummary(const Draft& draft) const;
     [[nodiscard]] juce::String captureApplicationScreenshot() const;
     void saveDraft(const Draft& draft);
     void clearDraft();
     void restoreDraft();
     void setSubmissionState(SubmissionState state, const juce::String& detail = {});
+    [[nodiscard]] bool
+    sendRequest(juce::WebInputStream& request, int& statusCode, juce::String& responseBody);
     void run() override;
 
     juce::PropertiesFile& properties;
@@ -79,6 +82,8 @@ class FeedbackComponent final : public juce::Component, private juce::Thread
 
     Draft pendingDraft;
     SubmissionState submissionState = SubmissionState::editing;
+    juce::CriticalSection requestLock;
+    juce::WebInputStream* activeRequest = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FeedbackComponent)
 };

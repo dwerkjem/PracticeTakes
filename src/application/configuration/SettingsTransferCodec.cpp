@@ -5,6 +5,7 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <unordered_set>
 
 namespace
 {
@@ -94,15 +95,92 @@ namespace
     return mode == AppSettings::FullscreenMode::kiosk ? "kiosk" : "normal";
 }
 
-[[nodiscard]] Theme parseTheme(std::string_view value)
+[[nodiscard]] bool parseTheme(std::string_view value, Theme& result)
 {
-    return value == "dark" ? Theme::dark : Theme::light;
+    if (value == "dark")
+    {
+        result = Theme::dark;
+        return true;
+    }
+    if (value == "light")
+    {
+        result = Theme::light;
+        return true;
+    }
+    return false;
 }
 
-[[nodiscard]] AppSettings::FullscreenMode parseFullscreenMode(std::string_view value)
+[[nodiscard]] bool parseFullscreenMode(std::string_view value, AppSettings::FullscreenMode& result)
 {
-    return value == "kiosk" ? AppSettings::FullscreenMode::kiosk
-                            : AppSettings::FullscreenMode::normal;
+    if (value == "kiosk")
+    {
+        result = AppSettings::FullscreenMode::kiosk;
+        return true;
+    }
+    if (value == "normal")
+    {
+        result = AppSettings::FullscreenMode::normal;
+        return true;
+    }
+    return false;
+}
+
+[[nodiscard]] bool
+validateImportedWorkspaceNames(const juce::var& workspaceValue, std::string& error)
+{
+    const auto* workspaces = workspaceValue.getDynamicObject();
+    if (workspaces == nullptr || !hasProperty(*workspaces, "named"))
+    {
+        return true;
+    }
+
+    const auto* named = property(*workspaces, "named").getArray();
+    if (named == nullptr)
+    {
+        return true;
+    }
+
+    std::unordered_set<std::string> ids;
+    std::unordered_set<std::string> names;
+    std::unordered_set<std::string> reservedNames;
+    for (const auto& builtIn : WorkspaceBuiltIns::all())
+    {
+        reservedNames.insert(
+            juce::String::fromUTF8(builtIn.name.c_str()).trim().toLowerCase().toStdString());
+    }
+
+    for (const auto& value : *named)
+    {
+        const auto* workspace = value.getDynamicObject();
+        std::string id;
+        std::string name;
+        if (workspace == nullptr || !hasProperty(*workspace, "id") ||
+            !hasProperty(*workspace, "name") ||
+            !readString(property(*workspace, "id"), id, false) ||
+            !readString(property(*workspace, "name"), name, false))
+        {
+            continue;
+        }
+
+        const auto foldedName =
+            juce::String::fromUTF8(name.c_str()).trim().toLowerCase().toStdString();
+        if (!ids.insert(id).second)
+        {
+            error = "Settings transfer contains duplicate workspace IDs";
+            return false;
+        }
+        if (!names.insert(foldedName).second)
+        {
+            error = "Settings transfer contains duplicate workspace names";
+            return false;
+        }
+        if (reservedNames.contains(foldedName))
+        {
+            error = "Settings transfer contains a reserved built-in workspace name";
+            return false;
+        }
+    }
+    return true;
 }
 
 [[nodiscard]] AppSettings::RecentTool recentTool(const WorkspaceCatalog& catalog)
@@ -131,11 +209,19 @@ namespace
 }
 } // namespace
 
-std::string SettingsTransferCodec::encode(const SettingsTransferModel& model)
+SettingsTransferEncodeResult SettingsTransferCodec::encode(const SettingsTransferModel& model)
 {
+    if (model.schemaVersion != SettingsTransferModel::currentSchemaVersion)
+    {
+        return {
+            .status = SettingsTransferEncodeStatus::invalidModel,
+            .document = std::nullopt,
+            .error = "Settings transfer model schema is unsupported"};
+    }
+
     auto root = std::make_unique<juce::DynamicObject>();
     root->setProperty("format", formatMarker);
-    root->setProperty("schemaVersion", model.schemaVersion);
+    root->setProperty("schemaVersion", SettingsTransferModel::currentSchemaVersion);
     root->setProperty("applicationVersion", toJuceString(model.applicationVersion));
 
     auto settings = std::make_unique<juce::DynamicObject>();
@@ -168,13 +254,25 @@ std::string SettingsTransferCodec::encode(const SettingsTransferModel& model)
     settings->setProperty("workspaces", encodeWorkspaceCatalog(model.state.workspaceCatalog));
     root->setProperty("settings", settings.release());
 
-    return juce::JSON::toString(juce::var(root.release()), true, 17).toStdString();
+    auto document = juce::JSON::toString(juce::var(root.release()), true, 17).toStdString();
+    if (document.size() > maximumDocumentBytes)
+    {
+        return {
+            .status = SettingsTransferEncodeStatus::tooLarge,
+            .document = std::nullopt,
+            .error = "Settings transfer document exceeds the 4 MiB limit"};
+    }
+
+    return {
+        .status = SettingsTransferEncodeStatus::encoded,
+        .document = std::move(document),
+        .error = {}};
 }
 
 SettingsTransferDecodeResult SettingsTransferCodec::decode(
     std::string_view document,
     const std::vector<WorkspaceBounds>& displayAreas,
-    const WorkspaceToolRegistry& registry)
+    const ToolCatalog& registry)
 {
     if (document.size() > maximumDocumentBytes)
     {
@@ -222,7 +320,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
             .model = std::nullopt,
             .error = "Settings transfer uses a newer schema"};
     }
-    if (schemaVersion != SettingsTransferModel::currentSchemaVersion)
+    if (schemaVersion < 1)
     {
         return {
             .status = SettingsTransferDecodeStatus::invalid,
@@ -231,7 +329,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
     }
 
     SettingsTransferModel model;
-    model.schemaVersion = schemaVersion;
+    model.schemaVersion = SettingsTransferModel::currentSchemaVersion;
     if (!readString(property(*root, "applicationVersion"), model.applicationVersion))
     {
         return {
@@ -270,10 +368,12 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
     std::string fullscreenMode;
     std::string settingsBounds;
     bool invitationsDisabled = false;
+    Theme parsedTheme = Theme::light;
+    AppSettings::FullscreenMode parsedFullscreenMode = AppSettings::FullscreenMode::normal;
 
     if (!hasProperty(*appearance, "theme") ||
         !readString(property(*appearance, "theme"), theme, false) ||
-        !hasProperty(*audio, "microphoneMuted") ||
+        !parseTheme(theme, parsedTheme) || !hasProperty(*audio, "microphoneMuted") ||
         !readBoolean(property(*audio, "microphoneMuted"), microphoneMuted) ||
         !hasProperty(*audio, "inputGain") ||
         !readNumber(property(*audio, "inputGain"), inputGain) ||
@@ -281,6 +381,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         !readString(property(*audio, "deviceState"), deviceState) ||
         !hasProperty(*window, "fullscreenMode") ||
         !readString(property(*window, "fullscreenMode"), fullscreenMode, false) ||
+        !parseFullscreenMode(fullscreenMode, parsedFullscreenMode) ||
         !hasProperty(*window, "settingsBounds") ||
         !readString(property(*window, "settingsBounds"), settingsBounds) ||
         !hasProperty(*feedback, "invitationsDisabled") ||
@@ -329,6 +430,15 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
 
     const auto workspaceDocument =
         juce::JSON::toString(property(*settings, "workspaces"), true, 17).toStdString();
+    std::string workspaceValidationError;
+    if (!validateImportedWorkspaceNames(
+            property(*settings, "workspaces"), workspaceValidationError))
+    {
+        return {
+            .status = SettingsTransferDecodeStatus::invalid,
+            .model = std::nullopt,
+            .error = std::move(workspaceValidationError)};
+    }
     const auto workspaceDecode =
         WorkspaceCatalogCodec::decode(workspaceDocument, displayAreas, registry);
     if (workspaceDecode.status == WorkspaceCatalogDecodeStatus::newerSchema)
@@ -346,11 +456,11 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
             .error = workspaceDecode.error};
     }
 
-    model.state.theme = parseTheme(theme);
+    model.state.theme = parsedTheme;
     model.state.microphoneMuted = microphoneMuted;
     model.state.inputGain = inputGain;
     model.state.audioDeviceState = juce::String::fromUTF8(deviceState.c_str());
-    model.state.fullscreenMode = parseFullscreenMode(fullscreenMode);
+    model.state.fullscreenMode = parsedFullscreenMode;
     model.state.settingsBounds = juce::String::fromUTF8(settingsBounds.c_str());
     model.state.tunerBounds = juce::String::fromUTF8(tunerBounds.c_str());
     model.state.spectrogramBounds = juce::String::fromUTF8(spectrogramBounds.c_str());

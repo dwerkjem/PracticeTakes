@@ -1,0 +1,1957 @@
+{
+  "answers": [
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "empty",
+      "surface": "The shell with no tool open",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does the tuner respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does the tuner respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does the tuner respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "tuner-docked",
+      "surface": "The tuner, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-open",
+      "surface": "The settings window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does the spectrogram respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does the spectrogram respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does the spectrogram respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "spectrogram-docked",
+      "surface": "The spectrogram, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does the analyser respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does the analyser respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does the analyser respond to sound from the microphone?",
+      "question": "live-input",
+      "state": "harmonics-docked",
+      "surface": "The harmonic analyser, docked",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "It is too small at this scale just show the note and sharp or flat indicators",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "default",
+      "note": "It is too muich info in too small of a area",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Can the floating window be moved and resized?",
+      "question": "moveable",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "It is too small it should just be note and sharp/flat indicator",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "constrained",
+      "note": "same reason",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Can the floating window be moved and resized?",
+      "question": "moveable",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "too small",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "maximised",
+      "note": "too illegible",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Can the floating window be moved and resized?",
+      "question": "moveable",
+      "state": "tuner-floating",
+      "surface": "The tuner in a floating window",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "there tabbed not not side by side",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "two-tools-split",
+      "surface": "Two tools tiled side by side",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "two-tools-split",
+      "surface": "Two tools tiled side by side",
+      "verdict": "skip"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "two-tools-split",
+      "surface": "Two tools tiled side by side",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "there not side by side",
+      "prompt": "Can the divider between the two be dragged?",
+      "question": "divider",
+      "state": "two-tools-split",
+      "surface": "Two tools tiled side by side",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "constrained",
+      "note": "same reson",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "two-tools-split",
+      "surface": "Two tools tiled side by side",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "constrained",
+      "note": "not tiled",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "two-tools-split",
+      "surface": "Two tools tiled side by side",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "two-tools-split",
+      "surface": "Two tools tiled side by side",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "not tiled",
+      "prompt": "Can the divider between the two be dragged?",
+      "question": "divider",
+      "state": "two-tools-split",
+      "surface": "Two tools tiled side by side",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "two-tools-split",
+      "surface": "Two tools tiled side by side",
+      "verdict": "skip"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "two-tools-split",
+      "surface": "Two tools tiled side by side",
+      "verdict": "skip"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "two-tools-split",
+      "surface": "Two tools tiled side by side",
+      "verdict": "skip"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Can the divider between the two be dragged?",
+      "question": "divider",
+      "state": "two-tools-split",
+      "surface": "Two tools tiled side by side",
+      "verdict": "skip"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "two-tools-tabbed",
+      "surface": "Two tools sharing a tab strip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "two-tools-tabbed",
+      "surface": "Two tools sharing a tab strip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "two-tools-tabbed",
+      "surface": "Two tools sharing a tab strip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does switching tabs show the other tool?",
+      "question": "switching",
+      "state": "two-tools-tabbed",
+      "surface": "Two tools sharing a tab strip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "two-tools-tabbed",
+      "surface": "Two tools sharing a tab strip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "two-tools-tabbed",
+      "surface": "Two tools sharing a tab strip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "two-tools-tabbed",
+      "surface": "Two tools sharing a tab strip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does switching tabs show the other tool?",
+      "question": "switching",
+      "state": "two-tools-tabbed",
+      "surface": "Two tools sharing a tab strip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "two-tools-tabbed",
+      "surface": "Two tools sharing a tab strip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "two-tools-tabbed",
+      "surface": "Two tools sharing a tab strip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "two-tools-tabbed",
+      "surface": "Two tools sharing a tab strip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does switching tabs show the other tool?",
+      "question": "switching",
+      "state": "two-tools-tabbed",
+      "surface": "Two tools sharing a tab strip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "all-tools-docked",
+      "surface": "All three tools open at once",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "all-tools-docked",
+      "surface": "All three tools open at once",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "all-tools-docked",
+      "surface": "All three tools open at once",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Do all three respond to sound at the same time?",
+      "question": "all-live",
+      "state": "all-tools-docked",
+      "surface": "All three tools open at once",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "all-tools-docked",
+      "surface": "All three tools open at once",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "all-tools-docked",
+      "surface": "All three tools open at once",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "all-tools-docked",
+      "surface": "All three tools open at once",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Do all three respond to sound at the same time?",
+      "question": "all-live",
+      "state": "all-tools-docked",
+      "surface": "All three tools open at once",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "not all visable",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "all-tools-docked",
+      "surface": "All three tools open at once",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "maximised",
+      "note": "not visible",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "all-tools-docked",
+      "surface": "All three tools open at once",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "all-tools-docked",
+      "surface": "All three tools open at once",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Do all three respond to sound at the same time?",
+      "question": "all-live",
+      "state": "all-tools-docked",
+      "surface": "All three tools open at once",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "not narrow",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "narrow-window",
+      "surface": "A narrow window with the collapsed menu",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "narrow-window",
+      "surface": "A narrow window with the collapsed menu",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "narrow-window",
+      "surface": "A narrow window with the collapsed menu",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does the collapsed menu open and list the same actions?",
+      "question": "hamburger",
+      "state": "narrow-window",
+      "surface": "A narrow window with the collapsed menu",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "narrow-window",
+      "surface": "A narrow window with the collapsed menu",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "narrow-window",
+      "surface": "A narrow window with the collapsed menu",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "narrow-window",
+      "surface": "A narrow window with the collapsed menu",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does the collapsed menu open and list the same actions?",
+      "question": "hamburger",
+      "state": "narrow-window",
+      "surface": "A narrow window with the collapsed menu",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "narrow-window",
+      "surface": "A narrow window with the collapsed menu",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "narrow-window",
+      "surface": "A narrow window with the collapsed menu",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "narrow-window",
+      "surface": "A narrow window with the collapsed menu",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does the collapsed menu open and list the same actions?",
+      "question": "hamburger",
+      "state": "narrow-window",
+      "surface": "A narrow window with the collapsed menu",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "fullscreen",
+      "surface": "Fullscreen",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "fullscreen",
+      "surface": "Fullscreen",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "fullscreen",
+      "surface": "Fullscreen",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "its not fullscreen",
+      "prompt": "Does Escape or F11 leave fullscreen?",
+      "question": "escape",
+      "state": "fullscreen",
+      "surface": "Fullscreen",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "constrained",
+      "note": "not fullscreen",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "fullscreen",
+      "surface": "Fullscreen",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "fullscreen",
+      "surface": "Fullscreen",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "fullscreen",
+      "surface": "Fullscreen",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "f11 makes it full screren",
+      "prompt": "Does Escape or F11 leave fullscreen?",
+      "question": "escape",
+      "state": "fullscreen",
+      "surface": "Fullscreen",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "fullscreen",
+      "surface": "Fullscreen",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "fullscreen",
+      "surface": "Fullscreen",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "fullscreen",
+      "surface": "Fullscreen",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does Escape or F11 leave fullscreen?",
+      "question": "escape",
+      "state": "fullscreen",
+      "surface": "Fullscreen",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Is it obvious at a glance that input is muted?",
+      "question": "mute-obvious",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Do the tools stop responding to sound?",
+      "question": "mute-silences",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "I am not sure at first glance make a color to repesent muted mabby amber",
+      "prompt": "Is it obvious at a glance that input is muted?",
+      "question": "mute-obvious",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "fail"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Do the tools stop responding to sound?",
+      "question": "mute-silences",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Is it obvious at a glance that input is muted?",
+      "question": "mute-obvious",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Do the tools stop responding to sound?",
+      "question": "mute-silences",
+      "state": "microphone-muted",
+      "surface": "Global microphone mute engaged",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does the warning say what to do about it?",
+      "question": "actionable",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Can it be dismissed?",
+      "question": "dismissable",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does the warning say what to do about it?",
+      "question": "actionable",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Can it be dismissed?",
+      "question": "dismissable",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does the warning say what to do about it?",
+      "question": "actionable",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Can it be dismissed?",
+      "question": "dismissable",
+      "state": "microphone-warning",
+      "surface": "The no-usable-input warning",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-audio-device",
+      "surface": "Settings: audio device selection",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-audio-device",
+      "surface": "Settings: audio device selection",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-audio-device",
+      "surface": "Settings: audio device selection",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Did switching device take effect without a restart?",
+      "question": "switching",
+      "state": "settings-audio-device",
+      "surface": "Settings: audio device selection",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-audio-device",
+      "surface": "Settings: audio device selection",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-audio-device",
+      "surface": "Settings: audio device selection",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-audio-device",
+      "surface": "Settings: audio device selection",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Did switching device take effect without a restart?",
+      "question": "switching",
+      "state": "settings-audio-device",
+      "surface": "Settings: audio device selection",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-audio-device",
+      "surface": "Settings: audio device selection",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-audio-device",
+      "surface": "Settings: audio device selection",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-audio-device",
+      "surface": "Settings: audio device selection",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Did switching device take effect without a restart?",
+      "question": "switching",
+      "state": "settings-audio-device",
+      "surface": "Settings: audio device selection",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-appearance",
+      "surface": "Settings: appearance and theme",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-appearance",
+      "surface": "Settings: appearance and theme",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-appearance",
+      "surface": "Settings: appearance and theme",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Did the theme apply everywhere?",
+      "question": "theme-applies",
+      "state": "settings-appearance",
+      "surface": "Settings: appearance and theme",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-appearance",
+      "surface": "Settings: appearance and theme",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-appearance",
+      "surface": "Settings: appearance and theme",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-appearance",
+      "surface": "Settings: appearance and theme",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Did the theme apply everywhere?",
+      "question": "theme-applies",
+      "state": "settings-appearance",
+      "surface": "Settings: appearance and theme",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-appearance",
+      "surface": "Settings: appearance and theme",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-appearance",
+      "surface": "Settings: appearance and theme",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-appearance",
+      "surface": "Settings: appearance and theme",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Did the theme apply everywhere?",
+      "question": "theme-applies",
+      "state": "settings-appearance",
+      "surface": "Settings: appearance and theme",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Did importing restore exactly what was exported?",
+      "question": "round-trip",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Did it say clearly whether the import succeeded?",
+      "question": "reports",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Did importing restore exactly what was exported?",
+      "question": "round-trip",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Did it say clearly whether the import succeeded?",
+      "question": "reports",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Did importing restore exactly what was exported?",
+      "question": "round-trip",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Did it say clearly whether the import succeeded?",
+      "question": "reports",
+      "state": "settings-open",
+      "surface": "Settings: import and export round trip",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "feedback-open",
+      "surface": "The feedback form",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "feedback-open",
+      "surface": "The feedback form",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "feedback-open",
+      "surface": "The feedback form",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "feedback-open",
+      "surface": "The feedback form",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "feedback-open",
+      "surface": "The feedback form",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "feedback-open",
+      "surface": "The feedback form",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "feedback-open",
+      "surface": "The feedback form",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "feedback-open",
+      "surface": "The feedback form",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "feedback-open",
+      "surface": "The feedback form",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-docked",
+      "surface": "Workspace layout after a restart",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-docked",
+      "surface": "Workspace layout after a restart",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-docked",
+      "surface": "Workspace layout after a restart",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "default",
+      "note": "",
+      "prompt": "Was the workspace layout restored?",
+      "question": "layout-restored",
+      "state": "tuner-docked",
+      "surface": "Workspace layout after a restart",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-docked",
+      "surface": "Workspace layout after a restart",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-docked",
+      "surface": "Workspace layout after a restart",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-docked",
+      "surface": "Workspace layout after a restart",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "constrained",
+      "note": "",
+      "prompt": "Was the workspace layout restored?",
+      "question": "layout-restored",
+      "state": "tuner-docked",
+      "surface": "Workspace layout after a restart",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look correct?",
+      "question": "looks-correct",
+      "state": "tuner-docked",
+      "surface": "Workspace layout after a restart",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it look well-presented?",
+      "question": "looks-good",
+      "state": "tuner-docked",
+      "surface": "Workspace layout after a restart",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Does it work?",
+      "question": "works",
+      "state": "tuner-docked",
+      "surface": "Workspace layout after a restart",
+      "verdict": "pass"
+    },
+    {
+      "geometry": "maximised",
+      "note": "",
+      "prompt": "Was the workspace layout restored?",
+      "question": "layout-restored",
+      "state": "tuner-docked",
+      "surface": "Workspace layout after a restart",
+      "verdict": "pass"
+    }
+  ],
+  "audio_device": "unspecified",
+  "commit": "ab4b3f73ffed",
+  "complete": true,
+  "finished_at": "2026-08-01T13:23:02",
+  "geometry_sweep": true,
+  "mode": "full",
+  "platform": "Linux 6.12.90+deb13.1-amd64 (x86_64)",
+  "started_at": "2026-08-01T13:03:49",
+  "unreachable": []
+}

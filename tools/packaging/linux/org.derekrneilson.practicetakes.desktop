@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Practice Takes
+GenericName=Music Practice Tools
+Comment=Analyze live microphone pitch and frequency content
+Exec=PracticeTakes
+Icon=org.derekrneilson.practicetakes
+Terminal=false
+StartupWMClass=Practice Takes
+Categories=AudioVideo;Audio;Education;
+Keywords=music;practice;tuner;spectrogram;microphone;
+StartupNotify=true

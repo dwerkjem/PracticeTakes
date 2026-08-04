@@ -2,7 +2,7 @@
 
 #include "WorkspaceBuiltIns.h"
 #include "WorkspaceDocuments.h"
-#include "WorkspaceToolRegistry.h"
+#include "application/tools/BuiltInToolCatalog.h"
 
 #include <algorithm>
 #include <cmath>
@@ -37,7 +37,7 @@ class WorkspaceNormalizer
     [[nodiscard]] static WorkspaceNormalizationResult normalize(
         const WorkspaceSnapshot& source,
         const std::vector<WorkspaceBounds>& displayAreas,
-        const WorkspaceToolRegistry& registry = WorkspaceToolRegistry())
+        const ToolCatalog& registry = builtInToolCatalog())
     {
         Context context{registry, displayAreas, {}, {}, {}};
         WorkspaceSnapshot normalized;
@@ -55,7 +55,7 @@ class WorkspaceNormalizer
         for (std::size_t index = 0; index < floatingCount; ++index)
         {
             const auto& entry = source.floating[index];
-            const auto resolved = registry.resolve(entry.toolId);
+            const auto resolved = placeableInstance(entry.toolId, context);
             if (!resolved.has_value() || !context.placed.insert(*resolved).second)
             {
                 continue;
@@ -76,12 +76,12 @@ class WorkspaceNormalizer
             {
                 break;
             }
-            const auto resolved = registry.resolve(id);
+            const auto resolved = placeableInstance(id, context);
             if (!resolved.has_value())
             {
                 continue;
             }
-            const auto* definition = registry.find(*resolved);
+            const auto* definition = registry.findForInstance(ToolInstanceId(*resolved));
             if (definition != nullptr && definition->settingsVersion == payload.version)
             {
                 normalized.toolSettings.emplace(*resolved, payload);
@@ -89,7 +89,8 @@ class WorkspaceNormalizer
         }
 
         const auto resolvedFocus =
-            source.focusedTool.has_value() ? registry.resolve(*source.focusedTool) : std::nullopt;
+            source.focusedTool.has_value() ? placeableInstance(*source.focusedTool, context)
+                                           : std::nullopt;
         if (resolvedFocus.has_value() && context.placed.contains(*resolvedFocus))
         {
             normalized.focusedTool = *resolvedFocus;
@@ -111,7 +112,7 @@ class WorkspaceNormalizer
   private:
     struct Context
     {
-        const WorkspaceToolRegistry& registry;
+        const ToolCatalog& registry;
         const std::vector<WorkspaceBounds>& displayAreas;
         std::unordered_set<std::string> placed;
         std::vector<std::string> visibleOrder;
@@ -143,7 +144,7 @@ class WorkspaceNormalizer
             const auto tabCount = std::min(source.tabs.size(), maximumTabs);
             for (std::size_t index = 0; index < tabCount; ++index)
             {
-                const auto resolved = context.registry.resolve(source.tabs[index]);
+                const auto resolved = placeableInstance(source.tabs[index], context);
                 if (resolved.has_value() && context.placed.insert(*resolved).second)
                 {
                     tabs.push_back(*resolved);
@@ -160,7 +161,7 @@ class WorkspaceNormalizer
                 return WorkspaceNode::leaf(tabs.front());
             }
 
-            const auto resolvedActive = context.registry.resolve(source.activeTab);
+            const auto resolvedActive = placeableInstance(source.activeTab, context);
             const auto active =
                 resolvedActive.has_value() &&
                         std::find(tabs.begin(), tabs.end(), *resolvedActive) != tabs.end()
@@ -188,10 +189,45 @@ class WorkspaceNormalizer
             source.orientation, ratio, std::move(*first), std::move(*second));
     }
 
+    // Canonicalises a saved id into the instance id it should be placed under,
+    // or nullopt when it must be dropped.
+    //
+    // Deduplication throughout this class keys on the *instance* id, not the
+    // tool id. Today the two are the same string for every tool, so this
+    // behaves exactly as keying on the tool did -- a snapshot naming "tuner"
+    // twice still collapses to one. Keying on the instance now is what lets
+    // multi-instance be enabled later without revisiting this class.
+    //
+    // The single-instance policy is enforced here rather than by the dedup:
+    // an id like "tuner#2" is a distinct instance and survives dedup, so it
+    // has to be dropped explicitly while the tool that declared it is
+    // single-instance.
+    [[nodiscard]] static std::optional<std::string>
+    placeableInstance(const std::string& id, Context& context)
+    {
+        const auto resolved = context.registry.resolveInstance(ToolInstanceId(id));
+        if (!resolved.has_value())
+        {
+            return std::nullopt;
+        }
+
+        const auto* definition = context.registry.findForInstance(*resolved);
+        if (definition == nullptr)
+        {
+            return std::nullopt;
+        }
+        if (definition->instancePolicy == ToolInstancePolicy::single &&
+            resolved->ordinal().value_or(1) > 1)
+        {
+            return std::nullopt;
+        }
+        return resolved->value();
+    }
+
     [[nodiscard]] static std::optional<WorkspaceNode>
     normalizeLeaf(const std::string& id, Context& context)
     {
-        const auto resolved = context.registry.resolve(id);
+        const auto resolved = placeableInstance(id, context);
         if (!resolved.has_value() || !context.placed.insert(*resolved).second)
         {
             return std::nullopt;

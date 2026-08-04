@@ -1,0 +1,175 @@
+name: Publish knowledge graph site
+
+# Publishes .ua/knowledge-graph.json as a browsable static site.
+#
+# Regenerating the graph is a deliberate, manual act — this workflow never runs
+# the analysis, invokes no model, and needs no model API credential. It reacts
+# to a regenerated graph being committed, which is the only signal that the
+# published site is out of date.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".ua/knowledge-graph.json"
+      - ".ua/meta.json"
+      - ".ua/config.json"
+      - "tools/scripts/pages/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+    inputs:
+      allow_regression:
+        description: "Publish even if the graph regression check fails"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Never cancel in progress: a superseded deployment can leave the site
+# half-updated, which is worse than publishing one graph later than necessary.
+concurrency:
+  group: knowledge-graph-site
+  cancel-in-progress: false
+
+env:
+  # Understand-Anything dashboard, pinned by commit. 2.9.4 has no upstream tag
+  # or release asset, so a tag reference would not resolve at all — see the
+  # openspec change for why this is a SHA rather than a version.
+  UA_COMMIT: fe8c5bc591716aafd79b4765549328f08ef5a52e
+  SITE_BASE: /PracticeTakes/
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          # The provenance and regression checks both read git history.
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "26"
+
+      # Runs before any build work, so a bad graph costs seconds rather than a
+      # failed publish. Blocks on missing provenance, excluded paths, and
+      # structural regression against the previously published graph.
+      - name: Verify the graph
+        run: |
+          node tools/scripts/pages/verify-graph.mjs \
+            ${{ inputs.allow_regression && '--allow-regression' || '' }}
+
+      - name: Check out the Understand-Anything dashboard
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: Egonex-AI/Understand-Anything
+          ref: ${{ env.UA_COMMIT }}
+          path: .dashboard-src
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+        with:
+          package_json_file: .dashboard-src/package.json
+
+      # Scoped to the dashboard and its dependencies. An unfiltered install also
+      # pulls the upstream homepage package and every tree-sitter grammar,
+      # none of which the site build touches.
+      - name: Install dashboard dependencies
+        working-directory: .dashboard-src
+        run: pnpm install --frozen-lockfile --filter @understand-anything/dashboard...
+
+      # The dashboard imports @understand-anything/core from dist/. The
+      # workspace's prepare script already builds it during install; this runs
+      # it explicitly so the bundle does not depend on that staying true.
+      - name: Build the core package
+        working-directory: .dashboard-src
+        run: pnpm --filter @understand-anything/core build
+
+      # Demo mode is what makes static hosting work: it skips the access-token
+      # gate and resolves data files against BASE_URL instead of a
+      # token-guarded dev-server route.
+      - name: Build the dashboard
+        working-directory: .dashboard-src/understand-anything-plugin/packages/dashboard
+        run: |
+          ./node_modules/.bin/vite build \
+            --config vite.config.demo.ts \
+            --base="${SITE_BASE}" \
+            --outDir "${GITHUB_WORKSPACE}/_site" \
+            --emptyOutDir
+
+      # Only the three files the dashboard actually fetches. fingerprints.json
+      # and intermediate/ are analysis inputs and are deliberately not served.
+      - name: Stage the graph data
+        run: |
+          cp .ua/knowledge-graph.json _site/
+          for optional in meta.json config.json; do
+            if [ -f ".ua/${optional}" ]; then
+              cp ".ua/${optional}" _site/
+            else
+              echo "note: .ua/${optional} absent; the dashboard tolerates this."
+            fi
+          done
+
+      # Publishing a built bundle is redistribution, so the upstream MIT
+      # licence and its copyright notice ship with it.
+      - name: Include the upstream licence
+        run: |
+          cp .dashboard-src/LICENSE _site/LICENSE.dashboard.txt
+          printf '%s\n' \
+            '<!doctype html><meta charset="utf-8">' \
+            '<title>Third-party licences</title>' \
+            '<h1>Third-party licences</h1>' \
+            '<p>This site bundles the Understand-Anything dashboard' \
+            "(commit ${UA_COMMIT}), distributed under the MIT licence:</p>" \
+            '<p><a href="LICENSE.dashboard.txt">MIT licence text</a></p>' \
+            > _site/licences.html
+
+      - name: Install gitleaks
+        run: |
+          curl -fsSL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum --check --strict
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+
+      # The graph carries model-written prose summarising every analysed file,
+      # so its contents are not reviewable from the source diff alone. Scan
+      # what is actually about to be served.
+      - name: Scan the built output for secrets
+        run: /tmp/gitleaks dir _site --redact
+
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-24.04
+
+    # Scoped to this job so the build — which runs third-party dashboard code
+    # and a downloaded scanner — never holds deployment credentials.
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5

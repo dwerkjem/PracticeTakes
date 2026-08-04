@@ -1,7 +1,8 @@
 #pragma once
 
 #include "../../../application/theme/Theme.h"
-#include "../../../services/audio/AudioInputService.h"
+#include "../../../application/tools/ToolComponent.h"
+#include "../../../platform/audio/AudioInputService.h"
 #include "HarmonicAnalyzer.h"
 
 #include <JuceHeader.h>
@@ -10,7 +11,7 @@
 #include <atomic>
 
 class HarmonicAnalyzerComponent final
-    : public juce::Component,
+    : public ToolComponent,
       private AudioInputService::Listener,
       private juce::Timer
 {
@@ -20,8 +21,8 @@ class HarmonicAnalyzerComponent final
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
-    void setTheme(Theme theme);
-    void resetToDefaults();
+    void setTheme(Theme theme) override;
+    void resetToDefaults() override;
 
   private:
     static constexpr int historyCapacity = 180;

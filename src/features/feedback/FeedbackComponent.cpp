@@ -1,11 +1,14 @@
 #include "FeedbackComponent.h"
 
+#include <string_view>
+
 namespace
 {
 constexpr int maximumTitleLength = 120;
 constexpr int maximumDescriptionLength = 6500;
 constexpr int maximumReproductionLength = 1200;
 constexpr int maximumEmailLength = 254;
+constexpr int requestTimeoutMs = 10000;
 
 constexpr auto draftTypeKey = "feedback.draft.type";
 constexpr auto draftTitleKey = "feedback.draft.title";
@@ -18,6 +21,33 @@ constexpr auto installationIdKey = "feedback.installationId";
 #ifndef PRACTICE_TAKES_FEEDBACK_ENDPOINT
 #define PRACTICE_TAKES_FEEDBACK_ENDPOINT ""
 #endif
+
+constexpr bool hasHttpsScheme(std::string_view endpoint)
+{
+    constexpr std::string_view scheme{"https://"};
+    if (endpoint.length() < scheme.length())
+    {
+        return false;
+    }
+    for (std::string_view::size_type index = 0; index < scheme.length(); ++index)
+    {
+        auto character = endpoint[index];
+        if (character >= 'A' && character <= 'Z')
+        {
+            character = static_cast<char>(character - 'A' + 'a');
+        }
+        if (character != scheme[index])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+static_assert(
+    std::string_view{PRACTICE_TAKES_FEEDBACK_ENDPOINT}.empty() ||
+        hasHttpsScheme(PRACTICE_TAKES_FEEDBACK_ENDPOINT),
+    "PRACTICE_TAKES_FEEDBACK_ENDPOINT must be an https origin");
 
 juce::String typeName(int type)
 {
@@ -121,7 +151,8 @@ FeedbackComponent::FeedbackComponent(
     descriptionLabel.setText(
         "Detailed description (required, 6,500 characters maximum)", juce::dontSendNotification);
     reproductionLabel.setText("Reproduction steps (optional)", juce::dontSendNotification);
-    emailLabel.setText("Contact email (optional)", juce::dontSendNotification);
+    emailLabel.setText(
+        "Contact email (optional and saved with the draft until sent)", juce::dontSendNotification);
     contextLabel.setText(
         "Feature context (optional and fully editable)", juce::dontSendNotification);
     for (auto* label :
@@ -141,12 +172,17 @@ FeedbackComponent::FeedbackComponent(
     emailEditor.setInputRestrictions(maximumEmailLength);
 
     environmentLabel.setText(
-        "Optional diagnostics (disabled by default; select for this report)",
+        "Optional diagnostics (disabled by default; select for this report). Every submission "
+        "also sends the application version and an anonymous installation identifier.",
         juce::dontSendNotification);
     environmentLabel.setTitle("Optional diagnostic information");
+    environmentLabel.setDescription(
+        "Optional diagnostics are disabled by default. The application version and an anonymous "
+        "installation identifier are sent with every submission so the service can rate-limit "
+        "reports.");
     addAndMakeVisible(environmentLabel);
-    versionDiagnostic.setTitle("Include application version in this submission");
-    operatingSystemDiagnostic.setTitle("Include operating system in this submission");
+    versionDiagnostic.setTitle("Include application version in the feedback message");
+    operatingSystemDiagnostic.setTitle("Include operating system in the feedback message");
     screenshotDiagnostic.setTitle(
         "Capture all open Practice Takes windows except this feedback window");
     addAndMakeVisible(versionDiagnostic);
@@ -178,7 +214,14 @@ FeedbackComponent::FeedbackComponent(
 FeedbackComponent::~FeedbackComponent()
 {
     signalThreadShouldExit();
-    stopThread(3000);
+    {
+        const juce::ScopedLock lock(requestLock);
+        if (activeRequest != nullptr)
+        {
+            activeRequest->cancel();
+        }
+    }
+    stopThread(requestTimeoutMs);
 }
 
 void FeedbackComponent::configureEditor(
@@ -215,7 +258,7 @@ void FeedbackComponent::resized()
     place(reproductionLabel, reproductionEditor, 88);
     place(emailLabel, emailEditor, 34);
     place(contextLabel, contextEditor, 52);
-    environmentLabel.setBounds(bounds.removeFromTop(26));
+    environmentLabel.setBounds(bounds.removeFromTop(44));
     auto diagnosticRow = bounds.removeFromTop(30);
     versionDiagnostic.setBounds(diagnosticRow.removeFromLeft(190));
     operatingSystemDiagnostic.setBounds(diagnosticRow.removeFromLeft(190));
@@ -305,6 +348,14 @@ juce::String FeedbackComponent::previewText(const Draft& draft) const
     return text;
 }
 
+juce::String FeedbackComponent::previewSummary(const Draft& draft) const
+{
+    return previewText(draft) + "\n\nAlways sent with every submission:\nApplication version: " +
+           juce::String(ProjectInfo::versionString) +
+           "\nAnonymous installation identifier, reused for later reports so the feedback "
+           "service can rate-limit submissions";
+}
+
 void FeedbackComponent::setContextTag(const juce::String& toolOrWorkflowName)
 {
     contextEditor.setText(
@@ -389,7 +440,7 @@ void FeedbackComponent::preview()
     if (!draft.includeScreenshot)
     {
         juce::AlertWindow::showMessageBoxAsync(
-            juce::MessageBoxIconType::InfoIcon, "Feedback preview", previewText(draft));
+            juce::MessageBoxIconType::InfoIcon, "Feedback preview", previewSummary(draft));
         return;
     }
 
@@ -406,7 +457,7 @@ void FeedbackComponent::preview()
     const auto screenshot =
         juce::ImageFileFormat::loadFrom(decoded.getData(), decoded.getDataSize());
     juce::DialogWindow::LaunchOptions options;
-    options.content.setOwned(new FeedbackPreview(previewText(draft), screenshot));
+    options.content.setOwned(new FeedbackPreview(previewSummary(draft), screenshot));
     options.dialogTitle = "Feedback preview";
     options.dialogBackgroundColour = findColour(juce::ResizableWindow::backgroundColourId);
     options.escapeKeyTriggersCloseButton = true;
@@ -457,7 +508,14 @@ void FeedbackComponent::saveDraft(const Draft& draft)
     properties.setValue(draftTitleKey, draft.title);
     properties.setValue(draftDescriptionKey, draft.description);
     properties.setValue(draftReproductionKey, draft.reproductionSteps);
-    properties.setValue(draftEmailKey, draft.contactEmail);
+    if (draft.contactEmail.isEmpty())
+    {
+        properties.removeValue(draftEmailKey);
+    }
+    else
+    {
+        properties.setValue(draftEmailKey, draft.contactEmail);
+    }
     properties.setValue(draftContextKey, draft.contextTag);
     properties.saveIfNeeded();
 }
@@ -486,19 +544,52 @@ void FeedbackComponent::restoreDraft()
     screenshotDiagnostic.setToggleState(false, juce::dontSendNotification);
 }
 
+bool FeedbackComponent::sendRequest(
+    juce::WebInputStream& request,
+    int& statusCode,
+    juce::String& responseBody)
+{
+    request.withExtraHeaders("Content-Type: application/json\r\n")
+        .withConnectionTimeout(requestTimeoutMs)
+        .withNumRedirectsToFollow(0);
+    {
+        const juce::ScopedLock lock(requestLock);
+        if (threadShouldExit())
+        {
+            return false;
+        }
+        activeRequest = &request;
+    }
+
+    const auto connected = request.connect(nullptr) && !request.isError();
+    if (connected)
+    {
+        statusCode = request.getStatusCode();
+        responseBody = request.readEntireStreamAsString();
+    }
+
+    const juce::ScopedLock lock(requestLock);
+    activeRequest = nullptr;
+    return connected && !threadShouldExit();
+}
+
 void FeedbackComponent::run()
 {
     const juce::String endpoint{PRACTICE_TAKES_FEEDBACK_ENDPOINT};
-    if (endpoint.isEmpty())
+    if (endpoint.isEmpty() || !endpoint.startsWithIgnoreCase("https://"))
     {
+        juce::String detail("Queued locally; the feedback service is unavailable.");
+        if (endpoint.isNotEmpty())
+        {
+            detail = "Queued locally; the feedback service is not configured for a secure "
+                     "HTTPS connection.";
+        }
         juce::MessageManager::callAsync(
-            [safe = juce::Component::SafePointer(this)]
+            [safe = juce::Component::SafePointer(this), detail]
             {
                 if (safe != nullptr)
                 {
-                    safe->setSubmissionState(
-                        SubmissionState::queued,
-                        "Queued locally; the feedback service is unavailable.");
+                    safe->setSubmissionState(SubmissionState::queued, detail);
                 }
             });
         return;
@@ -520,15 +611,17 @@ void FeedbackComponent::run()
     authorizationObject->setProperty("installationId", installationId);
     authorizationBody = juce::JSON::toString(juce::var(authorizationObject));
 
+    juce::WebInputStream authorizationRequest(
+        juce::URL(endpoint + "/v1/authorizations").withPOSTData(authorizationBody), false);
     int authorizationStatus = 0;
-    const auto authorizationResponse =
-        juce::URL(endpoint + "/v1/authorizations")
-            .withPOSTData(authorizationBody)
-            .createInputStream(
-                juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
-                    .withExtraHeaders("Content-Type: application/json\r\n")
-                    .withStatusCode(&authorizationStatus));
-    if (authorizationResponse == nullptr || authorizationStatus != 201)
+    juce::String authorizationResponse;
+    const auto authorized =
+        sendRequest(authorizationRequest, authorizationStatus, authorizationResponse);
+    if (threadShouldExit())
+    {
+        return;
+    }
+    if (!authorized || authorizationStatus != 201)
     {
         juce::MessageManager::callAsync(
             [safe = juce::Component::SafePointer(this)]
@@ -543,8 +636,7 @@ void FeedbackComponent::run()
         return;
     }
 
-    const auto authorizationJson =
-        juce::JSON::parse(authorizationResponse->readEntireStreamAsString());
+    const auto authorizationJson = juce::JSON::parse(authorizationResponse);
     const auto authorization = authorizationJson.getProperty("authorization", {}).toString();
     auto* submissionObject = new juce::DynamicObject;
     submissionObject->setProperty("schemaVersion", 1);
@@ -565,19 +657,22 @@ void FeedbackComponent::run()
         submissionObject->setProperty("screenshotBase64", pendingDraft.screenshotBase64);
     }
 
-    int submissionStatus = 0;
-    const auto submissionResponse =
+    juce::WebInputStream submissionRequest(
         juce::URL(endpoint + "/v1/submissions")
-            .withPOSTData(juce::JSON::toString(juce::var(submissionObject)))
-            .createInputStream(
-                juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
-                    .withExtraHeaders("Content-Type: application/json\r\n")
-                    .withStatusCode(&submissionStatus));
+            .withPOSTData(juce::JSON::toString(juce::var(submissionObject))),
+        false);
+    int submissionStatus = 0;
+    juce::String submissionResponse;
+    const auto submitted = sendRequest(submissionRequest, submissionStatus, submissionResponse);
+    if (threadShouldExit())
+    {
+        return;
+    }
     juce::String submissionError;
     const auto submissionSucceeded = submissionStatus == 200 || submissionStatus == 201;
-    if (submissionResponse != nullptr && !submissionSucceeded)
+    if (submitted && !submissionSucceeded)
     {
-        const auto responseJson = juce::JSON::parse(submissionResponse->readEntireStreamAsString());
+        const auto responseJson = juce::JSON::parse(submissionResponse);
         const auto errorJson = responseJson.getProperty("error", {});
         submissionError = errorJson.getProperty("message", {}).toString();
     }

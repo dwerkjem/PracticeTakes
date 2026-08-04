@@ -3,9 +3,6 @@
 #include "ui/feedback/FeedbackWindow.h"
 #include "ui/main_window/MainTitleBar.h"
 #include "ui/main_window/MicrophoneWarning.h"
-#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
-#include "ui/performance/PerformanceLabWindow.h"
-#endif
 #include "ui/settings/SettingsWindow.h"
 #include "ui/workspace/components/DockedToolPanel.h"
 #include "ui/workspace/components/ToolWindow.h"
@@ -14,9 +11,52 @@ namespace
 {
 constexpr int microphoneWarningWidth = 470;
 constexpr int microphoneWarningHeight = 118;
+
+juce::String settingsFolderName()
+{
+#if JUCE_LINUX || JUCE_BSD
+    // PropertiesFile puts Linux settings straight under $HOME, which leaves a
+    // visible folder among the user's own directories. An absolute folderName
+    // overrides that, so resolve the XDG config location instead.
+    return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+        .getChildFile("PracticeTakes")
+        .getFullPathName();
+#else
+    return "PracticeTakes";
+#endif
+}
+
+void migrateLegacySettingsFile(const juce::File& destination)
+{
+#if JUCE_LINUX || JUCE_BSD
+    if (destination.existsAsFile())
+    {
+        return;
+    }
+
+    const auto legacyFolder =
+        juce::File::getSpecialLocation(juce::File::userHomeDirectory).getChildFile("PracticeTakes");
+    const auto legacyFile = legacyFolder.getChildFile("PracticeTakes.settings");
+
+    if (!legacyFile.existsAsFile() || !destination.getParentDirectory().createDirectory().wasOk())
+    {
+        return;
+    }
+
+    if (legacyFile.moveFileTo(destination))
+    {
+        // Removes the directory only when it is empty, so anything else the
+        // user kept there survives.
+        legacyFolder.deleteFile();
+    }
+#else
+    juce::ignoreUnused(destination);
+#endif
+}
 } // namespace
 
-MainComponent::MainComponent()
+MainComponent::MainComponent(bool muteMicrophoneForSession)
+    : sessionMicrophoneMuteEnabled(muteMicrophoneForSession)
 {
     setOpaque(true);
     audioInputService.addChangeListener(this);
@@ -24,13 +64,19 @@ MainComponent::MainComponent()
     juce::PropertiesFile::Options storageOptions;
     storageOptions.applicationName = "PracticeTakes";
     storageOptions.filenameSuffix = ".settings";
-    storageOptions.folderName = "PracticeTakes";
+    storageOptions.folderName = settingsFolderName();
     storageOptions.osxLibrarySubFolder = "Application Support";
     storageOptions.commonToAllUsers = false;
     storageOptions.millisecondsBeforeSaving = -1;
     storageOptions.storageFormat = juce::PropertiesFile::storeAsXML;
+    migrateLegacySettingsFile(storageOptions.getDefaultFile());
     applicationProperties.setStorageParameters(storageOptions);
     loadSettings();
+    persistedMicrophoneMuted = audioInputService.isMuted();
+    if (sessionMicrophoneMuteEnabled)
+    {
+        audioInputService.setMuted(true);
+    }
 
     configureTopButtons();
     createMicrophoneWarning();
@@ -46,19 +92,13 @@ MainComponent::~MainComponent()
     audioInputService.removeChangeListener(this);
     settingsWindow.reset();
     feedbackWindow.reset();
-#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
-    performanceLabWindow.reset();
-#endif
     workspaceContainers.clear();
-    tunerDock.reset();
-    spectrogramDock.reset();
-    harmonicDock.reset();
-    harmonicWindow.reset();
-    spectrogramWindow.reset();
-    tunerWindow.reset();
-    spectrogramComponent.reset();
-    harmonicComponent.reset();
-    tunerComponent.reset();
+    // Explicit, and before microphoneWarning, so every tool is gone while the
+    // audio service and look-and-feel it borrowed are still alive. Member
+    // destruction order would do this anyway -- see the liveTools declaration
+    // -- but a tool's destructor deregisters from audio, so making it visible
+    // here keeps that dependency from looking accidental.
+    liveTools.clear();
     microphoneWarning.reset();
     applicationProperties.closeFiles();
     setLookAndFeel(nullptr);
@@ -72,6 +112,17 @@ void MainComponent::configureTopButtons()
     helpButton.onClick = [this] { showHelpMenu(); };
     microphoneButton.setTitle("Global microphone mute control");
     microphoneButton.onClick = [this] { audioInputService.toggleMuted(); };
+
+    // Component ids let the development-only test control channel address these
+    // by name rather than by screen position, so the manual GUI harness never
+    // synthesises a pointer or a key. The names must match the approved click
+    // targets in src/application/testcontrol/ApprovedWindowStates.cpp -- a
+    // rename that misses one shows up as a click failing, not as a click
+    // silently landing on nothing.
+    settingsButton.setComponentID("settings-button");
+    toolsButton.setComponentID("tools-button");
+    helpButton.setComponentID("help-button");
+    microphoneButton.setComponentID("microphone-button");
 }
 
 std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(

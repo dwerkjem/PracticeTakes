@@ -1,0 +1,258 @@
+# .understandignore — patterns for files/dirs to exclude from analysis
+# Syntax: same as .gitignore (globs, # comments, ! negation, trailing / for dirs)
+# Lines below are suggestions — uncomment to activate.
+# Use ! prefix to force-include something excluded by defaults.
+#
+# Built-in defaults (always excluded unless negated):
+#   node_modules/, .git/, dist/, build/, obj/, *.lock, *.min.js, etc.
+#
+
+# --- Secret material ---
+
+.ua/
+.understand-anything/
+
+.secrets/
+**/.secrets/
+
+.env
+.env.*
+!.env.example
+!.env.*.example
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+**/.dev.vars
+**/.dev.vars.*
+!**/.dev.vars.example
+
+*.secret
+*.secrets
+**/*.secret
+**/*.secrets
+**/secrets.toml
+services/feedback-intake/wrangler.jsonc
+
+# --- Agent / process scaffolding (not PracticeTakes code) ---
+# Duplicated OpenSpec skill+command definitions and local agent config.
+# These describe how tooling drives the repo, not what the app does.
+
+.claude/
+.github/prompts/
+.github/skills/
+
+# Issue / PR boilerplate — templates, no architectural signal.
+.github/ISSUE_TEMPLATE/
+.github/PULL_REQUEST_TEMPLATE.md
+
+# Completed change proposals. Current requirements live in openspec/specs/
+# and the active openspec/changes/<name>/ dir, both of which stay indexed.
+openspec/changes/archive/
+
+# Generated benchmark output.
+benchmark-results/
+
+# Kept on purpose: .github/workflows/ (real CI topology), docs/,
+# tests/, openspec/specs/, tools/scripts/.
+
+# --- From .gitignore (uncomment to exclude) ---
+
+# *.d
+# *.slo
+# *.lo
+# *.o
+# *.obj
+# *.gch
+# *.pch
+# *.ilk
+# *.pdb
+# *.dwo
+# *.so
+# *.so.*
+# *.dylib
+# *.dll
+# *.lai
+# *.la
+# *.a
+# *.lib
+# *.exe
+# *.out
+# *.app
+# /main
+# /build/
+# /Build/
+# /build-*/
+# /out/
+# CMakeFiles/
+# CMakeCache.txt
+# cmake_install.cmake
+# Makefile
+# install_manifest.txt
+# compile_commands.json
+# *.tmp
+# *.bak
+# *.swp
+# .wrangler/
+# services/feedback-intake/wrangler.jsonc
+# .dev.vars
+# .dev.vars.*
+# !.dev.vars.example
+# .env.*
+# !.env.example
+# .npm/
+# .eslintcache
+# *.tsbuildinfo
+# .vitest/
+# /vcpkg_installed/
+# Testing/
+# *.py[codz]
+# *$py.class
+# *.so
+# .Python
+# develop-eggs/
+# downloads/
+# eggs/
+# .eggs/
+# lib/
+# lib64/
+# parts/
+# sdist/
+# var/
+# wheels/
+# share/python-wheels/
+# *.egg-info/
+# .installed.cfg
+# *.egg
+# MANIFEST
+# *.manifest
+# *.spec
+# pip-log.txt
+# pip-delete-this-directory.txt
+# htmlcov/
+# .tox/
+# .nox/
+# .coverage
+# .coverage.*
+# nosetests.xml
+# coverage.xml
+# *.cover
+# *.py.cover
+# *.lcov
+# .hypothesis/
+# .pytest_cache/
+# cover/
+# *.mo
+# *.pot
+# local_settings.py
+# db.sqlite3
+# db.sqlite3-journal
+# instance/
+# .webassets-cache
+# .scrapy
+# docs/_build/
+# .pybuilder/
+# .ipynb_checkpoints
+# profile_default/
+# ipython_config.py
+# .pdm-python
+# .pdm-build/
+# .pixi/*
+# !.pixi/config.toml
+# __pypackages__/
+# celerybeat-schedule*
+# celerybeat.pid
+# *.rdb
+# *.aof
+# *.pid
+# mnesia/
+# rabbitmq/
+# rabbitmq-data/
+# activemq-data/
+# *.sage.py
+# .env
+# .envrc
+# env/
+# ENV/
+# env.bak/
+# venv.bak/
+# !.secrets/
+# !.secrets/**
+# .spyderproject
+# .spyproject
+# .ropeproject
+# /site
+# .mypy_cache/
+# .dmypy.json
+# dmypy.json
+# .pyre/
+# .pytype/
+# cython_debug/
+# .abstra/
+# tempCodeRunnerFile.py
+# .ruff_cache/
+# .pypirc
+# marimo/_static/
+# marimo/_lsp/
+# __marimo__/
+# .streamlit/secrets.toml
+!/tools/scripts/build/
+# benchmark-results/
+
+# --- Detected directories (uncomment to exclude) ---
+
+# docs/
+# tools/scripts/
+# tests/
+
+# --- Test file patterns (uncomment to exclude) ---
+
+# JS / TS
+# *.test.*
+# *.spec.*
+# *.snap
+# C# / .NET
+# **/*Tests.cs
+# **/*Test.cs
+# **/*Fixture.cs
+# **/*.Tests.csproj
+# Java / Kotlin
+# **/src/test/**
+# **/*Test.java
+# **/*IT.java
+# **/*Spec.kt
+# Go
+# **/*_test.go
+# C++
+# **/*_test.cc
+# **/*_test.cpp
+# **/*_test.cxx
+# **/*Test.cc
+# **/*Test.cpp
+# **/*_unittest.cc
+# **/*_unittest.cpp
+# **/*_browsertest.cc
+# **/*_benchmark.cc
+# **/*Benchmark.cpp
+# Python
+# **/test_*.py
+# **/*_test.py
+# **/tests.py
+# **/conftest.py
+# Rust
+# **/tests.rs
+# **/test_*.rs
+# **/*_test.rs
+# **/bench_*.rs
+# **/*_bench.rs
+# Ruby
+# **/*_spec.rb
+# **/*_test.rb
+# **/test_*.rb
+# **/spec_helper.rb
+# **/test_helper.rb
+# **/rails_helper.rb

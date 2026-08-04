@@ -1,0 +1,259 @@
+## 0. Decisions before any code
+
+- [x] 0.1 Resolve the six items in `design.md` § "Decisions needed from Derek":
+      the owning layer, the musical time representation, as-written versus
+      as-played, whether MusicXML and MIDI share a model, the parser and
+      dependency policy, and the test-fixture and licensing policy.
+      *Resolved 2026-07-31.*
+- [x] 0.2 Record each resolution in `design.md` under a "Resolved questions"
+      section, following the convention in
+      `openspec/changes/archive/2026-07-31-close-highest-risk-test-gaps/design.md`.
+- [x] 0.3 Fix the directory and namespace names implied by decision 1, and
+      update the placeholder paths used in the tasks below.
+
+**Settled inputs for everything below** (see `design.md` § Resolved Questions):
+
+| | |
+|---|---|
+| Model | `src/platform/score/`, `namespace score` |
+| Importer | `src/platform/score/musicxml/`, `namespace score::musicxml` |
+| Time | fixed 3840 PPQ integer ticks, rescale factor stored on `Score` |
+| Repeats | as-written only; repeat/ending/jump data captured, not interpreted |
+| MIDI | separate `Timeline` in #34; only `TempoMap` + tick/seconds is shared |
+| Parser | ~~libmusicxml~~ → `juce::parseXML`, behind one adapter header (see § 3) |
+| `.mxl` | `juce::ZipFile`, detected by content rather than by extension |
+| Fixtures | synthetic literals + MuseScore-only corpus in `src/tests/resources/musicxml/` |
+
+## 1. Model types
+
+All headers in `src/platform/score/`, `namespace score`.
+
+- [x] 1.1 Add the pitch type storing step, alteration, octave, and the derived
+      sounding number, with construction from a spelling and the consistency
+      check that invariant 5 requires.
+- [x] 1.2 Add the duration and position types for the chosen time
+      representation, with the conversions between the source's units and the
+      model's, and the rescale factor kept on the score.
+- [x] 1.3 Add the event types — note, chord, rest — carrying staff, onset,
+      duration, grace flag, tuplet ratio, tie linkage, and lyric syllables.
+- [x] 1.4 Add the lyric syllable type with verse number, syllabic position,
+      text, and extend flag.
+- [x] 1.5 Add the clef, key signature, and time signature types, and the
+      direction type covering tempo and dynamic markings.
+- [x] 1.6 Add the measure type: printed number as a string, zero-based index,
+      absolute start, nominal duration, pickup flag, attribute changes, repeat
+      and ending data held uninterpreted, and voices.
+- [x] 1.7 Add the part and score root types, including the work and credit
+      metadata and the encoding-software string.
+- [x] 1.8 Add the tempo map with position-to-seconds and seconds-to-position
+      conversion and the documented default tempo (120 BPM). Per decision 4 this
+      is the one piece shared with #34's MIDI timeline, so put it in its own
+      header with no dependency on `Score`, `Part`, or `Measure`.
+- [x] 1.9 Add the diagnostic type: severity, optional location (part, printed
+      measure number, voice, position), element name, and message.
+- [x] 1.10 Confirm no model header includes `JuceHeader.h` or any GUI module,
+      and that the model compiles against the module set `PracticeTakesTests`
+      already links.
+
+## 2. Model construction and invariants
+
+- [x] 2.1 Add the builder that assembles a score and produces an immutable
+      value; make the constructed score shareable as read-only and unmutatable
+      afterwards.
+- [x] 2.2 Implement the invariant checks: voice ordering and non-overlap,
+      non-negative durations, measure-duration bounds with the pickup
+      exemption, tie-chain matching, unique non-empty part identifiers,
+      cross-part measure alignment, tempo-map ordering, and diagnostic
+      locations referencing only existing entities.
+- [x] 2.3 Make each invariant violation a repair plus a diagnostic, not a
+      throw, and record in the code comment which repair applies to which
+      violation.
+- [x] 2.4 Add `src/tests/platform/score/ScoreInvariantsTests.cpp` covering every invariant, each with a
+      case that satisfies it and a case that must be repaired.
+- [x] 2.5 Add `src/tests/platform/score/TempoMapTests.cpp` covering single tempo, mid-score tempo
+      change, no declared tempo, duplicate positions, and round-tripping
+      position to seconds and back.
+- [x] 2.6 Add the new sources to `target_sources(PracticeTakes ...)` and to
+      `add_executable(PracticeTakesTests ...)` in `CMakeLists.txt`, keeping the
+      lists alphabetically grouped as they already are.
+
+## 3. File acceptance and the parser adapter
+
+> **Outcome: decision 5 was reversed.** Tasks 3.0, 3.0a, and 3.2 were carried
+> out against libmusicxml and found it unusable — it parses only MusicXML's own
+> element vocabulary and aborts on anything else, which rules out the `.mxl`
+> manifest and defeats task 7.2 entirely. XML parsing is `juce::parseXML`, and
+> the dependency, its pin, and its MPL-2.0 notice were all removed again. The
+> evidence is in `design.md` § Verification of libmusicxml; the tasks below are
+> kept as written so the record shows what was asked and what came back.
+
+- [x] 3.0 Declare libmusicxml in `CMakeLists.txt` via `FetchContent_Declare`
+      pinned to an exact commit SHA. *Done, then reverted.* The `dev` SHA
+      `525399683cd9165c483bc20e2459b4149efcd809` was still the branch tip and
+      built; the pin also needed `SOURCE_SUBDIR build` (there is no top-level
+      `CMakeLists.txt`, contrary to the decision-time note), no `GIT_SHALLOW`,
+      and a `CMAKE_POLICY_VERSION_MINIMUM` floor because CMake 4 refuses its
+      `cmake_minimum_required(VERSION 3.5)`. All removed with the dependency.
+- [x] 3.0a Confirm libmusicxml builds under this project's C++20 settings and
+      warning level on Linux. *It does* — it hard-sets `CMAKE_CXX_STANDARD 17`
+      for itself, so the `std::iterator` deprecation was moot, and its headers
+      compile clean at `-Wall -Wextra -Wpedantic -std=c++20` apart from
+      `-Wunused-parameter`. Not the reason it was dropped.
+- [x] 3.0b Add MPL-2.0 attribution for libmusicxml. *Done, then reverted with the
+      dependency.* No third-party notice file is needed: nothing in this change
+      links weak-copyleft code, and adding one for JUCE alone is a separate
+      concern from this change.
+- [x] 3.1 Add the adapter that is the only place the parser is named, exposing
+      document loading and element traversal. It parses into a plain owned tree,
+      so no parser type crosses the boundary — which is what made swapping the
+      parser a one-file change when 3.2 forced it.
+- [x] 3.2 Verify the parser performs no network access, and bound or strip
+      inline entity expansion; record the finding in `design.md`. **This is the
+      task that overturned decision 5.** Six findings, recorded in full. Under
+      `juce::parseXML` the answer is that the DOCTYPE is removed entirely before
+      parsing, which makes external resolution and entity expansion impossible
+      rather than bounded. No parse-error line or column is available, so the
+      musical location stays the only location, as originally reasoned.
+- [x] 3.3 Add source-file, uncompressed-size, and expansion-ratio limits as
+      named constants next to the code that enforces them, following the
+      `maximumDocumentBytes` convention in `SettingsTransferCodec`.
+- [x] 3.4 Add compressed-container handling using `juce::ZipFile`: read
+      `META-INF/container.xml`, resolve the root score document, and fail with a
+      distinct status when the manifest is absent or names an entry that is not
+      present. Containers are detected by content, not by extension.
+- [x] 3.5 Add the import status enum and result struct following the
+      `enum class ...Status` plus `struct ...Result` convention, including the
+      partial-success status modelled on `WorkspaceCatalogDecodeStatus`.
+- [x] 3.6 Add `src/tests/platform/score/musicxml/container/MusicXmlContainerTests.cpp` covering a valid
+      container, a container with no manifest, a manifest naming a missing entry,
+      an expansion-ratio violation, an oversized source file, a missing file, an
+      unreadable path, malformed XML, a well-formed non-MusicXML document, and a
+      timewise document.
+- [x] 3.7 Assert in each failure test that the result carries no score.
+
+## 4. Importer: structure and time
+
+- [x] 4.1 Import the part list, part identifiers, names, abbreviations, and
+      staff counts, generating identifiers with a diagnostic when the source's
+      are missing or duplicated.
+- [x] 4.2 Import measures with their printed numbers and pickup flags, and
+      reconcile differing measure counts across parts with padding and a
+      diagnostic.
+- [x] 4.3 Import source duration units per part, including a mid-score change,
+      and rescale into the model's time base; diagnose any rescale that is not
+      exact.
+- [x] 4.4 Implement the voice cursor, including backward and forward moves, and
+      order each voice's events by position.
+- [x] 4.5 Enforce the measure-duration bound per voice with the pickup
+      exemption, truncating and diagnosing over-full measures.
+- [x] 4.6 Add `src/tests/platform/score/musicxml/MusicXmlTimingTests.cpp` covering two- and four-voice
+      measures, a backward move to a non-zero position, a forward move past the
+      end of a measure, a mid-score change of source duration units, a pickup
+      measure, an over-full measure, and an under-full non-pickup measure.
+
+## 5. Importer: pitch, chords, ties
+
+- [x] 5.1 Import pitched notes with their spelling and derive the sounding
+      number.
+- [x] 5.2 Import rests, including whole-measure rests.
+- [x] 5.3 Collapse a run of simultaneous notes into a single chord event
+      consuming one duration.
+- [x] 5.4 Import ties as sounding links and confirm slurs produce no tie link;
+      drop unmatched tie ends with a diagnostic.
+- [x] 5.5 Import grace notes as zero-duration events that do not advance the
+      cursor.
+- [x] 5.6 Add `src/tests/platform/score/musicxml/MusicXmlNoteTests.cpp` covering enharmonic spellings, a
+      three-note chord, a tie across a barline, a tie with no end, a slur that
+      must not become a tie, a whole-measure rest, and a grace note.
+
+## 6. Importer: attributes, directions, lyrics
+
+- [x] 6.1 Import clef per staff, key signature, and time signature, including
+      changes partway through the score.
+- [x] 6.2 Import tempo from both the sounding attribute and the metronome
+      marking, and define and test which wins when they disagree.
+- [x] 6.3 Import dynamics as directions attached to a part, measure, and
+      position.
+- [x] 6.4 Import lyrics with verse number, syllabic position, text, and extend,
+      attaching each syllable to the correct note.
+- [x] 6.5 Add `src/tests/platform/score/musicxml/MusicXmlAttributeTests.cpp` and
+      `src/tests/platform/score/musicxml/MusicXmlLyricTests.cpp` covering mid-score clef, key, and time
+      changes, conflicting tempo sources, dynamics placement, multiple verses,
+      a melisma, and a syllable on a chord.
+
+## 7. Subset boundary and diagnostics
+
+- [x] 7.1 Drop each recognised-but-unsupported construct listed in `design.md`
+      with a diagnostic naming it.
+- [x] 7.2 Summarise unrecognised elements once per element name with an
+      occurrence count, not once per occurrence.
+- [x] 7.3 Confirm no unsupported or unrecognised content can turn a successful
+      import into a failure.
+- [x] 7.4 Add `src/tests/platform/score/musicxml/MusicXmlDiagnosticsTests.cpp` covering diagnostic
+      locations for a per-measure problem, a non-numeric measure number, a
+      document-level problem with no location, aggregation of a repeated
+      unrecognised element, and an import that succeeds despite dropped
+      content.
+- [x] 7.5 Decide and implement the behaviour for a file that imports with zero
+      notes (see `design.md` § Open questions), and test it either way.
+
+## 8. Real-score corpus
+
+> **What decision 6 asked for, and what was actually built.** The decision was
+> four to six public-domain scores *exported by us from MuseScore*, on the
+> grounds that no second notation program was available and exporting them
+> ourselves sidestepped licensing. Both premises turned out to be wrong in our
+> favour: OpenScore publishes 1,462 songs under CC0, and CPDL states a licence
+> per edition, so 36 scores from six exporters were assembled without needing
+> a notation program at all. Task 8.5's MuseScore-only disclaimer went with it.
+
+- [x] 8.1 Assemble the corpus. **36 scores, not four to six, and none exported
+      by us**: twenty CC0 songs from the OpenScore Lieder Corpus (voice and
+      piano, Beethoven to Webern) and sixteen Public Domain or CC-BY choral
+      works from CPDL (one to eleven parts). Covers the multi-part vocal score
+      decision 6 asked for — SATB in open *and* closed score, plus double-choir
+      writing at ten and eleven parts. The piano score it also asked for is
+      covered by the OpenScore songs' accompaniments rather than by solo piano
+      repertoire.
+- [x] 8.2 Record each file's provenance and licence status in the README beside
+      the corpus. Composer, death year, work, and source for all 36, plus the
+      per-layer licence procedure — composition, arrangement, file — that
+      rejected three candidates on the evidence of their own `<rights>`
+      metadata.
+- [x] 8.3 Wire `src/tests/resources/musicxml/` into the test target as a
+      `PRACTICE_TAKES_TEST_RESOURCES_DIR` compile definition, following the
+      `PRACTICE_TAKES_SOURCE_DIR` precedent on the app target.
+- [x] 8.4 Add `src/tests/platform/score/musicxml/MusicXmlCorpusTests.cpp` asserting each file's part count,
+      measure count, total musical length, and diagnostic count, so a change in
+      conversion fails rather than passing silently.
+- [x] 8.5 State plainly at the top of `src/tests/platform/score/musicxml/MusicXmlCorpusTests.cpp` what the
+      corpus does and does not cover. **The original instruction — say it is
+      MuseScore exports only — became false**, so what is stated instead is the
+      six exporters and part range that *are* covered, and the three gaps that
+      remain: no percussion, no orchestral score, no uncompressed document.
+- [x] 8.6 Open a follow-up issue to add a Finale, Sibelius, or Dorico export to
+      the corpus when a second program becomes available. *Opened as #128 and
+      then satisfied within this change — the corpus carries Finale, Sibelius,
+      Dorico, Harmony Assistant, and PDFtoMusic Pro exports, so the issue was
+      closed rather than left open against work already done.*
+
+## 9. Documentation and verification
+
+- [x] 9.1 Write the supported-subset document listing imported constructs,
+      recognised-but-dropped constructs, and rejected document types, and link
+      it from `docs/development/README.md`.
+- [x] 9.2 Add a score-model section to `docs/development/ARCHITECTURE.md`
+      covering ownership, immutability, the background-thread import, and the
+      rule that the audio thread never reads the model.
+- [x] 9.3 Add a follow-up issue for transposing instruments, which this change
+      deliberately drops. *Opened as #127, cross-referenced from #128.*
+- [x] 9.4 Add follow-up notes to #32, #33, #34, and #39 pointing at the model
+      and at whichever decisions in this change constrain them. *Commented on
+      all four, each naming the specific invariants and decisions that bind it.*
+- [x] 9.5 Run `python3 scripts/run_tests.py` and the C++ suite
+      (`PracticeTakesTests`) and confirm both pass.
+- [x] 9.6 Run `clang-format` and `clang-tidy` via pre-commit and confirm the new
+      sources are clean.
+- [x] 9.7 Re-read the change's spec deltas against the implemented behaviour and
+      correct any requirement the implementation had to deviate from, recording
+      the deviation rather than quietly editing the spec to match.

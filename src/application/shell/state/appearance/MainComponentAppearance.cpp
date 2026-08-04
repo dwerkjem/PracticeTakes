@@ -3,9 +3,6 @@
 #include "../../ui/feedback/FeedbackWindow.h"
 #include "../../ui/main_window/MicrophoneWarning.h"
 #include "../../ui/settings/SettingsWindow.h"
-#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
-#include "../../ui/performance/PerformanceLabWindow.h"
-#endif
 
 void MainComponent::setTheme(Theme theme)
 {
@@ -100,17 +97,12 @@ void MainComponent::applyAppearanceToOpenWindows()
     {
         microphoneWarning->setTheme(currentTheme);
     }
-    if (tunerState.isOpen())
+    for (const auto& entry : liveTools)
     {
-        applyAppearanceToTool(ToolType::tuner);
-    }
-    if (spectrogramState.isOpen())
-    {
-        applyAppearanceToTool(ToolType::spectrogram);
-    }
-    if (harmonicState.isOpen())
-    {
-        applyAppearanceToTool(ToolType::harmonics);
+        if (entry.state.isOpen())
+        {
+            applyAppearanceToTool(entry.id);
+        }
     }
     if (settingsWindow != nullptr)
     {
@@ -122,10 +114,4 @@ void MainComponent::applyAppearanceToOpenWindows()
         feedbackWindow->sendLookAndFeelChange();
         feedbackWindow->repaint();
     }
-#if PRACTICE_TAKES_ENABLE_PERFORMANCE_LAB
-    if (performanceLabWindow != nullptr)
-    {
-        performanceLabWindow->applyAppearance(&appLookAndFeel, palette.background);
-    }
-#endif
 }

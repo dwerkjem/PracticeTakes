@@ -1,0 +1,429 @@
+/* The grid is the product: everything else stays out of its way. Dark, because
+   the application under test is dark and a light chrome around it misrepresents
+   how the captures actually look. */
+
+:root {
+  --background: #16181d;
+  --panel: #1e2128;
+  --line: #2c313c;
+  --text: #e6e8ee;
+  --muted: #9aa3b2;
+  --accent: #5aa9ff;
+  --fail: #ff6b6b;
+  --pass: #4ec9a0;
+  --skip: #c9a94e;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 16px;
+}
+
+header .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+#tabs button { border-radius: 999px; }
+#tabs button.active { border-color: var(--accent); color: var(--accent); }
+
+select {
+  background: #262b34;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font: inherit;
+}
+
+#progress { margin-top: 8px; }
+#progress-bar { height: 6px; background: #2a2f3a; border-radius: 3px; overflow: hidden; }
+#progress-fill { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+#progress-fill.failed { background: var(--fail); }
+#progress-message { margin-top: 4px; font-size: 12px; }
+
+.view { padding: 16px; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.panel h2 { font-size: 14px; margin: 0 0 10px; display: flex; gap: 10px; align-items: center; }
+
+.suite {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.suite:first-of-type { border-top: none; }
+.suite-label { min-width: 18ch; font-weight: 500; }
+.suite input { accent-color: var(--accent); }
+
+.chip {
+  font-size: 11px;
+  background: #313743;
+  border-radius: 10px;
+  padding: 1px 8px;
+  color: var(--muted);
+}
+
+.notice {
+  border-left: 3px solid var(--skip);
+  background: #23262e;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-radius: 0 4px 4px 0;
+}
+
+.notice.subtle { border-left-color: var(--line); color: var(--muted); }
+
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+button.primary { background: var(--accent); color: #0d1117; border-color: var(--accent); font-weight: 600; }
+button.link { background: none; border: none; color: var(--accent); padding: 0; font-size: 12px; }
+
+label.inline { margin-right: 10px; }
+.panel label { display: block; margin-bottom: 6px; }
+
+pre#log {
+  background: #12141a;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 10px;
+  max-height: 320px;
+  overflow: auto;
+  font-size: 12px;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 5px 10px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 500; }
+
+.empty { text-align: center; padding: 60px 20px; }
+.empty p { margin: 0 0 10px; }
+
+.verdict-passed { color: var(--pass); }
+.verdict-failed { color: var(--fail); }
+.verdict-skipped, .verdict-queued { color: var(--muted); }
+.verdict-running { color: var(--accent); }
+
+.small { font-size: 12px; }
+
+.divider {
+  display: inline-block;
+  width: 1px;
+  height: 18px;
+  background: var(--line);
+  margin: 0 4px;
+}
+
+button.verdict-pass { border-color: var(--pass); color: var(--pass); }
+button.verdict-fail { border-color: var(--fail); color: var(--fail); }
+button.size.active { border-color: var(--accent); color: var(--accent); }
+
+#outstanding { margin-bottom: 10px; }
+.muted { color: var(--muted); }
+
+/* The bulk buttons have to be reachable from wherever you have scrolled to:
+   selecting a row of images two screens down and then scrolling back up to
+   score them is the friction bulk actions exist to remove. `--header-height`
+   is measured in app.js, since the header wraps at narrow widths. */
+#toolbar {
+  position: sticky;
+  top: var(--header-height, 84px);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin: -8px -10px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(10, 11, 14, 0.55);
+  flex-wrap: wrap;
+}
+
+#outstanding {
+  position: sticky;
+  top: calc(var(--header-height, 84px) + 52px);
+  z-index: 3;
+  background: var(--background);
+  padding: 4px 0;
+}
+
+#selection-count { color: var(--muted); min-width: 12ch; }
+
+button {
+  background: #262b34;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 9px;
+  cursor: pointer;
+  font: inherit;
+}
+
+button:hover { border-color: var(--accent); }
+
+.surface-group { margin-bottom: 28px; }
+.surface-group h2 { font-size: 15px; margin: 0 0 8px; }
+.surface-group .state { color: var(--muted); font-weight: 400; font-size: 12px; }
+
+/* Resolutions of one surface sit in a row so the comparison the whole workflow
+   exists for — the same tool at three sizes — is one glance, not two scrolls. */
+.captures { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+
+.captures { --card-width: 900px; }
+.captures.dense { --card-width: 320px; }
+.captures.medium { --card-width: 620px; }
+.captures.large { --card-width: 900px; }
+.captures.full { --card-width: 100%; }
+
+.card {
+  /* Dragging a band across the grid used to select the captions as text, which
+     turns a selection gesture into a mess of blue highlight. */
+  user-select: none;
+  -webkit-user-select: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+  width: var(--card-width);
+  max-width: 100%;
+}
+
+.card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+.card h3 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 500; }
+
+/* The whole point of the grid is seeing what is actually there, so the image
+   fills the card and keeps its aspect ratio. */
+.card img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 3px;
+  cursor: zoom-in;
+  background: #000;
+  border: 1px solid var(--line);
+}
+
+.card .unavailable {
+  padding: 24px 8px;
+  text-align: center;
+  border: 1px dashed var(--fail);
+  border-radius: 3px;
+  color: var(--fail);
+  font-size: 12px;
+}
+
+.capture-notice {
+  font-size: 12px;
+  color: var(--skip);
+  border-left: 3px solid var(--skip);
+  padding: 4px 8px;
+  margin-bottom: 6px;
+  background: #23262e;
+  border-radius: 0 3px 3px 0;
+}
+
+.card .tags { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+.tag-chip {
+  background: #313743;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+}
+
+.questions { margin-top: 8px; display: grid; gap: 4px; }
+.question { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.question .prompt { flex: 1; }
+.question.attended .prompt::after { content: " · attended"; color: var(--muted); }
+.question .verdict-pass { color: var(--pass); }
+.question .verdict-fail { color: var(--fail); }
+.question .verdict-skip { color: var(--skip); }
+.question button { padding: 0 6px; font-size: 11px; }
+
+.comments { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.comments li { margin-left: 14px; }
+
+#zoom {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 11, 14, 0.97);
+  z-index: 10;
+  overflow: auto;
+  padding: 0 0 24px;
+}
+
+#zoom-bar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+#zoom-bar .grow { flex: 1; }
+#zoom-caption { color: var(--text); font-size: 13px; }
+#zoom-verdicts { padding: 8px 14px; display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; }
+#zoom-verdicts .muted { color: var(--muted); }
+
+/* Fits the window by default, so "maximise the preview" is what opening it
+   does. Click the image itself for true full size when a detail needs it. */
+#zoom-image {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  cursor: zoom-in;
+}
+
+#zoom-image.actual-size { max-width: none; image-rendering: pixelated; cursor: zoom-out; }
+
+#rubber-band {
+  position: fixed;
+  border: 1px solid var(--accent);
+  background: rgba(90, 169, 255, 0.12);
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* --- History -------------------------------------------------------------
+   Chart colours are roles, not raw hex, so the two that ever share a chart --
+   the series line and the failure marker -- are stated once. Both were checked
+   against this surface for contrast and for colour-vision separation; a failure
+   also gets a bigger ringed marker and a caption, so colour never carries the
+   meaning alone. */
+
+:root {
+  --series-1: #3987e5;
+  --grid: #2c313c;
+}
+
+#history-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.tiles { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+
+.tile {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 14px;
+  min-width: 200px;
+}
+
+.tile-label { color: var(--muted); font-size: 12px; }
+.tile-value { font-size: 30px; font-weight: 600; line-height: 1.2; }
+.tile-value.bad { color: var(--fail); }
+.tile-detail { margin-top: 2px; }
+
+/* Chart.js needs a sized box to be responsive into; without one it grows on
+   every redraw. The container owns the height, the canvas fills it. */
+.plot { position: relative; height: 260px; }
+.plot.small { height: 190px; }
+.plot canvas { width: 100% !important; height: 100% !important; }
+
+.small-multiples {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 14px;
+}
+
+.multiple {
+  margin: 0;
+  background: #191c22;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.multiple figcaption { font-size: 13px; margin-bottom: 4px; }
+.multiple figcaption .small { display: block; }
+
+#history-tables h3 { font-size: 13px; margin: 14px 0 6px; }
+
+/* --- Filters ------------------------------------------------------------- */
+
+#filters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.facet {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  user-select: none;
+}
+
+.facet-name {
+  color: var(--muted);
+  font-size: 12px;
+  min-width: 11ch;
+  text-transform: capitalize;
+}
+
+.chip-button {
+  background: #262b34;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.chip-button.on { border-color: var(--accent); color: var(--accent); background: #22303f; }
+.chip-button .count { color: var(--muted); margin-left: 5px; }
+.chip-button.on .count { color: var(--accent); }
+
+#filter-summary { color: var(--muted); font-size: 12px; }
+
+/* A live application opened from a capture. Sticky with the toolbar, because
+   "which surface is open" is worth knowing from anywhere in the grid. */
+.launch {
+  position: sticky;
+  top: calc(var(--header-height, 84px) + 52px);
+  z-index: 3;
+  background: #22303f;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.launch.failed { background: #2e2126; border-color: var(--fail); color: var(--fail); }
+.card .open-in-app { border-color: var(--accent); color: var(--accent); }

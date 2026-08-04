@@ -1,0 +1,2978 @@
+{
+  "name": "PracticeTakes",
+  "description": "Practice Takes is an early-stage desktop music-practice application for Windows, Linux, and macOS, built with JUCE 8 and C++20, currently offering a tuner and spectrogram over a shared microphone-capture shell. It also includes a small TypeScript Cloudflare Worker that receives in-app feedback submissions. Note: this project has over 100 source files; consider scoping analysis to a subdirectory for faster results.",
+  "languages": [
+    "c",
+    "cmake",
+    "cpp",
+    "css",
+    "dockerfile",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "python",
+    "shell",
+    "sql",
+    "toml",
+    "typescript",
+    "yaml"
+  ],
+  "frameworks": [
+    "JUCE",
+    "CMake",
+    "Catch2",
+    "Cloudflare Workers",
+    "Vitest",
+    "esbuild",
+    "Textual",
+    "Docker",
+    "Docker Compose",
+    "GitHub Actions"
+  ],
+  "files": [
+    {
+      "path": ".clang-format",
+      "language": "unknown",
+      "sizeLines": 21,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".clang-tidy",
+      "language": "unknown",
+      "sizeLines": 35,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".gitattributes",
+      "language": "unknown",
+      "sizeLines": 34,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".github/CODEOWNERS",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".github/CONTRIBUTING.md",
+      "language": "markdown",
+      "sizeLines": 95,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".github/SECURITY.md",
+      "language": "markdown",
+      "sizeLines": 33,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".github/dependabot.yml",
+      "language": "yaml",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".github/workflows/benchmarks.yml",
+      "language": "yaml",
+      "sizeLines": 77,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/build-multiplatform.yml",
+      "language": "yaml",
+      "sizeLines": 945,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/clang-tidy-main.yml",
+      "language": "yaml",
+      "sizeLines": 99,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/coverage.yml",
+      "language": "yaml",
+      "sizeLines": 208,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/cpp-quality-check.yml",
+      "language": "yaml",
+      "sizeLines": 86,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/pages.yml",
+      "language": "yaml",
+      "sizeLines": 175,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/python-check.yml",
+      "language": "yaml",
+      "sizeLines": 51,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "language": "yaml",
+      "sizeLines": 345,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/secret-scan.yml",
+      "language": "yaml",
+      "sizeLines": 51,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/services-check.yml",
+      "language": "yaml",
+      "sizeLines": 72,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/smoke.yml",
+      "language": "yaml",
+      "sizeLines": 88,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".pre-commit-config.yaml",
+      "language": "yaml",
+      "sizeLines": 43,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".sops.yaml",
+      "language": "yaml",
+      "sizeLines": 3,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".sops.yaml.example",
+      "language": "example",
+      "sizeLines": 10,
+      "fileCategory": "code"
+    },
+    {
+      "path": "CLAUDE.md",
+      "language": "markdown",
+      "sizeLines": 7,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "CMakeLists.txt",
+      "language": "txt",
+      "sizeLines": 462,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "sizeLines": 118,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/contracts/feedback/v1.schema.json",
+      "language": "json",
+      "sizeLines": 72,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/README.md",
+      "language": "markdown",
+      "sizeLines": 60,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/agents/AGENT_GUIDE.md",
+      "language": "markdown",
+      "sizeLines": 255,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/architecture/ARCHITECTURE.md",
+      "language": "markdown",
+      "sizeLines": 166,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/architecture/ARCHITECTURE_QA.md",
+      "language": "markdown",
+      "sizeLines": 104,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/operations/FEEDBACK.md",
+      "language": "markdown",
+      "sizeLines": 48,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/operations/MERGING.md",
+      "language": "markdown",
+      "sizeLines": 125,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/operations/RELEASING.md",
+      "language": "markdown",
+      "sizeLines": 212,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/operations/SECRETS.md",
+      "language": "markdown",
+      "sizeLines": 206,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/performance/audio-thread-safety.md",
+      "language": "markdown",
+      "sizeLines": 33,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/performance/hardware-acceptance.md",
+      "language": "markdown",
+      "sizeLines": 111,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/quality/CODE_STYLE.md",
+      "language": "markdown",
+      "sizeLines": 67,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/quality/MANUAL_GUI_VERIFICATION.md",
+      "language": "markdown",
+      "sizeLines": 238,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/quality/QA_STRATEGY.md",
+      "language": "markdown",
+      "sizeLines": 303,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/quality/QUALITY.md",
+      "language": "markdown",
+      "sizeLines": 180,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/quality/TEST_LAYOUT.md",
+      "language": "markdown",
+      "sizeLines": 66,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/quality/manual-runs/20260801-122601-quick.json",
+      "language": "json",
+      "sizeLines": 103,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/manual-runs/20260801-122601-quick.md",
+      "language": "markdown",
+      "sizeLines": 25,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/quality/manual-runs/20260801-123636-full.json",
+      "language": "json",
+      "sizeLines": 688,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/manual-runs/20260801-123636-full.md",
+      "language": "markdown",
+      "sizeLines": 92,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/quality/manual-runs/20260801-124009-full.json",
+      "language": "json",
+      "sizeLines": 2264,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/manual-runs/20260801-124009-full.md",
+      "language": "markdown",
+      "sizeLines": 489,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/quality/manual-runs/20260801-124240-full.json",
+      "language": "json",
+      "sizeLines": 1957,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/manual-runs/20260801-124240-full.md",
+      "language": "markdown",
+      "sizeLines": 231,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/quality/manual-runs/20260801-125606-full.json",
+      "language": "json",
+      "sizeLines": 616,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/manual-runs/20260801-125606-full.md",
+      "language": "markdown",
+      "sizeLines": 88,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/quality/manual-runs/20260801-130349-full.json",
+      "language": "json",
+      "sizeLines": 1957,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/manual-runs/20260801-130349-full.md",
+      "language": "markdown",
+      "sizeLines": 250,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/settings-defaults.md",
+      "language": "markdown",
+      "sizeLines": 119,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/changes/musicxml-import/.openspec.yaml",
+      "language": "yaml",
+      "sizeLines": 2,
+      "fileCategory": "config"
+    },
+    {
+      "path": "openspec/changes/musicxml-import/design.md",
+      "language": "markdown",
+      "sizeLines": 695,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/changes/musicxml-import/proposal.md",
+      "language": "markdown",
+      "sizeLines": 133,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/changes/musicxml-import/specs/musicxml-import/spec.md",
+      "language": "markdown",
+      "sizeLines": 172,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/changes/musicxml-import/specs/normalized-score-model/spec.md",
+      "language": "markdown",
+      "sizeLines": 139,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/changes/musicxml-import/tasks.md",
+      "language": "markdown",
+      "sizeLines": 235,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/changes/real-world-performance-benchmarking/.openspec.yaml",
+      "language": "yaml",
+      "sizeLines": 2,
+      "fileCategory": "config"
+    },
+    {
+      "path": "openspec/changes/real-world-performance-benchmarking/design.md",
+      "language": "markdown",
+      "sizeLines": 80,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/changes/real-world-performance-benchmarking/proposal.md",
+      "language": "markdown",
+      "sizeLines": 28,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/changes/real-world-performance-benchmarking/specs/hardware-performance-lab/spec.md",
+      "language": "markdown",
+      "sizeLines": 67,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/changes/real-world-performance-benchmarking/tasks.md",
+      "language": "markdown",
+      "sizeLines": 47,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/config.yaml",
+      "language": "yaml",
+      "sizeLines": 20,
+      "fileCategory": "config"
+    },
+    {
+      "path": "openspec/specs/benchmark-ci-reporting/spec.md",
+      "language": "markdown",
+      "sizeLines": 52,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/codeql-security-scanning/spec.md",
+      "language": "markdown",
+      "sizeLines": 30,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/cpp-pr-quality-gate/spec.md",
+      "language": "markdown",
+      "sizeLines": 58,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/end-to-end-smoke-tests/spec.md",
+      "language": "markdown",
+      "sizeLines": 74,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/knowledge-graph-site/spec.md",
+      "language": "markdown",
+      "sizeLines": 240,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/load-and-soak-tests/spec.md",
+      "language": "markdown",
+      "sizeLines": 73,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/manual-gui-verification/spec.md",
+      "language": "markdown",
+      "sizeLines": 303,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/python-script-test-gate/spec.md",
+      "language": "markdown",
+      "sizeLines": 52,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/settings-transfer/spec.md",
+      "language": "markdown",
+      "sizeLines": 80,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/test-coverage-reporting/spec.md",
+      "language": "markdown",
+      "sizeLines": 80,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/test-suite-layout/spec.md",
+      "language": "markdown",
+      "sizeLines": 66,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/worker-database-fidelity/spec.md",
+      "language": "markdown",
+      "sizeLines": 75,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/workspace-layout-restoration/spec.md",
+      "language": "markdown",
+      "sizeLines": 95,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/workspace-tab-drag/spec.md",
+      "language": "markdown",
+      "sizeLines": 74,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "pyproject.toml",
+      "language": "toml",
+      "sizeLines": 49,
+      "fileCategory": "config"
+    },
+    {
+      "path": "src/application/configuration/AppDefaults.h",
+      "language": "c",
+      "sizeLines": 56,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/configuration/SettingsImportPersistence.h",
+      "language": "c",
+      "sizeLines": 48,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/configuration/SettingsImportTransaction.h",
+      "language": "c",
+      "sizeLines": 171,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/configuration/SettingsPersistence.cpp",
+      "language": "cpp",
+      "sizeLines": 298,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/configuration/SettingsPersistence.h",
+      "language": "c",
+      "sizeLines": 64,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/configuration/SettingsTransferCodec.cpp",
+      "language": "cpp",
+      "sizeLines": 473,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/configuration/SettingsTransferCodec.h",
+      "language": "c",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/configuration/SettingsTransferFile.h",
+      "language": "c",
+      "sizeLines": 59,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/MainComponent.h",
+      "language": "c",
+      "sizeLines": 283,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/MainComponentLifecycle.cpp",
+      "language": "cpp",
+      "sizeLines": 208,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/WorkspaceStartupSequence.h",
+      "language": "c",
+      "sizeLines": 16,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/state/appearance/MainComponentAppearance.cpp",
+      "language": "cpp",
+      "sizeLines": 131,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/state/audio/MainComponentAudioState.cpp",
+      "language": "cpp",
+      "sizeLines": 93,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/state/testcontrol/MainComponentTestControl.cpp",
+      "language": "cpp",
+      "sizeLines": 253,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/feedback/FeedbackWindow.h",
+      "language": "c",
+      "sizeLines": 46,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/feedback/MainComponentFeedback.cpp",
+      "language": "cpp",
+      "sizeLines": 160,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/main_window/MainTitleBar.h",
+      "language": "c",
+      "sizeLines": 214,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/main_window/MicrophoneWarning.h",
+      "language": "c",
+      "sizeLines": 110,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/performance/PerformanceLabWindow.h",
+      "language": "c",
+      "sizeLines": 1027,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/settings/MainComponentSettings.cpp",
+      "language": "cpp",
+      "sizeLines": 666,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/settings/SettingsWindow.h",
+      "language": "c",
+      "sizeLines": 544,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/components/DockedToolPanel.h",
+      "language": "c",
+      "sizeLines": 127,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/components/ToolDragHandle.h",
+      "language": "c",
+      "sizeLines": 54,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/components/ToolOptionsButton.h",
+      "language": "c",
+      "sizeLines": 77,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/components/ToolWindow.h",
+      "language": "c",
+      "sizeLines": 136,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/components/WorkspaceSplitPane.h",
+      "language": "c",
+      "sizeLines": 140,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/components/WorkspaceTabBarButton.h",
+      "language": "c",
+      "sizeLines": 99,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/components/WorkspaceTabbedComponent.h",
+      "language": "c",
+      "sizeLines": 79,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/model/NamedWorkspaceService.h",
+      "language": "c",
+      "sizeLines": 328,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h",
+      "language": "c",
+      "sizeLines": 95,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp",
+      "language": "cpp",
+      "sizeLines": 557,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.h",
+      "language": "c",
+      "sizeLines": 40,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/model/WorkspaceDocuments.h",
+      "language": "c",
+      "sizeLines": 201,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/model/WorkspaceLayoutState.h",
+      "language": "c",
+      "sizeLines": 568,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/model/WorkspaceMenuModel.h",
+      "language": "c",
+      "sizeLines": 54,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/model/WorkspaceNormalizer.h",
+      "language": "c",
+      "sizeLines": 235,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/model/WorkspaceSessionLifecycle.h",
+      "language": "c",
+      "sizeLines": 89,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/model/WorkspaceSnapshotApply.h",
+      "language": "c",
+      "sizeLines": 246,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h",
+      "language": "c",
+      "sizeLines": 124,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h",
+      "language": "c",
+      "sizeLines": 70,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/model/WorkspaceToolState.h",
+      "language": "c",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/shell/MainComponentWorkspaceDrag.cpp",
+      "language": "cpp",
+      "sizeLines": 288,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/shell/MainComponentWorkspaceLayout.cpp",
+      "language": "cpp",
+      "sizeLines": 185,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/shell/MainComponentWorkspaceManagement.cpp",
+      "language": "cpp",
+      "sizeLines": 406,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/shell/MainComponentWorkspaceMenu.cpp",
+      "language": "cpp",
+      "sizeLines": 270,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/shell/MainComponentWorkspacePresentation.cpp",
+      "language": "cpp",
+      "sizeLines": 364,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp",
+      "language": "cpp",
+      "sizeLines": 254,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/testcontrol/ApprovedWindowStates.cpp",
+      "language": "cpp",
+      "sizeLines": 193,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/testcontrol/ApprovedWindowStates.h",
+      "language": "c",
+      "sizeLines": 139,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/testcontrol/TestControlChannel.cpp",
+      "language": "cpp",
+      "sizeLines": 67,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/testcontrol/TestControlChannel.h",
+      "language": "c",
+      "sizeLines": 78,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/testcontrol/TestControlClicker.cpp",
+      "language": "cpp",
+      "sizeLines": 96,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/testcontrol/TestControlClicker.h",
+      "language": "c",
+      "sizeLines": 39,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/testcontrol/TestControlCommand.cpp",
+      "language": "cpp",
+      "sizeLines": 171,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/testcontrol/TestControlCommand.h",
+      "language": "c",
+      "sizeLines": 84,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/testcontrol/TestControlSession.cpp",
+      "language": "cpp",
+      "sizeLines": 156,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/testcontrol/TestControlSession.h",
+      "language": "c",
+      "sizeLines": 64,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/testcontrol/TestControlTarget.h",
+      "language": "c",
+      "sizeLines": 47,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/theme/Theme.cpp",
+      "language": "cpp",
+      "sizeLines": 72,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/theme/Theme.h",
+      "language": "c",
+      "sizeLines": 44,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/theme/ThemeType.h",
+      "language": "c",
+      "sizeLines": 12,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/bootstrap/main.cpp",
+      "language": "cpp",
+      "sizeLines": 447,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/harmonics/HarmonicAnalyzer.cpp",
+      "language": "cpp",
+      "sizeLines": 90,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/harmonics/HarmonicAnalyzer.h",
+      "language": "c",
+      "sizeLines": 37,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/harmonics/HarmonicAnalyzerComponent.cpp",
+      "language": "cpp",
+      "sizeLines": 214,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/harmonics/HarmonicAnalyzerComponent.h",
+      "language": "c",
+      "sizeLines": 53,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/spectrogram/SpectrogramComponent.cpp",
+      "language": "cpp",
+      "sizeLines": 276,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/spectrogram/SpectrogramComponent.h",
+      "language": "c",
+      "sizeLines": 78,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/tuner/PitchDetector.cpp",
+      "language": "cpp",
+      "sizeLines": 107,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/tuner/PitchDetector.h",
+      "language": "c",
+      "sizeLines": 34,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/tuner/TunerComponent.cpp",
+      "language": "cpp",
+      "sizeLines": 520,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/tuner/TunerComponent.h",
+      "language": "c",
+      "sizeLines": 138,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/tuner/TunerDrawing.cpp",
+      "language": "cpp",
+      "sizeLines": 343,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/feedback/FeedbackComponent.cpp",
+      "language": "cpp",
+      "sizeLines": 712,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/feedback/FeedbackComponent.h",
+      "language": "c",
+      "sizeLines": 89,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/feedback/FeedbackInvitationPolicy.h",
+      "language": "c",
+      "sizeLines": 19,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/ApplicationLaunchTimer.cpp",
+      "language": "cpp",
+      "sizeLines": 36,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/ApplicationLaunchTimer.h",
+      "language": "c",
+      "sizeLines": 25,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/BenchmarkComparability.cpp",
+      "language": "cpp",
+      "sizeLines": 57,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/BenchmarkComparability.h",
+      "language": "c",
+      "sizeLines": 24,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/BenchmarkComparison.cpp",
+      "language": "cpp",
+      "sizeLines": 64,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/BenchmarkComparison.h",
+      "language": "c",
+      "sizeLines": 27,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/BenchmarkInterfaces.h",
+      "language": "c",
+      "sizeLines": 94,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/BenchmarkRecordCodec.cpp",
+      "language": "cpp",
+      "sizeLines": 310,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/BenchmarkRecordCodec.h",
+      "language": "c",
+      "sizeLines": 31,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/BenchmarkRecordStore.cpp",
+      "language": "cpp",
+      "sizeLines": 119,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/BenchmarkRecordStore.h",
+      "language": "c",
+      "sizeLines": 42,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/BenchmarkRunner.cpp",
+      "language": "cpp",
+      "sizeLines": 158,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/BenchmarkRunner.h",
+      "language": "c",
+      "sizeLines": 66,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/BenchmarkTypes.h",
+      "language": "c",
+      "sizeLines": 120,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/HarmonicAnalysisActions.cpp",
+      "language": "cpp",
+      "sizeLines": 49,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/HarmonicAnalysisActions.h",
+      "language": "c",
+      "sizeLines": 28,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/InTreeOptimizationStrategy.cpp",
+      "language": "cpp",
+      "sizeLines": 63,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/InTreeOptimizationStrategy.h",
+      "language": "c",
+      "sizeLines": 46,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/NonRealTimeTelemetryCollector.cpp",
+      "language": "cpp",
+      "sizeLines": 82,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/NonRealTimeTelemetryCollector.h",
+      "language": "c",
+      "sizeLines": 45,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/PerformanceLabController.cpp",
+      "language": "cpp",
+      "sizeLines": 207,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/PerformanceLabController.h",
+      "language": "c",
+      "sizeLines": 80,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/PlatformProvenanceProvider.cpp",
+      "language": "cpp",
+      "sizeLines": 89,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/PlatformProvenanceProvider.h",
+      "language": "c",
+      "sizeLines": 47,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/RealTimeEventCapture.h",
+      "language": "c",
+      "sizeLines": 94,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/StrategyRegistry.cpp",
+      "language": "cpp",
+      "sizeLines": 74,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/StrategyRegistry.h",
+      "language": "c",
+      "sizeLines": 30,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/SustainedAudioAnalysisScenario.cpp",
+      "language": "cpp",
+      "sizeLines": 77,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/SustainedAudioAnalysisScenario.h",
+      "language": "c",
+      "sizeLines": 42,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/TrialAggregator.cpp",
+      "language": "cpp",
+      "sizeLines": 81,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/performance/TrialAggregator.h",
+      "language": "c",
+      "sizeLines": 27,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/audio/AudioInputService.cpp",
+      "language": "cpp",
+      "sizeLines": 552,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/audio/AudioInputService.h",
+      "language": "c",
+      "sizeLines": 127,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/audio/AudioRecoveryPolicy.h",
+      "language": "c",
+      "sizeLines": 18,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/audio/AudioSampleFifo.h",
+      "language": "c",
+      "sizeLines": 106,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/Diagnostic.h",
+      "language": "c",
+      "sizeLines": 81,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/LyricSyllable.h",
+      "language": "c",
+      "sizeLines": 45,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/Measure.h",
+      "language": "c",
+      "sizeLines": 99,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/MusicalTime.h",
+      "language": "c",
+      "sizeLines": 99,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/Pitch.h",
+      "language": "c",
+      "sizeLines": 115,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/Score.h",
+      "language": "c",
+      "sizeLines": 121,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/ScoreAttributes.h",
+      "language": "c",
+      "sizeLines": 117,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/ScoreEvent.h",
+      "language": "c",
+      "sizeLines": 119,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/TempoMap.cpp",
+      "language": "cpp",
+      "sizeLines": 152,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/TempoMap.h",
+      "language": "c",
+      "sizeLines": 89,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/.dockerignore",
+      "language": "unknown",
+      "sizeLines": 8,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "src/services/feedback-intake/.dev.vars.example",
+      "language": "example",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/.env.example",
+      "language": "config",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "src/services/feedback-intake/Dockerfile",
+      "language": "dockerfile",
+      "sizeLines": 28,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "src/services/feedback-intake/README.md",
+      "language": "markdown",
+      "sizeLines": 372,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "src/services/feedback-intake/compose.yaml",
+      "language": "yaml",
+      "sizeLines": 18,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "src/services/feedback-intake/docker-entrypoint.sh",
+      "language": "shell",
+      "sizeLines": 15,
+      "fileCategory": "script"
+    },
+    {
+      "path": "src/services/feedback-intake/migrations/0001_initial.sql",
+      "language": "sql",
+      "sizeLines": 32,
+      "fileCategory": "data"
+    },
+    {
+      "path": "src/services/feedback-intake/migrations/0002_admin_triage.sql",
+      "language": "sql",
+      "sizeLines": 16,
+      "fileCategory": "data"
+    },
+    {
+      "path": "src/services/feedback-intake/migrations/0003_admin_action_receipts.sql",
+      "language": "sql",
+      "sizeLines": 18,
+      "fileCategory": "data"
+    },
+    {
+      "path": "src/services/feedback-intake/migrations/0004_optional_screenshots.sql",
+      "language": "sql",
+      "sizeLines": 2,
+      "fileCategory": "data"
+    },
+    {
+      "path": "src/services/feedback-intake/migrations/0005_idempotent_submissions.sql",
+      "language": "sql",
+      "sizeLines": 4,
+      "fileCategory": "data"
+    },
+    {
+      "path": "src/services/feedback-intake/migrations/0006_operations.sql",
+      "language": "sql",
+      "sizeLines": 28,
+      "fileCategory": "data"
+    },
+    {
+      "path": "src/services/feedback-intake/migrations/0007_email_notification_limits.sql",
+      "language": "sql",
+      "sizeLines": 28,
+      "fileCategory": "data"
+    },
+    {
+      "path": "src/services/feedback-intake/package.json",
+      "language": "json",
+      "sizeLines": 28,
+      "fileCategory": "config"
+    },
+    {
+      "path": "src/services/feedback-intake/src/access.ts",
+      "language": "typescript",
+      "sizeLines": 101,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/src/admin.css",
+      "language": "css",
+      "sizeLines": 328,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "src/services/feedback-intake/src/admin.html",
+      "language": "html",
+      "sizeLines": 81,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "src/services/feedback-intake/src/admin.ts",
+      "language": "typescript",
+      "sizeLines": 522,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/src/audit.html",
+      "language": "html",
+      "sizeLines": 26,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "src/services/feedback-intake/src/audit.js",
+      "language": "javascript",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/src/dashboard.js",
+      "language": "javascript",
+      "sizeLines": 366,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/src/docker-server.ts",
+      "language": "typescript",
+      "sizeLines": 165,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/src/html.d.ts",
+      "language": "typescript",
+      "sizeLines": 14,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/src/index.ts",
+      "language": "typescript",
+      "sizeLines": 539,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/src/notifications.ts",
+      "language": "typescript",
+      "sizeLines": 225,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/src/operations.ts",
+      "language": "typescript",
+      "sizeLines": 297,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/test/access.test.ts",
+      "language": "typescript",
+      "sizeLines": 127,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/test/admin.test.ts",
+      "language": "typescript",
+      "sizeLines": 427,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/test/index.test.ts",
+      "language": "typescript",
+      "sizeLines": 444,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/test/migrations.test.ts",
+      "language": "typescript",
+      "sizeLines": 75,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/test/notifications.test.ts",
+      "language": "typescript",
+      "sizeLines": 222,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/test/support/database.ts",
+      "language": "typescript",
+      "sizeLines": 330,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/services/feedback-intake/tsconfig.json",
+      "language": "json",
+      "sizeLines": 13,
+      "fileCategory": "config"
+    },
+    {
+      "path": "src/services/feedback-intake/wrangler.example.jsonc",
+      "language": "jsonc",
+      "sizeLines": 49,
+      "fileCategory": "config"
+    },
+    {
+      "path": "src/services/package.json",
+      "language": "json",
+      "sizeLines": 12,
+      "fileCategory": "config"
+    },
+    {
+      "path": "src/services/vitest.config.mts",
+      "language": "mts",
+      "sizeLines": 44,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/configuration/AppDefaultsTests.cpp",
+      "language": "cpp",
+      "sizeLines": 48,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/configuration/SettingsPersistenceTests.cpp",
+      "language": "cpp",
+      "sizeLines": 441,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/configuration/SettingsTransferCodecTests.cpp",
+      "language": "cpp",
+      "sizeLines": 610,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/shell/WorkspaceStartupSequenceTests.cpp",
+      "language": "cpp",
+      "sizeLines": 19,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp",
+      "language": "cpp",
+      "sizeLines": 62,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/shell/ui/workspace/model/NamedWorkspaceServiceTests.cpp",
+      "language": "cpp",
+      "sizeLines": 253,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/shell/ui/workspace/model/WorkspaceBuiltInsTests.cpp",
+      "language": "cpp",
+      "sizeLines": 87,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/shell/ui/workspace/model/WorkspaceCatalogCodecTests.cpp",
+      "language": "cpp",
+      "sizeLines": 119,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/shell/ui/workspace/model/WorkspaceDocumentsTests.cpp",
+      "language": "cpp",
+      "sizeLines": 50,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/shell/ui/workspace/model/WorkspaceLayoutStateTests.cpp",
+      "language": "cpp",
+      "sizeLines": 532,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/shell/ui/workspace/model/WorkspaceMenuModelTests.cpp",
+      "language": "cpp",
+      "sizeLines": 60,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/shell/ui/workspace/model/WorkspaceRecoveryTests.cpp",
+      "language": "cpp",
+      "sizeLines": 87,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/shell/ui/workspace/model/WorkspaceSessionLifecycleTests.cpp",
+      "language": "cpp",
+      "sizeLines": 123,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotApplyTests.cpp",
+      "language": "cpp",
+      "sizeLines": 183,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp",
+      "language": "cpp",
+      "sizeLines": 74,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp",
+      "language": "cpp",
+      "sizeLines": 93,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp",
+      "language": "cpp",
+      "sizeLines": 361,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/testcontrol/TestControlClickerTests.cpp",
+      "language": "cpp",
+      "sizeLines": 159,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/testcontrol/TestControlCommandTests.cpp",
+      "language": "cpp",
+      "sizeLines": 125,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/testcontrol/TestControlSessionTests.cpp",
+      "language": "cpp",
+      "sizeLines": 362,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/theme/ThemeContrastTests.cpp",
+      "language": "cpp",
+      "sizeLines": 83,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp",
+      "language": "cpp",
+      "sizeLines": 109,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/analysis/tuner/PitchDetectorTests.cpp",
+      "language": "cpp",
+      "sizeLines": 181,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp",
+      "language": "cpp",
+      "sizeLines": 41,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/ApplicationLaunchTimerTests.cpp",
+      "language": "cpp",
+      "sizeLines": 26,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/BenchmarkComparabilityTests.cpp",
+      "language": "cpp",
+      "sizeLines": 71,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/BenchmarkComparisonTests.cpp",
+      "language": "cpp",
+      "sizeLines": 68,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/BenchmarkInterfacesTests.cpp",
+      "language": "cpp",
+      "sizeLines": 93,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/BenchmarkRecordCodecTests.cpp",
+      "language": "cpp",
+      "sizeLines": 85,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/BenchmarkRecordStoreTests.cpp",
+      "language": "cpp",
+      "sizeLines": 108,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/BenchmarkRunnerTests.cpp",
+      "language": "cpp",
+      "sizeLines": 126,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/BenchmarkTypesTests.cpp",
+      "language": "cpp",
+      "sizeLines": 47,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/InTreeOptimizationStrategyTests.cpp",
+      "language": "cpp",
+      "sizeLines": 48,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/NonRealTimeTelemetryCollectorTests.cpp",
+      "language": "cpp",
+      "sizeLines": 64,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/PerformanceLabControllerTests.cpp",
+      "language": "cpp",
+      "sizeLines": 173,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/PlatformProvenanceProviderTests.cpp",
+      "language": "cpp",
+      "sizeLines": 67,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/RealTimeEventCaptureTests.cpp",
+      "language": "cpp",
+      "sizeLines": 91,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/StrategyRegistryTests.cpp",
+      "language": "cpp",
+      "sizeLines": 39,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/SustainedAudioAnalysisScenarioTests.cpp",
+      "language": "cpp",
+      "sizeLines": 71,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/performance/TrialAggregatorTests.cpp",
+      "language": "cpp",
+      "sizeLines": 75,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/audio/AudioRecoveryPolicyTests.cpp",
+      "language": "cpp",
+      "sizeLines": 45,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/audio/AudioSampleFifoLoadTests.cpp",
+      "language": "cpp",
+      "sizeLines": 459,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/audio/AudioSampleFifoTests.cpp",
+      "language": "cpp",
+      "sizeLines": 198,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/score/MusicalTimeTests.cpp",
+      "language": "cpp",
+      "sizeLines": 130,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/score/PitchTests.cpp",
+      "language": "cpp",
+      "sizeLines": 109,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/score/ScoreModelTests.cpp",
+      "language": "cpp",
+      "sizeLines": 391,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/score/TempoMapTests.cpp",
+      "language": "cpp",
+      "sizeLines": 155,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/support/BenchmarkFakes.h",
+      "language": "c",
+      "sizeLines": 153,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/support/BenchmarkFakesTests.cpp",
+      "language": "cpp",
+      "sizeLines": 45,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/VERSION",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/cmake/Packaging.cmake",
+      "language": "cmake",
+      "sizeLines": 120,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/cmake/PatchJuceAlsaChannelMismatch.cmake",
+      "language": "cmake",
+      "sizeLines": 51,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/cmake/PatchJuceAlsaInputStartup.cmake",
+      "language": "cmake",
+      "sizeLines": 51,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/cmake/triplets/arm64-linux-practice.cmake",
+      "language": "cmake",
+      "sizeLines": 9,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/cmake/triplets/x64-linux-practice.cmake",
+      "language": "cmake",
+      "sizeLines": 9,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/packaging/icons/README.md",
+      "language": "markdown",
+      "sizeLines": 50,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "tools/packaging/linux/org.derekrneilson.practicetakes.desktop",
+      "language": "desktop",
+      "sizeLines": 13,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/README.md",
+      "language": "markdown",
+      "sizeLines": 40,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "tools/scripts/build/build-and-run.sh",
+      "language": "shell",
+      "sizeLines": 335,
+      "fileCategory": "script"
+    },
+    {
+      "path": "tools/scripts/build/check-linux-build-dependencies.sh",
+      "language": "shell",
+      "sizeLines": 134,
+      "fileCategory": "script"
+    },
+    {
+      "path": "tools/scripts/design/generate_app_icons.py",
+      "language": "python",
+      "sizeLines": 667,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/design/test_generate_app_icons.py",
+      "language": "python",
+      "sizeLines": 208,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/feedback/configure-cloudflare-access.sh",
+      "language": "shell",
+      "sizeLines": 247,
+      "fileCategory": "script"
+    },
+    {
+      "path": "tools/scripts/feedback/migrate-feedback-database.sh",
+      "language": "shell",
+      "sizeLines": 79,
+      "fileCategory": "script"
+    },
+    {
+      "path": "tools/scripts/feedback/run-recovery-drill.py",
+      "language": "python",
+      "sizeLines": 76,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/feedback/setup-dashboard-daemon.sh",
+      "language": "shell",
+      "sizeLines": 169,
+      "fileCategory": "script"
+    },
+    {
+      "path": "tools/scripts/feedback/update-dashboard-daemon.sh",
+      "language": "shell",
+      "sizeLines": 48,
+      "fileCategory": "script"
+    },
+    {
+      "path": "tools/scripts/git/configure_merge.py",
+      "language": "python",
+      "sizeLines": 177,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/git/merge_cmake_sources.py",
+      "language": "python",
+      "sizeLines": 222,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/git/merge_npm_lock.py",
+      "language": "python",
+      "sizeLines": 149,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/git/test_configure_merge.py",
+      "language": "python",
+      "sizeLines": 149,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/git/test_merge_cmake_sources.py",
+      "language": "python",
+      "sizeLines": 215,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/git/test_merge_npm_lock.py",
+      "language": "python",
+      "sizeLines": 148,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/manual_gui/__init__.py",
+      "language": "python",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/manual_gui/__main__.py",
+      "language": "python",
+      "sizeLines": 260,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/manual_gui/app.py",
+      "language": "python",
+      "sizeLines": 189,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/manual_gui/driver.py",
+      "language": "python",
+      "sizeLines": 193,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/manual_gui/record.py",
+      "language": "python",
+      "sizeLines": 197,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/manual_gui/session.py",
+      "language": "python",
+      "sizeLines": 264,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/manual_gui/surfaces.py",
+      "language": "python",
+      "sizeLines": 332,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/manual_gui/test_manual_gui.py",
+      "language": "python",
+      "sizeLines": 599,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/pages/verify-graph.mjs",
+      "language": "javascript",
+      "sizeLines": 260,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/practice_takes_roadmap/__init__.py",
+      "language": "python",
+      "sizeLines": 3,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/practice_takes_roadmap/__main__.py",
+      "language": "python",
+      "sizeLines": 3,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/practice_takes_roadmap/config.py",
+      "language": "python",
+      "sizeLines": 71,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/practice_takes_roadmap/discovery.py",
+      "language": "python",
+      "sizeLines": 74,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/practice_takes_roadmap/github.py",
+      "language": "python",
+      "sizeLines": 444,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/practice_takes_roadmap/main.py",
+      "language": "python",
+      "sizeLines": 789,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/practice_takes_roadmap/models.py",
+      "language": "python",
+      "sizeLines": 45,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/practice_takes_roadmap/planning.py",
+      "language": "python",
+      "sizeLines": 285,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/practice_takes_roadmap/progress.py",
+      "language": "python",
+      "sizeLines": 97,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/practice_takes_roadmap/state.py",
+      "language": "python",
+      "sizeLines": 235,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/check_test_layout.py",
+      "language": "python",
+      "sizeLines": 139,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/coverage_sources.py",
+      "language": "python",
+      "sizeLines": 166,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/format_benchmarks.py",
+      "language": "python",
+      "sizeLines": 140,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/run-performance-lab.sh",
+      "language": "shell",
+      "sizeLines": 20,
+      "fileCategory": "script"
+    },
+    {
+      "path": "tools/scripts/quality/run_clang_format.py",
+      "language": "python",
+      "sizeLines": 98,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/run_clang_tidy.py",
+      "language": "python",
+      "sizeLines": 157,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/run_coverage.py",
+      "language": "python",
+      "sizeLines": 175,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/run_python_coverage.py",
+      "language": "python",
+      "sizeLines": 97,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/smoke_test.py",
+      "language": "python",
+      "sizeLines": 145,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/test_check_test_layout.py",
+      "language": "python",
+      "sizeLines": 116,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/test_coverage_sources.py",
+      "language": "python",
+      "sizeLines": 173,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/ui-validation/pointer_control.cpp",
+      "language": "cpp",
+      "sizeLines": 76,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/ui-validation/run-ui-golden.zsh",
+      "language": "shell",
+      "sizeLines": 379,
+      "fileCategory": "script"
+    },
+    {
+      "path": "tools/scripts/quality/ui-validation/window_control.cpp",
+      "language": "cpp",
+      "sizeLines": 202,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/ui-validation/xwindow_capture.cpp",
+      "language": "cpp",
+      "sizeLines": 224,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/release/check_manual_verification.py",
+      "language": "python",
+      "sizeLines": 253,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/release/test_check_manual_verification.py",
+      "language": "python",
+      "sizeLines": 292,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/release/test_version.py",
+      "language": "python",
+      "sizeLines": 130,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/release/version.py",
+      "language": "python",
+      "sizeLines": 119,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/roadmap/setup.sh",
+      "language": "shell",
+      "sizeLines": 7,
+      "fileCategory": "script"
+    },
+    {
+      "path": "tools/scripts/run_tests.py",
+      "language": "python",
+      "sizeLines": 64,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/secrets/secrets_manager.py",
+      "language": "python",
+      "sizeLines": 875,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/secrets/test_secrets_manager.py",
+      "language": "python",
+      "sizeLines": 196,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/secret-patterns",
+      "language": "unknown",
+      "sizeLines": 36,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/vcpkg.json",
+      "language": "json",
+      "sizeLines": 24,
+      "fileCategory": "config"
+    }
+  ],
+  "totalFiles": 355,
+  "filteredByIgnore": 105,
+  "estimatedComplexity": "large",
+  "importMap": {
+    ".clang-format": [],
+    ".clang-tidy": [],
+    ".gitattributes": [],
+    ".github/CODEOWNERS": [],
+    ".github/CONTRIBUTING.md": [],
+    ".github/SECURITY.md": [],
+    ".github/dependabot.yml": [],
+    ".github/workflows/benchmarks.yml": [],
+    ".github/workflows/build-multiplatform.yml": [],
+    ".github/workflows/clang-tidy-main.yml": [],
+    ".github/workflows/coverage.yml": [],
+    ".github/workflows/cpp-quality-check.yml": [],
+    ".github/workflows/pages.yml": [],
+    ".github/workflows/python-check.yml": [],
+    ".github/workflows/release.yml": [],
+    ".github/workflows/secret-scan.yml": [],
+    ".github/workflows/services-check.yml": [],
+    ".github/workflows/smoke.yml": [],
+    ".pre-commit-config.yaml": [],
+    ".sops.yaml": [],
+    ".sops.yaml.example": [],
+    "CLAUDE.md": [],
+    "CMakeLists.txt": [],
+    "README.md": [],
+    "docs/contracts/feedback/v1.schema.json": [],
+    "docs/development/README.md": [],
+    "docs/development/agents/AGENT_GUIDE.md": [],
+    "docs/development/architecture/ARCHITECTURE.md": [],
+    "docs/development/architecture/ARCHITECTURE_QA.md": [],
+    "docs/development/operations/FEEDBACK.md": [],
+    "docs/development/operations/MERGING.md": [],
+    "docs/development/operations/RELEASING.md": [],
+    "docs/development/operations/SECRETS.md": [],
+    "docs/development/performance/audio-thread-safety.md": [],
+    "docs/development/performance/hardware-acceptance.md": [],
+    "docs/development/quality/CODE_STYLE.md": [],
+    "docs/development/quality/MANUAL_GUI_VERIFICATION.md": [],
+    "docs/development/quality/QA_STRATEGY.md": [],
+    "docs/development/quality/QUALITY.md": [],
+    "docs/development/quality/TEST_LAYOUT.md": [],
+    "docs/development/quality/manual-runs/20260801-122601-quick.json": [],
+    "docs/development/quality/manual-runs/20260801-122601-quick.md": [],
+    "docs/development/quality/manual-runs/20260801-123636-full.json": [],
+    "docs/development/quality/manual-runs/20260801-123636-full.md": [],
+    "docs/development/quality/manual-runs/20260801-124009-full.json": [],
+    "docs/development/quality/manual-runs/20260801-124009-full.md": [],
+    "docs/development/quality/manual-runs/20260801-124240-full.json": [],
+    "docs/development/quality/manual-runs/20260801-124240-full.md": [],
+    "docs/development/quality/manual-runs/20260801-125606-full.json": [],
+    "docs/development/quality/manual-runs/20260801-125606-full.md": [],
+    "docs/development/quality/manual-runs/20260801-130349-full.json": [],
+    "docs/development/quality/manual-runs/20260801-130349-full.md": [],
+    "docs/settings-defaults.md": [],
+    "openspec/changes/musicxml-import/.openspec.yaml": [],
+    "openspec/changes/musicxml-import/design.md": [],
+    "openspec/changes/musicxml-import/proposal.md": [],
+    "openspec/changes/musicxml-import/specs/musicxml-import/spec.md": [],
+    "openspec/changes/musicxml-import/specs/normalized-score-model/spec.md": [],
+    "openspec/changes/musicxml-import/tasks.md": [],
+    "openspec/changes/real-world-performance-benchmarking/.openspec.yaml": [],
+    "openspec/changes/real-world-performance-benchmarking/design.md": [],
+    "openspec/changes/real-world-performance-benchmarking/proposal.md": [],
+    "openspec/changes/real-world-performance-benchmarking/specs/hardware-performance-lab/spec.md": [],
+    "openspec/changes/real-world-performance-benchmarking/tasks.md": [],
+    "openspec/config.yaml": [],
+    "openspec/specs/benchmark-ci-reporting/spec.md": [],
+    "openspec/specs/codeql-security-scanning/spec.md": [],
+    "openspec/specs/cpp-pr-quality-gate/spec.md": [],
+    "openspec/specs/end-to-end-smoke-tests/spec.md": [],
+    "openspec/specs/knowledge-graph-site/spec.md": [],
+    "openspec/specs/load-and-soak-tests/spec.md": [],
+    "openspec/specs/manual-gui-verification/spec.md": [],
+    "openspec/specs/python-script-test-gate/spec.md": [],
+    "openspec/specs/settings-transfer/spec.md": [],
+    "openspec/specs/test-coverage-reporting/spec.md": [],
+    "openspec/specs/test-suite-layout/spec.md": [],
+    "openspec/specs/worker-database-fidelity/spec.md": [],
+    "openspec/specs/workspace-layout-restoration/spec.md": [],
+    "openspec/specs/workspace-tab-drag/spec.md": [],
+    "pyproject.toml": [],
+    "src/application/configuration/AppDefaults.h": [
+      "src/application/theme/ThemeType.h"
+    ],
+    "src/application/configuration/SettingsImportPersistence.h": [
+      "src/application/configuration/SettingsTransferCodec.h"
+    ],
+    "src/application/configuration/SettingsImportTransaction.h": [
+      "src/application/configuration/SettingsTransferCodec.h"
+    ],
+    "src/application/configuration/SettingsPersistence.cpp": [
+      "src/application/configuration/SettingsPersistence.h",
+      "src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.h"
+    ],
+    "src/application/configuration/SettingsPersistence.h": [
+      "src/application/configuration/AppDefaults.h",
+      "src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h",
+      "src/application/theme/ThemeType.h"
+    ],
+    "src/application/configuration/SettingsTransferCodec.cpp": [
+      "src/application/configuration/SettingsTransferCodec.h"
+    ],
+    "src/application/configuration/SettingsTransferCodec.h": [
+      "src/application/configuration/SettingsPersistence.h",
+      "src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.h"
+    ],
+    "src/application/configuration/SettingsTransferFile.h": [],
+    "src/application/shell/MainComponent.h": [
+      "src/application/configuration/AppDefaults.h",
+      "src/application/configuration/SettingsPersistence.h",
+      "src/application/shell/ui/workspace/model/NamedWorkspaceService.h",
+      "src/application/shell/ui/workspace/model/WorkspaceDocuments.h",
+      "src/application/shell/ui/workspace/model/WorkspaceLayoutState.h",
+      "src/application/shell/ui/workspace/model/WorkspaceSessionLifecycle.h",
+      "src/application/shell/ui/workspace/model/WorkspaceToolState.h",
+      "src/application/theme/Theme.h",
+      "src/platform/audio/AudioInputService.h"
+    ],
+    "src/application/shell/MainComponentLifecycle.cpp": [
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/ui/feedback/FeedbackWindow.h",
+      "src/application/shell/ui/main_window/MainTitleBar.h",
+      "src/application/shell/ui/main_window/MicrophoneWarning.h",
+      "src/application/shell/ui/settings/SettingsWindow.h",
+      "src/application/shell/ui/workspace/components/DockedToolPanel.h",
+      "src/application/shell/ui/workspace/components/ToolWindow.h"
+    ],
+    "src/application/shell/WorkspaceStartupSequence.h": [],
+    "src/application/shell/state/appearance/MainComponentAppearance.cpp": [
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/ui/feedback/FeedbackWindow.h",
+      "src/application/shell/ui/main_window/MicrophoneWarning.h",
+      "src/application/shell/ui/settings/SettingsWindow.h"
+    ],
+    "src/application/shell/state/audio/MainComponentAudioState.cpp": [
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/ui/main_window/MicrophoneWarning.h"
+    ],
+    "src/application/shell/state/testcontrol/MainComponentTestControl.cpp": [
+      "src/application/shell/MainComponent.h"
+    ],
+    "src/application/shell/ui/feedback/FeedbackWindow.h": [
+      "src/application/shell/MainComponent.h",
+      "src/features/feedback/FeedbackComponent.h"
+    ],
+    "src/application/shell/ui/feedback/MainComponentFeedback.cpp": [
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/ui/feedback/FeedbackWindow.h",
+      "src/features/feedback/FeedbackInvitationPolicy.h"
+    ],
+    "src/application/shell/ui/main_window/MainTitleBar.h": [],
+    "src/application/shell/ui/main_window/MicrophoneWarning.h": [
+      "src/application/shell/MainComponent.h"
+    ],
+    "src/application/shell/ui/performance/PerformanceLabWindow.h": [],
+    "src/application/shell/ui/settings/MainComponentSettings.cpp": [
+      "src/application/configuration/SettingsImportPersistence.h",
+      "src/application/configuration/SettingsImportTransaction.h",
+      "src/application/configuration/SettingsTransferCodec.h",
+      "src/application/configuration/SettingsTransferFile.h",
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/ui/settings/SettingsWindow.h",
+      "src/application/shell/ui/workspace/components/ToolWindow.h",
+      "src/features/analysis/harmonics/HarmonicAnalyzerComponent.h",
+      "src/features/analysis/spectrogram/SpectrogramComponent.h",
+      "src/features/analysis/tuner/TunerComponent.h"
+    ],
+    "src/application/shell/ui/settings/SettingsWindow.h": [
+      "src/application/shell/MainComponent.h"
+    ],
+    "src/application/shell/ui/workspace/components/DockedToolPanel.h": [
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/ui/workspace/components/ToolOptionsButton.h"
+    ],
+    "src/application/shell/ui/workspace/components/ToolDragHandle.h": [],
+    "src/application/shell/ui/workspace/components/ToolOptionsButton.h": [],
+    "src/application/shell/ui/workspace/components/ToolWindow.h": [
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/ui/workspace/components/ToolDragHandle.h",
+      "src/application/shell/ui/workspace/components/ToolOptionsButton.h"
+    ],
+    "src/application/shell/ui/workspace/components/WorkspaceSplitPane.h": [],
+    "src/application/shell/ui/workspace/components/WorkspaceTabBarButton.h": [],
+    "src/application/shell/ui/workspace/components/WorkspaceTabbedComponent.h": [
+      "src/application/shell/ui/workspace/components/WorkspaceTabBarButton.h",
+      "src/application/shell/ui/workspace/model/WorkspaceLayoutState.h"
+    ],
+    "src/application/shell/ui/workspace/model/NamedWorkspaceService.h": [
+      "src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h"
+    ],
+    "src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h": [
+      "src/application/shell/ui/workspace/model/WorkspaceDocuments.h"
+    ],
+    "src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp": [
+      "src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h",
+      "src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.h",
+      "src/application/shell/ui/workspace/model/WorkspaceNormalizer.h"
+    ],
+    "src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.h": [
+      "src/application/shell/ui/workspace/model/WorkspaceDocuments.h",
+      "src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h"
+    ],
+    "src/application/shell/ui/workspace/model/WorkspaceDocuments.h": [],
+    "src/application/shell/ui/workspace/model/WorkspaceLayoutState.h": [],
+    "src/application/shell/ui/workspace/model/WorkspaceMenuModel.h": [
+      "src/application/shell/ui/workspace/model/NamedWorkspaceService.h"
+    ],
+    "src/application/shell/ui/workspace/model/WorkspaceNormalizer.h": [
+      "src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h",
+      "src/application/shell/ui/workspace/model/WorkspaceDocuments.h",
+      "src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h"
+    ],
+    "src/application/shell/ui/workspace/model/WorkspaceSessionLifecycle.h": [
+      "src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h",
+      "src/application/shell/ui/workspace/model/WorkspaceNormalizer.h",
+      "src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h"
+    ],
+    "src/application/shell/ui/workspace/model/WorkspaceSnapshotApply.h": [
+      "src/application/shell/ui/workspace/model/WorkspaceDocuments.h",
+      "src/application/shell/ui/workspace/model/WorkspaceLayoutState.h",
+      "src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h",
+      "src/application/shell/ui/workspace/model/WorkspaceToolState.h"
+    ],
+    "src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h": [
+      "src/application/shell/ui/workspace/model/WorkspaceDocuments.h",
+      "src/application/shell/ui/workspace/model/WorkspaceLayoutState.h",
+      "src/application/shell/ui/workspace/model/WorkspaceToolState.h"
+    ],
+    "src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h": [],
+    "src/application/shell/ui/workspace/model/WorkspaceToolState.h": [],
+    "src/application/shell/ui/workspace/shell/MainComponentWorkspaceDrag.cpp": [
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/ui/workspace/components/DockedToolPanel.h"
+    ],
+    "src/application/shell/ui/workspace/shell/MainComponentWorkspaceLayout.cpp": [
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/ui/workspace/components/DockedToolPanel.h",
+      "src/application/shell/ui/workspace/components/WorkspaceSplitPane.h",
+      "src/application/shell/ui/workspace/components/WorkspaceTabbedComponent.h"
+    ],
+    "src/application/shell/ui/workspace/shell/MainComponentWorkspaceManagement.cpp": [
+      "src/application/configuration/SettingsImportTransaction.h",
+      "src/application/shell/MainComponent.h"
+    ],
+    "src/application/shell/ui/workspace/shell/MainComponentWorkspaceMenu.cpp": [
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/ui/workspace/model/WorkspaceMenuModel.h"
+    ],
+    "src/application/shell/ui/workspace/shell/MainComponentWorkspacePresentation.cpp": [
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/ui/workspace/components/DockedToolPanel.h",
+      "src/application/shell/ui/workspace/components/ToolWindow.h",
+      "src/features/analysis/harmonics/HarmonicAnalyzerComponent.h",
+      "src/features/analysis/spectrogram/SpectrogramComponent.h",
+      "src/features/analysis/tuner/TunerComponent.h"
+    ],
+    "src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp": [
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/ui/workspace/components/ToolWindow.h",
+      "src/application/shell/ui/workspace/model/WorkspaceSnapshotApply.h",
+      "src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h",
+      "src/features/analysis/tuner/TunerComponent.h"
+    ],
+    "src/application/testcontrol/ApprovedWindowStates.cpp": [
+      "src/application/testcontrol/ApprovedWindowStates.h"
+    ],
+    "src/application/testcontrol/ApprovedWindowStates.h": [],
+    "src/application/testcontrol/TestControlChannel.cpp": [
+      "src/application/testcontrol/TestControlChannel.h"
+    ],
+    "src/application/testcontrol/TestControlChannel.h": [
+      "src/application/testcontrol/TestControlSession.h",
+      "src/application/testcontrol/TestControlTarget.h"
+    ],
+    "src/application/testcontrol/TestControlClicker.cpp": [
+      "src/application/testcontrol/TestControlClicker.h"
+    ],
+    "src/application/testcontrol/TestControlClicker.h": [],
+    "src/application/testcontrol/TestControlCommand.cpp": [
+      "src/application/testcontrol/TestControlCommand.h"
+    ],
+    "src/application/testcontrol/TestControlCommand.h": [],
+    "src/application/testcontrol/TestControlSession.cpp": [
+      "src/application/testcontrol/TestControlSession.h"
+    ],
+    "src/application/testcontrol/TestControlSession.h": [
+      "src/application/testcontrol/TestControlCommand.h",
+      "src/application/testcontrol/TestControlTarget.h"
+    ],
+    "src/application/testcontrol/TestControlTarget.h": [
+      "src/application/testcontrol/ApprovedWindowStates.h"
+    ],
+    "src/application/theme/Theme.cpp": [
+      "src/application/theme/Theme.h"
+    ],
+    "src/application/theme/Theme.h": [
+      "src/application/theme/ThemeType.h"
+    ],
+    "src/application/theme/ThemeType.h": [],
+    "src/bootstrap/main.cpp": [
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/WorkspaceStartupSequence.h",
+      "src/application/shell/ui/main_window/MainTitleBar.h",
+      "src/features/performance/ApplicationLaunchTimer.h"
+    ],
+    "src/features/analysis/harmonics/HarmonicAnalyzer.cpp": [
+      "src/features/analysis/harmonics/HarmonicAnalyzer.h"
+    ],
+    "src/features/analysis/harmonics/HarmonicAnalyzer.h": [
+      "src/features/analysis/tuner/PitchDetector.h"
+    ],
+    "src/features/analysis/harmonics/HarmonicAnalyzerComponent.cpp": [
+      "src/features/analysis/harmonics/HarmonicAnalyzerComponent.h"
+    ],
+    "src/features/analysis/harmonics/HarmonicAnalyzerComponent.h": [
+      "src/application/theme/Theme.h",
+      "src/features/analysis/harmonics/HarmonicAnalyzer.h",
+      "src/platform/audio/AudioInputService.h"
+    ],
+    "src/features/analysis/spectrogram/SpectrogramComponent.cpp": [
+      "src/features/analysis/spectrogram/SpectrogramComponent.h"
+    ],
+    "src/features/analysis/spectrogram/SpectrogramComponent.h": [
+      "src/application/theme/Theme.h",
+      "src/platform/audio/AudioInputService.h"
+    ],
+    "src/features/analysis/tuner/PitchDetector.cpp": [
+      "src/features/analysis/tuner/PitchDetector.h"
+    ],
+    "src/features/analysis/tuner/PitchDetector.h": [],
+    "src/features/analysis/tuner/TunerComponent.cpp": [
+      "src/features/analysis/tuner/TunerComponent.h"
+    ],
+    "src/features/analysis/tuner/TunerComponent.h": [
+      "src/application/configuration/AppDefaults.h",
+      "src/application/theme/Theme.h",
+      "src/features/analysis/tuner/PitchDetector.h",
+      "src/platform/audio/AudioInputService.h"
+    ],
+    "src/features/analysis/tuner/TunerDrawing.cpp": [
+      "src/features/analysis/tuner/TunerComponent.h"
+    ],
+    "src/features/feedback/FeedbackComponent.cpp": [
+      "src/features/feedback/FeedbackComponent.h"
+    ],
+    "src/features/feedback/FeedbackComponent.h": [],
+    "src/features/feedback/FeedbackInvitationPolicy.h": [],
+    "src/features/performance/ApplicationLaunchTimer.cpp": [
+      "src/features/performance/ApplicationLaunchTimer.h"
+    ],
+    "src/features/performance/ApplicationLaunchTimer.h": [],
+    "src/features/performance/BenchmarkComparability.cpp": [
+      "src/features/performance/BenchmarkComparability.h"
+    ],
+    "src/features/performance/BenchmarkComparability.h": [
+      "src/features/performance/BenchmarkTypes.h"
+    ],
+    "src/features/performance/BenchmarkComparison.cpp": [
+      "src/features/performance/BenchmarkComparison.h"
+    ],
+    "src/features/performance/BenchmarkComparison.h": [
+      "src/features/performance/BenchmarkComparability.h"
+    ],
+    "src/features/performance/BenchmarkInterfaces.h": [
+      "src/features/performance/BenchmarkTypes.h"
+    ],
+    "src/features/performance/BenchmarkRecordCodec.cpp": [
+      "src/features/performance/BenchmarkRecordCodec.h"
+    ],
+    "src/features/performance/BenchmarkRecordCodec.h": [
+      "src/features/performance/BenchmarkTypes.h"
+    ],
+    "src/features/performance/BenchmarkRecordStore.cpp": [
+      "src/features/performance/BenchmarkRecordStore.h"
+    ],
+    "src/features/performance/BenchmarkRecordStore.h": [
+      "src/features/performance/BenchmarkRecordCodec.h"
+    ],
+    "src/features/performance/BenchmarkRunner.cpp": [
+      "src/features/performance/BenchmarkRunner.h"
+    ],
+    "src/features/performance/BenchmarkRunner.h": [
+      "src/features/performance/BenchmarkInterfaces.h"
+    ],
+    "src/features/performance/BenchmarkTypes.h": [],
+    "src/features/performance/HarmonicAnalysisActions.cpp": [
+      "src/features/performance/HarmonicAnalysisActions.h"
+    ],
+    "src/features/performance/HarmonicAnalysisActions.h": [
+      "src/features/analysis/harmonics/HarmonicAnalyzer.h",
+      "src/features/performance/SustainedAudioAnalysisScenario.h"
+    ],
+    "src/features/performance/InTreeOptimizationStrategy.cpp": [
+      "src/features/performance/InTreeOptimizationStrategy.h"
+    ],
+    "src/features/performance/InTreeOptimizationStrategy.h": [
+      "src/features/performance/BenchmarkInterfaces.h"
+    ],
+    "src/features/performance/NonRealTimeTelemetryCollector.cpp": [
+      "src/features/performance/NonRealTimeTelemetryCollector.h"
+    ],
+    "src/features/performance/NonRealTimeTelemetryCollector.h": [
+      "src/features/performance/BenchmarkInterfaces.h"
+    ],
+    "src/features/performance/PerformanceLabController.cpp": [
+      "src/features/performance/PerformanceLabController.h"
+    ],
+    "src/features/performance/PerformanceLabController.h": [
+      "src/features/performance/BenchmarkComparison.h",
+      "src/features/performance/BenchmarkRunner.h"
+    ],
+    "src/features/performance/PlatformProvenanceProvider.cpp": [
+      "src/features/performance/PlatformProvenanceProvider.h"
+    ],
+    "src/features/performance/PlatformProvenanceProvider.h": [
+      "src/features/performance/BenchmarkTypes.h"
+    ],
+    "src/features/performance/RealTimeEventCapture.h": [],
+    "src/features/performance/StrategyRegistry.cpp": [
+      "src/features/performance/InTreeOptimizationStrategy.h",
+      "src/features/performance/StrategyRegistry.h"
+    ],
+    "src/features/performance/StrategyRegistry.h": [
+      "src/features/performance/BenchmarkInterfaces.h"
+    ],
+    "src/features/performance/SustainedAudioAnalysisScenario.cpp": [
+      "src/features/performance/SustainedAudioAnalysisScenario.h"
+    ],
+    "src/features/performance/SustainedAudioAnalysisScenario.h": [
+      "src/features/performance/BenchmarkInterfaces.h"
+    ],
+    "src/features/performance/TrialAggregator.cpp": [
+      "src/features/performance/TrialAggregator.h"
+    ],
+    "src/features/performance/TrialAggregator.h": [
+      "src/features/performance/BenchmarkTypes.h"
+    ],
+    "src/platform/audio/AudioInputService.cpp": [
+      "src/platform/audio/AudioInputService.h",
+      "src/platform/audio/AudioRecoveryPolicy.h"
+    ],
+    "src/platform/audio/AudioInputService.h": [
+      "src/platform/audio/AudioSampleFifo.h"
+    ],
+    "src/platform/audio/AudioRecoveryPolicy.h": [],
+    "src/platform/audio/AudioSampleFifo.h": [],
+    "src/platform/score/Diagnostic.h": [
+      "src/platform/score/MusicalTime.h"
+    ],
+    "src/platform/score/LyricSyllable.h": [],
+    "src/platform/score/Measure.h": [
+      "src/platform/score/MusicalTime.h",
+      "src/platform/score/ScoreAttributes.h",
+      "src/platform/score/ScoreEvent.h"
+    ],
+    "src/platform/score/MusicalTime.h": [],
+    "src/platform/score/Pitch.h": [],
+    "src/platform/score/Score.h": [
+      "src/platform/score/Diagnostic.h",
+      "src/platform/score/Measure.h",
+      "src/platform/score/MusicalTime.h",
+      "src/platform/score/TempoMap.h"
+    ],
+    "src/platform/score/ScoreAttributes.h": [
+      "src/platform/score/MusicalTime.h"
+    ],
+    "src/platform/score/ScoreEvent.h": [
+      "src/platform/score/LyricSyllable.h",
+      "src/platform/score/MusicalTime.h",
+      "src/platform/score/Pitch.h"
+    ],
+    "src/platform/score/TempoMap.cpp": [
+      "src/platform/score/TempoMap.h"
+    ],
+    "src/platform/score/TempoMap.h": [
+      "src/platform/score/MusicalTime.h"
+    ],
+    "src/services/.dockerignore": [],
+    "src/services/feedback-intake/.dev.vars.example": [],
+    "src/services/feedback-intake/.env.example": [],
+    "src/services/feedback-intake/Dockerfile": [],
+    "src/services/feedback-intake/README.md": [],
+    "src/services/feedback-intake/compose.yaml": [],
+    "src/services/feedback-intake/docker-entrypoint.sh": [],
+    "src/services/feedback-intake/migrations/0001_initial.sql": [],
+    "src/services/feedback-intake/migrations/0002_admin_triage.sql": [],
+    "src/services/feedback-intake/migrations/0003_admin_action_receipts.sql": [],
+    "src/services/feedback-intake/migrations/0004_optional_screenshots.sql": [],
+    "src/services/feedback-intake/migrations/0005_idempotent_submissions.sql": [],
+    "src/services/feedback-intake/migrations/0006_operations.sql": [],
+    "src/services/feedback-intake/migrations/0007_email_notification_limits.sql": [],
+    "src/services/feedback-intake/package.json": [],
+    "src/services/feedback-intake/src/access.ts": [],
+    "src/services/feedback-intake/src/admin.css": [],
+    "src/services/feedback-intake/src/admin.html": [],
+    "src/services/feedback-intake/src/admin.ts": [
+      "src/services/feedback-intake/src/admin.css",
+      "src/services/feedback-intake/src/admin.html",
+      "src/services/feedback-intake/src/audit.html",
+      "src/services/feedback-intake/src/audit.js",
+      "src/services/feedback-intake/src/dashboard.js",
+      "src/services/feedback-intake/src/operations.ts"
+    ],
+    "src/services/feedback-intake/src/audit.html": [],
+    "src/services/feedback-intake/src/audit.js": [],
+    "src/services/feedback-intake/src/dashboard.js": [],
+    "src/services/feedback-intake/src/docker-server.ts": [
+      "src/services/feedback-intake/src/admin.ts"
+    ],
+    "src/services/feedback-intake/src/html.d.ts": [],
+    "src/services/feedback-intake/src/index.ts": [
+      "src/services/feedback-intake/src/access.ts",
+      "src/services/feedback-intake/src/admin.ts",
+      "src/services/feedback-intake/src/notifications.ts",
+      "src/services/feedback-intake/src/operations.ts"
+    ],
+    "src/services/feedback-intake/src/notifications.ts": [],
+    "src/services/feedback-intake/src/operations.ts": [],
+    "src/services/feedback-intake/test/access.test.ts": [
+      "src/services/feedback-intake/src/access.ts"
+    ],
+    "src/services/feedback-intake/test/admin.test.ts": [
+      "src/services/feedback-intake/src/admin.ts",
+      "src/services/feedback-intake/test/support/database.ts"
+    ],
+    "src/services/feedback-intake/test/index.test.ts": [
+      "src/services/feedback-intake/src/index.ts",
+      "src/services/feedback-intake/test/support/database.ts"
+    ],
+    "src/services/feedback-intake/test/migrations.test.ts": [
+      "src/services/feedback-intake/test/support/database.ts"
+    ],
+    "src/services/feedback-intake/test/notifications.test.ts": [
+      "src/services/feedback-intake/src/notifications.ts",
+      "src/services/feedback-intake/test/support/database.ts"
+    ],
+    "src/services/feedback-intake/test/support/database.ts": [],
+    "src/services/feedback-intake/tsconfig.json": [],
+    "src/services/feedback-intake/wrangler.example.jsonc": [],
+    "src/services/package.json": [],
+    "src/services/vitest.config.mts": [],
+    "src/tests/application/configuration/AppDefaultsTests.cpp": [
+      "src/application/configuration/AppDefaults.h"
+    ],
+    "src/tests/application/configuration/SettingsPersistenceTests.cpp": [
+      "src/application/configuration/SettingsPersistence.h",
+      "src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h"
+    ],
+    "src/tests/application/configuration/SettingsTransferCodecTests.cpp": [
+      "src/application/configuration/SettingsImportPersistence.h",
+      "src/application/configuration/SettingsImportTransaction.h",
+      "src/application/configuration/SettingsTransferCodec.h",
+      "src/application/configuration/SettingsTransferFile.h",
+      "src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h"
+    ],
+    "src/tests/application/shell/WorkspaceStartupSequenceTests.cpp": [
+      "src/application/shell/WorkspaceStartupSequence.h"
+    ],
+    "src/tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp": [
+      "src/application/shell/ui/workspace/components/WorkspaceSplitPane.h",
+      "src/application/shell/ui/workspace/components/WorkspaceTabBarButton.h",
+      "src/application/shell/ui/workspace/components/WorkspaceTabbedComponent.h"
+    ],
+    "src/tests/application/shell/ui/workspace/model/NamedWorkspaceServiceTests.cpp": [
+      "src/application/shell/ui/workspace/model/NamedWorkspaceService.h"
+    ],
+    "src/tests/application/shell/ui/workspace/model/WorkspaceBuiltInsTests.cpp": [
+      "src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h"
+    ],
+    "src/tests/application/shell/ui/workspace/model/WorkspaceCatalogCodecTests.cpp": [
+      "src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h",
+      "src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.h"
+    ],
+    "src/tests/application/shell/ui/workspace/model/WorkspaceDocumentsTests.cpp": [
+      "src/application/shell/ui/workspace/model/WorkspaceDocuments.h"
+    ],
+    "src/tests/application/shell/ui/workspace/model/WorkspaceLayoutStateTests.cpp": [
+      "src/application/shell/ui/workspace/model/WorkspaceLayoutState.h"
+    ],
+    "src/tests/application/shell/ui/workspace/model/WorkspaceMenuModelTests.cpp": [
+      "src/application/shell/ui/workspace/model/WorkspaceMenuModel.h"
+    ],
+    "src/tests/application/shell/ui/workspace/model/WorkspaceRecoveryTests.cpp": [
+      "src/application/shell/ui/workspace/model/WorkspaceNormalizer.h"
+    ],
+    "src/tests/application/shell/ui/workspace/model/WorkspaceSessionLifecycleTests.cpp": [
+      "src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.h",
+      "src/application/shell/ui/workspace/model/WorkspaceSessionLifecycle.h"
+    ],
+    "src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotApplyTests.cpp": [
+      "src/application/shell/ui/workspace/model/WorkspaceSnapshotApply.h"
+    ],
+    "src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp": [
+      "src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h"
+    ],
+    "src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp": [
+      "src/application/shell/ui/workspace/model/WorkspaceToolState.h"
+    ],
+    "src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp": [
+      "src/application/testcontrol/ApprovedWindowStates.h"
+    ],
+    "src/tests/application/testcontrol/TestControlClickerTests.cpp": [
+      "src/application/testcontrol/ApprovedWindowStates.h",
+      "src/application/testcontrol/TestControlClicker.h"
+    ],
+    "src/tests/application/testcontrol/TestControlCommandTests.cpp": [
+      "src/application/testcontrol/TestControlCommand.h"
+    ],
+    "src/tests/application/testcontrol/TestControlSessionTests.cpp": [
+      "src/application/testcontrol/TestControlSession.h"
+    ],
+    "src/tests/application/theme/ThemeContrastTests.cpp": [
+      "src/application/theme/Theme.h"
+    ],
+    "src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp": [
+      "src/features/analysis/harmonics/HarmonicAnalyzer.h"
+    ],
+    "src/tests/features/analysis/tuner/PitchDetectorTests.cpp": [
+      "src/features/analysis/tuner/PitchDetector.h"
+    ],
+    "src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp": [
+      "src/features/feedback/FeedbackInvitationPolicy.h"
+    ],
+    "src/tests/features/performance/ApplicationLaunchTimerTests.cpp": [
+      "src/features/performance/ApplicationLaunchTimer.h"
+    ],
+    "src/tests/features/performance/BenchmarkComparabilityTests.cpp": [
+      "src/features/performance/BenchmarkComparability.h"
+    ],
+    "src/tests/features/performance/BenchmarkComparisonTests.cpp": [
+      "src/features/performance/BenchmarkComparison.h"
+    ],
+    "src/tests/features/performance/BenchmarkInterfacesTests.cpp": [
+      "src/features/performance/BenchmarkInterfaces.h"
+    ],
+    "src/tests/features/performance/BenchmarkRecordCodecTests.cpp": [
+      "src/features/performance/BenchmarkRecordCodec.h"
+    ],
+    "src/tests/features/performance/BenchmarkRecordStoreTests.cpp": [
+      "src/features/performance/BenchmarkRecordStore.h"
+    ],
+    "src/tests/features/performance/BenchmarkRunnerTests.cpp": [
+      "src/features/performance/BenchmarkRunner.h"
+    ],
+    "src/tests/features/performance/BenchmarkTypesTests.cpp": [
+      "src/features/performance/BenchmarkTypes.h"
+    ],
+    "src/tests/features/performance/InTreeOptimizationStrategyTests.cpp": [
+      "src/features/performance/InTreeOptimizationStrategy.h"
+    ],
+    "src/tests/features/performance/NonRealTimeTelemetryCollectorTests.cpp": [
+      "src/features/performance/NonRealTimeTelemetryCollector.h"
+    ],
+    "src/tests/features/performance/PerformanceLabControllerTests.cpp": [
+      "src/features/performance/PerformanceLabController.h"
+    ],
+    "src/tests/features/performance/PlatformProvenanceProviderTests.cpp": [
+      "src/features/performance/PlatformProvenanceProvider.h"
+    ],
+    "src/tests/features/performance/RealTimeEventCaptureTests.cpp": [
+      "src/features/performance/RealTimeEventCapture.h"
+    ],
+    "src/tests/features/performance/StrategyRegistryTests.cpp": [
+      "src/features/performance/StrategyRegistry.h"
+    ],
+    "src/tests/features/performance/SustainedAudioAnalysisScenarioTests.cpp": [
+      "src/features/performance/HarmonicAnalysisActions.h",
+      "src/features/performance/SustainedAudioAnalysisScenario.h"
+    ],
+    "src/tests/features/performance/TrialAggregatorTests.cpp": [
+      "src/features/performance/TrialAggregator.h"
+    ],
+    "src/tests/platform/audio/AudioRecoveryPolicyTests.cpp": [
+      "src/platform/audio/AudioRecoveryPolicy.h"
+    ],
+    "src/tests/platform/audio/AudioSampleFifoLoadTests.cpp": [
+      "src/platform/audio/AudioSampleFifo.h"
+    ],
+    "src/tests/platform/audio/AudioSampleFifoTests.cpp": [
+      "src/platform/audio/AudioSampleFifo.h"
+    ],
+    "src/tests/platform/score/MusicalTimeTests.cpp": [
+      "src/platform/score/MusicalTime.h"
+    ],
+    "src/tests/platform/score/PitchTests.cpp": [
+      "src/platform/score/Pitch.h"
+    ],
+    "src/tests/platform/score/ScoreModelTests.cpp": [
+      "src/platform/score/Score.h"
+    ],
+    "src/tests/platform/score/TempoMapTests.cpp": [
+      "src/platform/score/TempoMap.h"
+    ],
+    "src/tests/support/BenchmarkFakes.h": [
+      "src/features/performance/BenchmarkInterfaces.h"
+    ],
+    "src/tests/support/BenchmarkFakesTests.cpp": [],
+    "tools/VERSION": [],
+    "tools/cmake/Packaging.cmake": [],
+    "tools/cmake/PatchJuceAlsaChannelMismatch.cmake": [],
+    "tools/cmake/PatchJuceAlsaInputStartup.cmake": [],
+    "tools/cmake/triplets/arm64-linux-practice.cmake": [],
+    "tools/cmake/triplets/x64-linux-practice.cmake": [],
+    "tools/packaging/icons/README.md": [],
+    "tools/packaging/linux/org.derekrneilson.practicetakes.desktop": [],
+    "tools/scripts/README.md": [],
+    "tools/scripts/build/build-and-run.sh": [],
+    "tools/scripts/build/check-linux-build-dependencies.sh": [],
+    "tools/scripts/design/generate_app_icons.py": [],
+    "tools/scripts/design/test_generate_app_icons.py": [],
+    "tools/scripts/feedback/configure-cloudflare-access.sh": [],
+    "tools/scripts/feedback/migrate-feedback-database.sh": [],
+    "tools/scripts/feedback/run-recovery-drill.py": [],
+    "tools/scripts/feedback/setup-dashboard-daemon.sh": [],
+    "tools/scripts/feedback/update-dashboard-daemon.sh": [],
+    "tools/scripts/git/configure_merge.py": [],
+    "tools/scripts/git/merge_cmake_sources.py": [],
+    "tools/scripts/git/merge_npm_lock.py": [],
+    "tools/scripts/git/test_configure_merge.py": [],
+    "tools/scripts/git/test_merge_cmake_sources.py": [],
+    "tools/scripts/git/test_merge_npm_lock.py": [],
+    "tools/scripts/manual_gui/__init__.py": [],
+    "tools/scripts/manual_gui/__main__.py": [
+      "tools/scripts/manual_gui/driver.py",
+      "tools/scripts/manual_gui/record.py",
+      "tools/scripts/manual_gui/session.py",
+      "tools/scripts/manual_gui/surfaces.py"
+    ],
+    "tools/scripts/manual_gui/app.py": [
+      "tools/scripts/manual_gui/session.py"
+    ],
+    "tools/scripts/manual_gui/driver.py": [],
+    "tools/scripts/manual_gui/record.py": [],
+    "tools/scripts/manual_gui/session.py": [
+      "tools/scripts/manual_gui/record.py",
+      "tools/scripts/manual_gui/surfaces.py"
+    ],
+    "tools/scripts/manual_gui/surfaces.py": [],
+    "tools/scripts/manual_gui/test_manual_gui.py": [
+      "tools/scripts/manual_gui/driver.py",
+      "tools/scripts/manual_gui/record.py",
+      "tools/scripts/manual_gui/session.py",
+      "tools/scripts/manual_gui/surfaces.py"
+    ],
+    "tools/scripts/pages/verify-graph.mjs": [],
+    "tools/scripts/practice_takes_roadmap/__init__.py": [],
+    "tools/scripts/practice_takes_roadmap/__main__.py": [
+      "tools/scripts/practice_takes_roadmap/main.py"
+    ],
+    "tools/scripts/practice_takes_roadmap/config.py": [
+      "tools/scripts/practice_takes_roadmap/models.py"
+    ],
+    "tools/scripts/practice_takes_roadmap/discovery.py": [
+      "tools/scripts/practice_takes_roadmap/github.py",
+      "tools/scripts/practice_takes_roadmap/models.py"
+    ],
+    "tools/scripts/practice_takes_roadmap/github.py": [
+      "tools/scripts/practice_takes_roadmap/models.py"
+    ],
+    "tools/scripts/practice_takes_roadmap/main.py": [
+      "tools/scripts/practice_takes_roadmap/config.py",
+      "tools/scripts/practice_takes_roadmap/discovery.py",
+      "tools/scripts/practice_takes_roadmap/github.py",
+      "tools/scripts/practice_takes_roadmap/models.py",
+      "tools/scripts/practice_takes_roadmap/planning.py",
+      "tools/scripts/practice_takes_roadmap/progress.py",
+      "tools/scripts/practice_takes_roadmap/state.py"
+    ],
+    "tools/scripts/practice_takes_roadmap/models.py": [],
+    "tools/scripts/practice_takes_roadmap/planning.py": [
+      "tools/scripts/practice_takes_roadmap/config.py",
+      "tools/scripts/practice_takes_roadmap/models.py"
+    ],
+    "tools/scripts/practice_takes_roadmap/progress.py": [],
+    "tools/scripts/practice_takes_roadmap/state.py": [],
+    "tools/scripts/quality/check_test_layout.py": [],
+    "tools/scripts/quality/coverage_sources.py": [],
+    "tools/scripts/quality/format_benchmarks.py": [],
+    "tools/scripts/quality/run-performance-lab.sh": [],
+    "tools/scripts/quality/run_clang_format.py": [],
+    "tools/scripts/quality/run_clang_tidy.py": [],
+    "tools/scripts/quality/run_coverage.py": [
+      "tools/scripts/quality/coverage_sources.py"
+    ],
+    "tools/scripts/quality/run_python_coverage.py": [],
+    "tools/scripts/quality/smoke_test.py": [],
+    "tools/scripts/quality/test_check_test_layout.py": [
+      "tools/scripts/quality/check_test_layout.py"
+    ],
+    "tools/scripts/quality/test_coverage_sources.py": [
+      "tools/scripts/quality/coverage_sources.py"
+    ],
+    "tools/scripts/quality/ui-validation/pointer_control.cpp": [],
+    "tools/scripts/quality/ui-validation/run-ui-golden.zsh": [],
+    "tools/scripts/quality/ui-validation/window_control.cpp": [],
+    "tools/scripts/quality/ui-validation/xwindow_capture.cpp": [],
+    "tools/scripts/release/check_manual_verification.py": [],
+    "tools/scripts/release/test_check_manual_verification.py": [
+      "tools/scripts/release/check_manual_verification.py"
+    ],
+    "tools/scripts/release/test_version.py": [],
+    "tools/scripts/release/version.py": [],
+    "tools/scripts/roadmap/setup.sh": [],
+    "tools/scripts/run_tests.py": [],
+    "tools/scripts/secrets/secrets_manager.py": [],
+    "tools/scripts/secrets/test_secrets_manager.py": [],
+    "tools/secret-patterns": [],
+    "tools/vcpkg.json": []
+  }
+}

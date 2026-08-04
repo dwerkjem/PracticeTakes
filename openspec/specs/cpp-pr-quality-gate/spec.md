@@ -1,4 +1,16 @@
-## ADDED Requirements
+## Purpose
+
+Defines the automated C++ quality checks a pull request must clear:
+`clang-format` in check mode over every C++ file, `clang-tidy` findings
+reported without modifying the branch, and a post-merge pass on `main` that
+discovers sources recursively rather than from a hand-maintained list.
+
+The division of labour is deliberate. A pull request is *told* what is wrong
+and left alone; only `main` is auto-fixed. A gate that rewrites a contributor's
+branch turns a review comment into a merge conflict, and a file list that has
+to be edited by hand is a check that silently stops covering new code.
+
+## Requirements
 
 ### Requirement: Pull requests are checked for C++ formatting
 Every pull request that modifies a `.c`, `.cc`, `.cpp`, `.cxx`, `.h`, `.hh`,

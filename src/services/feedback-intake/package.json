@@ -1,0 +1,28 @@
+{
+  "name": "@practice-takes/feedback-intake",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "db:migrate:local": "wrangler d1 migrations apply practice-takes-feedback --local",
+    "db:migrate:remote": "wrangler d1 migrations apply practice-takes-feedback --remote",
+    "build:docker": "esbuild src/docker-server.ts --bundle --platform=node --format=esm --loader:.html=text --loader:.css=text --loader:.js=text --outfile=dist/docker-server.js"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260728.1",
+    "@types/node": "26.1.2",
+    "@vitest/coverage-v8": "4.1.10",
+    "esbuild": "^0.28.1",
+    "typescript": "^7.0.2",
+    "vitest": "4.1.10",
+    "wrangler": "4.117.0"
+  },
+  "dependencies": {
+    "jose": "^6.2.5"
+  }
+}

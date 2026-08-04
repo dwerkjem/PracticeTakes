@@ -1,6 +1,8 @@
+#include "../../../../configuration/SettingsImportTransaction.h"
 #include "../../../MainComponent.h"
 
 #include <algorithm>
+#include <limits>
 
 namespace
 {
@@ -53,6 +55,81 @@ const NamedWorkspace* MainComponent::activeNamedWorkspace() const
         workspaceCatalog.named.begin(), workspaceCatalog.named.end(),
         [&id](const auto& candidate) { return candidate.id == id; });
     return workspace != workspaceCatalog.named.end() ? &*workspace : nullptr;
+}
+
+void MainComponent::runUiValidationScenario(const juce::String& scenario)
+{
+    juce::Timer::callAfterDelay(
+        500,
+        [safeThis = juce::Component::SafePointer<MainComponent>(this), scenario]
+        {
+            if (safeThis == nullptr)
+            {
+                return;
+            }
+
+            if (scenario == "prepare-restored")
+            {
+                safeThis->applyWorkspace(WorkspaceBuiltIns::performancePreparation().id);
+                safeThis->saveNamedWorkspace(
+                    "Representative restored workspace with a deliberately long visible name",
+                    false);
+                return;
+            }
+            if (scenario == "import-confirmation")
+            {
+                SettingsTransferModel model;
+                model.state.workspaceCatalog.active =
+                    WorkspaceBuiltIns::performancePreparation().snapshot;
+                model.state.workspaceCatalog.activeSource =
+                    WorkspaceBuiltIns::performancePreparation().id;
+                model.state.workspaceCatalog.named.push_back(
+                    {"ui-validation-workspace",
+                     "Representative restored workspace with a deliberately long visible name",
+                     WorkspaceBuiltIns::performancePreparation().snapshot});
+                safeThis->confirmSettingsImport(std::move(model));
+                return;
+            }
+            if (scenario == "import-validation-error")
+            {
+                juce::AlertWindow::showMessageBoxAsync(
+                    juce::MessageBoxIconType::WarningIcon, "Settings import failed",
+                    "The selected file is not a valid Practice Takes settings bundle.");
+                return;
+            }
+            if (scenario == "import-rollback-error")
+            {
+                safeThis->showSettingsImportResult(
+                    {.status = SettingsImportStatus::rollbackFailed,
+                     .error = "Settings import failed and the previous live settings could not be "
+                              "restored"});
+                return;
+            }
+            if (scenario == "long-workspace-name")
+            {
+                safeThis->showSaveWorkspaceDialog();
+                if (auto* alert = dynamic_cast<juce::AlertWindow*>(
+                        juce::AlertWindow::getCurrentlyModalComponent()))
+                {
+                    if (auto* editor = alert->getTextEditor("workspaceName"))
+                    {
+                        editor->setText(
+                            "Representative restored workspace with a deliberately long visible "
+                            "name");
+                    }
+                }
+                return;
+            }
+            if (scenario == "disconnected-display")
+            {
+                auto snapshot = WorkspaceBuiltIns::vocalWarmUp().snapshot;
+                snapshot.floating.push_back(
+                    {"spectrogram", {std::numeric_limits<int>::max() - 2000, 250, 920, 700}});
+                safeThis->workspaceCatalog.active = std::move(snapshot);
+                safeThis->workspaceCatalog.activeSource.reset();
+                safeThis->restoreLoadedWorkspace();
+            }
+        });
 }
 
 void MainComponent::applyWorkspace(const std::string& workspaceId)
@@ -109,7 +186,8 @@ void MainComponent::showSaveWorkspaceDialog()
                 }
             }),
         true);
-    static_cast<void>(alert.release());
+    auto* releasedAlert = alert.release();
+    juce::ignoreUnused(releasedAlert);
 }
 
 void MainComponent::showRenameWorkspaceDialog()
@@ -154,7 +232,8 @@ void MainComponent::showRenameWorkspaceDialog()
                 }
             }),
         true);
-    static_cast<void>(alert.release());
+    auto* releasedAlert = alert.release();
+    juce::ignoreUnused(releasedAlert);
 }
 
 void MainComponent::saveNamedWorkspace(const juce::String& name, bool confirmed)

@@ -17,9 +17,16 @@ enum class SettingsTransferDecodeStatus
     tooLarge
 };
 
+enum class SettingsTransferEncodeStatus
+{
+    encoded,
+    invalidModel,
+    tooLarge
+};
+
 struct SettingsTransferModel
 {
-    static constexpr int currentSchemaVersion = 1;
+    static constexpr int currentSchemaVersion = 2;
 
     int schemaVersion = currentSchemaVersion;
     std::string applicationVersion;
@@ -36,16 +43,23 @@ struct SettingsTransferDecodeResult
     std::string error;
 };
 
+struct SettingsTransferEncodeResult
+{
+    SettingsTransferEncodeStatus status = SettingsTransferEncodeStatus::invalidModel;
+    std::optional<std::string> document;
+    std::string error;
+};
+
 class SettingsTransferCodec
 {
   public:
     static constexpr std::size_t maximumDocumentBytes = 4 * 1024 * 1024;
     static constexpr const char* formatMarker = "practice-takes-settings";
 
-    [[nodiscard]] static std::string encode(const SettingsTransferModel& model);
+    [[nodiscard]] static SettingsTransferEncodeResult encode(const SettingsTransferModel& model);
 
     [[nodiscard]] static SettingsTransferDecodeResult decode(
         std::string_view document,
         const std::vector<WorkspaceBounds>& displayAreas,
-        const WorkspaceToolRegistry& registry = WorkspaceToolRegistry());
+        const ToolCatalog& registry = builtInToolCatalog());
 };
