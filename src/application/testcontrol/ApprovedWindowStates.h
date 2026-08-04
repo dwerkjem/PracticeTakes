@@ -96,6 +96,23 @@ struct ApprovedWindowState
     // What a tester is looking at in this state. Shown by `list-states` and
     // used by the harness as the prompt heading.
     std::string description;
+
+    // Added after `description` on purpose: every entry in the list is
+    // initialised positionally, so a field inserted in the middle silently
+    // shifts every value after it in all forty of them.
+
+    // A synthetic tone to feed the tools, in hertz. Zero uses the real input.
+    //
+    // Without it, every capture of an analysis tool is a picture of it waiting:
+    // "Play or sing a sustained note", an empty graph, no harmonics. A tone
+    // makes the surface show the tool doing its job, and show the same thing
+    // every run.
+    double toneHz = 0.0;
+
+    // A named view within the tool the state opens -- the tuner's "graph",
+    // "bar", "meter", or "advanced". The names belong to the tool; the shell
+    // passes them through without knowing which tool it is.
+    std::string toolView;
 };
 
 // An object that can be asked to act, as though clicked.

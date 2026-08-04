@@ -69,7 +69,9 @@ class SurfaceListTests(unittest.TestCase):
         )
 
         self.assertTrue(once)
-        self.assertEqual(len(swept), (len(plain) - once) * 3 + once)
+        self.assertEqual(
+            len(swept), (len(plain) - once) * len(surfaces.SWEEP_GEOMETRIES) + once
+        )
 
     def test_a_run_must_cover_something(self) -> None:
         with self.assertRaises(ValueError):

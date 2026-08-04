@@ -50,6 +50,10 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
 
     testControlNoMicrophone = state.microphone == MicrophoneCondition::unavailable;
     audioInputService.setMuted(state.microphone == MicrophoneCondition::muted);
+
+    // Set before the tools are built, so the first analysis frame they draw
+    // already has something in it rather than a second of "waiting for input".
+    audioInputService.setSyntheticTone(static_cast<float>(state.toneHz));
     isMicrophoneWarningDismissed = false;
     updateMicrophoneStateControl();
     updateMicrophoneWarning();
@@ -102,6 +106,27 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
         }
 
         rebuildWorkspaceContainer();
+    }
+
+    if (!state.toolView.empty())
+    {
+        // Asked of the tool by name. The shell does not know which tool it is
+        // holding, and a view the tool does not have is a failure rather than a
+        // quiet capture of the default.
+        auto shown = false;
+
+        for (auto& live : liveTools)
+        {
+            if (live.component != nullptr && live.component->showView(state.toolView))
+            {
+                shown = true;
+            }
+        }
+
+        if (!shown)
+        {
+            return false;
+        }
     }
 
     if (state.settingsOpen)
@@ -219,6 +244,18 @@ bool MainComponent::applyTestControlGeometry(const std::string& geometry)
     {
         window->setFullScreen(false);
         window->setSize(800, 600);
+
+        return true;
+    }
+
+    // Smaller than any window manager would let a user make it, deliberately.
+    // Most of what manual verification finds is a layout running out of room,
+    // and 640x480 is where a docked tool has to choose what to drop -- the
+    // question #113 asks, asked of every tool at once.
+    if (geometry == "tiny")
+    {
+        window->setFullScreen(false);
+        window->setSize(640, 480);
 
         return true;
     }

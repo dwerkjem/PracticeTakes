@@ -378,22 +378,94 @@ button:hover { border-color: var(--accent); }
   flex-direction: column;
   gap: 6px;
   margin-bottom: 12px;
-}
-
-.facet {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  flex-wrap: wrap;
   user-select: none;
 }
 
-.facet-name {
-  color: var(--muted);
+/* One row of dropdowns rather than six rows of chips: the facets are a control
+   surface, and the grid is what the screen is for. */
+.filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.facet-menu { position: relative; }
+
+.facet-menu > summary {
+  list-style: none;
+  cursor: pointer;
+  background: #262b34;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 10px;
   font-size: 12px;
-  min-width: 11ch;
-  text-transform: capitalize;
+  white-space: nowrap;
 }
+
+.facet-menu > summary::-webkit-details-marker { display: none; }
+.facet-menu[open] > summary { border-color: var(--accent); color: var(--accent); }
+.facet-menu > summary:hover { border-color: var(--accent); }
+.facet-menu .caret { color: var(--muted); }
+
+.facet-menu .badge {
+  background: var(--accent);
+  color: #0d1117;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-weight: 600;
+}
+
+.facet-panel {
+  position: absolute;
+  z-index: 6;
+  margin-top: 4px;
+  min-width: 190px;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 6px;
+  box-shadow: 0 10px 26px rgba(10, 11, 14, 0.6);
+}
+
+.facet-hint {
+  color: var(--muted);
+  font-size: 11px;
+  padding: 2px 6px 6px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+
+.facet-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 3px 6px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.facet-option:hover { background: #262b34; border-color: transparent; }
+.facet-option .mark { width: 1.2em; color: var(--muted); }
+.facet-option .count { margin-left: auto; color: var(--muted); }
+.facet-option.include .mark { color: var(--pass); }
+.facet-option.include .value { color: var(--pass); }
+.facet-option.exclude .mark { color: var(--fail); }
+.facet-option.exclude .value { color: var(--fail); text-decoration: line-through; }
+
+.chip-button.excluded {
+  border-color: var(--fail);
+  color: var(--fail);
+  background: #2e2126;
+}
+
+.active-filters { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.active-filters:empty { display: none; }
+.chip-button .remove { color: var(--muted); margin-left: 4px; }
 
 .chip-button {
   background: #262b34;

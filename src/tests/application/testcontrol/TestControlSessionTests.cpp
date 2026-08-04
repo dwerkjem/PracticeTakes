@@ -419,3 +419,12 @@ TEST_CASE("every approved theme is one the vocabulary lists", "[testcontrol][ses
     REQUIRE(std::find(names.begin(), names.end(), "dark") != names.end());
     REQUIRE(std::find(names.begin(), names.end(), "light") != names.end());
 }
+
+TEST_CASE("the smallest geometry is offered", "[testcontrol][session]")
+{
+    // The suite captures every surface at it, so dropping the name would
+    // silently stop verifying the size most failures show up at.
+    const auto& names = approvedGeometryNames();
+
+    REQUIRE(std::find(names.begin(), names.end(), "tiny") != names.end());
+}

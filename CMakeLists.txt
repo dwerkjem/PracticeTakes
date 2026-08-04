@@ -272,6 +272,7 @@ target_sources(PracticeTakes
         src/platform/audio/AudioInputService.h
         src/platform/audio/AudioRecoveryPolicy.h
         src/platform/audio/AudioSampleFifo.h
+        src/platform/audio/SyntheticTone.h
         src/platform/score/Diagnostic.h
         src/platform/score/LyricSyllable.h
         src/platform/score/Measure.h
@@ -381,6 +382,7 @@ if(BUILD_TESTING)
         src/tests/platform/audio/AudioRecoveryPolicyTests.cpp
         src/tests/platform/audio/AudioSampleFifoLoadTests.cpp
         src/tests/platform/audio/AudioSampleFifoTests.cpp
+        src/tests/platform/audio/SyntheticToneTests.cpp
         src/tests/platform/score/MusicalTimeTests.cpp
         src/tests/platform/score/PitchTests.cpp
         src/tests/platform/score/ScoreInvariantsTests.cpp
