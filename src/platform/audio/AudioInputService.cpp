@@ -288,6 +288,27 @@ std::unique_ptr<juce::XmlElement> AudioInputService::createDeviceState() const
     return manager.createStateXml();
 }
 
+void AudioInputService::setSyntheticTone(float frequencyHz, float amplitude)
+{
+    // Allocated here, on the message thread, before the tone is switched on --
+    // the callback only ever writes into a block that already exists.
+    if (toneBlock.size() < maximumToneBlock)
+    {
+        toneBlock.resize(maximumToneBlock);
+    }
+
+    // From a known point, so what a capture shows does not depend on how long
+    // the capture before it took.
+    tone.reset();
+    toneAmplitude.store(juce::jlimit(0.0f, 1.0f, amplitude), std::memory_order_relaxed);
+    toneFrequency.store(juce::jmax(0.0f, frequencyHz), std::memory_order_release);
+}
+
+float AudioInputService::syntheticTone() const noexcept
+{
+    return toneFrequency.load(std::memory_order_acquire);
+}
+
 void AudioInputService::audioDeviceIOCallbackWithContext(
     const float* const* inputChannelData,
     int numInputChannels,
@@ -312,14 +333,34 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
     }
 
     const float* inputSamples = nullptr;
-    for (int channel = 0; channel < numInputChannels; ++channel)
+
+    // A tone replaces the device's input rather than mixing with it, and is
+    // read before the input pointers are even looked at -- so a machine with no
+    // microphone still produces a surface with something to analyse, which is
+    // the case verification cares about most.
+    const auto frequency = toneFrequency.load(std::memory_order_acquire);
+
+    if (frequency > 0.0f && static_cast<std::size_t>(numSamples) <= toneBlock.size())
     {
-        if (inputChannelData[channel] != nullptr)
+        tone.render(
+            toneBlock.data(), static_cast<std::size_t>(numSamples), static_cast<double>(frequency),
+            currentSampleRate.load(std::memory_order_relaxed),
+            toneAmplitude.load(std::memory_order_relaxed));
+
+        inputSamples = toneBlock.data();
+    }
+    else
+    {
+        for (int channel = 0; channel < numInputChannels; ++channel)
         {
-            inputSamples = inputChannelData[channel];
-            break;
+            if (inputChannelData[channel] != nullptr)
+            {
+                inputSamples = inputChannelData[channel];
+                break;
+            }
         }
     }
+
     if (inputSamples == nullptr)
     {
         return;

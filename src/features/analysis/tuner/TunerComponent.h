@@ -37,6 +37,7 @@ class TunerComponent final
 
     [[nodiscard]] std::optional<ToolSettingsPayload> captureSettings() const override;
     void applySettings(const ToolSettingsPayload& payload) override;
+    [[nodiscard]] bool showView(const juce::String& view) override;
 
   private:
     enum class DisplayMode

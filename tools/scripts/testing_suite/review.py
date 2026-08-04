@@ -73,16 +73,52 @@ def image_available(capture) -> str:
     return ""
 
 
-def facets_of(capture) -> dict:
+def verdict_of(questions: list[dict]) -> str:
+    """One word for how a capture was judged.
+
+    A failure anywhere wins: a surface with two passes and a fail is a failing
+    surface, and a filter that called it "passed" would hide the thing worth
+    looking at. Skips rank above passes for the same reason -- an area nobody
+    examined is not a pass.
+    """
+    verdicts = {question["verdict"] for question in questions if question["verdict"]}
+
+    if not verdicts:
+        return "unanswered"
+
+    if "fail" in verdicts:
+        return "failed"
+
+    if "skip" in verdicts:
+        return "skipped"
+
+    return "passed"
+
+
+def review_state(questions: list[dict]) -> str:
+    """How much of this capture has been looked at."""
+    if not questions:
+        return "nothing to answer"
+
+    answered = sum(1 for question in questions if question["verdict"])
+
+    if answered == 0:
+        return "unreviewed"
+
+    return "reviewed" if answered == len(questions) else "part reviewed"
+
+
+def facets_of(capture, questions: list[dict] | None = None, tags: list[str] | None = None) -> dict:
     """What a reviewer can filter this capture by.
 
-    Computed from the surface list rather than stored, so adding a facet is an
-    edit to `surfaces.py` and every run -- including ones captured months ago --
-    gains it. A capture whose surface has since been removed keeps the facets a
-    capture always has (its palette and its size) and simply offers no others.
+    Computed rather than stored, so adding a facet is an edit here and every run
+    -- including ones captured months ago -- gains it. A capture whose surface
+    has since been removed keeps the facets a capture always has (its palette,
+    its size, how it was judged) and simply offers no others.
     """
     surface = surfaces.find(capture.surface_state, capture.surface_title)
     tools = list(surface.tools) if surface else []
+    questions = questions or []
 
     return {
         "theme": capture.theme,
@@ -94,6 +130,12 @@ def facets_of(capture) -> dict:
         # the question that found the clipped workspace.
         "tool_count": str(len(tools)),
         "state": capture.surface_state,
+        # The three that make a second pass finishable: what is left to do, how
+        # what is done came out, and what somebody marked on the way past.
+        "review": review_state(questions),
+        "verdict": verdict_of(questions),
+        "tag": list(tags) if tags else ["untagged"],
+        "capture": "failed" if capture.failure else ("flagged" if capture.notice else "ok"),
     }
 
 
@@ -107,30 +149,33 @@ def capture_view(store: Store, capture, *, include_attended: bool = True) -> dic
     questions = _question_lookup(capture.surface_state, capture.surface_title, False) + attended
     attended_ids = {question.id for question in attended}
 
+    asked = [
+        {
+            "id": question.id,
+            "prompt": question.prompt,
+            "attended": question.id in attended_ids,
+            "verdict": verdicts[question.id]["verdict"] if question.id in verdicts else "",
+            "note": verdicts[question.id]["note"] if question.id in verdicts else "",
+        }
+        for question in questions
+    ]
+    tags = store.tags_for(capture.id)
+
     return {
         "id": capture.id,
         "surface": capture.surface_title,
         "state": capture.surface_state,
         "geometry": capture.geometry,
         "theme": capture.theme,
-        "facets": facets_of(capture),
+        "facets": facets_of(capture, asked, tags),
         "width": capture.width,
         "height": capture.height,
         "failure": capture.failure,
         "notice": capture.notice,
         "unavailable": image_available(capture),
-        "tags": store.tags_for(capture.id),
+        "tags": tags,
         "comments": [row["body"] for row in store.comments_for(capture.id)],
-        "questions": [
-            {
-                "id": question.id,
-                "prompt": question.prompt,
-                "attended": question.id in attended_ids,
-                "verdict": verdicts[question.id]["verdict"] if question.id in verdicts else "",
-                "note": verdicts[question.id]["note"] if question.id in verdicts else "",
-            }
-            for question in questions
-        ],
+        "questions": asked,
     }
 
 

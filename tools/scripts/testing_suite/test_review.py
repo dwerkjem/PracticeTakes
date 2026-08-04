@@ -269,6 +269,78 @@ class FacetTests(ReviewTestCase):
         self.assertEqual(dict(facets["theme"]), {"dark": 1})
 
 
+class VerdictFacetTests(ReviewTestCase):
+    """The facets a second pass is filtered by."""
+
+    def answered(self, *verdicts: str) -> list[dict]:
+        return [{"id": f"q{index}", "verdict": verdict} for index, verdict in enumerate(verdicts)]
+
+    def test_a_failure_anywhere_makes_the_capture_failed(self) -> None:
+        """Two passes and a fail is a failing surface, and calling it passed
+        would hide the one thing worth looking at."""
+        self.assertEqual(review.verdict_of(self.answered("pass", "fail", "pass")), "failed")
+
+    def test_a_skip_outranks_a_pass(self) -> None:
+        """An area nobody examined is not a pass."""
+        self.assertEqual(review.verdict_of(self.answered("pass", "skip")), "skipped")
+
+    def test_everything_passing_is_passed(self) -> None:
+        self.assertEqual(review.verdict_of(self.answered("pass", "pass")), "passed")
+
+    def test_nothing_answered_is_unanswered(self) -> None:
+        self.assertEqual(review.verdict_of(self.answered("", "")), "unanswered")
+
+    def test_review_state_counts_what_is_left(self) -> None:
+        self.assertEqual(review.review_state(self.answered("", "")), "unreviewed")
+        self.assertEqual(review.review_state(self.answered("pass", "")), "part reviewed")
+        self.assertEqual(review.review_state(self.answered("pass", "skip")), "reviewed")
+
+    def test_an_unreviewed_capture_says_so(self) -> None:
+        capture_id = self.add_capture(SHELL)
+        view = review.run_view(self.store, self.run_id)
+        facets = view["groups"][0]["captures"][0]["facets"]
+
+        self.assertEqual(facets["review"], "unreviewed")
+        self.assertEqual(facets["verdict"], "unanswered")
+        self.assertTrue(capture_id)
+
+    def test_a_reviewed_capture_reports_its_verdict(self) -> None:
+        capture_id = self.add_capture(SHELL)
+        review.score_many(self.store, [capture_id], "pass")
+        facets = review.run_view(self.store, self.run_id)["groups"][0]["captures"][0]["facets"]
+
+        self.assertEqual(facets["review"], "reviewed")
+        self.assertEqual(facets["verdict"], "passed")
+
+    def test_one_failure_is_visible_through_the_facet(self) -> None:
+        capture_id = self.add_capture(SHELL)
+        review.score_many(self.store, [capture_id], "pass")
+        review.score(self.store, capture_id, "works", "fail", "the menu bar is missing")
+        facets = review.run_view(self.store, self.run_id)["groups"][0]["captures"][0]["facets"]
+
+        self.assertEqual(facets["verdict"], "failed")
+
+    def test_tags_are_a_facet_and_untagged_is_a_value(self) -> None:
+        """Otherwise "everything nobody flagged" is not a question you can ask."""
+        tagged = self.add_capture(TUNER)
+        self.add_capture(SHELL)
+        self.store.apply_tag([tagged], "ugly")
+
+        view = review.run_view(self.store, self.run_id)
+        facets = {group["surface"]: group["captures"][0]["facets"]["tag"]
+                  for group in view["groups"]}
+
+        self.assertEqual(facets[TUNER.title], ["ugly"])
+        self.assertEqual(facets[SHELL.title], ["untagged"])
+        self.assertEqual(dict(view["facets"]["tag"]), {"ugly": 1, "untagged": 1})
+
+    def test_a_failed_capture_is_its_own_facet_value(self) -> None:
+        self.add_capture(SHELL, failure="the window never settled")
+        facets = review.run_view(self.store, self.run_id)["groups"][0]["captures"][0]["facets"]
+
+        self.assertEqual(facets["capture"], "failed")
+
+
 class SelectionTests(ReviewTestCase):
     def test_a_tag_applied_to_a_selection_lands_on_all_of_it(self) -> None:
         ids = [self.add_capture(TUNER, geometry) for geometry in ("default", "constrained")]

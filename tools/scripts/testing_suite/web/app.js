@@ -420,11 +420,11 @@ function renderGrid(view) {
   }
 
   // Said out loud, because a filtered grid that looks complete is how a
-  // reviewer approves a run they only saw half of.
+  // reviewer approves a run they only saw half of. Set, never appended.
   const filtered = element("filter-summary");
 
   if (filtered && hidden) {
-    filtered.textContent += `  ·  ${state.order.length} shown, ${hidden} hidden`;
+    filtered.textContent = `${state.order.length} shown, ${hidden} hidden by the filters above.`;
   }
 
   paintSelection();
@@ -442,83 +442,194 @@ function renderGrid(view) {
 // the other, so requiring both would match nothing). Between facets, every one
 // has to hold. That is the combination people expect without being told.
 
-function chosen(name) {
-  return state.filters[name] || new Set();
+// A filter is two sets: what to keep and what to drop. Include narrows to the
+// values you name; exclude removes them and leaves everything else. Both are
+// needed for different questions -- "only the settings window" and "everything
+// except what I already approved" are not the same request, and the second one
+// is what makes a second pass over a hundred captures finishable.
+
+function filterFor(name) {
+  return state.filters[name] || { include: new Set(), exclude: new Set() };
+}
+
+function activeFilters() {
+  return Object.entries(state.filters)
+    .filter(([, sets]) => sets.include.size || sets.exclude.size);
+}
+
+function valuesOf(capture, name) {
+  const actual = capture.facets ? capture.facets[name] : undefined;
+
+  if (actual === undefined || actual === null) return [];
+
+  return Array.isArray(actual) ? actual : [actual];
 }
 
 function matchesFilters(capture) {
-  return Object.entries(state.filters).every(([name, values]) => {
-    if (!values.size) return true;
+  return Object.entries(state.filters).every(([name, sets]) => {
+    const values = valuesOf(capture, name);
 
-    const actual = capture.facets ? capture.facets[name] : undefined;
+    // Excluded wins over included: naming a value in both is a contradiction,
+    // and dropping it is the safer reading of it.
+    if (values.some((value) => sets.exclude.has(value))) return false;
 
-    if (Array.isArray(actual)) return actual.some((entry) => values.has(entry));
+    if (!sets.include.size) return true;
 
-    return values.has(actual);
+    return values.some((value) => sets.include.has(value));
   });
 }
 
-function toggleFilter(name, value) {
-  const values = new Set(chosen(name));
-
-  if (values.has(value)) values.delete(value);
-  else values.add(value);
-
-  state.filters[name] = values;
+// Everything that depends on the filters is redrawn from the filters, rather
+// than patched. Patching is what left "6 shown, 32 hidden" appended three times
+// over and a cleared filter still described in the summary.
+function applyFilters() {
+  renderFilters(state.data);
   renderGrid(state.data);
+}
+
+// Click cycles a value: off -> include -> exclude -> off. Three states in one
+// control, because a separate button per direction doubles the row and still
+// has to say which one is on.
+function cycleFilter(name, value) {
+  const sets = filterFor(name);
+  const include = new Set(sets.include);
+  const exclude = new Set(sets.exclude);
+
+  if (include.has(value)) {
+    include.delete(value);
+    exclude.add(value);
+  } else if (exclude.has(value)) {
+    exclude.delete(value);
+  } else {
+    include.add(value);
+  }
+
+  if (include.size || exclude.size) state.filters[name] = { include, exclude };
+  else delete state.filters[name];   // Empty sets are no filter, not a filter of nothing.
+
+  applyFilters();
+}
+
+function clearValue(name, value) {
+  const sets = filterFor(name);
+  const include = new Set(sets.include);
+  const exclude = new Set(sets.exclude);
+  include.delete(value);
+  exclude.delete(value);
+
+  if (include.size || exclude.size) state.filters[name] = { include, exclude };
+  else delete state.filters[name];
+
+  applyFilters();
+}
+
+function facetLabel(name) {
+  return name.replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase());
+}
+
+function facetMenu(name, values) {
+  const menu = document.createElement("details");
+  menu.className = "facet-menu";
+
+  const sets = filterFor(name);
+  const chosenCount = sets.include.size + sets.exclude.size;
+  const summary = document.createElement("summary");
+  summary.innerHTML = `${facetLabel(name)}` +
+    (chosenCount ? ` <span class="badge">${chosenCount}</span>` : "") +
+    ` <span class="caret">▾</span>`;
+  menu.appendChild(summary);
+
+  const panel = document.createElement("div");
+  panel.className = "facet-panel";
+  panel.innerHTML = '<div class="facet-hint">click to keep · again to exclude · again to clear</div>';
+
+  values.forEach(([value, count]) => {
+    const state_ = sets.include.has(value) ? "include"
+      : sets.exclude.has(value) ? "exclude" : "off";
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = `facet-option ${state_}`;
+    row.innerHTML =
+      `<span class="mark">${state_ === "include" ? "✓" : state_ === "exclude" ? "✕" : ""}</span>` +
+      `<span class="value">${value}</span><span class="count">${count}</span>`;
+    row.addEventListener("click", () => cycleFilter(name, value));
+    panel.appendChild(row);
+  });
+
+  menu.appendChild(panel);
+
+  // One open at a time, so a row of dropdowns cannot cover the grid.
+  menu.addEventListener("toggle", () => {
+    if (!menu.open) return;
+
+    document.querySelectorAll("details.facet-menu").forEach((other) => {
+      if (other !== menu) other.open = false;
+    });
+  });
+
+  return menu;
 }
 
 function renderFilters(view) {
   const holder = element("filters");
   const facets = view.facets || {};
 
-  if (!Object.keys(facets).length) {
-    holder.innerHTML = "";
-    return;
-  }
-
   holder.innerHTML = "";
+
+  if (!Object.keys(facets).length) return;
+
+  const row = document.createElement("div");
+  row.className = "filter-row";
 
   Object.entries(facets).forEach(([name, values]) => {
     if (values.length < 2) return;   // A facet with one value filters nothing.
 
-    const row = document.createElement("div");
-    row.className = "facet";
-    row.innerHTML = `<span class="facet-name">${name.replace("_", " ")}</span>`;
-
-    values.forEach(([value, count]) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = `chip-button${chosen(name).has(value) ? " on" : ""}`;
-      button.innerHTML = `${value}<span class="count">${count}</span>`;
-      button.addEventListener("click", () => toggleFilter(name, value));
-      row.appendChild(button);
-    });
-
-    holder.appendChild(row);
+    row.appendChild(facetMenu(name, values));
   });
 
-  const summary = document.createElement("div");
-  summary.id = "filter-summary";
-  const active = Object.entries(state.filters).filter(([, values]) => values.size);
+  holder.appendChild(row);
 
-  if (active.length) {
-    summary.textContent = active
-      .map(([name, values]) => `${name}: ${[...values].join(" or ")}`).join("  ·  ");
+  // What is chosen shows outside the menus, because a filter you cannot see is
+  // a grid lying about how much of the run you have looked at.
+  const active = document.createElement("div");
+  active.className = "active-filters";
+  const picked = activeFilters();
+
+  picked.forEach(([name, sets]) => {
+    const chip = (value, excluded) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `chip-button ${excluded ? "excluded" : "on"}`;
+      button.innerHTML = `${excluded ? "not " : ""}${facetLabel(name)}: ${value}` +
+        ` <span class="remove">✕</span>`;
+      button.title = "Remove this filter";
+      button.addEventListener("click", () => clearValue(name, value));
+      active.appendChild(button);
+    };
+
+    sets.include.forEach((value) => chip(value, false));
+    sets.exclude.forEach((value) => chip(value, true));
+  });
+
+  if (picked.length) {
     const clear = document.createElement("button");
     clear.type = "button";
     clear.className = "chip-button";
-    clear.textContent = "clear filters";
+    clear.textContent = "clear all";
     clear.addEventListener("click", () => {
       state.filters = {};
-      renderGrid(state.data);
+      applyFilters();
     });
-    summary.appendChild(document.createTextNode("  "));
-    summary.appendChild(clear);
-  } else {
-    summary.textContent = "Showing everything. Choose values to narrow it; several filters combine.";
+    active.appendChild(clear);
   }
 
+  holder.appendChild(active);
+
+  const summary = document.createElement("div");
+  summary.id = "filter-summary";
+  summary.textContent = picked.length
+    ? ""   // Filled in by the grid, which is what knows the counts.
+    : "Showing everything. Open a menu to keep or exclude values; filters combine.";
   holder.appendChild(summary);
 }
 

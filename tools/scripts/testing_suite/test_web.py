@@ -97,6 +97,59 @@ class PageWiringTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertIn(f'"{path}"', routes)
 
+    def test_the_filter_summary_is_set_rather_than_appended(self) -> None:
+        """Appending is why it read "6 shown, 32 hidden" three times over."""
+        self.assertNotIn("filter-summary", script().split("+=")[0][-200:])
+
+        for line in script().splitlines():
+            if "filtered.textContent" in line or "summary.textContent" in line:
+                with self.subTest(line=line.strip()):
+                    self.assertNotIn("+=", line)
+
+    def test_changing_a_filter_redraws_the_filter_row_too(self) -> None:
+        """Redrawing only the grid leaves the chips and the summary stale."""
+        body = script()
+        start = body.index("function applyFilters()")
+        end = body.index("function cycleFilter")
+        apply_body = body[start:end]
+
+        self.assertIn("renderFilters(", apply_body)
+        self.assertIn("renderGrid(", apply_body)
+
+        # And every filter change goes through it.
+        cycle = body[body.index("function cycleFilter"):body.index("function clearValue")]
+
+        self.assertIn("applyFilters()", cycle)
+
+    def test_an_emptied_facet_stops_being_a_filter(self) -> None:
+        """A facet holding empty sets would match nothing and hide everything."""
+        body = script()
+        cycle = body[body.index("function cycleFilter"):body.index("function clearValue")]
+
+        self.assertIn("delete state.filters[name]", cycle)
+
+    def test_a_value_cycles_through_keep_exclude_and_off(self) -> None:
+        body = script()
+        cycle = body[body.index("function cycleFilter"):body.index("function clearValue")]
+
+        # include -> exclude -> off, in that order.
+        self.assertLess(cycle.index("include.has(value)"), cycle.index("exclude.has(value)"))
+        self.assertIn("exclude.add(value)", cycle)
+        self.assertIn("exclude.delete(value)", cycle)
+
+    def test_excluding_beats_including(self) -> None:
+        """Naming a value in both is a contradiction; dropping it is the safer reading."""
+        body = script()
+        matches = body[body.index("function matchesFilters"):body.index("// Everything that depends")]
+
+        self.assertLess(matches.index("sets.exclude.has(value)"), matches.index("sets.include.size"))
+
+    def test_the_facets_are_dropdowns(self) -> None:
+        body = script()
+
+        self.assertIn('createElement("details")', body)
+        self.assertIn("facet-panel", body)
+
     def test_the_stylesheet_and_script_are_linked(self) -> None:
         self.assertIn('href="/web/style.css"', markup())
         self.assertIn('src="/web/app.js"', markup())

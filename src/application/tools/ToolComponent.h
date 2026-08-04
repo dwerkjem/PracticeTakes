@@ -41,4 +41,23 @@ class ToolComponent : public juce::Component
     {
         juce::ignoreUnused(payload);
     }
+
+    // Put the tool into one of its own named views, for verification.
+    //
+    // A tool that offers several ways of showing the same analysis -- the
+    // tuner's graph, bar, and meter -- is three surfaces, not one, and a
+    // screenshot of the default view says nothing about the other two. The
+    // names are the tool's own, and the shell only passes them through: it
+    // still has no idea which tool it is talking to, which is the whole point
+    // of this class.
+    //
+    // Returns false for a view the tool does not have, so an approved state
+    // naming a view that no longer exists fails loudly instead of quietly
+    // capturing the default.
+    [[nodiscard]] virtual bool showView(const juce::String& view)
+    {
+        juce::ignoreUnused(view);
+
+        return false;
+    }
 };

@@ -119,6 +119,44 @@ For each surface at each resolution the pass opens the approved state, applies
 the palette, asks the application for the geometry, waits for the window to
 settle, captures, and converts the result to PNG plus a thumbnail.
 
+**Analysis tools are fed a synthetic tone.** A state can name a frequency, and
+the audio service generates it in its own callback instead of the device's
+input — the same path a microphone takes, through the same FIFO, at the same
+gain. So a capture of the tuner reads a live pitch rather than "Play or sing a
+sustained note", and it works on a machine with no microphone at all. It is a
+table read and a phase increment in the callback, never `sin` per sample,
+because the audio thread may not do unbounded work.
+
+**It is a sung note, not a test tone**, because a pure sine draws a flat line on
+the tuner, one bar on the harmonic analyser, and a single stripe on the
+spectrogram — a state no real input produces, and one that hides every layout
+bug that only appears when a reading moves. So it carries:
+
+| | |
+|---|---|
+| a slow **drift** of ±45 cents at 0.55 Hz | the tuner's graph draws a wave; the tool smooths over ~0.75 s, so a fast vibrato alone averages back to a line |
+| a **vibrato** of ±12 cents at 5 Hz | moves the meter and bar views, which read the current frame |
+| second and third **partials** | the analyser shows H1, H2, H3, and the spectrogram three bands |
+| a **swell** of ±55% at 0.45 Hz | about 11 dB peak to trough, so a peak, RMS, or loudness meter has something to draw |
+| a little **noise** | pitch confidence lands where real input lands rather than at a suspicious 100% |
+
+The peak of the loudest moment lands exactly on the amplitude asked for — the
+swell is folded into the scaling — so deepening it never pushes the signal
+towards clipping and never lights a clipping indicator that has nothing to
+report.
+
+**Nothing is audible.** The generator only fills a buffer pushed into the
+analysis FIFOs; the device's output is cleared at the top of the callback and
+never written, and this is the only audio callback the application registers.
+
+Surfaces with a tone wait a couple of seconds before being captured, so a tool
+drawing a history has one to draw.
+
+The tuner is captured in tune, sharp, and flat, in each of its three views
+(graph, bar, meter), and with its advanced settings expanded — six surfaces
+where there was one, because a screenshot of the graph says nothing about the
+meter.
+
 **The pointer is not parked**, unlike `run-ui-golden.zsh`. An X capture of a
 window never includes the cursor, so parking changes only hover state — which
 matters when images are compared pixel for pixel, as the golden-image and
@@ -153,16 +191,38 @@ browser loses nothing.
 ### Filtering
 
 A full run is around a hundred captures — 27 surfaces, three resolutions, two
-palettes — which is only reviewable if you can ask it a question. The filter row
-above the grid offers every value actually present in the run, with counts:
-palette, resolution, area (workspace, settings, audio, feedback, shell),
-presentation (docked, floating, split, tabbed), which tools are open, how many,
-and the state.
+palettes — which is only reviewable if you can ask it a question. Each facet is a
+dropdown above the grid, offering every value actually present in the run with
+its count:
+
+| Facet | Values |
+|---|---|
+| `review` | unreviewed · part reviewed · reviewed |
+| `verdict` | unanswered · passed · skipped · failed |
+| `tag` | whatever you have applied, plus `untagged` |
+| `capture` | ok · flagged · failed |
+| `theme`, `resolution` | the palettes and sizes the run covered |
+| `area` | workspace · settings · audio · feedback · shell |
+| `presentation`, `tools`, `tool_count`, `state` | what the surface opens and how |
+
+`verdict` reports the worst thing said about a capture: a failure anywhere makes
+it failed, and a skip outranks a pass, because an area nobody examined is not a
+pass and a surface with one failure is not a passing surface.
+
+**Clicking a value cycles it**: keep ✓ → exclude ✕ → off. Keeping narrows to
+what you named; excluding removes it and leaves everything else — which is what
+makes a second pass finishable, since "everything except what I already
+approved" is `review: exclude reviewed`. Excluding beats keeping if a value is
+somehow both.
 
 Filters combine the way people expect: **within** a facet the values are
 alternatives (a capture is dark *or* light), **between** facets they all have to
 hold. "Settings, light" is twelve captures; "three tools, constrained" is the
-handful that found the clipped workspace.
+handful that found the clipped workspace; "unreviewed, not settings" is what is
+left to do.
+
+What you have chosen shows as chips under the menus — click one to drop it —
+with a count of how many captures the filters are hiding.
 
 ### Judging from the zoom
 
@@ -272,9 +332,19 @@ run whose failures carry no notes still exports.
   shell, the tuner, and the settings window.
 - **`--mode full`** — every surface. What a release is verified with.
 
-`--resolutions` chooses the window sizes, defaulting to all three. The
-constrained size (800×600) is below the 900px threshold at which the title bar
-collapses to the hamburger menu, so it exercises the responsive layout.
+`--resolutions` chooses the window sizes, defaulting to all four:
+
+| Name | Size | Why |
+|---|---|---|
+| `default` | 1280×800 | what most people open it at |
+| `constrained` | 800×600 | below the 900px threshold at which the title bar collapses to the hamburger menu |
+| `tiny` | 640×480 | smaller than a window manager would let a user drag it — the size at which a docked tool has to choose what to drop |
+| `maximised` | the display | where a layout stretches empty space instead of showing more |
+
+`tiny` exists because most of what a run finds is a layout out of room. It is
+the question #113 asks, asked of every tool at once, and it is reachable only
+because the application resizes itself through the control channel — the window
+advertises a 980px minimum that a window manager honours.
 
 Resizing goes through the control channel, so the application resizes *itself*.
 An external resize cannot do this job: the window advertises a 980px minimum
