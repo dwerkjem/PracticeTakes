@@ -312,3 +312,30 @@ against it — they can drift (`docs/development/quality/QA_STRATEGY.md` area 12
   for C++ changes under `src/**`/`src/tests/**`; `npm run check && npm run test`
   from `src/services/` for `src/services/**`; `python tools/scripts/run_tests.py` for
   `tools/scripts/**`.
+
+## Agent skills
+
+Configuration the installed engineering skills read. These files use
+repository-specific paths rather than the skills' defaults, because the root
+must stay minimal — see the hard constraint above.
+
+### Issue tracker
+
+Issues live as GitHub issues on `dwerkjem/PracticeTakes`, driven through the
+`gh` CLI, and are labelled by `area:`/`type:`/`priority:`. GitHub is the
+request surface; `openspec/changes/` remains the design surface. See
+[`issue-tracker.md`](issue-tracker.md).
+
+### Triage labels
+
+The four triage states take a `status:` prefix to match this repository's label
+families (`status:needs-triage`, `status:needs-info`,
+`status:ready-for-agent`, `status:ready-for-human`); `wontfix` is reused
+unprefixed. See [`triage-labels.md`](triage-labels.md).
+
+### Domain docs
+
+Single-context. The glossary is
+`docs/development/architecture/CONTEXT.md` and ADRs go in
+`docs/development/architecture/adr/` — **not** the skills' default root
+`CONTEXT.md` and `docs/adr/`. See [`domain.md`](domain.md).

@@ -20,6 +20,7 @@ broader music-practice and digital-audio workstation application.
 ### `architecture/`
 
 - [Architecture](architecture/ARCHITECTURE.md) — application ownership, audio flow, and UI structure
+- [Domain glossary](architecture/CONTEXT.md) — the vocabulary Practice Takes uses for itself, and the terms to prefer over their synonyms
 - [Adding a tool](architecture/adding-a-tool.md) — the two entries that register an analysis tool, and the lifecycle it runs through
 - [Design and architecture review checklist](architecture/ARCHITECTURE_QA.md) — what reviewers check on pull requests beyond formatting/linting
 
@@ -51,6 +52,9 @@ broader music-practice and digital-audio workstation application.
 
 - [Agent guide](agents/AGENT_GUIDE.md) — repository guidance loaded by Claude Code
   through the root `CLAUDE.md` stub
+- [Issue tracker](agents/issue-tracker.md) — where issues live, the `gh` commands skills use, and this repository's label taxonomy
+- [Triage labels](agents/triage-labels.md) — the five canonical triage roles mapped onto this repository's `status:` labels
+- [Domain docs](agents/domain.md) — where the glossary and ADRs live, and how skills should read them
 
 ## Main technologies
 
