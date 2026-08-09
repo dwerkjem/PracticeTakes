@@ -1,5 +1,7 @@
 {
   "enabledPlugins": {
-    "understand-anything@understand-anything": true
+    "understand-anything@understand-anything": true,
+    "mattpocock-skills@claude-plugins-official": true,
+    "context7@claude-plugins-official": true
   }
 }
