@@ -584,7 +584,9 @@ describe("the notification administration routes", () => {
 
     expect(response.status).toBe(503);
     expect(body.error.code).toBe("notification_send_failed");
-    expect(body.error.message).toBe("mail service unavailable");
+    // A fixed sentence for the reason, not the provider's own words.
+    expect(body.error.message).toContain("could not be reached");
+    expect(body.error.message).not.toContain("mail service unavailable");
     expect(database.count("feedback_email_queue")).toBe(1);
     errorLog.mockRestore();
   });

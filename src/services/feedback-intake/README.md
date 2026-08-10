@@ -43,7 +43,8 @@ email before serving any page, asset, or API response. Administrative responses 
 - `POST /v1/admin/notifications/dispatch` runs a real dispatch immediately under the caller's
   identity. It consumes one of the day's sends and offers no way to exceed the limit. `200` for
   `sent`, `nothing_pending`, and `daily_limit_reached`; `503` for `not_configured` and
-  `send_failed`. See `docs/development/operations/EMAIL_DISPATCH.md`.
+  `send_failed`. A failed send reports a classified `failureReason`, never the provider's own
+  text — that goes to the service log only. See `docs/development/operations/EMAIL_DISPATCH.md`.
 
 Hosted administration is disabled unless `ADMIN_ROUTES_ENABLED` is exactly `true`. Even when it is
 enabled, missing or invalid `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, `ADMIN_EMAILS`, or Access JWT values

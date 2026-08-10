@@ -133,6 +133,22 @@ async function dispatchNotifications(env: AdminEnv, user: string): Promise<Respo
     : jsonResponse(200, { dispatch: result });
 }
 
+// A fixed sentence per reason. The provider's own words are in the service log;
+// they are derived from a caught exception and do not belong in a response.
+const failureMessages: Record<string, string> = {
+  provider_rejected:
+    "The email provider refused the message. Check that the sender's domain is "
+    + "onboarded to Email Sending and that its DNS records resolve.",
+  provider_unavailable:
+    "The email provider could not be reached. The batch stays queued and the "
+    + "next dispatch retries it.",
+  provider_rate_limited:
+    "The email provider is rate limiting this account. The batch stays queued.",
+  unknown:
+    "The feedback email could not be sent. See the service log for the "
+    + "provider's response.",
+};
+
 function dispatchFailure(result: DispatchResult): { code: string; message: string } | null {
   if (result.outcome === "not_configured") {
     return {
@@ -143,7 +159,7 @@ function dispatchFailure(result: DispatchResult): { code: string; message: strin
   if (result.outcome === "send_failed") {
     return {
       code: "notification_send_failed",
-      message: result.error ?? "The feedback email could not be sent.",
+      message: failureMessages[result.failureReason ?? "unknown"] ?? failureMessages.unknown!,
     };
   }
   return null;
