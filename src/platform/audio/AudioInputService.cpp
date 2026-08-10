@@ -315,7 +315,7 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
     float* const* outputChannelData,
     int numOutputChannels,
     int numSamples,
-    const juce::AudioIODeviceCallbackContext&)
+    const juce::AudioIODeviceCallbackContext&) noexcept PRACTICE_TAKES_NONBLOCKING
 {
     AudioCallbackScope callbackScope(callbacksInProgress);
 

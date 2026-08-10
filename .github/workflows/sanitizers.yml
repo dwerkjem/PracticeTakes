@@ -7,6 +7,11 @@
 name: Sanitizers
 
 on:
+  # TEMPORARY: exercising the realtime job before this branch has a pull
+  # request. Removed once RTSan is confirmed to catch an allocation and a lock.
+  push:
+    branches:
+      - feat/verify-audio-thread-contract
   pull_request:
     paths:
       - "src/**"
@@ -81,3 +86,50 @@ jobs:
       - name: Compiler cache statistics
         if: always()
         run: ccache --show-stats
+
+  realtime:
+    name: Realtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install build dependencies
+        run: |
+          bash tools/scripts/build/check-linux-build-dependencies.sh --install
+          sudo apt-get install --yes ninja-build clang-20
+
+      - name: Configure
+        run: |
+          cmake -S . -B build-rtsan -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON \
+            -DPRACTICE_TAKES_SANITIZE=realtime \
+            -DCMAKE_C_COMPILER=clang-20 \
+            -DCMAKE_CXX_COMPILER=clang++-20
+
+      - name: Build
+        run: cmake --build build-rtsan --target PracticeTakesTests --parallel
+
+      # Only the audio callback carries the annotation, and only the [callback]
+      # cases drive it. Running the whole suite would spend the slot observing
+      # code RealtimeSanitizer has nothing to say about.
+      #
+      # This job means nothing without those cases: RTSan observes what runs, so
+      # if the harness stops invoking the callback the check silently becomes a
+      # no-op that reports success.
+      - name: Verify the audio callback is non-blocking
+        run: |
+          set -x
+          ./build-rtsan/PracticeTakesTests "[callback]" --order lex
+          # Guard against the harness being removed or renamed: a pass with zero
+          # test cases is not a pass.
+          ./build-rtsan/PracticeTakesTests "[callback]" --list-tests \
+            | grep -q "audio callback" || {
+              echo "No [callback] cases ran -- the realtime check is verifying nothing"
+              exit 1
+            }
+        env:
+          RTSAN_OPTIONS: halt_on_error=1

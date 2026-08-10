@@ -9,6 +9,7 @@
 #include <juce_events/juce_events.h>
 
 #include "AudioSampleFifo.h"
+#include "RealtimeSafety.h"
 #include "SyntheticTone.h"
 
 #include <array>
@@ -105,13 +106,16 @@ class AudioInputService final
         std::atomic<bool> active{false};
     };
 
+    // noexcept and non-blocking are load-bearing, not decoration: see
+    // RealtimeSafety.h. Overriding with a stricter exception specification than
+    // JUCE's base declares is legal and is what makes the annotation possible.
     void audioDeviceIOCallbackWithContext(
         const float* const* inputChannelData,
         int numInputChannels,
         float* const* outputChannelData,
         int numOutputChannels,
         int numSamples,
-        const juce::AudioIODeviceCallbackContext&) override;
+        const juce::AudioIODeviceCallbackContext&) noexcept PRACTICE_TAKES_NONBLOCKING override;
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
     void audioDeviceStopped() override;
     void changeListenerCallback(juce::ChangeBroadcaster*) override;
