@@ -1,0 +1,115 @@
+# THROWAWAY. Task 1.1 of openspec/changes/verify-audio-thread-contract.
+#
+# The project has only ever been built with GCC. Before committing CI to a
+# clang toolchain for RealtimeSanitizer, find out two things and delete this
+# file:
+#
+#   1. Does PracticeTakesTests compile and pass under clang-20?
+#   2. Does that clang accept -fsanitize=realtime?
+#
+# Every step is `continue-on-error` on purpose. A red X here is a finding, not
+# a broken build — the point is to read the output, not to gate anything.
+name: clang spike (throwaway)
+
+on:
+  push:
+    branches:
+      - feat/verify-audio-thread-contract
+
+permissions:
+  contents: read
+
+jobs:
+  spike:
+    name: Build the test suite with clang-20
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install build dependencies
+        run: bash tools/scripts/build/check-linux-build-dependencies.sh --install
+
+      - name: Install clang-20
+        id: install
+        continue-on-error: true
+        run: |
+          set -x
+          if ! sudo apt-get install --yes clang-20; then
+            echo "clang-20 is not in the runner's apt sources; adding apt.llvm.org"
+            wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+              | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc >/dev/null
+            source /etc/os-release
+            echo "deb http://apt.llvm.org/${VERSION_CODENAME}/ llvm-toolchain-${VERSION_CODENAME}-20 main" \
+              | sudo tee /etc/apt/sources.list.d/llvm.list
+            sudo apt-get update
+            sudo apt-get install --yes clang-20
+          fi
+          clang-20 --version
+
+      - name: Does this clang accept -fsanitize=realtime?
+        id: rtsan
+        continue-on-error: true
+        run: |
+          set -x
+          printf 'int main(void) { return 0; }\n' > /tmp/probe.c
+          clang-20 -fsanitize=realtime /tmp/probe.c -o /tmp/probe
+          /tmp/probe
+          echo "RTSAN=supported" >> "$GITHUB_OUTPUT"
+
+      - name: Does the nonblocking attribute exist?
+        continue-on-error: true
+        run: |
+          set -x
+          cat > /tmp/nb.cpp <<'PROBE'
+          [[clang::nonblocking]] void callback() {}
+          int main() { callback(); }
+          PROBE
+          clang-20 -std=c++20 -Wall -Wextra -Werror /tmp/nb.cpp -o /tmp/nb
+
+      - name: Configure with clang-20
+        id: configure
+        continue-on-error: true
+        run: |
+          set -x
+          cmake -S . -B build-clang -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_C_COMPILER=clang-20 \
+            -DCMAKE_CXX_COMPILER=clang++-20
+
+      - name: Build PracticeTakesTests with clang-20
+        id: build
+        continue-on-error: true
+        run: |
+          set -x
+          cmake --build build-clang --target PracticeTakesTests --parallel 2>&1 | tee /tmp/build.log
+          exit "${PIPESTATUS[0]}"
+
+      - name: Run the suite
+        id: test
+        continue-on-error: true
+        run: ctest --test-dir build-clang --output-on-failure
+
+      - name: What broke
+        if: always()
+        run: |
+          echo "### clang-20 spike" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Step | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| install clang-20 | ${{ steps.install.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| -fsanitize=realtime | ${{ steps.rtsan.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| configure | ${{ steps.configure.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| build | ${{ steps.build.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| ctest | ${{ steps.test.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f /tmp/build.log ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "<details><summary>First 60 diagnostics</summary>" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            grep -E "error:|warning:" /tmp/build.log | head -60 >> "$GITHUB_STEP_SUMMARY" || true
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "</details>" >> "$GITHUB_STEP_SUMMARY"
+          fi
