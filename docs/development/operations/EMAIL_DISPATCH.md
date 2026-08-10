@@ -39,7 +39,7 @@ Every run returns one of five outcomes, and records it:
 | `nothing_pending` | The dispatcher ran and the queue was empty |
 | `not_configured` | Delivery configuration was rejected; `problems` says why |
 | `daily_limit_reached` | The day's sends were already spent |
-| `send_failed` | The provider rejected the send; `error` carries its message |
+| `send_failed` | The send was attempted and failed; `failureReason` classifies it |
 
 Each attempt — including the ones that send nothing — is written to
 `maintenance_runs` with `operation = 'notification'` and the actor that caused
@@ -164,7 +164,7 @@ Reads only. It never sends, claims, or reserves a slot.
       "completedAt": "2026-08-09T03:17:02.000Z",
       "sent": 4,
       "problems": [],
-      "error": null
+      "failureReason": null
     }
   }
 }
@@ -195,10 +195,24 @@ If you need more sends today, raise `FEEDBACK_MAX_DAILY_EMAILS` and deploy.
     "remainingDailyEmails": 2,
     "messageId": "…",
     "problems": [],
-    "error": null
+    "failureReason": null
   }
 }
 ```
+
+## Failure reasons
+
+A `send_failed` dispatch reports one of these. They classify the provider's
+response; the response itself is written to the service log and deliberately
+appears in no API body and no stored record, because it is derived from a caught
+exception and can carry a stack frame or a path.
+
+| Reason | Means | What to do |
+| --- | --- | --- |
+| `provider_rejected` | The provider refused the message outright | Confirm the sender's domain is onboarded and its SPF and DKIM resolve. Retrying will not help until that changes |
+| `provider_unavailable` | The provider could not be reached, or returned a transient error | Nothing. The batch stays queued and the next scheduled dispatch retries it |
+| `provider_rate_limited` | The account is over a sending limit or quota | Nothing immediately. Check the account's Email Sending limits if it persists |
+| `unknown` | The response matched none of the above | Read the provider's sentence in the log: `npx wrangler tail --env-file /dev/null` |
 
 ## Problem codes
 
@@ -215,7 +229,7 @@ If you need more sends today, raise `FEEDBACK_MAX_DAILY_EMAILS` and deploy.
 | `missing_dashboard_url` / `invalid_dashboard_url` | Must be HTTPS with the path exactly `/admin`, no credentials, port, query, or fragment |
 
 A domain that is real but simply not onboarded yet passes validation and fails
-at send time instead, as `send_failed` with the provider's message. Validation
+at send time instead, as `send_failed` with a `failureReason`. Validation
 rejects what can never work; the provider rejects what does not work yet.
 
 ## When mail stops arriving
@@ -224,8 +238,9 @@ rejects what can never work; the provider rejects what does not work yet.
 2. Check `lastAttempt`. A stale `completedAt` means the crons are not running,
    not that delivery is broken — check the Worker's deployment and triggers.
 3. Repeated `send_failed` with a growing `queue.pending`: the configuration is
-   accepted but the provider is refusing. Re-run step 2 of activation to test
-   the provider without the service in the way, and check SPF and DKIM still
-   resolve.
+   accepted but the provider is refusing. Read `failureReason` — see the table
+   below — then re-run step 2 of activation to test the provider without the
+   service in the way, and check SPF and DKIM still resolve. The provider's own
+   sentence is in the Worker log: `npx wrangler tail --env-file /dev/null`.
 4. `daily_limit_reached` with a large backlog is working as designed — the queue
    drains across the following days' sends. Raise the limit if that is too slow.

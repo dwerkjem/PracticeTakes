@@ -31,6 +31,18 @@ export type DispatchOutcome =
   | "daily_limit_reached"
   | "send_failed";
 
+/**
+ * Why a send failed, as a code chosen by us rather than words chosen by the
+ * provider. The provider's own message goes to the log and nowhere else: it is
+ * derived from a caught exception, so it can carry a stack frame or a path, and
+ * it is prose no caller can branch on.
+ */
+export type DispatchFailureReason =
+  | "provider_rejected"
+  | "provider_unavailable"
+  | "provider_rate_limited"
+  | "unknown";
+
 export interface DispatchResult {
   outcome: DispatchOutcome;
   sent: number;
@@ -41,7 +53,7 @@ export interface DispatchResult {
   remainingDailyEmails: number | null;
   messageId: string | null;
   problems: string[];
-  error: string | null;
+  failureReason: DispatchFailureReason | null;
 }
 
 export interface DispatchAttempt {
@@ -50,7 +62,7 @@ export interface DispatchAttempt {
   completedAt: string;
   sent: number;
   problems: string[];
-  error: string | null;
+  failureReason: DispatchFailureReason | null;
 }
 
 export interface NotificationStatus {
@@ -139,7 +151,7 @@ async function dispatch(
     remainingDailyEmails: null,
     messageId: null,
     problems: [],
-    error: null,
+    failureReason: null,
   };
 
   const { configuration, problems } = notificationConfiguration(env);
@@ -209,15 +221,20 @@ async function dispatch(
     return { ...empty, pending: 0 };
   }
 
+  // Formatting is done before the try, so only the send itself can produce the
+  // failure that gets reported. A TypeError raised in here would otherwise be
+  // reported to the caller as though the provider had rejected the message.
+  const message = {
+    from: configuration.from,
+    to: configuration.to,
+    subject: feedbackEmailSubject(reports),
+    text: feedbackEmailText(reports, configuration.dashboardUrl, notificationDay,
+                            reservation.sent_count, dailyLimit),
+  };
+
   let messageId: string | null = null;
   try {
-    const sendResult = await configuration.email.send({
-      from: configuration.from,
-      to: configuration.to,
-      subject: feedbackEmailSubject(reports),
-      text: feedbackEmailText(reports, configuration.dashboardUrl, notificationDay,
-                              reservation.sent_count, dailyLimit),
-    });
+    const sendResult = await configuration.email.send(message);
     messageId = sendResult?.messageId ?? null;
   } catch (error) {
     await releaseClaim(db, claimId);
@@ -228,7 +245,7 @@ async function dispatch(
       outcome: "send_failed",
       pending: pendingCount,
       remainingDailyEmails: dailyLimit - reservation.sent_count + 1,
-      error: error instanceof Error ? error.message : String(error),
+      failureReason: classifyFailure(error),
     };
   }
 
@@ -244,7 +261,7 @@ async function dispatch(
     remainingDailyEmails: dailyLimit - reservation.sent_count,
     messageId,
     problems: [],
-    error: null,
+    failureReason: null,
   };
 }
 
@@ -318,7 +335,7 @@ function presentAttempt(row: {
     completedAt: new Date(row.completed_at * 1000).toISOString(),
     sent: Number(details.sent ?? 0),
     problems: details.problems ?? [],
-    error: details.error ?? null,
+    failureReason: details.failureReason ?? null,
   };
 }
 
@@ -341,6 +358,21 @@ async function recordDispatchAttempt(
     // change what the caller is told about it.
     console.error("Unable to record the feedback dispatch attempt", error);
   }
+}
+
+// Matched most-specific first: a 429 is a refusal too, and a rejection often
+// mentions a status code that would otherwise read as transient.
+function classifyFailure(error: unknown): DispatchFailureReason {
+  const raw = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  if (/rate.?limit|too many|quota|\b429\b/.test(raw)) return "provider_rate_limited";
+  if (/timeout|timed out|network|econn|socket|unavailable|temporar|\b50[234]\b/.test(raw)) {
+    return "provider_unavailable";
+  }
+  if (/reject|refus|denied|forbidden|unauthor|not verified|unverified|invalid|\b40[013]\b|\b5[.]7|\b55\d\b/
+      .test(raw)) {
+    return "provider_rejected";
+  }
+  return "unknown";
 }
 
 function feedbackEmailSubject(reports: PendingFeedback[]): string {

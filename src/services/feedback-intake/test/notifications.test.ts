@@ -178,12 +178,63 @@ describe("feedback email batching", () => {
     const failed = await dispatch(database, env, "2026-07-24T03:17:00Z");
     expect(failed.outcome).toBe("send_failed");
     expect(failed.sent).toBe(0);
-    expect(failed.error).toBe("mail service unavailable");
+    expect(failed.failureReason).toBe("provider_unavailable");
     expect(queued(database)[0]?.claim_id).toBeNull();
     expect((await dispatch(database, env, "2026-07-24T11:17:00Z")).sent).toBe(1);
     expect(queued(database)).toHaveLength(0);
     expect(errorLog).toHaveBeenCalledOnce();
     errorLog.mockRestore();
+  });
+
+  const failWith = async (thrown: unknown, receiptId: string) => {
+    const database = createTestDatabase();
+    seedQueuedFeedback(database, receiptId, 1);
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const send = vi.fn(async (_message: unknown) => undefined).mockRejectedValueOnce(thrown);
+    const result = await dispatch(database, environment(send), "2026-07-24T03:17:00Z");
+    const logged = errorLog.mock.calls.map((call) => String(call[1])).join(" ");
+    errorLog.mockRestore();
+    return { result, database, logged };
+  };
+
+  it.each([
+    ["550 5.7.1 domain not verified", "provider_rejected"],
+    ["403 Forbidden: sender not authorized", "provider_rejected"],
+    ["429 Too Many Requests", "provider_rate_limited"],
+    ["Daily sending quota exceeded", "provider_rate_limited"],
+    ["fetch failed: ECONNRESET", "provider_unavailable"],
+    ["503 Service Unavailable", "provider_unavailable"],
+    ["request timed out", "provider_unavailable"],
+    ["something nobody anticipated", "unknown"],
+  ])("classifies %o as %s", async (thrown, expected) => {
+    const { result } = await failWith(new Error(thrown as string), "classified");
+    expect(result.outcome).toBe("send_failed");
+    expect(result.failureReason).toBe(expected);
+  });
+
+  it("keeps the provider's words out of the result and the stored attempt", async () => {
+    const raw =
+      "550 5.7.1 domain not verified\n" +
+      "    at send (/opt/worker/src/notifications.ts:214:31)\n" +
+      "    at dispatch (/opt/worker/src/notifications.ts:118:18)";
+    const { result, database, logged } = await failWith(new Error(raw), "leaky");
+
+    expect(result.failureReason).toBe("provider_rejected");
+    const serialized = JSON.stringify(result) + attempts(database)[0]?.details_json;
+    for (const fragment of ["notifications.ts", "at send", "/opt/worker", "5.7.1"]) {
+      expect(serialized).not.toContain(fragment);
+    }
+    // The detail is not discarded — it goes where only an operator sees it.
+    expect(logged).toContain("5.7.1");
+  });
+
+  it("classifies a thrown non-Error rather than stringifying it into the result", async () => {
+    // Deliberately free of any word the classifier matches on, so this pins the
+    // non-Error path rather than accidentally re-testing the patterns.
+    const { result } = await failWith("a bare string throw", "not-an-error");
+    expect(result.outcome).toBe("send_failed");
+    expect(result.failureReason).toBe("unknown");
+    expect(JSON.stringify(result)).not.toContain("a bare string throw");
   });
 
   it("returns the reserved daily slot when a send fails", async () => {
