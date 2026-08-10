@@ -16,12 +16,19 @@
 
 ## 3. TSan on a schedule and on pushes to main
 
-- [ ] 3.1 Separate build tree; build `PracticeTakesTests` with TSan
-- [ ] 3.2 Run `[.load]` only; check the soak duration under instrumentation and tune the env override if the job is slow
-- [ ] 3.3 Triggers: `schedule` plus `push` to `main`
-- [ ] 3.4 On failure, open an issue with `area:testing` and `priority:p1` naming the workflow, run URL, and failing step
-- [ ] 3.5 Comment on the existing issue rather than opening a duplicate when one is already open
-- [ ] 3.6 Confirm it reports a race by weakening FIFO synchronisation deliberately, then revert
+- [x] 3.1 Separate build tree; build `PracticeTakesTests` with TSan
+- [x] 3.2 Run `[.load]` only. Measured **2 s** under TSan at the 1500 ms soak default — no tuning needed
+- [x] 3.3 Triggers: `schedule` plus `push` to `main`
+- [x] 3.4 On failure, open an issue with `area:testing` and `priority:p1` naming the workflow, run URL, and failing step
+- [x] 3.5 Comment on the existing issue rather than opening a duplicate when one is already open
+- [x] 3.6 Confirmed: weakening `writePosition.store` from release to relaxed produced `WARNING: ThreadSanitizer: data race`, exit 66, naming both accesses. Reverted byte-identical
+
+## 3b. Bound the backpressure assertions (design decision 8)
+
+- [x] 3b.1 Replace `droppedBlocks() == 0` with a bound at all three retry-loop sites; the counter measures rejected-and-retried pushes, not lost data
+- [x] 3b.2 Report the observed rejection count so drift is visible without being fatal
+- [x] 3b.3 Keep `stalled.droppedBlocks() > 0` exact — it is the point of that test, not a scheduling outcome
+- [x] 3b.4 Confirm all five cases pass on an ordinary build and under TSan
 
 ## 4. Run the audio callback under observation
 

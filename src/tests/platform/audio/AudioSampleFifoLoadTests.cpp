@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -36,6 +37,23 @@ using Fifo = AudioSampleFifo<fifoCapacity>;
 
 // The audio callback's block size. 512 frames at 48 kHz is a typical setting.
 constexpr std::size_t blockSize = 512;
+
+// Both producers below retry on a full ring rather than dropping, so
+// `droppedBlocks()` counts *rejected attempts that were then retried*, not lost
+// data. Nothing is lost -- `received == total` and `mismatches == 0` prove that
+// directly.
+//
+// So a rejection is backpressure working as designed, and its count is a
+// scheduling outcome: it varies with the machine, the load, and instrumentation.
+// Asserting zero asserted that the consumer always kept up, which was already
+// false on an ordinary build and wildly false under ThreadSanitizer.
+//
+// What is still worth catching is pathology -- a ring that effectively never
+// drains, where the producer spins thousands of times per block. This bound is
+// deliberately generous: it is a guard against that, not a performance target.
+// The observed value is reported either way, so a drift upward is visible
+// without being fatal.
+constexpr std::uint64_t maximumRejectionsPerBlock = 200;
 
 // Each sample carries its own index, so the consumer can assert both ordering
 // and exactly-once delivery from the values alone.
@@ -124,13 +142,16 @@ TEST_CASE("every accepted sample is delivered exactly once and in order", "[.loa
 
     producer.join();
 
+    const auto blocksPushed = totalSamples / blockSize;
+    const auto rejections = fifo.droppedBlocks();
+
     CHECK(received == totalSamples);
     CHECK(mismatches == 0);
-    CHECK(fifo.droppedBlocks() == 0);
+    CHECK(rejections < blocksPushed * maximumRejectionsPerBlock);
 
     report(
         "exactly-once: " + std::to_string(received) + " samples, " + std::to_string(mismatches) +
-        " mismatches");
+        " mismatches, " + std::to_string(rejections) + " rejected pushes retried");
 }
 
 TEST_CASE(
@@ -284,17 +305,24 @@ TEST_CASE("many simultaneous consumers each receive their own complete stream", 
         thread.join();
     }
 
+    constexpr auto blocksPerConsumer = samplesPerConsumer / blockSize;
+    std::uint64_t totalRejections = 0;
+
     for (std::size_t consumer = 0; consumer < consumerCount; ++consumer)
     {
+        const auto rejections = fifos[consumer]->droppedBlocks();
+        totalRejections += rejections;
+
         INFO("consumer " << consumer);
         CHECK(receivedCounts[consumer] == samplesPerConsumer);
         CHECK(mismatchCounts[consumer] == 0);
-        CHECK(fifos[consumer]->droppedBlocks() == 0);
+        CHECK(rejections < blocksPerConsumer * maximumRejectionsPerBlock);
     }
 
     report(
         "saturation: " + std::to_string(consumerCount) + " concurrent consumers, " +
-        std::to_string(consumerCount * samplesPerConsumer) + " samples total");
+        std::to_string(consumerCount * samplesPerConsumer) + " samples total, " +
+        std::to_string(totalRejections) + " rejected pushes retried");
 }
 
 TEST_CASE("a stalled consumer overflows without affecting the others", "[.load][fifo]")
@@ -357,9 +385,13 @@ TEST_CASE("a stalled consumer overflows without affecting the others", "[.load][
 
     CHECK(received == samples);
     CHECK(mismatches == 0);
-    CHECK(healthy.droppedBlocks() == 0);
+    // The healthy producer retries too, so this is the same bounded-backpressure
+    // check as the cases above rather than a claim that the ring never filled.
+    CHECK(healthy.droppedBlocks() < (samples / blockSize) * maximumRejectionsPerBlock);
 
-    // The stalled one overflowed, which is the documented behaviour.
+    // The stalled one overflowed, which is the documented behaviour. This one
+    // stays an exact assertion: it is the point of the test, not a scheduling
+    // outcome.
     CHECK(stalled.droppedBlocks() > 0);
 
     report(
