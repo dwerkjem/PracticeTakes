@@ -26,4 +26,4 @@
 ## 5. Close the alert
 
 - [x] 5.1 Confirm no exception-derived value reaches a response
-- [ ] 5.2 After merge, confirm CodeQL alert 8 resolves on the next scan of `main`
+- [x] 5.2 After merge, confirm CodeQL alert 8 resolves on the next scan of `main`

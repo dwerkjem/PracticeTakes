@@ -11,6 +11,11 @@ send was attempted and failed. These outcomes SHALL be distinguishable by the
 caller without inspecting logs. A single sentinel value SHALL NOT stand for more
 than one of them.
 
+A failed send SHALL be reported as a classification chosen from a fixed set,
+never as text originating from the caught exception. The provider's own message
+SHALL be written to the service log and SHALL NOT appear in any response body or
+stored record.
+
 #### Scenario: Nothing is queued
 - **WHEN** the dispatcher runs with valid configuration and an empty queue
 - **THEN** the result reports the `nothing_pending` outcome and zero reports sent
@@ -23,8 +28,15 @@ than one of them.
 
 #### Scenario: The provider rejects the send
 - **WHEN** the configured send fails
-- **THEN** the result reports the `send_failed` outcome and carries the failure
-  message, and the claimed reports and the reserved daily slot are both released
+- **THEN** the result reports the `send_failed` outcome and a failure reason
+  drawn from the fixed set, and the claimed reports and the reserved daily slot
+  are both released
+
+#### Scenario: The provider's message would identify internals
+- **WHEN** the failure carries a stack frame, a file path, or any other detail
+  of the service's implementation
+- **THEN** none of it appears in the returned result or in the stored attempt,
+  and the full value is written to the service log
 
 #### Scenario: The daily limit is already spent
 - **WHEN** the dispatcher runs after the configured number of emails have
@@ -67,7 +79,8 @@ The service SHALL expose an authenticated administrative route that reports
 whether delivery is configured, the problems if it is not, the number of queued
 reports and the age of the oldest, the emails sent for the current UTC day
 against the configured limit, and the most recent dispatch attempt with its
-outcome and time. The route SHALL NOT send email.
+outcome, its failure reason where it failed, and its time. The route SHALL NOT
+send email.
 
 #### Scenario: Status is read while delivery is misconfigured
 - **WHEN** an authorized administrator reads the status route and the sender
@@ -79,6 +92,12 @@ outcome and time. The route SHALL NOT send email.
 - **WHEN** an authorized administrator reads the status route after a dispatch
   has run
 - **THEN** the response reports that attempt's outcome and the time it completed
+
+#### Scenario: Status is read after a failed dispatch
+- **WHEN** an authorized administrator reads the status route after a send
+  failed
+- **THEN** the response reports the classified failure reason and no text
+  originating from the provider
 
 #### Scenario: An unauthenticated caller reads the status route
 - **WHEN** the status route is requested without an authorized administrator
