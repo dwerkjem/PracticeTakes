@@ -7,12 +7,12 @@
 
 ## 2. ASan and UBSan on pull requests
 
-- [ ] 2.1 CMake options for a sanitizer build tree; confirm ASan and TSan are mutually exclusive and rejected together
-- [ ] 2.2 Workflow job: configure with ASan+UBSan, build `PracticeTakesTests`, run the full suite
-- [ ] 2.3 Add `tools/sanitizers/lsan.supp` with a comment per entry; wire `LSAN_OPTIONS`
-- [ ] 2.4 Confirm the job fails on a deliberately introduced use-after-free, then remove it
-- [ ] 2.5 Confirm the job fails on deliberate signed overflow, then remove it
-- [ ] 2.6 Confirm no suppression covers a leak originating under `src/`
+- [x] 2.1 `PRACTICE_TAKES_SANITIZE` cache variable — a single-valued string, so ASan and TSan are mutually exclusive *structurally* rather than by a check. Guards verified rejecting an unknown value, sanitizer+coverage in one tree, and `realtime` under GCC
+- [x] 2.2 Workflow job: configure with ASan+UBSan, build `PracticeTakesTests`, run the full suite
+- [x] 2.3 Add `tools/sanitizers/lsan.supp` with a comment per entry; wire `LSAN_OPTIONS`
+- [x] 2.4 Confirmed: `heap-use-after-free`, exit 1. The first probe was constant-propagated away at `-O1` and reported success — reading through a `volatile` pointer defeats it
+- [x] 2.5 Confirm the job fails on deliberate signed overflow, then remove it
+- [x] 2.6 Confirmed: a deliberate 4096-byte leak from our own code fails despite the fontconfig suppression, and every frame in the real report is `libfontconfig`
 
 ## 3. TSan on a schedule and on pushes to main
 
