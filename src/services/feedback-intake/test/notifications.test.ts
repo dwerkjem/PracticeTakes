@@ -186,6 +186,56 @@ describe("feedback email batching", () => {
     errorLog.mockRestore();
   });
 
+  it("reports the provider's reason without its internals", async () => {
+    const database = createTestDatabase();
+    seedQueuedFeedback(database, "leaky", 1);
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const send = vi.fn(async (_message: unknown) => undefined).mockRejectedValueOnce(
+      new Error(
+        "550 5.7.1 domain not verified\n" +
+        "    at send (/opt/worker/src/notifications.ts:214:31)\n" +
+        "    at dispatch (/opt/worker/src/notifications.ts:118:18)",
+      ),
+    );
+
+    const result = await dispatch(database, environment(send), "2026-07-24T03:17:00Z");
+
+    expect(result.outcome).toBe("send_failed");
+    expect(result.error).toBe("550 5.7.1 domain not verified");
+    expect(result.error).not.toContain("notifications.ts");
+    expect(result.error).not.toContain("at send");
+    // The whole object still reaches the log, where the detail belongs.
+    expect(errorLog).toHaveBeenCalledOnce();
+    errorLog.mockRestore();
+  });
+
+  it("bounds a hostile provider message", async () => {
+    const database = createTestDatabase();
+    seedQueuedFeedback(database, "verbose", 1);
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const send = vi.fn(async (_message: unknown) => undefined)
+      .mockRejectedValueOnce(new Error("x".repeat(10_000)));
+
+    const result = await dispatch(database, environment(send), "2026-07-24T03:17:00Z");
+
+    expect(result.error).toHaveLength(200);
+    errorLog.mockRestore();
+  });
+
+  it("reports a thrown non-Error without crashing", async () => {
+    const database = createTestDatabase();
+    seedQueuedFeedback(database, "not-an-error", 1);
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const send = vi.fn(async (_message: unknown) => undefined)
+      .mockRejectedValueOnce("plain string rejection");
+
+    const result = await dispatch(database, environment(send), "2026-07-24T03:17:00Z");
+
+    expect(result.outcome).toBe("send_failed");
+    expect(result.error).toBe("plain string rejection");
+    errorLog.mockRestore();
+  });
+
   it("returns the reserved daily slot when a send fails", async () => {
     const database = createTestDatabase();
     seedQueuedFeedback(database, "undelivered", 1);

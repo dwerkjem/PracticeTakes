@@ -92,6 +92,7 @@ const maximumFeedbackPerEmail = 100;
 const staleClaimSeconds = 30 * 60;
 const maximumEmailAddressLength = 254;
 const maximumDashboardUrlLength = 2048;
+const maximumReportedErrorLength = 200;
 
 // Domains that can never be onboarded to Cloudflare Email Sending, so a sender
 // on one of them is a configuration mistake rather than a delivery failure
@@ -209,15 +210,20 @@ async function dispatch(
     return { ...empty, pending: 0 };
   }
 
+  // Formatting is done before the try, so only the send itself can produce the
+  // failure that gets reported. A TypeError raised in here would otherwise be
+  // reported to the caller as though the provider had rejected the message.
+  const message = {
+    from: configuration.from,
+    to: configuration.to,
+    subject: feedbackEmailSubject(reports),
+    text: feedbackEmailText(reports, configuration.dashboardUrl, notificationDay,
+                            reservation.sent_count, dailyLimit),
+  };
+
   let messageId: string | null = null;
   try {
-    const sendResult = await configuration.email.send({
-      from: configuration.from,
-      to: configuration.to,
-      subject: feedbackEmailSubject(reports),
-      text: feedbackEmailText(reports, configuration.dashboardUrl, notificationDay,
-                              reservation.sent_count, dailyLimit),
-    });
+    const sendResult = await configuration.email.send(message);
     messageId = sendResult?.messageId ?? null;
   } catch (error) {
     await releaseClaim(db, claimId);
@@ -228,7 +234,7 @@ async function dispatch(
       outcome: "send_failed",
       pending: pendingCount,
       remainingDailyEmails: dailyLimit - reservation.sent_count + 1,
-      error: error instanceof Error ? error.message : String(error),
+      error: reportableError(error),
     };
   }
 
@@ -341,6 +347,19 @@ async function recordDispatchAttempt(
     // change what the caller is told about it.
     console.error("Unable to record the feedback dispatch attempt", error);
   }
+}
+
+// The provider's reason for refusing is the useful half of a failure. A stack
+// frame, a file path, or a multi-line dump of internals is not, and the full
+// object is already on its way to console.error for whoever is tailing logs.
+function reportableError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  return raw
+    .split("\n", 1)[0]!
+    .replace(/(?:\/|[A-Za-z]:\\|file:\/\/)\S+/g, "[path]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maximumReportedErrorLength);
 }
 
 function feedbackEmailSubject(reports: PendingFeedback[]): string {
