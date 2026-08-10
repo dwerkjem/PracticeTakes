@@ -12,11 +12,15 @@ Zero is also what it returns when the queue is empty, when the daily limit is
 reached, and when the send throws. All four are silent, indistinguishable, and
 unobservable — the only trace is a `console.error` that nobody is watching.
 
-The production configuration is in exactly that state. The deployed
-`FEEDBACK_NOTIFICATION_FROM` comes from `.env`, which still holds the example
-value `…@example.com`. Feedback has been accumulating in D1 and queueing for
-email that was never going to arrive. There is no endpoint, no dashboard field,
-and no log a human reads that would have revealed this at any point.
+The production configuration is in exactly that state, and worse than it
+looked. The deployed `FEEDBACK_NOTIFICATION_FROM` came from `.env`, which still
+held the example value `…@example.com` — and beyond `SUBMISSION_SIGNING_KEY`,
+none of the Worker's secrets had ever been uploaded, because
+`configure-cloudflare-access.sh` aborted on a bad path every time it was run.
+The database held zero submissions, so nothing was lost; had a single user
+submitted feedback, it would have queued for email that could not be sent.
+There was no endpoint, no dashboard field, and no log a human reads that would
+have revealed any of this.
 
 Activation therefore needs two things that do not exist: a way to ask the
 service what it thinks its email configuration is, and a way to make it try
@@ -110,11 +114,18 @@ silently again.
 - `docs/development/operations/EMAIL_DISPATCH.md` (new),
   `docs/development/operations/FEEDBACK.md`,
   `docs/development/README.md`, `src/services/feedback-intake/README.md`.
-- **Cloudflare — the part this repository cannot do.** The account currently
-  has no zone, so there is no domain to send from; `*.workers.dev` cannot be a
-  sender. A domain must be added to the account and onboarded to Email
-  Sending before any of the above delivers mail. The runbook covers it and the
-  status endpoint confirms it, but the change lands unactivated until that is
-  done.
+- **Cloudflare — done during this change.** `derekrneilson.org` was already on
+  the account with Email Sending enabled and SPF, DKIM, and DMARC resolving;
+  migration 0008 was applied to the remote D1, the six Worker secrets were
+  uploaded, the Access application was created, and the Worker was deployed. A
+  real report was submitted through the public intake and dispatched through
+  `POST /v1/admin/notifications/dispatch`, which returned `sent` with a
+  provider message ID.
+- **Two setup-script defects found by running it.** It resolved `wrangler` only
+  at the per-package path, which npm workspaces do not create, so it aborted
+  with "dependencies are not installed" every time it had ever been run — the
+  reason no secret but `SUBMISSION_SIGNING_KEY` existed. And `wrangler secret
+  put` would have picked up the D1-scoped token from the auto-loaded `.env`
+  instead of the setup token.
 - **Not affected:** the C++ application, the public intake routes, the feedback
   wire contract, and the content of the email itself.

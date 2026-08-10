@@ -6,7 +6,12 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo_dir=$(cd -- "${script_dir}/../../.." && pwd)
 service_dir=${repo_dir}/src/services/feedback-intake
 environment_file=${service_dir}/.env
+# npm workspaces hoist wrangler to the workspace root, so the per-package path
+# only exists when the package was installed on its own. Check both.
 wrangler=${service_dir}/node_modules/wrangler/bin/wrangler.js
+if [[ ! -f ${wrangler} ]]; then
+    wrangler=${repo_dir}/src/services/node_modules/wrangler/bin/wrangler.js
+fi
 application_name="Practice Takes feedback dashboard"
 api_base=https://api.cloudflare.com/client/v4
 
@@ -234,10 +239,13 @@ fi
 put_worker_secret() {
     local name=$1
     local value=$2
+    # --env-file /dev/null keeps Wrangler from auto-loading the service's .env,
+    # whose CLOUDFLARE_API_TOKEN is scoped for D1 and cannot write secrets. The
+    # setup token exported above is the one that must be used here.
     printf '%s' "${value}" |
         (
             cd "${service_dir}"
-            node "${wrangler}" secret put "${name}"
+            node "${wrangler}" secret put "${name}" --env-file /dev/null
         )
 }
 

@@ -45,10 +45,10 @@
 
 ## 7. Activation — needs the Cloudflare account
 
-- [ ] 7.1 Add a domain to the account and onboard it to Email Sending: `npx wrangler email sending enable <domain>`, then `npx wrangler email sending dns get <domain>` and confirm SPF and DKIM resolve
-- [ ] 7.2 Prove the provider independently of the service: `npx wrangler email sending send --from <sender> --to <administrator> --subject 'Practice Takes dispatcher check' --text …`
-- [ ] 7.3 Apply migration 0008 remotely: `npm run db:migrate:remote`
-- [ ] 7.4 Set the real `FEEDBACK_NOTIFICATION_FROM` in `.env`, re-encrypt, and re-run `tools/scripts/feedback/configure-cloudflare-access.sh`
-- [ ] 7.5 Deploy the Worker
-- [ ] 7.6 `GET /v1/admin/notifications` and confirm it reports delivery as configured with no problems
-- [ ] 7.7 `POST /v1/admin/notifications/dispatch` and confirm the outcome, the arriving email, and that the queue drained
+- [x] 7.1 Add a domain to the account and onboard it to Email Sending: `npx wrangler email sending enable <domain>`, then `npx wrangler email sending dns get <domain>` and confirm SPF and DKIM resolve
+- [x] 7.2 Prove the provider independently of the service: `npx wrangler email sending send --from <sender> --to <administrator> --subject 'Practice Takes dispatcher check' --text …`
+- [x] 7.3 Apply migration 0008 remotely: `npm run db:migrate:remote`
+- [x] 7.4 Set the real `FEEDBACK_NOTIFICATION_FROM` in `.env`, re-encrypt, and re-run `tools/scripts/feedback/configure-cloudflare-access.sh`
+- [x] 7.5 Deploy the Worker
+- [x] 7.6 `GET /v1/admin/notifications` and confirm it reports delivery as configured with no problems
+- [x] 7.7 `POST /v1/admin/notifications/dispatch` and confirm the outcome, the arriving email, and that the queue drained
