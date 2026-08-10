@@ -82,20 +82,38 @@ pre-commit install
 symlink. `nix profile add` is an alternative, but fails on some profiles with a
 pre-existing `bin/c++` conflict between `gcc-wrapper` and `home-manager-path`.
 
-Point SOPS at the derived identity, without ever writing it to disk:
+Then synchronize the secrets:
 
 ```bash
-export SOPS_AGE_KEY_CMD='ssh-to-age -private-key -stdinpass -i ~/.ssh/id_ed25519'
+./tools/scripts/secrets/sync-secrets.sh            # both directions
+./tools/scripts/secrets/sync-secrets.sh encrypt    # plaintext -> mirrors
+./tools/scripts/secrets/sync-secrets.sh decrypt    # mirrors -> plaintext
 ```
 
-Do not bake the passphrase into a shell profile or an environment variable.
-That restores exactly the exposure the passphrase exists to remove.
+It asks for the SSH passphrase once, derives the identity to tmpfs, points SOPS
+at it for the run, and shreds it on the way out — including on failure and on
+Ctrl-C. Arguments after the subcommand pass through to `secrets_manager.py`, so
+`sync --prefer local` works.
 
-Then restore the plaintext:
+### Why not `SOPS_AGE_KEY_CMD`
 
-```bash
-python3 tools/scripts/secrets/secrets_manager.py decrypt
+Because it cannot work here, and it fails in a way that names none of this:
+
+```text
+failed to execute command ssh-to-age -private-key -stdinpass
+  -i ~/.ssh/id_ed25519: exit status 1
 ```
+
+`-stdinpass` means the passphrase arrives on standard input. SOPS runs the
+command to capture its stdout and gives the child no terminal to read from, so
+`ssh-to-age` sees an empty passphrase and exits 1. Nothing in the error says
+"you were not asked for your passphrase", and keystrokes typed at the apparent
+prompt go nowhere.
+
+Deriving the identity and using it therefore have to be separate steps, which is
+what the script does. Do not bake the passphrase into a shell profile or an
+environment variable to get around this — that restores exactly the exposure the
+passphrase exists to remove.
 
 ## Recovering on a machine that has nothing
 
