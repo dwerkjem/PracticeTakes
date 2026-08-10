@@ -109,6 +109,26 @@ Two findings incidental to the question, both invisible to GCC:
 
 Verifying that `-fsanitize=realtime` *compiles* was the first version of that probe, and it was not enough: a flag that parses proves nothing about detection. The probe that matters is the one that fails when the sanitizer is inert.
 
+### 8. Blocked — the concurrency tests assert throughput as if it were correctness
+
+Found while wiring section 3, and it changes what section 3 can mean.
+
+`AudioSampleFifoLoadTests.cpp` asserts `droppedBlocks() == 0` at lines 129 and 292. Dropping is not a defect: `AudioSampleFifo.h:12-13` documents that "when a complete callback block does not fit, the newest block is dropped and the already-buffered samples remain in order", and `push` returns `false` and counts it. So the assertion is not checking an invariant — it is checking that the consumer thread kept up, which depends on the machine, the load, and the instrumentation.
+
+Three measurements:
+
+| Build | Result |
+| --- | --- |
+| Ordinary GCC | **4 of 5 pass** — "many simultaneous consumers" already fails, consumer 7 dropped 1 block |
+| ThreadSanitizer | 3 of 5 pass — 2 cases fail, thousands of drops |
+| Either | **0 mismatches, no race, exactly-once and ordering hold throughout** |
+
+The correctness properties pass everywhere. Only the throughput expectation fails, and it fails *without* instrumentation too.
+
+Compounding it: the `[.load]` cases carry a leading-dot tag, so `catch_discover_tests` does not register them and `ctest` never runs them. The 464 tests that pass have never included these five. #115's premise was that nothing *observes* the concurrency tests; the truth is that nothing *runs* them either, outside a manual invocation.
+
+Wiring the nightly as designed would therefore open a `priority:p1` issue on its first run, for a test-design problem rather than a race — and a leg that is red from day one is a leg that gets ignored, which is the failure mode this change exists to remove.
+
 ## Risks / Trade-offs
 
 - **TSan on a schedule means races can merge.** Accepted, and mitigated by the push-to-`main` leg and the auto-opened issue. The alternative costs every pull request a concurrency soak.

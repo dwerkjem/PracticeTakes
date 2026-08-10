@@ -1,0 +1,121 @@
+# ThreadSanitizer over the concurrency suite.
+#
+# Not on pull requests: TSan runs 5-15x slower and the [.load] cases are a soak,
+# which is the wrong thing to put in the budget of every review. It runs nightly
+# and on every push to main -- nightly so it runs at all, and on main so a
+# failure is attributable to one commit instead of to a week of them.
+#
+# A scheduled check nobody reads is not a check, so a failure opens an issue.
+# benchmarks.yml and secret-scan.yml still have that gap; that is #159.
+name: Sanitizers (scheduled)
+
+on:
+  schedule:
+    # 04:20 UTC daily, off the hour to avoid the GitHub-wide cron stampede.
+    - cron: "20 4 * * *"
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "!src/services/**"
+      - "CMakeLists.txt"
+      - "tools/cmake/**"
+      - ".github/workflows/sanitizers-scheduled.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: sanitizers-scheduled-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  thread:
+    name: Thread
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install build dependencies
+        run: |
+          bash tools/scripts/build/check-linux-build-dependencies.sh --install
+          sudo apt-get install --yes ninja-build
+
+      - name: Configure
+        id: configure
+        run: |
+          cmake -S . -B build-tsan -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON \
+            -DPRACTICE_TAKES_SANITIZE=thread
+
+      - name: Build
+        id: build
+        run: cmake --build build-tsan --target PracticeTakesTests --parallel
+
+      # [.load] only. The rest of the suite is single-threaded, so TSan would
+      # spend its slowdown observing code that cannot race.
+      - name: Run the concurrency suite
+        id: test
+        run: ./build-tsan/PracticeTakesTests "[.load]" --order lex
+        env:
+          # halt_on_error keeps the first race as the one a reader sees; second
+          # deadline guards against instrumentation turning a soak into a hang.
+          TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
+          PRACTICE_TAKES_SOAK_MILLISECONDS: "1500"
+
+      # A red run that only exists in the Actions tab is a red run nobody sees.
+      # One issue per outstanding failure, commented on rather than duplicated,
+      # so a week of nightly failures does not become a week of issues.
+      - name: Report the failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "ThreadSanitizer: scheduled run is failing"
+        run: |
+          if [ "${{ steps.configure.outcome }}" = "failure" ]; then
+            failed="Configure"
+          elif [ "${{ steps.build.outcome }}" = "failure" ]; then
+            failed="Build"
+          elif [ "${{ steps.test.outcome }}" = "failure" ]; then
+            failed="Run the concurrency suite"
+          else
+            failed="unknown — see the run"
+          fi
+
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          # Written to a file rather than a shell variable: an indented heredoc
+          # keeps its leading spaces, and GitHub renders indented markdown as a
+          # code block.
+          {
+            printf 'Workflow `%s` failed at step **%s**.\n\n' "${GITHUB_WORKFLOW}" "${failed}"
+            printf -- '- Run: %s\n' "${run_url}"
+            printf -- '- Commit: `%s`\n' "${GITHUB_SHA}"
+            printf -- '- Trigger: `%s`\n\n' "${GITHUB_EVENT_NAME}"
+            printf 'If the failing step is *Run the concurrency suite*, ThreadSanitizer\n'
+            printf 'has reported a data race and names both accesses. Treat a race in\n'
+            printf '`AudioSampleFifo` as urgent: it is on the audio path, and the ordinary\n'
+            printf 'test suite cannot see it.\n\n'
+            printf 'This issue is reused for later failures rather than duplicated.\n'
+          } > /tmp/failure-body.md
+
+          # $TITLE is expanded by the shell before jq sees it, so jq receives a
+          # string literal rather than an undefined jq variable.
+          number=$(gh issue list --state open --limit 100 --json number,title \
+            --jq "map(select(.title == \"${TITLE}\")) | .[0].number // empty")
+
+          if [ -n "${number}" ]; then
+            gh issue comment "${number}" --body-file /tmp/failure-body.md
+            echo "Commented on existing issue #${number}"
+          else
+            gh issue create --title "${TITLE}" \
+              --label "area:testing,area:audio,type:bug,priority:p1" \
+              --body-file /tmp/failure-body.md
+          fi
