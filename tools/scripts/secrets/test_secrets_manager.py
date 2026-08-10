@@ -5,12 +5,14 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
+import json
 from pathlib import Path
 import re
 import subprocess
 import tempfile
 from typing import Iterator
 import unittest
+import unittest.mock
 
 
 MODULE_PATH = Path(__file__).with_name("secrets_manager.py")
@@ -228,6 +230,33 @@ class CommitGateTests(unittest.TestCase):
 
             self.assertEqual(self._staged(root), [])
             self.assertFalse((root / ".secrets").exists())
+
+    def test_sync_does_not_stage_ignored_mirrors(self) -> None:
+        """`encrypt` stopped staging mirrors; `sync` kept doing it and failed.
+
+        `git add` on a path inside an ignored `.secrets/` exits non-zero, and the
+        raise happened before `save_state`, so the run left mirrors on disk with
+        no sync baseline recorded for them.
+        """
+        with temporary_repository() as root:
+            self._repository(root)
+            (root / ".gitignore").write_text("/.secrets/\n", encoding="utf-8")
+            (root / ".env").write_text("TOKEN=live-value\n", encoding="utf-8")
+
+            with unittest.mock.patch.object(
+                secrets_manager, "encrypt_bytes",
+                lambda _root, _relative, plaintext: b"ENC:" + plaintext,
+            ):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    secrets_manager.sync_command(root, prefer=None)
+
+            self.assertEqual(self._staged(root), [])
+            self.assertTrue((root / ".secrets" / ".env.sops").is_file())
+            # save_state runs only if nothing raised before it.
+            state = json.loads(
+                secrets_manager.state_path(root).read_text(encoding="utf-8")
+            )
+            self.assertIn(".env", state)
 
     def test_a_staged_non_secret_is_left_alone(self) -> None:
         with temporary_repository() as root:

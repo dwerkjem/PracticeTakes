@@ -344,6 +344,7 @@ def decrypt_bytes(root: Path, mirror: Path) -> bytes:
 
 
 def stage(root: Path, relative_paths: Iterable[str]) -> None:
+    """Stage tracked files. Never call this for a mirror under .secrets/."""
     paths = sorted(set(relative_paths))
     if paths:
         run(["git", "add", "--", *paths], cwd=root)
@@ -554,13 +555,17 @@ def clear_sync_conflict(root: Path, source_relative: str) -> None:
 
 
 def sync_command(root: Path, *, prefer: str | None) -> int:
-    """Synchronize in both directions using local last-synced hashes."""
+    """Synchronize in both directions using local last-synced hashes.
+
+    Mirrors are git-ignored, so nothing is staged, for the same reason
+    ``encrypt_command`` does not stage: ``git add`` on an ignored path fails and
+    advises ``-f``, which is exactly the wrong thing to do here.
+    """
     rules = read_patterns(root)
     sync_git_exclude(root, rules)
     plaintext = discover_plaintext(root, rules)
     mirrors = discover_mirrors(root)
     state = load_state(root)
-    staged: list[str] = []
     conflicts: list[str] = []
 
     for relative in sorted(set(plaintext) | set(mirrors)):
@@ -582,20 +587,17 @@ def sync_command(root: Path, *, prefer: str | None) -> int:
             state[relative] = encrypted_hash
         elif local_data is not None and encrypted_data is None:
             write_mirror(root, relative, local_data)
-            staged.append(mirror_relative_path(relative))
             state[relative] = local_hash
         elif local_hash == encrypted_hash:
             state[relative] = local_hash
         elif prefer == "local":
             write_mirror(root, relative, local_data)
-            staged.append(mirror_relative_path(relative))
             state[relative] = local_hash
         elif prefer == "encrypted":
             atomic_write(root / relative, encrypted_data, private=True)
             state[relative] = encrypted_hash
         elif base_hash is not None and encrypted_hash == base_hash:
             write_mirror(root, relative, local_data)
-            staged.append(mirror_relative_path(relative))
             state[relative] = local_hash
         elif base_hash is not None and local_hash == base_hash:
             atomic_write(root / relative, encrypted_data, private=True)
@@ -616,7 +618,6 @@ def sync_command(root: Path, *, prefer: str | None) -> int:
             "--prefer-local or --prefer-encrypted."
         )
 
-    stage(root, staged)
     save_state(root, state)
     print(f"Synchronized {len(set(plaintext) | set(mirrors))} secret(s).")
     return 0
@@ -648,7 +649,7 @@ def finish_resolution(root: Path, mirror_relative: str, plaintext: bytes) -> Non
     atomic_write(root / source_relative, plaintext, private=True)
     encrypted = encrypt_bytes(root, mirror_relative, plaintext)
     atomic_write(root / mirror_relative, encrypted)
-    stage(root, [mirror_relative])
+    # The mirror is git-ignored; staging it fails and advises -f.
     state = load_state(root)
     state[source_relative] = sha256(plaintext)
     save_state(root, state)
