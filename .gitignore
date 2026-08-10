@@ -237,10 +237,9 @@ env.bak/
 venv.bak/
 
 # SOPS plaintext is selected by tools/secret-patterns and also copied into each
-# clone's .git/info/exclude by tools/scripts/secrets/secrets_manager.py. Encrypted
-# mirrors below .secrets/ are intentionally tracked.
-!.secrets/
-!.secrets/**
+# clone's .git/info/exclude by tools/scripts/secrets/secrets_manager.py. The
+# encrypted mirrors below .secrets/ are ignored too, by the /.secrets/ rule
+# further down — a published ciphertext cannot be retracted.
 
 # A directory literally named secrets/ at the repository root behaves the way a
 # contributor expects: everything below it stays local and is mirrored
