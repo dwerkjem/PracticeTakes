@@ -120,6 +120,42 @@ jobs:
       # This job means nothing without those cases: RTSan observes what runs, so
       # if the harness stops invoking the callback the check silently becomes a
       # no-op that reports success.
+      # TEMPORARY DIAGNOSTIC. The Realtime job passed with a deliberate
+      # allocation in the callback, so either the attribute is not taking effect
+      # or RTSan is not checking it. These two steps tell which.
+      - name: Did the compiler instrument the callback?
+        run: |
+          set -x
+          object=$(find build-rtsan -name 'AudioInputService.cpp.o' | head -1)
+          echo "object: ${object}"
+          nm -C "${object}" | grep -i rtsan || echo "NO rtsan SYMBOLS -- attribute had no effect"
+
+      - name: Which declaration shape does RTSan actually check?
+        run: |
+          set -x
+          cat > /tmp/shapes.cpp <<'PROBE'
+          #include <vector>
+          struct Base { virtual void go(int) = 0; virtual ~Base() = default; };
+          struct Override : Base {
+              void go(int n) noexcept [[clang::nonblocking]] override {
+                  std::vector<float> a(static_cast<std::size_t>(n) + 1);
+                  volatile float sink = a[0]; (void) sink;
+              }
+          };
+          void freeFunction(int n) [[clang::nonblocking]] {
+              std::vector<float> a(static_cast<std::size_t>(n) + 1);
+              volatile float sink = a[0]; (void) sink;
+          }
+          int main(int argc, char**) {
+              if (argc > 1) { Override o; o.go(4); } else { freeFunction(4); }
+          }
+          PROBE
+          clang++-20 -std=c++20 -O1 -g -fsanitize=realtime /tmp/shapes.cpp -o /tmp/shapes
+          echo "--- free function ---"
+          /tmp/shapes         && echo "NOT DETECTED" || echo "detected"
+          echo "--- noexcept virtual override ---"
+          /tmp/shapes extra   && echo "NOT DETECTED" || echo "detected"
+
       - name: Verify the audio callback is non-blocking
         run: |
           set -x
