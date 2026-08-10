@@ -6,7 +6,12 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo_dir=$(cd -- "${script_dir}/../../.." && pwd)
 service_dir=${repo_dir}/src/services/feedback-intake
 environment_file=${service_dir}/.env
+# npm workspaces hoist wrangler to the workspace root, so the per-package path
+# only exists when the package was installed on its own. Check both.
 wrangler=${service_dir}/node_modules/wrangler/bin/wrangler.js
+if [[ ! -f ${wrangler} ]]; then
+    wrangler=${repo_dir}/src/services/node_modules/wrangler/bin/wrangler.js
+fi
 application_name="Practice Takes feedback dashboard"
 api_base=https://api.cloudflare.com/client/v4
 
@@ -118,6 +123,23 @@ if [[ ! ${FEEDBACK_NOTIFICATION_FROM} =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:spa
     exit 2
 fi
 
+# A sender on one of these can never be onboarded to Cloudflare Email Sending,
+# so accepting it deploys a delivery path that provably cannot deliver — which
+# is how the template value reached production unnoticed once already.
+sender_domain=${FEEDBACK_NOTIFICATION_FROM##*@}
+sender_domain=${sender_domain,,}
+case ${sender_domain} in
+    example.com | example.org | example.net | example.edu | localhost | \
+    *.example.com | *.example.org | *.example.net | *.example.edu | \
+    *.invalid | *.test | *.local | *.localhost | *.example | *.workers.dev)
+        echo "Error: FEEDBACK_NOTIFICATION_FROM uses ${sender_domain}, which cannot" >&2
+        echo "send mail. Use an address on a domain onboarded to Cloudflare Email" >&2
+        echo "Sending: npx wrangler email sending enable <domain>" >&2
+        echo "See docs/development/operations/EMAIL_DISPATCH.md." >&2
+        exit 2
+        ;;
+esac
+
 api_request() {
     local method=$1
     local path=$2
@@ -217,10 +239,13 @@ fi
 put_worker_secret() {
     local name=$1
     local value=$2
+    # --env-file /dev/null keeps Wrangler from auto-loading the service's .env,
+    # whose CLOUDFLARE_API_TOKEN is scoped for D1 and cannot write secrets. The
+    # setup token exported above is the one that must be used here.
     printf '%s' "${value}" |
         (
             cd "${service_dir}"
-            node "${wrangler}" secret put "${name}"
+            node "${wrangler}" secret put "${name}" --env-file /dev/null
         )
 }
 

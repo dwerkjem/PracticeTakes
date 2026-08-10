@@ -3,9 +3,15 @@ import adminStyles from "./admin.css";
 import adminScript from "./dashboard.js";
 import auditPageTemplate from "./audit.html";
 import auditScript from "./audit.js";
+import {
+  notificationStatus,
+  sendPendingFeedbackBatch,
+  type DispatchResult,
+  type NotificationEnv,
+} from "./notifications";
 import { operationalReport, retentionPolicy, runRetention } from "./operations";
 
-export interface AdminEnv {
+export interface AdminEnv extends NotificationEnv {
   FEEDBACK_DB: D1Database;
   RESOLVED_RETENTION_DAYS?: string;
   DUPLICATE_RETENTION_DAYS?: string;
@@ -81,6 +87,12 @@ export async function handleAdminRequest(
   if (url.pathname === "/v1/admin/operations" && request.method === "GET") {
     return jsonResponse(200, { operations: await operationalReport(env.FEEDBACK_DB) });
   }
+  if (url.pathname === "/v1/admin/notifications" && request.method === "GET") {
+    return jsonResponse(200, { notifications: await notificationStatus(env.FEEDBACK_DB, env) });
+  }
+  if (url.pathname === "/v1/admin/notifications/dispatch" && request.method === "POST") {
+    return dispatchNotifications(env, user);
+  }
   if (url.pathname === "/v1/admin/maintenance/retention" && request.method === "POST") {
     const result = await runRetention(env.FEEDBACK_DB, retentionPolicy(env), user);
     return jsonResponse(200, { retention: result });
@@ -108,6 +120,33 @@ export async function handleAdminRequest(
     return deleteSubmission(match[1], env.FEEDBACK_DB, user);
   }
   return jsonResponse(404, { error: { code: "not_found", message: "Administrative route not found." } });
+}
+
+// The manual dispatch is the scheduled dispatch with a different actor. A
+// trigger that took its own path would be proving something other than the
+// thing that runs on the cron.
+async function dispatchNotifications(env: AdminEnv, user: string): Promise<Response> {
+  const result = await sendPendingFeedbackBatch(env.FEEDBACK_DB, env, user);
+  const failure = dispatchFailure(result);
+  return failure
+    ? jsonResponse(503, { dispatch: result, error: failure })
+    : jsonResponse(200, { dispatch: result });
+}
+
+function dispatchFailure(result: DispatchResult): { code: string; message: string } | null {
+  if (result.outcome === "not_configured") {
+    return {
+      code: "notifications_not_configured",
+      message: `Feedback email delivery is not configured: ${result.problems.join(", ")}.`,
+    };
+  }
+  if (result.outcome === "send_failed") {
+    return {
+      code: "notification_send_failed",
+      message: result.error ?? "The feedback email could not be sent.",
+    };
+  }
+  return null;
 }
 
 async function listSubmissions(url: URL, db: D1Database): Promise<Response> {

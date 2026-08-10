@@ -6,24 +6,10 @@
 #include <cmath>
 #include <limits>
 
-namespace
-{
-constexpr double immediatePitchJumpSemitones = 5.0;
-constexpr double matchingJumpToleranceSemitones = 1.5;
-constexpr int pitchJumpConfirmationFrames = 4;
-
-constexpr std::array<const char*, 12> noteNames{
-    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-
-[[nodiscard]] juce::String noteNameForMidi(int midiNote)
-{
-    const auto noteIndex = ((midiNote % 12) + 12) % 12;
-    const auto octave = (midiNote / 12) - 1;
-
-    return juce::String(noteNames[static_cast<std::size_t>(noteIndex)]) + juce::String(octave);
-}
-
-} // namespace
+// The thresholds that decide a glide from a misdetection, the smoothing, and
+// the note lock all live in PitchTracker now. noteNameForMidi comes from the
+// same header, so this file and TunerDrawing.cpp cannot disagree about the name
+// of a note -- they held separate identical copies before.
 
 //==============================================================================
 TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService)
@@ -397,154 +383,42 @@ void TunerComponent::timerCallback()
 
     const auto analysis = pitchDetector.detect(analysisBuffer, currentSampleRate.load());
     inputLevel = analysis.inputLevel;
-    if (analysis.frequency > 0.0)
-    {
-        handleDetectedPitch(analysis.frequency);
-    }
-    else
-    {
-        handleMissingPitch();
-    }
+
+    const auto update =
+        analysis.frequency > 0.0 ? pitchTracker.detected(analysis.frequency, trackerSettings())
+                                 : pitchTracker.missing(trackerSettings());
+    applyTrackerUpdate(update);
 
     repaint();
 }
 
-void TunerComponent::handleDetectedPitch(double frequency)
+PitchTracker::Settings TunerComponent::trackerSettings() const
 {
-    if (!isConfirmedPitch(frequency))
-    {
-        // Do not let a suspected harmonic alter the smoothing history or draw
-        // a line to it in the graph. A real large interval will be admitted
-        // after it remains stable for a few consecutive analysis frames.
-        addHistoryPoint(std::numeric_limits<double>::quiet_NaN());
-        return;
-    }
-
-    framesWithoutPitch = 0;
-
-    const auto stableFrequency = smoothFrequency(frequency);
-    updateDisplayedNote(stableFrequency);
-    addHistoryPoint(smoothedMidiNote);
-    hasSignal = true;
+    // Read straight off the sliders each frame, so a mid-note adjustment takes
+    // effect immediately rather than at the next note.
+    return {
+        easingSlider.getValue(),
+        averagingSlider.getValue(),
+        thresholdSlider.getValue(),
+        dropoutSlider.getValue(),
+    };
 }
 
-bool TunerComponent::isConfirmedPitch(double frequency)
+void TunerComponent::applyTrackerUpdate(const PitchTracker::Update& update)
 {
-    const auto midiPitch = frequencyToMidi(frequency);
-    if (std::abs(smoothedMidiNote) <= std::numeric_limits<double>::epsilon() ||
-        std::abs(midiPitch - smoothedMidiNote) <= immediatePitchJumpSemitones)
-    {
-        pendingJumpFrames = 0;
-        pendingJumpMidiNote = 0.0;
-        return true;
-    }
+    hasSignal = update.hasSignal;
+    displayedFrequency = update.displayedFrequency;
+    displayedCents = update.displayedCents;
+    lockedMidiNote = update.displayedMidiNote;
+    hasLockedMidiNote = update.hasDisplayedNote;
+    displayedNote = update.hasDisplayedNote
+                        ? juce::String(noteNameForMidi(update.displayedMidiNote))
+                        : juce::String("--");
 
-    if (pendingJumpFrames == 0 ||
-        std::abs(midiPitch - pendingJumpMidiNote) > matchingJumpToleranceSemitones)
-    {
-        pendingJumpMidiNote = midiPitch;
-        pendingJumpFrames = 1;
-        return false;
-    }
-
-    // Follow a genuine glide while requiring all confirming frames to remain
-    // in the same small pitch neighbourhood.
-    pendingJumpMidiNote +=
-        (midiPitch - pendingJumpMidiNote) / static_cast<double>(pendingJumpFrames + 1);
-    ++pendingJumpFrames;
-
-    if (pendingJumpFrames < pitchJumpConfirmationFrames)
-    {
-        return false;
-    }
-
-    // Begin a fresh smoothing segment at the confirmed note. Otherwise the
-    // old pitch would keep making the newly accepted note look like a jump.
-    smoothedMidiNote = midiPitch;
-    recentPitchCount = 0;
-    recentPitchWriteIndex = 0;
-    pendingJumpFrames = 0;
-    pendingJumpMidiNote = 0.0;
-    return true;
-}
-
-void TunerComponent::handleMissingPitch()
-{
-    pendingJumpFrames = 0;
-    pendingJumpMidiNote = 0.0;
-    ++framesWithoutPitch;
-    addHistoryPoint(std::numeric_limits<double>::quiet_NaN());
-
-    if (framesWithoutPitch >= static_cast<int>(dropoutSlider.getValue()))
-    {
-        resetPitchTracking();
-    }
-}
-
-double TunerComponent::smoothFrequency(double frequency)
-{
-    const auto midiPitch = frequencyToMidi(frequency);
-
-    recentMidiPitches[static_cast<std::size_t>(recentPitchWriteIndex)] = midiPitch;
-    recentPitchWriteIndex = (recentPitchWriteIndex + 1) % maximumAverageWindow;
-    recentPitchCount = std::min(recentPitchCount + 1, maximumAverageWindow);
-
-    const auto averagedMidiPitch = averageRecentMidiPitches();
-    const auto easing = easingSlider.getValue();
-
-    smoothedMidiNote = std::abs(smoothedMidiNote) <= std::numeric_limits<double>::epsilon()
-                           ? averagedMidiPitch
-                           : smoothedMidiNote + easing * (averagedMidiPitch - smoothedMidiNote);
-
-    return midiToFrequency(smoothedMidiNote);
-}
-
-double TunerComponent::averageRecentMidiPitches() const
-{
-    const auto requestedWindow = static_cast<int>(averagingSlider.getValue());
-    const auto pitchesToAverage = std::min(requestedWindow, recentPitchCount);
-
-    double sum = 0.0;
-    for (int offset = 0; offset < pitchesToAverage; ++offset)
-    {
-        const auto index =
-            (recentPitchWriteIndex - 1 - offset + maximumAverageWindow) % maximumAverageWindow;
-        sum += recentMidiPitches[static_cast<std::size_t>(index)];
-    }
-
-    return sum / static_cast<double>(std::max(1, pitchesToAverage));
-}
-
-double TunerComponent::frequencyToMidi(double frequency)
-{
-    return 69.0 + 12.0 * std::log2(frequency / referenceFrequencyHz);
-}
-
-double TunerComponent::midiToFrequency(double midiPitch)
-{
-    return referenceFrequencyHz * std::pow(2.0, (midiPitch - 69.0) / 12.0);
-}
-
-void TunerComponent::updateDisplayedNote(double frequency)
-{
-    const auto midiPitch = frequencyToMidi(frequency);
-    const auto nearestMidiNote = static_cast<int>(std::round(midiPitch));
-
-    if (!hasLockedMidiNote)
-    {
-        lockedMidiNote = nearestMidiNote;
-        hasLockedMidiNote = true;
-    }
-    else if (std::abs(midiPitch - static_cast<double>(lockedMidiNote)) > thresholdSlider.getValue())
-    {
-        // Keep the current note label until the pitch moves far enough away.
-        // This prevents the display from rapidly switching near a boundary.
-        lockedMidiNote = nearestMidiNote;
-    }
-
-    displayedNote = noteNameForMidi(lockedMidiNote);
-    displayedFrequency = frequency;
-    displayedCents = 100.0 * (midiPitch - static_cast<double>(lockedMidiNote));
+    // Every frame contributes a point. A NaN is a deliberate gap -- silence, or
+    // a reading rejected as a suspected harmonic -- and the graph draws a break
+    // rather than a line across it.
+    addHistoryPoint(update.historyMidiNote);
 }
 
 void TunerComponent::addHistoryPoint(double midiPitch)
@@ -564,13 +438,11 @@ void TunerComponent::addHistoryPoint(double midiPitch)
 
 void TunerComponent::resetPitchTracking()
 {
-    recentMidiPitches.fill(0.0);
-    recentPitchCount = 0;
-    recentPitchWriteIndex = 0;
-    smoothedMidiNote = 0.0;
-    framesWithoutPitch = 0;
-    pendingJumpFrames = 0;
-    pendingJumpMidiNote = 0.0;
+    // Two resets that used to be one. The tracker forgets what it has heard;
+    // the component clears what it is showing. They were entangled before, so
+    // neither could be exercised without the other.
+    pitchTracker.reset();
+
     hasLockedMidiNote = false;
     hasSignal = false;
     displayedFrequency = 0.0;

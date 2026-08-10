@@ -19,8 +19,12 @@ repos:
         stages:
           - pre-commit
           - pre-merge-commit
+      # Encrypted mirrors are no longer committed, so there is nothing left for
+      # this hook to stage. What remains is the half that prevents accidents:
+      # keeping plaintext secrets out of the index. Refreshing the mirrors is
+      # the `encrypt` command, run deliberately rather than on every commit.
       - id: sops-secrets
-        name: Encrypt and stage configured secrets with SOPS
+        name: Keep plaintext secrets out of the Git index
         entry: python3 tools/scripts/secrets/secrets_manager.py pre-commit
         language: system
         pass_filenames: false

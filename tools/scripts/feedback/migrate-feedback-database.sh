@@ -49,10 +49,16 @@ if [[ ! -f "$SERVICE_DIR/wrangler.jsonc" ]]; then
     exit 1
 fi
 
+# src/services is an npm workspace root, so dependencies hoist to
+# src/services/node_modules rather than the package's own directory. Check the
+# package first anyway, in case a future version pins its own copy.
 wrangler="$SERVICE_DIR/node_modules/wrangler/bin/wrangler.js"
 if [[ ! -f "$wrangler" ]]; then
+    wrangler="$PROJECT_ROOT/src/services/node_modules/wrangler/bin/wrangler.js"
+fi
+if [[ ! -f "$wrangler" ]]; then
     printf 'Error: feedback service dependencies are not installed.\n' >&2
-    printf 'Run: cd services && npm install\n' >&2
+    printf 'Run: cd src/services && npm ci\n' >&2
     exit 1
 fi
 

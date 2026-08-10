@@ -33,6 +33,7 @@ interface Env extends AccessEnv, NotificationEnv {
   TELEMETRY_RETENTION_DAYS?: string;
   AUDIT_RETENTION_DAYS?: string;
   EMAIL_QUEUE_RETENTION_DAYS?: string;
+  FEEDBACK_MAX_DAILY_EMAILS?: string;
 }
 
 interface AuthorizationRequest {
@@ -127,7 +128,7 @@ export default {
 
   async scheduled(controller: ScheduledController, env: Env, context: ExecutionContext) {
     context.waitUntil(
-      sendPendingFeedbackBatch(env.FEEDBACK_DB, env)
+      sendPendingFeedbackBatch(env.FEEDBACK_DB, env, "scheduled")
         .catch((error) => console.error("Scheduled feedback email failed", error)),
     );
     if (controller.cron === "17 3 * * *") {

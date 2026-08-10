@@ -72,4 +72,45 @@ describe("feedback database migrations", () => {
     insert(null, "receipt-four");
     expect(database.count("feedback_submissions")).toBe(3);
   });
+
+  it("lets the daily email count exceed the retired fixed maximum of three", () => {
+    const database = createTestDatabase();
+    const reserve = (count: number) =>
+      database.execute(
+        `INSERT INTO feedback_notification_days (notification_day, sent_count, updated_at)
+         VALUES ('2026-07-24', ?, 1768788000)
+         ON CONFLICT(notification_day) DO UPDATE SET sent_count = excluded.sent_count`,
+        count,
+      );
+
+    // The original CHECK stopped at three, which would have rejected the
+    // fourth email of a day whenever FEEDBACK_MAX_DAILY_EMAILS allowed one.
+    reserve(9);
+    expect(database.row<{ sent_count: number }>(
+      "SELECT sent_count FROM feedback_notification_days WHERE notification_day = '2026-07-24'",
+    )?.sent_count).toBe(9);
+    expect(() => reserve(-1)).toThrowError(/CHECK constraint failed/);
+  });
+
+  it("records notification runs alongside retention runs and nothing else", () => {
+    const database = createTestDatabase();
+    const record = (operation: string) =>
+      database.execute(
+        `INSERT INTO maintenance_runs (operation, actor, started_at, completed_at)
+         VALUES (?, 'scheduled', 1768788000, 1768788001)`,
+        operation,
+      );
+
+    record("retention");
+    record("notification");
+    expect(() => record("something_else")).toThrowError(/CHECK constraint failed/);
+    expect(database.count("maintenance_runs")).toBe(2);
+  });
+
+  it("keeps the maintenance history index the rebuild dropped", () => {
+    const database = createTestDatabase();
+    expect(database.rows<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'maintenance_runs'",
+    ).map((index) => index.name)).toContain("maintenance_runs_operation_time");
+  });
 });

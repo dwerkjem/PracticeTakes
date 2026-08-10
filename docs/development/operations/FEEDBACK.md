@@ -19,9 +19,12 @@ Cloudflare Access application. The Worker also validates the signed Access JWT a
 administrator address before returning any private data.
 
 Accepted reports are stored in D1 immediately. Three scheduled runs per UTC day email every queued
-report to the administrator, combining reports only when needed to stay within the three-email
-limit. The queue balances the current backlog across the remaining daily sends and retries failed
-batches; email availability never determines whether the client receives a submission receipt.
+report to the administrator, combining reports only when needed to stay within
+`FEEDBACK_MAX_DAILY_EMAILS` — three unless configured otherwise. The queue balances the current
+backlog across the remaining daily sends and retries failed batches; email availability never
+determines whether the client receives a submission receipt. Delivery is inert until a sending
+domain is onboarded; [`EMAIL_DISPATCH.md`](EMAIL_DISPATCH.md) covers activation, the administrative
+status and dispatch routes, and every reason a dispatch sends nothing.
 
 The Tuner and Spectrogram each provide **Give feedback on this tool**. That action opens the same
 form with an editable context field containing only the tool name and application version. Clearing

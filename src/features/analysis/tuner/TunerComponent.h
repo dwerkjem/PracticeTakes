@@ -7,6 +7,7 @@
 #include "../../../application/tools/ToolComponent.h"
 #include "../../../platform/audio/AudioInputService.h"
 #include "PitchDetector.h"
+#include "PitchTracker.h"
 
 #include <array>
 #include <atomic>
@@ -49,10 +50,8 @@ class TunerComponent final
 
     static constexpr int fifoCapacity = 65536;
     static constexpr int analysisWindowSize = PitchDetector::windowSize;
-    static constexpr int maximumAverageWindow = 15;
     static constexpr int maximumGraphPoints = 1200;
     static constexpr int analysisRefreshRateHz = 20;
-    static constexpr double referenceFrequencyHz = 440.0;
 
     // Audio capture ---------------------------------------------------------
     void audioInputAboutToStart(double sampleRate, int inputChannels) override;
@@ -61,18 +60,14 @@ class TunerComponent final
     [[nodiscard]] bool drainAudioFifo();
 
     // Pitch analysis --------------------------------------------------------
+    // The tracking itself lives in PitchTracker, which is JUCE-free and tested
+    // directly. What remains here is turning one of its updates into the
+    // widgets' state and the graph.
     void timerCallback() override;
-    [[nodiscard]] double smoothFrequency(double frequency);
-    [[nodiscard]] bool isConfirmedPitch(double frequency);
-    [[nodiscard]] double averageRecentMidiPitches() const;
-    [[nodiscard]] static double frequencyToMidi(double frequency);
-    [[nodiscard]] static double midiToFrequency(double midiPitch);
-
-    void handleDetectedPitch(double frequency);
-    void handleMissingPitch();
-    void resetPitchTracking();
-    void updateDisplayedNote(double frequency);
+    [[nodiscard]] PitchTracker::Settings trackerSettings() const;
+    void applyTrackerUpdate(const PitchTracker::Update& update);
     void addHistoryPoint(double midiPitch);
+    void resetPitchTracking();
 
     // Controls and appearance ----------------------------------------------
     void configureSlider(
@@ -116,24 +111,19 @@ class TunerComponent final
     std::array<float, fifoCapacity> drainBuffer{};
     std::array<float, analysisWindowSize> analysisBuffer{};
     PitchDetector pitchDetector;
-
-    // A short circular history stabilizes the pitch before display easing.
-    std::array<double, maximumAverageWindow> recentMidiPitches{};
-    int recentPitchCount = 0;
-    int recentPitchWriteIndex = 0;
+    PitchTracker pitchTracker;
 
     std::vector<double> graphHistory;
     std::atomic<double> currentSampleRate{44100.0};
 
-    double smoothedMidiNote = 0.0;
+    // Mirrors of the tracker's latest update. They are members because the
+    // drawing code in TunerDrawing.cpp reads them directly; nothing here
+    // computes them.
     double displayedFrequency = 0.0;
     double displayedCents = 0.0;
     juce::String displayedNote{"--"};
     float inputLevel = 0.0f;
     int lockedMidiNote = 69;
-    int framesWithoutPitch = 0;
-    double pendingJumpMidiNote = 0.0;
-    int pendingJumpFrames = 0;
 
     bool hasLockedMidiNote = false;
     bool hasSignal = false;

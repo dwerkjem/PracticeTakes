@@ -7,15 +7,12 @@ namespace
 {
 constexpr double inTuneToleranceCents = 5.0;
 
-constexpr std::array<const char*, 12> noteNames{
-    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-
-[[nodiscard]] juce::String noteNameForMidi(int midiNote)
+// The graph's axis labels and the status line's note name must agree. They were
+// byte-identical copies of the same function before, free to drift apart; the
+// single definition now lives beside the tracker that produces the note.
+[[nodiscard]] juce::String noteLabelForMidi(int midiNote)
 {
-    const auto noteIndex = ((midiNote % 12) + 12) % 12;
-    const auto octave = (midiNote / 12) - 1;
-
-    return juce::String(noteNames[static_cast<std::size_t>(noteIndex)]) + juce::String(octave);
+    return juce::String(::noteNameForMidi(midiNote));
 }
 } // namespace
 
@@ -90,7 +87,7 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
         {
             graphics.setColour(isCurrentNote ? palette.accent : palette.muted);
             graphics.drawFittedText(
-                noteNameForMidi(midiNote),
+                noteLabelForMidi(midiNote),
                 labelArea.withY(static_cast<int>(std::round(y)) - 8).withHeight(16),
                 juce::Justification::centredRight, 1);
         }

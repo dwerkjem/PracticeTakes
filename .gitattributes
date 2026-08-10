@@ -7,10 +7,6 @@
 #
 # See docs/development/operations/MERGING.md.
 
-# SOPS ciphertext must be resolved through tools/scripts/secrets/secrets_manager.py.
-# Treating it as binary preserves all three Git stages for plaintext merging.
-.secrets/** -diff -merge
-
 # The long source lists in target_sources()/add_executable() are unordered sets
 # of paths, and every branch that adds or moves a file collides in them. The
 # driver unions the lists and conflicts on anything that is not a bare path.
