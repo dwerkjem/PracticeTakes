@@ -1,7 +1,7 @@
 ## 1. Harden the derivation key
 
 - [x] 1.1 Set a passphrase on `~/.ssh/id_ed25519` with `ssh-keygen -p -f ~/.ssh/id_ed25519`, and confirm `ssh-keygen -y -P "" -f ~/.ssh/id_ed25519` now fails
-- [ ] 1.2 Confirm the key still authenticates to GitHub with `ssh -T git@github.com`
+- [x] 1.2 Confirm the key still authenticates to GitHub with `ssh -T git@github.com`
 - [x] 1.3 Make `ssh-to-age` available. `nix profile add` fails on a pre-existing `gcc-wrapper` vs `home-manager-path` conflict over `bin/c++`, unrelated to this change and not worth resolving (removing `gcc-wrapper` risks the C++ toolchain). Instead: `nix build nixpkgs#ssh-to-age --out-link ~/.local/state/nix-ssh-to-age` (registers a GC root) then symlink into `~/.local/bin`, which is already on PATH
 - [x] 1.4 Derive the recipient with `ssh-to-age -i ~/.ssh/id_ed25519.pub` and confirm it equals `age18qqk80sc9s3dnv2r4w8s32d9mllmzdrnj7shdx5lrsvwhgkh9edq2we8l3`; stop if it differs. The public-side derivation needs no passphrase, so this works before or after 1.1
 - [x] 1.5 Confirm the private-side derivation works against the now-protected key: `ssh-to-age -private-key -stdinpass -i ~/.ssh/id_ed25519` (passphrase on stdin). Without `-stdinpass` it fails with "this private key is passphrase protected"
@@ -22,11 +22,11 @@
 
 ## 4. Build the offline recovery copy
 
-- [ ] 4.1 Run `bash /tmp/provision-vault.sh`, setting a memorable recovery passphrase and recording it on paper
-- [ ] 4.2 Confirm the script reported both unlock paths verified and locked the drive on exit
-- [ ] 4.3 Re-run with `--refresh` and confirm it unlocks with the SSH key alone, with no passphrase prompt
-- [ ] 4.4 Back up the LUKS header: `sudo cryptsetup luksHeaderBackup /dev/sdc2 --header-backup-file ~/vault-luks-header.img`, stored off the stick
-- [ ] 4.5 Confirm the stick holds `bootstrap/id_ed25519`, `bootstrap/sops-age-key.txt`, and both `encrypted/` and `plaintext/` copies of all three secrets
+- [x] 4.1 Run `bash /tmp/provision-vault.sh`, setting a memorable recovery passphrase and recording it on paper
+- [x] 4.2 Confirm the script reported both unlock paths verified and locked the drive on exit
+- [x] 4.3 Re-run with `--refresh` and confirm it unlocks with the SSH key alone, with no passphrase prompt
+- [x] 4.4 Back up the LUKS header: `sudo cryptsetup luksHeaderBackup /dev/sdc2 --header-backup-file ~/vault-luks-header.img`, stored off the stick
+- [x] 4.5 Confirm the stick holds `bootstrap/id_ed25519`, `bootstrap/sops-age-key.txt`, and both `encrypted/` and `plaintext/` copies of all three secrets
 
 ## 5. Retire the old recipient
 
@@ -46,9 +46,9 @@
 
 - [x] 7.1 Roll `CLOUDFLARE_API_TOKEN` in the Cloudflare dashboard; update `.env`; confirm the old token is revoked
 - [x] 7.2 Regenerate `ADMIN_PASSWORD` with `openssl rand -base64 32`; update `.env`
-- [ ] 7.3 Regenerate `SUBMISSION_SIGNING_KEY` (≥32 chars) in `.dev.vars` and as the deployed Worker secret
-- [ ] 7.4 Re-encrypt with `secrets_manager.py encrypt` and refresh the stick with `bash /tmp/provision-vault.sh --refresh`
-- [ ] 7.5 Redeploy the worker; confirm a feedback submission succeeds end to end
+- [x] 7.3 Regenerate `SUBMISSION_SIGNING_KEY` (≥32 chars) in `.dev.vars` and as the deployed Worker secret
+- [x] 7.4 Re-encrypt with `secrets_manager.py encrypt` and refresh the stick with `bash /tmp/provision-vault.sh --refresh`
+- [x] 7.5 Redeploy the worker; confirm a feedback submission succeeds end to end
 - [x] 7.6 Confirm rate-limit counters reset as expected and no stored submissions were lost (`SELECT COUNT(*) FROM feedback_submissions` before and after)
 
 ## 8. Shrink the managed-secret set
