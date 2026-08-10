@@ -476,30 +476,29 @@ def protect_command(root: Path) -> int:
 
 
 def encrypt_command(root: Path, *, protect_index: bool = False) -> int:
-    """Encrypt all matched plaintext files and stage their mirrors."""
+    """Refresh the encrypted mirror of every matched plaintext file.
+
+    Mirrors are git-ignored, so nothing is staged. Attempting to would make git
+    print an "Use -f if you really want to add them" hint on every run, which is
+    noise advising exactly the wrong thing.
+    """
     rules = read_patterns(root)
     sync_git_exclude(root, rules)
     unstaged = protect_staged_plaintext(root, rules) if protect_index else []
     plaintext = discover_plaintext(root, rules)
     state = load_state(root)
-    staged: list[str] = []
     changed = 0
 
     for relative, source in plaintext.items():
         data = source.read_bytes()
         if write_mirror(root, relative, data):
             changed += 1
-        staged.append(mirror_relative_path(relative))
         state[relative] = sha256(data)
 
-    stage(root, staged)
     save_state(root, state)
     for relative in unstaged:
-        print(f"Protected plaintext and staged its encrypted mirror: {relative}")
-    print(
-        f"Synchronized {len(plaintext)} local secret(s); "
-        f"staged {len(staged)} mirror(s), {changed} changed."
-    )
+        print(f"Unstaged plaintext secret: {relative}")
+    print(f"Refreshed {len(plaintext)} mirror(s); {changed} changed.")
     return 0
 
 
