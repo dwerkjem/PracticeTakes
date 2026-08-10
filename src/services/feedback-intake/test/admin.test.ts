@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { handleAdminRequest as handleAdminRequestWithIdentity } from "../src/admin";
 import {
@@ -50,7 +50,7 @@ function adminRequest(path: string, init: RequestInit = {}, authenticated = true
 
 function handleAdminRequest(
   request: Request,
-  env: ReturnType<typeof environment>,
+  env: Parameters<typeof handleAdminRequestWithIdentity>[1],
 ): Promise<Response> {
   return handleAdminRequestWithIdentity(
     request,
@@ -423,5 +423,203 @@ describe("feedback administration", () => {
 
     expect(response.status).toBe(415);
     expect(body.error.code).toBe("unsupported_media_type");
+  });
+});
+
+describe("the notification administration routes", () => {
+  function notificationEnvironment(
+    database: TestDatabase,
+    overrides: Record<string, unknown> = {},
+  ) {
+    const send = vi.fn(async (_message: unknown) => ({ messageId: "cf-admin-1" }));
+    return {
+      env: {
+        FEEDBACK_DB: asD1(database),
+        FEEDBACK_EMAIL: { send: send as unknown as SendEmail["send"] },
+        FEEDBACK_NOTIFICATION_FROM: "feedback@practicetakes.app",
+        FEEDBACK_NOTIFICATION_TO: email,
+        FEEDBACK_DASHBOARD_URL: "https://feedback.example.test/admin",
+        ADMIN_EMAILS: email,
+        ...overrides,
+      },
+      send,
+      database,
+    };
+  }
+
+  it("reports delivery status without sending, claiming, or reserving", async () => {
+    const database = createTestDatabase();
+    seedQueuedFeedback(database, receiptId, 1_756_000_000);
+    const { env, send } = notificationEnvironment(database);
+
+    const response = await handleAdminRequest(adminRequest("/v1/admin/notifications"), env);
+    const body = await response.json() as {
+      notifications: {
+        configured: boolean;
+        problems: string[];
+        queue: { pending: number; oldestReceivedAt: string | null };
+        daily: { limit: number; remaining: number };
+        lastAttempt: unknown;
+      };
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.notifications.configured).toBe(true);
+    expect(body.notifications.problems).toEqual([]);
+    expect(body.notifications.queue.pending).toBe(1);
+    expect(body.notifications.daily).toMatchObject({ limit: 3, remaining: 3 });
+    expect(body.notifications.lastAttempt).toBeNull();
+    expect(send).not.toHaveBeenCalled();
+    expect(database.count("maintenance_runs")).toBe(0);
+  });
+
+  it("names the configuration problem when delivery is broken", async () => {
+    const { env } = notificationEnvironment(createTestDatabase(), {
+      FEEDBACK_NOTIFICATION_FROM: "feedback@example.com",
+    });
+
+    const response = await handleAdminRequest(adminRequest("/v1/admin/notifications"), env);
+    const body = await response.json() as {
+      notifications: { configured: boolean; problems: string[] };
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.notifications.configured).toBe(false);
+    expect(body.notifications.problems).toEqual(["sender_domain_not_sendable"]);
+  });
+
+  it("dispatches queued feedback on demand under the caller's identity", async () => {
+    const database = createTestDatabase();
+    seedQueuedFeedback(database, receiptId, 1_756_000_000);
+    const { env, send } = notificationEnvironment(database);
+
+    const response = await handleAdminRequest(
+      adminRequest("/v1/admin/notifications/dispatch", { method: "POST" }), env,
+    );
+    const body = await response.json() as {
+      dispatch: { outcome: string; sent: number; messageId: string | null };
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.dispatch).toMatchObject({
+      outcome: "sent", sent: 1, messageId: "cf-admin-1",
+    });
+    expect(send).toHaveBeenCalledOnce();
+    expect(database.count("feedback_email_queue")).toBe(0);
+    expect(database.row<{ actor: string }>(
+      "SELECT actor FROM maintenance_runs WHERE operation = 'notification'",
+    )?.actor).toBe(email);
+  });
+
+  it("reports an empty queue as a successful run that sent nothing", async () => {
+    const { env, send } = notificationEnvironment(createTestDatabase());
+
+    const response = await handleAdminRequest(
+      adminRequest("/v1/admin/notifications/dispatch", { method: "POST" }), env,
+    );
+    const body = await response.json() as { dispatch: { outcome: string } };
+
+    expect(response.status).toBe(200);
+    expect(body.dispatch.outcome).toBe("nothing_pending");
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("refuses with 503 when delivery is not configured, leaving the queue intact", async () => {
+    const database = createTestDatabase();
+    seedQueuedFeedback(database, receiptId, 1_756_000_000);
+    const { env, send } = notificationEnvironment(database, {
+      FEEDBACK_NOTIFICATION_FROM: "feedback@example.com",
+    });
+
+    const response = await handleAdminRequest(
+      adminRequest("/v1/admin/notifications/dispatch", { method: "POST" }), env,
+    );
+    const body = await response.json() as {
+      dispatch: { outcome: string; problems: string[] };
+      error: { code: string; message: string };
+    };
+
+    expect(response.status).toBe(503);
+    expect(body.error.code).toBe("notifications_not_configured");
+    expect(body.error.message).toContain("sender_domain_not_sendable");
+    expect(body.dispatch.problems).toEqual(["sender_domain_not_sendable"]);
+    expect(send).not.toHaveBeenCalled();
+    expect(database.count("feedback_email_queue")).toBe(1);
+  });
+
+  it("reports a failed send as 503 and returns the batch to the queue", async () => {
+    const database = createTestDatabase();
+    seedQueuedFeedback(database, receiptId, 1_756_000_000);
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { env, send } = notificationEnvironment(database);
+    send.mockRejectedValueOnce(new Error("mail service unavailable"));
+
+    const response = await handleAdminRequest(
+      adminRequest("/v1/admin/notifications/dispatch", { method: "POST" }), env,
+    );
+    const body = await response.json() as { error: { code: string; message: string } };
+
+    expect(response.status).toBe(503);
+    expect(body.error.code).toBe("notification_send_failed");
+    expect(body.error.message).toBe("mail service unavailable");
+    expect(database.count("feedback_email_queue")).toBe(1);
+    errorLog.mockRestore();
+  });
+
+  it("honours the daily limit that the scheduled dispatch honours", async () => {
+    const database = createTestDatabase();
+    seedQueuedFeedback(database, receiptId, 1_756_000_000);
+    seedQueuedFeedback(database, secondReceiptId, 1_756_000_100);
+    const { env, send } = notificationEnvironment(database, {
+      FEEDBACK_MAX_DAILY_EMAILS: "1",
+    });
+
+    const first = await handleAdminRequest(
+      adminRequest("/v1/admin/notifications/dispatch", { method: "POST" }), env,
+    );
+    seedQueuedFeedback(database, "33333333-3333-4333-8333-333333333333", 1_756_000_200);
+    const second = await handleAdminRequest(
+      adminRequest("/v1/admin/notifications/dispatch", { method: "POST" }), env,
+    );
+    const body = await second.json() as { dispatch: { outcome: string; dailyLimit: number } };
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(body.dispatch).toMatchObject({ outcome: "daily_limit_reached", dailyLimit: 1 });
+    expect(send).toHaveBeenCalledOnce();
+  });
+
+  it("refuses both routes without an authorized administrator identity", async () => {
+    const database = createTestDatabase();
+    seedQueuedFeedback(database, receiptId, 1_756_000_000);
+    const { env, send } = notificationEnvironment(database);
+
+    for (const [path, method] of [
+      ["/v1/admin/notifications", "GET"],
+      ["/v1/admin/notifications/dispatch", "POST"],
+    ] as const) {
+      const response = await handleAdminRequest(
+        adminRequest(path, { method }, false), env,
+      );
+      expect(response.status).toBe(401);
+      expect(await response.text()).not.toContain("practicetakes.app");
+    }
+    expect(send).not.toHaveBeenCalled();
+    expect(database.count("feedback_email_queue")).toBe(1);
+  });
+
+  it("does not dispatch on GET or report status on POST", async () => {
+    const { env, send } = notificationEnvironment(createTestDatabase());
+
+    const dispatched = await handleAdminRequest(
+      adminRequest("/v1/admin/notifications", { method: "POST" }), env,
+    );
+    const status = await handleAdminRequest(
+      adminRequest("/v1/admin/notifications/dispatch"), env,
+    );
+
+    expect(dispatched.status).toBe(404);
+    expect(status.status).toBe(404);
+    expect(send).not.toHaveBeenCalled();
   });
 });

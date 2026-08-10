@@ -47,6 +47,7 @@ broader music-practice and digital-audio workstation application.
 - [SOPS secrets](operations/SECRETS.md) — encrypted secret mirrors, synchronization, and conflict resolution
 - [Merging](operations/MERGING.md) — the merge drivers and Git configuration this repository expects, and how to bypass them
 - [Feedback service](operations/FEEDBACK.md) — the in-app feedback contract and endpoint configuration
+- [Feedback email dispatch](operations/EMAIL_DISPATCH.md) — how queued feedback becomes email, activating it on Cloudflare, and the administrative status and dispatch routes
 
 ### `agents/`
 

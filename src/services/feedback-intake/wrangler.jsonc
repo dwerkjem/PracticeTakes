@@ -28,6 +28,9 @@
     "TELEMETRY_RETENTION_DAYS": "90",
     "AUDIT_RETENTION_DAYS": "730",
     "EMAIL_QUEUE_RETENTION_DAYS": "30",
+    // Ceiling on feedback emails per UTC day, counting manual dispatches.
+    // Not a secret: it grants no access. Falls back to 3 when unset.
+    "FEEDBACK_MAX_DAILY_EMAILS": "3",
     "ADMIN_ROUTES_ENABLED": "true"
   },
   "triggers": {

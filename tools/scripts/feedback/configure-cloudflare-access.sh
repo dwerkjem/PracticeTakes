@@ -118,6 +118,23 @@ if [[ ! ${FEEDBACK_NOTIFICATION_FROM} =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:spa
     exit 2
 fi
 
+# A sender on one of these can never be onboarded to Cloudflare Email Sending,
+# so accepting it deploys a delivery path that provably cannot deliver — which
+# is how the template value reached production unnoticed once already.
+sender_domain=${FEEDBACK_NOTIFICATION_FROM##*@}
+sender_domain=${sender_domain,,}
+case ${sender_domain} in
+    example.com | example.org | example.net | example.edu | localhost | \
+    *.example.com | *.example.org | *.example.net | *.example.edu | \
+    *.invalid | *.test | *.local | *.localhost | *.example | *.workers.dev)
+        echo "Error: FEEDBACK_NOTIFICATION_FROM uses ${sender_domain}, which cannot" >&2
+        echo "send mail. Use an address on a domain onboarded to Cloudflare Email" >&2
+        echo "Sending: npx wrangler email sending enable <domain>" >&2
+        echo "See docs/development/operations/EMAIL_DISPATCH.md." >&2
+        exit 2
+        ;;
+esac
+
 api_request() {
     local method=$1
     local path=$2

@@ -150,7 +150,16 @@ createServer(async (incoming, outgoing) => {
     });
     const response = await handleAdminRequest(
       request,
-      { FEEDBACK_DB: database as unknown as D1Database },
+      {
+        FEEDBACK_DB: database as unknown as D1Database,
+        // No send_email binding exists outside Workers, so the status route
+        // reports delivery as unconfigured here — correctly, for this process.
+        FEEDBACK_NOTIFICATION_FROM: process.env.FEEDBACK_NOTIFICATION_FROM,
+        FEEDBACK_NOTIFICATION_TO: process.env.FEEDBACK_NOTIFICATION_TO ?? adminEmail,
+        FEEDBACK_DASHBOARD_URL: process.env.FEEDBACK_DASHBOARD_URL,
+        FEEDBACK_MAX_DAILY_EMAILS: process.env.FEEDBACK_MAX_DAILY_EMAILS,
+        ADMIN_EMAILS: adminEmail,
+      },
       adminEmail,
     );
     outgoing.writeHead(response.status, Object.fromEntries(response.headers));
