@@ -258,6 +258,8 @@ target_sources(PracticeTakes
         src/features/analysis/harmonics/HarmonicAnalyzerComponent.h
         src/features/analysis/tuner/PitchDetector.cpp
         src/features/analysis/tuner/PitchDetector.h
+        src/features/analysis/tuner/PitchTracker.cpp
+        src/features/analysis/tuner/PitchTracker.h
         src/features/analysis/tuner/TunerComponent.cpp
         src/features/analysis/tuner/TunerComponent.h
         src/features/analysis/tuner/TunerSettingsCodec.cpp
@@ -377,6 +379,7 @@ if(BUILD_TESTING)
         src/tests/application/theme/ThemeContrastTests.cpp
         src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
         src/tests/features/analysis/tuner/PitchDetectorTests.cpp
+        src/tests/features/analysis/tuner/PitchTrackerTests.cpp
         src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
         src/tests/features/performance/ApplicationLaunchTimerTests.cpp
         src/tests/platform/audio/AudioRecoveryPolicyTests.cpp
@@ -408,6 +411,7 @@ if(BUILD_TESTING)
         src/application/theme/Theme.cpp
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
         src/features/analysis/tuner/PitchDetector.cpp
+        src/features/analysis/tuner/PitchTracker.cpp
         src/features/performance/ApplicationLaunchTimer.cpp
         src/platform/score/ScoreBuilder.cpp
         src/platform/score/ScoreInvariants.cpp
