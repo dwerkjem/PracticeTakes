@@ -32,11 +32,11 @@
 
 ## 4. Run the audio callback under observation
 
-- [ ] 4.1 Add `src/platform/audio/AudioInputService.cpp` and `.h` to `add_executable(PracticeTakesTests ...)`
-- [ ] 4.2 Add `src/tests/platform/audio/AudioInputServiceTests.cpp`: construct the service, supply input and output buffers, invoke `audioDeviceIOCallbackWithContext`
-- [ ] 4.3 Assert the documented behaviour — output cleared, mute honoured, samples reaching the FIFO
-- [ ] 4.4 Keep it minimal: device lifecycle, gain, metering, and dropout accounting stay for #116
-- [ ] 4.5 Confirm the test layout checker still passes and note the new instrumented-TU count for #116's baseline
+- [x] 4.1 Added to the test target. Required converting the header off the generated `JuceHeader.h` umbrella to modular `juce_audio_devices`/`juce_core`/`juce_events` includes — that umbrella is produced for the application target only, which is the mechanical reason this file had never been testable
+- [x] 4.2 Add `src/tests/platform/audio/AudioInputServiceTests.cpp`: construct the service, supply input and output buffers, invoke `audioDeviceIOCallbackWithContext`
+- [x] 4.3 Assert the documented behaviour — output cleared, mute honoured, samples reaching the FIFO
+- [x] 4.4 Keep it minimal: device lifecycle, gain, metering, and dropout accounting stay for #116
+- [x] 4.5 Layout checker passes. Instrumented TUs **26 of 47 (55.3%) → 27 of 47 (57.4%)**. #116's quoted "25 of 43, 58.1%" is stale — the denominator has grown, so its 80% target should be measured against 47
 
 ## 5. RealtimeSanitizer — only if 1.3 was clean
 

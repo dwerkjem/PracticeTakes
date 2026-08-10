@@ -362,6 +362,8 @@ endif()
 
 if(BUILD_TESTING)
     add_executable(PracticeTakesTests
+        src/platform/audio/AudioInputService.cpp
+        src/platform/audio/AudioInputService.h
         src/tests/application/configuration/AppDefaultsTests.cpp
         src/tests/application/configuration/SettingsPersistenceTests.cpp
         src/tests/application/configuration/SettingsTransferCodecTests.cpp
@@ -393,6 +395,7 @@ if(BUILD_TESTING)
         src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
         src/tests/features/performance/ApplicationLaunchTimerTests.cpp
         src/tests/platform/audio/AudioRecoveryPolicyTests.cpp
+        src/tests/platform/audio/AudioInputServiceTests.cpp
         src/tests/platform/audio/AudioSampleFifoLoadTests.cpp
         src/tests/platform/audio/AudioSampleFifoTests.cpp
         src/tests/platform/audio/SyntheticToneTests.cpp
@@ -459,6 +462,7 @@ if(BUILD_TESTING)
     target_link_libraries(PracticeTakesTests
         PRIVATE
             Catch2::Catch2WithMain
+            juce::juce_audio_devices
             juce::juce_data_structures
             juce::juce_dsp
             juce::juce_graphics
