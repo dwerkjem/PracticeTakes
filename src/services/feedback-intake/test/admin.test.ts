@@ -382,6 +382,29 @@ describe("feedback administration", () => {
     )?.actor).toBe(email);
   });
 
+  it("prunes dispatch attempts on the audit retention schedule", async () => {
+    const database = createTestDatabase();
+    const now = Math.floor(Date.now() / 1000);
+    const beyondAudit = now - 800 * 24 * 60 * 60;
+    const insert = (completedAt: number) =>
+      database.execute(
+        `INSERT INTO maintenance_runs (operation, actor, started_at, completed_at, details_json)
+         VALUES ('notification', 'scheduled', ?, ?, '{"outcome":"nothing_pending"}')`,
+        completedAt,
+        completedAt,
+      );
+
+    insert(beyondAudit);
+    insert(now);
+
+    await handleAdminRequest(
+      adminRequest("/v1/admin/maintenance/retention", { method: "POST" }),
+      environment(database),
+    );
+
+    expect(database.count("maintenance_runs", "operation = 'notification'")).toBe(1);
+  });
+
   it("rejects malformed GitHub issue links", async () => {
     const response = await handleAdminRequest(adminRequest(`/v1/admin/submissions/${receiptId}`, {
       method: "PATCH",
