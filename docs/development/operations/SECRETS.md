@@ -1,206 +1,273 @@
-# SOPS secret management
+# Secret management
 
-Practice Takes stores local plaintext secrets outside Git and commits only
-SOPS-encrypted mirrors. The repository-level `tools/secret-patterns` file determines
-which plaintext files are managed. Encrypted files are written below
-`.secrets/` while preserving the original relative path:
+Secrets never enter Git — not in plaintext, and not encrypted either. They live
+locally in two forms, and a LUKS recovery stick is what rebuilds them on a
+machine that has nothing.
 
 ```text
-src/services/feedback-intake/.dev.vars
-    -> .secrets/services/feedback-intake/.dev.vars.sops
+src/services/feedback-intake/.env          plaintext, mode 0600, git-ignored
+    -> .secrets/src/services/feedback-intake/.env.sops
+                                           age-encrypted, git-ignored
 ```
 
-## One-time setup
+`tools/secret-patterns` decides which plaintext files are managed. The mirror
+under `.secrets/` preserves the original relative path.
 
-Install [SOPS](https://getsops.io/docs/install/) and
-[age](https://github.com/FiloSottile/age). Generate an age identity if you do
-not already have one:
+## Why encrypted mirrors are not committed
+
+They used to be. The reasoning was that ciphertext is safe to publish, which is
+true right up until the key leaks — and a published ciphertext cannot be
+retracted, so its confidentiality depends on one key staying secret forever, in
+a public repository, with no expiry. Rotation is a better answer than
+encryption for material that does not need to travel through Git at all.
+
+The mirrors still exist locally. They are the at-rest copy and the thing the
+recovery stick carries. They simply are not tracked.
+
+## The decryption identity
+
+`.sops.yaml` names one age recipient, derived from your SSH key:
 
 ```bash
-mkdir -p ~/.config/sops/age
-age-keygen -o ~/.config/sops/age/keys.txt
+ssh-to-age -i ~/.ssh/id_ed25519.pub
+# age18qqk80sc9s3dnv2r4w8s32d9mllmzdrnj7shdx5lrsvwhgkh9edq2we8l3
 ```
 
-Keep the `AGE-SECRET-KEY-...` identity private. Use the printed `age1...`
-public recipient to configure this repository:
+The conversion is deterministic — both are Curve25519, so it is a re-encoding
+rather than a key derivation with parameters that could drift. The same SSH key
+always yields the same recipient, which is what removes the need to distribute a
+separate age key between machines.
+
+**Your SSH key must have a passphrase.** It now decrypts every secret as well as
+authenticating to GitHub, so an unprotected key file hands over both. Check
+with:
 
 ```bash
-python3 tools/scripts/secrets/secrets_manager.py init --age-recipient age1...
+ssh-keygen -y -P "" -f ~/.ssh/id_ed25519   # must FAIL
 ```
 
-Then install the Git hooks. **Every clone needs this step.** The hook is the
-only local control that keeps plaintext secrets out of commits, and a clone
-without it has no protection at all:
+Adding a passphrase does not change the derived recipient — only the encryption
+of the key file on disk.
+
+### The `-stdinpass` trap
+
+`ssh-to-age` refuses a passphrase-protected key outright:
+
+```text
+ssh: this private key is passphrase protected
+```
+
+The private-side conversion always needs `-stdinpass`, with the passphrase on
+stdin:
 
 ```bash
+ssh-to-age -private-key -stdinpass -i ~/.ssh/id_ed25519
+```
+
+The public-side conversion (`-i key.pub`) needs no passphrase at all, which is
+why the recipient in `.sops.yaml` can be recomputed by anyone at any time.
+
+Note that `age` behaves differently: it accepts a protected SSH key and prompts
+for the passphrase itself. Only `ssh-to-age` needs the flag.
+
+## Setting up a machine that already has your SSH key
+
+```bash
+nix build nixpkgs#ssh-to-age --out-link ~/.local/state/nix-ssh-to-age
+ln -sf ~/.local/state/nix-ssh-to-age/bin/ssh-to-age ~/.local/bin/ssh-to-age
 pre-commit install
 ```
 
-`pre-commit install` honors `default_install_hook_types` in
-`.pre-commit-config.yaml`, so the read-only `sops-secret-audit` hook also runs
-on merge commits, which Git otherwise creates without running any pre-commit
-hook. Encryption deliberately stays on ordinary commits: a merge commit must
-keep the mirrors it is merging in, not overwrite them with whatever plaintext
-happens to be on disk. Run `sync` after a merge that touched `.secrets/`.
+`--out-link` registers a GC root so `nix-collect-garbage` cannot break the
+symlink. `nix profile add` is an alternative, but fails on some profiles with a
+pre-existing `bin/c++` conflict between `gcc-wrapper` and `home-manager-path`.
 
-The hooks remain defense in depth rather than a guarantee: `git commit
---no-verify` skips them, and they match file paths, not file contents, so a
-credential pasted into source or documentation is never detected.
-
-The public recipient in `.sops.yaml` is safe to commit. Each collaborator who
-needs access must have a corresponding authorized identity.
-
-## Key backup and rotation
-
-`.sops.yaml` lists a single age recipient today, so exactly one identity can
-read every mirror. Back that identity up before anything else: copy
-`~/.config/sops/age/keys.txt` into a password manager or onto offline media.
-Losing it makes every committed mirror unreadable. The mirrors also live in a
-public repository, so anyone who obtains the identity can decrypt every version
-of every mirror that Git has ever stored.
-
-Adding a second recipient — an offline escrow identity, or one identity per
-collaborator — removes that single point of failure. Whether to do so is a
-project decision, because it means generating and safely storing another key.
-List the recipients comma separated:
-
-```yaml
-creation_rules:
-  - path_regex: ^\.secrets/.*\.sops$
-    age: >-
-      age1<primary>,
-      age1<backup>
-```
-
-Then re-wrap the data key of each existing mirror:
+Point SOPS at the derived identity, without ever writing it to disk:
 
 ```bash
-sops updatekeys --yes .secrets/services/feedback-intake/.env.sops
-sops updatekeys --yes .secrets/services/feedback-intake/.dev.vars.sops
-sops updatekeys --yes .secrets/services/feedback-intake/wrangler.jsonc.sops
+export SOPS_AGE_KEY_CMD='ssh-to-age -private-key -stdinpass -i ~/.ssh/id_ed25519'
 ```
 
-`updatekeys` only re-wraps the existing data key for the current recipient list.
-It never generates a new data key, so a recipient that was removed can still
-decrypt any ciphertext it saw earlier. Generating a fresh data key is a separate
-step:
+Do not bake the passphrase into a shell profile or an environment variable.
+That restores exactly the exposure the passphrase exists to remove.
+
+Then restore the plaintext:
 
 ```bash
-sops rotate --in-place --input-type json --output-type json \
-  .secrets/services/feedback-intake/.env.sops
+python3 tools/scripts/secrets/secrets_manager.py decrypt
 ```
 
-Rotate when an identity is lost or exposed, when a collaborator leaves, and at
-least once a year otherwise:
+## Recovering on a machine that has nothing
 
-1. Generate the replacement identity with `age-keygen` and back it up.
-2. Add the new `age1...` recipient to `.sops.yaml` next to the old one and run
-   `sops updatekeys` on every file below `.secrets/`.
-3. Verify the new identity alone can read the mirrors, without touching the
-   working tree: `SOPS_AGE_KEY_FILE=/path/to/new-keys.txt sops decrypt
-   --input-type json --output-type binary
-   .secrets/services/feedback-intake/.env.sops > /dev/null`.
-4. Remove the old recipient from `.sops.yaml`, run `sops updatekeys` again, then
-   `sops rotate --in-place` on every mirror so the data keys are new as well.
-5. Commit the re-keyed mirrors together with `.sops.yaml`.
-6. If the old identity was exposed rather than merely retired, also rotate the
-   credentials the mirrors carry: `CLOUDFLARE_API_TOKEN`, `ADMIN_PASSWORD`, and
-   `SUBMISSION_SIGNING_KEY`. Git history keeps every earlier ciphertext, and the
-   exposed identity still decrypts those, so re-keying revokes nothing on its
-   own.
+A new machine has no SSH key, so it cannot use the stick's SSH keyslot. It uses
+the recovery passphrase, and the first thing it recovers is the SSH key —
+everything else depends on that.
+
+1. **Unlock with the LUKS recovery passphrase.** The stick has two keyslots:
+   slot 0 is the passphrase, slot 1 is a keyfile age-wrapped to your SSH public
+   key. Only slot 0 is usable here.
+
+2. **Restore the SSH key** from `bootstrap/` on the stick:
+
+   ```bash
+   install -m 600 /mnt/secrets/bootstrap/id_ed25519     ~/.ssh/id_ed25519
+   install -m 644 /mnt/secrets/bootstrap/id_ed25519.pub ~/.ssh/id_ed25519.pub
+   ```
+
+3. **Restore or re-derive the age identity.** Either copy
+   `bootstrap/sops-age-key.txt` to `~/.config/sops/age/keys.txt` (mode 600), or
+   derive it from the SSH key with the `-stdinpass` command above.
+
+4. **Clone the repository and decrypt**, or — if SOPS itself is the problem —
+   copy the plaintext straight out of `projects/<name>/plaintext/` on the stick.
+
+The stick carries both forms deliberately: the `.sops` copies need a working age
+key, the plaintext copies need nothing. They fail in different ways.
+
+Provision or refresh a stick with:
+
+```bash
+tools/scripts/secrets/provision-vault.sh              # first time: erases and registers
+tools/scripts/secrets/provision-vault.sh --refresh    # reload current secrets
+```
+
+It registers the stick's serial in `~/.config/practice-takes/vault.conf` and
+refuses to erase anything else without `--reregister`. It also refuses any
+non-removable device — note that an externally attached SSD reports
+`removable=0` and is therefore excluded, while a USB hard drive in an enclosure
+does not, which is why oversized or populated disks trigger a second
+confirmation.
+
+Back up the LUKS header off the stick. A corrupt header loses the volume even
+when you hold the key:
+
+```bash
+sudo cryptsetup luksHeaderBackup /dev/sdX2 --header-backup-file ~/vault-luks-header.img
+```
 
 ## Daily commands
 
-Encrypt local files and stage only their encrypted mirrors:
-
 ```bash
-python tools/scripts/secrets/secrets_manager.py encrypt
+python3 tools/scripts/secrets/secrets_manager.py decrypt   # mirrors  -> plaintext
+python3 tools/scripts/secrets/secrets_manager.py encrypt   # plaintext -> mirrors
+python3 tools/scripts/secrets/secrets_manager.py audit     # fail if a secret is tracked
 ```
 
-Restore plaintext after cloning:
+Run `encrypt` before refreshing the stick. After rotating a credential the
+plaintext on disk is the newest copy that exists, so the direction that matters
+is plaintext → mirror; `decrypt` at that moment would overwrite the new value
+with the stale one. `secrets_manager` refuses to do so without `--force`, and
+`provision-vault.sh` runs `encrypt` rather than `decrypt` for the same reason.
 
-```bash
-python tools/scripts/secrets/secrets_manager.py decrypt
+### The pre-commit hook
+
+`pre-commit install` is required in **every clone**. Two hooks run:
+
+| Hook | Job |
+|---|---|
+| `sops-secrets` | unstage plaintext secrets; refuse if one is already tracked |
+| `sops-secret-audit` | fail if any tracked file matches `tools/secret-patterns` |
+
+The first no longer encrypts or stages anything — there is nothing to stage now
+that mirrors are untracked. What remains is the half that prevents accidents,
+and it matters more than before: with no encrypted copy going into the
+repository, an unnoticed plaintext secret in the index is the only route a
+credential has to the remote.
+
+They complement each other. The hook reads `git diff --cached`, so it only sees
+a tracked secret when it is being *changed*; `audit` catches one that is
+committed and sitting still.
+
+Neither is a guarantee. `git commit --no-verify` skips both, and they match
+paths rather than contents, so a credential pasted into source or documentation
+is never detected.
+
+## Sourcing `.env` breaks Wrangler
+
+`src/services/feedback-intake/.env` holds a D1-scoped `CLOUDFLARE_API_TOKEN` for
+the dashboard daemon. **Wrangler auto-loads `.env` from its working directory**,
+so any wrangler command run from that directory silently authenticates with the
+D1 token instead of your OAuth session, and fails:
+
+```text
+Authentication error [code: 10000]
 ```
 
-Safely synchronize both directions:
+The error blames your token's permissions and never mentions `.env`. `unset` does
+not help — wrangler re-reads the file every invocation. Two fixes:
 
 ```bash
-python tools/scripts/secrets/secrets_manager.py sync
+npx wrangler <command> --env-file /dev/null          # from the service directory
+npx wrangler <command> -c src/services/feedback-intake/wrangler.jsonc   # from the repo root
 ```
 
-The sync command records plaintext hashes only in `.git/sops-secret-state.json`;
-they are never committed. It can therefore distinguish a local-only edit from
-an encrypted-only edit. If both sides changed, it stops and writes two
-local-only comparison files below `.git/sops-secret-conflicts/`. Review them,
-then explicitly choose:
+`tools/scripts/feedback/migrate-feedback-database.sh --wrangler-login` exists for
+this reason; it blanks `CLOUDFLARE_API_TOKEN` before invoking wrangler.
+
+The exception is `wrangler d1 execute`, which genuinely wants that token. Source
+`.env` in a subshell so it does not leak into your session.
+
+## Rotation
+
+Rotate when an identity is lost or exposed, when a collaborator leaves, when a
+recovery stick goes missing, and on a schedule for the signing key.
+
+| Credential | How | Cost |
+|---|---|---|
+| `CLOUDFLARE_API_TOKEN` | dashboard → API Tokens → Roll | none |
+| `ADMIN_PASSWORD` | `openssl rand -base64 32` | none |
+| `SUBMISSION_SIGNING_KEY` | `openssl rand -hex 32 \| npx wrangler secret put SUBMISSION_SIGNING_KEY --env-file /dev/null` | rate-limit counters reset |
+
+Rotating the signing key orphans the stored `client_hash` values in
+`authorization_requests` and `feedback_submissions`, because those are HMACs
+under the old key. Counters reset and in-flight authorizations expire. **No
+submission content is lost** — nothing in D1 is encrypted at rest, so no key
+here can render a stored row unreadable.
+
+Put the same value in `.dev.vars`; `wrangler secret put` only updates
+production.
+
+Afterwards:
 
 ```bash
-python tools/scripts/secrets/secrets_manager.py sync --prefer-local
-python tools/scripts/secrets/secrets_manager.py sync --prefer-encrypted
+python3 tools/scripts/secrets/secrets_manager.py encrypt
+tools/scripts/secrets/provision-vault.sh --refresh
+tools/scripts/feedback/update-dashboard-daemon.sh
+( cd src/services/feedback-intake && npx wrangler deploy --env-file /dev/null )
 ```
 
-`--prefer-encrypted` overwrites the local plaintext. Use it only after
-reviewing the saved comparison.
+`ACCESS_HOSTNAME`, `FEEDBACK_NOTIFICATION_FROM`, `CLOUDFLARE_ACCOUNT_ID` and
+`D1_DATABASE_ID` are **not** secrets. They identify resources but grant no
+access without a credential. Treating an identifier as a secret buys a rotation
+obligation it can never discharge, and forces a template file that will drift
+from the real one.
 
-## Git conflict resolution
+### Changing the recipient
 
-Do not edit conflicted `.sops` ciphertext manually. Decrypt and three-way merge
-the Git stages with:
+Order matters, and getting it wrong is unrecoverable — `sops updatekeys` will
+happily encrypt to a recipient you cannot use, with no error.
 
-```bash
-python tools/scripts/secrets/secrets_manager.py resolve
-```
+1. Add the new recipient **alongside** the old one; `sops updatekeys` every mirror.
+2. Verify the new identity decrypts every mirror **alone**, with the old key
+   moved out of reach. Verifying while the old key is still readable proves
+   nothing.
+3. Only then remove the old recipient and `sops updatekeys` again.
+4. Confirm the old key can no longer decrypt.
 
-Clean plaintext merges are re-encrypted and staged automatically. If Git
-cannot merge the plaintext cleanly, the manager writes a local-only `.merge`
-file below `.git/sops-secret-conflicts/`. Edit that file, remove all conflict
-markers, and continue:
+## What this does and does not protect
 
-```bash
-python tools/scripts/secrets/secrets_manager.py resolve --continue
-```
+**Does:** keeps every secret out of Git. Keeps the at-rest mirror unreadable
+without your SSH key. Survives losing this machine, via the stick. Survives
+losing the stick, because every credential on it is rotatable.
 
-To choose one side without merging:
+**Does not:** protect the plaintext. `.env` and `.dev.vars` must exist in the
+clear for the worker and dashboard to run. They are mode 0600 and git-ignored,
+which stops other *users* — it stops nothing that has the disk.
 
-```bash
-python tools/scripts/secrets/secrets_manager.py resolve --ours
-python tools/scripts/secrets/secrets_manager.py resolve --theirs
-```
-
-`.gitattributes` marks `.secrets/` as binary and disables Git's ciphertext
-merge attempt, ensuring the manager receives intact base, ours, and theirs
-stages.
-
-## Safety behavior
-
-The `sops-secrets` hook:
-
-1. Reads the ordered globs in `tools/secret-patterns`.
-2. Mirrors those patterns into the clone-local `.git/info/exclude`.
-3. Removes newly added matching plaintext files from the index.
-4. Encrypts each matching plaintext file as binary SOPS JSON.
-5. Stages only changed files below `.secrets/`.
-6. Refuses to commit if a matching plaintext file was already tracked or an
-   encrypted secret still has a Git conflict.
-
-The `sops-secret-audit` hook then scans the whole index, not just the staged
-change, and fails if any tracked path matches `tools/secret-patterns`. It catches
-plaintext that reached the repository through a bypassed hook or a merge. Run
-the same check by hand, or from CI, with:
-
-```bash
-python3 tools/scripts/secrets/secrets_manager.py audit
-```
-
-`tools/secret-patterns` selects `.env`, `.dev.vars`, `*.secret`, `*.secrets`, the
-deployed `src/services/feedback-intake/wrangler.jsonc`, and everything below the
-repository-root `secrets/` directory. Example and template files stay plaintext.
-
-Every decrypted copy the manager writes outside the working tree — sync
-comparisons, merge scratch files, and manual `.merge` files — lives below
-`.git/sops-secret-conflicts/` with mode 0600, and is deleted once the conflict
-it describes is resolved.
-
-If a real secret was ever committed in plaintext, removing the file is not
-enough: rotate the credential immediately and separately clean the Git history.
+On a machine with an unencrypted root filesystem, anyone holding the drive reads
+those files. Unencrypted swap can also page plaintext from memory onto disk,
+which is why staging secrets in `tmpfs` is not the protection it appears to be.
+The measures that actually close this are, in order of effort: encrypt swap,
+then encrypt the root filesystem. Until then the passphrase on your SSH key is
+the strongest control in this document, because it is what a stolen laptop does
+not come with.

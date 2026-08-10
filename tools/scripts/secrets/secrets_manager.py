@@ -454,6 +454,27 @@ def audit_command(root: Path) -> int:
     return 0
 
 
+def protect_command(root: Path) -> int:
+    """Keep plaintext secrets out of the index. Nothing is encrypted or staged.
+
+    The mirrors under ``.secrets/`` are no longer committed, so there is nothing
+    for a commit hook to stage. What remains is the half that actually prevents
+    accidents, and it matters more now than it did: with no encrypted copy going
+    into the repository, an unnoticed plaintext secret in the index is the only
+    way a credential reaches the remote.
+
+    Refreshing the mirrors is the ``encrypt`` command's job, run when you choose
+    to -- typically before copying them to the recovery stick.
+    """
+    rules = read_patterns(root)
+    sync_git_exclude(root, rules)
+    unstaged = protect_staged_plaintext(root, rules)
+    for relative in unstaged:
+        print(f"Unstaged plaintext secret: {relative}")
+    print(f"Index protected; {len(unstaged)} plaintext secret(s) unstaged.")
+    return 0
+
+
 def encrypt_command(root: Path, *, protect_index: bool = False) -> int:
     """Encrypt all matched plaintext files and stage their mirrors."""
     rules = read_patterns(root)
@@ -602,19 +623,6 @@ def sync_command(root: Path, *, prefer: str | None) -> int:
     return 0
 
 
-def unmerged_mirrors(root: Path) -> list[str]:
-    result = run(
-        ["git", "diff", "--name-only", "--diff-filter=U", "-z"],
-        cwd=root,
-    )
-    paths = result.stdout.decode(errors="surrogateescape").split("\0")
-    return sorted(
-        path
-        for path in paths
-        if path.startswith(f"{SECRET_DIRECTORY}/") and path.endswith(SOPS_SUFFIX)
-    )
-
-
 def git_stage_bytes(root: Path, stage_number: int, relative: str) -> bytes | None:
     result = run(
         ["git", "show", f":{stage_number}:{relative}"],
@@ -636,33 +644,6 @@ def decrypt_temporary_ciphertext(root: Path, ciphertext: bytes) -> bytes:
         path.unlink(missing_ok=True)
 
 
-def merge_plaintext(
-    root: Path, ours: bytes, base: bytes, theirs: bytes
-) -> tuple[bytes, bool]:
-    """Three-way merge plaintext with Git's merge-file implementation."""
-    scratch_root = git_directory(root) / CONFLICT_DIRECTORY
-    scratch_root.mkdir(parents=True, exist_ok=True)
-    directory = Path(tempfile.mkdtemp(prefix="merge-", dir=scratch_root))
-    try:
-        paths = [directory / name for name in ("ours", "base", "theirs")]
-        for path, data in zip(paths, (ours, base, theirs), strict=True):
-            atomic_write(path, data, private=True)
-        result = subprocess.run(
-            ["git", "merge-file", "-p", *map(str, paths)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-        )
-        if result.returncode not in (0, 1):
-            raise SecretsError(
-                result.stderr.decode(errors="replace").strip()
-                or "git merge-file failed"
-            )
-        return result.stdout, result.returncode == 0
-    finally:
-        shutil.rmtree(directory)
-
-
 def finish_resolution(root: Path, mirror_relative: str, plaintext: bytes) -> None:
     source_relative = source_relative_path(mirror_relative)
     atomic_write(root / source_relative, plaintext, private=True)
@@ -672,92 +653,6 @@ def finish_resolution(root: Path, mirror_relative: str, plaintext: bytes) -> Non
     state = load_state(root)
     state[source_relative] = sha256(plaintext)
     save_state(root, state)
-
-
-def resolve_command(
-    root: Path,
-    *,
-    continue_resolution: bool,
-    choice: str | None,
-) -> int:
-    """Resolve Git conflicts by merging decrypted plaintext."""
-    if continue_resolution:
-        merge_root = git_directory(root) / CONFLICT_DIRECTORY
-        merge_files = sorted(merge_root.rglob("*.merge")) if merge_root.exists() else []
-        if not merge_files:
-            raise SecretsError("No saved secret conflict resolutions were found")
-        for merge_file in merge_files:
-            plaintext = merge_file.read_bytes()
-            if b"<<<<<<<" in plaintext or b">>>>>>>" in plaintext:
-                raise SecretsError(f"Conflict markers remain in {merge_file}")
-            source_relative = merge_file.relative_to(merge_root).as_posix()
-            source_relative = source_relative[: -len(".merge")]
-            finish_resolution(root, mirror_relative_path(source_relative), plaintext)
-            merge_file.unlink()
-        print(f"Completed {len(merge_files)} secret conflict resolution(s).")
-        return 0
-
-    conflicts = unmerged_mirrors(root)
-    if not conflicts:
-        print("No conflicted encrypted secrets were found.")
-        return 0
-
-    manual: list[Path] = []
-    for mirror_relative in conflicts:
-        stages = {
-            number: git_stage_bytes(root, number, mirror_relative)
-            for number in (1, 2, 3)
-        }
-        ours_ciphertext = stages[2]
-        theirs_ciphertext = stages[3]
-        if choice == "ours":
-            if ours_ciphertext is None:
-                raise SecretsError(f"No ours version exists for {mirror_relative}")
-            finish_resolution(
-                root,
-                mirror_relative,
-                decrypt_temporary_ciphertext(root, ours_ciphertext),
-            )
-            continue
-        if choice == "theirs":
-            if theirs_ciphertext is None:
-                raise SecretsError(f"No theirs version exists for {mirror_relative}")
-            finish_resolution(
-                root,
-                mirror_relative,
-                decrypt_temporary_ciphertext(root, theirs_ciphertext),
-            )
-            continue
-        if ours_ciphertext is None or theirs_ciphertext is None:
-            raise SecretsError(
-                f"{mirror_relative} is an add/delete conflict; use --ours or --theirs"
-            )
-
-        ours = decrypt_temporary_ciphertext(root, ours_ciphertext)
-        theirs = decrypt_temporary_ciphertext(root, theirs_ciphertext)
-        base = (
-            decrypt_temporary_ciphertext(root, stages[1])
-            if stages[1] is not None
-            else b""
-        )
-        merged, clean = merge_plaintext(root, ours, base, theirs)
-        if clean:
-            finish_resolution(root, mirror_relative, merged)
-        else:
-            source_relative = source_relative_path(mirror_relative)
-            output = conflict_output_path(root, source_relative)
-            atomic_write(output, merged, private=True)
-            manual.append(output)
-
-    if manual:
-        locations = "\n  ".join(str(path) for path in manual)
-        raise SecretsError(
-            "Manual plaintext conflict resolution is required. Edit these local-only files:\n"
-            f"  {locations}\nThen run "
-            "'python tools/scripts/secrets/secrets_manager.py resolve --continue'."
-        )
-    print(f"Resolved {len(conflicts)} encrypted secret conflict(s).")
-    return 0
 
 
 def init_command(root: Path, age_recipient: str) -> int:
@@ -811,20 +706,13 @@ def build_parser() -> argparse.ArgumentParser:
     preference.add_argument("--prefer-encrypted", action="store_true")
 
     subparsers.add_parser(
-        "pre-commit", help="protect plaintext, encrypt mirrors, and stage them"
+        "pre-commit", help="keep plaintext secrets out of the index"
     )
 
     subparsers.add_parser(
         "audit", help="fail if any tracked file matches tools/secret-patterns"
     )
 
-    resolve = subparsers.add_parser(
-        "resolve", help="resolve Git conflicts in decrypted plaintext"
-    )
-    resolution = resolve.add_mutually_exclusive_group()
-    resolution.add_argument("--continue", dest="continue_resolution", action="store_true")
-    resolution.add_argument("--ours", action="store_true")
-    resolution.add_argument("--theirs", action="store_true")
     return parser
 
 
@@ -851,19 +739,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if arguments.command == "audit":
             return audit_command(root)
         if arguments.command == "pre-commit":
-            if unmerged_mirrors(root):
-                raise SecretsError(
-                    "Encrypted secrets have unresolved Git conflicts. Run the "
-                    "'resolve' command before committing."
-                )
-            return encrypt_command(root, protect_index=True)
-        if arguments.command == "resolve":
-            choice = "ours" if arguments.ours else "theirs" if arguments.theirs else None
-            return resolve_command(
-                root,
-                continue_resolution=arguments.continue_resolution,
-                choice=choice,
-            )
+            return protect_command(root)
         parser.error(f"Unsupported command: {arguments.command}")
     except SecretsError as error:
         print(f"secrets-manager: {error}", file=sys.stderr)

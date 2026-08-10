@@ -3,8 +3,8 @@
   "name": "practice-takes-feedback-intake",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-18",
-  // Public feedback intake stays on workers.dev. Cloudflare Access protects
-  // only the private paths, and the Worker verifies every Access JWT again.
+  // Public intake stays available on workers.dev. Cloudflare Access protects
+  // only the admin paths, and the Worker verifies every Access JWT again.
   "workers_dev": true,
   "rules": [
     {
@@ -42,7 +42,7 @@
     {
       "binding": "FEEDBACK_DB",
       "database_name": "practice-takes-feedback",
-      "database_id": "replace-with-database-id",
+      "database_id": "47da8767-d002-415a-a507-f126042e4f13",
       "migrations_dir": "migrations"
     }
   ]
