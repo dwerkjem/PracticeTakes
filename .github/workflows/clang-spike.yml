@@ -58,15 +58,50 @@ jobs:
           /tmp/probe
           echo "RTSAN=supported" >> "$GITHUB_OUTPUT"
 
-      - name: Does the nonblocking attribute exist?
+      # The first attempt put the attribute before the declaration and clang
+      # rejected it: these are function *type* attributes and go after the
+      # parameter list, like noexcept. Probing the real shape -- a virtual
+      # override, which is what the audio callback is.
+      - name: Does the nonblocking attribute compile where we need it?
+        id: attribute
         continue-on-error: true
         run: |
           set -x
           cat > /tmp/nb.cpp <<'PROBE'
-          [[clang::nonblocking]] void callback() {}
-          int main() { callback(); }
+          struct Base { virtual void callback(float*, int) = 0; virtual ~Base() = default; };
+          struct Impl : Base {
+              void callback(float* out, int n) [[clang::nonblocking]] override {
+                  for (int i = 0; i < n; ++i) out[i] = 0.0f;
+              }
+          };
+          int main() { float buffer[4]{}; Impl impl; impl.callback(buffer, 4); }
           PROBE
-          clang-20 -std=c++20 -Wall -Wextra -Werror /tmp/nb.cpp -o /tmp/nb
+          clang++-20 -std=c++20 -Wall -Wextra -Werror /tmp/nb.cpp -o /tmp/nb
+          /tmp/nb
+
+      # Compiling with -fsanitize=realtime proves the flag is accepted. It does
+      # not prove anything is detected. This allocates inside a nonblocking
+      # function and requires a non-zero exit -- if RTSan is inert, this step
+      # "passing" would be the false confidence the whole change exists to end.
+      - name: Does RealtimeSanitizer actually catch an allocation?
+        id: rtsan_detects
+        continue-on-error: true
+        run: |
+          set -x
+          cat > /tmp/detect.cpp <<'PROBE'
+          #include <vector>
+          void offender(int n) [[clang::nonblocking]] {
+              std::vector<float> allocated(static_cast<std::size_t>(n));
+              (void) allocated.size();
+          }
+          int main() { offender(8); }
+          PROBE
+          clang++-20 -std=c++20 -fsanitize=realtime /tmp/detect.cpp -o /tmp/detect
+          if /tmp/detect; then
+            echo "RTSAN DID NOT DETECT THE ALLOCATION — the leg would be worthless"
+            exit 1
+          fi
+          echo "RTSan aborted on the allocation, as required"
 
       - name: Configure with clang-20
         id: configure
@@ -100,7 +135,9 @@ jobs:
           echo "| Step | Result |" >> "$GITHUB_STEP_SUMMARY"
           echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
           echo "| install clang-20 | ${{ steps.install.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| -fsanitize=realtime | ${{ steps.rtsan.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| -fsanitize=realtime accepted | ${{ steps.rtsan.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| nonblocking attribute compiles | ${{ steps.attribute.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| RTSan detects an allocation | ${{ steps.rtsan_detects.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| configure | ${{ steps.configure.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| build | ${{ steps.build.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| ctest | ${{ steps.test.outcome }} |" >> "$GITHUB_STEP_SUMMARY"
