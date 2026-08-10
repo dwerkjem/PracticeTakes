@@ -1,9 +1,9 @@
 ## 1. Spike clang — the gate on everything RTSan
 
-- [ ] 1.1 Add a throwaway CI job that installs clang-20 and configures `PracticeTakesTests` with it; capture the full output
-- [ ] 1.2 Confirm `-fsanitize=realtime` is accepted by that clang
-- [ ] 1.3 Record the verdict in the change: clean, or a list of what breaks
-- [ ] 1.4 **If it is not clean**, open a "build under clang" issue and an RTSan issue blocked on it, drop tasks 5.x from this change, and continue — sections 2 to 4 do not depend on this
+- [x] 1.1 Add a throwaway CI job that installs clang-20 and configures `PracticeTakesTests` with it; capture the full output
+- [x] 1.2 Confirm `-fsanitize=realtime` is accepted by that clang, **and that it detects a real allocation** — a flag that merely parses proves nothing
+- [x] 1.3 Record the verdict in the change: **clean** — clang 20.1.2 from Ubuntu apt, configures, builds, 464/464 pass, RTSan verified to detect. See design decision 7
+- [x] 1.4 ~~If it is not clean~~ — not triggered; section 5 stays. **If it is not clean**, open a "build under clang" issue and an RTSan issue blocked on it, drop tasks 5.x from this change, and continue — sections 2 to 4 do not depend on this
 
 ## 2. ASan and UBSan on pull requests
 
@@ -33,7 +33,7 @@
 
 ## 5. RealtimeSanitizer — only if 1.3 was clean
 
-- [ ] 5.1 Portability macro for `[[clang::nonblocking]]`, inert under GCC
+- [ ] 5.1 Portability macro for `[[clang::nonblocking]]`, inert under GCC. Attribute goes **after** the parameter list, and needs `noexcept` alongside it — decide between annotating the override directly or a private `noexcept` helper (design decision 6)
 - [ ] 5.2 Annotate `audioDeviceIOCallbackWithContext`
 - [ ] 5.3 Confirm the GCC build and the GCC test run are unaffected
 - [ ] 5.4 RTSan build tree and a pull-request job running the harness

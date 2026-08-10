@@ -71,9 +71,43 @@ The spike is throwaway: build `PracticeTakesTests` with clang-20 in CI and read 
 
 Three working legs must not sit unmerged behind a toolchain problem.
 
-### 6. The annotation must be inert under GCC
+### 6. The annotation must be inert under GCC, and carries `noexcept` with it
 
 `[[clang::nonblocking]]` behind a macro that expands to nothing when the compiler does not recognise it. The GCC build — which is the build that produces releases — must be unaffected by an annotation that only one toolchain reads.
+
+Two corrections from the spike, both of which the first draft of this document had wrong:
+
+**Placement.** These are function *type* attributes and go after the parameter list, like `noexcept` — `void f() [[clang::nonblocking]]`, not `[[clang::nonblocking]] void f()`. Clang rejects the second outright.
+
+**`noexcept` is required in practice.** Clang emits `-Wperf-constraint-implies-noexcept` for a nonblocking function that is not `noexcept`, which `-Werror` turns into a build failure. So annotating means declaring the callback `noexcept` as well.
+
+That is a real semantic change, not a formality: an exception escaping the callback becomes `std::terminate` rather than propagating into JUCE. Two ways to take it, and the choice is deferred to task 5.1:
+
+- **Annotate the override directly**, making `audioDeviceIOCallbackWithContext` `noexcept`. C++ permits an override to have a stricter exception specification than its base, so this is legal even though JUCE's base is not `noexcept`. It is also arguably what the contract already says — throwing from the audio thread is forbidden — and this makes the compiler enforce it.
+- **Annotate a private `noexcept` helper** that the override calls immediately, leaving the virtual's exception specification untouched. Smaller blast radius, one extra indirection, and the annotation no longer covers the override's own prologue.
+
+### 7. Spike verdict — recorded 2026-08-10
+
+Run [31380836018](https://github.com/dwerkjem/PracticeTakes/actions/runs/31380836018), on `ubuntu-24.04`:
+
+| Question | Answer |
+| --- | --- |
+| clang-20 available? | Yes — `20.1.2`, from Ubuntu's own apt. No `apt.llvm.org` source needed |
+| `-fsanitize=realtime` accepted? | Yes |
+| Does RTSan actually detect an allocation? | **Yes** — verified by allocating inside a nonblocking function and requiring a non-zero exit |
+| Attribute compiles in the shape needed? | Yes, with `noexcept`; see decision 6 |
+| Project configures with clang? | Yes |
+| `PracticeTakesTests` builds? | Yes |
+| Suite passes? | Yes — 464/464, 13.4s |
+
+**Section 5 stays in this change.** The contingency in decision 5 is not triggered.
+
+Two findings incidental to the question, both invisible to GCC:
+
+- `src/application/configuration/SettingsTransferCodec.h:36` — `explicitly defaulted equality comparison operator is implicitly deleted`. A `= default`'d `operator==` that is implicitly deleted gives the type no working comparison. Possibly a live defect; out of scope here.
+- `src/tests/platform/audio/AudioSampleFifoTests.cpp:165-195` — six ignored `[[nodiscard]]` returns, on the FIFO whose return value reports whether a write was accepted.
+
+Verifying that `-fsanitize=realtime` *compiles* was the first version of that probe, and it was not enough: a flag that parses proves nothing about detection. The probe that matters is the one that fails when the sanitizer is inert.
 
 ## Risks / Trade-offs
 
