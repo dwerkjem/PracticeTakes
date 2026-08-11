@@ -1,3 +1,5 @@
+#include "x_window_lookup.h"
+
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -10,111 +12,7 @@
 
 namespace
 {
-std::optional<unsigned long> windowPid(Display* display, Window window, Atom pidAtom)
-{
-    Atom actualType{};
-    int actualFormat{};
-    unsigned long itemCount{};
-    unsigned long bytesAfter{};
-    unsigned char* data{};
-
-    if (XGetWindowProperty(
-            display, window, pidAtom, 0, 1, False, XA_CARDINAL, &actualType, &actualFormat,
-            &itemCount, &bytesAfter, &data) != Success ||
-        data == nullptr)
-    {
-        return std::nullopt;
-    }
-
-    const auto pid = *reinterpret_cast<unsigned long*>(data);
-    XFree(data);
-    return pid;
-}
-
-std::optional<std::string> windowTitle(Display* display, Window window)
-{
-    const auto utf8Atom = XInternAtom(display, "UTF8_STRING", True);
-    const auto readUtf8Property =
-        [display, window, utf8Atom](Atom nameAtom) -> std::optional<std::string>
-    {
-        if (utf8Atom == None || nameAtom == None)
-        {
-            return std::nullopt;
-        }
-        Atom actualType{};
-        int actualFormat{};
-        unsigned long itemCount{};
-        unsigned long bytesAfter{};
-        unsigned char* data{};
-        if (XGetWindowProperty(
-                display, window, nameAtom, 0, 1024, False, utf8Atom, &actualType, &actualFormat,
-                &itemCount, &bytesAfter, &data) == Success &&
-            data != nullptr)
-        {
-            const std::string title{reinterpret_cast<char*>(data), itemCount};
-            XFree(data);
-            return title;
-        }
-        return std::nullopt;
-    };
-
-    if (const auto title = readUtf8Property(XInternAtom(display, "_NET_WM_NAME", True)))
-    {
-        return title;
-    }
-    if (const auto title = readUtf8Property(XInternAtom(display, "WM_NAME", True)))
-    {
-        return title;
-    }
-
-    char* title{};
-    if (XFetchName(display, window, &title) != 0 && title != nullptr)
-    {
-        const std::string result{title};
-        XFree(title);
-        return result;
-    }
-    return std::nullopt;
-}
-
-std::optional<Window>
-findWindowForPid(Display* display, unsigned long pid, const std::optional<std::string>& title)
-{
-    const auto root = DefaultRootWindow(display);
-    const auto clientsAtom = XInternAtom(display, "_NET_CLIENT_LIST", True);
-    const auto pidAtom = XInternAtom(display, "_NET_WM_PID", True);
-    if (clientsAtom == None || pidAtom == None)
-    {
-        return std::nullopt;
-    }
-
-    Atom actualType{};
-    int actualFormat{};
-    unsigned long itemCount{};
-    unsigned long bytesAfter{};
-    unsigned char* data{};
-    if (XGetWindowProperty(
-            display, root, clientsAtom, 0, 4096, False, XA_WINDOW, &actualType, &actualFormat,
-            &itemCount, &bytesAfter, &data) != Success ||
-        data == nullptr)
-    {
-        return std::nullopt;
-    }
-
-    const auto* windows = reinterpret_cast<Window*>(data);
-    std::optional<Window> result;
-    for (unsigned long index = 0; index < itemCount; ++index)
-    {
-        if (windowPid(display, windows[index], pidAtom) == pid &&
-            (!title.has_value() || windowTitle(display, windows[index]) == title))
-        {
-            result = windows[index];
-            break;
-        }
-    }
-    XFree(data);
-    return result;
-}
+using xlookup::findWindowForPid;
 
 std::uint8_t channel(unsigned long pixel, unsigned long mask)
 {

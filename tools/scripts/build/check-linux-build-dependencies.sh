@@ -68,6 +68,10 @@ readonly apt_packages=(
     libxinerama-dev
     libxrandr-dev
     libxrender-dev
+    # Not needed to build or run the application. `test-suite capture --headless`
+    # photographs surfaces on a screen of its own so a capture run does not take
+    # over the desktop, and Xvfb is that screen.
+    xvfb
 )
 
 missing_packages=()

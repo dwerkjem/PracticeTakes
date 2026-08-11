@@ -103,7 +103,64 @@ uv run test-suite capture --mode full --resolutions default constrained maximise
 uv run test-suite capture --themes dark light
 uv run test-suite capture --mode quick
 uv run test-suite capture --run 12          # resume; already-captured surfaces are skipped
+uv run test-suite capture --surfaces tuner-in-tune tuner-bar   # only these
+uv run test-suite capture --headless        # on a screen of its own
+uv run test-suite capture --scratch         # not in the verification history
 ```
+
+The three combine, and together they are what a "let me look at this" capture
+wants — one surface, on nobody's screen, out of the record:
+
+```bash
+uv run test-suite capture --headless --scratch --surfaces tuner-bar \
+    --resolutions default --themes dark
+```
+
+### Capturing one surface
+
+`--surfaces` names approved states — the same names `list-states` prints and the
+review grid shows. Someone who changed the tuner wants the tuner, not a sweep of
+every surface at four geometries in two palettes.
+
+Selection composes with `--resolutions` and `--themes` rather than replacing
+them: a narrowed run still visits each chosen surface at every configured
+resolution and palette. A name no surface offers fails the run before it starts,
+because a typo that captures nothing looks exactly like a run where everything
+was fine.
+
+The summary prints the directory the images went to, which is usually what you
+want when you captured two surfaces to look at a change.
+
+### Capturing without taking over the screen
+
+`--headless` runs the pass on a private Xvfb screen. No window appears, nothing
+takes focus, and the images are the same — `xwindow_capture` reads a window's
+contents from the X server, which does not care whether the screen is attached
+to a monitor. Install Xvfb with
+`bash tools/scripts/build/check-linux-build-dependencies.sh --install`; without
+it, `--headless` refuses rather than quietly falling back to the desktop.
+
+Two limits worth knowing. A headless capture is evidence about layout and state,
+not about how the application renders on real hardware — font hinting and
+compositing can differ. And `attend` has no headless mode on purpose: that pass
+exists to put a live application in front of a person, and a display they cannot
+see would defeat it.
+
+### Capturing something you only need once
+
+`--scratch` writes to a temporary store instead of the verification history, so
+a capture taken to answer one question does not take a run number in a record
+meant for verification passes. The run reports its directory, and the images are
+left there rather than deleted on exit — looking at them is the reason the run
+happened. The machine's temporary directory clears them eventually.
+
+It refuses to combine with `--database` or `--run`: the first two both choose
+where the run lives, and there is nothing in a fresh scratch store to resume.
+
+**Check which binary you are capturing.** `--executable` defaults to
+`build-tc/bin/PracticeTakes`, a tree that may be older than the one you just
+built. Nothing warns you, and a capture of a stale binary looks exactly like a
+capture of a current one.
 
 A capture is a surface, at a resolution, **in a palette**. Themes are a
 dimension rather than a property of a surface, for the same reason resolutions
