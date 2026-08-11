@@ -160,39 +160,97 @@ TEST_CASE(
     AudioSampleFifo<fifoCapacity> fifo256;
     AudioSampleFifo<fifoCapacity> fifo512;
 
+    // Each body is a matched pair -- the operation being measured, and the
+    // opposite operation that keeps the FIFO from filling or emptying. The
+    // setup is inside the timed region, so an absolute number here is the cost
+    // of a push *and* a pop; the names are kept as they are because the
+    // performance history in docs/development/quality/run-history/ is keyed on
+    // them, and renaming would orphan the trend rather than correct it.
+    //
+    // What each pair must not do is measure the wrong branch. A rejected push
+    // returns early without copying anything, and a pop from an empty FIFO
+    // copies nothing either -- both are far cheaper than the accepted path, and
+    // a benchmark that drifted into them would report a FIFO that had merely
+    // stopped doing the work. Nothing asserted that until now.
+    //
+    // The two checks after each block are what assert it, and they sit outside
+    // the timed region so they cost the measurement nothing:
+    //
+    //   droppedBlocks() == 0     No push was ever rejected -- exact, because
+    //                            push increments that counter on precisely the
+    //                            branch this must not measure. This covers the
+    //                            measured push above and the setup push below.
+    //
+    //   available() <= blockSize The pops kept up. A pop that returned short
+    //                            would leave its remainder buffered, so a
+    //                            systematic shortfall shows as a backlog and,
+    //                            once the backlog reaches capacity, as drops.
+    //
+    // Together they are also what proves a measured pop was never short: a push
+    // accepted immediately beforehand leaves at least one block available, and
+    // pop returns min(requested, available).
+    //
+    // The setup return is discarded rather than accumulated, which is worth
+    // justifying because the obvious reading is that it should be summed and
+    // compared. It was written that way first. The accumulator has to live
+    // inside the lambda, which is the timed region, and these numbers feed the
+    // performance trend -- paying measurement accuracy for a check that the
+    // counters already provide for free is the wrong trade. A per-iteration sum
+    // would additionally catch a single isolated short pop, but an isolated
+    // short pop does not change what the benchmark measures; systematic drift
+    // does, and that is what the invariants below catch.
+
     BENCHMARK("push 128-sample block")
     {
-        fifo128.pop(readBuf.data(), blockSize128);
+        static_cast<void>(fifo128.pop(readBuf.data(), blockSize128));
         return fifo128.push(block.data(), blockSize128);
     };
 
+    CHECK(fifo128.droppedBlocks() == 0);
+    CHECK(fifo128.available() <= blockSize128);
+
     BENCHMARK("pop 128-sample block")
     {
-        fifo128.push(block.data(), blockSize128);
+        static_cast<void>(fifo128.push(block.data(), blockSize128));
         return fifo128.pop(readBuf.data(), blockSize128);
     };
 
+    CHECK(fifo128.droppedBlocks() == 0);
+    CHECK(fifo128.available() <= blockSize128);
+
     BENCHMARK("push 256-sample block")
     {
-        fifo256.pop(readBuf.data(), blockSize256);
+        static_cast<void>(fifo256.pop(readBuf.data(), blockSize256));
         return fifo256.push(block.data(), blockSize256);
     };
 
+    CHECK(fifo256.droppedBlocks() == 0);
+    CHECK(fifo256.available() <= blockSize256);
+
     BENCHMARK("pop 256-sample block")
     {
-        fifo256.push(block.data(), blockSize256);
+        static_cast<void>(fifo256.push(block.data(), blockSize256));
         return fifo256.pop(readBuf.data(), blockSize256);
     };
 
+    CHECK(fifo256.droppedBlocks() == 0);
+    CHECK(fifo256.available() <= blockSize256);
+
     BENCHMARK("push 512-sample block")
     {
-        fifo512.pop(readBuf.data(), blockSize512);
+        static_cast<void>(fifo512.pop(readBuf.data(), blockSize512));
         return fifo512.push(block.data(), blockSize512);
     };
 
+    CHECK(fifo512.droppedBlocks() == 0);
+    CHECK(fifo512.available() <= blockSize512);
+
     BENCHMARK("pop 512-sample block")
     {
-        fifo512.push(block.data(), blockSize512);
+        static_cast<void>(fifo512.push(block.data(), blockSize512));
         return fifo512.pop(readBuf.data(), blockSize512);
     };
+
+    CHECK(fifo512.droppedBlocks() == 0);
+    CHECK(fifo512.available() <= blockSize512);
 }
