@@ -92,6 +92,68 @@ class SurfaceListTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             surfaces.plan(surfaces.FULL, surfaces.SWEEP_GEOMETRIES, ("neon",))
 
+    def test_a_run_can_be_narrowed_to_named_surfaces(self) -> None:
+        """Someone who changed one tool wants that tool, not a full sweep."""
+        chosen = surfaces.surfaces_for_mode(surfaces.FULL)[0].state
+        narrowed = surfaces.plan(
+            surfaces.FULL, (surfaces.DEFAULT_GEOMETRY,), (surfaces.DARK,), (chosen,)
+        )
+
+        self.assertTrue(narrowed)
+        self.assertEqual({surface.state for surface, _, _ in narrowed}, {chosen})
+
+    def test_narrowing_still_covers_every_resolution_and_palette(self) -> None:
+        """The selection replaces which surfaces, not the other two dimensions."""
+        chosen = next(
+            surface.state
+            for surface in surfaces.surfaces_for_mode(surfaces.FULL)
+            if not surface.fixed_geometry and not surface.window_title
+        )
+        narrowed = surfaces.plan(
+            surfaces.FULL, surfaces.SWEEP_GEOMETRIES, surfaces.THEMES, (chosen,)
+        )
+
+        self.assertEqual({theme for _, _, theme in narrowed}, set(surfaces.THEMES))
+        self.assertEqual(
+            {geometry for _, geometry, _ in narrowed}, set(surfaces.SWEEP_GEOMETRIES)
+        )
+
+    def test_an_unknown_surface_name_is_rejected_rather_than_ignored(self) -> None:
+        """A typo that captured nothing would look exactly like a clean run.
+
+        Warning and carrying on with whatever matched produces a run that
+        covered less than the operator believes, and nothing in the output
+        distinguishes that from every surface being fine.
+        """
+        with self.assertRaises(ValueError) as raised:
+            surfaces.plan(
+                surfaces.FULL, (surfaces.DEFAULT_GEOMETRY,), (surfaces.DARK,), ("tuner-in-tune-typo",)
+            )
+
+        self.assertIn("tuner-in-tune-typo", str(raised.exception))
+
+    def test_no_selection_covers_everything(self) -> None:
+        everything = surfaces.plan(surfaces.FULL, (surfaces.DEFAULT_GEOMETRY,), (surfaces.DARK,))
+        explicit = surfaces.plan(
+            surfaces.FULL, (surfaces.DEFAULT_GEOMETRY,), (surfaces.DARK,), ()
+        )
+
+        self.assertEqual(everything, explicit)
+
+    def test_a_surface_outside_the_mode_is_rejected(self) -> None:
+        """Quick mode is a subset, so a full-only name is not silently empty."""
+        full_only = {surface.state for surface in surfaces.surfaces_for_mode(surfaces.FULL)} - {
+            surface.state for surface in surfaces.surfaces_for_mode(surfaces.QUICK)
+        }
+
+        if not full_only:
+            self.skipTest("quick mode currently covers every surface")
+
+        with self.assertRaises(ValueError):
+            surfaces.plan(
+                surfaces.QUICK, (surfaces.DEFAULT_GEOMETRY,), (surfaces.DARK,), (sorted(full_only)[0],)
+            )
+
     def test_a_palette_is_captured_in_one_pass_before_the_next(self) -> None:
         """Switching palette is instant; a resize has to settle, so themes go outside."""
         themes = [theme for _, _, theme in surfaces.plan(surfaces.QUICK)]
