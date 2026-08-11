@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <memory>
 #include <vector>
 
 // The first test to invoke the real-time audio callback.
@@ -52,9 +53,19 @@ struct ServiceUnderTest
 {
     // Declaration order is the point: the runtime is constructed before the
     // service and destroyed after it, so the service never exists without a
-    // MessageManager underneath it.
+    // MessageManager underneath it. The unique_ptr is declared second, so the
+    // service is destroyed first and never outlives the MessageManager.
     juce::ScopedJuceInitialiser_GUI juceRuntime;
-    AudioInputService service;
+
+    // On the heap, and it has to be. AudioInputService carries eight inline
+    // 65,536-sample FIFOs -- a little over 2 MB -- and Windows gives a thread
+    // 1 MB of stack by default where Linux and macOS give 8. As a by-value
+    // member this fixture overflowed the stack, and all six cases below
+    // segfaulted on Windows while passing everywhere else. The application
+    // never had the problem: MainComponent owns the service as a member of a
+    // heap-allocated component.
+    std::unique_ptr<AudioInputService> owned = std::make_unique<AudioInputService>();
+    AudioInputService& service = *owned;
 };
 
 // A consumer that only needs to exist. What it receives is read back through

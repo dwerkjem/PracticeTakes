@@ -39,6 +39,7 @@
 - [x] 4.5 Layout checker passes. Instrumented TUs **26 of 47 (55.3%) → 27 of 47 (57.4%)**. #116's quoted "25 of 43, 58.1%" is stale — the denominator has grown, so its 80% target should be measured against 47
 
 - [x] 4.6 Fix `test_coverage_sources.py`, which pins area 9's list of untested units and had been red since 4.1 moved `AudioInputService.cpp` into the test target. `python-check.yml` covers `src/**` and would have caught it on the first pull request; it went unseen only because this branch has not opened one yet
+- [x] 4.7 Heap-allocate the service in the fixture. `sizeof(AudioInputService)` is **2,115,272 bytes** — eight inline 65,536-sample FIFOs — and a by-value fixture member segfaulted all six cases on Windows x64 and arm64 against a 1 MB default thread stack, while passing on Linux and macOS at 8 MB. Found by PR #167, which is the first time these tests ran anywhere but Linux
 
 ## 5. RealtimeSanitizer — only if 1.3 was clean
 

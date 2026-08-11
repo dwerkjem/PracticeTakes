@@ -148,6 +148,14 @@ The lock probe was deliberately uncontended: a check that only fired on contenti
 
 The diagnostic was not wasted: it established that the object carries `__rtsan_realtime_enter`/`_exit`, and that RTSan checks a `noexcept` virtual override exactly as it checks a free function — so neither the attribute placement nor the override shape is a hole.
 
+### 10. The harness must not hold the service by value — recorded 2026-08-11
+
+`sizeof(AudioInputService)` is 2,115,272 bytes: `maximumConsumers` (8) inline `AudioSampleFifo<65536>` slots, each an `std::array<float, 65536>`. The first fixture made it a by-value member, which is fine on Linux and macOS — 8 MB of thread stack — and overflows Windows' 1 MB default. All six `[callback]` cases segfaulted on Windows x64 and arm64 in PR #167, and passed everywhere else.
+
+The application never had this problem: `MainComponent` owns the service as a member of a heap-allocated component. It is specific to a fixture constructing one on the stack.
+
+Two things worth carrying forward. **Local green on one platform is not green** — these tests had only ever run on Linux, and the defect was waiting for the first pull request. And a type this large is a hazard for any future by-value use, which is why the fixture says so in a comment rather than silently using `make_unique`.
+
 ## Risks / Trade-offs
 
 - **TSan on a schedule means races can merge.** Accepted, and mitigated by the push-to-`main` leg and the auto-opened issue. The alternative costs every pull request a concurrency soak.
