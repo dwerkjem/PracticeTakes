@@ -249,7 +249,7 @@ const std::vector<std::string>& approvedThemeNames()
 const std::vector<std::string>& approvedGeometryNames()
 {
     static const std::vector<std::string> names{
-        "normal", "narrow", "tiny", "maximised", "fullscreen"};
+        "normal", "narrow", "tiny", "maximised", "fullscreen", "slim", "squat"};
 
     return names;
 }

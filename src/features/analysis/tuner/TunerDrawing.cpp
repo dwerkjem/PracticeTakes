@@ -370,7 +370,9 @@ void TunerComponent::drawCompactGraph(
         graphics.strokePath(trace, juce::PathStrokeType(2.0f));
     }
 
-    drawCompactReading(graphics, bounds, shape);
+    drawCompactReading(
+        graphics, juce::Rectangle<int>(0, 0, juce::jmin(bounds.getWidth() - 12, 160), 44)
+                      .withCentre(bounds.getCentre()));
 }
 
 void TunerComponent::drawCompactBar(
@@ -435,7 +437,23 @@ void TunerComponent::drawCompactBar(
             (vertical ? position : static_cast<float>(centre.y)) - 9.0f, 18.0f, 18.0f);
     }
 
-    drawCompactReading(graphics, bounds, shape);
+    // Clear of the track, not centred on it. Centred, the marker sits exactly
+    // on the note whenever the reading is in tune -- which is the moment the
+    // note most wants reading. Offset perpendicular to the track, the two never
+    // meet at any reading.
+    constexpr int readingHeight = 34;
+    constexpr int clearance = 16;
+    const auto readingCentre =
+        vertical ? juce::Point<int>(
+                       centre.x - static_cast<int>(trackThickness) - clearance - readingHeight / 2,
+                       centre.y)
+                 : juce::Point<int>(
+                       centre.x,
+                       centre.y - static_cast<int>(trackThickness) - clearance - readingHeight / 2);
+
+    drawCompactReading(
+        graphics, juce::Rectangle<int>(0, 0, juce::jmin(bounds.getWidth() - 12, 120), readingHeight)
+                      .withCentre(readingCentre));
 }
 
 void TunerComponent::drawCompactMeter(
@@ -486,16 +504,13 @@ juce::String TunerComponent::directionLabel() const
                               : juce::String::fromUTF8("\xe2\x96\xbc  flat");
 }
 
-void TunerComponent::drawCompactReading(
-    juce::Graphics& graphics,
-    juce::Rectangle<int> bounds,
-    compact::Shape shape) const
+void TunerComponent::drawCompactReading(juce::Graphics& graphics, juce::Rectangle<int> area) const
 {
-    // The note over the middle of whatever was just drawn. Backed by a panel
-    // fill rather than drawn straight onto the trace, because a note name on
-    // top of a gridline is neither readable.
-    juce::ignoreUnused(shape);
-
+    // The note over the middle of whatever was just drawn, and nothing behind
+    // it. A plate was there to stop a gridline crossing the glyphs; it read as
+    // a box someone forgot to remove, which is worse than the problem it
+    // solved. Slight transparency does the same job -- the trace shows through
+    // rather than being hidden by a rectangle -- and leaves the letters alone.
     if (!hasSignal)
     {
         return;
@@ -503,17 +518,11 @@ void TunerComponent::drawCompactReading(
 
     const auto palette = tunerPaletteFor(currentTheme);
     const auto inTune = std::abs(displayedCents) <= inTuneToleranceCents;
+    const auto height = juce::jlimit(22, 52, area.getHeight());
 
-    const auto height = juce::jlimit(26, 52, bounds.getHeight() / 4);
-    const auto plate = juce::Rectangle<int>(0, 0, juce::jmin(bounds.getWidth() - 12, 120), height)
-                           .withCentre(bounds.getCentre());
-
-    graphics.setColour(palette.panel.withAlpha(0.88f));
-    graphics.fillRoundedRectangle(plate.toFloat(), 5.0f);
-
-    graphics.setColour(inTune ? palette.inTune : palette.foreground);
-    graphics.setFont(juce::FontOptions(static_cast<float>(height) * 0.62f, juce::Font::bold));
-    graphics.drawFittedText(displayedNote, plate, juce::Justification::centred, 1);
+    graphics.setColour((inTune ? palette.inTune : palette.foreground).withAlpha(0.85f));
+    graphics.setFont(juce::FontOptions(static_cast<float>(height) * 0.72f, juce::Font::bold));
+    graphics.drawFittedText(displayedNote, area, juce::Justification::centred, 1);
 }
 
 void TunerComponent::drawCompactDisplay(

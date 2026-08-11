@@ -260,6 +260,30 @@ bool MainComponent::applyTestControlGeometry(const std::string& geometry)
         return true;
     }
 
+    // Tall and thin, and short and wide. A window this shape is what puts a
+    // *pane* below the size its tool can draw at -- the sweep's other
+    // geometries shrink the window but leave a single docked tool a pane with
+    // plenty of room, so the compact displays never appear in a capture.
+    //
+    // Both are outside what a window manager would allow, like "tiny", because
+    // reaching a small pane through the window is the only way when one tool
+    // fills the workspace.
+    if (geometry == "slim")
+    {
+        window->setFullScreen(false);
+        window->setSize(340, 780);
+
+        return true;
+    }
+
+    if (geometry == "squat")
+    {
+        window->setFullScreen(false);
+        window->setSize(1100, 300);
+
+        return true;
+    }
+
     if (geometry == "maximised")
     {
         window->setFullScreen(false);

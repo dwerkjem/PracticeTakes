@@ -185,6 +185,8 @@ class ApplicationDriver:
 GEOMETRY_NAMES = {
     "default": "normal",
     "constrained": "narrow",
+    "slim": "slim",
+    "squat": "squat",
     "tiny": "tiny",
     "maximised": "maximised",
 }

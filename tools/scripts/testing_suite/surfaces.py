@@ -56,8 +56,16 @@ DEFAULT_GEOMETRY = "default"
 # "tiny" is 640x480 -- smaller than a window manager would let a user drag it,
 # and deliberately so. Most of what a run finds is a layout out of room, and
 # this is the size at which a docked tool has to choose what to drop.
-SWEEP_GEOMETRIES = (DEFAULT_GEOMETRY, "constrained", "tiny", "maximised")
-DEFAULT_RESOLUTIONS = SWEEP_GEOMETRIES
+# Every geometry a run may be asked for. "slim" and "squat" put a *pane* below
+# the size its tool draws at, which the others cannot: they shrink the window,
+# and a single docked tool in a small window still has a roomy pane.
+SWEEP_GEOMETRIES = (DEFAULT_GEOMETRY, "constrained", "tiny", "maximised", "slim", "squat")
+
+# What a run covers when nobody says otherwise. Deliberately not all of them --
+# the two compact shapes are asked for when the compact displays are what is
+# being looked at, and would otherwise add two more images per surface to every
+# full sweep.
+DEFAULT_RESOLUTIONS = (DEFAULT_GEOMETRY, "constrained", "tiny", "maximised")
 
 
 @dataclass(frozen=True)

@@ -123,10 +123,7 @@ class TunerComponent final
         juce::Graphics& graphics,
         juce::Rectangle<int> bounds,
         compact::Shape shape) const;
-    void drawCompactReading(
-        juce::Graphics& graphics,
-        juce::Rectangle<int> bounds,
-        compact::Shape shape) const;
+    void drawCompactReading(juce::Graphics& graphics, juce::Rectangle<int> area) const;
     [[nodiscard]] juce::String directionLabel() const;
     void drawSelectedDisplay(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
 
