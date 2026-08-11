@@ -6,7 +6,7 @@
 # failure is attributable to one commit instead of to a week of them.
 #
 # A scheduled check nobody reads is not a check, so a failure opens an issue.
-# benchmarks.yml and secret-scan.yml still have that gap; that is #159.
+# Every scheduled workflow now does this through tools/scripts/ci/report_workflow_failure.py.
 name: Sanitizers (scheduled)
 
 on:
@@ -73,11 +73,13 @@ jobs:
       # A red run that only exists in the Actions tab is a red run nobody sees.
       # One issue per outstanding failure, commented on rather than duplicated,
       # so a week of nightly failures does not become a week of issues.
+      #
+      # Not on workflow_dispatch: whoever pressed the button is watching. See #159,
+      # which moved this logic into a script the other scheduled workflows share.
       - name: Report the failure
-        if: failure()
+        if: failure() && (github.event_name == 'schedule' || github.event_name == 'push')
         env:
           GH_TOKEN: ${{ github.token }}
-          TITLE: "ThreadSanitizer: scheduled run is failing"
         run: |
           if [ "${{ steps.configure.outcome }}" = "failure" ]; then
             failed="Configure"
@@ -89,33 +91,15 @@ jobs:
             failed="unknown — see the run"
           fi
 
-          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-
-          # Written to a file rather than a shell variable: an indented heredoc
-          # keeps its leading spaces, and GitHub renders indented markdown as a
-          # code block.
-          {
-            printf 'Workflow `%s` failed at step **%s**.\n\n' "${GITHUB_WORKFLOW}" "${failed}"
-            printf -- '- Run: %s\n' "${run_url}"
-            printf -- '- Commit: `%s`\n' "${GITHUB_SHA}"
-            printf -- '- Trigger: `%s`\n\n' "${GITHUB_EVENT_NAME}"
-            printf 'If the failing step is *Run the concurrency suite*, ThreadSanitizer\n'
-            printf 'has reported a data race and names both accesses. Treat a race in\n'
-            printf '`AudioSampleFifo` as urgent: it is on the audio path, and the ordinary\n'
-            printf 'test suite cannot see it.\n\n'
-            printf 'This issue is reused for later failures rather than duplicated.\n'
-          } > /tmp/failure-body.md
-
-          # $TITLE is expanded by the shell before jq sees it, so jq receives a
-          # string literal rather than an undefined jq variable.
-          number=$(gh issue list --state open --limit 100 --json number,title \
-            --jq "map(select(.title == \"${TITLE}\")) | .[0].number // empty")
-
-          if [ -n "${number}" ]; then
-            gh issue comment "${number}" --body-file /tmp/failure-body.md
-            echo "Commented on existing issue #${number}"
-          else
-            gh issue create --title "${TITLE}" \
-              --label "area:testing,area:audio,type:bug,priority:p1" \
-              --body-file /tmp/failure-body.md
-          fi
+          python3 tools/scripts/ci/report_workflow_failure.py \
+            --title "ThreadSanitizer: scheduled run is failing" \
+            --workflow "${GITHUB_WORKFLOW}" \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --commit "${GITHUB_SHA}" \
+            --trigger "${GITHUB_EVENT_NAME}" \
+            --failing-step "${failed}" \
+            --label area:testing \
+            --label area:audio \
+            --label type:bug \
+            --label priority:p1 \
+            --guidance "If the failing step is *Run the concurrency suite*, ThreadSanitizer has reported a data race and names both accesses. Treat a race in \`AudioSampleFifo\` as urgent: it is on the audio path, and the ordinary test suite cannot see it."

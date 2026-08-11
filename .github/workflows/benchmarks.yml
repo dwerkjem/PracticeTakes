@@ -18,6 +18,9 @@ on:
 
 permissions:
   contents: read
+  # For the failure report below. A scheduled run that goes red is otherwise
+  # visible only in the Actions tab, which is the same as invisible.
+  issues: write
 
 jobs:
   benchmark:
@@ -29,26 +32,31 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Install build dependencies
+        id: dependencies
         run: bash tools/scripts/build/check-linux-build-dependencies.sh --install
 
       - name: Configure
+        id: configure
         run: |
           /usr/bin/cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON
 
       - name: Build test binary and application
+        id: build
         run: |
           /usr/bin/cmake --build build --target PracticeTakesTests --parallel
           /usr/bin/cmake --build build --target PracticeTakes --parallel
 
       - name: Run benchmarks
+        id: benchmarks
         run: |
           ./build/PracticeTakesTests "[.benchmark]" --reporter XML \
             --out benchmark.xml
           echo "Benchmark XML written."
 
       - name: Measure startup timing
+        id: startup
         run: |
           # Launch the binary under a 5-second wall-clock timeout.
           # PracticeTakes will exit non-zero when there is no display/audio
@@ -63,15 +71,56 @@ jobs:
           echo "Startup probe: ${launch_ms} ms"
 
       - name: Format and post step summary
+        id: summary
         run: |
           python3 tools/scripts/quality/format_benchmarks.py \
             benchmark.xml startup.json \
             >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload raw benchmark results
+        id: upload
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: benchmark-results-${{ github.sha }}
           path: benchmark.xml
           retention-days: 90
           if-no-files-found: error
+
+      # Only the unattended triggers. A workflow_dispatch run is being watched by
+      # whoever started it, and a failure they can already see does not need an
+      # issue opened on their behalf. See #159.
+      - name: Report the failure
+        if: failure() && (github.event_name == 'schedule' || github.event_name == 'push')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ steps.dependencies.outcome }}" = "failure" ]; then
+            failed="Install build dependencies"
+          elif [ "${{ steps.configure.outcome }}" = "failure" ]; then
+            failed="Configure"
+          elif [ "${{ steps.build.outcome }}" = "failure" ]; then
+            failed="Build test binary and application"
+          elif [ "${{ steps.benchmarks.outcome }}" = "failure" ]; then
+            failed="Run benchmarks"
+          elif [ "${{ steps.startup.outcome }}" = "failure" ]; then
+            failed="Measure startup timing"
+          elif [ "${{ steps.summary.outcome }}" = "failure" ]; then
+            failed="Format and post step summary"
+          elif [ "${{ steps.upload.outcome }}" = "failure" ]; then
+            failed="Upload raw benchmark results"
+          else
+            failed="unknown — see the run"
+          fi
+
+          python3 tools/scripts/ci/report_workflow_failure.py \
+            --title "Performance benchmarks: scheduled run is failing" \
+            --workflow "${GITHUB_WORKFLOW}" \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --commit "${GITHUB_SHA}" \
+            --trigger "${GITHUB_EVENT_NAME}" \
+            --failing-step "${failed}" \
+            --label area:testing \
+            --label area:build \
+            --label type:bug \
+            --label priority:p1 \
+            --guidance "These numbers are recorded, not gated, so a failure here is almost always the build or the harness rather than a performance regression. Check that \`[.benchmark]\` still runs before reading anything into the timings."
