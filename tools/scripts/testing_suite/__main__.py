@@ -24,7 +24,7 @@ No CI check runs any of this.
 from __future__ import annotations
 
 import argparse
-from contextlib import ExitStack
+from contextlib import contextmanager, ExitStack
 from pathlib import Path
 import platform
 import subprocess
@@ -149,6 +149,30 @@ def command_capture(arguments) -> int:
 
     store = open_store(arguments)
 
+    if arguments.workers < 1:
+        print("--workers needs at least 1.", file=sys.stderr)
+
+        return 1
+
+    if arguments.workers > 1:
+        if arguments.headless is False:
+            # Several applications resizing themselves on one screen is the
+            # arrangement this was impossible under before headless existed.
+            print(
+                "--workers needs a display per worker, so it cannot run on the "
+                "desktop display. Drop --no-headless.",
+                file=sys.stderr,
+            )
+
+            return 1
+
+        if not display_module.is_available():
+            print(display_module.missing_message(), file=sys.stderr)
+
+            return 1
+
+        return _capture_in_parallel(arguments, plan, store, resolutions)
+
     # Entered before anything opens a window, and left after the driver stops,
     # so every process this run starts inherits the private DISPLAY.
     with ExitStack() as stack:
@@ -172,6 +196,83 @@ def command_capture(arguments) -> int:
                 print(f"{error}\nFalling back to the desktop display.", file=sys.stderr)
 
         return _capture_on_current_display(arguments, plan, store, resolutions)
+
+
+def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
+    """One plan, several screens, one run.
+
+    Each worker gets a screen and an application of its own, and passes the
+    screen's name to both explicitly. Nothing here relies on inheriting
+    `DISPLAY`: there is one of those per process and there are several screens,
+    so a worker that inherited would photograph whichever came up last.
+    """
+    try:
+        tooling = capture_module.Tooling.ensure()
+    except capture_module.CaptureError as error:
+        print(str(error), file=sys.stderr)
+
+        return 1
+
+    run_id = int(store.run(int(arguments.run))["id"]) if arguments.run else store.start_run(
+        provenance=machine_module.provenance(),
+        commit=current_commit(),
+        mode=arguments.mode,
+        resolutions=resolutions,
+        build_config=arguments.build_config,
+        platform=describe_platform(),
+        audio_device=arguments.audio_device,
+    )
+    images_at = image_directory(store, run_id)
+
+    @contextmanager
+    def worker(index: int, lock):
+        with display_module.virtual_display(publish=False) as screen:
+            driver = ApplicationDriver(arguments.executable, display=screen)
+            driver.start()
+
+            try:
+                absent = missing_states(driver.list_states(), surfaces.required_states())
+
+                if absent:
+                    raise capture_module.CaptureError(
+                        "the application does not offer: " + ", ".join(absent)
+                    )
+
+                yield capture_module.CapturePass(
+                    store=store,
+                    run_id=run_id,
+                    driver=driver,
+                    tooling=tooling,
+                    image_directory=images_at,
+                    window_title=arguments.window_title,
+                    display=screen,
+                    lock=lock,
+                )
+            finally:
+                driver.stop()
+
+    def say(entry: dict) -> None:
+        print(
+            f"[{entry['done'] + 1}/{entry['total']}] {entry['surface']} "
+            f"at {entry['geometry']} in {entry.get('theme', 'dark')}"
+        )
+
+    print(f"Capturing on {arguments.workers} screens at once; nothing will appear on yours.")
+    result = capture_module.run_in_parallel(
+        plan, workers=arguments.workers, worker=worker, progress=say
+    )
+
+    for error in result["errors"]:
+        print(f"A worker stopped: {error}", file=sys.stderr)
+
+    print(
+        f"Run {run_id}: {result['captured']} captured, {result['failed']} failed, "
+        f"{result['already_captured']} already present, "
+        f"across {result['workers']} worker(s)."
+    )
+    print(f"Images: {images_at}")
+
+    return 1 if result["failed"] or result["errors"] else 0
 
 
 def _capture_on_current_display(arguments, plan, store, resolutions) -> int:
@@ -654,6 +755,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Capture on a private Xvfb screen instead of the desktop, so no "
         "windows appear and nothing steals focus. On by default; --no-headless "
         "captures on the desktop.",
+    )
+    capture_parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="How many screens to capture on at once. Default 1; 2 is the most "
+        "that works today. Never derived from the processor count. Above two, "
+        "instances contend for the input device and one blocks inside ALSA "
+        "opening it, on the thread that answers the control channel — so the "
+        "application runs but stops answering, and its share is recorded as "
+        "failures.",
     )
     capture_parser.add_argument("--build-config", default="", help="How the build under test was configured.")
     capture_parser.add_argument("--audio-device", default="", help="The input device in use.")

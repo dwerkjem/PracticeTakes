@@ -11,8 +11,11 @@ layers down.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import sys
+import threading
+import time
 import unittest
 from unittest import mock
 
@@ -71,3 +74,139 @@ class ScreenSizeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SeveralDisplaysAtOnceTests(unittest.TestCase):
+    """Choosing display numbers from more than one thread.
+
+    No Xvfb: the server is replaced by a stand-in that registers its number as
+    taken, which is the only part of a real one this needs. The race being
+    guarded against has a window of milliseconds and only appears when captures
+    run in parallel — the case where the symptom is a worker that quietly never
+    started rather than an error anyone would see.
+    """
+
+    def setUp(self) -> None:
+        self.taken: set[int] = set()
+        self.lock = threading.Lock()
+        self.started: list[int] = []
+
+        original_in_use = display.display_in_use
+        display.display_in_use = lambda number: number in self.taken
+        self.addCleanup(setattr, display, "display_in_use", original_in_use)
+
+        original_popen = display.subprocess.Popen
+        display.subprocess.Popen = self.fake_server
+        self.addCleanup(setattr, display.subprocess, "Popen", original_popen)
+
+        original_ready = display.wait_until_ready
+        display.wait_until_ready = lambda number, process, timeout=0: None
+        self.addCleanup(setattr, display, "wait_until_ready", original_ready)
+
+        original_available = display.is_available
+        display.is_available = lambda: True
+        self.addCleanup(setattr, display, "is_available", original_available)
+
+    def fake_server(self, arguments, **_):
+        """Stands in for Xvfb, and claims the number the way a real one would."""
+        number = int(str(arguments[1]).lstrip(":"))
+        # A real server binds its socket a moment after starting; the delay is
+        # what makes the race reachable at all.
+        time.sleep(0.005)
+
+        with self.lock:
+            self.taken.add(number)
+            self.started.append(number)
+
+        class Server:
+            returncode = 0
+
+            def poll(inner):  # noqa: N805 - test double
+                return None
+
+            def terminate(inner) -> None:  # noqa: N805 - test double
+                return None
+
+            def wait(inner, timeout=None) -> int:  # noqa: N805 - test double
+                return 0
+
+            def kill(inner) -> None:  # noqa: N805 - test double
+                return None
+
+        return Server()
+
+    def test_two_at_once_get_different_numbers(self) -> None:
+        names: list[str] = []
+        barrier = threading.Barrier(4)
+
+        def take() -> None:
+            barrier.wait()
+
+            with display.virtual_display(publish=False) as name:
+                with self.lock:
+                    names.append(name)
+
+                time.sleep(0.02)
+
+        threads = [threading.Thread(target=take) for _ in range(4)]
+
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join(10)
+
+        self.assertEqual(len(names), 4)
+        self.assertEqual(len(set(names)), 4, f"two workers were given one screen: {names}")
+
+    def test_a_display_that_will_not_come_up_is_tried_again(self) -> None:
+        """A number free when it was chosen can be taken a moment later.
+
+        Xvfb says so by exiting immediately, which `wait_until_ready` reports.
+        Giving up on the first one would lose a worker to a collision that
+        costs nothing to retry.
+        """
+        refused: list[int] = []
+        original = display.wait_until_ready
+
+        def first_one_fails(number, process, timeout=0):
+            if not refused:
+                refused.append(number)
+
+                raise display.VirtualDisplayError("that display is taken")
+
+            return None
+
+        display.wait_until_ready = first_one_fails
+        self.addCleanup(setattr, display, "wait_until_ready", original)
+
+        with display.virtual_display(publish=False) as name:
+            self.assertEqual(len(refused), 1)
+            self.assertNotEqual(name, f":{refused[0]}")
+
+    def test_a_display_that_never_comes_up_gives_up_rather_than_spinning(self) -> None:
+        original = display.wait_until_ready
+
+        def never(number, process, timeout=0):
+            raise display.VirtualDisplayError("Xvfb did not come up")
+
+        display.wait_until_ready = never
+        self.addCleanup(setattr, display, "wait_until_ready", original)
+
+        with self.assertRaises(display.VirtualDisplayError):
+            with display.virtual_display(publish=False):
+                pass
+
+        self.assertEqual(len(self.started), display.SELECTION_ATTEMPTS)
+
+    def test_publishing_is_what_changes_the_environment(self) -> None:
+        before = os.environ.get("DISPLAY")
+
+        with display.virtual_display(publish=False) as name:
+            self.assertEqual(os.environ.get("DISPLAY"), before)
+            self.assertTrue(name.startswith(":"))
+
+        with display.virtual_display(publish=True) as name:
+            self.assertEqual(os.environ.get("DISPLAY"), name)
+
+        self.assertEqual(os.environ.get("DISPLAY"), before)

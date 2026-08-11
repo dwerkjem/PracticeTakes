@@ -16,8 +16,12 @@ Standard library only, so the protocol can be tested without Textual.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
+import queue
 import subprocess
+import threading
+import time
 
 # Replies end with a verdict line, so a reader knows a reply is complete without
 # counting bytes or waiting on a timeout.
@@ -28,6 +32,23 @@ ITEM_PREFIX = "item "
 
 class ChannelError(RuntimeError):
     """The application refused a command, or the channel broke."""
+
+
+# How long one command may take before the channel is declared broken.
+#
+# Generous, because a state change legitimately takes seconds and a false
+# timeout would report a working build as broken. Not unbounded, because an
+# application that stops answering otherwise hangs the run with nothing said:
+# that happened here with two instances running, where the second blocked
+# inside ALSA opening a device the first already held, on the thread that
+# answers this channel. The run waited on a pipe forever and no image, log
+# line, or failed row said so.
+REPLY_TIMEOUT_SECONDS = 60.0
+
+# What `quit` gets. Shorter, because an application on its way out has nothing
+# left to be slow about, and one that will not answer is about to be killed
+# anyway -- waiting a minute first only delays the run's own shutdown.
+QUIT_TIMEOUT_SECONDS = 5.0
 
 
 @dataclass
@@ -54,10 +75,26 @@ def parse_reply(lines: list[str]) -> Reply:
 class ApplicationDriver:
     """Launches the application and drives it through the control channel."""
 
-    def __init__(self, executable: Path, extra_arguments: tuple[str, ...] = ()) -> None:
+    def __init__(
+        self,
+        executable: Path,
+        extra_arguments: tuple[str, ...] = (),
+        display: str = "",
+    ) -> None:
         self.executable = executable
         self.extra_arguments = extra_arguments
+        # Which X screen this application opens on. Empty means "inherit", which
+        # is right for one application at a time. It stops being right the
+        # moment there are two: `os.environ` is one dictionary per process, so
+        # the second display started would silently become everybody's.
+        self.display = display
         self._process: subprocess.Popen[str] | None = None
+
+    def _environment(self) -> dict[str, str] | None:
+        if not self.display:
+            return None
+
+        return {**os.environ, "DISPLAY": self.display}
 
     def start(self) -> None:
         if not self.executable.is_file():
@@ -73,7 +110,26 @@ class ApplicationDriver:
             stderr=subprocess.DEVNULL,
             text=True,
             bufsize=1,
+            env=self._environment(),
         )
+
+        # Read on a thread of its own so a reply can be waited for with a
+        # deadline. `readline` on the pipe cannot be given one, and selecting on
+        # the descriptor would miss a complete line already sitting in Python's
+        # buffer.
+        self._lines = queue.Queue()
+        self._reader = threading.Thread(
+            target=self._read_lines, args=(self._process.stdout,), daemon=True
+        )
+        self._reader.start()
+
+    def _read_lines(self, stream) -> None:
+        for line in stream:
+            self._lines.put(line.rstrip("\n"))
+
+        # Closed. A sentinel rather than silence, so a waiting `send` learns
+        # about it now instead of at its deadline.
+        self._lines.put(None)
 
     def stop(self) -> None:
         """Ask the application to quit, then make sure it actually did."""
@@ -82,13 +138,22 @@ class ApplicationDriver:
         if process is None:
             return
 
-        self._process = None
-
         try:
             if process.poll() is None:
-                self.send("quit")
+                # A short deadline of its own, not the one a real command gets.
+                # An application being shut down has nothing left to be slow
+                # about, and the case where it does not answer is exactly the
+                # one this is not going to wait a minute for.
+                self.send("quit", timeout=QUIT_TIMEOUT_SECONDS)
         except ChannelError:
             pass
+        finally:
+            # Cleared after asking, not before. Clearing first made `send` raise
+            # "the control channel is not open" against this very process, so
+            # `quit` was never sent and every stop waited ten seconds and then
+            # killed the application -- which also meant it never left the way a
+            # user's would.
+            self._process = None
 
         try:
             process.wait(timeout=10)
@@ -97,8 +162,15 @@ class ApplicationDriver:
             process.kill()
             process.wait(timeout=5)
 
-    def send(self, command: str) -> Reply:
-        """Send one command and read its reply."""
+        for stream in (process.stdin, process.stdout):
+            if stream is not None:
+                try:
+                    stream.close()
+                except OSError:
+                    pass
+
+    def send(self, command: str, timeout: float | None = None) -> Reply:
+        """Send one command and read its reply, or say that none came."""
         process = self._process
 
         if process is None or process.stdin is None or process.stdout is None:
@@ -110,20 +182,34 @@ class ApplicationDriver:
         process.stdin.write(command + "\n")
         process.stdin.flush()
 
+        deadline = time.monotonic() + (
+            REPLY_TIMEOUT_SECONDS if timeout is None else timeout
+        )
         lines: list[str] = []
 
         while True:
-            line = process.stdout.readline()
+            remaining = deadline - time.monotonic()
 
-            if not line:
+            if remaining <= 0:
+                raise ChannelError(
+                    f"The application did not answer '{command}' within "
+                    f"{REPLY_TIMEOUT_SECONDS if timeout is None else timeout:g}s. "
+                    f"It is running but not responding."
+                )
+
+            try:
+                line = self._lines.get(timeout=remaining)
+            except queue.Empty:
+                continue
+
+            if line is None:
                 raise ChannelError(
                     f"The application closed the channel while answering '{command}'."
                 )
 
-            stripped = line.rstrip("\n")
-            lines.append(stripped)
+            lines.append(line)
 
-            if stripped == OK or stripped.startswith(ERROR_PREFIX):
+            if line == OK or line.startswith(ERROR_PREFIX):
                 return parse_reply(lines)
 
     # --- The vocabulary -----------------------------------------------------

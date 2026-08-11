@@ -116,3 +116,55 @@ Default stays 1, so nothing changes for anyone who does not ask.
   choose to be.
 - **Should the hub offer it?** It is the place a full sweep is most often
   started, and also the place where a flaky run is least welcome.
+
+## What running it actually found
+
+Measured on this machine, quick mode, 14 captures, both palettes.
+
+| Workers | Wall clock | Result |
+| --- | --- | --- |
+| 1 | 29s | 12 captured, 2 failed |
+| 2 | 21s | 12 captured, 2 failed — identical |
+| 4 | 77s | 4–8 captured, and two applications never answered |
+
+### The ceiling is the audio device, not the settle check
+
+The open question was how many workers before the settle check gets flaky. That
+was the wrong thing to watch. At four workers two applications hang before
+capturing anything, on `list-states` — the first command either is sent.
+
+Attached to one and read its stack:
+
+```
+AudioInputService::timerCallback         (AudioInputService.cpp:451)
+ → scanForDeviceChanges                  (AudioInputService.cpp:569)
+   → AudioDeviceManager::initialise
+     → ALSAAudioIODevice::open → snd_pcm_prepare
+       → libasound_module_pcm_pipewire → pw_thread_loop_wait → pthread_cond_wait
+```
+
+The recovery timer reopens the input device when it does not have a usable one,
+on the message thread. With another instance already holding the device, that
+open never returns — so the message thread never returns, so the thread that
+answers the control channel waits on a promise that is never kept.
+
+This is a property of the application, not of this change. It is also a defect
+outside the suite: anything that makes an ALSA open block — a device
+disappearing, PipeWire restarting — freezes the interface, with no timeout and
+no way back. Fixing it means taking device recovery off the message thread,
+which is the audio ownership model and belongs in a proposal of its own.
+
+**So the useful worker count today is 2.** Not a guess: 1 and 2 agree exactly on
+what they captured, and 4 does not.
+
+### A hang is now a failure with a reason
+
+The run used to wait on a pipe forever: no image, no log line, no failed row,
+and nothing to read but a stack. `ApplicationDriver.send` now has a deadline,
+so an application that stops answering is a recorded failure naming the command
+it did not answer.
+
+Found while doing that: `stop` cleared `_process` before calling `send`, so
+`send` refused against the very application it was closing. `quit` had never
+been sent by anything, ever — every stop waited ten seconds and then killed the
+application, which also meant it never left the way a user's would.

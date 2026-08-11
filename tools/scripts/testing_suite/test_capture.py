@@ -9,9 +9,11 @@ verified in the ordinary Python suite.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from pathlib import Path
 import sys
 import tempfile
+import threading
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -429,6 +431,7 @@ class _StubPass(capture_module.CapturePass):
         self.captured = captured
         self.store = _StubStore()
         self.run_id = 1
+        self.lock = threading.Lock()
 
     def capture_one(self, surface, geometry, seen, digests, theme):  # type: ignore[override]
         self.captured.append((surface.state, geometry, theme))
@@ -439,3 +442,220 @@ class _StubPass(capture_module.CapturePass):
 class _StubStore:
     def captured_keys(self, run_id: int) -> set:
         return set()
+
+
+class SharingThePlanTests(unittest.TestCase):
+    """Splitting a plan between workers without losing or repeating anything."""
+
+    def plan(self, count: int = 6) -> tuple:
+        return surfaces.plan(surfaces.QUICK, ("default", "constrained"), (surfaces.DARK,))[:count]
+
+    def test_one_worker_gets_the_whole_plan_unchanged(self) -> None:
+        plan = self.plan()
+
+        self.assertEqual(capture_module.share_plan(plan, 1), [list(plan)])
+
+    def test_every_entry_lands_exactly_once(self) -> None:
+        plan = surfaces.plan(surfaces.FULL, surfaces.SWEEP_GEOMETRIES, surfaces.THEMES)
+
+        for workers in (1, 2, 3, 4, 8):
+            with self.subTest(workers=workers):
+                shares = capture_module.share_plan(plan, workers)
+                dealt = [entry for share in shares for entry in share]
+
+                self.assertEqual(len(dealt), len(plan))
+                self.assertEqual(
+                    sorted((s.state, s.title, g, t) for s, g, t in dealt),
+                    sorted((s.state, s.title, g, t) for s, g, t in plan),
+                )
+
+    def test_a_surface_keeps_its_resolutions_together(self) -> None:
+        """Opening the state is the expensive part; four workers would do it four times."""
+        plan = surfaces.plan(surfaces.FULL, surfaces.SWEEP_GEOMETRIES, surfaces.THEMES)
+
+        for workers in (2, 4):
+            with self.subTest(workers=workers):
+                where: dict[tuple[str, str, str], set[int]] = {}
+
+                for index, share in enumerate(capture_module.share_plan(plan, workers)):
+                    for surface, _, theme in share:
+                        where.setdefault((surface.state, surface.title, theme), set()).add(index)
+
+                split = {key for key, workers_seen in where.items() if len(workers_seen) > 1}
+
+                self.assertEqual(split, set(), "a surface was split across workers")
+
+    def test_more_workers_than_groups_leaves_some_empty(self) -> None:
+        shares = capture_module.share_plan(self.plan(2), 8)
+
+        self.assertEqual(sum(len(share) for share in shares), 2)
+
+    def test_no_workers_is_refused(self) -> None:
+        for workers in (0, -1):
+            with self.subTest(workers=workers):
+                with self.assertRaises(ValueError):
+                    capture_module.share_plan(self.plan(), workers)
+
+
+class ParallelCaptureTests(unittest.TestCase):
+    """Several passes, one run.
+
+    The point of the tests here is not that it is faster -- it is that a run
+    split between workers is the same run. Two of the pass's checks work by
+    comparing captures against *other* captures, and both would develop holes if
+    each worker could only see its own share while still reporting success.
+    """
+
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        self.store = Store.open(self.root / "verification.db")
+        self.addCleanup(self.store.close)
+        self.run_id = self.store.start_run(
+            provenance=PROVENANCE,
+            commit="abc123",
+            mode=surfaces.QUICK,
+            resolutions=("default", "constrained"),
+        )
+        self.converted = 0
+        self.digest_per_capture = True
+        self.sizes = {"default": (1280, 800), "constrained": (800, 600)}
+        self.displays: list[str] = []
+        self.broken: set[int] = set()
+
+        self.original_convert = images.convert
+        images.convert = self.fake_convert
+        self.addCleanup(setattr, images, "convert", self.original_convert)
+
+    def fake_convert(self, source: Path, png_path: Path, thumbnail_path: Path):
+        png_path.write_bytes(b"png")
+        thumbnail_path.write_bytes(b"thumb")
+        self.converted += 1
+        digest = f"digest-{self.converted}" if self.digest_per_capture else "one-digest"
+
+        return 1280, 800, digest
+
+    @contextmanager
+    def worker(self, index: int, lock):
+        """A screen and an application of this worker's own, faked."""
+        outer = self
+        display = f":{90 + len(self.displays)}"
+        self.displays.append(display)
+        requested: list[str] = []
+
+        class TestablePass(capture_module.CapturePass):
+            def read_size(inner, title: str = ""):  # noqa: N805 - test double
+                return outer.sizes.get(requested[-1] if requested else "default")
+
+            def _capture_to(inner, destination: Path, title: str = "") -> str:  # noqa: N805
+                destination.write_bytes(b"P6 fake")
+
+                return ""
+
+            def move_to(inner, surface, geometry, theme=""):  # noqa: N805 - test double
+                requested.append(geometry)
+
+                return capture_module.CapturePass.move_to(inner, surface, geometry, theme)
+
+        if index in self.broken:
+            raise RuntimeError("this worker's display never came up")
+
+        yield TestablePass(
+            store=self.store,
+            run_id=self.run_id,
+            driver=FakeDriver(),
+            tooling=capture_module.Tooling(Path("capture"), Path("control")),
+            image_directory=self.root / "images",
+            settle_seconds=2.0,
+            poll_interval=0.0,
+            # The warmup is a real sleep for the tone surfaces, and none of
+            # what is under test here needs it to have happened.
+            sleep=lambda _: None,
+            display=display,
+            lock=lock,
+        )
+
+    def plan(self) -> tuple:
+        return surfaces.plan(surfaces.QUICK, ("default", "constrained"), (surfaces.DARK,))
+
+    def capture_with(self, workers: int) -> dict:
+        return capture_module.run_in_parallel(
+            self.plan(), workers=workers, worker=self.worker
+        )
+
+    def rows(self) -> list[tuple]:
+        return sorted(
+            (row.surface_state, row.surface_title, row.geometry, row.theme)
+            for row in self.store.captures(self.run_id)
+        )
+
+    def test_a_parallel_run_captures_what_a_sequential_one_does(self) -> None:
+        alone = self.capture_with(1)
+        sequential = self.rows()
+
+        self.setUp()
+        together = self.capture_with(3)
+
+        self.assertEqual(self.rows(), sequential)
+        self.assertEqual(together["captured"], alone["captured"])
+        self.assertEqual(together["failed"], 0)
+
+    def test_nothing_is_captured_twice(self) -> None:
+        self.capture_with(4)
+        rows = self.rows()
+
+        self.assertEqual(len(rows), len(set(rows)))
+
+    def test_each_worker_gets_a_display_of_its_own(self) -> None:
+        self.capture_with(3)
+
+        self.assertEqual(len(self.displays), len(set(self.displays)))
+        self.assertEqual(len(self.displays), 3)
+
+    def test_the_duplicate_check_still_sees_across_workers(self) -> None:
+        """The check this change most risks weakening.
+
+        Built so the collision can *only* be found across workers: two states,
+        one capture each, one worker each, and the same pixels from both. A
+        worker keeping its own map has nothing of the other's to compare
+        against, so it reports success on exactly the pair the check exists to
+        catch.
+
+        Written first with a plan big enough that each worker also collided with
+        itself, which passed with the maps split -- and proved nothing.
+        """
+        self.digest_per_capture = False
+        two_states = surfaces.plan(surfaces.QUICK, ("default",), (surfaces.DARK,))[:2]
+        self.assertNotEqual(two_states[0][0].state, two_states[1][0].state)
+
+        capture_module.run_in_parallel(two_states, workers=2, worker=self.worker)
+
+        rows = list(self.store.captures(self.run_id))
+        notices = [row.notice for row in rows if row.notice]
+
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(len(notices), 1, "the cross-worker duplicate was not reported")
+        self.assertIn("identical to", notices[0])
+
+    def test_a_window_that_ignores_a_geometry_is_still_caught(self) -> None:
+        self.sizes = {"default": (1280, 800), "constrained": (1280, 800)}
+        result = self.capture_with(3)
+
+        self.assertGreater(result["failed"], 0)
+        failures = [row.failure for row in self.store.captures(self.run_id) if row.failure]
+
+        self.assertTrue(any("stayed at 1280x800" in failure for failure in failures))
+
+    def test_a_worker_that_dies_does_not_take_the_run_with_it(self) -> None:
+        self.broken = {1}
+        result = self.capture_with(3)
+
+        self.assertGreater(result["captured"], 0)
+        self.assertGreater(result["failed"], 0)
+        self.assertTrue(result["errors"])
+        self.assertIn("never came up", result["errors"][0])
+
+    def test_no_workers_is_refused(self) -> None:
+        with self.assertRaises(ValueError):
+            self.capture_with(0)

@@ -28,9 +28,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+import os
 from pathlib import Path
 import re
 import subprocess
+import threading
 import time
 
 import images
@@ -229,6 +231,8 @@ class CapturePass:
         settle_seconds: float = SETTLE_SECONDS,
         poll_interval: float = POLL_INTERVAL_SECONDS,
         sleep: Callable[[float], None] = time.sleep,
+        display: str = "",
+        lock: threading.Lock | None = None,
     ) -> None:
         self.store = store
         self.run_id = run_id
@@ -239,8 +243,27 @@ class CapturePass:
         self.settle_seconds = settle_seconds
         self.poll_interval = poll_interval
         self.sleep = sleep
+        # Which screen to read windows from. Empty inherits, which is right for
+        # one pass; several passes at once each name their own, because
+        # `os.environ` cannot hold two answers.
+        self.display = display
+        # Guards the store and the two cross-capture maps. A lock of its own
+        # unless passes are sharing them, in which case they share this too.
+        self.lock = lock or threading.Lock()
 
     # --- X plumbing ---------------------------------------------------------
+
+    def _environment(self) -> dict[str, str] | None:
+        """The environment for the X utilities this pass runs.
+
+        One place, because a call site that forgets is a capture of whatever is
+        on another worker's screen -- an image that looks entirely plausible and
+        is of the wrong thing.
+        """
+        if not self.display:
+            return None
+
+        return {**os.environ, "DISPLAY": self.display}
 
     def _window_arguments(self, title: str = "") -> list[str]:
         """Which window to act on: the surface's own, or the run's default.
@@ -265,6 +288,7 @@ class CapturePass:
             capture_output=True,
             text=True,
             check=False,
+            env=self._environment(),
         )
 
         if completed.returncode != 0:
@@ -291,6 +315,7 @@ class CapturePass:
             capture_output=True,
             text=True,
             check=False,
+            env=self._environment(),
         )
 
         if completed.returncode != 0:
@@ -343,14 +368,15 @@ class CapturePass:
         each surface's sizes as the yardstick for its remaining resolutions.
         """
         def fail(reason: str) -> None:
-            self.store.record_capture(
-                self.run_id,
-                state=surface.state,
-                title=surface.title,
-                geometry=geometry,
-                theme=theme,
-                failure=reason,
-            )
+            with self.lock:
+                self.store.record_capture(
+                    self.run_id,
+                    state=surface.state,
+                    title=surface.title,
+                    geometry=geometry,
+                    theme=theme,
+                    failure=reason,
+                )
 
         reason = self.move_to(surface, geometry, theme)
 
@@ -369,7 +395,11 @@ class CapturePass:
         # size, and this is time for the tool to have something to show.
         if surface.warmup_seconds > 0:
             self.sleep(surface.warmup_seconds)
-        problem = geometry_problem(geometry, size, seen)
+        # Under the lock for the same reason as the digests: `seen` is shared
+        # when passes run together, and the geometry it is being compared
+        # against may be another pass's, written a moment ago.
+        with self.lock:
+            problem = geometry_problem(geometry, size, seen)
 
         if problem:
             fail(problem)
@@ -401,26 +431,33 @@ class CapturePass:
         # Keyed by palette as well: the same surface in dark and in light is
         # expected to differ, and two surfaces matching in one palette says
         # nothing about the other.
-        notice = duplicate_problem(
-            surface.state, f"{geometry}/{theme}", digest, digests if digests is not None else {}
-        )
+        #
+        # Asked and answered under one lock. Two passes sharing this map would
+        # otherwise both look before either writes, and each would find the
+        # other's collision absent -- so the check would report success on
+        # exactly the pair it exists to catch.
+        with self.lock:
+            notice = duplicate_problem(
+                surface.state, f"{geometry}/{theme}", digest, digests if digests is not None else {}
+            )
 
-        if digests is not None:
-            digests.setdefault((f"{geometry}/{theme}", digest), surface.state)
+            if digests is not None:
+                digests.setdefault((f"{geometry}/{theme}", digest), surface.state)
 
-        self.store.record_capture(
-            self.run_id,
-            state=surface.state,
-            title=surface.title,
-            geometry=geometry,
-            theme=theme,
-            image_path=str(png_path),
-            thumbnail_path=str(thumbnail_path),
-            width=width,
-            height=height,
-            digest=digest,
-            notice=notice,
-        )
+        with self.lock:
+            self.store.record_capture(
+                self.run_id,
+                state=surface.state,
+                title=surface.title,
+                geometry=geometry,
+                theme=theme,
+                image_path=str(png_path),
+                thumbnail_path=str(thumbnail_path),
+                width=width,
+                height=height,
+                digest=digest,
+                notice=notice,
+            )
 
         return size
 
@@ -431,6 +468,8 @@ class CapturePass:
         resume: bool = True,
         progress: Callable[[dict], None] | None = None,
         should_stop: Callable[[], bool] | None = None,
+        sizes: dict[str, dict[str, tuple[int, int]]] | None = None,
+        digests: dict[tuple[str, str], str] | None = None,
     ) -> dict:
         """Walk the plan. Never raises for one surface's sake.
 
@@ -450,11 +489,20 @@ class CapturePass:
         gate.
         """
         already = self.store.captured_keys(self.run_id) if resume else set()
-        sizes: dict[str, dict[str, tuple[int, int]]] = {}
+
+        # Both maps compare captures against *other* captures, so passing them
+        # in is how several passes keep one view of the run between them. A pass
+        # given neither keeps its own, which is every caller that captures alone.
+        #
+        # Splitting them per pass would leave each comparing against its own
+        # share -- a quarter of the run, four ways -- and `duplicate_problem`
+        # would stop seeing the cross-surface collision it exists to catch,
+        # while still reporting success.
+        sizes = {} if sizes is None else sizes
 
         # (resolution, digest) -> the state that produced it: two states with the
         # same pixels at the same resolution means one captured the wrong window.
-        digests: dict[tuple[str, str], str] = {}
+        digests = {} if digests is None else digests
         captured = 0
         failed = 0
         skipped = 0
@@ -494,7 +542,9 @@ class CapturePass:
                 continue
 
             captured += 1
-            seen[geometry] = size
+
+            with self.lock:
+                seen[geometry] = size
 
         return {
             "captured": captured,
@@ -505,3 +555,140 @@ class CapturePass:
             # nothing downstream mistakes "we stopped" for "the build is broken".
             "not_reached": max(0, len(plan) - captured - failed - skipped) if stopped else 0,
         }
+
+
+# --- Several at once --------------------------------------------------------
+
+def share_plan(
+    plan: tuple[tuple[surfaces.Surface, str, str], ...], workers: int
+) -> list[list[tuple[surfaces.Surface, str, str]]]:
+    """Split a plan between workers, keeping each surface's resolutions together.
+
+    Grouped rather than dealt out one entry at a time. Consecutive entries for
+    one surface in one palette are the same application, moved: it opens the
+    state once and is then asked for four geometries. Handing those four to four
+    workers would open the state four times, which is the expensive part.
+
+    Groups go round-robin, because the plan is ordered and contiguous blocks
+    would give one worker every surface that carries a tone -- each of which
+    sleeps for its warmup -- while another finishes early.
+    """
+    if workers < 1:
+        raise ValueError("a capture needs at least one worker")
+
+    groups: list[list[tuple[surfaces.Surface, str, str]]] = []
+    key: tuple[str, str, str] | None = None
+
+    for entry in plan:
+        surface, _, theme = entry
+        here = (surface.state, surface.title, theme)
+
+        if here != key:
+            groups.append([])
+            key = here
+
+        groups[-1].append(entry)
+
+    shares: list[list[tuple[surfaces.Surface, str, str]]] = [[] for _ in range(workers)]
+
+    for index, group in enumerate(groups):
+        shares[index % workers].extend(group)
+
+    return shares
+
+
+def run_in_parallel(
+    plan: tuple[tuple[surfaces.Surface, str, str], ...],
+    *,
+    workers: int,
+    worker: Callable[[int, threading.Lock], object],
+    resume: bool = True,
+    progress: Callable[[dict], None] | None = None,
+    should_stop: Callable[[], bool] | None = None,
+) -> dict:
+    """Capture one plan on several screens at once, and report it as one run.
+
+    `worker(index, lock)` is a context manager yielding the pass that captures
+    this share -- which means the caller opens the screen, starts the
+    application, and shuts both down again. All of that already belongs to the
+    caller, and a coordinator that knew about any of it would have to be told
+    about all of it.
+
+    The two cross-capture maps and one lock are shared across every worker. That
+    is the whole reason this is threads: the checks only work by seeing the
+    whole run, and a worker that could see only its own share would compare each
+    capture against a fraction of the run while still reporting success.
+    """
+    if workers < 1:
+        raise ValueError("a capture needs at least one worker")
+
+    lock = threading.Lock()
+    sizes: dict[str, dict[str, tuple[int, int]]] = {}
+    digests: dict[tuple[str, str], str] = {}
+    shares = [share for share in share_plan(plan, workers) if share]
+    results: list[dict] = [{} for _ in shares]
+    done = 0
+
+    def report(entry: dict) -> None:
+        """One count across every worker, so "6 of 204" means what it says."""
+        nonlocal done
+
+        if progress is None:
+            return
+
+        with lock:
+            done += 1
+            said = done
+
+        progress({**entry, "done": said - 1, "total": len(plan)})
+
+    def work(index: int, share: list[tuple[surfaces.Surface, str, str]]) -> None:
+        try:
+            with worker(index, lock) as pass_:
+                results[index] = pass_.run(
+                    tuple(share),
+                    resume=resume,
+                    progress=report,
+                    should_stop=should_stop,
+                    sizes=sizes,
+                    digests=digests,
+                )
+        except Exception as error:  # noqa: BLE001 - one worker dying is not the run dying
+            # Recorded as this worker's failure rather than raised: the other
+            # workers are mid-capture, and losing their work to tidy up after
+            # this one would turn one broken display into a lost run.
+            results[index] = {
+                "captured": 0,
+                "failed": len(share),
+                "already_captured": 0,
+                "stopped": False,
+                "not_reached": 0,
+                "error": f"{type(error).__name__}: {error}",
+            }
+
+    threads = [
+        threading.Thread(target=work, args=(index, share), daemon=True)
+        for index, share in enumerate(shares)
+    ]
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    total = {
+        "captured": sum(result.get("captured", 0) for result in results),
+        "failed": sum(result.get("failed", 0) for result in results),
+        "already_captured": sum(result.get("already_captured", 0) for result in results),
+        "stopped": any(result.get("stopped") for result in results),
+        "workers": len(shares),
+        "errors": [result["error"] for result in results if result.get("error")],
+    }
+    total["not_reached"] = (
+        max(0, len(plan) - total["captured"] - total["failed"] - total["already_captured"])
+        if total["stopped"]
+        else 0
+    )
+
+    return total
