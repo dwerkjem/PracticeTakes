@@ -40,21 +40,23 @@
 
 ## 5. RealtimeSanitizer — only if 1.3 was clean
 
-- [ ] 5.1 Portability macro for `[[clang::nonblocking]]`, inert under GCC. Attribute goes **after** the parameter list, and needs `noexcept` alongside it — decide between annotating the override directly or a private `noexcept` helper (design decision 6)
-- [ ] 5.2 Annotate `audioDeviceIOCallbackWithContext`
-- [ ] 5.3 Confirm the GCC build and the GCC test run are unaffected
-- [ ] 5.4 RTSan build tree and a pull-request job running the harness
-- [ ] 5.5 Confirm it fails on a deliberate allocation in the callback, then remove it
-- [ ] 5.6 Confirm it fails on a deliberate lock in the callback, then remove it
+- [x] 5.1 `src/platform/audio/RealtimeSafety.h`. Annotated the override directly rather than a private helper — a helper would leave the override's own prologue outside the annotation (design decision 9)
+- [x] 5.2 Annotate `audioDeviceIOCallbackWithContext`
+- [x] 5.3 Confirmed: GCC build unaffected, 470/470 green, application target unchanged
+- [x] 5.4 RTSan build tree and a pull-request job running the harness
+- [x] 5.5 Confirmed: a deliberate `std::vector` gave `unsafe-library-call ... malloc`, exit 43, naming `AudioInputService.cpp:325`. Reverted. The first reading of this probe was wrong — see design decision 9 on reading a cancelled run
+- [x] 5.6 Confirmed: an uncontended `std::mutex` gave `unsafe-library-call ... pthread_mutex_lock`, exit 43, naming `AudioInputService.cpp:332`. Reverted byte-identical
+- [x] 5.7 Remove the temporary `push` trigger that exercised the job before this branch had a pull request
 
 ## 6. Documentation
 
-- [ ] 6.1 Record in `docs/development/performance/audio-thread-safety.md` that the contract is enforced, by what, on which trigger, and — honestly — that enforcement covers only the paths the harness drives
-- [ ] 6.2 Note the sanitizer legs in `docs/development/quality/QUALITY.md`
-- [ ] 6.3 Correct #115's stale reference to `docs/development/performance-audio-thread-safety.md`
+- [x] 6.1 `docs/development/performance/audio-thread-safety.md` rewritten. It had described `RealTimeEventCapture`, deleted with the Performance Lab in 41da53f, so the document the audio-thread contract points at documented nothing that exists. It now carries the contract, its enforcement, and a "what this does not cover" section
+- [x] 6.2 Note the sanitizer legs in `docs/development/quality/QUALITY.md`
+- [x] 6.3 Corrected #115. Both paths in it were stale — `performance-audio-thread-safety.md` and `docs/development/QA_STRATEGY.md`
+- [x] 6.4 Corrected the claims this change falsified: QA_STRATEGY area 13 (was "no sanitizer build exists"), area 9's 25-of-43 coverage figure, and AGENT_GUIDE's list of files outside the test target
 
 ## 7. Verification
 
-- [ ] 7.1 `ctest --test-dir build --output-on-failure` still green in the ordinary GCC tree
-- [ ] 7.2 Every new leg observed passing and observed failing, not just passing
-- [ ] 7.3 Note the coverage figure before and after task 4.1
+- [x] 7.1 `ctest --test-dir build --output-on-failure` green in the ordinary GCC tree — 470/470
+- [x] 7.2 Every leg observed failing as well as passing: ASan on a use-after-free (2.4), UBSan on signed overflow (2.5), LSan on a 4096-byte leak of our own (2.6), TSan on a weakened `writePosition.store` (3.6), RTSan on an allocation (5.5) and a lock (5.6)
+- [x] 7.3 Instrumented TUs **26 of 47 (55.3%) → 27 of 47 (57.4%)**. #116's quoted "25 of 43, 58.1%" was measured before the denominator grew; its 80% target should be read against 47

@@ -109,7 +109,7 @@ Two findings incidental to the question, both invisible to GCC:
 
 Verifying that `-fsanitize=realtime` *compiles* was the first version of that probe, and it was not enough: a flag that parses proves nothing about detection. The probe that matters is the one that fails when the sanitizer is inert.
 
-### 8. Blocked — the concurrency tests assert throughput as if it were correctness
+### 8. Resolved in section 3b — the concurrency tests asserted throughput as if it were correctness
 
 Found while wiring section 3, and it changes what section 3 can mean.
 
@@ -128,6 +128,25 @@ The correctness properties pass everywhere. Only the throughput expectation fail
 Compounding it: the `[.load]` cases carry a leading-dot tag, so `catch_discover_tests` does not register them and `ctest` never runs them. The 464 tests that pass have never included these five. #115's premise was that nothing *observes* the concurrency tests; the truth is that nothing *runs* them either, outside a manual invocation.
 
 Wiring the nightly as designed would therefore open a `priority:p1` issue on its first run, for a test-design problem rather than a race — and a leg that is red from day one is a leg that gets ignored, which is the failure mode this change exists to remove.
+
+**Resolution (section 3b).** The three retry-loop sites now assert a bound and report the observed rejection count instead of demanding zero, so drift stays visible without being fatal. `stalled.droppedBlocks() > 0` stays exact — that one is the point of its test rather than a scheduling outcome. All five cases pass on an ordinary build and under TSan.
+
+### 9. RTSan verdict — recorded 2026-08-11
+
+The annotation went on the override directly (decision 6, first option): `audioDeviceIOCallbackWithContext` is now `noexcept PRACTICE_TAKES_NONBLOCKING`. Overriding with a stricter exception specification than JUCE's base declares is legal, and terminating on an escaped exception is the honest outcome for a function already forbidden to throw. The private-helper alternative was rejected because it would leave the override's own prologue outside the annotation.
+
+Both halves of the requirement were verified by breaking them:
+
+| Probe | Run | Result |
+| --- | --- | --- |
+| `std::vector` constructed in the callback | [31387304645](https://github.com/dwerkjem/PracticeTakes/actions/runs/31387304645) | `unsafe-library-call ... malloc`, exit 43, naming `AudioInputService.cpp:325` and the test that drove it |
+| Uncontended `std::mutex` locked in the callback | [31469705595](https://github.com/dwerkjem/PracticeTakes/actions/runs/31469705595) | `unsafe-library-call ... pthread_mutex_lock`, exit 43, naming `AudioInputService.cpp:332` |
+
+The lock probe was deliberately uncontended: a check that only fired on contention would prove nothing about a contract that forbids the lock itself.
+
+**A methodology note worth more than the result.** The allocation probe was first read as *not* detected, and a diagnostic round was spent on that reading. The run had been cancelled by `cancel-in-progress` after 2m28s, and the Realtime job needs about four minutes to reach its first test — so the callback never ran. A cancelled run reports no failure, and a probe looking for a failure reads no-failure as no-detection. **Read the job, not the run conclusion**, when the expected outcome is red.
+
+The diagnostic was not wasted: it established that the object carries `__rtsan_realtime_enter`/`_exit`, and that RTSan checks a `noexcept` virtual override exactly as it checks a free function — so neither the attribute placement nor the override shape is a hole.
 
 ## Risks / Trade-offs
 
@@ -149,5 +168,5 @@ Steps 2 and 3 are independent of 1 and can land first. Step 5 depends on 1 and 4
 
 ## Open Questions
 
-- **Is clang-20 available on the runners, and does the project build with it?** Step 1 answers this. Everything about RTSan is provisional until it does.
-- **Does RTSan need the harness to drive more than the happy path** to be worth the CI slot? Answerable only once it runs; the minimal harness is the starting point, not the intended end state.
+- ~~**Is clang-20 available on the runners, and does the project build with it?**~~ Answered by decision 7: yes, clang 20.1.2 from Ubuntu's own apt, configures and builds, suite green.
+- **Does RTSan need the harness to drive more than the happy path** to be worth the CI slot? Partly answered: the minimal harness was enough to catch both probes, so the slot pays for itself today. It is still not enough to call the contract enforced — the synthetic-tone branch, the multi-consumer loop, and every device-lifecycle path go undriven, so a violation added there passes. Widening the harness stays with #116, and the limit is written down in `docs/development/performance/audio-thread-safety.md`.
