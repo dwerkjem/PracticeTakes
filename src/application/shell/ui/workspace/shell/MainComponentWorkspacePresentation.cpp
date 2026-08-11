@@ -226,7 +226,7 @@ void MainComponent::constructToolPresentation(
         };
         entry->dock = std::make_unique<DockedToolPanel>(
             toolName(instance), *entry->component, dragHandler, floatHandler, feedbackHandler,
-            closeHandler, focusHandler);
+            closeHandler, focusHandler, entry->component.get());
     }
     else
     {

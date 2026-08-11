@@ -349,14 +349,15 @@ void TunerComponent::resized()
 
     const auto preferredDisplayHeight = std::max(90, bounds.getHeight() - controlAreaHeight() - 8);
     bounds.removeFromTop(std::min(preferredDisplayHeight, bounds.getHeight()));
-    bounds.removeFromTop(8);
 
-    auto displayRow = bounds.removeFromTop(32);
-    displayModeLabel.setBounds(displayRow.removeFromLeft(110));
-    displayModeBox.setBounds(displayRow);
-
-    bounds.removeFromTop(8);
-    advancedSettingsButton.setBounds(bounds.removeFromTop(34));
+    // Only when nobody adopted it. A docked panel puts the chooser on its
+    // header line, and reserving a row here as well would leave a gap where it
+    // used to be.
+    if (modeChooser != nullptr && !isModeChooserAdopted())
+    {
+        bounds.removeFromTop(8);
+        placeModeChooser(bounds.removeFromTop(modeChooserHeight));
+    }
 
     if (!areAdvancedSettingsExpanded)
     {
