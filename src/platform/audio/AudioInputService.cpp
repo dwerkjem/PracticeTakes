@@ -319,15 +319,6 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
 {
     AudioCallbackScope callbackScope(callbacksInProgress);
 
-    // TEMPORARY PROBE (task 5.5) -- a heap allocation on the audio thread.
-    // RealtimeSanitizer must fail the Realtime job on this. Removed immediately.
-    {
-        std::vector<float> deliberate(static_cast<std::size_t>(numSamples) + 1);
-        deliberate[0] = 1.0f;
-        volatile float sink = deliberate[0];
-        (void)sink;
-    }
-
     for (int channel = 0; channel < numOutputChannels; ++channel)
     {
         if (outputChannelData[channel] != nullptr)
