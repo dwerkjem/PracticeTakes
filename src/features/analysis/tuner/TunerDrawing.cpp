@@ -290,8 +290,30 @@ void TunerComponent::drawCompactGraph(
     // Two semitones when there is almost no room, up to six when there is.
     const auto span = 2.0 + 4.0 * static_cast<double>(detail);
     const auto centreNote = hasLockedMidiNote ? static_cast<double>(lockedMidiNote) : 69.0;
-    const auto lowest = centreNote - span * 0.5;
-    const auto highest = centreNote + span * 0.5;
+
+    // Widened to hold the trace, never merely centred on the current note.
+    //
+    // A fixed window around the locked note is what the compact graph had, and
+    // any reading outside it mapped outside the plot: the trace left the panel
+    // and drew over the tool's own border. The full graph has always taken its
+    // range from the data; this does the same, with `span` as a floor so a
+    // dead-steady note does not get an axis zoomed to its own jitter.
+    auto lowest = centreNote - span * 0.5;
+    auto highest = centreNote + span * 0.5;
+
+    for (const auto value : graphHistory)
+    {
+        if (std::isfinite(value))
+        {
+            lowest = std::min(lowest, value);
+            highest = std::max(highest, value);
+        }
+    }
+
+    // A little air, so a reading at the extreme is not drawn on the edge.
+    const auto margin = (highest - lowest) * 0.06;
+    lowest -= margin;
+    highest += margin;
 
     const auto plot = bounds.reduced(6);
 
@@ -354,8 +376,14 @@ void TunerComponent::drawCompactGraph(
                 static_cast<float>(index), 0.0f, static_cast<float>(graphHistory.size() - 1),
                 static_cast<float>(vertical ? plot.getY() : plot.getX()),
                 static_cast<float>(vertical ? plot.getBottom() : plot.getRight()));
+            // Clamped as well as ranged. The range above covers every finite
+            // value, so this only catches the degenerate case where they are
+            // all equal -- but a trace outside the panel is exactly the bug
+            // being fixed, and it should not depend on arithmetic elsewhere
+            // staying correct.
             const auto alongPitch = juce::jmap(
-                static_cast<float>(value), static_cast<float>(lowest), static_cast<float>(highest),
+                static_cast<float>(juce::jlimit(lowest, highest, value)),
+                static_cast<float>(lowest), static_cast<float>(highest),
                 static_cast<float>(vertical ? plot.getX() : plot.getBottom()),
                 static_cast<float>(vertical ? plot.getRight() : plot.getY()));
 

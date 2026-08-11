@@ -35,6 +35,8 @@ Standard library only.
 
 from __future__ import annotations
 
+from contextlib import ExitStack
+
 from dataclasses import dataclass, field
 import datetime as _datetime
 import os
@@ -47,6 +49,7 @@ import threading
 import time
 
 import capture as capture_module
+import display as display_module
 import machine as machine_module
 import suites as suites_module
 import surfaces
@@ -645,6 +648,33 @@ class Job:
         if executable is None:
             raise RuntimeError("PracticeTakes is not built")
 
+        # On a screen of its own, like the command line does. Without this the
+        # hub's "run everything" opened the application on the operator's
+        # desktop: windows over whatever they were doing, the pointer taken, and
+        # nothing else clickable for the length of the run. The button most
+        # likely to be pressed was the one that behaved worst.
+        with ExitStack() as stack:
+            try:
+                screen = stack.enter_context(display_module.virtual_display())
+                self._say(f"capturing on a virtual display ({screen})", percent=floor + 1)
+            except display_module.VirtualDisplayError as error:
+                # Not fatal here: the hub has to work on a machine without Xvfb.
+                self._say(f"{error} Capturing on the desktop display.", percent=floor + 1)
+
+            self._capture_with_display(
+                run_id=run_id, plan=plan, tooling=tooling, executable=executable,
+                floor=floor, ceiling=ceiling)
+
+    def _capture_with_display(
+        self,
+        *,
+        run_id: int,
+        plan,
+        tooling,
+        executable,
+        floor: int,
+        ceiling: int,
+    ) -> None:
         driver = ApplicationDriver(executable)
         driver.start()
 
