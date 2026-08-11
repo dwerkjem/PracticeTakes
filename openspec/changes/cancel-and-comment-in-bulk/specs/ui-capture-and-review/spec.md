@@ -46,3 +46,20 @@ read on its own still shows what was said about it.
 #### Scenario: Reading a capture on its own
 - **WHEN** a capture that received a bulk comment is opened by itself
 - **THEN** the comment is shown against it like any other
+
+### Requirement: A comment can be removed
+The review SHALL let a comment be deleted from the capture it was written
+against. A comment is a note somebody typed rather than a record of what the
+build did, and typing one against the wrong capture is easy.
+
+Deleting one comment SHALL leave every other comment on that capture untouched,
+and asking to delete one that is not there SHALL say so rather than report
+success.
+
+#### Scenario: A comment written by accident
+- **WHEN** a reviewer deletes a comment
+- **THEN** it is gone from that capture, and the capture's other comments remain
+
+#### Scenario: Deleting one that has already gone
+- **WHEN** a comment that no longer exists is deleted
+- **THEN** the review says so rather than reporting that it worked

@@ -772,6 +772,19 @@ class Store:
 
         return int(cursor.lastrowid)
 
+    def delete_comment(self, comment_id: int) -> bool:
+        """Remove one comment. False when there was nothing to remove.
+
+        A comment is a note somebody typed, not a record of what the build did,
+        so it is deleted outright rather than marked. Nothing downstream reads
+        comments -- the export carries verdicts and measurements -- so there is
+        nothing for a tombstone to protect.
+        """
+        cursor = self.execute("DELETE FROM comment WHERE id = ?", (int(comment_id),))
+        self.commit()
+
+        return cursor.rowcount > 0
+
     def comments_for(self, capture_id: int) -> list[sqlite3.Row]:
         return list(
             self.execute(

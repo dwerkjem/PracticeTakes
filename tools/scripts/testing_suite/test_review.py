@@ -687,3 +687,48 @@ class BulkCommentTests(unittest.TestCase):
 
         self.assertEqual(result["written"], 3)
         self.assertEqual(result["missed"], [999_999])
+
+
+class DeleteCommentTests(unittest.TestCase):
+    """Removing a comment typed by accident."""
+
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.store = Store.open(Path(self.directory.name) / "verification.db")
+        self.addCleanup(self.store.close)
+        self.run_id = self.store.start_run(
+            provenance=PROVENANCE, commit="abc123", mode=surfaces.QUICK,
+            resolutions=("default",),
+        )
+        self.capture = self.store.record_capture(
+            self.run_id, state="s", title="S", geometry="default", theme="dark",
+            image_path="/tmp/s.png", digest="d",
+        )
+
+    def test_a_comment_can_be_removed(self) -> None:
+        comment_id = self.store.add_comment(self.capture, "typed by accident")
+
+        self.assertEqual(review.delete_comment(self.store, comment_id), {"deleted": comment_id})
+        self.assertEqual(self.store.comments_for(self.capture), [])
+
+    def test_only_the_named_comment_goes(self) -> None:
+        keep = self.store.add_comment(self.capture, "worth keeping")
+        drop = self.store.add_comment(self.capture, "not worth keeping")
+
+        review.delete_comment(self.store, drop)
+
+        self.assertEqual([row["id"] for row in self.store.comments_for(self.capture)], [keep])
+
+    def test_deleting_something_that_is_not_there_says_so(self) -> None:
+        """Rather than reporting success and leaving the reader to wonder."""
+        self.assertIn("error", review.delete_comment(self.store, 999_999))
+
+    def test_comments_reach_the_page_with_their_ids(self) -> None:
+        # Position in a list is not a name: without the id the page cannot say
+        # which comment to remove.
+        comment_id = self.store.add_comment(self.capture, "something")
+        capture = self.store.captures(self.run_id)[0]
+        shown = review.capture_view(self.store, capture)
+
+        self.assertEqual(shown["comments"], [{"id": comment_id, "body": "something"}])

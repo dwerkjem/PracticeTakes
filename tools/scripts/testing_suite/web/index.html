@@ -66,9 +66,10 @@
 
         <span class="divider"></span>
         <button type="button" id="approve-shown" class="primary">Approve all shown</button>
-        <button type="button" id="bulk-pass" class="verdict-pass">Pass selected</button>
-        <button type="button" id="bulk-fail" class="verdict-fail">Fail selected…</button>
-        <button type="button" id="bulk-skip">Skip selected</button>
+        <button type="button" id="bulk-pass" class="verdict-pass" hidden>Pass selected</button>
+        <button type="button" id="bulk-fail" class="verdict-fail" hidden>Fail selected…</button>
+        <button type="button" id="bulk-skip" hidden>Skip selected</button>
+        <button type="button" id="bulk-comment" hidden>Comment selected…</button>
         <label class="inline small" title="Off: only fill in what has not been answered.">
           <input type="checkbox" id="overwrite" /> overwrite answered
         </label>

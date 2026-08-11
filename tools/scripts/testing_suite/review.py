@@ -176,7 +176,11 @@ def capture_view(store: Store, capture, *, include_attended: bool = True) -> dic
         "notice": capture.notice,
         "unavailable": image_available(capture),
         "tags": tags,
-        "comments": [row["body"] for row in store.comments_for(capture.id)],
+        # id alongside the text: the page has to be able to name the one to
+        # delete, and position in a list is not a name.
+        "comments": [
+            {"id": row["id"], "body": row["body"]} for row in store.comments_for(capture.id)
+        ],
         "questions": asked,
     }
 
@@ -430,6 +434,13 @@ def add_comment_to_many(store: Store, capture_ids: list[int], body: str) -> dict
             missed.append(int(capture_id))
 
     return {"written": len(written), "captures": written, "missed": missed}
+
+
+def delete_comment(store: Store, comment_id: int) -> dict:
+    if store.delete_comment(comment_id):
+        return {"deleted": comment_id}
+
+    return {"error": "that comment is not there"}
 
 
 def failures(store: Store, run_id: int) -> list[dict]:

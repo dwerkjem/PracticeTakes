@@ -22,6 +22,17 @@
 - [x] 4.2 One row per capture, so a capture read alone still shows it (design decision 4)
 - [x] 4.3 Tests: a comment over a selection reaches exactly those captures and no others
 
+## 4b. Removing a comment
+
+- [x] 4b.1 Delete one comment from a capture, leaving its others alone
+- [x] 4b.2 Comments carry their id to the page, since position in a list is not a name
+- [x] 4b.3 Deleting one that is not there says so rather than reporting success
+- [x] 4b.4 The control is quiet until its comment is hovered -- a row of crosses invites misclicks on the thing they remove
+
+## 4c. Bulk actions appear only when they apply
+
+- [x] 4c.1 Pass, fail, skip, and comment for a selection are hidden until more than one capture is selected
+
 ## 5. Verification
 
 - [x] 5.1 `python tools/scripts/run_tests.py` green

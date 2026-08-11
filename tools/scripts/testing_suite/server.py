@@ -483,6 +483,9 @@ class ReviewHandler(BaseHTTPRequestHandler):
                 )
 
             self._send_json(result, status=400 if "error" in result else 200)
+        elif parsed.path == "/api/delete-comment":
+            result = review.delete_comment(self.store, int(payload.get("comment_id", 0)))
+            self._send_json(result, status=400 if "error" in result else 200)
         else:
             self._send_json({"error": "not found"}, status=404)
 

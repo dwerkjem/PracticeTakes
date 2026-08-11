@@ -343,9 +343,30 @@ function renderCard(capture) {
   if (capture.comments.length) {
     const list = document.createElement("ul");
     list.className = "comments";
-    capture.comments.forEach((body) => {
+    capture.comments.forEach((entry) => {
       const item = document.createElement("li");
-      item.textContent = body;
+      item.textContent = entry.body;
+
+      // A comment is a note somebody typed, and typing one by accident is easy.
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "comment-delete";
+      remove.title = "Delete this comment";
+      remove.textContent = "\u00d7";
+      remove.addEventListener("click", async (event) => {
+        event.stopPropagation();
+
+        const { ok, data } = await api("/api/delete-comment", { comment_id: entry.id });
+
+        if (!ok) {
+          window.alert(data.error || "could not delete that");
+          return;
+        }
+
+        await reload();
+      });
+
+      item.appendChild(remove);
       list.appendChild(item);
     });
     card.appendChild(list);
@@ -672,6 +693,36 @@ function paintSelection() {
   const count = state.selected.size;
   element("selection-count").textContent =
     count === 0 ? "nothing selected" : `${count} selected`;
+
+  // Only once there is a selection to act on. A row of "selected" buttons above
+  // an empty selection is four things that do nothing, and the one that matters
+  // is harder to find among them.
+  ["bulk-pass", "bulk-fail", "bulk-skip", "bulk-comment"].forEach((id) => {
+    element(id).hidden = count < 2;
+  });
+}
+
+async function commentOnSelected() {
+  const ids = [...state.selected];
+
+  if (ids.length < 2) return;
+
+  const body = window.prompt(`Comment on ${ids.length} captures:`);
+
+  if (!body || !body.trim()) return;
+
+  const { ok, data } = await api("/api/comment", { capture_ids: ids, body });
+
+  if (!ok) {
+    window.alert(data.error || "could not comment");
+    return;
+  }
+
+  if (data.missed && data.missed.length) {
+    window.alert(`Commented on ${data.written}; ${data.missed.length} could not be found.`);
+  }
+
+  await reload();
 }
 
 function selectFrom(id, event) {
@@ -812,6 +863,7 @@ element("approve-shown").addEventListener("click", async () => {
 element("bulk-pass").addEventListener("click", () => scoreSelection("pass"));
 element("bulk-fail").addEventListener("click", () => scoreSelection("fail"));
 element("bulk-skip").addEventListener("click", () => scoreSelection("skip"));
+element("bulk-comment").addEventListener("click", commentOnSelected);
 
 element("select-all").addEventListener("click", () => {
   // Everything *shown*, not everything in the run: with filters on, selecting
