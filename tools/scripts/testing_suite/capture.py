@@ -430,12 +430,24 @@ class CapturePass:
         *,
         resume: bool = True,
         progress: Callable[[dict], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
     ) -> dict:
         """Walk the plan. Never raises for one surface's sake.
 
         `progress` is called after each surface, so a caller running this in the
         background -- the review page's capture button -- can say what is
         happening rather than showing a spinner for ten minutes.
+
+        `should_stop` is asked at each surface boundary. Between surfaces is the
+        only safe place: one capture asks for a geometry, waits for the window
+        to settle, photographs it, converts it, and writes a row, and stopping
+        part way through leaves a partial image or a row pointing at no file. A
+        surface takes seconds, so the delay between asking to stop and stopping
+        is bounded by one of them.
+
+        Surfaces not reached are counted as stopped, never as failed. A stopped
+        run and a broken one are different, and the export feeds a release
+        gate.
         """
         already = self.store.captured_keys(self.run_id) if resume else set()
         sizes: dict[str, dict[str, tuple[int, int]]] = {}
@@ -446,8 +458,14 @@ class CapturePass:
         captured = 0
         failed = 0
         skipped = 0
+        stopped = False
 
         for surface, geometry, theme in plan:
+            if should_stop is not None and should_stop():
+                stopped = True
+
+                break
+
             if (surface.state, surface.title, geometry, theme) in already:
                 skipped += 1
 
@@ -478,4 +496,12 @@ class CapturePass:
             captured += 1
             seen[geometry] = size
 
-        return {"captured": captured, "failed": failed, "already_captured": skipped}
+        return {
+            "captured": captured,
+            "failed": failed,
+            "already_captured": skipped,
+            "stopped": stopped,
+            # What the run did not reach. Reported separately from failures so
+            # nothing downstream mistakes "we stopped" for "the build is broken".
+            "not_reached": max(0, len(plan) - captured - failed - skipped) if stopped else 0,
+        }

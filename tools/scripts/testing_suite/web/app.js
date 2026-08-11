@@ -159,6 +159,28 @@ async function runSuites(ids) {
   poll();
 }
 
+async function stopRun() {
+  const { ok, data } = await api("/api/stop-run", {});
+
+  if (ok && data.stopping) {
+    element("progress-message").textContent = "stopping after the current surface\u2026";
+  }
+
+  poll();
+}
+
+element("stop-run").addEventListener("click", stopRun);
+
+// Escape as well as the button. The reason to want a key is the case where the
+// pointer is not usable, which is what a capture run on the desktop display did
+// until it moved to a display of its own -- and that is exactly when being able
+// to stop matters most.
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && state.data && state.data.job && state.data.job.running) {
+    stopRun();
+  }
+});
+
 element("run-selected").addEventListener("click", () => runSuites(chosenSuites()));
 element("run-all").addEventListener("click", () =>
   runSuites(state.data.suites.map((suite) => suite.id)));
@@ -174,6 +196,13 @@ function renderJob(job) {
   bar.hidden = !job || (!job.running && job.state === "idle");
 
   if (!job || job.state === "idle") return;
+
+  // Only offered while there is something to stop, and disabled once asked so
+  // a second press does not read as the first having been ignored.
+  const stop = element("stop-run");
+  stop.hidden = !job.running;
+  stop.disabled = Boolean(job.stopping);
+  stop.textContent = job.stopping ? "Stopping\u2026" : "Stop run";
 
   element("progress-fill").style.width = `${job.percent}%`;
   element("progress-fill").className = job.state === "failed" ? "failed" : "";

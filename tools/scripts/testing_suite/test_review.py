@@ -619,3 +619,71 @@ class IngestTests(ReviewTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BulkCommentTests(unittest.TestCase):
+    """One sentence about one defect, typed once.
+
+    Four captures got the same comment about the same border this afternoon,
+    which is what this exists to stop.
+    """
+
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.store = Store.open(Path(self.directory.name) / "verification.db")
+        self.addCleanup(self.store.close)
+        self.run_id = self.store.start_run(
+            provenance=PROVENANCE,
+            commit="abc123",
+            mode=surfaces.QUICK,
+            resolutions=("default",),
+        )
+        self.captures = [
+            self.store.record_capture(
+                self.run_id,
+                state=f"surface-{index}",
+                title=f"Surface {index}",
+                geometry="default",
+                theme="dark",
+                image_path=f"/tmp/{index}.png",
+                thumbnail_path=f"/tmp/{index}.thumb.png",
+                width=1280,
+                height=800,
+                digest=f"digest-{index}",
+            )
+            for index in range(3)
+        ]
+
+    def test_one_comment_reaches_every_capture_in_the_selection(self) -> None:
+        result = review.add_comment_to_many(self.store, self.captures, "the border has to go")
+
+        self.assertEqual(result["written"], 3)
+
+        for capture_id in self.captures:
+            bodies = [row["body"] for row in self.store.comments_for(capture_id)]
+            self.assertEqual(bodies, ["the border has to go"])
+
+    def test_captures_outside_the_selection_are_untouched(self) -> None:
+        review.add_comment_to_many(self.store, self.captures[:2], "only these two")
+
+        self.assertEqual(self.store.comments_for(self.captures[2]), [])
+
+    def test_an_empty_comment_is_refused(self) -> None:
+        """Otherwise a stray keypress writes a blank comment onto twenty images."""
+        result = review.add_comment_to_many(self.store, self.captures, "   ")
+
+        self.assertIn("error", result)
+        self.assertEqual(self.store.comments_for(self.captures[0]), [])
+
+    def test_an_empty_selection_is_refused(self) -> None:
+        self.assertIn("error", review.add_comment_to_many(self.store, [], "something"))
+
+    def test_a_capture_that_has_gone_does_not_lose_the_rest(self) -> None:
+        """A selection can outlive one of its captures; the others still get it."""
+        result = review.add_comment_to_many(
+            self.store, [*self.captures, 999_999], "still worth saying"
+        )
+
+        self.assertEqual(result["written"], 3)
+        self.assertEqual(result["missed"], [999_999])

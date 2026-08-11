@@ -325,6 +325,21 @@ class ReviewHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         payload = self._read_json()
 
+        if parsed.path == "/api/stop-run":
+            # Polite about there being nothing to stop: the button can be
+            # pressed twice, and a second press is not an error.
+            stopped = self.session.job.stop()
+            self._send_json(
+                {
+                    "stopping": stopped,
+                    "message": "stopping after the current surface"
+                    if stopped
+                    else "nothing is running",
+                }
+            )
+
+            return
+
         if parsed.path == "/api/run-suites":
             requested = [str(value) for value in payload.get("suites", [])]
             unknown = [name for name in requested if suites_module.by_id(name) is None]
@@ -454,9 +469,19 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self.store.add_tag(name, str(payload.get("description", "")))
             self._send_json({"name": name})
         elif parsed.path == "/api/comment":
-            result = review.add_comment(
-                self.store, int(payload.get("capture_id", 0)), str(payload.get("body", ""))
-            )
+            # One capture or many, through one endpoint: the page sends whichever
+            # it has, and a selection of one behaves exactly like the old call.
+            ids = payload.get("capture_ids")
+
+            if ids:
+                result = review.add_comment_to_many(
+                    self.store, [int(value) for value in ids], str(payload.get("body", ""))
+                )
+            else:
+                result = review.add_comment(
+                    self.store, int(payload.get("capture_id", 0)), str(payload.get("body", ""))
+                )
+
             self._send_json(result, status=400 if "error" in result else 200)
         else:
             self._send_json({"error": "not found"}, status=404)

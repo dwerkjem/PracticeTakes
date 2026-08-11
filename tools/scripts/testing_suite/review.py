@@ -12,6 +12,8 @@ Standard library only.
 
 from __future__ import annotations
 
+import sqlite3
+
 from pathlib import Path
 
 import surfaces
@@ -393,6 +395,41 @@ def add_comment(store: Store, capture_id: int, body: str) -> dict:
         return {"id": store.add_comment(capture_id, body)}
     except StoreError as error:
         return {"error": str(error)}
+
+
+def add_comment_to_many(store: Store, capture_ids: list[int], body: str) -> dict:
+    """One comment, written against every capture given.
+
+    A row each rather than a comment that belongs to a selection: a capture read
+    on its own still has to show what was said about it, and a shared comment
+    would raise the question of what it shows outside the selection that made
+    it.
+
+    All or nothing is deliberately *not* the rule. A selection that has lost one
+    capture since it was made should still comment on the rest, and say which it
+    could not.
+    """
+    if not body.strip():
+        return {"error": "a comment needs something in it"}
+
+    if not capture_ids:
+        return {"error": "no captures selected"}
+
+    written: list[int] = []
+    missed: list[int] = []
+
+    for capture_id in capture_ids:
+        try:
+            store.add_comment(int(capture_id), body)
+            written.append(int(capture_id))
+        except (StoreError, sqlite3.Error):
+            # A capture that has gone raises from the database rather than from
+            # the store's own checks -- the foreign key is what refuses it -- so
+            # both have to be caught, or one missing capture takes the whole
+            # selection down with it.
+            missed.append(int(capture_id))
+
+    return {"written": len(written), "captures": written, "missed": missed}
 
 
 def failures(store: Store, run_id: int) -> list[dict]:

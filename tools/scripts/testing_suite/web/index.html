@@ -22,6 +22,11 @@
       <div id="progress" hidden>
         <div id="progress-bar"><span id="progress-fill"></span></div>
         <div id="progress-message" class="muted"></div>
+        <!-- Only while something is running. A full sweep is two hundred
+             captures and there was no way to end one. -->
+        <button type="button" id="stop-run" title="Stop after the current surface (Esc)">
+          Stop run
+        </button>
       </div>
     </header>
 

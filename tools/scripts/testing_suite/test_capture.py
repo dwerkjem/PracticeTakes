@@ -348,3 +348,94 @@ class CapturePassTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StoppingTests(unittest.TestCase):
+    """A run that is stopped part way.
+
+    The distinction these protect is that a stopped run reports no failures. The
+    export feeds a release gate, so a run full of failures that only means
+    somebody pressed stop would either block a release or teach everyone that
+    failures can be ignored -- and the second is the expensive one, because it
+    lasts.
+    """
+
+    def plan(self, length: int):
+        surface = surfaces.surfaces_for_mode(surfaces.FULL)[0]
+
+        return tuple(
+            (surface, geometry, surfaces.DARK)
+            for geometry in (surfaces.SWEEP_GEOMETRIES * length)[:length]
+        )
+
+    def test_a_run_stopped_before_it_starts_captures_nothing(self) -> None:
+        captured: list = []
+
+        result = _StubPass(captured).run(self.plan(4), should_stop=lambda: True)
+
+        self.assertEqual(captured, [])
+        self.assertEqual(result["captured"], 0)
+        self.assertEqual(result["failed"], 0)
+        self.assertTrue(result["stopped"])
+
+    def test_stopping_part_way_keeps_what_came_before(self) -> None:
+        captured: list = []
+        calls = {"n": 0}
+
+        def should_stop() -> bool:
+            calls["n"] += 1
+
+            # Stop once two surfaces have been taken.
+            return calls["n"] > 2
+
+        result = _StubPass(captured).run(self.plan(4), should_stop=should_stop)
+
+        self.assertEqual(len(captured), 2)
+        self.assertEqual(result["captured"], 2)
+        self.assertTrue(result["stopped"])
+
+    def test_a_stopped_run_reports_no_failures(self) -> None:
+        result = _StubPass([]).run(self.plan(4), should_stop=lambda: True)
+
+        self.assertEqual(result["failed"], 0)
+        self.assertGreater(result["not_reached"], 0)
+
+    def test_a_finished_run_is_not_marked_stopped(self) -> None:
+        captured: list = []
+
+        result = _StubPass(captured).run(self.plan(3), should_stop=lambda: False)
+
+        self.assertEqual(len(captured), 3)
+        self.assertFalse(result["stopped"])
+        self.assertEqual(result["not_reached"], 0)
+
+    def test_no_stop_callback_behaves_as_before(self) -> None:
+        captured: list = []
+
+        result = _StubPass(captured).run(self.plan(3))
+
+        self.assertEqual(len(captured), 3)
+        self.assertFalse(result["stopped"])
+
+
+class _StubPass(capture_module.CapturePass):
+    """A pass that records which surfaces it was asked for and captures none.
+
+    Only the loop is under test here: whether it stops where it was told to and
+    what it says afterwards. Photographing anything would need a display.
+    """
+
+    def __init__(self, captured: list) -> None:  # noqa: D107 - test double
+        self.captured = captured
+        self.store = _StubStore()
+        self.run_id = 1
+
+    def capture_one(self, surface, geometry, seen, digests, theme):  # type: ignore[override]
+        self.captured.append((surface.state, geometry, theme))
+
+        return (1280, 800)
+
+
+class _StubStore:
+    def captured_keys(self, run_id: int) -> set:
+        return set()

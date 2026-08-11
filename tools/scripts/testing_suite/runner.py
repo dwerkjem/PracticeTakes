@@ -247,15 +247,39 @@ class Job:
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     _thread: threading.Thread | None = field(default=None, repr=False)
 
+    # Raised by `stop`, read by the capture pass between surfaces. An Event
+    # rather than a bool because it is set from the request thread and read from
+    # the run thread, and because "is it set" is the whole interface.
+    _stop: threading.Event = field(default_factory=threading.Event, repr=False)
+
     # --- Status -------------------------------------------------------------
 
     @property
     def running(self) -> bool:
         return self.state in (BUILDING, RUNNING)
 
+    def stop(self) -> bool:
+        """Ask a run in progress to stop. False when there is nothing to stop.
+
+        The run ends at the next surface boundary rather than here: a capture
+        interrupted between photographing and writing its row leaves a row with
+        no file behind it.
+        """
+        with self._lock:
+            if not self.running:
+                return False
+
+        self._stop.set()
+
+        return True
+
+    def stopping(self) -> bool:
+        return self._stop.is_set()
+
     def status(self) -> dict:
         with self._lock:
             return {
+                "stopping": self._stop.is_set(),
                 "state": self.state,
                 "message": self.message,
                 "run_id": self.run_id,
@@ -308,6 +332,8 @@ class Job:
             if self.running:
                 return False
 
+            # A previous run's stop must not end this one before it begins.
+            self._stop.clear()
             self.state = BUILDING
             self.message = "starting"
             self.percent = 0
@@ -381,7 +407,7 @@ class Job:
             ]
             ran = [
                 entry for entry in self.results.values()
-                if entry.get("state") not in ("skipped", "unavailable")
+                if entry.get("state") not in ("skipped", "unavailable", "stopped")
             ]
             summary = f"{len(ran) - len(failed)} of {len(ran)} suite(s) passed"
 
@@ -699,21 +725,33 @@ class Job:
                 driver=driver,
                 tooling=tooling,
                 image_directory=self.store.path.parent / "images" / f"run-{run_id}",
-            ).run(plan, progress=report)
+            ).run(plan, progress=report, should_stop=self._stop.is_set)
         finally:
             driver.stop()
 
+        # Stopped is neither passed nor failed. The export feeds a release gate,
+        # and a run reported as failed because somebody pressed stop would
+        # either block a release or teach everyone that failures can be ignored.
+        # `skipped` and `unavailable` are already treated this way; this joins
+        # them.
+        if result.get("stopped"):
+            state = "stopped"
+            summary = (
+                f"stopped after {result['captured']} captured, "
+                f"{result['not_reached']} not reached"
+            )
+        else:
+            state = "failed" if result["failed"] else "passed"
+            summary = f"{result['captured']} captured"
+
         self._record(
             suite_id="ui-capture",
-            state="failed" if result["failed"] else "passed",
+            state=state,
             cases=result["captured"] + result["failed"],
             failures=result["failed"],
-            message=f"{result['captured']} captured",
+            message=summary,
         )
-        self._say(
-            f"UI capture: {result['captured']} captured, {result['failed']} failed",
-            percent=ceiling,
-        )
+        self._say(f"UI capture: {summary}", percent=ceiling)
 
 
 def _commit() -> str:
