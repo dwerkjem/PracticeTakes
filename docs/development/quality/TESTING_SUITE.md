@@ -104,7 +104,7 @@ uv run test-suite capture --themes dark light
 uv run test-suite capture --mode quick
 uv run test-suite capture --run 12          # resume; already-captured surfaces are skipped
 uv run test-suite capture --surfaces tuner-in-tune tuner-bar   # only these
-uv run test-suite capture --headless        # on a screen of its own
+uv run test-suite capture --no-headless     # on the desktop; headless is the default
 uv run test-suite capture --scratch         # not in the verification history
 ```
 
@@ -133,12 +133,19 @@ want when you captured two surfaces to look at a change.
 
 ### Capturing without taking over the screen
 
-`--headless` runs the pass on a private Xvfb screen. No window appears, nothing
+Capture runs on a private Xvfb screen **by default**. No window appears, nothing
 takes focus, and the images are the same — `xwindow_capture` reads a window's
 contents from the X server, which does not care whether the screen is attached
-to a monitor. Install Xvfb with
-`bash tools/scripts/build/check-linux-build-dependencies.sh --install`; without
-it, `--headless` refuses rather than quietly falling back to the desktop.
+to a monitor. Verified rather than assumed: the same static surface captured both ways
+produces a byte-identical file, digest for digest.
+
+Install Xvfb with
+`bash tools/scripts/build/check-linux-build-dependencies.sh --install`. Without
+it, an explicit `--headless` refuses rather than quietly falling back — but the
+*default* falls back to the desktop with a notice, because somebody who never
+mentioned a display would rather have their capture than a lecture.
+
+`--no-headless` captures on the desktop when that is what you want.
 
 Two limits worth knowing. A headless capture is evidence about layout and state,
 not about how the application renders on real hardware — font hinting and

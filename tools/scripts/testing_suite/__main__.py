@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import attend as attend_module  # noqa: E402
 import capture as capture_module  # noqa: E402
 import display as display_module  # noqa: E402
+import freshness as freshness_module  # noqa: E402
 import runner as runner_module  # noqa: E402
 import suites as suites_module  # noqa: E402
 import export as export_module  # noqa: E402
@@ -112,6 +113,13 @@ def command_capture(arguments) -> int:
 
         return 1
 
+    # Said before anything is captured, so it is read rather than scrolled past
+    # at the end alongside a summary that says everything worked.
+    warning = freshness_module.staleness_warning(arguments.executable, REPOSITORY_ROOT)
+
+    if warning:
+        print(warning, file=sys.stderr)
+
     if arguments.scratch:
         # Both name where the run is written, and one of them would silently win.
         if getattr(arguments, "database", None) is not None:
@@ -144,15 +152,24 @@ def command_capture(arguments) -> int:
     # Entered before anything opens a window, and left after the driver stops,
     # so every process this run starts inherits the private DISPLAY.
     with ExitStack() as stack:
-        if arguments.headless:
+        # Unset means the default rather than a request, and the two differ when
+        # Xvfb is missing: refusing is right for somebody who asked for a
+        # private screen, and wrong for somebody who never mentioned it and
+        # would rather have their capture than a lecture.
+        requested = arguments.headless is True
+        wanted = arguments.headless is not False
+
+        if wanted:
             try:
                 screen = stack.enter_context(display_module.virtual_display())
+                print(f"Capturing on a virtual display ({screen}); nothing will appear on screen.")
             except display_module.VirtualDisplayError as error:
-                print(str(error), file=sys.stderr)
+                if requested:
+                    print(str(error), file=sys.stderr)
 
-                return 1
+                    return 1
 
-            print(f"Capturing on a virtual display ({screen}); nothing will appear on screen.")
+                print(f"{error}\nFalling back to the desktop display.", file=sys.stderr)
 
         return _capture_on_current_display(arguments, plan, store, resolutions)
 
@@ -626,11 +643,17 @@ def build_parser() -> argparse.ArgumentParser:
         "instead of the verification history. For a capture you only need to "
         "look at once.",
     )
+    # Default, because watching windows open and resize on your own screen is
+    # the reason capture runs get put off. None rather than True so the code can
+    # tell "asked for it" from "did not say", which decides whether a missing
+    # Xvfb is an error or a fallback.
     capture_parser.add_argument(
         "--headless",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
+        default=None,
         help="Capture on a private Xvfb screen instead of the desktop, so no "
-        "windows appear and nothing steals focus.",
+        "windows appear and nothing steals focus. On by default; --no-headless "
+        "captures on the desktop.",
     )
     capture_parser.add_argument("--build-config", default="", help="How the build under test was configured.")
     capture_parser.add_argument("--audio-device", default="", help="The input device in use.")

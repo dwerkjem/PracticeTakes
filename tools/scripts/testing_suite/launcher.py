@@ -23,10 +23,14 @@ from __future__ import annotations
 
 import datetime as _datetime
 from pathlib import Path
+import sys
 import threading
 
+import freshness
 import surfaces
 from driver import ApplicationDriver, ChannelError
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 
 class LaunchError(RuntimeError):
@@ -75,6 +79,14 @@ class ManualLaunch:
                 f"no application at {self.executable} — build it with "
                 f"-DPRACTICE_TAKES_ENABLE_TEST_CONTROL=ON first"
             )
+
+        # Not fatal: opening an older build on purpose is reasonable. Opening
+        # one by accident is what refuses a state or a geometry the source
+        # added days ago, and then looks like a bug in the harness.
+        stale = freshness.staleness_warning(self.executable, REPOSITORY_ROOT)
+
+        if stale:
+            print(stale, file=sys.stderr)
 
         with self._lock:
             self._close_locked()
