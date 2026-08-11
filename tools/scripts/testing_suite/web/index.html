@@ -30,6 +30,10 @@
       </div>
     </header>
 
+    <!-- Outside every view, because the mismatch it reports makes buttons in
+         all of them do nothing. -->
+    <div id="stale-server" class="notice" hidden></div>
+
     <!-- Run: pick what to run, and run it. The landing view, because an empty
          store is what everyone sees first and it needs a way forward. -->
     <main id="view-run" class="view">

@@ -55,6 +55,17 @@ document.querySelectorAll("#tabs button").forEach((button) => {
 
 // --- The run view ----------------------------------------------------------
 
+// A hub left running while the suite is edited answers a fresh page with old
+// code: a comment saves and renders blank, a delete button posts to a route
+// that does not exist yet. Both look like broken features. Say which it is.
+function renderStaleServer(view) {
+  const banner = element("stale-server");
+  const warning = view.stale_server || "";
+
+  banner.textContent = warning;
+  banner.hidden = !warning;
+}
+
 function renderBuilds(view) {
   const holder = element("build-state");
   const missing = (view.builds || []).filter((build) => !build.present);
@@ -1406,6 +1417,7 @@ async function reload() {
   const { data } = await api("/api/run");
   state.data = data;
 
+  renderStaleServer(data);
   renderBuilds(data);
   renderOptions(data);
   renderSuites(data);

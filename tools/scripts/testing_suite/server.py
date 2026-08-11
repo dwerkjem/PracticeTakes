@@ -21,6 +21,7 @@ import json
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+import freshness
 import history as history_module
 import launcher as launcher_module
 import review
@@ -64,6 +65,11 @@ def web_assets(root: Path = WEB_ROOT) -> dict[str, Path]:
 
 
 WEB_FILES = web_assets()
+
+# What the suite's code looked like when this process imported it. Read at
+# import rather than passed in, so it is stamped at the one moment that is
+# actually true -- see `freshness.suite_staleness_warning`.
+SOURCES_LOADED_AT = freshness.newest_suite_source_time()
 
 
 class ReviewSession:
@@ -130,6 +136,7 @@ class ReviewSession:
             "kinds": list(suites_module.KINDS),
             "builds": runner_module.build_overview(),
             "display": runner_module.display_available(),
+            "stale_server": freshness.suite_staleness_warning(SOURCES_LOADED_AT),
             "job": self.job.status(),
             "launch": self.launch.status(),
             "modes": [surfaces.QUICK, surfaces.FULL],

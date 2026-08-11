@@ -87,5 +87,72 @@ class FreshnessTests(unittest.TestCase):
         self.assertIn("build-tc", warning)
 
 
+class SuiteFreshnessTests(unittest.TestCase):
+    """The hub outliving the code it was started from.
+
+    Caught in practice: a hub started an hour before a feature landed served
+    the new page, which asked it to delete a comment. The route did not exist
+    in the running process, so the button did nothing and the comments it was
+    attached to rendered blank. Nothing was wrong with either half.
+    """
+
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.root = Path(self.directory.name)
+        self.module = self.root / "server.py"
+        self.module.write_text("# code\n")
+
+    def tearDown(self) -> None:
+        self.directory.cleanup()
+
+    def touch(self, path: Path, offset: float) -> None:
+        import os
+
+        stamp = path.stat().st_mtime + offset
+        os.utime(path, (stamp, stamp))
+
+    def test_code_unchanged_since_start_does_not_warn(self) -> None:
+        loaded = freshness.newest_suite_source_time(self.root)
+
+        self.assertGreater(loaded, 0.0)
+        self.assertEqual(freshness.suite_staleness_warning(loaded, self.root), "")
+
+    def test_an_edited_module_warns(self) -> None:
+        loaded = freshness.newest_suite_source_time(self.root)
+        self.touch(self.module, 60)
+
+        self.assertIn("older than the files on disk", freshness.suite_staleness_warning(loaded, self.root))
+
+    def test_a_new_module_warns(self) -> None:
+        """A feature usually arrives as a file, not as an edit to one."""
+        loaded = freshness.newest_suite_source_time(self.root)
+        added = self.root / "display.py"
+        added.write_text("# new\n")
+        self.touch(added, 60)
+
+        self.assertNotEqual(freshness.suite_staleness_warning(loaded, self.root), "")
+
+    def test_a_changed_web_asset_does_not_warn(self) -> None:
+        """`web/` is re-read per request, so it cannot go out of step."""
+        loaded = freshness.newest_suite_source_time(self.root)
+        (self.root / "web").mkdir()
+        asset = self.root / "web" / "app.js"
+        asset.write_text("// new\n")
+        self.touch(asset, 600)
+
+        self.assertEqual(freshness.suite_staleness_warning(loaded, self.root), "")
+
+    def test_an_unknown_start_time_never_warns(self) -> None:
+        self.touch(self.module, 600)
+
+        self.assertEqual(freshness.suite_staleness_warning(0.0, self.root), "")
+
+    def test_the_warning_says_what_to_do(self) -> None:
+        loaded = freshness.newest_suite_source_time(self.root)
+        self.touch(self.module, 60)
+
+        self.assertIn("start it again", freshness.suite_staleness_warning(loaded, self.root))
+
+
 if __name__ == "__main__":
     unittest.main()

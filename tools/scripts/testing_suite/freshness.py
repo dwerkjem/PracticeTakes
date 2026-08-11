@@ -34,6 +34,13 @@ SOURCE_FILES = ("CMakeLists.txt",)
 
 SOURCE_SUFFIXES = (".cpp", ".h", ".txt")
 
+# The suite's own code. The hub is a long-lived process that imported this once
+# at startup, while `web/` is re-read from disk on every request -- so an editor
+# open on this directory can leave a running hub answering new pages with old
+# code. Only Python is compared, because only Python is the part that got
+# frozen at import.
+SUITE_ROOT = Path(__file__).resolve().parent
+
 
 def newest_source_time(repository_root: Path) -> float:
     """The most recent modification time across the application's sources.
@@ -86,4 +93,37 @@ def staleness_warning(executable: Path, repository_root: Path) -> str:
         f"         What follows describes that binary, not the code in this tree.\n"
         f"         cmake --build {executable.parents[1].name} "
         f"--target PracticeTakes --parallel"
+    )
+
+
+def newest_suite_source_time(suite_root: Path = SUITE_ROOT) -> float:
+    """The most recent modification time across the suite's own modules."""
+    newest = 0.0
+
+    for path in suite_root.glob("*.py"):
+        if path.is_file():
+            newest = max(newest, path.stat().st_mtime)
+
+    return newest
+
+
+def suite_staleness_warning(loaded_at: float, suite_root: Path = SUITE_ROOT) -> str:
+    """A warning for a hub running code older than the files on disk, or "".
+
+    The failure this names is a nasty one because it looks like a bug in the
+    feature rather than in the process serving it: the page is fetched fresh
+    and asks for something the running code has never heard of, so a button
+    does nothing and a comment renders blank. Nothing in either half is broken.
+
+    `loaded_at` is what `newest_suite_source_time` returned when the process
+    started. Zero disables the check, which is the right way to fail for
+    something that must never stop a run on its own.
+    """
+    if loaded_at <= 0.0 or newest_suite_source_time(suite_root) <= loaded_at:
+        return ""
+
+    return (
+        "This hub is running code older than the files on disk. Quit it and "
+        "start it again — the page is served fresh on every request, so what "
+        "you are looking at is newer than what answers it."
     )
