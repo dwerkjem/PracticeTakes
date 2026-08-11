@@ -2,6 +2,8 @@
 
 #include "TunerSettingsCodec.h"
 
+#include "application/theme/AppLookAndFeel.h"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -24,7 +26,7 @@ TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService)
         addAndMakeVisible(label);
     };
 
-    configureLabel(displayModeLabel, "Display");
+    configureLabel(displayModeLabel, "Display mode");
     configureLabel(easingLabel, "Pitch easing");
     configureLabel(averagingLabel, "Average window");
     configureLabel(thresholdLabel, "Note switch");
@@ -50,6 +52,9 @@ TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService)
         resized();
         repaint();
     };
+    // Reads as a disclosure row rather than a floating button, which is what
+    // the chevron in its label is promising.
+    AppLookAndFeel::alignButtonTextLeft(advancedSettingsButton);
     addAndMakeVisible(advancedSettingsButton);
 
     configureSlider(easingSlider, 0.02, 1.0, 0.01, AppDefaults::Tuner::easing, "");
@@ -294,8 +299,11 @@ juce::String TunerComponent::statusText() const
         return "Play or sing a sustained note";
     }
 
+    // One space, not the three the design's HTML carries -- a browser collapses
+    // runs of whitespace and renders exactly one, which is what the reference
+    // actually shows. JUCE draws all three.
     const auto centsSign = displayedCents > 0.0 ? "+" : "";
-    return juce::String(displayedFrequency, 1) + " Hz   " + centsSign +
+    return juce::String(displayedFrequency, 1) + " Hz " + centsSign +
            juce::String(displayedCents, 1) + " cents";
 }
 

@@ -23,11 +23,6 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
 {
     const auto palette = tunerPaletteFor(currentTheme);
 
-    graphics.setColour(palette.panel);
-    graphics.fillRoundedRectangle(bounds.toFloat(), 8.0f);
-    graphics.setColour(palette.outline);
-    graphics.drawRoundedRectangle(bounds.toFloat(), 8.0f, 1.0f);
-
     auto content = bounds.reduced(8);
     auto labelArea = content.removeFromLeft(48);
     const auto plotArea = content;
@@ -139,11 +134,6 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
     const auto indicatorColour =
         std::abs(displayedCents) <= inTuneToleranceCents ? palette.inTune : palette.accent;
 
-    graphics.setColour(palette.panel);
-    graphics.fillRoundedRectangle(bounds.toFloat(), 8.0f);
-    graphics.setColour(palette.outline);
-    graphics.drawRoundedRectangle(bounds.toFloat(), 8.0f, 1.0f);
-
     auto barBounds = bounds.reduced(28, 34);
     const auto centreY = barBounds.getCentreY();
 
@@ -187,11 +177,6 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
     const auto palette = tunerPaletteFor(currentTheme);
     const auto indicatorColour =
         std::abs(displayedCents) <= inTuneToleranceCents ? palette.inTune : palette.accent;
-
-    graphics.setColour(palette.panel);
-    graphics.fillRoundedRectangle(bounds.toFloat(), 8.0f);
-    graphics.setColour(palette.outline);
-    graphics.drawRoundedRectangle(bounds.toFloat(), 8.0f, 1.0f);
 
     const auto centre = juce::Point<float>(
         static_cast<float>(bounds.getCentreX()), static_cast<float>(bounds.getBottom() - 24));
@@ -258,10 +243,60 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
         "SHARP", bounds.removeFromRight(74).removeFromBottom(24), juce::Justification::centred);
 }
 
+void TunerComponent::drawNoteWatermark(juce::Graphics& graphics, juce::Rectangle<int> area) const
+{
+    // The note being played is drawn *behind* the display rather than above it,
+    // at low opacity. It reads at a glance from across a room without spending
+    // any vertical space, which is what lets the display have the rest of the
+    // panel -- the note used to take 96px off the top before the graph got
+    // anything at all.
+    //
+    // Nothing is drawn without a signal: displayedNote is "--" then, and a
+    // giant translucent "--" reads as a rendering fault rather than as an idle
+    // tuner. The status line above already says what to do.
+    if (!hasSignal)
+    {
+        return;
+    }
+
+    const auto palette = tunerPaletteFor(currentTheme);
+
+    // Sized from the area it is given rather than fixed, so it fills a tall
+    // docked pane and still fits the half-height band the bar leaves it. The
+    // cap only stops it becoming absurd on a very large display.
+    const auto fontHeight =
+        juce::jlimit(24.0f, 360.0f, static_cast<float>(area.getHeight()) * 0.28f);
+
+    graphics.setColour(palette.foreground.withAlpha(0.14f));
+    graphics.setFont(juce::FontOptions(fontHeight, juce::Font::bold));
+    graphics.drawFittedText(displayedNote, area, juce::Justification::centred, 1);
+}
+
 void TunerComponent::drawSelectedDisplay(juce::Graphics& graphics, juce::Rectangle<int> bounds)
     const
 {
-    switch (static_cast<DisplayMode>(displayModeBox.getSelectedId()))
+    // The panel, the watermark, and the border are common to all three modes,
+    // so they live here rather than being repeated in each -- and the ordering
+    // is the point: the watermark goes down after the background and before the
+    // mode draws, so the graph line, the bar, and the meter all sit on top of
+    // it. The border goes last so no content can bleed over the rounded edge.
+    const auto palette = tunerPaletteFor(currentTheme);
+
+    graphics.setColour(palette.panel);
+    graphics.fillRoundedRectangle(bounds.toFloat(), 8.0f);
+
+    const auto mode = static_cast<DisplayMode>(displayModeBox.getSelectedId());
+
+    // Where the note goes depends on what the mode leaves free. The graph and
+    // the meter both keep their middle clear, so the note sits behind them,
+    // centred, which is where it reads best. The bar lies straight across the
+    // middle -- centred there, the track and its "0" tick slice the glyphs in
+    // half -- so above the bar it is, in the band the bar does not use.
+    const auto watermarkArea =
+        mode == DisplayMode::bar ? bounds.withTrimmedBottom(bounds.getHeight() / 2 + 26) : bounds;
+    drawNoteWatermark(graphics, watermarkArea);
+
+    switch (mode)
     {
     case DisplayMode::bar:
         drawPitchBar(graphics, bounds);
@@ -276,6 +311,9 @@ void TunerComponent::drawSelectedDisplay(juce::Graphics& graphics, juce::Rectang
         drawPitchGraph(graphics, bounds);
         break;
     }
+
+    graphics.setColour(palette.outline);
+    graphics.drawRoundedRectangle(bounds.toFloat(), 8.0f, 1.0f);
 }
 
 void TunerComponent::paint(juce::Graphics& graphics)
@@ -284,15 +322,15 @@ void TunerComponent::paint(juce::Graphics& graphics)
     graphics.fillAll(palette.background);
 
     auto bounds = getLocalBounds().reduced(18);
-    auto noteArea = bounds.removeFromTop(142);
 
-    graphics.setColour(hasSignal ? palette.foreground : palette.muted);
-    graphics.setFont(juce::FontOptions(78.0f, juce::Font::bold));
-    graphics.drawText(displayedNote, noteArea.removeFromTop(96), juce::Justification::centred);
-
-    graphics.setFont(juce::FontOptions(18.0f));
-    graphics.drawFittedText(
-        statusText(), noteArea.removeFromTop(42), juce::Justification::centred, 2);
+    // One quiet line of readout, then the display takes everything left. The
+    // frequency and cents are a detail you consult; the note is the thing you
+    // read at a glance, and it is drawn behind the display instead of above it.
+    graphics.setColour(palette.muted);
+    graphics.setFont(juce::FontOptions(13.0f));
+    graphics.drawText(
+        statusText(), bounds.removeFromTop(statusHeight), juce::Justification::centred);
+    bounds.removeFromTop(statusGap);
 
     const auto preferredDisplayHeight = std::max(90, bounds.getHeight() - controlAreaHeight() - 8);
     displayBounds = bounds.removeFromTop(std::min(preferredDisplayHeight, bounds.getHeight()));
@@ -303,7 +341,11 @@ void TunerComponent::paint(juce::Graphics& graphics)
 void TunerComponent::resized()
 {
     auto bounds = getLocalBounds().reduced(18);
-    bounds.removeFromTop(142);
+
+    // Must consume exactly what paint() consumes above the display, or the
+    // controls drift away from the box they belong under.
+    bounds.removeFromTop(statusHeight);
+    bounds.removeFromTop(statusGap);
 
     const auto preferredDisplayHeight = std::max(90, bounds.getHeight() - controlAreaHeight() - 8);
     bounds.removeFromTop(std::min(preferredDisplayHeight, bounds.getHeight()));

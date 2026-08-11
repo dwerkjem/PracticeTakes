@@ -53,6 +53,13 @@ class TunerComponent final
     static constexpr int maximumGraphPoints = 1200;
     static constexpr int analysisRefreshRateHz = 20;
 
+    // paint() and resized() each walk the same vertical layout and have to
+    // agree about what sits above the display. Named, because the two used to
+    // carry the same magic 142 independently and nothing would have caught them
+    // drifting apart except noticing the controls had slipped.
+    static constexpr int statusHeight = 22;
+    static constexpr int statusGap = 6;
+
     // Audio capture ---------------------------------------------------------
     void audioInputAboutToStart(double sampleRate, int inputChannels) override;
     void audioInputStopped() override;
@@ -87,6 +94,7 @@ class TunerComponent final
     void drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
+    void drawNoteWatermark(juce::Graphics& graphics, juce::Rectangle<int> area) const;
     void drawSelectedDisplay(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
 
     AudioInputService& audioInputService;
