@@ -2,6 +2,35 @@
 
 #include "TunerSettingsCodec.h"
 
+#include "application/theme/AppLookAndFeel.h"
+
+// The display-mode label and chooser as one component, so a docked panel adopts
+// the pair with a single reparent and lays out one thing.
+class TunerComponent::ModeChooser final : public juce::Component
+{
+  public:
+    ModeChooser(juce::Label& labelToUse, juce::ComboBox& boxToUse)
+        : label(labelToUse), box(boxToUse)
+    {
+        addAndMakeVisible(label);
+        addAndMakeVisible(box);
+    }
+
+    void resized() override
+    {
+        auto bounds = getLocalBounds();
+        // The label takes what it needs and the box the rest, so this reads the
+        // same on a header line as it did on a row of its own.
+        label.setBounds(bounds.removeFromLeft(juce::jmin(88, bounds.getWidth() / 2)));
+        bounds.removeFromLeft(6);
+        box.setBounds(bounds);
+    }
+
+  private:
+    juce::Label& label;
+    juce::ComboBox& box;
+};
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -24,7 +53,7 @@ TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService)
         addAndMakeVisible(label);
     };
 
-    configureLabel(displayModeLabel, "Display");
+    configureLabel(displayModeLabel, "Display mode");
     configureLabel(easingLabel, "Pitch easing");
     configureLabel(averagingLabel, "Average window");
     configureLabel(thresholdLabel, "Note switch");
@@ -41,16 +70,12 @@ TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService)
         resized();
         repaint();
     };
-    addAndMakeVisible(displayModeBox);
 
-    advancedSettingsButton.onClick = [this]
-    {
-        areAdvancedSettingsExpanded = !areAdvancedSettingsExpanded;
-        updateAdvancedSettingsVisibility();
-        resized();
-        repaint();
-    };
-    addAndMakeVisible(advancedSettingsButton);
+    // The advanced settings live behind the panel's "..." menu rather than a
+    // button of their own. Most sessions never open them, and a permanent row
+    // for them was a row the display did not get.
+    modeChooser = std::make_unique<ModeChooser>(displayModeLabel, displayModeBox);
+    addAndMakeVisible(*modeChooser);
 
     configureSlider(easingSlider, 0.02, 1.0, 0.01, AppDefaults::Tuner::easing, "");
     configureSlider(averagingSlider, 1.0, 15.0, 1.0, AppDefaults::Tuner::averaging, " samples");
@@ -203,7 +228,7 @@ void TunerComponent::applyThemeToControls()
         label->setColour(juce::Label::textColourId, palette.muted);
     }
 
-    for (auto* button : {&advancedSettingsButton, &clearGraphButton})
+    for (auto* button : {&clearGraphButton})
     {
         button->setColour(juce::TextButton::buttonColourId, palette.control);
         button->setColour(juce::TextButton::buttonOnColourId, palette.accent.withAlpha(0.75f));
@@ -248,9 +273,6 @@ void TunerComponent::configureSlider(
 
 void TunerComponent::updateAdvancedSettingsVisibility()
 {
-    advancedSettingsButton.setButtonText(
-        areAdvancedSettingsExpanded ? "Advanced settings  v" : "Advanced settings  >");
-
     for (auto* component : std::array<juce::Component*, 10>{
              &easingLabel, &easingSlider, &averagingLabel, &averagingSlider, &thresholdLabel,
              &thresholdSlider, &dropoutLabel, &dropoutSlider, &durationLabel, &durationSlider})
@@ -273,13 +295,50 @@ void TunerComponent::updateGraphControlAvailability()
 
 int TunerComponent::controlAreaHeight() const
 {
-    constexpr int displaySelectorHeight = 32;
-    constexpr int gapBelowDisplaySelector = 8;
-    constexpr int advancedButtonHeight = 34;
     constexpr int expandedRowsHeight = 5 * 30 + 8 + 36;
 
-    return displaySelectorHeight + gapBelowDisplaySelector + advancedButtonHeight +
-           (areAdvancedSettingsExpanded ? expandedRowsHeight : 0);
+    // Nothing but the advanced rows, and only while they are open. The mode
+    // chooser is on the header line when the tuner is docked, and the tuner
+    // adds a row for it only when nobody adopted it -- which resized() works
+    // out, since it is the only place that knows.
+    return (areAdvancedSettingsExpanded ? expandedRowsHeight + 8 : 0) +
+           (isModeChooserAdopted() ? 0 : modeChooserHeight + 8);
+}
+
+bool TunerComponent::isModeChooserAdopted() const
+{
+    // Adopted means some other component -- a docked panel's header -- took it
+    // as a child. Floating, nobody does, so the tuner shows it itself.
+    return modeChooser != nullptr && modeChooser->getParentComponent() != nullptr &&
+           modeChooser->getParentComponent() != this;
+}
+
+void TunerComponent::placeModeChooser(juce::Rectangle<int> area)
+{
+    if (modeChooser == nullptr)
+    {
+        return;
+    }
+
+    addAndMakeVisible(*modeChooser);
+    modeChooser->setBounds(area);
+}
+
+juce::Component* TunerComponent::headerControl()
+{
+    return modeChooser.get();
+}
+
+std::vector<ToolComponent::MenuEntry> TunerComponent::optionsMenuEntries()
+{
+    return {
+        {areAdvancedSettingsExpanded ? "Hide advanced settings" : "Advanced settings", [this]
+         {
+             areAdvancedSettingsExpanded = !areAdvancedSettingsExpanded;
+             updateAdvancedSettingsVisibility();
+             resized();
+             repaint();
+         }}};
 }
 
 juce::String TunerComponent::statusText() const
@@ -294,8 +353,11 @@ juce::String TunerComponent::statusText() const
         return "Play or sing a sustained note";
     }
 
+    // One space, not the three the design's HTML carries -- a browser collapses
+    // runs of whitespace and renders exactly one, which is what the reference
+    // actually shows. JUCE draws all three.
     const auto centsSign = displayedCents > 0.0 ? "+" : "";
-    return juce::String(displayedFrequency, 1) + " Hz   " + centsSign +
+    return juce::String(displayedFrequency, 1) + " Hz " + centsSign +
            juce::String(displayedCents, 1) + " cents";
 }
 

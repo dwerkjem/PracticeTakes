@@ -11,6 +11,7 @@
 
 #include <array>
 #include <atomic>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -39,8 +40,16 @@ class TunerComponent final
     [[nodiscard]] std::optional<ToolSettingsPayload> captureSettings() const override;
     void applySettings(const ToolSettingsPayload& payload) override;
     [[nodiscard]] bool showView(const juce::String& view) override;
+    [[nodiscard]] juce::Component* headerControl() override;
+    [[nodiscard]] std::vector<MenuEntry> optionsMenuEntries() override;
 
   private:
+    // The display-mode label and chooser, in one component so a panel can adopt
+    // the pair with a single reparent. Which display the tuner is drawing is a
+    // property of the tool rather than of what it is currently showing, so it
+    // belongs on the panel's header line -- and a row of its own at the bottom
+    // of the panel was a row the graph did not get.
+    class ModeChooser;
     enum class DisplayMode
     {
         graph = 1,
@@ -52,6 +61,14 @@ class TunerComponent final
     static constexpr int analysisWindowSize = PitchDetector::windowSize;
     static constexpr int maximumGraphPoints = 1200;
     static constexpr int analysisRefreshRateHz = 20;
+
+    // paint() and resized() each walk the same vertical layout and have to
+    // agree about what sits above the display. Named, because the two used to
+    // carry the same magic 142 independently and nothing would have caught them
+    // drifting apart except noticing the controls had slipped.
+    static constexpr int statusHeight = 22;
+    static constexpr int statusGap = 6;
+    static constexpr int modeChooserHeight = 32;
 
     // Audio capture ---------------------------------------------------------
     void audioInputAboutToStart(double sampleRate, int inputChannels) override;
@@ -81,19 +98,28 @@ class TunerComponent final
     void updateGraphControlAvailability();
     void applyThemeToControls();
     [[nodiscard]] int controlAreaHeight() const;
+    [[nodiscard]] bool isModeChooserAdopted() const;
+    // Defined beside ModeChooser, which is only complete in TunerComponent.cpp.
+    void placeModeChooser(juce::Rectangle<int> area);
     [[nodiscard]] juce::String statusText() const;
 
     // Drawing ---------------------------------------------------------------
     void drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
+    void drawNoteWatermark(juce::Graphics& graphics, juce::Rectangle<int> area) const;
     void drawSelectedDisplay(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
 
     AudioInputService& audioInputService;
 
     juce::Label displayModeLabel;
     juce::ComboBox displayModeBox;
-    juce::TextButton advancedSettingsButton{"Advanced settings  >"};
+
+    // Owned here, but reparented into the docked panel's header when there is
+    // one. Declared after the two controls it lays out, so it is destroyed
+    // first and never lays out a dangling reference.
+    std::unique_ptr<ModeChooser> modeChooser;
+
     juce::Label easingLabel;
     juce::Label averagingLabel;
     juce::Label thresholdLabel;

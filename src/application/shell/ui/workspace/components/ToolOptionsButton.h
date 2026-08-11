@@ -2,8 +2,11 @@
 
 #include <JuceHeader.h>
 
+#include "application/tools/ToolComponent.h"
+
 #include <functional>
 #include <utility>
+#include <vector>
 
 class ToolOptionsButton final : public juce::TextButton
 {
@@ -12,10 +15,11 @@ class ToolOptionsButton final : public juce::TextButton
         juce::String presentationActionText,
         std::function<void()> presentationHandler,
         std::function<void()> feedbackHandler,
-        std::function<void()> closeHandler)
+        std::function<void()> closeHandler,
+        std::function<std::vector<ToolComponent::MenuEntry>()> toolEntryProvider = {})
         : presentationAction(std::move(presentationActionText)),
           onPresentation(std::move(presentationHandler)), onFeedback(std::move(feedbackHandler)),
-          onClose(std::move(closeHandler))
+          onClose(std::move(closeHandler)), toolEntries(std::move(toolEntryProvider))
     {
         setButtonText("...");
         setTitle("Tool options");
@@ -28,12 +32,31 @@ class ToolOptionsButton final : public juce::TextButton
     {
         changePresentation = 1,
         giveFeedback,
-        close
+        close,
+
+        // The tool's own entries are numbered from here, so adding a shell item
+        // above can never collide with them.
+        firstToolEntry = 100
     };
 
     void showOptions()
     {
         juce::PopupMenu menu;
+
+        // The tool's entries first, and separated: they are what the menu is
+        // usually opened for, while the shell's three are the same everywhere.
+        auto entries = toolEntries ? toolEntries() : std::vector<ToolComponent::MenuEntry>{};
+
+        for (std::size_t index = 0; index < entries.size(); ++index)
+        {
+            menu.addItem(firstToolEntry + static_cast<int>(index), entries[index].label);
+        }
+
+        if (!entries.empty())
+        {
+            menu.addSeparator();
+        }
+
         menu.addItem(changePresentation, presentationAction);
         menu.addItem(giveFeedback, "Give feedback");
         menu.addSeparator();
@@ -62,6 +85,20 @@ class ToolOptionsButton final : public juce::TextButton
                 {
                     action = safeThis->onClose;
                 }
+                else if (selectedItemId >= firstToolEntry)
+                {
+                    // Re-asked rather than captured: the menu was built when it
+                    // opened, and a tool whose entries depend on its own state
+                    // must not have a stale action run against it.
+                    auto current = safeThis->toolEntries ? safeThis->toolEntries()
+                                                         : std::vector<ToolComponent::MenuEntry>{};
+                    const auto index = static_cast<std::size_t>(selectedItemId - firstToolEntry);
+
+                    if (index < current.size())
+                    {
+                        action = current[index].action;
+                    }
+                }
 
                 if (action)
                 {
@@ -74,4 +111,5 @@ class ToolOptionsButton final : public juce::TextButton
     std::function<void()> onPresentation;
     std::function<void()> onFeedback;
     std::function<void()> onClose;
+    std::function<std::vector<ToolComponent::MenuEntry>()> toolEntries;
 };

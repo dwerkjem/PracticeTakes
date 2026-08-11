@@ -157,6 +157,25 @@ juce_add_binary_data(PracticeTakesIcon
     SOURCES "${PRACTICE_TAKES_ICON_DIRECTORY}/practice-takes-128.png"
 )
 
+# The UI typeface is embedded rather than looked up by name, so the application
+# renders identically on a machine that has never heard of IBM Plex. A
+# name-based lookup would silently fall back to the platform sans and the only
+# symptom would be that screenshots stopped matching.
+#
+# Regular and Bold only. JUCE's font model is plain/bold, so the design's 500
+# and 600 weights collapse onto these two; carrying Medium and SemiBold as well
+# would need a name-keyed lookup and another 400 KB for weights nothing asks
+# for by name. See tools/packaging/fonts/README.md.
+set(PRACTICE_TAKES_FONT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/tools/packaging/fonts")
+
+juce_add_binary_data(PracticeTakesFonts
+    HEADER_NAME PracticeTakesFonts.h
+    NAMESPACE PracticeTakesFonts
+    SOURCES
+        "${PRACTICE_TAKES_FONT_DIRECTORY}/IBMPlexSans-Regular.ttf"
+        "${PRACTICE_TAKES_FONT_DIRECTORY}/IBMPlexSans-Bold.ttf"
+)
+
 # The space-free binary name is what the Debian package, the NSIS installer,
 # and the tooling scripts under tools/scripts/ all expect. Apple is deliberately
 # excluded: juce_add_gui_app names both the bundle and its executable after
@@ -247,6 +266,7 @@ target_sources(PracticeTakes
         src/application/testcontrol/TestControlSession.cpp
         src/application/testcontrol/TestControlSession.h
         src/application/testcontrol/TestControlTarget.h
+        src/application/theme/AppLookAndFeel.cpp
         src/application/theme/Theme.cpp
         src/application/theme/Theme.h
         src/application/theme/ThemeType.h
@@ -347,6 +367,7 @@ target_compile_definitions(PracticeTakes
 target_link_libraries(PracticeTakes
     PRIVATE
         PracticeTakesIcon
+        PracticeTakesFonts
         juce::juce_audio_utils
         juce::juce_dsp
         juce::juce_gui_extra
@@ -381,6 +402,7 @@ if(BUILD_TESTING)
         src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp
         src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
         src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp
+        src/tests/application/theme/AppLookAndFeelTests.cpp
         src/tests/application/tools/ToolCatalogTests.cpp
         src/tests/application/tools/ToolLifecycleTests.cpp
         src/tests/application/tools/UnknownToolIntegrationTests.cpp
@@ -421,6 +443,7 @@ if(BUILD_TESTING)
         src/application/testcontrol/TestControlClicker.cpp
         src/application/testcontrol/TestControlCommand.cpp
         src/application/testcontrol/TestControlSession.cpp
+        src/application/theme/AppLookAndFeel.cpp
         src/application/theme/Theme.cpp
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
         src/features/analysis/tuner/PitchDetector.cpp
@@ -462,6 +485,7 @@ if(BUILD_TESTING)
     target_link_libraries(PracticeTakesTests
         PRIVATE
             Catch2::Catch2WithMain
+            PracticeTakesFonts
             juce::juce_audio_devices
             juce::juce_data_structures
             juce::juce_dsp
