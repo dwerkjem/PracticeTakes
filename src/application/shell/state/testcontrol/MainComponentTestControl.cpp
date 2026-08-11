@@ -108,6 +108,25 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
         rebuildWorkspaceContainer();
     }
 
+    // A state that names no view must still be in a known one. Left alone, a
+    // tool keeps whatever the previous state selected, so the same state
+    // captured twice in a run could show two different displays depending on
+    // what preceded it -- which is exactly what "tuner-in-tune" did, showing
+    // the graph in the first palette pass and the meter in the second.
+    //
+    // resetToDefaults is the tool's own answer to "what do you look like with
+    // nothing asked of you", and the shell still does not know what that means.
+    if (state.toolView.empty())
+    {
+        for (auto& live : liveTools)
+        {
+            if (live.component != nullptr)
+            {
+                live.component->resetToDefaults();
+            }
+        }
+    }
+
     if (!state.toolView.empty())
     {
         // Asked of the tool by name. The shell does not know which tool it is

@@ -32,7 +32,7 @@ const std::vector<ApprovedWindowState>& states()
         // --- One tool at a time ---
         {"tuner-docked", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
          WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
-         "The tuner, docked in the workspace", 0.0, "graph"},
+         "The tuner, docked in the workspace"},
         {"tuner-in-tune", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
          WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
          "The tuner reading a note dead in tune", 440.0, "graph"},

@@ -474,7 +474,10 @@ void TunerComponent::drawCompactMeter(
     {
         // The whole face takes the colour, so it reads from across a room at a
         // size where no text would.
-        graphics.setColour((inTune ? palette.inTune : palette.accent).withAlpha(0.18f));
+        // Darker on the light palette: 0.18 over white is barely a tint, and
+        // the wash is the whole signal at this size.
+        graphics.setColour((inTune ? palette.inTune : palette.accent)
+                               .withAlpha(isDarkTheme(currentTheme) ? 0.18f : 0.30f));
         graphics.fillRoundedRectangle(bounds.reduced(2).toFloat(), 6.0f);
     }
 
@@ -506,11 +509,13 @@ juce::String TunerComponent::directionLabel() const
 
 void TunerComponent::drawCompactReading(juce::Graphics& graphics, juce::Rectangle<int> area) const
 {
-    // The note over the middle of whatever was just drawn, and nothing behind
-    // it. A plate was there to stop a gridline crossing the glyphs; it read as
-    // a box someone forgot to remove, which is worse than the problem it
-    // solved. Slight transparency does the same job -- the trace shows through
-    // rather than being hidden by a rectangle -- and leaves the letters alone.
+    // The note, as large as the space allows, with a small arrow beside it when
+    // the reading is off. The arrow is the whole point of a tuner at this size:
+    // the note says what you are playing, and only the arrow says what to do
+    // about it.
+    //
+    // In tune is carried twice over -- the colour changes *and* the arrow goes
+    // away -- so it survives a glance, a colourblind reader, and a bad monitor.
     if (!hasSignal)
     {
         return;
@@ -518,11 +523,51 @@ void TunerComponent::drawCompactReading(juce::Graphics& graphics, juce::Rectangl
 
     const auto palette = tunerPaletteFor(currentTheme);
     const auto inTune = std::abs(displayedCents) <= inTuneToleranceCents;
-    const auto height = juce::jlimit(22, 52, area.getHeight());
 
-    graphics.setColour((inTune ? palette.inTune : palette.foreground).withAlpha(0.85f));
-    graphics.setFont(juce::FontOptions(static_cast<float>(height) * 0.72f, juce::Font::bold));
-    graphics.drawFittedText(displayedNote, area, juce::Justification::centred, 1);
+    // Lighter over a dark background reads as recessed; over a light one it
+    // reads as faded. The light palette therefore gets nearly full opacity --
+    // the point of the transparency is to let a trace show through, not to make
+    // the reading hard to find.
+    const auto alpha = isDarkTheme(currentTheme) ? 0.85f : 0.97f;
+    const auto noteHeight = juce::jlimit(24.0f, 96.0f, static_cast<float>(area.getHeight()));
+    const auto arrowHeight = noteHeight * 0.5f;
+
+    const juce::Font noteFont(juce::FontOptions(noteHeight, juce::Font::bold));
+    const juce::Font arrowFont(juce::FontOptions(arrowHeight, juce::Font::bold));
+
+    const auto arrow = inTune               ? juce::String()
+                       : displayedCents > 0 ? juce::String::fromUTF8("\xe2\x96\xb2")
+                                            : juce::String::fromUTF8("\xe2\x96\xbc");
+
+    constexpr float gap = 6.0f;
+    const auto noteWidth = juce::GlyphArrangement::getStringWidth(noteFont, displayedNote);
+    const auto arrowWidth =
+        arrow.isEmpty() ? 0.0f : juce::GlyphArrangement::getStringWidth(arrowFont, arrow) + gap;
+
+    // Laid out as one centred group rather than a centred note with something
+    // hung off it, so the pair stays centred whichever way the reading goes.
+    auto left = static_cast<float>(area.getCentreX()) - (noteWidth + arrowWidth) * 0.5f;
+    const auto centreY = static_cast<float>(area.getCentreY());
+
+    graphics.setColour((inTune ? palette.inTune : palette.foreground).withAlpha(alpha));
+    graphics.setFont(noteFont);
+    graphics.drawText(
+        displayedNote,
+        juce::Rectangle<float>(left, centreY - noteHeight * 0.5f, noteWidth, noteHeight),
+        juce::Justification::centred, false);
+
+    if (arrow.isEmpty())
+    {
+        return;
+    }
+
+    left += noteWidth + gap;
+
+    graphics.setColour(palette.accent.withAlpha(alpha));
+    graphics.setFont(arrowFont);
+    graphics.drawText(
+        arrow, juce::Rectangle<float>(left, centreY - arrowHeight * 0.5f, arrowWidth, arrowHeight),
+        juce::Justification::centred, false);
 }
 
 void TunerComponent::drawCompactDisplay(
