@@ -33,13 +33,6 @@
 
 - [x] 4c.1 Pass, fail, skip, and comment for a selection are hidden until more than one capture is selected
 
-## 4d. A hub older than the code it serves
-
-- [x] 4d.1 Stamp the suite's source time at import, and compare it on every request
-- [x] 4d.2 Warn on every view, not only where a run is started -- the mismatch breaks controls everywhere
-- [x] 4d.3 Compare modules only; the page assets are re-read per request and cannot fall out of step
-- [x] 4d.4 Tests, including the two ways of not crying wolf: an unchanged hub and a changed asset
-
 ## 5. Verification
 
 - [x] 5.1 `python tools/scripts/run_tests.py` green
@@ -47,4 +40,3 @@
 - [x] 5.3 Run it again and confirm it resumes rather than starting over
 - [x] 5.4 Comment on several captures at once and confirm each carries it
 - [x] 5.5 Delete a comment through the running hub, and press delete twice on the same one
-- [x] 5.6 Edit a module under a running hub and confirm the warning appears; restart and confirm it goes

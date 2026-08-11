@@ -62,28 +62,105 @@ function renderStaleServer(view) {
   const banner = element("stale-server");
   const warning = view.stale_server || "";
 
-  banner.textContent = warning;
+  element("stale-server-message").textContent = warning;
   banner.hidden = !warning;
+}
+
+// One build, on its own, now. The slow part of everything here is the build,
+// and wanting it done without also running two hundred captures is the normal
+// state of someone who has just edited the application.
+async function buildTargets(targets) {
+  const { ok, data } = await api("/api/build", { targets });
+
+  if (!ok) {
+    window.alert(data.error || "could not start a build");
+
+    return;
+  }
+
+  renderJob(data);
+  poll();
+}
+
+function buildNotice(text, action, subtle) {
+  const notice = document.createElement("div");
+  notice.className = subtle ? "notice subtle" : "notice";
+  notice.appendChild(document.createTextNode(`${text} `));
+
+  if (action) {
+    // The instruction used to be "tick rebuild, then run something". Saying
+    // what to do next is worse than doing it, when there is only one answer.
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "inline-action";
+    button.textContent = action.label;
+    button.addEventListener("click", action.run);
+    notice.appendChild(button);
+  }
+
+  return notice;
 }
 
 function renderBuilds(view) {
   const holder = element("build-state");
-  const missing = (view.builds || []).filter((build) => !build.present);
-  const stale = (view.builds || []).filter((build) => build.present && build.stale);
-  const lines = [];
+  const row = element("build-buttons");
+  const builds = view.builds || [];
+  const running = Boolean(view.job && view.job.running);
+
+  holder.innerHTML = "";
+  row.innerHTML = "";
+
+  // Beside the run buttons, because building is the same decision one step
+  // earlier. The colour is the state: a row of identical buttons above a
+  // paragraph saying which one is needed is how this read before, and the
+  // paragraph is the part nobody reads.
+  builds.forEach((build) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `build-button ${build.present ? "built" : "not-built"}`;
+    button.textContent = `${build.present ? "Rebuild" : "Build"} ${build.target}`;
+    button.title = build.present
+      ? `${build.target} is built${build.stale ? ", but predates your latest source change" : ""}`
+      : build.reason;
+    button.disabled = running;
+    button.addEventListener("click", () => buildTargets([build.target]));
+    row.appendChild(button);
+  });
+
+  if (builds.length > 1) {
+    // Both targets at once. Red unless everything is there, because the
+    // question this one answers is "can I run anything", and one of two
+    // present is still no to half of it.
+    const every = document.createElement("button");
+    const all = builds.every((build) => build.present);
+
+    every.type = "button";
+    every.className = `build-button ${all ? "built" : "not-built"}`;
+    every.textContent = all ? "Rebuild everything" : "Build everything";
+    every.title = all
+      ? "Rebuild every target"
+      : `Not built: ${builds.filter((build) => !build.present).map((build) => build.target).join(", ")}`;
+    every.disabled = running;
+    every.addEventListener("click", () => buildTargets(builds.map((build) => build.target)));
+    row.appendChild(every);
+  }
 
   // Said up front rather than discovered ten minutes in: a cold build is the
   // slowest thing here by far, and knowing it is coming changes what you click.
-  missing.forEach((build) => lines.push(
-    `<div class="notice">${build.target} is not built — ${build.reason}. Running anything that needs it will build it first (several minutes).</div>`));
-  stale.forEach((build) => lines.push(
-    `<div class="notice subtle">${build.target} was built before your latest source change. Tick "rebuild" to be sure.</div>`));
+  builds.filter((build) => !build.present).forEach((build) => holder.appendChild(buildNotice(
+    `${build.target} is not built — ${build.reason}. Running anything that needs it will build it first (several minutes).`,
+    running ? null : { label: `Build ${build.target} now`, run: () => buildTargets([build.target]) },
+    false)));
+
+  builds.filter((build) => build.present && build.stale).forEach((build) => holder.appendChild(buildNotice(
+    `${build.target} was built before your latest source change.`,
+    running ? null : { label: `Rebuild ${build.target} now`, run: () => buildTargets([build.target]) },
+    true)));
 
   if (!view.display) {
-    lines.push('<div class="notice">No display detected — UI suites will be skipped rather than failing.</div>');
+    holder.appendChild(buildNotice(
+      "No display detected — UI suites will be skipped rather than failing.", null, false));
   }
-
-  holder.innerHTML = lines.join("");
 }
 
 function suiteRow(suite, result) {
@@ -181,6 +258,57 @@ async function stopRun() {
 }
 
 element("stop-run").addEventListener("click", stopRun);
+
+const pause = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+async function hubBoot() {
+  try {
+    const response = await fetch("/api/session", { cache: "no-store" });
+
+    return response.ok ? (await response.json()).boot || "" : "";
+  } catch (error) {
+    return "";
+  }
+}
+
+// Reload when a different process answers, rather than when anything does.
+// A restart replaces the hub in place: the pid does not change and the port is
+// often back within the second, so "wait for it to go down" is a race whose
+// losing side reloads into the old code -- the exact fault being escaped.
+async function waitForNewHub(say, previous) {
+  for (let attempt = 0; attempt < 240; attempt += 1) {
+    await pause(250);
+
+    const boot = await hubBoot();
+
+    if (boot && boot !== previous) {
+      window.location.reload();
+
+      return;
+    }
+  }
+
+  say("the hub has not come back — check the terminal it is running in");
+}
+
+async function restartHub() {
+  const button = element("restart-hub");
+  const say = (text) => { element("stale-server-message").textContent = text; };
+  const previous = await hubBoot();
+  const { ok, data } = await api("/api/restart-hub", {});
+
+  if (!ok) {
+    window.alert(data.error || "could not restart the hub");
+
+    return;
+  }
+
+  button.disabled = true;
+  say("restarting… this page will reload itself when the hub is back.");
+  waitForNewHub(say, previous);
+}
+
+element("restart-hub").addEventListener("click", restartHub);
 
 // Escape as well as the button. The reason to want a key is the case where the
 // pointer is not usable, which is what a capture run on the desktop display did

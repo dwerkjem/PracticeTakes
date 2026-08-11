@@ -19,11 +19,13 @@ from __future__ import annotations
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
+import time
 from urllib.parse import parse_qs, urlparse
 
 import freshness
 import history as history_module
 import launcher as launcher_module
+import restart as restart_module
 import review
 import runner as runner_module
 import suites as suites_module
@@ -70,6 +72,12 @@ WEB_FILES = web_assets()
 # import rather than passed in, so it is stamped at the one moment that is
 # actually true -- see `freshness.suite_staleness_warning`.
 SOURCES_LOADED_AT = freshness.newest_suite_source_time()
+
+# Which process is answering. A restart replaces this process in place, so the
+# pid is unchanged and the port is often back before anyone can observe it
+# missing; a page waiting for the new hub has nothing else to key on, and
+# reloading against the old one lands back on the fault it was escaping.
+BOOT_ID = str(time.time_ns())
 
 
 class ReviewSession:
@@ -137,6 +145,7 @@ class ReviewSession:
             "builds": runner_module.build_overview(),
             "display": runner_module.display_available(),
             "stale_server": freshness.suite_staleness_warning(SOURCES_LOADED_AT),
+            "boot": BOOT_ID,
             "job": self.job.status(),
             "launch": self.launch.status(),
             "modes": [surfaces.QUICK, surfaces.FULL],
@@ -344,6 +353,43 @@ class ReviewHandler(BaseHTTPRequestHandler):
                     else "nothing is running",
                 }
             )
+
+            return
+
+        if parsed.path == "/api/build":
+            # No run row behind this one: a build verified nothing, and a run
+            # with nothing under it would sit in the history looking like one
+            # that did.
+            targets = [str(value) for value in payload.get("targets", [])]
+            unknown = [name for name in targets if name not in runner_module.BUILD_TARGETS]
+
+            if unknown:
+                self._send_json({"error": f"unknown target(s): {', '.join(unknown)}"}, status=400)
+
+                return
+
+            if not self.session.job.start_build(targets or None):
+                self._send_json({"error": "something is already running"}, status=409)
+
+                return
+
+            self._send_json(self.session.job.status())
+
+            return
+
+        if parsed.path == "/api/restart-hub":
+            # Refused rather than queued while a job is on: exec would take a
+            # capture pass down with it, and the half-written run it left
+            # behind would be a worse thing to explain than a stale hub.
+            if self.session.job.running:
+                self._send_json(
+                    {"error": "something is running — stop it first"}, status=409
+                )
+
+                return
+
+            restart_module.restart_now()
+            self._send_json({"restarting": True})
 
             return
 

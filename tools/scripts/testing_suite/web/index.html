@@ -32,7 +32,12 @@
 
     <!-- Outside every view, because the mismatch it reports makes buttons in
          all of them do nothing. -->
-    <div id="stale-server" class="notice" hidden></div>
+    <div id="stale-server" class="notice" hidden>
+      <span id="stale-server-message"></span>
+      <!-- The way out, beside the problem. Nowhere else, because there is
+           nothing to restart when the hub is current. -->
+      <button type="button" id="restart-hub">Restart the hub</button>
+    </div>
 
     <!-- Run: pick what to run, and run it. The landing view, because an empty
          store is what everyone sees first and it needs a way forward. -->
@@ -53,6 +58,12 @@
         <button type="button" id="run-tests">Tests only</button>
         <button type="button" id="run-performance">Performance only</button>
         <button type="button" id="run-ui">UI only</button>
+
+        <!-- Building belongs with running: it is the same decision made one
+             step earlier, and the run buttons are where you are already
+             looking. Filled by the script, one per target. -->
+        <span class="divider"></span>
+        <span id="build-buttons"></span>
       </div>
 
       <section class="panel">

@@ -12,6 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 import tempfile
+import threading
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -328,6 +329,86 @@ class JobTests(unittest.TestCase):
         status = self.run_job(["python"])
 
         self.assertTrue(any("Python script tests" in line for line in status["log"]))
+
+    # --- Building on its own ------------------------------------------------
+
+    def build_job(self, targets: list[str] | None = None) -> dict:
+        job = self.make_job()
+        self.assertTrue(job.start_build(targets))
+        job.wait(30)
+
+        return job.status()
+
+    def test_a_build_on_its_own_builds_what_it_was_asked_for(self) -> None:
+        status = self.build_job(["PracticeTakes"])
+
+        self.assertEqual(self.built, ["PracticeTakes"])
+        self.assertEqual(status["state"], runner_module.FINISHED)
+        self.assertEqual(status["percent"], 100)
+
+    def test_a_build_with_no_targets_builds_everything(self) -> None:
+        self.build_job()
+
+        self.assertEqual(sorted(self.built), sorted(runner_module.BUILD_TARGETS))
+
+    def test_a_build_leaves_no_run_behind_it(self) -> None:
+        """A build verified nothing, and history is a record of verification."""
+        status = self.build_job(["PracticeTakes"])
+
+        self.assertIsNone(status["run_id"])
+        self.assertEqual(self.store.runs(), [])
+
+    def test_a_build_runs_no_suite(self) -> None:
+        self.build_job(["PracticeTakes"])
+
+        self.assertEqual(self.commands, [])
+        self.assertEqual(self.build_job(["PracticeTakes"])["results"], {})
+
+    def test_an_unknown_target_is_not_built(self) -> None:
+        job = self.make_job()
+
+        self.assertFalse(job.start_build(["NotATarget"]))
+        self.assertEqual(self.built, [])
+
+    def test_a_failing_build_is_reported_rather_than_raised(self) -> None:
+        outer = self
+
+        class ExplodingJob(runner_module.Job):
+            def _build(inner, target, *, floor, ceiling):  # noqa: N805 - test double
+                outer.built.append(target)
+
+                raise RuntimeError("cmake said no")
+
+        job = ExplodingJob(store=self.store)
+
+        self.assertTrue(job.start_build(["PracticeTakes"]))
+        job.wait(30)
+
+        self.assertEqual(job.status()["state"], runner_module.FAILED)
+        self.assertIn("cmake said no", job.status()["message"])
+
+    def test_nothing_else_starts_while_a_build_is_running(self) -> None:
+        """One job at a time is the existing rule; a build is a job."""
+        started = threading.Event()
+        release = threading.Event()
+        outer = self
+
+        class BlockingJob(runner_module.Job):
+            def _build(inner, target, *, floor, ceiling):  # noqa: N805 - test double
+                outer.built.append(target)
+                started.set()
+                release.wait(10)
+
+        job = BlockingJob(store=self.store)
+        self.assertTrue(job.start_build(["PracticeTakes"]))
+        self.assertTrue(started.wait(10))
+
+        try:
+            self.assertFalse(job.start_build(["PracticeTakesTests"]))
+            self.assertFalse(job.start(["python"]))
+        finally:
+            release.set()
+            job.wait(30)
 
 
 class BinaryDiscoveryTests(unittest.TestCase):

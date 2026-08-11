@@ -356,6 +356,71 @@ class Job:
 
         return True
 
+    def start_build(self, targets: list[str] | None = None) -> bool:
+        """Build, and do nothing else. False when something is already running.
+
+        A build on its own, rather than one that happens on the way to a suite:
+        the build is the slow part, it is what a source change invalidates, and
+        wanting it done now without also running two hundred captures is the
+        normal state of someone who has just edited the application.
+
+        Deliberately no run row. A run is a record of what was verified, and a
+        build verified nothing -- a row with no captures and no results under it
+        would show up in the history as a run that did nothing.
+        """
+        chosen = [target for target in (targets or list(BUILD_TARGETS)) if target in BUILD_TARGETS]
+
+        if not chosen:
+            return False
+
+        with self._lock:
+            if self.running:
+                return False
+
+            self._stop.clear()
+            self.state = BUILDING
+            self.message = "starting"
+            self.percent = 0
+            self.run_id = None
+            self.started_at = _now()
+            self.finished_at = ""
+            self.queued = list(chosen)
+            self.results = {}
+            self.log = []
+
+        self._thread = threading.Thread(
+            target=self._build_only, kwargs={"chosen": chosen}, daemon=True
+        )
+        self._thread.start()
+
+        return True
+
+    def _build_only(self, *, chosen: list[str]) -> None:
+        try:
+            for index, target in enumerate(chosen):
+                # Asking to stop between targets is honoured, because the second
+                # of two builds is another several minutes.
+                if self.stopping():
+                    self._say(
+                        f"stopped before building {target}", state=FINISHED, percent=100
+                    )
+
+                    return
+
+                self._build(
+                    target,
+                    floor=int(100 * index / len(chosen)),
+                    ceiling=int(100 * (index + 1) / len(chosen)),
+                )
+
+            built = ", ".join(chosen)
+            self._say(f"built {built}", state=FINISHED, percent=100)
+        except Exception as error:  # noqa: BLE001 - a background job reports rather than crashes
+            self._say(f"build failed: {error}", state=FAILED)
+        finally:
+            with self._lock:
+                self.finished_at = _now()
+
     def wait(self, timeout: float | None = None) -> None:
         """For the command line and for tests; the page polls instead."""
         if self._thread is not None:

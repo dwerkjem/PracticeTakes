@@ -46,6 +46,10 @@ def declared_ids() -> set[str]:
     return from_markup | from_script | interpolated
 
 
+def stylesheet() -> str:
+    return (WEB_ROOT / "style.css").read_text(encoding="utf-8")
+
+
 def referenced_ids() -> set[str]:
     text = script()
 
@@ -149,6 +153,35 @@ class PageWiringTests(unittest.TestCase):
 
         self.assertIn('createElement("details")', body)
         self.assertIn("facet-panel", body)
+
+    def test_nothing_hidden_is_laid_out_without_being_hideable(self) -> None:
+        """Styling an element by id can stop `hidden` from hiding it.
+
+        `[hidden] { display: none }` is a browser rule with no specificity to
+        speak of, so `#thing { display: flex }` silently outranks it and the
+        element is on the page forever. That shipped here once: a restart
+        button sat above a hub that had nothing to restart, in an otherwise
+        empty banner.
+        """
+        css = stylesheet()
+        hideable = set(re.findall(r'id="([^"]+)"[^>]*\shidden', markup()))
+        self.assertTrue(hideable)
+
+        for name in sorted(hideable):
+            laid_out = re.search(
+                rf"#{re.escape(name)}\s*\{{[^}}]*\bdisplay\s*:", css
+            )
+
+            if not laid_out:
+                continue
+
+            with self.subTest(id=name):
+                self.assertRegex(
+                    css,
+                    rf"#{re.escape(name)}\[hidden\]\s*\{{[^}}]*display\s*:\s*none",
+                    f"#{name} is given a display by id but has no [hidden] rule, "
+                    f"so hiding it in the script will not hide it",
+                )
 
     def test_the_stylesheet_and_script_are_linked(self) -> None:
         self.assertIn('href="/web/style.css"', markup())
