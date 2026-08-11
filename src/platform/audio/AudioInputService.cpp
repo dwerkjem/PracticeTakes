@@ -3,9 +3,16 @@
 #include "AudioRecoveryPolicy.h"
 
 #include <cmath>
+#include <mutex>
 
 namespace
 {
+// TEMPORARY PROBE (task 5.6), removed with the lock in the callback below.
+// At namespace scope so that acquiring it is the only real-time-unsafe thing
+// the probe does -- a function-local static would drag its own initialisation
+// guard into the measurement.
+std::mutex deliberateProbeLock;
+
 class AudioCallbackScope final
 {
   public:
@@ -318,6 +325,14 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
     const juce::AudioIODeviceCallbackContext&) noexcept PRACTICE_TAKES_NONBLOCKING
 {
     AudioCallbackScope callbackScope(callbacksInProgress);
+
+    // TEMPORARY PROBE (task 5.6) -- a lock acquisition on the audio thread.
+    // RealtimeSanitizer must fail the Realtime job on this. Removed immediately.
+    {
+        const std::lock_guard<std::mutex> deliberate(deliberateProbeLock);
+        volatile int sink = numSamples;
+        (void)sink;
+    }
 
     for (int channel = 0; channel < numOutputChannels; ++channel)
     {
