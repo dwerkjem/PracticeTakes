@@ -38,6 +38,8 @@
 - [x] 4.4 Keep it minimal: device lifecycle, gain, metering, and dropout accounting stay for #116
 - [x] 4.5 Layout checker passes. Instrumented TUs **26 of 47 (55.3%) → 27 of 47 (57.4%)**. #116's quoted "25 of 43, 58.1%" is stale — the denominator has grown, so its 80% target should be measured against 47
 
+- [x] 4.6 Fix `test_coverage_sources.py`, which pins area 9's list of untested units and had been red since 4.1 moved `AudioInputService.cpp` into the test target. `python-check.yml` covers `src/**` and would have caught it on the first pull request; it went unseen only because this branch has not opened one yet
+
 ## 5. RealtimeSanitizer — only if 1.3 was clean
 
 - [x] 5.1 `src/platform/audio/RealtimeSafety.h`. Annotated the override directly rather than a private helper — a helper would leave the override's own prologue outside the annotation (design decision 9)

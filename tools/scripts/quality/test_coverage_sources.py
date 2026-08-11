@@ -142,6 +142,11 @@ class CoverageSourcesTests(unittest.TestCase):
 
         If any of them stops appearing, either it gained tests — good, update
         this list — or the derivation broke and the denominator just shrank.
+
+        `AudioInputService.cpp` left this list on 2026-08-10: the real-time
+        verification work needed a test that drives the audio callback, so the
+        file entered the test target. Only the callback is covered; the rest of
+        it is still #116's work.
         """
         repository_root = Path(__file__).resolve().parents[3]
         classified = classify(
@@ -150,7 +155,6 @@ class CoverageSourcesTests(unittest.TestCase):
         outside = set(classified["not_in_test_build"])
 
         for expected in (
-            "src/platform/audio/AudioInputService.cpp",
             "src/features/feedback/FeedbackComponent.cpp",
             "src/features/analysis/tuner/TunerComponent.cpp",
             "src/features/analysis/spectrogram/SpectrogramComponent.cpp",

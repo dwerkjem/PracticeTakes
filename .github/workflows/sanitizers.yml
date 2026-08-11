@@ -1,17 +1,14 @@
 # Runtime verification of PracticeTakesTests. Static analysis lives in
 # cpp-quality-check.yml; this workflow observes a running program.
 #
-# Address and Undefined only. ThreadSanitizer runs on a schedule instead --
-# the concurrency soak is the expensive leg and does not belong in the
-# pull-request budget. See openspec/specs/runtime-safety-verification/spec.md.
+# Two jobs, both cheap enough for a review: Address plus Undefined over the full
+# suite, and Realtime over the audio callback. ThreadSanitizer runs on a
+# schedule instead (sanitizers-scheduled.yml) -- the concurrency soak is the
+# expensive leg and does not belong in the pull-request budget. See
+# openspec/specs/runtime-safety-verification/spec.md.
 name: Sanitizers
 
 on:
-  # TEMPORARY: exercising the realtime job before this branch has a pull
-  # request. Removed once RTSan is confirmed to catch an allocation and a lock.
-  push:
-    branches:
-      - feat/verify-audio-thread-contract
   pull_request:
     paths:
       - "src/**"
