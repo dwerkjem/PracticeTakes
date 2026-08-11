@@ -1,0 +1,132 @@
+# Runtime verification of PracticeTakesTests. Static analysis lives in
+# cpp-quality-check.yml; this workflow observes a running program.
+#
+# Two jobs, both cheap enough for a review: Address plus Undefined over the full
+# suite, and Realtime over the audio callback. ThreadSanitizer runs on a
+# schedule instead (sanitizers-scheduled.yml) -- the concurrency soak is the
+# expensive leg and does not belong in the pull-request budget. See
+# openspec/specs/runtime-safety-verification/spec.md.
+name: Sanitizers
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "!src/services/**"
+      - "CMakeLists.txt"
+      - "tools/cmake/**"
+      - "tools/sanitizers/**"
+      - ".github/workflows/sanitizers.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sanitizers-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  address-undefined:
+    name: Address and Undefined
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install build dependencies
+        run: |
+          bash tools/scripts/build/check-linux-build-dependencies.sh --install
+          sudo apt-get install --yes ccache ninja-build
+
+      - name: Restore compiler cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          # Its own cache key: instrumented objects are not interchangeable
+          # with the ones cpp-quality-check builds.
+          path: ${{ github.workspace }}/.ccache
+          key: sanitize-asan-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            sanitize-asan-${{ runner.os }}-
+
+      - name: Configure compiler cache
+        run: |
+          ccache --max-size=1G
+          ccache --zero-stats
+
+      - name: Configure
+        run: |
+          cmake -S . -B build-asan -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON \
+            -DPRACTICE_TAKES_SANITIZE=address \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build
+        run: cmake --build build-asan --target PracticeTakesTests --parallel
+
+      # LSAN_OPTIONS is applied to each test by catch_discover_tests, so the
+      # suppression file travels with the build tree rather than living here
+      # where a local run would not see it.
+      - name: Run the suite
+        run: ctest --test-dir build-asan --output-on-failure
+        env:
+          # halt_on_error keeps the first report as the one a reader sees;
+          # without it a cascade of consequences buries the cause.
+          ASAN_OPTIONS: halt_on_error=1:detect_leaks=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+
+      - name: Compiler cache statistics
+        if: always()
+        run: ccache --show-stats
+
+  realtime:
+    name: Realtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install build dependencies
+        run: |
+          bash tools/scripts/build/check-linux-build-dependencies.sh --install
+          sudo apt-get install --yes ninja-build clang-20
+
+      - name: Configure
+        run: |
+          cmake -S . -B build-rtsan -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON \
+            -DPRACTICE_TAKES_SANITIZE=realtime \
+            -DCMAKE_C_COMPILER=clang-20 \
+            -DCMAKE_CXX_COMPILER=clang++-20
+
+      - name: Build
+        run: cmake --build build-rtsan --target PracticeTakesTests --parallel
+
+      # Only the audio callback carries the annotation, and only the [callback]
+      # cases drive it. Running the whole suite would spend the slot observing
+      # code RealtimeSanitizer has nothing to say about.
+      #
+      # This job means nothing without those cases: RTSan observes what runs, so
+      # if the harness stops invoking the callback the check silently becomes a
+      # no-op that reports success.
+      - name: Verify the audio callback is non-blocking
+        run: |
+          set -x
+          ./build-rtsan/PracticeTakesTests "[callback]" --order lex
+          # Guard against the harness being removed or renamed: a pass with zero
+          # test cases is not a pass.
+          ./build-rtsan/PracticeTakesTests "[callback]" --list-tests \
+            | grep -q "audio callback" || {
+              echo "No [callback] cases ran -- the realtime check is verifying nothing"
+              exit 1
+            }
+        env:
+          RTSAN_OPTIONS: halt_on_error=1

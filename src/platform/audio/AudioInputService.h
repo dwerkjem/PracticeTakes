@@ -1,8 +1,15 @@
 #pragma once
 
-#include <JuceHeader.h>
+// Modular JUCE includes rather than the generated JuceHeader.h umbrella:
+// JuceHeader.h is produced for the PracticeTakes application target only, so a
+// file that uses it cannot be compiled into PracticeTakesTests. That is the
+// mechanical reason this service had no tests.
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_core/juce_core.h>
+#include <juce_events/juce_events.h>
 
 #include "AudioSampleFifo.h"
+#include "RealtimeSafety.h"
 #include "SyntheticTone.h"
 
 #include <array>
@@ -74,6 +81,18 @@ class AudioInputService final
     [[nodiscard]] std::unique_ptr<juce::XmlElement> createDeviceState() const;
 
   private:
+    // The device callback is private, and the AudioIODeviceCallback base is
+    // inherited privately, because nothing in the application may invoke it --
+    // only the device does. A test must, though, and for a reason that is not
+    // convenience: the real-time contract in
+    // docs/development/performance/audio-thread-safety.md is only verifiable
+    // against the callback actually running, and RealtimeSanitizer observes
+    // code that executes. Until something drove this function, a green
+    // real-time check meant nothing.
+    //
+    // One named type gets in, rather than widening the class's surface.
+    friend struct AudioInputServiceCallbackAccess;
+
     static constexpr std::size_t maximumConsumers = 8;
     static constexpr std::size_t consumerFifoCapacity = 65536;
     static constexpr int serviceRefreshRateHz = 20;
@@ -87,13 +106,16 @@ class AudioInputService final
         std::atomic<bool> active{false};
     };
 
+    // noexcept and non-blocking are load-bearing, not decoration: see
+    // RealtimeSafety.h. Overriding with a stricter exception specification than
+    // JUCE's base declares is legal and is what makes the annotation possible.
     void audioDeviceIOCallbackWithContext(
         const float* const* inputChannelData,
         int numInputChannels,
         float* const* outputChannelData,
         int numOutputChannels,
         int numSamples,
-        const juce::AudioIODeviceCallbackContext&) override;
+        const juce::AudioIODeviceCallbackContext&) noexcept PRACTICE_TAKES_NONBLOCKING override;
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
     void audioDeviceStopped() override;
     void changeListenerCallback(juce::ChangeBroadcaster*) override;

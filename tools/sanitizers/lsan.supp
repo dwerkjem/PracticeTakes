@@ -1,0 +1,24 @@
+# LeakSanitizer suppressions for PracticeTakesTests.
+#
+# A suppression is a decision to stop looking at something. Every entry below
+# therefore names what it silences and why this repository cannot fix it, so
+# that the decision is reviewable rather than inherited.
+#
+# Nothing here may suppress a leak originating in src/. If a report names a
+# frame in this project's own code, the fix is the code, not this file.
+#
+# Applied automatically to `ctest` runs of a build tree configured with
+# -DPRACTICE_TAKES_SANITIZE=address. Running the test binary directly needs it
+# passed by hand:
+#
+#   LSAN_OPTIONS=suppressions=tools/sanitizers/lsan.supp ./build-asan/PracticeTakesTests
+
+# fontconfig, reached through JUCE's font enumeration the first time anything
+# measures or draws text. It caches pattern, charset, and value objects for the
+# lifetime of the process and releases them only from FcFini(), which JUCE does
+# not call — deliberately, since the cache is shared and tearing it down mid-run
+# would be worse than leaking it. Roughly 8.8 kB in 128 allocations on a
+# headless Linux runner.
+#
+# Reported against libfontconfig 2.15 via FcValueSave and FcConfigCreate.
+leak:libfontconfig

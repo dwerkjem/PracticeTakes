@@ -6,6 +6,7 @@ Practice Takes separates fast local formatting from slower repository-wide stati
 - `clang-format` rewrites C and C++ files to match `.clang-format` before every local commit.
 - `clang-tidy` runs after relevant changes land on `main`, applies supported safe fixes, and commits those source changes back to `main`.
 - Pull requests run a check-only `clang-format`/`clang-tidy` gate across every `.cpp`/`.h` file under `src/`, failing the PR without modifying or committing anything.
+- Sanitizers observe the test suite *running*, which static analysis cannot do. See [Runtime verification: sanitizers](#runtime-verification-sanitizers).
 - VS Code uses CMake's compilation database, so editor diagnostics match the actual project configuration.
 
 ## Local pre-commit formatting
@@ -112,6 +113,55 @@ The workflow:
 
 This check analyzes the full repository on every run, not just changed lines, so it catches findings anywhere in `src/`, not only in the diff.
 
+## Runtime verification: sanitizers
+
+Everything above inspects source. Sanitizers instrument a build and watch it
+run, which is the only way to catch a data race, a use-after-free, or an
+allocation on the audio thread — none of which are visible in a green ordinary
+test run.
+
+One CMake cache variable selects the instrumentation:
+`-DPRACTICE_TAKES_SANITIZE=address|thread|realtime`. It is single-valued on
+purpose, so mutually incompatible sanitizers cannot be requested together by
+construction rather than by a check. Each needs its own build tree: instrumented
+objects are not interchangeable with ordinary ones, or with each other's.
+
+| Leg                        | Workflow                    | Trigger                                | What runs             |
+| -------------------------- | --------------------------- | -------------------------------------- | --------------------- |
+| Address + Undefined        | `sanitizers.yml`            | pull requests touching `src/**`         | the full suite        |
+| Realtime                   | `sanitizers.yml`            | pull requests touching `src/**`         | the `[callback]` cases |
+| Thread                     | `sanitizers-scheduled.yml`  | nightly 04:20 UTC, and pushes to `main` | the `[.load]` cases   |
+
+ThreadSanitizer is deliberately not a pull-request gate: it runs 5–15× slower
+and `[.load]` is a soak. Running it on pushes to `main` as well as nightly keeps
+a failure attributable to one commit instead of to a week of them.
+
+**A failing scheduled run opens an issue** — `area:testing`, `area:audio`,
+`type:bug`, `priority:p1` — naming the workflow, the run URL, and the failing
+step. A later failure comments on that issue rather than opening a duplicate. A
+red run that exists only in the Actions tab is a red run nobody reads.
+`benchmarks.yml` and `secret-scan.yml` still have that gap; that is #159.
+
+Leak findings from outside this repository are handled by `tools/sanitizers/lsan.supp`,
+which carries a comment per entry explaining why. A leak from a file under
+`src/` is covered by nothing and fails the check.
+
+The Realtime leg is what enforces the audio-thread contract. What it does and
+does not cover is in
+[Audio-thread safety](../performance/audio-thread-safety.md).
+
+Run any leg locally the same way CI does:
+
+```bash
+cmake -S . -B build-asan -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON \
+    -DPRACTICE_TAKES_SANITIZE=address
+cmake --build build-asan --target PracticeTakesTests --parallel
+ctest --test-dir build-asan --output-on-failure
+```
+
+`realtime` requires Clang 20 or newer and is rejected at configure time under
+GCC, which has no equivalent.
+
 ## Manual clang-tidy use
 
 Configure and build the project before running clang-tidy locally:
@@ -175,6 +225,9 @@ When configuration succeeds but stale diagnostics remain, run **C/C++: Reset Int
 - `tools/secret-patterns` selects plaintext files managed by the SOPS pre-commit hook.
 - `tools/scripts/secrets/secrets_manager.py` encrypts, synchronizes, and resolves conflicts for secrets.
 - `.github/workflows/clang-tidy-main.yml` fixes and verifies C++ after changes land on `main`.
+- `.github/workflows/sanitizers.yml` runs the Address/Undefined and Realtime legs on pull requests.
+- `.github/workflows/sanitizers-scheduled.yml` runs the Thread leg nightly and on `main`, and files the issue when it fails.
+- `tools/sanitizers/lsan.supp` lists the third-party leaks LeakSanitizer ignores, with a reason each.
 - `tools/scripts/quality/run_clang_format.py` locates and invokes clang-format.
 - `tools/scripts/quality/run_clang_tidy.py` locates and invokes clang-tidy with the build directory and optional safe fixes.
 - `.vscode/settings.json` connects VS Code to CMake Tools and the compilation database.

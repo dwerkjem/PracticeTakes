@@ -233,17 +233,23 @@ config now sets `all: true` with a corrected pattern.
 
 ### 9. C++ code outside the test build
 
-**Problem** (measured at `efb65ec7b5fb`, 2026-07-31): `PracticeTakesTests`
-compiles **25 of 43 translation units** under `src/` — 58.1%. The remaining 18
-never enter the test binary, so no coverage tool can say anything about them.
-Run `python3 tools/scripts/quality/coverage_sources.py` for the current list; CI
+**Problem** (re-measured 2026-08-10): `PracticeTakesTests` compiles **27 of 47
+translation units** under `src/` — 57.4%. The remaining 20 never enter the test
+binary, so no coverage tool can say anything about them. Run
+`python3 tools/scripts/quality/coverage_sources.py` for the current list; CI
 publishes it with every coverage run.
 
-The earlier hand count of "64 of 99 source files" included headers, which are
-not separately compiled units; 25/43 is the figure that matters for coverage,
-and it is now measured rather than estimated. The largest untested units are
-`AudioInputService.cpp` (device lifecycle, gain, level metering, dropout
-accounting), `FeedbackComponent.cpp`, `TunerComponent`/`TunerDrawing`,
+Both numbers move. The earlier figure — 25 of 43, 58.1%, measured at
+`efb65ec7b5fb` on 2026-07-31 — is quoted in #116 as a target denominator, and it
+is stale: the denominator has grown, so #116's 80% goal should be measured
+against 47. An earlier hand count of "64 of 99 source files" included headers,
+which are not separately compiled units.
+
+`AudioInputService.cpp` has since entered the test binary — the real-time
+verification work needed a test that drives the audio callback — but only that
+callback is covered. Device lifecycle, level metering, dropout accounting, and
+recovery are still untested, and remain #116's largest target, alongside
+`FeedbackComponent.cpp`, `TunerComponent`/`TunerDrawing`,
 `SpectrogramComponent`, and the `MainComponent*` shell files.
 
 **Plan**: extract the testable logic out of the JUCE components — the pattern
@@ -281,7 +287,8 @@ both remain internally consistent.
 
 ### 13. Concurrency and real-time verification
 
-**Half done.** The concurrent tests exist; the sanitizer build does not.
+**Closed** (2026-08-11). The concurrent tests are now observed by the tools that
+can see what a green run cannot.
 
 Done: `src/tests/platform/audio/AudioSampleFifoLoadTests.cpp` exercises the FIFO
 with a real producer and consumer on separate threads, asserting exactly-once
@@ -290,12 +297,18 @@ isolation between consumers, and a configurable soak run. Tagged `[.load]` so
 the default suite is unaffected; run with
 `build/bin/PracticeTakesTests "[.load]"`.
 
-**Still open, and the more important half**: there is no ASan/UBSan/TSan build
-in CI, and the audio-thread no-allocation rules in
-[Audio-thread safety](../performance/audio-thread-safety.md) remain unverified.
-The concurrent tests say so at the top of the file in as many words — a race
-that does not manifest on a given scheduler passes silently, so a green run is
-**not** proof the FIFO is correct. Do not read those tests as closing this area.
+Also done: Address and Undefined sanitizers over the full suite on every pull
+request, ThreadSanitizer over `[.load]` nightly and on pushes to `main`, and
+RealtimeSanitizer over a test that actually invokes the audio callback — the
+first executable enforcement the audio-thread no-allocation rules have had. Each
+leg was verified by deliberately breaking it, not by observing a pass. See
+[Runtime verification: sanitizers](QUALITY.md#runtime-verification-sanitizers).
+
+**What remains true**: a green *ordinary* run is still not proof the FIFO is
+correct, and the real-time check covers only the callback paths the harness
+drives — the honest limits are listed in
+[Audio-thread safety](../performance/audio-thread-safety.md#what-this-does-not-cover).
+Widening the callback harness is #116.
 
 ### 14. macOS test execution
 
