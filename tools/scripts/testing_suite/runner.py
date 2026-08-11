@@ -44,6 +44,7 @@ from pathlib import Path
 import platform as _platform
 import re
 import shutil
+import signal
 import subprocess
 import threading
 import time
@@ -64,6 +65,14 @@ SOURCE_ROOT = REPOSITORY_ROOT / "src"
 
 BUILD_PATH = "/usr/bin:/bin"
 LOG_LINES_KEPT = 200
+
+# How long a command gets to end politely before it is killed.
+STOP_GRACE_SECONDS = 5.0
+
+# What `_command` reports for a command that was never started, or was ended by
+# a stop. Distinct from any exit code a real command produces, so "we stopped
+# this" is never mistaken for "this failed".
+STOPPED_CODE = -1000
 
 IDLE = "idle"
 BUILDING = "building"
@@ -228,6 +237,17 @@ def missing_program(command: str) -> str:
         return f"`{command}` is not installed, or is not on your PATH"
 
     return ""
+
+
+class RunStopped(Exception):
+    """Raised to unwind a job that was asked to stop.
+
+    An exception rather than a return value checked at each step: the stop can
+    happen inside a build, inside a suite, or between them, and every one of
+    those paths has to end in the same place. A code that has to be checked is
+    a code somebody forgets to check, and forgetting here means a stopped run
+    quietly carrying on to the next suite.
+    """
 
 
 @dataclass
@@ -396,25 +416,24 @@ class Job:
         return True
 
     def _build_only(self, *, chosen: list[str]) -> None:
+        done: list[str] = []
+
         try:
             for index, target in enumerate(chosen):
-                # Asking to stop between targets is honoured, because the second
-                # of two builds is another several minutes.
                 if self.stopping():
-                    self._say(
-                        f"stopped before building {target}", state=FINISHED, percent=100
-                    )
-
-                    return
+                    raise RunStopped
 
                 self._build(
                     target,
                     floor=int(100 * index / len(chosen)),
                     ceiling=int(100 * (index + 1) / len(chosen)),
                 )
+                done.append(target)
 
-            built = ", ".join(chosen)
-            self._say(f"built {built}", state=FINISHED, percent=100)
+            self._say(f"built {', '.join(chosen)}", state=FINISHED, percent=100)
+        except RunStopped:
+            built = f", built {', '.join(done)} first" if done else ""
+            self._say(f"stopped{built}", state=FINISHED, percent=100)
         except Exception as error:  # noqa: BLE001 - a background job reports rather than crashes
             self._say(f"build failed: {error}", state=FAILED)
         finally:
@@ -452,10 +471,16 @@ class Job:
                         needed.append(target)
 
             for index, target in enumerate(needed):
+                if self.stopping():
+                    raise RunStopped
+
                 floor = int(40 * index / len(needed))
                 self._build(target, floor=floor, ceiling=int(40 * (index + 1) / len(needed)))
 
             for index, suite_id in enumerate(chosen):
+                if self.stopping():
+                    raise RunStopped
+
                 base = 40 + int(60 * index / len(chosen))
                 self._run_suite(
                     suites_module.by_id(suite_id),
@@ -479,6 +504,25 @@ class Job:
             if len(ran) < len(chosen):
                 summary += f", {len(chosen) - len(ran)} could not run"
             self._say(summary, state=FINISHED if not failed else FAILED, percent=100)
+        except RunStopped:
+            # Everything that never got its turn, said out loud. A suite left
+            # sitting at "queued" reads as still to come, and nothing is coming.
+            for suite_id, entry in list(self.results.items()):
+                if entry.get("state") in ("queued", "running"):
+                    self._record(suite_id, state="stopped", message="the run was stopped")
+
+            done = [
+                entry for entry in self.results.values()
+                if entry.get("state") in ("passed", "failed")
+            ]
+            # Finished, not failed: stopping is a decision somebody made, and a
+            # run marked failed for it either blocks a release or teaches
+            # everyone that failures can be ignored.
+            self._say(
+                f"stopped — {len(done)} of {len(chosen)} suite(s) ran",
+                state=FINISHED,
+                percent=100,
+            )
         except Exception as error:  # noqa: BLE001 - a background job reports rather than crashes
             self._say(f"stopped: {error}", state=FAILED)
         finally:
@@ -512,12 +556,61 @@ class Job:
             ceiling=ceiling,
         )
 
+        # A stopped build leaves no binary, which is not the same thing as a
+        # build that finished and produced nothing -- and only one of those is
+        # worth a message about where it looked.
+        if self.stopping():
+            raise RunStopped
+
         if binary_path(target) is None:
             looked = ", ".join(
                 str(entry["directory"] / pattern.format(target=target))
                 for pattern in BINARY_LOCATIONS
             )
             raise RuntimeError(f"the build finished but {target} is not in any of: {looked}")
+
+    def _end(self, process: subprocess.Popen, label: str) -> None:
+        """Signal a running command and everything it started.
+
+        The process group, not the process. A build is cmake, which is make or
+        ninja, which is however many compilers -- signalling only the one this
+        job can see leaves the machine compiling for another minute while the
+        page says the run has stopped.
+
+        `terminate` first so a suite can tidy up; `kill` after a grace, because
+        a stop that waits indefinitely for a well-behaved exit is the thing
+        being fixed.
+        """
+        try:
+            group = os.getpgid(process.pid)
+        except OSError:  # already gone
+            return
+
+        self._say(f"stopping {label}…")
+
+        try:
+            os.killpg(group, signal.SIGTERM)
+            process.wait(STOP_GRACE_SECONDS)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(group, signal.SIGKILL)
+            except OSError:
+                pass
+        except OSError:
+            pass
+
+    def _watch_for_stop(self, process: subprocess.Popen, label: str) -> None:
+        """End the command if the job is asked to stop while it runs.
+
+        A thread rather than a check in the read loop: a suite that is thinking
+        rather than printing -- a long test case, a link step -- produces no
+        line to check on, and that is exactly when somebody presses stop.
+        """
+        while process.poll() is None:
+            if self._stop.wait(0.25):
+                self._end(process, label)
+
+                return
 
     def _command(
         self,
@@ -533,6 +626,9 @@ class Job:
         """Run a command, streaming its output into the log. Returns the exit code."""
         self._say(f"{label}…", percent=floor)
 
+        if self.stopping():
+            return STOPPED_CODE
+
         try:
             process = subprocess.Popen(
                 arguments,
@@ -542,6 +638,9 @@ class Job:
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
+                # Its own process group, so a stop reaches the whole tree of
+                # things it starts rather than just the top of it.
+                start_new_session=True,
             )
         except (OSError, ValueError) as error:
             self._say(f"{label} could not start: {error}")
@@ -550,26 +649,34 @@ class Job:
 
         assert process.stdout is not None
 
-        for line in process.stdout:
-            line = line.rstrip()
+        # `with` so the pipe is closed however this ends. A run is dozens of
+        # commands and the hub is long-lived, so leaking one file each is a
+        # descriptor limit somebody eventually hits.
+        with process:
+            threading.Thread(
+                target=self._watch_for_stop, args=(process, label), daemon=True
+            ).start()
 
-            if not line:
-                continue
+            for line in process.stdout:
+                line = line.rstrip()
 
-            if capture is not None:
-                capture.append(line)
+                if not line:
+                    continue
 
-            # cmake prints "[ 42%] Building ..."; map that onto this step's band
-            # so the page shows real progress rather than a spinner.
-            match = re.match(r"\[\s*(\d+)%\]", line)
-            percent = None
+                if capture is not None:
+                    capture.append(line)
 
-            if match:
-                percent = int(floor + (ceiling - floor) * int(match.group(1)) / 100)
+                # cmake prints "[ 42%] Building ..."; map that onto this step's
+                # band so the page shows real progress rather than a spinner.
+                match = re.match(r"\[\s*(\d+)%\]", line)
+                percent = None
 
-            self._say(line, percent=percent)
+                if match:
+                    percent = int(floor + (ceiling - floor) * int(match.group(1)) / 100)
 
-        return process.wait()
+                self._say(line, percent=percent)
+
+            return process.wait()
 
     # --- Suites -------------------------------------------------------------
 
@@ -629,6 +736,11 @@ class Job:
                 sanitised=False,
             )
 
+            if self.stopping():
+                self._record(suite.id, state="stopped", message="stopped part way")
+
+                raise RunStopped
+
             if prepared != 0:
                 self._record(
                     suite.id,
@@ -650,6 +762,16 @@ class Job:
             capture=output,
             sanitised=False,
         )
+
+        # Before anything is written down. A killed process exits non-zero, and
+        # recording that as a test result would put failures in the store, and
+        # in the export the release gate reads, for tests that never finished.
+        if self.stopping():
+            self._record(suite.id, state="stopped", message="stopped part way")
+            self._say(f"{suite.label}: stopped", percent=ceiling)
+
+            raise RunStopped
+
         seconds = (_datetime.datetime.now() - started).total_seconds()
         parsed = suite.parser("\n".join(output)) if suite.parser else {}
 
@@ -817,6 +939,13 @@ class Job:
             message=summary,
         )
         self._say(f"UI capture: {summary}", percent=ceiling)
+
+        # Unwind like every other stop, so the run says it was stopped. Left to
+        # return normally, a stopped capture reached the end of `_work` and was
+        # summarised as "0 of 0 suite(s) passed, 1 could not run" -- true, and
+        # no help at all to somebody who has just pressed stop.
+        if result.get("stopped"):
+            raise RunStopped
 
 
 def _commit() -> str:

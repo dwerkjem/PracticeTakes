@@ -109,6 +109,44 @@ stops being read. Same reasoning as the stale-binary check that module already
 holds — the one that exists because a capture of an old build reported success
 twice.
 
+### 9. The stop flag was only ever read by the capture pass
+
+The stop shipped as `should_stop`, passed into `CapturePass.run` and asked at
+each surface boundary. Nothing else looked at it: `_work`'s suite loop had no
+check, and `_command` ran its subprocess to completion. So stopping a run that
+was building, or running ctest, did nothing at all — the button reported
+"stopping" and the run carried on to the end.
+
+Fixed in three places, because it is three failures:
+
+- a watcher thread per command, since a suite that is thinking rather than
+  printing gives the read loop no line to check on, and that is exactly when
+  somebody presses stop
+- the process *group*, because a build is cmake is make is forty compilers
+- a check between suites and between builds, so a stop lands even if it arrives
+  between two commands
+
+Measured after: 42 compilers running, stop pressed, all gone within four
+seconds.
+
+### 10. A stopped suite is not written down at all
+
+A killed process exits non-zero. The existing code turned a non-zero exit into
+`failures: 1` and a row in `test_result`, which the export hands to the release
+gate — so stopping a run would have manufactured test failures for tests that
+never finished. The check goes *before* anything is recorded rather than after.
+
+### 11. Escape read a snapshot from before the run
+
+`state.data` is replaced only by a full reload; `poll()` renders the job without
+touching it. So the Escape handler asked `state.data.job.running`, which during
+a run still held what was true when the page last reloaded — not running. The
+key did nothing for the entire run, which is the only time it is wanted. The
+polled job is now kept in its own field, and Escape reads that.
+
+This one is worth noting because both halves were individually correct and the
+button beside it worked. Only the key was dead, and only during a run.
+
 ## Risks / Trade-offs
 
 **The restart inherits the command line, not the environment it was started

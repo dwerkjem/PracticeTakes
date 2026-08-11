@@ -13,6 +13,7 @@ from pathlib import Path
 import sys
 import tempfile
 import threading
+import time
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -330,6 +331,116 @@ class JobTests(unittest.TestCase):
 
         self.assertTrue(any("Python script tests" in line for line in status["log"]))
 
+    # --- Stopping -----------------------------------------------------------
+
+    def stopping_job(self, stop_during: str) -> runner_module.Job:
+        """A job whose stop is pressed while `stop_during` is the running suite."""
+        outer = self
+
+        class TestableJob(runner_module.Job):
+            def _build(inner, target, *, floor, ceiling):  # noqa: N805 - test double
+                outer.built.append(target)
+
+            def _command(inner, arguments, *, label, floor, ceiling,  # noqa: N805 - test double
+                         working_directory=None, capture=None, sanitised=True):
+                outer.commands.append(list(arguments))
+
+                if label == stop_during:
+                    inner.stop()
+
+                    return -15  # what a signalled process reports
+
+                if capture is not None:
+                    capture.extend(outer.output.splitlines())
+
+                return outer.exit_code
+
+        return TestableJob(store=self.store)
+
+    def test_a_stopped_suite_is_not_recorded_as_a_failure(self) -> None:
+        """A killed process exits non-zero. That is not a test failure.
+
+        The store feeds the export the release gate reads, so a stop that wrote
+        failures into it would either block a release or teach everyone that
+        failures can be ignored.
+        """
+        job = self.stopping_job("Python script tests")
+        self.assertTrue(job.start(["python"]))
+        job.wait(30)
+        status = job.status()
+
+        self.assertEqual(status["results"]["python"]["state"], "stopped")
+        self.assertEqual(self.store.test_results(status["run_id"]), [])
+
+    def test_a_stopped_run_is_finished_rather_than_failed(self) -> None:
+        job = self.stopping_job("Python script tests")
+        self.assertTrue(job.start(["python"]))
+        job.wait(30)
+
+        self.assertEqual(job.status()["state"], runner_module.FINISHED)
+        self.assertIn("stopped", job.status()["message"])
+
+    def test_the_suites_after_a_stop_do_not_run(self) -> None:
+        """The bug: the loop had no check, so the next suite started anyway."""
+        job = self.stopping_job("Python script tests")
+        self.assertTrue(job.start(["python", "services", "cpp"]))
+        job.wait(30)
+        results = job.status()["results"]
+
+        self.assertEqual(results["python"]["state"], "stopped")
+        self.assertEqual(results["services"]["state"], "stopped")
+        self.assertEqual(results["cpp"]["state"], "stopped")
+        self.assertEqual(len(self.commands), 1)
+
+    def test_what_ran_before_the_stop_is_kept(self) -> None:
+        self.install_dependencies()
+        job = self.stopping_job("C++ unit tests")
+        self.assertTrue(job.start(["python", "cpp"]))
+        job.wait(30)
+        status = job.status()
+
+        self.assertEqual(status["results"]["python"]["state"], "passed")
+        self.assertEqual(status["results"]["cpp"]["state"], "stopped")
+        self.assertEqual(len(self.store.test_results(status["run_id"])), 1)
+
+    def test_a_stop_during_the_build_runs_no_suite(self) -> None:
+        outer = self
+
+        class StoppingBuild(runner_module.Job):
+            def _build(inner, target, *, floor, ceiling):  # noqa: N805 - test double
+                outer.built.append(target)
+                inner.stop()
+
+            def _command(inner, arguments, *, label, floor, ceiling,  # noqa: N805 - test double
+                         working_directory=None, capture=None, sanitised=True):
+                outer.commands.append(list(arguments))
+
+                return 0
+
+        job = StoppingBuild(store=self.store)
+        self.assertTrue(job.start(["cpp"]))
+        job.wait(30)
+
+        self.assertEqual(self.built, ["PracticeTakesTests"])
+        self.assertEqual(self.commands, [])
+        self.assertEqual(job.status()["results"]["cpp"]["state"], "stopped")
+
+    def test_a_build_on_its_own_stops_between_targets(self) -> None:
+        outer = self
+
+        class StoppingBuild(runner_module.Job):
+            def _build(inner, target, *, floor, ceiling):  # noqa: N805 - test double
+                outer.built.append(target)
+                inner.stop()
+
+        job = StoppingBuild(store=self.store)
+        self.assertTrue(job.start_build(["PracticeTakes", "PracticeTakesTests"]))
+        job.wait(30)
+
+        self.assertEqual(self.built, ["PracticeTakes"])
+        self.assertEqual(job.status()["state"], runner_module.FINISHED)
+        self.assertIn("stopped", job.status()["message"])
+
     # --- Building on its own ------------------------------------------------
 
     def build_job(self, targets: list[str] | None = None) -> dict:
@@ -409,6 +520,88 @@ class JobTests(unittest.TestCase):
         finally:
             release.set()
             job.wait(30)
+
+
+class EndingACommandTests(unittest.TestCase):
+    """Stopping a command that is actually running.
+
+    Real processes here rather than doubles: the bug being fixed was that the
+    stop flag was never looked at while a command ran, and no amount of faking
+    `_command` can show whether the real one ends a real build. The commands
+    are shell loops rather than anything of the project's, so this stays under
+    a second.
+    """
+
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.store = Store.open(Path(self.directory.name) / "verification.db")
+        self.addCleanup(self.store.close)
+        self.job = runner_module.Job(store=self.store)
+        # `stop` refuses when nothing is running, and what is running here is a
+        # bare command rather than a job -- so say so, and use the real stop.
+        self.job.state = runner_module.RUNNING
+
+    def run_in_background(self, command: list[str]) -> dict:
+        outcome: dict = {}
+
+        def work() -> None:
+            outcome["code"] = self.job._command(  # noqa: SLF001 - the unit under test
+                command, label="a long command", floor=0, ceiling=10,
+                working_directory=Path(self.directory.name),
+            )
+
+        thread = threading.Thread(target=work, daemon=True)
+        thread.start()
+
+        return {"thread": thread, "outcome": outcome}
+
+    def test_a_command_ends_when_the_job_is_stopped(self) -> None:
+        started = self.run_in_background(["/bin/sh", "-c", "sleep 60"])
+        time.sleep(0.4)
+        self.assertTrue(self.job.stop())
+        started["thread"].join(runner_module.STOP_GRACE_SECONDS + 10)
+
+        self.assertFalse(started["thread"].is_alive(), "the command outlived the stop")
+
+    def test_everything_the_command_started_ends_too(self) -> None:
+        """cmake is make is a compiler. Signalling only cmake stops nothing."""
+        marker = Path(self.directory.name) / "ticks"
+        grandchild = f"while true; do echo tick >> {marker}; sleep 0.05; done"
+        started = self.run_in_background(
+            ["/bin/sh", "-c", f"/bin/sh -c '{grandchild}' & wait"]
+        )
+        time.sleep(0.5)
+        self.assertTrue(marker.is_file(), "the grandchild never started")
+
+        self.assertTrue(self.job.stop())
+        started["thread"].join(runner_module.STOP_GRACE_SECONDS + 10)
+        time.sleep(0.4)
+        settled = marker.stat().st_size
+        time.sleep(0.5)
+
+        self.assertEqual(marker.stat().st_size, settled, "the grandchild kept running")
+
+    def test_a_command_is_not_started_once_the_job_is_stopping(self) -> None:
+        self.assertTrue(self.job.stop())
+        marker = Path(self.directory.name) / "ran"
+
+        code = self.job._command(  # noqa: SLF001 - the unit under test
+            ["/bin/sh", "-c", f"touch {marker}"], label="should not run",
+            floor=0, ceiling=1, working_directory=Path(self.directory.name),
+        )
+
+        self.assertEqual(code, runner_module.STOPPED_CODE)
+        self.assertFalse(marker.exists())
+
+    def test_a_command_that_finishes_normally_is_unaffected(self) -> None:
+        """The watcher must not touch a command nobody stopped."""
+        code = self.job._command(  # noqa: SLF001 - the unit under test
+            ["/bin/sh", "-c", "echo hello"], label="quick", floor=0, ceiling=1,
+            working_directory=Path(self.directory.name),
+        )
+
+        self.assertEqual(code, 0)
 
 
 class BinaryDiscoveryTests(unittest.TestCase):

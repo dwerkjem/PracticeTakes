@@ -348,7 +348,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self._send_json(
                 {
                     "stopping": stopped,
-                    "message": "stopping after the current surface"
+                    "message": "stopping — ending what is running now"
                     if stopped
                     else "nothing is running",
                 }

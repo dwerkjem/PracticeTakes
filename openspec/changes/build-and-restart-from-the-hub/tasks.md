@@ -30,6 +30,18 @@
 - [x] 4.3 Compare modules only; the page assets are re-read per request and cannot fall out of step
 - [x] 4.4 Tests, including the two ways of not crying wolf: an unchanged hub and a changed asset
 
+## 4e. Stopping what is actually running
+
+- [x] 4e.1 A watcher per command, so a suite that is thinking rather than printing can still be stopped
+- [x] 4e.2 Signal the process group — a build is cmake is make is forty compilers
+- [x] 4e.3 `SIGTERM`, then `SIGKILL` after a grace, rather than waiting indefinitely
+- [x] 4e.4 Unwind through one exception, so a stop in a build, a suite, or between them ends in the same place
+- [x] 4e.5 A stopped suite records no result — a killed process exits non-zero, and that is not a test failure
+- [x] 4e.6 Suites that never ran say "stopped" rather than sitting at "queued"
+- [x] 4e.7 A stopped capture unwinds too, instead of being summarised as "0 of 0 passed, 1 could not run"
+- [x] 4e.8 Escape reads the polled job rather than the last full reload — it did nothing for the whole run
+- [x] 4e.9 Tests, including real processes: a command ends, its grandchildren end, and a command nobody stopped is untouched
+
 ## 5. Verification
 
 - [x] 5.1 `python tools/scripts/run_tests.py` green
@@ -38,3 +50,6 @@
 - [x] 5.4 Confirm a restart is refused while a build is running — done against a real build, not an arranged one
 - [x] 5.5 Build one target from the button and confirm it lands, with no run behind it
 - [x] 5.6 Confirm the banner and its restart button are absent on a current hub, and that a stylesheet rule cannot resurrect them
+- [x] 5.7 Stop a real build with 42 compilers running; confirm they are gone and the run says stopped
+- [x] 5.8 Stop a real ctest part way; confirm nothing is recorded, the queued suites say stopped, and no ctest survives
+- [x] 5.9 Stop a real capture pass; confirm it says what it captured and what it did not reach

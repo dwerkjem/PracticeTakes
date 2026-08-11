@@ -10,6 +10,11 @@
 const state = {
   view: "run",
   data: null,
+  // The job as of the last poll, kept apart from `data` because `data` is only
+  // replaced by a full reload. Escape used to read `data.job`, which during a
+  // run still said what was true before it started -- not running -- so the key
+  // did nothing for the whole run.
+  job: null,
   order: [],          // capture ids, in the order they are rendered
   selected: new Set(),
   lastClicked: null,
@@ -251,7 +256,7 @@ async function stopRun() {
   const { ok, data } = await api("/api/stop-run", {});
 
   if (ok && data.stopping) {
-    element("progress-message").textContent = "stopping after the current surface\u2026";
+    element("progress-message").textContent = "stopping\u2026";
   }
 
   poll();
@@ -315,7 +320,9 @@ element("restart-hub").addEventListener("click", restartHub);
 // until it moved to a display of its own -- and that is exactly when being able
 // to stop matters most.
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && state.data && state.data.job && state.data.job.running) {
+  if (event.key === "Escape" && state.job && state.job.running && !state.job.stopping) {
+    // Before the zoom handler gets it: with a run going, Escape means stop.
+    event.preventDefault();
     stopRun();
   }
 });
@@ -331,6 +338,8 @@ element("run-all").addEventListener("click", () =>
 // --- Progress --------------------------------------------------------------
 
 function renderJob(job) {
+  state.job = job || null;
+
   const bar = element("progress");
   bar.hidden = !job || (!job.running && job.state === "idle");
 

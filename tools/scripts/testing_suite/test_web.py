@@ -154,6 +154,19 @@ class PageWiringTests(unittest.TestCase):
         self.assertIn('createElement("details")', body)
         self.assertIn("facet-panel", body)
 
+    def test_the_stop_key_reads_the_polled_job_not_the_last_reload(self) -> None:
+        """`state.data` is only replaced by a full reload.
+
+        Escape used to ask `state.data.job.running`, which during a run still
+        held what was true before it started — not running — so the key did
+        nothing for the entire run, which is exactly when it is wanted.
+        """
+        text = script()
+
+        self.assertNotIn("state.data.job", text)
+        self.assertIn("state.job = job", text)
+        self.assertRegex(text, r'event\.key === "Escape" && state\.job')
+
     def test_nothing_hidden_is_laid_out_without_being_hideable(self) -> None:
         """Styling an element by id can stop `hidden` from hiding it.
 

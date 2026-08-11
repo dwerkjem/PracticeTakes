@@ -52,6 +52,45 @@ they describe, rather than naming a control elsewhere on the page.
 - **WHEN** a build or a run is already going
 - **THEN** the build controls are unavailable rather than queueing another
 
+### Requirement: Stopping ends whatever the run is doing
+A stop SHALL end the work in progress, whatever that work is: a build, a suite,
+or a capture pass. It SHALL reach everything the run started, not only the
+command the hub can see — a build is cmake, which is make, which is however many
+compilers, and signalling the first of those leaves the machine working after
+the page says the run has ended.
+
+A command SHALL be asked to end before it is killed, and killed if it does not.
+Waiting indefinitely for a well-behaved exit is the delay a stop exists to
+avoid.
+
+A suite that was stopped SHALL NOT be recorded as a result. A killed process
+exits non-zero, and writing that down would put failures for tests that never
+finished into the store and into the export the release gate reads. Suites that
+never started SHALL be reported as stopped rather than left looking as though
+they are still to come, and the run SHALL report that it was stopped rather than
+that it failed.
+
+Whatever finished before the stop SHALL be kept.
+
+#### Scenario: Stopping during a build
+- **WHEN** a run is stopped while a target is compiling
+- **THEN** the compilation ends, no suite runs afterwards, and the run reports
+  that it was stopped
+
+#### Scenario: Stopping during a suite
+- **WHEN** a run is stopped while a test suite is running
+- **THEN** that suite ends, no result is recorded for it, and the suites behind
+  it in the queue are reported as stopped rather than run
+
+#### Scenario: What already ran
+- **WHEN** a run is stopped after one suite has finished and before the next
+- **THEN** the finished suite's result is kept and the rest are stopped
+
+#### Scenario: The keyboard during a run
+- **WHEN** Escape is pressed while any job is running
+- **THEN** the run stops as though the stop control had been used, whatever the
+  page was showing when the run began
+
 ### Requirement: The hub can be restarted from the page
 The hub SHALL offer to restart itself, and that offer SHALL appear only where it
 is needed — with the warning that the hub is out of date, and nowhere else.
