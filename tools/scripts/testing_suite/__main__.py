@@ -24,10 +24,12 @@ No CI check runs any of this.
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
 from pathlib import Path
 import platform
 import subprocess
 import sys
+import tempfile
 import threading
 import webbrowser
 
@@ -35,6 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import attend as attend_module  # noqa: E402
 import capture as capture_module  # noqa: E402
+import display as display_module  # noqa: E402
 import runner as runner_module  # noqa: E402
 import suites as suites_module  # noqa: E402
 import export as export_module  # noqa: E402
@@ -102,9 +105,59 @@ def command_capture(arguments) -> int:
 
     resolutions = tuple(arguments.resolutions)
     themes = tuple(arguments.themes)
-    plan = surfaces.plan(arguments.mode, resolutions, themes)
+    try:
+        plan = surfaces.plan(arguments.mode, resolutions, themes, tuple(arguments.surfaces))
+    except ValueError as error:
+        print(str(error), file=sys.stderr)
+
+        return 1
+
+    if arguments.scratch:
+        # Both name where the run is written, and one of them would silently win.
+        if getattr(arguments, "database", None) is not None:
+            print("--scratch and --database both choose a store; pick one.", file=sys.stderr)
+
+            return 1
+
+        # Nothing to resume into: a scratch store is empty by construction.
+        if arguments.run:
+            print(
+                f"--scratch starts a new store, so there is no run {arguments.run} in it "
+                f"to resume.",
+                file=sys.stderr,
+            )
+
+            return 1
+
+        # A throwaway store, so a look-at-this capture does not become run 47 in
+        # a history meant for verification passes. The directory is deliberately
+        # not cleaned up on exit: the images have to outlive the process for
+        # anyone to look at them, which is the entire point. It is under the
+        # system temporary directory, so the machine clears it eventually.
+        arguments.database = (
+            Path(tempfile.mkdtemp(prefix="practice-takes-capture-")) / "verification.db"
+        )
+        print("Scratch run; the verification history is untouched.")
+
     store = open_store(arguments)
 
+    # Entered before anything opens a window, and left after the driver stops,
+    # so every process this run starts inherits the private DISPLAY.
+    with ExitStack() as stack:
+        if arguments.headless:
+            try:
+                screen = stack.enter_context(display_module.virtual_display())
+            except display_module.VirtualDisplayError as error:
+                print(str(error), file=sys.stderr)
+
+                return 1
+
+            print(f"Capturing on a virtual display ({screen}); nothing will appear on screen.")
+
+        return _capture_on_current_display(arguments, plan, store, resolutions)
+
+
+def _capture_on_current_display(arguments, plan, store, resolutions) -> int:
     try:
         tooling = capture_module.Tooling.ensure()
     except capture_module.CaptureError as error:
@@ -165,6 +218,9 @@ def command_capture(arguments) -> int:
         f"Run {run_id}: {result['captured']} captured, {result['failed']} failed, "
         f"{result['already_captured']} already present."
     )
+    # The path, not just the review command: someone who captured two surfaces
+    # to look at a change wants the files, not a browser grid.
+    print(f"Images:          {image_directory(store, run_id)}")
     print(f"Review it with:  test-suite review --run {run_id}")
 
     return 0
@@ -553,6 +609,28 @@ def build_parser() -> argparse.ArgumentParser:
         default=list(surfaces.DEFAULT_THEMES),
         choices=list(surfaces.THEMES),
         help="Which palettes to capture each surface in.",
+    )
+    capture_parser.add_argument(
+        "--surfaces",
+        nargs="+",
+        default=[],
+        metavar="STATE",
+        help="Capture only these surfaces, by approved-state name (for example "
+        "tuner-in-tune). Default: every surface the mode covers. An unknown "
+        "name is an error, not an empty run.",
+    )
+    capture_parser.add_argument(
+        "--scratch",
+        action="store_true",
+        help="Write to a throwaway store under the system temporary directory "
+        "instead of the verification history. For a capture you only need to "
+        "look at once.",
+    )
+    capture_parser.add_argument(
+        "--headless",
+        action="store_true",
+        help="Capture on a private Xvfb screen instead of the desktop, so no "
+        "windows appear and nothing steals focus.",
     )
     capture_parser.add_argument("--build-config", default="", help="How the build under test was configured.")
     capture_parser.add_argument("--audio-device", default="", help="The input device in use.")

@@ -615,12 +615,19 @@ def plan(
     mode: str,
     resolutions: tuple[str, ...] = DEFAULT_RESOLUTIONS,
     themes: tuple[str, ...] = DEFAULT_THEMES,
+    states: tuple[str, ...] = (),
 ) -> tuple[tuple[Surface, str, str], ...]:
     """The full ordered list of (surface, resolution, theme) a run captures.
 
     Themes are the outer loop: switching palette is one command and repainting
     is instant, while a resize has to settle, so grouping by theme keeps the
     number of resizes the same as it was before palettes existed.
+
+    `states` narrows the run to particular surfaces by approved-state name. A
+    full sweep is minutes of window resizing; someone who changed one tool wants
+    that tool, and an unknown name is an error rather than an empty run, because
+    a typo that silently captures nothing looks exactly like a surface that is
+    fine.
     """
     if not resolutions:
         raise ValueError("A run must cover at least one resolution.")
@@ -633,10 +640,25 @@ def plan(
     if unknown:
         raise ValueError(f"Unknown theme(s): {', '.join(unknown)}")
 
+    chosen = surfaces_for_mode(mode)
+
+    if states:
+        available = {surface.state for surface in chosen}
+        missing = [state for state in states if state not in available]
+
+        if missing:
+            raise ValueError(
+                f"Unknown surface state(s) for {mode} mode: {', '.join(sorted(missing))}. "
+                f"Known: {', '.join(sorted(available))}"
+            )
+
+        wanted = set(states)
+        chosen = tuple(surface for surface in chosen if surface.state in wanted)
+
     return tuple(
         (surface, geometry, theme)
         for theme in themes
-        for surface in surfaces_for_mode(mode)
+        for surface in chosen
         for geometry in resolutions_for_surface(surface, resolutions)
     )
 
