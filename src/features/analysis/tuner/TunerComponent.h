@@ -4,6 +4,7 @@
 
 #include "../../../application/configuration/AppDefaults.h"
 #include "../../../application/theme/Theme.h"
+#include "../../../application/tools/CompactPresentation.h"
 #include "../../../application/tools/ToolComponent.h"
 #include "../../../platform/audio/AudioInputService.h"
 #include "PitchDetector.h"
@@ -108,6 +109,25 @@ class TunerComponent final
     void drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawNoteWatermark(juce::Graphics& graphics, juce::Rectangle<int> area) const;
+    void drawCompactDisplay(
+        juce::Graphics& graphics,
+        juce::Rectangle<int> bounds,
+        compact::Shape shape) const;
+    void drawCompactGraph(
+        juce::Graphics& graphics,
+        juce::Rectangle<int> bounds,
+        compact::Shape shape) const;
+    void drawCompactBar(juce::Graphics& graphics, juce::Rectangle<int> bounds, compact::Shape shape)
+        const;
+    void drawCompactMeter(
+        juce::Graphics& graphics,
+        juce::Rectangle<int> bounds,
+        compact::Shape shape) const;
+    void drawCompactReading(
+        juce::Graphics& graphics,
+        juce::Rectangle<int> bounds,
+        compact::Shape shape) const;
+    [[nodiscard]] juce::String directionLabel() const;
     void drawSelectedDisplay(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
 
     AudioInputService& audioInputService;

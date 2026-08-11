@@ -39,6 +39,9 @@ class ToolOptionsButton final : public juce::TextButton
         firstToolEntry = 100
     };
 
+  public:
+    // Shown by the button, and by a right-click on the tool -- which is the only
+    // way to reach it once a pane is too small to show the button at all.
     void showOptions()
     {
         juce::PopupMenu menu;
@@ -64,7 +67,11 @@ class ToolOptionsButton final : public juce::TextButton
 
         const auto safeThis = juce::Component::SafePointer<ToolOptionsButton>(this);
         menu.showMenuAsync(
-            juce::PopupMenu::Options().withTargetComponent(this).withMinimumWidth(180),
+            // At the button when it is on screen; at the pointer when it is not,
+            // which is the right-click case on a pane too small for a header.
+            (isVisible() ? juce::PopupMenu::Options().withTargetComponent(this)
+                         : juce::PopupMenu::Options().withMousePosition())
+                .withMinimumWidth(180),
             [safeThis](int selectedItemId)
             {
                 if (safeThis == nullptr)
@@ -107,6 +114,7 @@ class ToolOptionsButton final : public juce::TextButton
             });
     }
 
+  private:
     juce::String presentationAction;
     std::function<void()> onPresentation;
     std::function<void()> onFeedback;
