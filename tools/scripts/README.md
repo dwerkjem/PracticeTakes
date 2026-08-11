@@ -3,6 +3,8 @@
 Scripts are grouped by their purpose:
 
 - `build/` configures, builds, and runs the desktop application.
+- `ci/` is what workflows call rather than inline — currently the reporter that
+  files an unattended workflow failure into the issue queue.
 - `design/` regenerates committed design assets such as the application icon.
 - `feedback/` manages the feedback database and dashboard service.
 - `quality/` runs source-formatting and static-analysis checks.

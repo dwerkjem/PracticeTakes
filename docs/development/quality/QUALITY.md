@@ -136,11 +136,19 @@ ThreadSanitizer is deliberately not a pull-request gate: it runs 5–15× slower
 and `[.load]` is a soak. Running it on pushes to `main` as well as nightly keeps
 a failure attributable to one commit instead of to a week of them.
 
-**A failing scheduled run opens an issue** — `area:testing`, `area:audio`,
-`type:bug`, `priority:p1` — naming the workflow, the run URL, and the failing
-step. A later failure comments on that issue rather than opening a duplicate. A
-red run that exists only in the Actions tab is a red run nobody reads.
-`benchmarks.yml` and `secret-scan.yml` still have that gap; that is #159.
+**A failing unattended run opens an issue** — labelled by area with
+`priority:p1`, naming the workflow, the run URL, and the failing step. A later
+failure comments on that issue rather than opening a duplicate. A red run that
+exists only in the Actions tab is a red run nobody reads.
+
+Every workflow with a `schedule:` trigger reports this way: `sanitizers-scheduled.yml`,
+`benchmarks.yml`, and `secret-scan.yml`. They share one implementation,
+`tools/scripts/ci/report_workflow_failure.py`, so a fourth scheduled workflow is
+a call rather than a fourth copy of the same shell.
+
+Only the unattended triggers report — `schedule` and `push`. A `workflow_dispatch`
+run is being watched by whoever started it, and a pull request is already red in
+front of its author; neither needs an issue opened on its behalf.
 
 Leak findings from outside this repository are handled by `tools/sanitizers/lsan.supp`,
 which carries a comment per entry explaining why. A leak from a file under
@@ -227,6 +235,7 @@ When configuration succeeds but stale diagnostics remain, run **C/C++: Reset Int
 - `.github/workflows/clang-tidy-main.yml` fixes and verifies C++ after changes land on `main`.
 - `.github/workflows/sanitizers.yml` runs the Address/Undefined and Realtime legs on pull requests.
 - `.github/workflows/sanitizers-scheduled.yml` runs the Thread leg nightly and on `main`, and files the issue when it fails.
+- `tools/scripts/ci/report_workflow_failure.py` files that issue, for every scheduled workflow, and comments rather than duplicating when one is already open.
 - `tools/sanitizers/lsan.supp` lists the third-party leaks LeakSanitizer ignores, with a reason each.
 - `tools/scripts/quality/run_clang_format.py` locates and invokes clang-format.
 - `tools/scripts/quality/run_clang_tidy.py` locates and invokes clang-tidy with the build directory and optional safe fixes.
