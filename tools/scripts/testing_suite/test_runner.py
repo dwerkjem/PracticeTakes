@@ -900,3 +900,110 @@ class SanitizerEnvironmentTests(JobTests):
         self.run_job(["python"])
 
         self.assertEqual(self.environments, [{}])
+
+
+class CommandResolutionTests(unittest.TestCase):
+    """`{Target}` in a suite's command becomes wherever that target was built."""
+
+    def job(self) -> runner_module.Job:
+        return runner_module.Job(store=None)
+
+    def test_a_hyphenated_target_resolves(self) -> None:
+        """The sanitizer builds are named for their tree, not their CMake target.
+
+        `\\w+` does not match a hyphen, so `{PracticeTakesTests-tsan}` was passed
+        through as a literal and the race suite tried to execute a file called
+        `{PracticeTakesTests-tsan}`.
+        """
+        original = runner_module.binary_path
+        runner_module.binary_path = lambda target: Path(f"/build/{target}")
+        self.addCleanup(setattr, runner_module, "binary_path", original)
+
+        self.assertEqual(
+            self.job()._resolve(("{PracticeTakesTests-tsan}", "[.load]")),
+            ["/build/PracticeTakesTests-tsan", "[.load]"],
+        )
+
+    def test_every_sanitizer_suite_resolves(self) -> None:
+        original = runner_module.binary_path
+        runner_module.binary_path = lambda target: Path(f"/build/{target}")
+        self.addCleanup(setattr, runner_module, "binary_path", original)
+
+        for suite in suites_module.SUITES:
+            with self.subTest(suite=suite.id):
+                for argument in self.job()._resolve(suite.command):
+                    self.assertNotIn("{", argument, f"{suite.id} left a placeholder")
+
+    def test_an_unbuilt_target_says_so_rather_than_running_a_placeholder(self) -> None:
+        original = runner_module.binary_path
+        runner_module.binary_path = lambda target: None
+        self.addCleanup(setattr, runner_module, "binary_path", original)
+
+        with self.assertRaises(RuntimeError):
+            self.job()._resolve(("{PracticeTakesTests-asan}",))
+
+
+class MissingCompilerTests(unittest.TestCase):
+    """A build this machine cannot do is not a failing test.
+
+    RealtimeSanitizer is Clang's, and the annotation the audio callback carries
+    is a Clang attribute. On a machine with only GCC the build does not produce
+    a wrong answer — it does not produce anything, and reporting that as "the
+    audio callback check failed" is a lie that costs somebody an afternoon.
+    """
+
+    def test_a_target_with_no_compiler_of_its_own_is_never_blocked(self) -> None:
+        for target in ("PracticeTakes", "PracticeTakesTests", "PracticeTakesTests-asan"):
+            with self.subTest(target=target):
+                self.assertEqual(runner_module.missing_compiler(target), "")
+
+    def test_an_absent_compiler_is_named(self) -> None:
+        original = runner_module.shutil.which
+        runner_module.shutil.which = lambda name, path=None: None
+        self.addCleanup(setattr, runner_module.shutil, "which", original)
+
+        reason = runner_module.missing_compiler("PracticeTakesTests-rtsan")
+
+        self.assertIn("clang", reason)
+        self.assertIn("not installed", reason)
+
+    def test_a_present_compiler_blocks_nothing(self) -> None:
+        original = runner_module.shutil.which
+        runner_module.shutil.which = lambda name, path=None: f"/usr/bin/{name}"
+        self.addCleanup(setattr, runner_module.shutil, "which", original)
+
+        self.assertEqual(runner_module.missing_compiler("PracticeTakesTests-rtsan"), "")
+
+    def test_an_unknown_target_is_not_blocked(self) -> None:
+        self.assertEqual(runner_module.missing_compiler("invented"), "")
+
+
+class BlockedSuiteTests(JobTests):
+    def block_clang(self) -> None:
+        original = runner_module.shutil.which
+        runner_module.shutil.which = lambda name, path=None: (
+            None if "clang" in name else f"/usr/bin/{name}"
+        )
+        self.addCleanup(setattr, runner_module.shutil, "which", original)
+
+    def test_a_suite_that_cannot_be_built_is_unavailable_not_failed(self) -> None:
+        self.block_clang()
+        status = self.run_job(["rtsan"])
+
+        self.assertEqual(status["results"]["rtsan"]["state"], "unavailable")
+        self.assertEqual(status["state"], runner_module.FINISHED)
+
+    def test_nothing_is_built_for_a_suite_that_cannot_run(self) -> None:
+        """Discovered before the build, not as a wall of CMake output part way."""
+        self.block_clang()
+        self.run_job(["rtsan"])
+
+        self.assertEqual(self.built, [])
+        self.assertEqual(self.commands, [])
+
+    def test_the_other_suites_still_run(self) -> None:
+        self.block_clang()
+        status = self.run_job(["rtsan", "python"])
+
+        self.assertEqual(status["results"]["rtsan"]["state"], "unavailable")
+        self.assertEqual(status["results"]["python"]["state"], "passed")

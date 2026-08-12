@@ -280,6 +280,28 @@ def describe_remaining(seconds: float) -> str:
     return f"about {minutes} minute{'' if minutes == 1 else 's'} left"
 
 
+def missing_compiler(target: str) -> str:
+    """Why this target cannot be built here at all, or "" when it can.
+
+    A target that names its own compiler is naming a requirement, not a
+    preference: RealtimeSanitizer is Clang's, and so is the annotation the audio
+    callback carries. GCC does not build it wrongly -- it does not build it.
+
+    Reported the way a missing `npm` is: a tool that is not installed means the
+    suite never ran, and calling that a failure costs somebody an afternoon.
+    """
+    entry = BUILD_TARGETS.get(target)
+
+    if entry is None or "compilers" not in entry:
+        return ""
+
+    for name in entry["compilers"]:
+        if "/" not in name and shutil.which(name, path=suite_environment().get("PATH", "")) is None:
+            return f"`{name}` is not installed, and {target} cannot be built without it"
+
+    return ""
+
+
 def build_overview() -> list[dict]:
     return [build_state(target) for target in BUILD_TARGETS]
 
@@ -533,9 +555,31 @@ class Job:
             with self._lock:
                 self.run_id = run_id
 
-            needed: list[str] = []
+            # A suite whose build needs a compiler this machine does not have
+            # is dropped before anything is built, rather than discovered as a
+            # wall of CMake output partway through.
+            runnable: list[str] = []
 
             for suite_id in chosen:
+                suite = suites_module.by_id(suite_id)
+                blocked = next(
+                    (
+                        reason
+                        for target in (suite.needs if suite else ())
+                        if (reason := missing_compiler(target))
+                    ),
+                    "",
+                )
+
+                if blocked:
+                    self._record(suite_id, state="unavailable", message=blocked)
+                    self._say(f"{suite.label if suite else suite_id}: skipped — {blocked}")
+                else:
+                    runnable.append(suite_id)
+
+            needed: list[str] = []
+
+            for suite_id in runnable:
                 suite = suites_module.by_id(suite_id)
 
                 for target in suite.needs if suite else ():
@@ -549,11 +593,11 @@ class Job:
                 floor = int(40 * index / len(needed))
                 self._build(target, floor=floor, ceiling=int(40 * (index + 1) / len(needed)))
 
-            for index, suite_id in enumerate(chosen):
+            for index, suite_id in enumerate(runnable):
                 if self.stopping():
                     raise RunStopped
 
-                base = 40 + int(60 * index / len(chosen))
+                base = 40 + int(60 * index / max(1, len(runnable)))
                 self._run_suite(
                     suites_module.by_id(suite_id),
                     run_id=run_id,
@@ -561,7 +605,7 @@ class Job:
                     resolutions=resolutions,
                     themes=themes,
                     floor=base,
-                    ceiling=40 + int(60 * (index + 1) / len(chosen)),
+                    ceiling=40 + int(60 * (index + 1) / max(1, len(runnable))),
                 )
 
             failed = [
@@ -901,7 +945,9 @@ class Job:
         resolved: list[str] = []
 
         for argument in command:
-            match = re.fullmatch(r"\{(\w+)\}", argument)
+            # Hyphens included: the sanitizer builds are named for the tree
+            # they live in, not for the CMake target they all share.
+            match = re.fullmatch(r"\{([\w-]+)\}", argument)
 
             if match:
                 found = binary_path(match.group(1))
