@@ -87,20 +87,43 @@ async function buildTargets(targets) {
   poll();
 }
 
-function buildNotice(text, action, subtle) {
+function buildNotice(text) {
   const notice = document.createElement("div");
-  notice.className = subtle ? "notice subtle" : "notice";
-  notice.appendChild(document.createTextNode(`${text} `));
+  notice.className = "notice";
+  notice.appendChild(document.createTextNode(text));
 
-  if (action) {
-    // The instruction used to be "tick rebuild, then run something". Saying
-    // what to do next is worse than doing it, when there is only one answer.
+  return notice;
+}
+
+// One line for every build that is behind, whatever it is behind by. Missing
+// and out-of-date were a notice each, which on five targets was four banners
+// stacked above the thing you came here to press — and the difference between
+// them is not a decision anybody makes. Either way it gets built.
+function needsBuildingNotice(behind, running) {
+  const notice = document.createElement("div");
+  notice.className = "notice needs-building";
+  notice.appendChild(document.createTextNode(
+    behind.length === 1 ? "Needs building: " : "Need building: "));
+
+  behind.forEach((build) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "inline-action";
-    button.textContent = action.label;
-    button.addEventListener("click", action.run);
+    button.textContent = build.target;
+    button.title = build.reason;
+    button.disabled = running;
+    button.addEventListener("click", () => buildTargets([build.target]));
     notice.appendChild(button);
+  });
+
+  if (behind.length > 1) {
+    const all = document.createElement("button");
+    all.type = "button";
+    all.className = "inline-action all";
+    all.textContent = "all of them";
+    all.disabled = running;
+    all.addEventListener("click", () => buildTargets(behind.map((build) => build.target)));
+    notice.appendChild(all);
   }
 
   return notice;
@@ -115,11 +138,12 @@ function renderBuilds(view) {
   holder.innerHTML = "";
   row.innerHTML = "";
 
-  // Beside the run buttons, because building is the same decision one step
-  // earlier. The colour is the state: a row of identical buttons above a
-  // paragraph saying which one is needed is how this read before, and the
-  // paragraph is the part nobody reads.
-  builds.forEach((build) => {
+  // Beside the run buttons, and only the two you run constantly. The sanitizer
+  // trees have one each too and that made a row of six; they are reached from
+  // the banner when they are behind, and built by their own suite otherwise.
+  const primary = builds.filter((build) => build.primary);
+
+  primary.forEach((build) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `build-button ${build.present ? "built" : "not-built"}`;
@@ -132,39 +156,25 @@ function renderBuilds(view) {
     row.appendChild(button);
   });
 
-  if (builds.length > 1) {
-    // Both targets at once. Red unless everything is there, because the
-    // question this one answers is "can I run anything", and one of two
-    // present is still no to half of it.
+  if (primary.length > 1) {
     const every = document.createElement("button");
-    const all = builds.every((build) => build.present);
+    const all = primary.every((build) => build.present);
 
     every.type = "button";
     every.className = `build-button ${all ? "built" : "not-built"}`;
     every.textContent = all ? "Rebuild everything" : "Build everything";
-    every.title = all
-      ? "Rebuild every target"
-      : `Not built: ${builds.filter((build) => !build.present).map((build) => build.target).join(", ")}`;
     every.disabled = running;
-    every.addEventListener("click", () => buildTargets(builds.map((build) => build.target)));
+    every.addEventListener("click", () => buildTargets(primary.map((build) => build.target)));
     row.appendChild(every);
   }
 
-  // Said up front rather than discovered ten minutes in: a cold build is the
-  // slowest thing here by far, and knowing it is coming changes what you click.
-  builds.filter((build) => !build.present).forEach((build) => holder.appendChild(buildNotice(
-    `${build.target} is not built — ${build.reason}. Running anything that needs it will build it first (several minutes).`,
-    running ? null : { label: `Build ${build.target} now`, run: () => buildTargets([build.target]) },
-    false)));
+  const behind = builds.filter((build) => !build.present || build.stale);
 
-  builds.filter((build) => build.present && build.stale).forEach((build) => holder.appendChild(buildNotice(
-    `${build.target} was built before your latest source change.`,
-    running ? null : { label: `Rebuild ${build.target} now`, run: () => buildTargets([build.target]) },
-    true)));
+  if (behind.length) holder.appendChild(needsBuildingNotice(behind, running));
 
   if (!view.display) {
     holder.appendChild(buildNotice(
-      "No display detected — UI suites will be skipped rather than failing.", null, false));
+      "No display detected — UI suites will be skipped rather than failing."));
   }
 }
 

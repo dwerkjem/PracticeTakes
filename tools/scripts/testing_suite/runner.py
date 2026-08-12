@@ -106,11 +106,13 @@ FAILED = "failed"
 # ask CMake for when the two differ.
 BUILD_TARGETS = {
     "PracticeTakes": {
+        "primary": True,
         "directory": CONTROL_BUILD,
         "options": ("-DPRACTICE_TAKES_ENABLE_TEST_CONTROL=ON",),
         "why": "the application, with the control channel the suite drives it through",
     },
     "PracticeTakesTests": {
+        "primary": True,
         "directory": TEST_BUILD,
         "options": ("-DBUILD_TESTING=ON",),
         "why": "the C++ unit and benchmark binary",
@@ -234,8 +236,10 @@ def build_state(target: str = "PracticeTakes") -> dict:
 
     binary = binary_path(target)
 
+    primary = bool(entry.get("primary", False))
+
     if binary is None:
-        return {"target": target, "present": False, "stale": False,
+        return {"target": target, "present": False, "stale": False, "primary": primary,
                 "reason": f"not built yet — {entry['why']}"}
 
     stale = binary.stat().st_mtime < newest_source_change()
@@ -244,6 +248,7 @@ def build_state(target: str = "PracticeTakes") -> dict:
         "target": target,
         "present": True,
         "stale": stale,
+        "primary": primary,
         "path": str(binary),
         "reason": "sources have changed since this was built" if stale else "",
     }

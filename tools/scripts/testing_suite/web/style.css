@@ -106,6 +106,10 @@ button.inline-action {
 
 #build-buttons { display: contents; }
 
+/* One line, and it wraps rather than growing a banner per target. */
+.notice.needs-building { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.notice.needs-building .inline-action.all { border-color: var(--line); color: var(--muted); }
+
 /* Filled rather than outlined: this is the one thing on the page that has to
    be readable without reading it. */
 button.build-button { font-weight: 600; color: #0d1117; }
