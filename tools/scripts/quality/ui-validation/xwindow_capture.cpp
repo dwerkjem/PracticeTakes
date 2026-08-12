@@ -4,6 +4,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
@@ -92,9 +93,57 @@ int main(int argc, char** argv)
         return 2;
     }
 
+    // Only the part of the window that is actually on the screen.
+    //
+    // `XGetImage` fails with BadMatch when the rectangle asked for reaches
+    // outside the drawable's visible area, and a window can hang off the edge:
+    // there is no window manager on a virtual display to keep one inside it, so
+    // JUCE puts secondary windows -- Settings, a floating tool -- wherever it
+    // likes and some of them land partly past the edge. Fourteen captures a run
+    // failed this way, every one of them a window of its own.
+    //
+    // Clipped rather than refused. A picture of the visible nine tenths of the
+    // settings window is worth having; nothing at all is not.
+    int windowX = 0;
+    int windowY = 0;
+    Window ignored{};
+    const Window root = DefaultRootWindow(display);
+    XTranslateCoordinates(display, *window, root, 0, 0, &windowX, &windowY, &ignored);
+
+    XWindowAttributes screen{};
+    if (!XGetWindowAttributes(display, root, &screen))
+    {
+        std::cerr << "cannot measure the screen\n";
+        XCloseDisplay(display);
+        return 1;
+    }
+
+    const int left = std::max(0, -windowX);
+    const int top = std::max(cropTop, std::max(0, -windowY));
+    const int right = std::min(attributes.width, screen.width - windowX);
+    const int bottom = std::min(attributes.height, screen.height - windowY);
+
+    if (right <= left || bottom <= top)
+    {
+        // Off the screen entirely, which a window on a virtual display can be:
+        // there is no window manager to place one, so JUCE's own placement is
+        // the only thing deciding, and a secondary window can land wholly
+        // outside.
+        //
+        // Refused, not moved. Moving it on with `XMoveWindow` and capturing
+        // was tried and produced a picture: mostly black, with a strip of the
+        // main window's menu bar in it. A capture that succeeds and shows the
+        // wrong thing is worse than one that fails, and it is the exact failure
+        // this whole harness exists to catch -- so this stays loud until
+        // something knows how to place the window properly.
+        std::cerr << "the window is entirely off the screen\n";
+        XCloseDisplay(display);
+        return 1;
+    }
+
     auto* image = XGetImage(
-        display, *window, 0, cropTop, static_cast<unsigned>(attributes.width),
-        static_cast<unsigned>(attributes.height - cropTop), AllPlanes, ZPixmap);
+        display, *window, left, top, static_cast<unsigned>(right - left),
+        static_cast<unsigned>(bottom - top), AllPlanes, ZPixmap);
     if (image == nullptr)
     {
         std::cerr << "cannot read window drawable\n";

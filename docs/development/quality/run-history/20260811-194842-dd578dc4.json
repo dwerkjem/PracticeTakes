@@ -1,0 +1,120 @@
+{
+  "capture_failures": 14,
+  "captures": 292,
+  "commit": "10db6cd1adee",
+  "complete": false,
+  "failed": 4,
+  "key": "dd578dc41161f931:2026-08-11T19:48:42:10db6cd1adee",
+  "machine": "dd578dc41161f931",
+  "machine_description": "11th Gen Intel(R) Core(TM) i7-11700KF @ 3.60GHz \u00b7 3520x1080",
+  "measurements": [
+    {
+      "metric": "FFT normalized autocorrelation",
+      "scenario": "catch2-benchmark",
+      "unit": "ms",
+      "value": 3.43908
+    },
+    {
+      "metric": "analyze @ 44.1 kHz",
+      "scenario": "catch2-benchmark",
+      "unit": "ms",
+      "value": 4.49521
+    },
+    {
+      "metric": "analyze @ 48 kHz",
+      "scenario": "catch2-benchmark",
+      "unit": "ms",
+      "value": 4.37681
+    },
+    {
+      "metric": "pop 128-sample block",
+      "scenario": "catch2-benchmark",
+      "unit": "ns",
+      "value": 500.928
+    },
+    {
+      "metric": "pop 256-sample block",
+      "scenario": "catch2-benchmark",
+      "unit": "ns",
+      "value": 967.501
+    },
+    {
+      "metric": "pop 512-sample block",
+      "scenario": "catch2-benchmark",
+      "unit": "us",
+      "value": 1.8603
+    },
+    {
+      "metric": "push 128-sample block",
+      "scenario": "catch2-benchmark",
+      "unit": "ns",
+      "value": 538.484
+    },
+    {
+      "metric": "push 256-sample block",
+      "scenario": "catch2-benchmark",
+      "unit": "us",
+      "value": 1.00566
+    },
+    {
+      "metric": "push 512-sample block",
+      "scenario": "catch2-benchmark",
+      "unit": "us",
+      "value": 1.91872
+    },
+    {
+      "metric": "scalar normalized autocorrelation",
+      "scenario": "catch2-benchmark",
+      "unit": "ms",
+      "value": 24.2476
+    }
+  ],
+  "mode": "full",
+  "passed": 7,
+  "skipped": 0,
+  "started_at": "2026-08-11T19:48:42",
+  "suites": [
+    {
+      "cases": 10,
+      "duration_seconds": 16.215141,
+      "failures": 0,
+      "suite": "Benchmarks"
+    },
+    {
+      "cases": 484,
+      "duration_seconds": 12.0,
+      "failures": 0,
+      "suite": "C++ unit tests"
+    },
+    {
+      "cases": 555,
+      "duration_seconds": 72.372,
+      "failures": 0,
+      "suite": "Python script tests"
+    },
+    {
+      "cases": 116,
+      "duration_seconds": 0.944927,
+      "failures": 0,
+      "suite": "Service tests"
+    },
+    {
+      "cases": 0,
+      "duration_seconds": 0.299397,
+      "failures": 0,
+      "suite": "Service type check"
+    },
+    {
+      "cases": 0,
+      "duration_seconds": 0.780413,
+      "failures": 0,
+      "suite": "Smoke test"
+    },
+    {
+      "cases": 0,
+      "duration_seconds": 40.156264,
+      "failures": 0,
+      "suite": "UI golden images"
+    }
+  ]
+}
