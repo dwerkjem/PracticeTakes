@@ -47,6 +47,13 @@ TOOL_BUILD_DIRECTORY = REPOSITORY_ROOT / "build" / "ui-validation"
 # How long a window is given to adopt a geometry before the attempt is recorded
 # as a failure. Generous: a window manager under load is slow, and a false
 # failure here costs a recapture while a false success costs a wrong verdict.
+# What one control command gets during a capture, as opposed to the minute a
+# command gets in general. Mid-run an application either answers in a moment or
+# has stopped answering: the thing that stops it is the input device, and it
+# does not come back. Sixty seconds each, over a surface's worth of commands,
+# is a wedged worker costing more than the run it was speeding up.
+COMMAND_TIMEOUT_SECONDS = 20.0
+
 SETTLE_SECONDS = 6.0
 POLL_INTERVAL_SECONDS = 0.25
 STABLE_POLLS = 3
@@ -258,6 +265,11 @@ class CapturePass:
         # (state, theme) the application is currently showing, or None when that
         # is not known. See `move_to`.
         self._open: tuple[str, str] | None = None
+        # Set when a command times out or the channel breaks. The application is
+        # not coming back, and asking it for the next surface -- and the one
+        # after -- buys nothing but the deadline again each time.
+        self.channel_broken = False
+        self.driver.default_timeout = COMMAND_TIMEOUT_SECONDS
 
     # --- X plumbing ---------------------------------------------------------
 
@@ -389,6 +401,7 @@ class CapturePass:
             return ""
         except ChannelError as error:
             self._open = None
+            self.channel_broken = True
 
             return str(error)
 
@@ -608,6 +621,16 @@ class CapturePass:
 
             if size is None:
                 failed += 1
+
+                # One failed capture is a defect in the build; an application
+                # that has stopped answering is a defect in the run, and every
+                # surface after it would be recorded as a failure it had nothing
+                # to do with.
+                if self.channel_broken:
+                    raise ChannelError(
+                        "the application stopped answering, so this worker "
+                        "captured no more"
+                    )
 
                 continue
 

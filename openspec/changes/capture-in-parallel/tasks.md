@@ -44,7 +44,10 @@
 - [ ] 6.9 **Still open:** capturing while the application is open needs a synthetic-input mode
       or device recovery off the message thread — an application change, its own proposal.
       Measured: a *sequential* capture with another instance open captures nothing at all.
-- [ ] 6.10 **Deferred:** whether the hub offers a worker count
+- [x] 6.10 A command mid-run gets twenty seconds, not sixty; one timeout retires the worker
+- [ ] 6.11 **Deferred:** whether the hub offers a worker count — one is the honest default today
+- [ ] 6.12 **Blocked on the application:** parallel is only reliable once instances stop
+      contending for the input device. Measured: 1 worker 13-14s every time, 2-4 workers wedge.
 
 ## 7. The races, and the bar
 

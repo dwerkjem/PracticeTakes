@@ -230,3 +230,38 @@ Fixing it properly means the capture instances not opening the shared input
 device at all — a synthetic-input mode, or device recovery off the message
 thread. Either is an application change and belongs in its own proposal. It
 would also do the thing actually wanted: capture while the application is open.
+
+## Third reading: what actually got faster
+
+Measured after the reopen-once and warm-once change, quick plan, 14 captures,
+repeated:
+
+| Workers | Wall clock | Result |
+| --- | --- | --- |
+| 1 | **13–14s**, three runs | 12 captured, 2 failed, every time |
+| 2 | 46s | a worker wedged |
+| 3 | 47s | two wedged |
+| 4 | 46–87s | two wedged |
+
+**The reliable speedup is the sequential one**: 19–29s down to 13–14s, because a
+surface is built once instead of once per resolution and its tool's history
+filled once instead of four times. Verified by looking at the images rather than
+by assertion — the second resolution of `tuner-in-tune` has the same full graph
+as the first.
+
+**Parallel is still not reliable on this machine.** Earlier readings of 10s at
+four workers were real and are not repeatable: whether an application wedges
+depends on what else holds the input device at that moment. The gate stops
+several *opening* it at once, but each application reopens it from a timer of
+its own whenever it decides it has none, and that lands whenever it lands.
+
+What changed is the cost of it happening. A wedged worker used to spend sixty
+seconds per command and keep going, recording every remaining surface as a
+failure it had nothing to do with. It now gets twenty, and one timeout retires
+the worker — an application that has stopped answering will not answer the next
+one either. That took a bad run from 87s to 46s, which is an improvement in
+something that should not be happening at all.
+
+So: **one worker is the honest default until the application stops opening the
+shared input device.** The parallel machinery is right and tested; what it is
+waiting on is not in this repository's testing suite but in its audio layer.

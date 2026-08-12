@@ -98,6 +98,11 @@ class ApplicationDriver:
         # moment there are two: `os.environ` is one dictionary per process, so
         # the second display started would silently become everybody's.
         self.display = display
+        # What a command waits when it does not say. Lowered by the capture
+        # pass: mid-run, an application that has not answered in twenty seconds
+        # is wedged rather than busy, and every further command it is sent
+        # waits the same again.
+        self.default_timeout: float | None = None
         self._process: subprocess.Popen[str] | None = None
 
     def _environment(self) -> dict[str, str] | None:
@@ -220,9 +225,9 @@ class ApplicationDriver:
         process.stdin.write(command + "\n")
         process.stdin.flush()
 
-        deadline = time.monotonic() + (
-            REPLY_TIMEOUT_SECONDS if timeout is None else timeout
-        )
+        wait_for = timeout if timeout is not None else self.default_timeout
+        wait_for = REPLY_TIMEOUT_SECONDS if wait_for is None else wait_for
+        deadline = time.monotonic() + wait_for
         lines: list[str] = []
 
         while True:
@@ -231,8 +236,7 @@ class ApplicationDriver:
             if remaining <= 0:
                 raise ChannelError(
                     f"The application did not answer '{command}' within "
-                    f"{REPLY_TIMEOUT_SECONDS if timeout is None else timeout:g}s. "
-                    f"It is running but not responding."
+                    f"{wait_for:g}s. It is running but not responding."
                 )
 
             try:
