@@ -838,9 +838,20 @@ class SanitizerSuiteTests(unittest.TestCase):
 
     def test_the_realtime_build_uses_clang(self) -> None:
         """RealtimeSanitizer is Clang's, and so is the annotation it reads."""
-        compilers = runner_module.BUILD_TARGETS["PracticeTakesTests-rtsan"]["compilers"]
+        for pair in runner_module.BUILD_TARGETS["PracticeTakesTests-rtsan"]["compilers"]:
+            with self.subTest(pair=pair):
+                self.assertTrue(all("clang" in name for name in pair))
 
-        self.assertTrue(all("clang" in name for name in compilers))
+    def test_a_versioned_clang_is_tried_before_the_default(self) -> None:
+        """Debian's `clang` is whatever version is the default -- 19 on trixie
+        -- and installing clang-20 beside it leaves `/usr/bin/clang` pointing at
+        the old one. Hardcoding `clang` would keep refusing to build on a
+        machine that had just been given everything it needed."""
+        pairs = runner_module.BUILD_TARGETS["PracticeTakesTests-rtsan"]["compilers"]
+        names = [pair[1] for pair in pairs]
+
+        self.assertIn("clang++-20", names)
+        self.assertLess(names.index("clang++-20"), names.index("clang++"))
 
     def test_the_other_builds_keep_the_system_toolchain(self) -> None:
         """A Nix profile ahead of the system one is what kills juceaide."""
@@ -972,8 +983,10 @@ class MissingCompilerTests(unittest.TestCase):
 
         reason = runner_module.missing_compiler("PracticeTakesTests-rtsan")
 
-        self.assertIn("clang", reason)
-        self.assertIn("not installed", reason)
+        # Names every candidate, so the answer is "install one of these" rather
+        # than "something about clang".
+        self.assertIn("clang++-20", reason)
+        self.assertIn("PracticeTakesTests-rtsan", reason)
 
     def test_a_present_compiler_that_takes_the_flag_blocks_nothing(self) -> None:
         original = runner_module.shutil.which
@@ -982,9 +995,12 @@ class MissingCompilerTests(unittest.TestCase):
 
         runner_module._flag_support.clear()
         self.addCleanup(runner_module._flag_support.clear)
-        runner_module._flag_support[("clang++", "-fsanitize=realtime")] = True
+
+        for pair in runner_module.BUILD_TARGETS["PracticeTakesTests-rtsan"]["compilers"]:
+            runner_module._flag_support[(pair[1], "-fsanitize=realtime")] = True
 
         self.assertEqual(runner_module.missing_compiler("PracticeTakesTests-rtsan"), "")
+        self.assertIsNotNone(runner_module.usable_compilers("PracticeTakesTests-rtsan"))
 
     def test_an_unknown_target_is_not_blocked(self) -> None:
         self.assertEqual(runner_module.missing_compiler("invented"), "")
@@ -1052,6 +1068,24 @@ class CompilerCapabilityTests(unittest.TestCase):
 
         self.assertIn("-fsanitize=realtime", reason)
         self.assertIn("Clang 20", reason)
+        # And names what it tried, so the answer is "install one of these".
+        self.assertIn("clang++-20", reason)
+
+    def test_the_first_compiler_that_takes_the_flag_is_the_one_used(self) -> None:
+        original_which = runner_module.shutil.which
+        runner_module.shutil.which = lambda name, path=None: f"/usr/bin/{name}"
+        self.addCleanup(setattr, runner_module.shutil, "which", original_which)
+
+        runner_module._flag_support.clear()
+        self.addCleanup(runner_module._flag_support.clear)
+        runner_module._flag_support[("clang++-21", "-fsanitize=realtime")] = False
+        runner_module._flag_support[("clang++-20", "-fsanitize=realtime")] = True
+        runner_module._flag_support[("clang++", "-fsanitize=realtime")] = True
+
+        self.assertEqual(
+            runner_module.usable_compilers("PracticeTakesTests-rtsan"),
+            ("clang-20", "clang++-20"),
+        )
 
     def test_a_compiler_that_takes_it_blocks_nothing(self) -> None:
         self.accept(True)

@@ -146,8 +146,18 @@ BUILD_TARGETS = {
         "options": ("-DBUILD_TESTING=ON", "-DPRACTICE_TAKES_SANITIZE=realtime"),
         # RealtimeSanitizer is Clang's, and so is the annotation the audio
         # callback carries. GCC will not build this at all.
-        "compilers": ("clang", "clang++"),
-        # Having clang is not the requirement -- RealtimeSanitizer landed in
+        # Candidates, newest first, and the first one that actually takes the
+        # flag wins. Not a single name: Debian's `clang` is whatever version is
+        # the default -- 19 on trixie -- and installing clang-20 beside it
+        # leaves `/usr/bin/clang` pointing at the old one. Hardcoding `clang`
+        # would keep refusing to build on a machine that had just been given
+        # everything it needed.
+        "compilers": (
+            ("clang-21", "clang++-21"),
+            ("clang-20", "clang++-20"),
+            ("clang", "clang++"),
+        ),
+        # Having a clang is not the requirement -- RealtimeSanitizer landed in
         # Clang 20, and 19 accepts every other `-fsanitize` argument and
         # refuses this one partway through a build. CI pins clang-20 for the
         # same reason.
@@ -313,21 +323,53 @@ def missing_compiler(target: str) -> str:
     if entry is None or "compilers" not in entry:
         return ""
 
-    path = suite_environment().get("PATH", "")
-
-    for name in entry["compilers"]:
-        if "/" not in name and shutil.which(name, path=path) is None:
-            return f"`{name}` is not installed, and {target} cannot be built without it"
+    if usable_compilers(target) is not None:
+        return ""
 
     flag = entry.get("needs_flag", "")
+    names = ", ".join(f"`{pair[1]}`" for pair in _candidates(entry))
 
-    if flag and not _compiler_accepts(entry["compilers"][1], flag):
+    if flag:
         return (
-            f"the `{entry['compilers'][1]}` here does not support `{flag}`, which "
-            f"{target} needs — RealtimeSanitizer arrived in Clang 20"
+            f"no compiler here supports `{flag}`, which {target} needs. Tried "
+            f"{names} — RealtimeSanitizer arrived in Clang 20, and this "
+            f"distribution's default clang is older"
         )
 
-    return ""
+    return f"none of {names} is installed, and {target} cannot be built without one"
+
+
+def _candidates(entry: dict) -> tuple[tuple[str, str], ...]:
+    """The compiler pairs to try, whether one was given or several."""
+    compilers = entry.get("compilers", (DEFAULT_COMPILERS,))
+
+    return compilers if isinstance(compilers[0], tuple) else (compilers,)
+
+
+def usable_compilers(target: str) -> tuple[str, str] | None:
+    """The first compiler pair that is installed and takes what this needs.
+
+    None when there is no such pair, which is what `missing_compiler` turns
+    into a sentence.
+    """
+    entry = BUILD_TARGETS.get(target)
+
+    if entry is None:
+        return DEFAULT_COMPILERS
+
+    path = suite_environment().get("PATH", "")
+    flag = entry.get("needs_flag", "")
+
+    for pair in _candidates(entry):
+        if any("/" not in name and shutil.which(name, path=path) is None for name in pair):
+            continue
+
+        if flag and not _compiler_accepts(pair[1], flag):
+            continue
+
+        return pair
+
+    return None
 
 
 # Asked once per compiler and flag: it costs a process, and the answer does not
@@ -737,7 +779,7 @@ class Job:
         built = entry.get("builds", target)
         self._say(f"building {target} — {entry['why']}", state=BUILDING, percent=floor)
 
-        c_compiler, cxx_compiler = entry.get("compilers", DEFAULT_COMPILERS)
+        c_compiler, cxx_compiler = usable_compilers(target) or DEFAULT_COMPILERS
         self._command(
             [
                 cmake_binary(),
