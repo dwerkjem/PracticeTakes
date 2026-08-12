@@ -707,6 +707,41 @@ class ParallelCaptureTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.capture_with(0)
 
+    def test_a_broken_channel_mid_group_keeps_what_it_already_captured(self) -> None:
+        """A group is one surface's several geometries, captured without
+        reopening between them (see `plan_groups`). If the channel breaks on
+        the second geometry, the first is already a row in the store -- the
+        run's totals must not also count it as failed, on top of counting it
+        as captured.
+        """
+        calls = {"set_geometry": 0}
+
+        class Breaking(FakeDriver):
+            def set_geometry(inner, geometry):  # noqa: N805 - test double
+                calls["set_geometry"] += 1
+
+                if calls["set_geometry"] == 2:
+                    raise ChannelError("the application closed the channel")
+
+                return super().set_geometry(geometry)
+
+        real_worker = self.worker
+
+        @contextmanager
+        def worker(index, shared):
+            with real_worker(index, shared) as pass_:
+                pass_.driver = Breaking()
+
+                yield pass_
+
+        result = capture_module.run_in_parallel(self.plan(), workers=1, worker=worker)
+
+        successful = [row for row in self.store.captures(self.run_id) if not row.failed]
+
+        self.assertEqual(len(successful), 1, "the first geometry should have been captured")
+        self.assertEqual(result["captured"], 1)
+        self.assertTrue(result["errors"])
+
 
 class AudioGateTests(unittest.TestCase):
     """Only one application opens the input device at a time.

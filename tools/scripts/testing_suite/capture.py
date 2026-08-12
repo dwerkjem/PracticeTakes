@@ -638,10 +638,21 @@ class CapturePass:
                 # surface after it would be recorded as a failure it had nothing
                 # to do with.
                 if self.channel_broken:
-                    raise ChannelError(
+                    error = ChannelError(
                         "the application stopped answering, so this worker "
                         "captured no more"
                     )
+                    # This group's tally so far, carried on the exception: the
+                    # surfaces already captured or skipped-as-already-captured
+                    # are already rows in the store, and the caller's handler
+                    # only sees `len(group)`, with no other way to tell how much
+                    # of it actually completed before the channel broke.
+                    error.partial_result = {
+                        "captured": captured,
+                        "failed": failed,
+                        "already_captured": skipped,
+                    }
+                    raise error
 
                 continue
 
@@ -940,7 +951,18 @@ def run_in_parallel(
             # this one would turn one broken display into a lost run. Whatever
             # it had already captured stays counted; only the group in its hands
             # is lost, and the rest of the queue goes to somebody else.
-            add(index, {"failed": taken})
+            #
+            # "The group in its hands" is not automatically "all of it failed",
+            # though: pass_.run() may have captured or skipped some of the
+            # group's surfaces -- real rows in the store -- before hitting the
+            # one that broke the channel. Use its partial tally when one was
+            # left on the exception, so those are not also counted as failed.
+            partial = getattr(error, "partial_result", None)
+            if partial is None:
+                add(index, {"failed": taken})
+            else:
+                reached = sum(partial.values())
+                add(index, {**partial, "failed": partial["failed"] + max(0, taken - reached)})
             results[index]["error"] = f"{type(error).__name__}: {error}"
 
     threads = [
