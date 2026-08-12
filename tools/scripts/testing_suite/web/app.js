@@ -23,9 +23,10 @@ const state = {
   // Previews default to large: the grid exists so you can see what is being
   // reviewed, and a thumbnail you have to squint at defeats the whole thing.
   size: window.localStorage.getItem("preview-size") || "large",
-  // facet name -> Set of chosen values. Empty means "no opinion", which is what
-  // makes several filters compose: within a facet the choices are alternatives,
-  // between facets they all have to hold.
+  // facet name -> Set of chosen values. Empty means "no opinion". Every chosen
+  // value has to hold, within a facet and between them alike: naming two things
+  // means wanting both, and a facet whose captures only ever carry one value
+  // shows nothing when two are named, which is what that honestly means.
   filters: {},
 };
 
@@ -715,7 +716,12 @@ function matchesFilters(capture) {
 
     if (!sets.include.size) return true;
 
-    return values.some((value) => sets.include.has(value));
+    // Every value kept has to hold, not any of them. "This or that" is not an
+    // opinion anybody forms while narrowing a contact sheet: the reason to
+    // name two things is that you want both. A facet that only ever holds one
+    // value per capture -- a palette, a size -- therefore shows nothing when
+    // two are named, which is what "dark and light" honestly means.
+    return [...sets.include].every((value) => values.includes(value));
   });
 }
 
@@ -727,19 +733,27 @@ function applyFilters() {
   renderGrid(state.data);
 }
 
-// Click cycles a value: off -> include -> exclude -> off. Three states in one
-// control, because a separate button per direction doubles the row and still
-// has to say which one is on.
-function cycleFilter(name, value) {
+// Click keeps a value, shift-click drops it, and clicking an active one turns
+// it off whichever way it was on.
+//
+// It used to cycle: off -> keep -> drop -> off. One control for both
+// directions, which is tidy, and which means turning off a filter you have just
+// switched on costs two more clicks through a state you did not want. Saying
+// "drop" with the modifier is the same information and none of the detour.
+function cycleFilter(name, value, negate = false) {
   const sets = filterFor(name);
   const include = new Set(sets.include);
   const exclude = new Set(sets.exclude);
 
-  if (include.has(value)) {
+  if (include.has(value) || exclude.has(value)) {
+    // Whichever way round it was on, one click is off. The alternative --
+    // shift-clicking a kept value to make it a dropped one -- reads as
+    // "change direction" and is a thing nobody asked for while looking at a
+    // grid; select it again if that is what was meant.
     include.delete(value);
-    exclude.add(value);
-  } else if (exclude.has(value)) {
     exclude.delete(value);
+  } else if (negate) {
+    exclude.add(value);
   } else {
     include.add(value);
   }
@@ -781,7 +795,8 @@ function facetMenu(name, values) {
 
   const panel = document.createElement("div");
   panel.className = "facet-panel";
-  panel.innerHTML = '<div class="facet-hint">click to keep · again to exclude · again to clear</div>';
+  panel.innerHTML =
+    '<div class="facet-hint">click to keep · shift-click to drop · click again to clear</div>';
 
   values.forEach(([value, count]) => {
     const state_ = sets.include.has(value) ? "include"
@@ -792,7 +807,7 @@ function facetMenu(name, values) {
     row.innerHTML =
       `<span class="mark">${state_ === "include" ? "✓" : state_ === "exclude" ? "✕" : ""}</span>` +
       `<span class="value">${value}</span><span class="count">${count}</span>`;
-    row.addEventListener("click", () => cycleFilter(name, value));
+    row.addEventListener("click", (event) => cycleFilter(name, value, event.shiftKey));
     panel.appendChild(row);
   });
 
