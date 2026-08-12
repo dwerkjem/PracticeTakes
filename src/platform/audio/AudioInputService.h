@@ -156,6 +156,12 @@ class AudioInputService final
     // to a thread of its own.
     void attemptRecovery();
 
+    // Run one piece of device work on a thread, unless some is already running.
+    // Everything automatic goes through here -- the startup open and the
+    // recovery retry alike -- because neither was asked for by anybody waiting,
+    // and both can wait forever.
+    void startDeviceWork(std::function<void()> step);
+
     // Whether a recovery is still running. The scan asks before starting
     // another: what makes an open block is another holder of the device, which
     // a second attempt does not change -- it only queues a wait on what the

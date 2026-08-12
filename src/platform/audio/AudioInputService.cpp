@@ -296,11 +296,24 @@ void AudioInputService::initialiseInput(const juce::XmlElement* state, bool forc
     }
 
     initialised = true;
-    // Explicit, and on the message thread on purpose: somebody asked for this
-    // and is waiting to see the result. The automatic retry is the one that
-    // must not block, and it is the only one that moved.
-    manager.closeAudioDevice();
-    juce::ignoreUnused(manager.initialise(2, 0, state, true));
+
+    // Nobody asked for a device here -- they started the application, or they
+    // imported settings. Opening one is automatic, so it is the same class of
+    // work as the recovery timer and blocks the message thread the same way:
+    // this is where a second instance stalled for six seconds before answering
+    // anything, and where four of them stalled past any deadline worth having.
+    //
+    // A saved state has to be copied: the caller's XML does not outlive this
+    // call, and the thread reading it starts after the call returns.
+    auto saved = state != nullptr ? std::make_shared<juce::XmlElement>(*state)
+                                  : std::shared_ptr<juce::XmlElement>{};
+
+    startDeviceWork(
+        [owner = ownedManager, saved]
+        {
+            owner->closeAudioDevice();
+            juce::ignoreUnused(owner->initialise(2, 0, saved.get(), true));
+        });
     publishState();
 }
 
@@ -589,6 +602,11 @@ bool AudioInputService::recoveryInFlight() const
 
 void AudioInputService::attemptRecovery()
 {
+    startDeviceWork(reopen);
+}
+
+void AudioInputService::startDeviceWork(std::function<void()> step)
+{
     if (recoveryInFlight())
     {
         return;
@@ -607,7 +625,7 @@ void AudioInputService::attemptRecovery()
     flight = inFlight;
 
     std::thread(
-        [step = reopen, inFlight]
+        [step = std::move(step), inFlight]
         {
             step();
             inFlight->running.store(false, std::memory_order_release);

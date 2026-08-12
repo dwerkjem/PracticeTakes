@@ -213,6 +213,12 @@ def command_capture(arguments) -> int:
 # retires instead, and the queue it never drew from goes to the others.
 STARTUP_ATTEMPTS = 1
 
+# How long a worker waits to see whether it got the input device. Short, because
+# one application holds it and the others will not get it however long they
+# wait; what the answer is for is routing the surfaces that need to hear
+# something to the worker that can.
+WORKER_INPUT_WAIT_SECONDS = 4.0
+
 
 def _start_under(driver, gate, fleet) -> list[str]:
     """Start an application while holding the audio gate, retrying a bad launch.
@@ -306,6 +312,16 @@ def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
             # it is replaced rather than waited on.
             try:
                 states = _start_under(driver, shared.audio, fleet)
+                # Before any capturing. The device opens without blocking now,
+                # so a worker can be answering commands while its application
+                # still has nothing to hear -- and the surfaces that carry a
+                # tone would photograph a tool with an empty history.
+                # Short: one application holds the device and the rest will
+                # not get it however long they wait. What matters is knowing
+                # which this worker is, so the tone surfaces can go to one that
+                # can hear.
+                analyses = driver.wait_for_input(timeout=WORKER_INPUT_WAIT_SECONDS)
+
                 absent = missing_states(states, surfaces.required_states())
 
                 if absent:
@@ -313,7 +329,7 @@ def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
                         "the application does not offer: " + ", ".join(absent)
                     )
 
-                yield capture_module.CapturePass(
+                made = capture_module.CapturePass(
                     store=store,
                     run_id=run_id,
                     driver=driver,
@@ -324,6 +340,9 @@ def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
                     lock=shared.checks,
                     audio_gate=shared.audio,
                 )
+                made.has_input = analyses
+
+                yield made
             finally:
                 driver.stop()
                 fleet.remove(driver)

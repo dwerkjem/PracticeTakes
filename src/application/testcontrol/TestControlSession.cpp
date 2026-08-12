@@ -153,7 +153,12 @@ Response TestControlSession::handle(const Command& command)
         // An empty id is not an error: the application is simply not in an
         // approved state, which is true at startup and after a click has
         // changed things. Saying so plainly beats inventing a state name.
-        return succeeded({current.empty() ? std::string{"none"} : current});
+        // A second item, so an existing reader that takes the first is
+        // unaffected: `input` or `no-input`, which is what a harness waits on
+        // before photographing a tool that has to be analysing something.
+        return succeeded(
+            {current.empty() ? std::string{"none"} : current,
+             target_.hasInput() ? std::string{"input"} : std::string{"no-input"}});
     }
 
     case CommandKind::quit:

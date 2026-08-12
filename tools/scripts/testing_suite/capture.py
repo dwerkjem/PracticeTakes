@@ -667,6 +667,16 @@ def progress_fraction(entry: dict) -> float:
     return float(entry.get("done", 0)) / max(1.0, float(entry.get("total", 1)))
 
 
+def needs_input(group: list[tuple[surfaces.Surface, str, str]]) -> bool:
+    """Whether this group is of a tool that has to be hearing something.
+
+    The warmup is the marker: a surface that waits for a tone is a surface
+    whose picture is of an analysis, and an analysis of silence is a picture of
+    nothing.
+    """
+    return any(surface.warmup_seconds > 0 for surface, _, _ in group)
+
+
 def plan_groups(
     plan: tuple[tuple[surfaces.Surface, str, str], ...],
 ) -> list[list[tuple[surfaces.Surface, str, str]]]:
@@ -779,7 +789,13 @@ def run_in_parallel(
     # no arrangement decided beforehand fixes that, because how long a surface
     # takes is not known until it is taken.
     queue: list[list[tuple[surfaces.Surface, str, str]]] = plan_groups(plan)
-    handed = 0
+    taken: set[int] = set()
+
+    # How many workers got the input device. Zero means nobody can hear, and the
+    # surfaces that need to are captured anyway rather than left out -- the tool
+    # says in the picture that it is waiting, which is visible, where a missing
+    # capture is not.
+    analysts = 0
 
     # No more workers than there is work: a plan of eight groups has nothing for
     # a ninth application to do but start up and stop again.
@@ -813,16 +829,54 @@ def run_in_parallel(
             "cost_total": total_cost,
         })
 
-    def next_group() -> list[tuple[surfaces.Surface, str, str]] | None:
-        nonlocal handed
+    def note_input(can_analyse: bool) -> None:
+        nonlocal analysts
 
+        if can_analyse:
+            with lock:
+                analysts += 1
+
+    def next_group(can_analyse: bool) -> list[tuple[surfaces.Surface, str, str]] | None:
+        """The next group this worker can honestly capture.
+
+        One application at a time can hold the input device -- measured, with
+        four workers running and seven of eight reporting none. A surface that
+        carries a tone photographed by a worker without input is a picture of a
+        tool that has heard nothing, and it is counted as captured, which makes
+        it the worst kind of wrong.
+
+        So those groups go to workers that have input. A worker without takes
+        them only when nothing else is left, because a machine with no
+        microphone at all should still produce the images, and the tool says in
+        the picture that it is waiting.
+        """
         with lock:
-            if handed >= len(queue):
+            remaining = [index for index in range(len(queue)) if index not in taken]
+
+            if not remaining:
                 return None
 
-            handed += 1
+            wanted = remaining
 
-            return queue[handed - 1]
+            if not can_analyse:
+                quiet = [index for index in remaining if not needs_input(queue[index])]
+
+                # Only when nobody can hear. A worker that has run out of quiet
+                # work must *stop*, not help with the tone surfaces: the worker
+                # holding the device is still going to reach them, and this one
+                # would photograph an empty tool and have it counted as
+                # captured. That is what it did -- `tuner-in-tune` came back as
+                # a blank graph saying "waiting for the microphone", and the
+                # run reported twelve captured either way.
+                if not quiet and analysts:
+                    return None
+
+                wanted = quiet or remaining
+
+            chosen = wanted[0]
+            taken.add(chosen)
+
+            return queue[chosen]
 
     def add(index: int, result: dict) -> None:
         into = results[index]
@@ -840,13 +894,16 @@ def run_in_parallel(
             # starting it is the part that has to wait for the audio device, and
             # paying that per group would undo what this is for.
             with worker(index, shared) as pass_:
+                analyses = bool(getattr(pass_, "has_input", True))
+                note_input(analyses)
+
                 while True:
                     if should_stop is not None and should_stop():
                         add(index, {"stopped": True})
 
                         return
 
-                    group = next_group()
+                    group = next_group(analyses)
 
                     if group is None:
                         return

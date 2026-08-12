@@ -231,7 +231,14 @@ class MainComponent final
 
     // Microphone state ------------------------------------------------------
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
+
+  public:
+    // Public for the test control channel, which reports it so a capture can
+    // wait for something to analyse rather than photograph a tool that has not
+    // heard anything yet.
     [[nodiscard]] bool hasUsableMicrophone() const;
+
+  private:
     void updateMicrophoneStateControl();
     void updateMicrophoneWarning();
     void dismissMicrophoneWarning();

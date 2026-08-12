@@ -276,6 +276,33 @@ class ApplicationDriver:
 
         return reply.items[0]
 
+    def has_input(self) -> bool:
+        """Whether the application has something to analyse.
+
+        The device is opened without blocking now, so a window can be up and
+        drawn before there is any input behind it. A tool photographed then is
+        a picture of a tool that has not heard anything -- a flaky golden
+        rather than a defect in the build.
+
+        False for an application that predates this reply, which is the safe
+        way round: the caller waits its timeout and captures anyway.
+        """
+        reply = self.send("status")
+
+        return reply.success and len(reply.items) > 1 and reply.items[1] == "input"
+
+    def wait_for_input(self, timeout: float = 20.0, interval: float = 0.25) -> bool:
+        """Block until there is input to analyse, or say there was none."""
+        deadline = time.monotonic() + timeout
+
+        while time.monotonic() < deadline:
+            if self.has_input():
+                return True
+
+            time.sleep(interval)
+
+        return False
+
     def restart(self) -> None:
         """Relaunch, for surfaces that verify something surviving a restart."""
         self.stop()

@@ -1027,6 +1027,12 @@ class Job:
             if absent:
                 raise RuntimeError("the application does not offer: " + ", ".join(absent))
 
+            # The device opens without blocking, so the window can be up before
+            # there is anything behind it. Waited for once, here, rather than
+            # per surface: once it is open it stays open.
+            if not driver.wait_for_input():
+                self._say("no input device yet; capturing anyway")
+
             began = time.monotonic()
 
             def report(entry: dict) -> None:
