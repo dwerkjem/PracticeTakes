@@ -103,6 +103,29 @@ manager and to nothing else, with everything it reports going through an atomic.
 *This is the risky part of the change* and is where the tests should be
 concentrated.
 
+**Corrected while implementing.** This decision said the manager outlives the
+recovery "because it is owned by the shell above". It is not:
+`juce::AudioDeviceManager manager;` is a by-value member of `AudioInputService`,
+so its lifetime *is* the service's, and an abandoned thread using it after
+shutdown is a use-after-free. Read off the declaration, not inferred.
+
+The manager is therefore held through a `std::shared_ptr` that the recovery
+thread copies, and goes when the last copy does. The default recovery step
+captures that owner rather than `this`, so nothing on the thread can reach the
+service at all.
+
+Two more things fell out of getting shutdown right:
+
+- The destructor must remove the audio callback **unconditionally**, or the
+  manager can call into an object that is going away. That is safe to do while
+  a recovery is inside the device: `removeAudioCallback` takes JUCE's callback
+  lock and `AudioIODevice::open` does not hold it. Read out of
+  `juce_AudioDeviceManager.cpp` rather than assumed — the whole design rests on
+  it.
+- The destructor must **not** close the device while a recovery is in flight.
+  `closeAudioDevice` destroys the device object that recovery may be inside
+  `open` on.
+
 ### 6. What a test can actually prove here
 
 None of this can be tested against a real ALSA device that hangs on demand. What
