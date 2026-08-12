@@ -550,26 +550,38 @@ void AudioInputService::scanForDeviceChanges()
         // In particular, closing a live ALSA mmap reader here can race its
         // capture thread. Wait for audioDeviceStopped/isOpen() to confirm that
         // the backend has finished before attempting recovery.
-        recovering = true;
+        attemptRecovery();
+    }
+}
 
-        juce::AudioDeviceManager::AudioDeviceSetup setup;
-        manager.getAudioDeviceSetup(setup);
+void AudioInputService::attemptRecovery()
+{
+    recovering = true;
+    reopen();
+    recovering = false;
+}
 
-        if (manager.getCurrentAudioDevice() != nullptr)
-        {
-            manager.closeAudioDevice();
-        }
+void AudioInputService::reopenDevice()
+{
+    juce::AudioDeviceManager::AudioDeviceSetup setup;
+    manager.getAudioDeviceSetup(setup);
 
-        if (setup.inputDeviceName.isNotEmpty() || setup.outputDeviceName.isNotEmpty())
-        {
-            manager.restartLastAudioDevice();
-        }
-        else if (hasEnumeratedInput)
-        {
-            juce::ignoreUnused(manager.initialise(2, 0, nullptr, true));
-        }
+    if (manager.getCurrentAudioDevice() != nullptr)
+    {
+        manager.closeAudioDevice();
+    }
 
-        recovering = false;
+    if (setup.inputDeviceName.isNotEmpty() || setup.outputDeviceName.isNotEmpty())
+    {
+        manager.restartLastAudioDevice();
+    }
+    else
+    {
+        // Nothing saved to go back to, so ask for whatever the system offers.
+        // `scanForDeviceChanges` has already established that it offers
+        // something; without that this would open the default output and call
+        // it a recovery.
+        juce::ignoreUnused(manager.initialise(2, 0, nullptr, true));
     }
 }
 

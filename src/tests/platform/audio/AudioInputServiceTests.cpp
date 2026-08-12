@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -38,6 +39,31 @@ struct AudioInputServiceCallbackAccess
         service.audioDeviceIOCallbackWithContext(
             inputChannelData, numInputChannels, outputChannelData, numOutputChannels, numSamples,
             context);
+    }
+};
+
+// The recovery's one blocking step, replaceable. Named rather than implied, for
+// the same reason as the callback above: this is a verification harness reaching
+// into something private, and the class says which harness.
+struct AudioInputServiceRecoveryAccess
+{
+    static void replaceReopen(AudioInputService& service, std::function<void()> step)
+    {
+        service.reopen = std::move(step);
+    }
+
+    // The recovery, not the scan that decides on one. Driving the scan makes
+    // the device backends enumerate, and the timers they create outlive the
+    // fixture's message manager -- a wall of JUCE assertions the real
+    // assertions then pass through.
+    static void attempt(AudioInputService& service)
+    {
+        service.attemptRecovery();
+    }
+
+    static bool recovering(const AudioInputService& service)
+    {
+        return service.recovering;
     }
 };
 
@@ -216,4 +242,59 @@ TEST_CASE("a callback with no input channels captures nothing", "[audio][callbac
         buffers.output.begin(), buffers.output.end(), [](float sample) { return sample == 0.0f; }));
 
     service.removeListener(&consumer);
+}
+
+// --- Recovery ---------------------------------------------------------------
+//
+// Run these three together in one process -- `PracticeTakesTests "[recovery]"`
+// -- and JUCE reports "a timer has outlived the platform event system" a few
+// times on the way out. It is the fixture cycling `ScopedJuceInitialiser_GUI`
+// once per case, not these cases: each alone is silent, any two are silent, and
+// ctest gives every case its own process, which is how CI and the suite run
+// them. Written down because the file above already records what noise like
+// this costs -- real assertions pass through it unread.
+//
+// What these pin is the shape of a recovery, not whether one is wanted --
+// `AudioRecoveryPolicy` decides that and is tested next door. The shape is
+// what is about to change: today the reopen happens on the message thread,
+// which is why a device that never opens freezes the interface.
+
+TEST_CASE("a recovery runs the step that reopens the device", "[audio][recovery]")
+{
+    ServiceUnderTest harness;
+    auto attempts = 0;
+    AudioInputServiceRecoveryAccess::replaceReopen(harness.service, [&attempts] { ++attempts; });
+
+    AudioInputServiceRecoveryAccess::attempt(harness.service);
+
+    REQUIRE(attempts == 1);
+}
+
+TEST_CASE("a recovery says so while it is running", "[audio][recovery]")
+{
+    ServiceUnderTest harness;
+    auto sawItself = false;
+    AudioInputServiceRecoveryAccess::replaceReopen(
+        harness.service,
+        [&harness, &sawItself]
+        {
+            // What the scan has to be able to see: something is already inside
+            // the device, so asking for another recovery would only queue a
+            // wait on what this one is waiting on.
+            sawItself = AudioInputServiceRecoveryAccess::recovering(harness.service);
+        });
+
+    AudioInputServiceRecoveryAccess::attempt(harness.service);
+
+    REQUIRE(sawItself);
+}
+
+TEST_CASE("the recovery flag is clear once a recovery finishes", "[audio][recovery]")
+{
+    ServiceUnderTest harness;
+    AudioInputServiceRecoveryAccess::replaceReopen(harness.service, [] {});
+
+    AudioInputServiceRecoveryAccess::attempt(harness.service);
+
+    REQUIRE_FALSE(AudioInputServiceRecoveryAccess::recovering(harness.service));
 }

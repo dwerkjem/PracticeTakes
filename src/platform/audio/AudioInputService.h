@@ -16,6 +16,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 // Owns the application's only microphone callback and fans captured input into
@@ -93,6 +94,12 @@ class AudioInputService final
     // One named type gets in, rather than widening the class's surface.
     friend struct AudioInputServiceCallbackAccess;
 
+    // The same bargain for recovery. What this file has to answer is "what
+    // happens when the device never opens", and a device that never opens
+    // cannot be arranged from a test -- so the step that opens it is
+    // replaceable, by one named type and nothing else.
+    friend struct AudioInputServiceRecoveryAccess;
+
     static constexpr std::size_t maximumConsumers = 8;
     static constexpr std::size_t consumerFifoCapacity = 65536;
     static constexpr int serviceRefreshRateHz = 20;
@@ -126,6 +133,22 @@ class AudioInputService final
     [[nodiscard]] std::array<Listener*, maximumConsumers> listenerSnapshot() const;
     void deliverFormatChange();
     void scanForDeviceChanges();
+
+    // Closing the device and opening it again: the one step of a recovery that
+    // can wait without limit. `snd_pcm_prepare` through PipeWire waits on a
+    // condition variable that another holder of the device never signals, and
+    // there is no timeout to reach.
+    //
+    // Behind a seam so a test can supply one that blocks. Nothing else can
+    // answer "what does this do when the device never opens", and that is the
+    // question this file has to have an answer to.
+    void reopenDevice();
+
+    // One recovery: the flag, the step, the flag again. Separate from the scan
+    // that decides to call it, because the deciding needs a device backend to
+    // enumerate and this does not -- and this is the part that is about to move
+    // to a thread of its own.
+    void attemptRecovery();
     void initialiseInput(const juce::XmlElement* state, bool force);
     void publishState();
 
@@ -167,6 +190,11 @@ class AudioInputService final
     int ticksUntilDeviceScan = disconnectedDeviceScanIntervalTicks;
     bool recovering = false;
     bool initialised = false;
+
+    // What a recovery does when it gets as far as the device. Replaced by tests
+    // with something that blocks, because a real device that never opens cannot
+    // be arranged on demand.
+    std::function<void()> reopen = [this] { reopenDevice(); };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioInputService)
 };
