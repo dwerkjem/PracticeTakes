@@ -16,8 +16,12 @@ HarmonicAnalyzer::analyze(std::span<const float, windowSize> samples, double sam
         return result;
     }
 
-    std::fill(fftData.begin(), fftData.end(), 0.0f);
+    // Copied first, zeroed second: the lower half is about to hold the signal
+    // regardless, so zeroing it first was `windowSize` writes thrown away on
+    // every frame. Only the upper half -- JUCE's scratch space for the
+    // frequency-only transform -- has to start at zero.
     std::copy(samples.begin(), samples.end(), fftData.begin());
+    std::fill(fftData.begin() + static_cast<std::ptrdiff_t>(samples.size()), fftData.end(), 0.0f);
     window.multiplyWithWindowingTable(fftData.data(), fftSize);
     fft.performFrequencyOnlyForwardTransform(fftData.data());
 
