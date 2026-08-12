@@ -558,8 +558,6 @@ class CapturePass:
         run and a broken one are different, and the export feeds a release
         gate.
         """
-        already = self.store.captured_keys(self.run_id) if resume else set()
-
         # Both maps compare captures against *other* captures, so passing them
         # in is how several passes keep one view of the run between them. A pass
         # given neither keeps its own, which is every caller that captures alone.
@@ -573,6 +571,37 @@ class CapturePass:
         # (resolution, digest) -> the state that produced it: two states with the
         # same pixels at the same resolution means one captured the wrong window.
         digests = {} if digests is None else digests
+
+        # A resumed run's own memory of the plan is exactly one process old: a
+        # fresh `sizes`/`digests` here means the checks above have no idea what
+        # ran before the interruption, only what runs after it. A surface
+        # captured before the interruption is skipped below (`already`), which
+        # is correct, but its size and digest still have to seed the maps --
+        # otherwise the geometry the earlier process captured is invisible to
+        # `geometry_problem`/`duplicate_problem` for every surface reached in
+        # this process, the same blind spot a from-scratch run does not have.
+        # One query serves both `already` and the seeding, since `captures()`
+        # already has everything `captured_keys()` would have asked for.
+        already: set[tuple[str, str, str, str]] = set()
+
+        if resume:
+            for stored in self.store.captures(self.run_id):
+                if not (stored.image_path or stored.failure):
+                    continue
+
+                already.add(
+                    (stored.surface_state, stored.surface_title, stored.geometry, stored.theme)
+                )
+
+                if stored.failed:
+                    continue
+
+                seen = sizes.setdefault(f"{stored.surface_title}/{stored.theme}", {})
+                seen.setdefault(stored.geometry, (stored.width, stored.height))
+                digests.setdefault(
+                    (f"{stored.geometry}/{stored.theme}", stored.digest), stored.surface_state
+                )
+
         captured = 0
         failed = 0
         skipped = 0

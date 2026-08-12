@@ -317,6 +317,29 @@ class CapturePassTests(unittest.TestCase):
         self.assertEqual(result["captured"], 0)
         self.assertEqual(result["already_captured"], len(self.plan()))
 
+    def test_a_resumed_pass_still_catches_a_window_that_never_resized(self) -> None:
+        """`geometry_problem` compares a capture against the same surface's
+        other captures -- including ones from *before* an interruption. A
+        resumed pass is a fresh process with no `sizes` of its own; unless it
+        is seeded from the store first, it has no memory of what an earlier
+        process already captured, and cannot catch a window still stuck at
+        that size now.
+        """
+        stuck_sizes = {"default": (1280, 800), "constrained": (1280, 800)}
+        plan = self.plan()
+        only_default = tuple(entry for entry in plan if entry[1] == "default")
+
+        self.make_pass(sizes=stuck_sizes).run(only_default)
+        result = self.make_pass(sizes=stuck_sizes).run(plan)
+
+        stuck = [
+            capture for capture in self.store.captures(self.run_id)
+            if capture.geometry == "constrained" and capture.failed
+        ]
+
+        self.assertTrue(result["failed"])
+        self.assertTrue(stuck, "a window stuck at the earlier size should still be caught")
+
     def test_a_fixed_geometry_surface_is_captured_once(self) -> None:
         """Resizing it would destroy the thing under test."""
         fullscreen = next(s for s in surfaces.SURFACES if s.state == "fullscreen")
@@ -443,6 +466,9 @@ class _StubPass(capture_module.CapturePass):
 class _StubStore:
     def captured_keys(self, run_id: int) -> set:
         return set()
+
+    def captures(self, run_id: int) -> list:
+        return []
 
 
 class SharingThePlanTests(unittest.TestCase):
