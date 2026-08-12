@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -103,7 +104,8 @@ int main(int argc, char** argv)
     // failed this way, every one of them a window of its own.
     //
     // Clipped rather than refused. A picture of the visible nine tenths of the
-    // settings window is worth having; nothing at all is not.
+    // settings window is worth having; nothing at all is not. One that is
+    // wholly outside is moved on instead -- see below.
     int windowX = 0;
     int windowY = 0;
     Window ignored{};
@@ -118,6 +120,41 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    // A window that has never been on the screen has no pixels to read: X does
+    // not keep the contents of what nobody can see. That is why moving one on
+    // and photographing it immediately produced an image of mostly black --
+    // the move was fine, the window simply had not drawn yet.
+    //
+    // So it is moved on, and then given a moment to paint. Only when it is off
+    // the screen: a window already visible is left exactly where it is.
+    if (windowX + attributes.width <= 0 || windowY + attributes.height <= 0 ||
+        windowX >= screen.width || windowY >= screen.height)
+    {
+        XMoveWindow(display, *window, 0, 0);
+        XRaiseWindow(display, *window);
+        XSync(display, False);
+
+        // Long enough for a repaint on an idle machine, short enough that
+        // paying it on every capture of a window that needed moving is not
+        // worth avoiding. Only surfaces with a window of their own reach here.
+        struct timespec settle
+        {
+            0, 400 * 1000 * 1000
+        };
+        nanosleep(&settle, nullptr);
+
+        if (!XGetWindowAttributes(display, *window, &attributes) ||
+            attributes.map_state != IsViewable)
+        {
+            std::cerr << "window is not viewable after being moved on screen\n";
+            XCloseDisplay(display);
+            return 1;
+        }
+
+        windowX = 0;
+        windowY = 0;
+    }
+
     const int left = std::max(0, -windowX);
     const int top = std::max(cropTop, std::max(0, -windowY));
     const int right = std::min(attributes.width, screen.width - windowX);
@@ -125,17 +162,10 @@ int main(int argc, char** argv)
 
     if (right <= left || bottom <= top)
     {
-        // Off the screen entirely, which a window on a virtual display can be:
-        // there is no window manager to place one, so JUCE's own placement is
-        // the only thing deciding, and a secondary window can land wholly
-        // outside.
-        //
-        // Refused, not moved. Moving it on with `XMoveWindow` and capturing
-        // was tried and produced a picture: mostly black, with a strip of the
-        // main window's menu bar in it. A capture that succeeds and shows the
-        // wrong thing is worse than one that fails, and it is the exact failure
-        // this whole harness exists to catch -- so this stays loud until
-        // something knows how to place the window properly.
+        // Should be unreachable: anything off the screen was moved on above.
+        // Left in because "unreachable" is a claim about code that has changed
+        // before, and the alternative to saying so is a BadMatch from
+        // `XGetImage` with nothing attached explaining it.
         std::cerr << "the window is entirely off the screen\n";
         XCloseDisplay(display);
         return 1;
