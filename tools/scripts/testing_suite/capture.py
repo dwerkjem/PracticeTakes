@@ -320,9 +320,20 @@ class CapturePass:
             return None
 
         try:
-            return int(parts[0]), int(parts[1])
+            width, height = int(parts[0]), int(parts[1])
         except ValueError:
             return None
+
+        # Zero is not a size. A window that reports one is unmapped, or was
+        # asked about before the server had it -- and everything downstream
+        # takes it at face value: the image is empty, the geometry check
+        # compares nothing against nothing, and the capture is recorded as a
+        # success. Treated as "no reading yet", which is what it is, so the
+        # settle loop keeps asking instead of photographing a void.
+        if width <= 0 or height <= 0:
+            return None
+
+        return width, height
 
     def _capture_to(self, destination: Path, title: str = "") -> str:
         pid = self.driver.pid

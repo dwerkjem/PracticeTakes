@@ -1429,3 +1429,63 @@ class InputRoutingTests(unittest.TestCase):
             {surface.title for surface, _, _ in tone},
             {surface.title for surface, _, _ in self.plan() if surface.warmup_seconds > 0},
         )
+
+
+class ZeroSizeTests(unittest.TestCase):
+    """A window that reports no size.
+
+    Everything downstream takes a size at face value: the image is written, the
+    geometry check compares nothing against nothing, and the capture is
+    recorded as a success. An empty picture that counts as captured is the
+    failure this whole harness exists to catch, so it is refused at the reading
+    rather than found in the grid.
+    """
+
+    def read(self, output: str):
+        class Reading(capture_module.CapturePass):
+            def __init__(inner):  # noqa: N805 - test double
+                inner.driver = FakeDriver()
+                inner.tooling = capture_module.Tooling(Path("capture"), Path("control"))
+                inner.window_title = None
+                inner.display = ""
+
+            def _window_arguments(inner, title: str = ""):  # noqa: N805 - test double
+                return []
+
+        pass_ = Reading()
+        original = capture_module.subprocess.run
+
+        class Completed:
+            returncode = 0
+            stdout = output
+
+        capture_module.subprocess.run = lambda *a, **k: Completed()
+        self.addCleanup(setattr, capture_module.subprocess, "run", original)
+
+        return pass_.read_size()
+
+    def test_a_real_size_is_read(self) -> None:
+        self.assertEqual(self.read("1280 800"), (1280, 800))
+
+    def test_zero_by_zero_is_not_a_size(self) -> None:
+        self.assertIsNone(self.read("0 0"))
+
+    def test_either_dimension_being_zero_is_not_a_size(self) -> None:
+        self.assertIsNone(self.read("1280 0"))
+        self.assertIsNone(self.read("0 800"))
+
+    def test_a_negative_dimension_is_not_a_size(self) -> None:
+        self.assertIsNone(self.read("-1 -1"))
+
+    def test_something_unreadable_is_still_not_a_size(self) -> None:
+        self.assertIsNone(self.read("wide tall"))
+        self.assertIsNone(self.read(""))
+
+    def test_a_window_with_no_size_never_settles(self) -> None:
+        """So the pass records a failure rather than photographing a void."""
+        self.assertIsNone(
+            capture_module.settled_size(
+                lambda: None, settle_seconds=0.5, sleep=lambda _: None,
+                clock=iter([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]).__next__,
+            )
+        )

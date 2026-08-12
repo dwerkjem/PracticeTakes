@@ -26,6 +26,7 @@ from pathlib import Path
 import shutil
 import socket
 import subprocess
+import sys
 import threading
 import time
 from typing import Iterator
@@ -37,6 +38,14 @@ from typing import Iterator
 DEFAULT_WIDTH = 1920
 DEFAULT_HEIGHT = 1200
 DEFAULT_DEPTH = 24
+
+# What a screen falls back to when it is asked for with no size. Xvfb accepts
+# `0x0x24` and starts, and every window on it is then zero by zero -- which
+# nothing downstream questions: the capture succeeds, the image is empty, and
+# the run reports it captured. Small and unremarkable on purpose; it is a
+# floor to keep a run honest, not a size anybody chose.
+FALLBACK_WIDTH = 800
+FALLBACK_HEIGHT = 600
 
 # Display numbers below this are where real sessions live.
 FIRST_DISPLAY_NUMBER = 90
@@ -202,6 +211,19 @@ def virtual_display(
     """
     if not is_available():
         raise VirtualDisplayError(missing_message())
+
+    # Asserted rather than trusted. A screen of no size is not a smaller
+    # problem than no screen at all: it produces images, and they are empty.
+    if width <= 0 or height <= 0:
+        print(
+            f"A screen of {width}x{height} was asked for, which is not a size. "
+            f"Using {FALLBACK_WIDTH}x{FALLBACK_HEIGHT}.",
+            file=sys.stderr,
+        )
+        width, height = FALLBACK_WIDTH, FALLBACK_HEIGHT
+
+    if depth <= 0:
+        depth = DEFAULT_DEPTH
 
     number, process = _start_server(width, height, depth)
     name = f":{number}"

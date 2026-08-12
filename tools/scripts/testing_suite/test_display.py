@@ -210,3 +210,70 @@ class SeveralDisplaysAtOnceTests(unittest.TestCase):
             self.assertEqual(os.environ.get("DISPLAY"), name)
 
         self.assertEqual(os.environ.get("DISPLAY"), before)
+
+
+class ScreenSizeGuardTests(unittest.TestCase):
+    """A screen of no size is not a smaller problem than no screen.
+
+    Xvfb accepts `0x0x24` and starts. Every window on it is then zero by zero,
+    and nothing downstream questions that: the capture succeeds, the image is
+    empty, and the run reports it captured.
+    """
+
+    def test_the_default_is_a_real_size(self) -> None:
+        self.assertGreater(display.DEFAULT_WIDTH, 0)
+        self.assertGreater(display.DEFAULT_HEIGHT, 0)
+
+    def test_the_fallback_is_a_real_size(self) -> None:
+        self.assertGreaterEqual(display.FALLBACK_WIDTH, 640)
+        self.assertGreaterEqual(display.FALLBACK_HEIGHT, 480)
+
+    def test_a_screen_with_no_size_falls_back(self) -> None:
+        asked: list[tuple[int, int]] = []
+
+        def record(width, height, depth):
+            asked.append((width, height))
+
+            raise display.VirtualDisplayError("not starting one in a test")
+
+        original_start = display._start_server
+        display._start_server = record
+        self.addCleanup(setattr, display, "_start_server", original_start)
+
+        original_available = display.is_available
+        display.is_available = lambda: True
+        self.addCleanup(setattr, display, "is_available", original_available)
+
+        for size in ((0, 0), (0, 1200), (1920, 0), (-1, -1)):
+            with self.subTest(size=size):
+                asked.clear()
+
+                with self.assertRaises(display.VirtualDisplayError):
+                    with display.virtual_display(width=size[0], height=size[1]):
+                        pass
+
+                self.assertEqual(
+                    asked, [(display.FALLBACK_WIDTH, display.FALLBACK_HEIGHT)]
+                )
+
+    def test_a_real_size_is_left_alone(self) -> None:
+        asked: list[tuple[int, int]] = []
+
+        def record(width, height, depth):
+            asked.append((width, height))
+
+            raise display.VirtualDisplayError("not starting one in a test")
+
+        original_start = display._start_server
+        display._start_server = record
+        self.addCleanup(setattr, display, "_start_server", original_start)
+
+        original_available = display.is_available
+        display.is_available = lambda: True
+        self.addCleanup(setattr, display, "is_available", original_available)
+
+        with self.assertRaises(display.VirtualDisplayError):
+            with display.virtual_display(width=1280, height=800):
+                pass
+
+        self.assertEqual(asked, [(1280, 800)])
