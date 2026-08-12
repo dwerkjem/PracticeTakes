@@ -181,11 +181,26 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    // What XGetImage actually captured, not the window's own dimensions. For a
+    // window fully on screen these are the same thing -- left is 0, right is
+    // attributes.width, and so on -- so this changes nothing for the ordinary
+    // case. For one that was clipped rather than moved (only entirely
+    // off-screen windows get moved, above; a window merely hanging off one
+    // edge is clipped and stays put), `image` holds fewer pixels than the
+    // window has, and reading it at the window's full width and height was
+    // XGetPixel indexing past the columns/rows the image actually has --
+    // undefined per Xlib's own contract for that call, and empirically
+    // returning zeroed/garbage pixels rather than the window's real content
+    // for the out-of-range columns, while still writing a header that claims
+    // the window's full, uncropped size.
+    const auto capturedWidth = right - left;
+    const auto capturedHeight = bottom - top;
+
     std::ofstream output(argv[2], std::ios::binary);
-    output << "P6\n" << attributes.width << ' ' << attributes.height - cropTop << "\n255\n";
-    for (int y = 0; y < attributes.height - cropTop; ++y)
+    output << "P6\n" << capturedWidth << ' ' << capturedHeight << "\n255\n";
+    for (int y = 0; y < capturedHeight; ++y)
     {
-        for (int x = 0; x < attributes.width; ++x)
+        for (int x = 0; x < capturedWidth; ++x)
         {
             const auto pixel = XGetPixel(image, x, y);
             const char rgb[] = {
