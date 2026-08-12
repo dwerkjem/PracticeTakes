@@ -147,6 +147,11 @@ BUILD_TARGETS = {
         # RealtimeSanitizer is Clang's, and so is the annotation the audio
         # callback carries. GCC will not build this at all.
         "compilers": ("clang", "clang++"),
+        # Having clang is not the requirement -- RealtimeSanitizer landed in
+        # Clang 20, and 19 accepts every other `-fsanitize` argument and
+        # refuses this one partway through a build. CI pins clang-20 for the
+        # same reason.
+        "needs_flag": "-fsanitize=realtime",
         "why": "the tests under RealtimeSanitizer, for the audio callback",
     },
 }
@@ -308,11 +313,56 @@ def missing_compiler(target: str) -> str:
     if entry is None or "compilers" not in entry:
         return ""
 
+    path = suite_environment().get("PATH", "")
+
     for name in entry["compilers"]:
-        if "/" not in name and shutil.which(name, path=suite_environment().get("PATH", "")) is None:
+        if "/" not in name and shutil.which(name, path=path) is None:
             return f"`{name}` is not installed, and {target} cannot be built without it"
 
+    flag = entry.get("needs_flag", "")
+
+    if flag and not _compiler_accepts(entry["compilers"][1], flag):
+        return (
+            f"the `{entry['compilers'][1]}` here does not support `{flag}`, which "
+            f"{target} needs — RealtimeSanitizer arrived in Clang 20"
+        )
+
     return ""
+
+
+# Asked once per compiler and flag: it costs a process, and the answer does not
+# change while the hub is running.
+_flag_support: dict[tuple[str, str], bool] = {}
+
+
+def _compiler_accepts(compiler: str, flag: str) -> bool:
+    """Whether this compiler will take the flag, asked rather than assumed.
+
+    A version number would be a proxy for this and a worse one: what matters is
+    whether the build will go through, and the compiler is the only thing that
+    knows. Costs one empty compile.
+    """
+    remembered = _flag_support.get((compiler, flag))
+
+    if remembered is not None:
+        return remembered
+
+    try:
+        completed = subprocess.run(
+            [compiler, flag, "-xc++", "-fsyntax-only", "-"],
+            input="int main() { return 0; }\n",
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env=build_environment(),
+        )
+        accepted = completed.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        accepted = False
+
+    _flag_support[(compiler, flag)] = accepted
+
+    return accepted
 
 
 def build_overview() -> list[dict]:
@@ -499,6 +549,28 @@ class Job:
 
         if not chosen:
             return False
+
+        # The same check the suites get. Without it the banner's build button
+        # started a build that could not work, CMake failed somewhere in the
+        # middle, and what came back was a complaint about a missing binary
+        # rather than the missing compiler that was the actual answer.
+        blocked = [(target, missing_compiler(target)) for target in chosen]
+        blocked = [(target, reason) for target, reason in blocked if reason]
+
+        if blocked and len(blocked) == len(chosen):
+            with self._lock:
+                self.state = FINISHED
+                self.message = blocked[0][1]
+                self.finished_at = _now()
+                self.log = [blocked[0][1]]
+                self.percent = 100
+
+            return False
+
+        for target, reason in blocked:
+            self._say(f"skipping {target}: {reason}")
+
+        chosen = [target for target in chosen if not missing_compiler(target)]
 
         with self._lock:
             if self.running:
@@ -694,11 +766,16 @@ class Job:
             raise RunStopped
 
         if binary_path(target) is None:
+            # `built`, not `target`: the sanitizer builds are named for the tree
+            # they live in and all produce `PracticeTakesTests`. Naming the
+            # wrong file sent somebody looking for a binary that was never
+            # supposed to exist.
             looked = ", ".join(
-                str(entry["directory"] / pattern.format(target=target))
+                str(entry["directory"] / pattern.format(target=built))
                 for pattern in BINARY_LOCATIONS
             )
-            raise RuntimeError(f"the build finished but {target} is not in any of: {looked}")
+            raise RuntimeError(
+                f"the build of {target} finished but {built} is not in any of: {looked}")
 
     def _end(self, process: subprocess.Popen, label: str) -> None:
         """Signal a running command and everything it started.

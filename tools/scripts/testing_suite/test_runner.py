@@ -464,10 +464,18 @@ class JobTests(unittest.TestCase):
         self.assertEqual(status["state"], runner_module.FINISHED)
         self.assertEqual(status["percent"], 100)
 
-    def test_a_build_with_no_targets_builds_everything(self) -> None:
+    def test_a_build_with_no_targets_builds_everything_buildable(self) -> None:
+        """Everything this machine can build. A target needing a compiler that
+        is not here, or one too old for the sanitizer it asks for, is skipped
+        rather than attempted and failed halfway."""
         self.build_job()
 
-        self.assertEqual(sorted(self.built), sorted(runner_module.BUILD_TARGETS))
+        expected = sorted(
+            target for target in runner_module.BUILD_TARGETS
+            if not runner_module.missing_compiler(target)
+        )
+
+        self.assertEqual(sorted(self.built), expected)
 
     def test_a_build_leaves_no_run_behind_it(self) -> None:
         """A build verified nothing, and history is a record of verification."""
@@ -967,10 +975,14 @@ class MissingCompilerTests(unittest.TestCase):
         self.assertIn("clang", reason)
         self.assertIn("not installed", reason)
 
-    def test_a_present_compiler_blocks_nothing(self) -> None:
+    def test_a_present_compiler_that_takes_the_flag_blocks_nothing(self) -> None:
         original = runner_module.shutil.which
         runner_module.shutil.which = lambda name, path=None: f"/usr/bin/{name}"
         self.addCleanup(setattr, runner_module.shutil, "which", original)
+
+        runner_module._flag_support.clear()
+        self.addCleanup(runner_module._flag_support.clear)
+        runner_module._flag_support[("clang++", "-fsanitize=realtime")] = True
 
         self.assertEqual(runner_module.missing_compiler("PracticeTakesTests-rtsan"), "")
 
@@ -1007,3 +1019,72 @@ class BlockedSuiteTests(JobTests):
 
         self.assertEqual(status["results"]["rtsan"]["state"], "unavailable")
         self.assertEqual(status["results"]["python"]["state"], "passed")
+
+
+class CompilerCapabilityTests(unittest.TestCase):
+    """Having the compiler is not the requirement; the flag working is.
+
+    Clang has been installed on this machine the whole time, at version 19.
+    RealtimeSanitizer arrived in Clang 20 — so the presence check passed, the
+    build started, and clang refused `-fsanitize=realtime` partway through. What
+    came back was a complaint about a missing binary.
+    """
+
+    def setUp(self) -> None:
+        runner_module._flag_support.clear()
+        self.addCleanup(runner_module._flag_support.clear)
+
+    def accept(self, works: bool) -> None:
+        class Completed:
+            returncode = 0 if works else 1
+
+        original = runner_module.subprocess.run
+        runner_module.subprocess.run = lambda *a, **k: Completed()
+        self.addCleanup(setattr, runner_module.subprocess, "run", original)
+
+        original_which = runner_module.shutil.which
+        runner_module.shutil.which = lambda name, path=None: f"/usr/bin/{name}"
+        self.addCleanup(setattr, runner_module.shutil, "which", original_which)
+
+    def test_a_compiler_that_refuses_the_flag_blocks_the_build(self) -> None:
+        self.accept(False)
+        reason = runner_module.missing_compiler("PracticeTakesTests-rtsan")
+
+        self.assertIn("-fsanitize=realtime", reason)
+        self.assertIn("Clang 20", reason)
+
+    def test_a_compiler_that_takes_it_blocks_nothing(self) -> None:
+        self.accept(True)
+
+        self.assertEqual(runner_module.missing_compiler("PracticeTakesTests-rtsan"), "")
+
+    def test_the_answer_is_asked_for_once(self) -> None:
+        asked = []
+
+        class Completed:
+            returncode = 0
+
+        original = runner_module.subprocess.run
+        runner_module.subprocess.run = lambda *a, **k: (asked.append(a), Completed())[1]
+        self.addCleanup(setattr, runner_module.subprocess, "run", original)
+
+        runner_module._compiler_accepts("clang++", "-fsanitize=realtime")
+        runner_module._compiler_accepts("clang++", "-fsanitize=realtime")
+
+        self.assertEqual(len(asked), 1)
+
+    def test_a_compiler_that_cannot_be_run_is_a_no(self) -> None:
+        original = runner_module.subprocess.run
+
+        def explode(*a, **k):
+            raise OSError("no such file")
+
+        runner_module.subprocess.run = explode
+        self.addCleanup(setattr, runner_module.subprocess, "run", original)
+
+        self.assertFalse(runner_module._compiler_accepts("clang++", "-fsanitize=realtime"))
+
+    def test_targets_with_no_flag_requirement_are_unaffected(self) -> None:
+        for target in ("PracticeTakes", "PracticeTakesTests", "PracticeTakesTests-asan"):
+            with self.subTest(target=target):
+                self.assertNotIn("needs_flag", runner_module.BUILD_TARGETS[target])
