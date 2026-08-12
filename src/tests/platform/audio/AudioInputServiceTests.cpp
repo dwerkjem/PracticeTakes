@@ -494,3 +494,38 @@ TEST_CASE("clearing the tone stops the generator", "[audio][tone]")
 
     REQUIRE_FALSE(harness.service.hasUsableInput());
 }
+
+TEST_CASE(
+    "changing the tone while it is already playing does not race the generator",
+    "[audio][tone][.load]")
+{
+    // What the test-control channel actually does: `open-state` calls
+    // `setSyntheticTone` every time, whether or not one is already running.
+    // Two capture surfaces carrying a tone back to back -- an ordinary
+    // sequence, not a contrived one -- call this while the generator's own
+    // timer thread is mid-block, writing the same phase fields `reset()`
+    // writes. TSan caught the race the first version of this had: no ordering
+    // between `tone.reset()` on this thread and `SyntheticTone::advance()` on
+    // the timer thread.
+    //
+    // A single-threaded assertion cannot observe that a race did not happen;
+    // what this pins is the shape that exposed it, so a regression is
+    // reachable by the tools that can see it. Tagged [.load] to run under
+    // ThreadSanitizer rather than every ordinary build.
+    ServiceUnderTest harness;
+
+    for (auto frequency = 220.0f; frequency < 240.0f; frequency += 1.0f)
+    {
+        harness.service.setSyntheticTone(frequency);
+        juce::Thread::sleep(1);
+    }
+
+    for (auto waited = 0; waited < 2000 && !harness.service.hasUsableInput(); waited += 20)
+    {
+        juce::Thread::sleep(20);
+    }
+
+    REQUIRE(harness.service.hasUsableInput());
+
+    harness.service.setSyntheticTone(0.0f);
+}

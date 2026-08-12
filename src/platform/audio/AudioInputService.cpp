@@ -348,6 +348,23 @@ void AudioInputService::setSyntheticTone(float frequencyHz, float amplitude)
         toneBlock.resize(maximumToneBlock);
     }
 
+    // Stopped before `tone` is touched, not just before the frequency changes.
+    // `reset()` below writes the generator's phase fields directly, and if the
+    // source is already running -- changing the tone on an open state, which
+    // the test-control channel does on every `open-state` -- the timer thread
+    // is concurrently writing those same fields through
+    // `renderToneBlock -> SyntheticTone::advance`. TSan caught the race:
+    // `SyntheticTone.h:125` written from both threads with nothing ordering
+    // them.
+    //
+    // `stopTimer` is the ordering. It blocks until any callback already in
+    // flight has returned -- JUCE's HighResolutionTimer takes the same mutex
+    // on both sides -- so nothing can still be inside `render()` once this
+    // call returns, whether or not the timer happened to be running. Message
+    // thread only; the audio thread never calls this.
+    toneSource.stopTimer();
+    toneSourceRunning.store(false, std::memory_order_release);
+
     // From a known point, so what a capture shows does not depend on how long
     // the capture before it took.
     tone.reset();
