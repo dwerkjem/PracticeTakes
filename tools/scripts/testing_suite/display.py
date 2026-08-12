@@ -26,6 +26,7 @@ from pathlib import Path
 import shutil
 import socket
 import subprocess
+import threading
 import time
 from typing import Iterator
 
@@ -45,6 +46,17 @@ READY_TIMEOUT_SECONDS = 10.0
 READY_POLL_SECONDS = 0.1
 
 X11_SOCKET_DIRECTORY = Path("/tmp/.X11-unix")
+
+# Held from choosing a display number until the server on it has bound its
+# socket. Without it two threads asking at once both see the same number free
+# and the second Xvfb refuses to start -- a race with a window of milliseconds
+# that only appears once captures run in parallel, which is exactly the case
+# that cannot be debugged from a screenshot.
+_selection = threading.Lock()
+
+# How many times to try again when a number is taken between choosing it and
+# starting on it. Something else on the machine can also take one.
+SELECTION_ATTEMPTS = 5
 
 
 class VirtualDisplayError(RuntimeError):
@@ -124,51 +136,88 @@ def wait_until_ready(
     raise VirtualDisplayError(f"Xvfb did not come up on :{number} within {timeout:g}s.")
 
 
+def _start_server(width: int, height: int, depth: int) -> tuple[int, subprocess.Popen]:
+    """Take a free display number and get a server answering on it.
+
+    Choosing and starting are one step under the lock, because they are one
+    decision: a number is only free until somebody starts on it.
+    """
+    last: VirtualDisplayError | None = None
+
+    for _ in range(SELECTION_ATTEMPTS):
+        with _selection:
+            number = find_free_display()
+            process = subprocess.Popen(
+                [
+                    "Xvfb",
+                    f":{number}",
+                    "-screen",
+                    "0",
+                    f"{width}x{height}x{depth}",
+                    # No TCP socket: this screen is for one process tree on this
+                    # machine, and a listening port is an invitation nobody needs.
+                    "-nolisten",
+                    "tcp",
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+            try:
+                wait_until_ready(number, process)
+
+                return number, process
+            except VirtualDisplayError as error:
+                last = error
+
+                process.terminate()
+
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+
+    raise last or VirtualDisplayError("No display could be started.")
+
+
 @contextmanager
 def virtual_display(
     width: int = DEFAULT_WIDTH,
     height: int = DEFAULT_HEIGHT,
     depth: int = DEFAULT_DEPTH,
+    publish: bool = True,
 ) -> Iterator[str]:
-    """Run the body with DISPLAY pointing at a private Xvfb screen.
+    """Run the body with a private Xvfb screen, and yield its display name.
 
-    `os.environ` is what is changed, rather than an env dict threaded through
-    the driver: the application, `xwindow_capture`, and anything else the run
-    shells out to all inherit it, so none of them need to know a virtual display
-    exists. The previous value is restored on the way out, including when the
-    body raises.
+    With `publish`, `os.environ["DISPLAY"]` is what is changed: the application,
+    `xwindow_capture`, and anything else the run shells out to all inherit it,
+    so none of them need to know a virtual display exists. The previous value is
+    restored on the way out, including when the body raises.
+
+    `publish=False` is for the case that breaks: `os.environ` is one dictionary
+    per process, so several displays at once would each overwrite the last and
+    every worker would end up capturing on whichever screen was started most
+    recently. Callers that want more than one display pass the name they are
+    given to each process they start, and never rely on inheriting it.
     """
     if not is_available():
         raise VirtualDisplayError(missing_message())
 
-    number = find_free_display()
-    process = subprocess.Popen(
-        [
-            "Xvfb",
-            f":{number}",
-            "-screen",
-            "0",
-            f"{width}x{height}x{depth}",
-            # No TCP socket: this screen is for one process tree on this
-            # machine, and a listening port is an invitation nobody needs.
-            "-nolisten",
-            "tcp",
-        ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
+    number, process = _start_server(width, height, depth)
+    name = f":{number}"
     previous = os.environ.get("DISPLAY")
 
     try:
-        wait_until_ready(number, process)
-        os.environ["DISPLAY"] = f":{number}"
-        yield f":{number}"
+        if publish:
+            os.environ["DISPLAY"] = name
+
+        yield name
     finally:
-        if previous is None:
-            os.environ.pop("DISPLAY", None)
-        else:
-            os.environ["DISPLAY"] = previous
+        if publish:
+            if previous is None:
+                os.environ.pop("DISPLAY", None)
+            else:
+                os.environ["DISPLAY"] = previous
 
         process.terminate()
 

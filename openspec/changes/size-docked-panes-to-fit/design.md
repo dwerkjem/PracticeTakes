@@ -102,6 +102,52 @@ for.
 `WorkspaceLayoutState` is already JUCE-free and unit-tested; the sizing rule
 should be reachable the same way rather than living only inside a `Component`.
 
+### 6. A compact form has two shapes, not one — decided 2026-08-11
+
+A narrow pane and a short pane are different problems. Side-by-side splits make
+panes tall and thin; stacked splits make them short and wide. A single compact
+form would be wrong in one of them.
+
+So each tool reads which dimension it is short of and draws along the other:
+
+| Tool | Narrow and tall | Short and wide |
+| --- | --- | --- |
+| Tuner, graph | vertical trace, coarser scale | horizontal trace, coarser scale |
+| Tuner, bar | vertical bar, reading in the middle | horizontal bar, reading in the middle |
+| Tuner, meter | the note, coloured by how close it is | the same |
+| Spectrogram | vertical | horizontal |
+| Harmonic analyser | vertical | horizontal |
+
+The scale coarsens with the size rather than staying fixed: a graph showing six
+semitones over 90px of height is a line, not a graph.
+
+The meter is the one that does not rotate. A dial needs width *and* height, and
+below the threshold it has neither — so it becomes what it was really telling
+you, which is the note and how close you are, carried by colour.
+
+### 7. Below the threshold, the chrome goes too — decided 2026-08-11
+
+A pane too small for a tool's full display is also too small to spend a header
+row on a mode chooser and an options button. Both are hidden below the
+threshold.
+
+The options are still reachable: **right-click anywhere on the tool**. That is
+the same menu the "..." button shows, from the surface that has the most room to
+spare — the tool's own body. Nothing becomes unreachable by getting smaller,
+which is the difference between hiding chrome and losing function.
+
+### 8. Small panes need their own capture surfaces — decided 2026-08-11
+
+The harness photographs surfaces at four geometries by resizing the *window*.
+That reaches a small window, not a small *pane*: three tools in a 1280 window
+give panes of about 400px, which is above the threshold, so the compact forms
+would never appear in a capture.
+
+New approved states put a tool in a pane that is narrow, and in one that is
+short, at an ordinary window size. Without them every compact form here is
+code no screenshot has ever shown, which is the position the audio callback was
+in before the sanitizer work.
+
 ## Risks / Trade-offs
 
 - **Every tool has to answer.** Three tools today, and each needs a considered

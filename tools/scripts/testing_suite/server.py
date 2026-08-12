@@ -19,10 +19,13 @@ from __future__ import annotations
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
+import time
 from urllib.parse import parse_qs, urlparse
 
+import freshness
 import history as history_module
 import launcher as launcher_module
+import restart as restart_module
 import review
 import runner as runner_module
 import suites as suites_module
@@ -64,6 +67,17 @@ def web_assets(root: Path = WEB_ROOT) -> dict[str, Path]:
 
 
 WEB_FILES = web_assets()
+
+# What the suite's code looked like when this process imported it. Read at
+# import rather than passed in, so it is stamped at the one moment that is
+# actually true -- see `freshness.suite_staleness_warning`.
+SOURCES_LOADED_AT = freshness.newest_suite_source_time()
+
+# Which process is answering. A restart replaces this process in place, so the
+# pid is unchanged and the port is often back before anyone can observe it
+# missing; a page waiting for the new hub has nothing else to key on, and
+# reloading against the old one lands back on the fault it was escaping.
+BOOT_ID = str(time.time_ns())
 
 
 class ReviewSession:
@@ -130,6 +144,8 @@ class ReviewSession:
             "kinds": list(suites_module.KINDS),
             "builds": runner_module.build_overview(),
             "display": runner_module.display_available(),
+            "stale_server": freshness.suite_staleness_warning(SOURCES_LOADED_AT),
+            "boot": BOOT_ID,
             "job": self.job.status(),
             "launch": self.launch.status(),
             "modes": [surfaces.QUICK, surfaces.FULL],
@@ -325,6 +341,58 @@ class ReviewHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         payload = self._read_json()
 
+        if parsed.path == "/api/stop-run":
+            # Polite about there being nothing to stop: the button can be
+            # pressed twice, and a second press is not an error.
+            stopped = self.session.job.stop()
+            self._send_json(
+                {
+                    "stopping": stopped,
+                    "message": "stopping — ending what is running now"
+                    if stopped
+                    else "nothing is running",
+                }
+            )
+
+            return
+
+        if parsed.path == "/api/build":
+            # No run row behind this one: a build verified nothing, and a run
+            # with nothing under it would sit in the history looking like one
+            # that did.
+            targets = [str(value) for value in payload.get("targets", [])]
+            unknown = [name for name in targets if name not in runner_module.BUILD_TARGETS]
+
+            if unknown:
+                self._send_json({"error": f"unknown target(s): {', '.join(unknown)}"}, status=400)
+
+                return
+
+            if not self.session.job.start_build(targets or None):
+                self._send_json({"error": "something is already running"}, status=409)
+
+                return
+
+            self._send_json(self.session.job.status())
+
+            return
+
+        if parsed.path == "/api/restart-hub":
+            # Refused rather than queued while a job is on: exec would take a
+            # capture pass down with it, and the half-written run it left
+            # behind would be a worse thing to explain than a stale hub.
+            if self.session.job.running:
+                self._send_json(
+                    {"error": "something is running — stop it first"}, status=409
+                )
+
+                return
+
+            restart_module.restart_now()
+            self._send_json({"restarting": True})
+
+            return
+
         if parsed.path == "/api/run-suites":
             requested = [str(value) for value in payload.get("suites", [])]
             unknown = [name for name in requested if suites_module.by_id(name) is None]
@@ -454,9 +522,22 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self.store.add_tag(name, str(payload.get("description", "")))
             self._send_json({"name": name})
         elif parsed.path == "/api/comment":
-            result = review.add_comment(
-                self.store, int(payload.get("capture_id", 0)), str(payload.get("body", ""))
-            )
+            # One capture or many, through one endpoint: the page sends whichever
+            # it has, and a selection of one behaves exactly like the old call.
+            ids = payload.get("capture_ids")
+
+            if ids:
+                result = review.add_comment_to_many(
+                    self.store, [int(value) for value in ids], str(payload.get("body", ""))
+                )
+            else:
+                result = review.add_comment(
+                    self.store, int(payload.get("capture_id", 0)), str(payload.get("body", ""))
+                )
+
+            self._send_json(result, status=400 if "error" in result else 200)
+        elif parsed.path == "/api/delete-comment":
+            result = review.delete_comment(self.store, int(payload.get("comment_id", 0)))
             self._send_json(result, status=400 if "error" in result else 200)
         else:
             self._send_json({"error": "not found"}, status=404)

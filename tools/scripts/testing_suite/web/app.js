@@ -10,6 +10,11 @@
 const state = {
   view: "run",
   data: null,
+  // The job as of the last poll, kept apart from `data` because `data` is only
+  // replaced by a full reload. Escape used to read `data.job`, which during a
+  // run still said what was true before it started -- not running -- so the key
+  // did nothing for the whole run.
+  job: null,
   order: [],          // capture ids, in the order they are rendered
   selected: new Set(),
   lastClicked: null,
@@ -55,24 +60,122 @@ document.querySelectorAll("#tabs button").forEach((button) => {
 
 // --- The run view ----------------------------------------------------------
 
-function renderBuilds(view) {
-  const holder = element("build-state");
-  const missing = (view.builds || []).filter((build) => !build.present);
-  const stale = (view.builds || []).filter((build) => build.present && build.stale);
-  const lines = [];
+// A hub left running while the suite is edited answers a fresh page with old
+// code: a comment saves and renders blank, a delete button posts to a route
+// that does not exist yet. Both look like broken features. Say which it is.
+function renderStaleServer(view) {
+  const banner = element("stale-server");
+  const warning = view.stale_server || "";
 
-  // Said up front rather than discovered ten minutes in: a cold build is the
-  // slowest thing here by far, and knowing it is coming changes what you click.
-  missing.forEach((build) => lines.push(
-    `<div class="notice">${build.target} is not built — ${build.reason}. Running anything that needs it will build it first (several minutes).</div>`));
-  stale.forEach((build) => lines.push(
-    `<div class="notice subtle">${build.target} was built before your latest source change. Tick "rebuild" to be sure.</div>`));
+  element("stale-server-message").textContent = warning;
+  banner.hidden = !warning;
+}
 
-  if (!view.display) {
-    lines.push('<div class="notice">No display detected — UI suites will be skipped rather than failing.</div>');
+// One build, on its own, now. The slow part of everything here is the build,
+// and wanting it done without also running two hundred captures is the normal
+// state of someone who has just edited the application.
+async function buildTargets(targets) {
+  const { ok, data } = await api("/api/build", { targets });
+
+  if (!ok) {
+    window.alert(data.error || "could not start a build");
+
+    return;
   }
 
-  holder.innerHTML = lines.join("");
+  renderJob(data);
+  poll();
+}
+
+function buildNotice(text) {
+  const notice = document.createElement("div");
+  notice.className = "notice";
+  notice.appendChild(document.createTextNode(text));
+
+  return notice;
+}
+
+// One line for every build that is behind, whatever it is behind by. Missing
+// and out-of-date were a notice each, which on five targets was four banners
+// stacked above the thing you came here to press — and the difference between
+// them is not a decision anybody makes. Either way it gets built.
+function needsBuildingNotice(behind, running) {
+  const notice = document.createElement("div");
+  notice.className = "notice needs-building";
+  notice.appendChild(document.createTextNode(
+    behind.length === 1 ? "Needs building: " : "Need building: "));
+
+  behind.forEach((build) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "inline-action";
+    button.textContent = build.target;
+    button.title = build.reason;
+    button.disabled = running;
+    button.addEventListener("click", () => buildTargets([build.target]));
+    notice.appendChild(button);
+  });
+
+  if (behind.length > 1) {
+    const all = document.createElement("button");
+    all.type = "button";
+    all.className = "inline-action all";
+    all.textContent = "all of them";
+    all.disabled = running;
+    all.addEventListener("click", () => buildTargets(behind.map((build) => build.target)));
+    notice.appendChild(all);
+  }
+
+  return notice;
+}
+
+function renderBuilds(view) {
+  const holder = element("build-state");
+  const row = element("build-buttons");
+  const builds = view.builds || [];
+  const running = Boolean(view.job && view.job.running);
+
+  holder.innerHTML = "";
+  row.innerHTML = "";
+
+  // Beside the run buttons, and only the two you run constantly. The sanitizer
+  // trees have one each too and that made a row of six; they are reached from
+  // the banner when they are behind, and built by their own suite otherwise.
+  const primary = builds.filter((build) => build.primary);
+
+  primary.forEach((build) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `build-button ${build.present ? "built" : "not-built"}`;
+    button.textContent = `${build.present ? "Rebuild" : "Build"} ${build.target}`;
+    button.title = build.present
+      ? `${build.target} is built${build.stale ? ", but predates your latest source change" : ""}`
+      : build.reason;
+    button.disabled = running;
+    button.addEventListener("click", () => buildTargets([build.target]));
+    row.appendChild(button);
+  });
+
+  if (primary.length > 1) {
+    const every = document.createElement("button");
+    const all = primary.every((build) => build.present);
+
+    every.type = "button";
+    every.className = `build-button ${all ? "built" : "not-built"}`;
+    every.textContent = all ? "Rebuild everything" : "Build everything";
+    every.disabled = running;
+    every.addEventListener("click", () => buildTargets(primary.map((build) => build.target)));
+    row.appendChild(every);
+  }
+
+  const behind = builds.filter((build) => !build.present || build.stale);
+
+  if (behind.length) holder.appendChild(needsBuildingNotice(behind, running));
+
+  if (!view.display) {
+    holder.appendChild(buildNotice(
+      "No display detected — UI suites will be skipped rather than failing."));
+  }
 }
 
 function suiteRow(suite, result) {
@@ -97,7 +200,12 @@ function suiteRow(suite, result) {
 function renderSuites(view) {
   const results = (view.job && view.job.results) || {};
   const holder = element("suite-groups");
-  const titles = { tests: "Tests", performance: "Performance", ui: "User interface" };
+  const titles = {
+    tests: "Tests",
+    performance: "Performance",
+    ui: "User interface",
+    safety: "Races, leaks, and the audio callback",
+  };
 
   holder.innerHTML = view.kinds.map((kind) => `
     <section class="panel">
@@ -159,6 +267,81 @@ async function runSuites(ids) {
   poll();
 }
 
+async function stopRun() {
+  const { ok, data } = await api("/api/stop-run", {});
+
+  if (ok && data.stopping) {
+    element("progress-message").textContent = "stopping\u2026";
+  }
+
+  poll();
+}
+
+element("stop-run").addEventListener("click", stopRun);
+
+const pause = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+async function hubBoot() {
+  try {
+    const response = await fetch("/api/session", { cache: "no-store" });
+
+    return response.ok ? (await response.json()).boot || "" : "";
+  } catch (error) {
+    return "";
+  }
+}
+
+// Reload when a different process answers, rather than when anything does.
+// A restart replaces the hub in place: the pid does not change and the port is
+// often back within the second, so "wait for it to go down" is a race whose
+// losing side reloads into the old code -- the exact fault being escaped.
+async function waitForNewHub(say, previous) {
+  for (let attempt = 0; attempt < 240; attempt += 1) {
+    await pause(250);
+
+    const boot = await hubBoot();
+
+    if (boot && boot !== previous) {
+      window.location.reload();
+
+      return;
+    }
+  }
+
+  say("the hub has not come back — check the terminal it is running in");
+}
+
+async function restartHub() {
+  const button = element("restart-hub");
+  const say = (text) => { element("stale-server-message").textContent = text; };
+  const previous = await hubBoot();
+  const { ok, data } = await api("/api/restart-hub", {});
+
+  if (!ok) {
+    window.alert(data.error || "could not restart the hub");
+
+    return;
+  }
+
+  button.disabled = true;
+  say("restarting… this page will reload itself when the hub is back.");
+  waitForNewHub(say, previous);
+}
+
+element("restart-hub").addEventListener("click", restartHub);
+
+// Escape as well as the button. The reason to want a key is the case where the
+// pointer is not usable, which is what a capture run on the desktop display did
+// until it moved to a display of its own -- and that is exactly when being able
+// to stop matters most.
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && state.job && state.job.running && !state.job.stopping) {
+    // Before the zoom handler gets it: with a run going, Escape means stop.
+    event.preventDefault();
+    stopRun();
+  }
+});
+
 element("run-selected").addEventListener("click", () => runSuites(chosenSuites()));
 element("run-all").addEventListener("click", () =>
   runSuites(state.data.suites.map((suite) => suite.id)));
@@ -170,10 +353,19 @@ element("run-all").addEventListener("click", () =>
 // --- Progress --------------------------------------------------------------
 
 function renderJob(job) {
+  state.job = job || null;
+
   const bar = element("progress");
   bar.hidden = !job || (!job.running && job.state === "idle");
 
   if (!job || job.state === "idle") return;
+
+  // Only offered while there is something to stop, and disabled once asked so
+  // a second press does not read as the first having been ignored.
+  const stop = element("stop-run");
+  stop.hidden = !job.running;
+  stop.disabled = Boolean(job.stopping);
+  stop.textContent = job.stopping ? "Stopping\u2026" : "Stop run";
 
   element("progress-fill").style.width = `${job.percent}%`;
   element("progress-fill").className = job.state === "failed" ? "failed" : "";
@@ -314,9 +506,30 @@ function renderCard(capture) {
   if (capture.comments.length) {
     const list = document.createElement("ul");
     list.className = "comments";
-    capture.comments.forEach((body) => {
+    capture.comments.forEach((entry) => {
       const item = document.createElement("li");
-      item.textContent = body;
+      item.textContent = entry.body;
+
+      // A comment is a note somebody typed, and typing one by accident is easy.
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "comment-delete";
+      remove.title = "Delete this comment";
+      remove.textContent = "\u00d7";
+      remove.addEventListener("click", async (event) => {
+        event.stopPropagation();
+
+        const { ok, data } = await api("/api/delete-comment", { comment_id: entry.id });
+
+        if (!ok) {
+          window.alert(data.error || "could not delete that");
+          return;
+        }
+
+        await reload();
+      });
+
+      item.appendChild(remove);
       list.appendChild(item);
     });
     card.appendChild(list);
@@ -643,6 +856,36 @@ function paintSelection() {
   const count = state.selected.size;
   element("selection-count").textContent =
     count === 0 ? "nothing selected" : `${count} selected`;
+
+  // Only once there is a selection to act on. A row of "selected" buttons above
+  // an empty selection is four things that do nothing, and the one that matters
+  // is harder to find among them.
+  ["bulk-pass", "bulk-fail", "bulk-skip", "bulk-comment"].forEach((id) => {
+    element(id).hidden = count < 2;
+  });
+}
+
+async function commentOnSelected() {
+  const ids = [...state.selected];
+
+  if (ids.length < 2) return;
+
+  const body = window.prompt(`Comment on ${ids.length} captures:`);
+
+  if (!body || !body.trim()) return;
+
+  const { ok, data } = await api("/api/comment", { capture_ids: ids, body });
+
+  if (!ok) {
+    window.alert(data.error || "could not comment");
+    return;
+  }
+
+  if (data.missed && data.missed.length) {
+    window.alert(`Commented on ${data.written}; ${data.missed.length} could not be found.`);
+  }
+
+  await reload();
 }
 
 function selectFrom(id, event) {
@@ -783,6 +1026,7 @@ element("approve-shown").addEventListener("click", async () => {
 element("bulk-pass").addEventListener("click", () => scoreSelection("pass"));
 element("bulk-fail").addEventListener("click", () => scoreSelection("fail"));
 element("bulk-skip").addEventListener("click", () => scoreSelection("skip"));
+element("bulk-comment").addEventListener("click", commentOnSelected);
 
 element("select-all").addEventListener("click", () => {
   // Everything *shown*, not everything in the run: with filters on, selecting
@@ -1325,6 +1569,7 @@ async function reload() {
   const { data } = await api("/api/run");
   state.data = data;
 
+  renderStaleServer(data);
   renderBuilds(data);
   renderOptions(data);
   renderSuites(data);

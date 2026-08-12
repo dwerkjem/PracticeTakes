@@ -3,6 +3,8 @@
 #include "../../../MainComponent.h"
 #include "ToolOptionsButton.h"
 
+#include "application/tools/CompactPresentation.h"
+
 #include <functional>
 #include <utility>
 
@@ -85,6 +87,30 @@ class MainComponent::DockedToolPanel final : public juce::Component
     void resized() override
     {
         auto bounds = getLocalBounds().reduced(6);
+
+        // Below the threshold the header goes entirely: a pane with no room for
+        // its tool's display has none to spare for a title, a chooser, and a
+        // button either. Right-click still reaches the options.
+        const auto compactPane = compact::isCompact(getWidth(), getHeight());
+
+        titleLabel.setVisible(!compactPane);
+        optionsButton.setVisible(!compactPane);
+
+        if (adoptedHeaderControl != nullptr)
+        {
+            adoptedHeaderControl->setVisible(!compactPane);
+        }
+
+        if (compactPane)
+        {
+            if (content != nullptr)
+            {
+                content->setBounds(bounds);
+            }
+
+            return;
+        }
+
         auto header = bounds.removeFromTop(32);
         optionsButton.setBounds(header.removeFromRight(38));
         header.removeFromRight(4);
@@ -113,6 +139,18 @@ class MainComponent::DockedToolPanel final : public juce::Component
         {
             onFocus();
         }
+
+        // The options are hidden on a pane too small to spend a header row on
+        // them, so this is how they are still reached. Available at every size,
+        // not only the small ones -- a menu that appears only when the button
+        // disappears is a menu nobody discovers.
+        if (event.mods.isPopupMenu())
+        {
+            optionsButton.showOptions();
+
+            return;
+        }
+
         dragStarted = false;
         dragArmed = canStartDrag(event);
     }

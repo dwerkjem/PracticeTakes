@@ -95,6 +95,45 @@ select {
 
 .notice.subtle { border-left-color: var(--line); color: var(--muted); }
 
+/* The action belongs in the sentence that describes the problem, rather than
+   somewhere else the sentence has to point at. */
+button.inline-action {
+  padding: 1px 8px;
+  font-size: 12px;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+#build-buttons { display: contents; }
+
+/* One line, and it wraps rather than growing a banner per target. */
+.notice.needs-building { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.notice.needs-building .inline-action.all { border-color: var(--line); color: var(--muted); }
+
+/* Filled rather than outlined: this is the one thing on the page that has to
+   be readable without reading it. */
+button.build-button { font-weight: 600; color: #0d1117; }
+button.build-button.built { background: var(--pass); border-color: var(--pass); }
+button.build-button.not-built { background: var(--fail); border-color: var(--fail); }
+button.build-button:disabled { opacity: 0.5; }
+
+/* The stale-hub banner sits above every view, so it is laid out here rather
+   than inside one.
+   `[hidden]` first, and by id: `display` set on an id selector outranks the
+   browser's own rule for the attribute, so laying this out is what stopped it
+   hiding -- which left a restart button above a hub with nothing to restart. */
+#stale-server[hidden] { display: none; }
+
+#stale-server {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-left-color: var(--fail);
+  margin: 10px 16px 0;
+}
+
+#stale-server button { border-color: var(--fail); color: var(--fail); white-space: nowrap; }
+
 .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 button.primary { background: var(--accent); color: #0d1117; border-color: var(--accent); font-weight: 600; }
 button.link { background: none; border: none; color: var(--accent); padding: 0; font-size: 12px; }
@@ -499,3 +538,29 @@ button:hover { border-color: var(--accent); }
 
 .launch.failed { background: #2e2126; border-color: var(--fail); color: var(--fail); }
 .card .open-in-app { border-color: var(--accent); color: var(--accent); }
+
+/* The delete on a comment. Quiet until the comment is hovered: a row of crosses
+   invites misclicks on the thing they remove. */
+.comments li {
+  position: relative;
+}
+
+.comment-delete {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  float: right;
+  line-height: 1;
+  opacity: 0;
+  padding: 0 0.25rem;
+}
+
+.comments li:hover .comment-delete,
+.comment-delete:focus {
+  opacity: 0.7;
+}
+
+.comment-delete:hover {
+  opacity: 1;
+}

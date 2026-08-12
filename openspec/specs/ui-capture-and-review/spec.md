@@ -328,3 +328,160 @@ requires a person; CI reads only the records a run exports.
 #### Scenario: CI consumes verification
 - **WHEN** CI needs to know what was verified
 - **THEN** it reads the exported run record
+
+### Requirement: A capture run can be narrowed to named surfaces
+The capture pass SHALL accept a set of surfaces to cover, named by their
+approved state, and SHALL capture only those. A name that no surface in the
+run's mode offers SHALL be rejected before the run starts, naming what was
+asked for and what is available. With no set given, the run SHALL cover every
+surface its mode covers, as it does today.
+
+Narrowing SHALL compose with the existing resolution and palette sets rather
+than replacing them: a narrowed run still visits each chosen surface at every
+configured resolution and in every configured palette.
+
+#### Scenario: Capturing one surface
+- **WHEN** a capture pass is asked for a single surface by name
+- **THEN** only that surface is captured, at every configured resolution and
+  palette, and no other surface is visited
+
+#### Scenario: A misspelled surface name
+- **WHEN** a capture pass is asked for a name no surface offers
+- **THEN** the run fails before capturing anything, reporting the unknown name
+  and the names that exist
+- **AND** it does not silently complete having captured nothing
+
+#### Scenario: No selection given
+- **WHEN** a capture pass is run without naming any surface
+- **THEN** it covers every surface its mode covers
+
+### Requirement: A capture run can use a display of its own
+The capture pass SHALL be able to run on a private display, so that no window
+appears on the operator's screen and nothing takes focus while it runs. The
+images produced SHALL be equivalent to those captured on the desktop display.
+
+The private display SHALL be at least as large as the largest geometry the run
+captures, so that a geometry defined in terms of the available screen is not
+quietly reduced to a smaller one.
+
+When a private display is requested and the mechanism providing it is not
+installed, the run SHALL refuse with the command that installs it, and SHALL NOT
+fall back to the desktop display — a fallback would put windows on the screen of
+someone who asked for a private display precisely so that would not happen.
+
+#### Scenario: Capturing while the machine is in use
+- **WHEN** a capture pass runs on a private display
+- **THEN** no application window appears on the operator's screen, focus is
+  never taken, and every surface is captured as usual
+
+#### Scenario: The display mechanism is absent
+- **WHEN** a private display is requested on a machine without it installed
+- **THEN** the run refuses, names the command that installs it, and captures
+  nothing on the desktop display
+
+#### Scenario: A geometry defined by the screen
+- **WHEN** a run on a private display captures a surface at a geometry that
+  asks for the whole available screen
+- **THEN** the screen is large enough that the geometry differs from the
+  ordinary window size
+
+### Requirement: A capture run can be thrown away
+The capture pass SHALL be able to write to a temporary store instead of the
+verification history, for a capture taken only to be looked at once. Such a run
+SHALL NOT appear in the history, SHALL NOT consume a run number in it, and SHALL
+report where its images were written.
+
+The images SHALL outlive the process that made them, since looking at them is
+the reason the run happened; cleaning them up is left to the machine's temporary
+directory rather than done on exit.
+
+Asking for a throwaway run and naming a store, or asking for a throwaway run and
+resuming an existing one, SHALL be refused rather than resolved silently: both
+choose where the run lives, and a throwaway store has nothing to resume.
+
+#### Scenario: A capture taken to answer one question
+- **WHEN** a capture pass runs as a throwaway
+- **THEN** its images are written somewhere temporary and reported
+- **AND** the verification history contains no new run
+
+#### Scenario: A throwaway run and a named store
+- **WHEN** a throwaway run also names a store to write to
+- **THEN** it is refused, because both choose where the run lives
+
+#### Scenario: Resuming a throwaway run
+- **WHEN** a throwaway run is asked to resume an existing run
+- **THEN** it is refused, because a throwaway store is empty by construction
+
+### Requirement: A capture run reports where its images were written
+On completion the capture pass SHALL report the directory holding the images it
+wrote, alongside the count captured and the way to open the review grid. Someone
+who captured a small selection to inspect a change needs the files themselves,
+not only a browser view of them.
+
+#### Scenario: A completed run
+- **WHEN** a capture pass finishes
+- **THEN** the path to its images is printed with the summary
+
+### Requirement: A run in progress can be stopped
+The interface that starts a capture run SHALL offer a way to stop it while it is
+running, and SHALL accept the Escape key for the same purpose. The run SHALL
+stop at the next surface boundary rather than mid-capture, so that no partial
+image is recorded.
+
+Captures already taken SHALL be kept. Surfaces not reached SHALL be left
+uncaptured rather than recorded as failures: a stopped run and a broken one are
+different, and only one of them describes a defect in the build.
+
+A stopped run SHALL be resumable by running it again, which skips what it
+already holds.
+
+#### Scenario: Stopping a long sweep
+- **WHEN** an operator stops a run that has captured some of its surfaces
+- **THEN** the run ends without capturing the rest
+- **AND** what it captured is still in the store and reviewable
+
+#### Scenario: A stopped run is not a failed one
+- **WHEN** a run is stopped before it finishes
+- **THEN** the surfaces it did not reach carry no failure, and the run is not
+  reported as having failed
+
+#### Scenario: Continuing afterwards
+- **WHEN** a stopped run is started again
+- **THEN** the surfaces it already captured are skipped and the rest are taken
+
+#### Scenario: The keyboard
+- **WHEN** the operator presses Escape while a run is in progress
+- **THEN** the run stops as though the stop control had been used
+
+### Requirement: A comment can be written against several captures at once
+The review SHALL let a comment be written once and applied to every capture in
+the current selection, using the same narrowing that already governs which
+captures are shown and approved together.
+
+Each capture SHALL carry the comment individually afterwards, so that a capture
+read on its own still shows what was said about it.
+
+#### Scenario: One defect across several images
+- **WHEN** a reviewer narrows to several captures and writes one comment
+- **THEN** every capture in that selection carries it
+
+#### Scenario: Reading a capture on its own
+- **WHEN** a capture that received a bulk comment is opened by itself
+- **THEN** the comment is shown against it like any other
+
+### Requirement: A comment can be removed
+The review SHALL let a comment be deleted from the capture it was written
+against. A comment is a note somebody typed rather than a record of what the
+build did, and typing one against the wrong capture is easy.
+
+Deleting one comment SHALL leave every other comment on that capture untouched,
+and asking to delete one that is not there SHALL say so rather than report
+success.
+
+#### Scenario: A comment written by accident
+- **WHEN** a reviewer deletes a comment
+- **THEN** it is gone from that capture, and the capture's other comments remain
+
+#### Scenario: Deleting one that has already gone
+- **WHEN** a comment that no longer exists is deleted
+- **THEN** the review says so rather than reporting that it worked

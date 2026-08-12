@@ -24,13 +24,14 @@ No CI check runs any of this.
 from __future__ import annotations
 
 import argparse
-from contextlib import ExitStack
+from contextlib import contextmanager, ExitStack
 from pathlib import Path
 import platform
 import subprocess
 import sys
 import tempfile
 import threading
+import time
 import webbrowser
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -38,9 +39,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import attend as attend_module  # noqa: E402
 import capture as capture_module  # noqa: E402
 import display as display_module  # noqa: E402
+import freshness as freshness_module  # noqa: E402
 import runner as runner_module  # noqa: E402
 import suites as suites_module  # noqa: E402
 import export as export_module  # noqa: E402
+import fleet as fleet_module  # noqa: E402
 import history as history_module  # noqa: E402
 import ingest as ingest_module  # noqa: E402
 import launcher as launcher_module  # noqa: E402
@@ -48,7 +51,12 @@ import machine as machine_module  # noqa: E402
 import review as review_module  # noqa: E402
 import server as server_module  # noqa: E402
 import surfaces  # noqa: E402
-from driver import ApplicationDriver, ChannelError, missing_states  # noqa: E402
+from driver import (  # noqa: E402
+    STARTUP_TIMEOUT_SECONDS,
+    ApplicationDriver,
+    ChannelError,
+    missing_states,
+)
 from store import Store, StoreError  # noqa: E402
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -112,6 +120,13 @@ def command_capture(arguments) -> int:
 
         return 1
 
+    # Said before anything is captured, so it is read rather than scrolled past
+    # at the end alongside a summary that says everything worked.
+    warning = freshness_module.staleness_warning(arguments.executable, REPOSITORY_ROOT)
+
+    if warning:
+        print(warning, file=sys.stderr)
+
     if arguments.scratch:
         # Both name where the run is written, and one of them would silently win.
         if getattr(arguments, "database", None) is not None:
@@ -141,20 +156,214 @@ def command_capture(arguments) -> int:
 
     store = open_store(arguments)
 
+    if arguments.workers < 1:
+        print("--workers needs at least 1.", file=sys.stderr)
+
+        return 1
+
+    if arguments.workers > 1:
+        if arguments.headless is False:
+            # Several applications resizing themselves on one screen is the
+            # arrangement this was impossible under before headless existed.
+            print(
+                "--workers needs a display per worker, so it cannot run on the "
+                "desktop display. Drop --no-headless.",
+                file=sys.stderr,
+            )
+
+            return 1
+
+        if not display_module.is_available():
+            print(display_module.missing_message(), file=sys.stderr)
+
+            return 1
+
+        return _capture_in_parallel(arguments, plan, store, resolutions)
+
     # Entered before anything opens a window, and left after the driver stops,
     # so every process this run starts inherits the private DISPLAY.
     with ExitStack() as stack:
-        if arguments.headless:
+        # Unset means the default rather than a request, and the two differ when
+        # Xvfb is missing: refusing is right for somebody who asked for a
+        # private screen, and wrong for somebody who never mentioned it and
+        # would rather have their capture than a lecture.
+        requested = arguments.headless is True
+        wanted = arguments.headless is not False
+
+        if wanted:
             try:
                 screen = stack.enter_context(display_module.virtual_display())
+                print(f"Capturing on a virtual display ({screen}); nothing will appear on screen.")
             except display_module.VirtualDisplayError as error:
-                print(str(error), file=sys.stderr)
+                if requested:
+                    print(str(error), file=sys.stderr)
 
-                return 1
+                    return 1
 
-            print(f"Capturing on a virtual display ({screen}); nothing will appear on screen.")
+                print(f"{error}\nFalling back to the desktop display.", file=sys.stderr)
 
         return _capture_on_current_display(arguments, plan, store, resolutions)
+
+
+# One. A second attempt is made while holding the gate every other worker is
+# waiting on, and the thing that makes a launch fail -- other instances already
+# holding the input device -- is not something a retry changes. Trying twice
+# turned one bad launch into seventy seconds of everybody waiting, which was
+# slower than not running in parallel at all. A worker that cannot start
+# retires instead, and the queue it never drew from goes to the others.
+STARTUP_ATTEMPTS = 1
+
+
+def _start_under(driver, gate, fleet) -> list[str]:
+    """Start an application while holding the audio gate, retrying a bad launch.
+
+    Returns the states it offers, which doubles as proof that it is answering:
+    an application that cannot open the input device comes up, draws a window,
+    and never replies.
+    """
+    last: ChannelError | None = None
+
+    for _ in range(STARTUP_ATTEMPTS):
+        failed = False
+
+        with gate:
+            driver.start()
+            # Registered the moment it exists, so teardown can end it whatever
+            # happens next -- and so nothing ends it by name.
+            fleet.add(driver)
+
+            try:
+                return driver.list_states(timeout=STARTUP_TIMEOUT_SECONDS)
+            except ChannelError as error:
+                last = error
+                failed = True
+
+        # Killed outside the gate, and killed rather than asked. Every worker
+        # behind this one waits for the gate, and spending five seconds asking
+        # a process that is known not to answer -- then ten more waiting for it
+        # to go -- spends that on all of them. This is what made a run with one
+        # bad launch take longer than the whole sequential pass.
+        if failed:
+            driver.kill()
+            fleet.remove(driver)
+
+    raise ChannelError(
+        f"The application would not start after {STARTUP_ATTEMPTS} attempts: {last}"
+    )
+
+
+def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
+    """One plan, several screens, one run.
+
+    Each worker gets a screen and an application of its own, and passes the
+    screen's name to both explicitly. Nothing here relies on inheriting
+    `DISPLAY`: there is one of those per process and there are several screens,
+    so a worker that inherited would photograph whichever came up last.
+    """
+    try:
+        tooling = capture_module.Tooling.ensure()
+    except capture_module.CaptureError as error:
+        print(str(error), file=sys.stderr)
+
+        return 1
+
+    run_id = int(store.run(int(arguments.run))["id"]) if arguments.run else store.start_run(
+        provenance=machine_module.provenance(),
+        commit=current_commit(),
+        mode=arguments.mode,
+        resolutions=resolutions,
+        build_config=arguments.build_config,
+        platform=describe_platform(),
+        audio_device=arguments.audio_device,
+    )
+    images_at = image_directory(store, run_id)
+    fleet = fleet_module.Fleet()
+
+    # Said before anything starts. An application somebody else is running holds
+    # the input device, and a worker that cannot open one comes up, draws a
+    # window, and never replies -- which reads as a broken build rather than as
+    # a busy machine.
+    warning = fleet_module.contention_warning(fleet.foreign())
+
+    if warning:
+        print(warning, file=sys.stderr)
+
+    @contextmanager
+    def worker(index: int, shared):
+        with display_module.virtual_display(publish=False) as screen:
+            driver = ApplicationDriver(arguments.executable, display=screen)
+
+            # One application opens the input device at a time. Held until this
+            # one answers, which is the proof that it is past the open rather
+            # than a guess at how long one takes -- and released before any
+            # capturing, because the device is only contended while it is being
+            # acquired.
+            #
+            # Tried more than once, because the gate cannot cover everything:
+            # the application reopens the device from a timer of its own when it
+            # decides it has none, and that can land while another worker holds
+            # it. One that came up without a device is not going to find one, so
+            # it is replaced rather than waited on.
+            try:
+                states = _start_under(driver, shared.audio, fleet)
+                absent = missing_states(states, surfaces.required_states())
+
+                if absent:
+                    raise capture_module.CaptureError(
+                        "the application does not offer: " + ", ".join(absent)
+                    )
+
+                yield capture_module.CapturePass(
+                    store=store,
+                    run_id=run_id,
+                    driver=driver,
+                    tooling=tooling,
+                    image_directory=images_at,
+                    window_title=arguments.window_title,
+                    display=screen,
+                    lock=shared.checks,
+                    audio_gate=shared.audio,
+                )
+            finally:
+                driver.stop()
+                fleet.remove(driver)
+
+    began = time.monotonic()
+
+    def say(entry: dict) -> None:
+        left = runner_module.remaining_seconds(entry, time.monotonic() - began)
+        print(
+            f"[{entry['done'] + 1}/{entry['total']}] {entry['surface']} "
+            f"at {entry['geometry']} in {entry.get('theme', 'dark')}"
+            f"{' — ' + runner_module.describe_remaining(left) if left is not None else ''}"
+        )
+
+    print(f"Capturing on {arguments.workers} screens at once; nothing will appear on yours.")
+
+    try:
+        result = capture_module.run_in_parallel(
+            plan, workers=arguments.workers, worker=worker, progress=say
+        )
+    finally:
+        # Only what this run started. An interrupted run used to leave
+        # applications behind holding the input device, which made every run
+        # after it slower for reasons nothing explained.
+        left = fleet.shut_down()
+
+        if left:
+            print(f"Ended {left} application(s) this run had left.", file=sys.stderr)
+
+    for error in result["errors"]:
+        print(f"A worker stopped: {error}", file=sys.stderr)
+
+    print(
+        f"Run {run_id}: {result['captured']} captured, {result['failed']} failed, "
+        f"{result['already_captured']} already present, "
+        f"across {result['workers']} worker(s)."
+    )
+    print(f"Images: {images_at}")
+
+    return 1 if result["failed"] or result["errors"] else 0
 
 
 def _capture_on_current_display(arguments, plan, store, resolutions) -> int:
@@ -626,11 +835,28 @@ def build_parser() -> argparse.ArgumentParser:
         "instead of the verification history. For a capture you only need to "
         "look at once.",
     )
+    # Default, because watching windows open and resize on your own screen is
+    # the reason capture runs get put off. None rather than True so the code can
+    # tell "asked for it" from "did not say", which decides whether a missing
+    # Xvfb is an error or a fallback.
     capture_parser.add_argument(
         "--headless",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
+        default=None,
         help="Capture on a private Xvfb screen instead of the desktop, so no "
-        "windows appear and nothing steals focus.",
+        "windows appear and nothing steals focus. On by default; --no-headless "
+        "captures on the desktop.",
+    )
+    capture_parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="How many screens to capture on at once. Default 1; 2 is the most "
+        "that works today. Never derived from the processor count. Above two, "
+        "instances contend for the input device and one blocks inside ALSA "
+        "opening it, on the thread that answers the control channel — so the "
+        "application runs but stops answering, and its share is recorded as "
+        "failures.",
     )
     capture_parser.add_argument("--build-config", default="", help="How the build under test was configured.")
     capture_parser.add_argument("--audio-device", default="", help="The input device in use.")

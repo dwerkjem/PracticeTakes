@@ -135,6 +135,12 @@ bool TunerComponent::showView(const juce::String& view)
 
     if (view == "advanced")
     {
+        // The display too, not only the panel. A state has to describe what is
+        // on screen rather than what changed about it: without this, the
+        // advanced surface inherited whichever display the previous state left
+        // selected, so the same capture showed the graph or the meter
+        // depending on what came before it in the run.
+        selectMode(DisplayMode::graph);
         areAdvancedSettingsExpanded = true;
         updateAdvancedSettingsVisibility();
         resized();
@@ -386,6 +392,9 @@ void TunerComponent::audioInputStateChanged(AudioInputService::InputState state)
     {
     case AudioInputService::InputState::disconnected:
         audioErrorMessage = "Microphone disconnected.";
+        break;
+    case AudioInputService::InputState::opening:
+        audioErrorMessage = "Waiting for the microphone.";
         break;
     case AudioInputService::InputState::muted:
         audioErrorMessage = "Microphone muted.";

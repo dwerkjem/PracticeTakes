@@ -619,3 +619,116 @@ class IngestTests(ReviewTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BulkCommentTests(unittest.TestCase):
+    """One sentence about one defect, typed once.
+
+    Four captures got the same comment about the same border this afternoon,
+    which is what this exists to stop.
+    """
+
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.store = Store.open(Path(self.directory.name) / "verification.db")
+        self.addCleanup(self.store.close)
+        self.run_id = self.store.start_run(
+            provenance=PROVENANCE,
+            commit="abc123",
+            mode=surfaces.QUICK,
+            resolutions=("default",),
+        )
+        self.captures = [
+            self.store.record_capture(
+                self.run_id,
+                state=f"surface-{index}",
+                title=f"Surface {index}",
+                geometry="default",
+                theme="dark",
+                image_path=f"/tmp/{index}.png",
+                thumbnail_path=f"/tmp/{index}.thumb.png",
+                width=1280,
+                height=800,
+                digest=f"digest-{index}",
+            )
+            for index in range(3)
+        ]
+
+    def test_one_comment_reaches_every_capture_in_the_selection(self) -> None:
+        result = review.add_comment_to_many(self.store, self.captures, "the border has to go")
+
+        self.assertEqual(result["written"], 3)
+
+        for capture_id in self.captures:
+            bodies = [row["body"] for row in self.store.comments_for(capture_id)]
+            self.assertEqual(bodies, ["the border has to go"])
+
+    def test_captures_outside_the_selection_are_untouched(self) -> None:
+        review.add_comment_to_many(self.store, self.captures[:2], "only these two")
+
+        self.assertEqual(self.store.comments_for(self.captures[2]), [])
+
+    def test_an_empty_comment_is_refused(self) -> None:
+        """Otherwise a stray keypress writes a blank comment onto twenty images."""
+        result = review.add_comment_to_many(self.store, self.captures, "   ")
+
+        self.assertIn("error", result)
+        self.assertEqual(self.store.comments_for(self.captures[0]), [])
+
+    def test_an_empty_selection_is_refused(self) -> None:
+        self.assertIn("error", review.add_comment_to_many(self.store, [], "something"))
+
+    def test_a_capture_that_has_gone_does_not_lose_the_rest(self) -> None:
+        """A selection can outlive one of its captures; the others still get it."""
+        result = review.add_comment_to_many(
+            self.store, [*self.captures, 999_999], "still worth saying"
+        )
+
+        self.assertEqual(result["written"], 3)
+        self.assertEqual(result["missed"], [999_999])
+
+
+class DeleteCommentTests(unittest.TestCase):
+    """Removing a comment typed by accident."""
+
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.store = Store.open(Path(self.directory.name) / "verification.db")
+        self.addCleanup(self.store.close)
+        self.run_id = self.store.start_run(
+            provenance=PROVENANCE, commit="abc123", mode=surfaces.QUICK,
+            resolutions=("default",),
+        )
+        self.capture = self.store.record_capture(
+            self.run_id, state="s", title="S", geometry="default", theme="dark",
+            image_path="/tmp/s.png", digest="d",
+        )
+
+    def test_a_comment_can_be_removed(self) -> None:
+        comment_id = self.store.add_comment(self.capture, "typed by accident")
+
+        self.assertEqual(review.delete_comment(self.store, comment_id), {"deleted": comment_id})
+        self.assertEqual(self.store.comments_for(self.capture), [])
+
+    def test_only_the_named_comment_goes(self) -> None:
+        keep = self.store.add_comment(self.capture, "worth keeping")
+        drop = self.store.add_comment(self.capture, "not worth keeping")
+
+        review.delete_comment(self.store, drop)
+
+        self.assertEqual([row["id"] for row in self.store.comments_for(self.capture)], [keep])
+
+    def test_deleting_something_that_is_not_there_says_so(self) -> None:
+        """Rather than reporting success and leaving the reader to wonder."""
+        self.assertIn("error", review.delete_comment(self.store, 999_999))
+
+    def test_comments_reach_the_page_with_their_ids(self) -> None:
+        # Position in a list is not a name: without the id the page cannot say
+        # which comment to remove.
+        comment_id = self.store.add_comment(self.capture, "something")
+        capture = self.store.captures(self.run_id)[0]
+        shown = review.capture_view(self.store, capture)
+
+        self.assertEqual(shown["comments"], [{"id": comment_id, "body": "something"}])

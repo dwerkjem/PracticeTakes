@@ -4,7 +4,9 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -38,6 +40,31 @@ struct AudioInputServiceCallbackAccess
         service.audioDeviceIOCallbackWithContext(
             inputChannelData, numInputChannels, outputChannelData, numOutputChannels, numSamples,
             context);
+    }
+};
+
+// The recovery's one blocking step, replaceable. Named rather than implied, for
+// the same reason as the callback above: this is a verification harness reaching
+// into something private, and the class says which harness.
+struct AudioInputServiceRecoveryAccess
+{
+    static void replaceReopen(AudioInputService& service, std::function<void()> step)
+    {
+        service.reopen = std::move(step);
+    }
+
+    // The recovery, not the scan that decides on one. Driving the scan makes
+    // the device backends enumerate, and the timers they create outlive the
+    // fixture's message manager -- a wall of JUCE assertions the real
+    // assertions then pass through.
+    static void attempt(AudioInputService& service)
+    {
+        service.attemptRecovery();
+    }
+
+    static bool recovering(const AudioInputService& service)
+    {
+        return service.recoveryInFlight();
     }
 };
 
@@ -216,4 +243,179 @@ TEST_CASE("a callback with no input channels captures nothing", "[audio][callbac
         buffers.output.begin(), buffers.output.end(), [](float sample) { return sample == 0.0f; }));
 
     service.removeListener(&consumer);
+}
+
+// --- Recovery ---------------------------------------------------------------
+//
+// Run these three together in one process -- `PracticeTakesTests "[recovery]"`
+// -- and JUCE reports "a timer has outlived the platform event system" a few
+// times on the way out. It is the fixture cycling `ScopedJuceInitialiser_GUI`
+// once per case, not these cases: each alone is silent, any two are silent, and
+// ctest gives every case its own process, which is how CI and the suite run
+// them. Written down because the file above already records what noise like
+// this costs -- real assertions pass through it unread.
+//
+// What these pin is the shape of a recovery, not whether one is wanted --
+// `AudioRecoveryPolicy` decides that and is tested next door. The shape is
+// what is about to change: today the reopen happens on the message thread,
+// which is why a device that never opens freezes the interface.
+
+TEST_CASE("a recovery does not make the caller wait for the device", "[audio][recovery]")
+{
+    // The whole change, in one case: the step blocks, and asking for a recovery
+    // returns anyway. On the message thread this is the difference between a
+    // busy device and an application that cannot be used or closed.
+    ServiceUnderTest harness;
+    juce::WaitableEvent released;
+    juce::WaitableEvent entered;
+
+    AudioInputServiceRecoveryAccess::replaceReopen(
+        harness.service,
+        [&entered, &released]
+        {
+            entered.signal();
+            released.wait();
+        });
+
+    const auto before = juce::Time::getMillisecondCounterHiRes();
+    AudioInputServiceRecoveryAccess::attempt(harness.service);
+    const auto waited = juce::Time::getMillisecondCounterHiRes() - before;
+
+    REQUIRE(entered.wait(5000));
+    REQUIRE(waited < 1000.0);
+    REQUIRE(AudioInputServiceRecoveryAccess::recovering(harness.service));
+
+    released.signal();
+}
+
+TEST_CASE("a second recovery is not started while one is running", "[audio][recovery]")
+{
+    // The scan runs every two seconds while there is no usable input, which is
+    // exactly the state a stuck open leaves it in. Without this, a slow device
+    // produces a queue of attempts, each waiting on what the one before waits
+    // on.
+    ServiceUnderTest harness;
+    juce::WaitableEvent released;
+    juce::WaitableEvent entered;
+    std::atomic<int> attempts{0};
+
+    AudioInputServiceRecoveryAccess::replaceReopen(
+        harness.service,
+        [&entered, &released, &attempts]
+        {
+            ++attempts;
+            entered.signal();
+            released.wait();
+        });
+
+    AudioInputServiceRecoveryAccess::attempt(harness.service);
+    REQUIRE(entered.wait(5000));
+
+    AudioInputServiceRecoveryAccess::attempt(harness.service);
+    AudioInputServiceRecoveryAccess::attempt(harness.service);
+
+    REQUIRE(attempts.load() == 1);
+
+    released.signal();
+}
+
+TEST_CASE("a recovery that finishes lets the next one start", "[audio][recovery]")
+{
+    ServiceUnderTest harness;
+    std::atomic<int> attempts{0};
+    AudioInputServiceRecoveryAccess::replaceReopen(harness.service, [&attempts] { ++attempts; });
+
+    AudioInputServiceRecoveryAccess::attempt(harness.service);
+
+    for (auto waited = 0;
+         waited < 5000 && AudioInputServiceRecoveryAccess::recovering(harness.service);
+         waited += 10)
+    {
+        juce::Thread::sleep(10);
+    }
+
+    REQUIRE_FALSE(AudioInputServiceRecoveryAccess::recovering(harness.service));
+
+    AudioInputServiceRecoveryAccess::attempt(harness.service);
+
+    for (auto waited = 0; waited < 5000 && attempts.load() < 2; waited += 10)
+    {
+        juce::Thread::sleep(10);
+    }
+
+    REQUIRE(attempts.load() == 2);
+}
+
+TEST_CASE("the input state says the device is being opened", "[audio][recovery]")
+{
+    // "No microphone detected" and "the microphone is not answering" are
+    // different situations with different answers, and only one of them reads
+    // as the application having crashed.
+    ServiceUnderTest harness;
+    juce::WaitableEvent released;
+    juce::WaitableEvent entered;
+
+    REQUIRE(harness.service.inputState() == AudioInputService::InputState::disconnected);
+
+    AudioInputServiceRecoveryAccess::replaceReopen(
+        harness.service,
+        [&entered, &released]
+        {
+            entered.signal();
+            released.wait();
+        });
+    AudioInputServiceRecoveryAccess::attempt(harness.service);
+    REQUIRE(entered.wait(5000));
+
+    REQUIRE(harness.service.inputState() == AudioInputService::InputState::opening);
+
+    released.signal();
+}
+
+TEST_CASE("the service can be destroyed while a recovery is stuck", "[audio][recovery]")
+{
+    // The case that has to work, or quitting reproduces the freeze at the
+    // moment somebody is trying to escape it. The step here never returns
+    // until the test lets it, which is what a device held by something else
+    // looks like from in here.
+    //
+    // Run this under AddressSanitizer: the mistake it guards against -- a
+    // thread still inside a manager that has been destroyed -- is invisible
+    // without one.
+    juce::ScopedJuceInitialiser_GUI juceRuntime;
+    juce::WaitableEvent released;
+    juce::WaitableEvent entered;
+    std::atomic<bool> finished{false};
+
+    {
+        auto service = std::make_unique<AudioInputService>();
+        AudioInputServiceRecoveryAccess::replaceReopen(
+            *service,
+            [&entered, &released, &finished]
+            {
+                entered.signal();
+                released.wait();
+                finished = true;
+            });
+        AudioInputServiceRecoveryAccess::attempt(*service);
+        REQUIRE(entered.wait(5000));
+
+        const auto before = juce::Time::getMillisecondCounterHiRes();
+        service.reset();
+        const auto waited = juce::Time::getMillisecondCounterHiRes() - before;
+
+        REQUIRE(waited < 2000.0);
+        REQUIRE_FALSE(finished.load());
+    }
+
+    // Let the abandoned recovery finish, and give it a moment to run out
+    // against a manager its own copy is keeping alive.
+    released.signal();
+
+    for (auto waited = 0; waited < 5000 && !finished.load(); waited += 10)
+    {
+        juce::Thread::sleep(10);
+    }
+
+    REQUIRE(finished.load());
 }

@@ -22,8 +22,22 @@
       <div id="progress" hidden>
         <div id="progress-bar"><span id="progress-fill"></span></div>
         <div id="progress-message" class="muted"></div>
+        <!-- Only while something is running. A full sweep is two hundred
+             captures and there was no way to end one. -->
+        <button type="button" id="stop-run" title="Stop the run (Esc)">
+          Stop run
+        </button>
       </div>
     </header>
+
+    <!-- Outside every view, because the mismatch it reports makes buttons in
+         all of them do nothing. -->
+    <div id="stale-server" class="notice" hidden>
+      <span id="stale-server-message"></span>
+      <!-- The way out, beside the problem. Nowhere else, because there is
+           nothing to restart when the hub is current. -->
+      <button type="button" id="restart-hub">Restart the hub</button>
+    </div>
 
     <!-- Run: pick what to run, and run it. The landing view, because an empty
          store is what everyone sees first and it needs a way forward. -->
@@ -44,6 +58,12 @@
         <button type="button" id="run-tests">Tests only</button>
         <button type="button" id="run-performance">Performance only</button>
         <button type="button" id="run-ui">UI only</button>
+
+        <!-- Building belongs with running: it is the same decision made one
+             step earlier, and the run buttons are where you are already
+             looking. Filled by the script, one per target. -->
+        <span class="divider"></span>
+        <span id="build-buttons"></span>
       </div>
 
       <section class="panel">
@@ -61,9 +81,10 @@
 
         <span class="divider"></span>
         <button type="button" id="approve-shown" class="primary">Approve all shown</button>
-        <button type="button" id="bulk-pass" class="verdict-pass">Pass selected</button>
-        <button type="button" id="bulk-fail" class="verdict-fail">Fail selected…</button>
-        <button type="button" id="bulk-skip">Skip selected</button>
+        <button type="button" id="bulk-pass" class="verdict-pass" hidden>Pass selected</button>
+        <button type="button" id="bulk-fail" class="verdict-fail" hidden>Fail selected…</button>
+        <button type="button" id="bulk-skip" hidden>Skip selected</button>
+        <button type="button" id="bulk-comment" hidden>Comment selected…</button>
         <label class="inline small" title="Off: only fill in what has not been answered.">
           <input type="checkbox" id="overwrite" /> overwrite answered
         </label>

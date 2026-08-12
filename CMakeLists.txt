@@ -403,6 +403,7 @@ if(BUILD_TESTING)
         src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
         src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp
         src/tests/application/theme/AppLookAndFeelTests.cpp
+        src/tests/application/tools/CompactPresentationTests.cpp
         src/tests/application/tools/ToolCatalogTests.cpp
         src/tests/application/tools/ToolLifecycleTests.cpp
         src/tests/application/tools/UnknownToolIntegrationTests.cpp
