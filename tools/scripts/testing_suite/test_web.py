@@ -189,13 +189,23 @@ class PageWiringTests(unittest.TestCase):
         body = script()
         menu = body[body.index("function facetMenu"):body.index("// One open at a time")]
 
-        self.assertIn('state_ === "off" ? reachable', menu)
+        self.assertIn('state_ === "off" ? reachable(name, value) : shown', menu)
+
+    def test_every_number_is_what_remains(self) -> None:
+        """Never how many exist. A count against the whole run promises
+        captures the other filters have already excluded."""
+        body = script()
+        menu = body[body.index("function facetMenu"):body.index("// One open at a time")]
+
+        # Both branches come from a count taken against the live filters.
+        self.assertIn("const shown = countMatching(state.filters)", menu)
+        self.assertNotIn("values.forEach(([value, count])", menu)
 
     def test_the_count_is_against_the_filters_already_on(self) -> None:
         """A number counted against the whole run promises captures that the
         other filters have already excluded."""
         body = script()
-        counter = body[body.index("function reachable"):body.index("function facetMenu")]
+        counter = body[body.index("function countMatching"):body.index("function facetMenu")]
 
         self.assertIn("...state.filters", counter)
         self.assertIn("matchesFilters(capture)", counter)

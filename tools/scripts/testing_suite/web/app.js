@@ -787,14 +787,9 @@ function facetLabel(name) {
 // beside a value is what clicking it gets you, and a value that gets you
 // nothing is not an option -- picking "dark" makes "light" impossible, and an
 // impossible choice sitting in a list is a thing to try and be confused by.
-function reachable(name, value) {
-  const sets = filterFor(name);
-  const proposed = {
-    ...state.filters,
-    [name]: { include: new Set([...sets.include, value]), exclude: sets.exclude },
-  };
+function countMatching(filters) {
   const was = state.filters;
-  state.filters = proposed;
+  state.filters = filters;
 
   let count = 0;
 
@@ -804,9 +799,20 @@ function reachable(name, value) {
     });
   });
 
+  // Put back, or every count after the first is taken against a filter set
+  // nobody asked for.
   state.filters = was;
 
   return count;
+}
+
+function reachable(name, value) {
+  const sets = filterFor(name);
+
+  return countMatching({
+    ...state.filters,
+    [name]: { include: new Set([...sets.include, value]), exclude: sets.exclude },
+  });
 }
 
 function facetMenu(name, values) {
@@ -827,15 +833,21 @@ function facetMenu(name, values) {
     '<div class="facet-hint">click to keep · shift-click to drop · click again to clear</div>';
 
   let offered = 0;
+  const shown = countMatching(state.filters);
 
   values.forEach(([value]) => {
     const state_ = sets.include.has(value) ? "include"
       : sets.exclude.has(value) ? "exclude" : "off";
 
-    // What clicking this would leave. A chosen value keeps its place whatever
-    // the number says -- it is how you take it off again, and a control that
-    // vanishes when used is worse than one that leads nowhere.
-    const count = state_ === "off" ? reachable(name, value) : null;
+    // Every number is how many captures remain, never how many exist. For a
+    // value that is on, that is what the grid is showing; for one that is off,
+    // it is what clicking it would leave. A count taken against the whole run
+    // promises captures the other filters have already excluded.
+    //
+    // A chosen value keeps its place whatever its number says -- it is how you
+    // take it off again, and a control that vanishes when used is worse than
+    // one that leads nowhere.
+    const count = state_ === "off" ? reachable(name, value) : shown;
 
     if (state_ === "off" && count === 0) return;
 
@@ -847,7 +859,7 @@ function facetMenu(name, values) {
     row.innerHTML =
       `<span class="mark">${state_ === "include" ? "✓" : state_ === "exclude" ? "✕" : ""}</span>` +
       `<span class="value">${value}</span>` +
-      `<span class="count">${count === null ? "" : count}</span>`;
+      `<span class="count">${count}</span>`;
     row.addEventListener("click", (event) => cycleFilter(name, value, event.shiftKey));
     panel.appendChild(row);
   });
