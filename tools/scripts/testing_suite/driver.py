@@ -57,6 +57,9 @@ QUIT_TIMEOUT_SECONDS = 5.0
 # and under contention in about six.
 STARTUP_TIMEOUT_SECONDS = 12.0
 
+# How long an application gets to leave after being asked to.
+EXIT_GRACE_SECONDS = 10.0
+
 
 @dataclass
 class Reply:
@@ -166,7 +169,7 @@ class ApplicationDriver:
                 except OSError:
                     pass
 
-    def stop(self) -> None:
+    def stop(self, grace: float = EXIT_GRACE_SECONDS) -> None:
         """Ask the application to quit, then make sure it actually did."""
         process = self._process
 
@@ -191,7 +194,7 @@ class ApplicationDriver:
             self._process = None
 
         try:
-            process.wait(timeout=10)
+            process.wait(timeout=grace)
         except subprocess.TimeoutExpired:
             # A hung application must not hang the harness with it.
             process.kill()

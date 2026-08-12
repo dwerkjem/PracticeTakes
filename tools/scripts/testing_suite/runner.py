@@ -69,6 +69,12 @@ LOG_LINES_KEPT = 200
 # How long a command gets to end politely before it is killed.
 STOP_GRACE_SECONDS = 5.0
 
+# How much of a plan's weight has to be finished before a time estimate is worth
+# showing. One surface is not a rate: the first is unrepresentative -- it pays
+# for the application's first paint -- and an estimate that swings from four
+# minutes to forty is worse than none.
+ESTIMATE_AFTER_COST = 4.0
+
 # What `_command` reports for a command that was never started, or was ended by
 # a stop. Distinct from any exit code a real command produces, so "we stopped
 # this" is never mistaken for "this failed".
@@ -206,6 +212,37 @@ def build_state(target: str = "PracticeTakes") -> dict:
         "path": str(binary),
         "reason": "sources have changed since this was built" if stale else "",
     }
+
+
+def remaining_seconds(entry: dict, elapsed: float) -> float | None:
+    """How much longer this pass has, or None while that is still a guess.
+
+    The plan's own weights say which surfaces are the expensive ones; this run's
+    measured rate says what one of those weights is worth on this machine
+    today. Neither alone is enough -- a static estimate is wrong on a slow
+    machine, and a rate with nothing to scale is wrong whenever what is left
+    does not resemble what is done.
+
+    None until enough has finished to divide by, because a number that swings
+    from four minutes to forty in its first seconds is worse than no number.
+    """
+    done = float(entry.get("cost_done", 0.0))
+    total = float(entry.get("cost_total", 0.0))
+
+    if total <= 0.0 or done < ESTIMATE_AFTER_COST or elapsed <= 0.0:
+        return None
+
+    return max(0.0, (total - done) * (elapsed / done))
+
+
+def describe_remaining(seconds: float) -> str:
+    """A duration to read at a glance, rounded to what it can honestly claim."""
+    if seconds < 45:
+        return "under a minute left"
+
+    minutes = int(seconds / 60 + 0.5)
+
+    return f"about {minutes} minute{'' if minutes == 1 else 's'} left"
 
 
 def build_overview() -> list[dict]:
@@ -897,12 +934,16 @@ class Job:
             if absent:
                 raise RuntimeError("the application does not offer: " + ", ".join(absent))
 
+            began = time.monotonic()
+
             def report(entry: dict) -> None:
-                fraction = entry["done"] / max(1, entry["total"])
+                fraction = capture_module.progress_fraction(entry)
+                left = remaining_seconds(entry, time.monotonic() - began)
                 self._say(
                     f"capturing {entry['surface']} at {entry['geometry']} "
                     f"in {entry.get('theme', 'dark')} "
-                    f"({entry['done'] + 1} of {entry['total']})",
+                    f"({entry['done'] + 1} of {entry['total']}"
+                    f"{', ' + describe_remaining(left) if left is not None else ''})",
                     percent=int(floor + (ceiling - floor) * fraction),
                 )
 

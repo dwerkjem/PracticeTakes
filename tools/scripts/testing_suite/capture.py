@@ -517,14 +517,26 @@ class CapturePass:
         skipped = 0
         stopped = False
 
+        # Weighted as well as counted. Half the surfaces is not half the time:
+        # the ones carrying a tone wait their warmup and then settle, and a bar
+        # that counts them equally is past the middle long before the run is.
+        total_cost = surfaces.plan_cost(plan)
+        spent = 0.0
+        previous_group: tuple[str, str, str] | None = None
+
         for surface, geometry, theme in plan:
             if should_stop is not None and should_stop():
                 stopped = True
 
                 break
 
+            group = (surface.state, surface.title, theme)
+            cost = surfaces.capture_cost(surface, first_of_group=group != previous_group)
+            previous_group = group
+
             if (surface.state, surface.title, geometry, theme) in already:
                 skipped += 1
+                spent += cost
 
                 continue
 
@@ -536,6 +548,9 @@ class CapturePass:
                         "theme": theme,
                         "done": captured + failed + skipped,
                         "total": len(plan),
+                        "cost": cost,
+                        "cost_done": spent,
+                        "cost_total": total_cost,
                     }
                 )
 
@@ -544,6 +559,8 @@ class CapturePass:
             # that ever stops being true.
             seen = sizes.setdefault(f"{surface.title}/{theme}", {})
             size = self.capture_one(surface, geometry, seen, digests, theme)
+
+            spent += cost
 
             if size is None:
                 failed += 1
@@ -567,6 +584,21 @@ class CapturePass:
 
 
 # --- Several at once --------------------------------------------------------
+
+def progress_fraction(entry: dict) -> float:
+    """How far through a run is, by weight where there is one and count where not.
+
+    Weight, because half the surfaces is not half the time. Count as a fallback,
+    so a caller that reports progress without weights still gets a bar that
+    moves rather than one stuck at zero.
+    """
+    total = float(entry.get("cost_total", 0.0))
+
+    if total > 0.0:
+        return min(1.0, float(entry.get("cost_done", 0.0)) / total)
+
+    return float(entry.get("done", 0)) / max(1.0, float(entry.get("total", 1)))
+
 
 def plan_groups(
     plan: tuple[tuple[surfaces.Surface, str, str], ...],
@@ -687,19 +719,32 @@ def run_in_parallel(
     running = min(workers, len(queue)) or 1
     results: list[dict] = [{} for _ in range(running)]
     done = 0
+    spent = 0.0
+    total_cost = surfaces.plan_cost(plan)
 
     def report(entry: dict) -> None:
-        """One count across every worker, so "6 of 204" means what it says."""
-        nonlocal done
+        """One count across every worker, so "6 of 204" means what it says.
+
+        The weights are summed here too, for the same reason: a worker knows
+        what its own share has cost, and the bar is about the run.
+        """
+        nonlocal done, spent
 
         if progress is None:
             return
 
         with lock:
             done += 1
-            said = done
+            spent += float(entry.get("cost", 0.0))
+            said, cost_done = done, spent
 
-        progress({**entry, "done": said - 1, "total": len(plan)})
+        progress({
+            **entry,
+            "done": said - 1,
+            "total": len(plan),
+            "cost_done": cost_done - float(entry.get("cost", 0.0)),
+            "cost_total": total_cost,
+        })
 
     def next_group() -> list[tuple[surfaces.Surface, str, str]] | None:
         nonlocal handed

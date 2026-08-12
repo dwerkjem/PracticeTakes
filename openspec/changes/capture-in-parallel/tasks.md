@@ -45,3 +45,15 @@
       or device recovery off the message thread — an application change, its own proposal.
       Measured: a *sequential* capture with another instance open captures nothing at all.
 - [ ] 6.10 **Deferred:** whether the hub offers a worker count
+
+## 7. The races, and the bar
+
+- [x] 7.1 Every group is taken exactly once under real contention — proven by removing the lock (1223 takes instead of 292)
+- [x] 7.2 Two workers never hold the audio gate at once
+- [x] 7.3 The shared maps survive being written by every worker
+- [x] 7.4 The progress count is not lost between workers — proven by removing the lock
+- [x] 7.5 A stop reaches every worker, before and part way through
+- [x] 7.6 The fleet loses no registration under concurrent add/remove, and teardown against live workers still ends everything
+- [x] 7.7 Replies never cross between drivers, and one hanging driver does not hold up another
+- [x] 7.8 Weight a plan by what a surface costs, not by counting surfaces
+- [x] 7.9 Estimate what is left from this run's own measured rate, and say nothing until there is one

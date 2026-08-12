@@ -702,3 +702,51 @@ class BuildStateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RemainingTimeTests(unittest.TestCase):
+    """What the bar claims about how much longer this will take.
+
+    Counting surfaces makes it lie: the ones carrying a tone wait a warmup and
+    then settle, so a run is past halfway by count long before it is by time.
+    The plan's weights say which surfaces are expensive; the run's own measured
+    rate says what a weight is worth on this machine today.
+    """
+
+    def entry(self, done: float, total: float) -> dict:
+        return {"cost_done": done, "cost_total": total}
+
+    def test_nothing_is_claimed_before_there_is_a_rate(self) -> None:
+        """A number that swings from four minutes to forty is worse than none."""
+        self.assertIsNone(runner_module.remaining_seconds(self.entry(0, 100), 1.0))
+        self.assertIsNone(
+            runner_module.remaining_seconds(
+                self.entry(runner_module.ESTIMATE_AFTER_COST / 2, 100), 5.0
+            )
+        )
+
+    def test_the_estimate_scales_by_what_has_been_measured(self) -> None:
+        # A tenth of the work in 10s: ninety percent left, so ninety seconds.
+        self.assertAlmostEqual(
+            runner_module.remaining_seconds(self.entry(10, 100), 10.0), 90.0
+        )
+
+    def test_a_slower_machine_gets_a_longer_estimate(self) -> None:
+        quick = runner_module.remaining_seconds(self.entry(10, 100), 10.0)
+        slow = runner_module.remaining_seconds(self.entry(10, 100), 30.0)
+
+        self.assertGreater(slow, quick)
+
+    def test_the_end_of_a_run_is_not_negative(self) -> None:
+        self.assertEqual(runner_module.remaining_seconds(self.entry(100, 100), 50.0), 0.0)
+        self.assertEqual(runner_module.remaining_seconds(self.entry(120, 100), 50.0), 0.0)
+
+    def test_a_plan_with_no_weights_claims_nothing(self) -> None:
+        """Rather than dividing by zero or promising zero seconds."""
+        self.assertIsNone(runner_module.remaining_seconds({}, 10.0))
+
+    def test_durations_are_rounded_to_what_they_can_honestly_claim(self) -> None:
+        self.assertEqual(runner_module.describe_remaining(3), "under a minute left")
+        self.assertEqual(runner_module.describe_remaining(44), "under a minute left")
+        self.assertEqual(runner_module.describe_remaining(75), "about 1 minute left")
+        self.assertEqual(runner_module.describe_remaining(300), "about 5 minutes left")

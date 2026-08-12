@@ -31,6 +31,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import webbrowser
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -327,10 +328,14 @@ def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
                 driver.stop()
                 fleet.remove(driver)
 
+    began = time.monotonic()
+
     def say(entry: dict) -> None:
+        left = runner_module.remaining_seconds(entry, time.monotonic() - began)
         print(
             f"[{entry['done'] + 1}/{entry['total']}] {entry['surface']} "
             f"at {entry['geometry']} in {entry.get('theme', 'dark')}"
+            f"{' — ' + runner_module.describe_remaining(left) if left is not None else ''}"
         )
 
     print(f"Capturing on {arguments.workers} screens at once; nothing will appear on yours.")

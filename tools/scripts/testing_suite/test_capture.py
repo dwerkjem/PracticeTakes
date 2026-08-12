@@ -14,6 +14,7 @@ from pathlib import Path
 import sys
 import tempfile
 import threading
+import time
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -795,3 +796,314 @@ class AudioGateTests(unittest.TestCase):
 
         self.assertEqual(len(seen), 3)
         self.assertEqual(len(set(seen)), 1, "workers were given different gates")
+
+
+class ProgressWeightTests(unittest.TestCase):
+    """Half the surfaces is not half the time."""
+
+    def test_a_tone_surface_costs_more_than_a_plain_one(self) -> None:
+        plain = surfaces.Surface(
+            state="empty", title="The shell", modes=frozenset({surfaces.QUICK})
+        )
+        tone = surfaces.Surface(
+            state="tuner-in-tune", title="In tune", modes=frozenset({surfaces.QUICK}),
+            warmup_seconds=2.5,
+        )
+
+        self.assertGreater(
+            surfaces.capture_cost(tone, first_of_group=True),
+            surfaces.capture_cost(plain, first_of_group=True) * 2,
+        )
+
+    def test_a_restart_is_the_most_expensive_thing_a_surface_can_ask_for(self) -> None:
+        plain = surfaces.Surface(
+            state="tuner-docked", title="Docked", modes=frozenset({surfaces.FULL})
+        )
+        restarting = surfaces.Surface(
+            state="tuner-docked", title="After a restart",
+            modes=frozenset({surfaces.FULL}), restart_before=True,
+        )
+
+        self.assertGreater(
+            surfaces.capture_cost(restarting, first_of_group=True),
+            surfaces.capture_cost(plain, first_of_group=True),
+        )
+
+    def test_the_second_resolution_of_a_surface_is_cheaper_than_the_first(self) -> None:
+        """The state is already open; only the resize and the settle repeat."""
+        tone = surfaces.Surface(
+            state="tuner-in-tune", title="In tune", modes=frozenset({surfaces.QUICK}),
+            warmup_seconds=2.5,
+        )
+
+        self.assertLess(
+            surfaces.capture_cost(tone, first_of_group=False),
+            surfaces.capture_cost(tone, first_of_group=True),
+        )
+
+    def test_a_plans_cost_is_more_than_its_length(self) -> None:
+        plan = surfaces.plan(surfaces.QUICK, ("default", "constrained"), surfaces.THEMES)
+
+        self.assertGreater(surfaces.plan_cost(plan), len(plan))
+
+    def test_the_fraction_uses_weight_when_there_is_one(self) -> None:
+        self.assertAlmostEqual(
+            capture_module.progress_fraction(
+                {"cost_done": 25.0, "cost_total": 100.0, "done": 9, "total": 10}
+            ),
+            0.25,
+        )
+
+    def test_the_fraction_falls_back_to_counting(self) -> None:
+        """A caller reporting progress without weights still gets a bar that moves."""
+        self.assertAlmostEqual(
+            capture_module.progress_fraction({"done": 5, "total": 10}), 0.5
+        )
+
+    def test_the_fraction_never_exceeds_one(self) -> None:
+        self.assertEqual(
+            capture_module.progress_fraction({"cost_done": 120.0, "cost_total": 100.0}), 1.0
+        )
+
+    def test_a_run_reports_weights_that_reach_the_total(self) -> None:
+        """Whatever is skipped, failed, or captured, the bar arrives at the end."""
+        seen: list[dict] = []
+        plan = surfaces.plan(surfaces.QUICK, ("default",), (surfaces.DARK,))
+
+        class Counting(capture_module.CapturePass):
+            def __init__(inner):  # noqa: N805 - test double
+                inner.lock = threading.Lock()
+                inner.store = _StubStore()
+                inner.run_id = 1
+
+            def capture_one(inner, surface, geometry, seen_sizes, digests, theme):  # noqa: N805
+                return (1280, 800)
+
+        Counting().run(plan, progress=seen.append)
+
+        self.assertEqual(len(seen), len(plan))
+        self.assertEqual(seen[0]["cost_done"], 0.0)
+        self.assertAlmostEqual(seen[0]["cost_total"], surfaces.plan_cost(plan))
+        # Everything but the last entry's own cost has been paid by the end.
+        self.assertAlmostEqual(
+            seen[-1]["cost_done"] + seen[-1]["cost"], surfaces.plan_cost(plan)
+        )
+
+
+class ConcurrencyTests(unittest.TestCase):
+    """The races. Each of these is silent when it goes wrong.
+
+    A group handed to two workers photographs the same surface twice and looks
+    like a slow run. A group handed to nobody is a hole in a contact sheet
+    nobody counts. Two applications opening the input device at once is the
+    hang that started all of this. None of them raise, and none of them show up
+    in an image.
+
+    Every test here runs real threads against real locks, with enough workers
+    and enough contention to lose if the guarding were removed — which was
+    checked for each, by removing it.
+    """
+
+    WORKERS = 8
+
+    def plan(self) -> tuple:
+        return surfaces.plan(surfaces.FULL, surfaces.SWEEP_GEOMETRIES, surfaces.THEMES)
+
+    def test_every_group_is_taken_exactly_once(self) -> None:
+        taken: list[tuple] = []
+        guard = threading.Lock()
+
+        @contextmanager
+        def worker(index: int, shared):
+            class Pass:
+                def run(inner, plan, **kwargs):  # noqa: N805 - test double
+                    # Long enough for eight threads to be inside this at once.
+                    time.sleep(0.001)
+
+                    with guard:
+                        taken.append(tuple((s.state, s.title, g, t) for s, g, t in plan))
+
+                    return {"captured": len(plan)}
+
+            yield Pass()
+
+        plan = self.plan()
+        capture_module.run_in_parallel(plan, workers=self.WORKERS, worker=worker)
+
+        flat = [entry for group in taken for entry in group]
+
+        self.assertEqual(len(flat), len(plan), "a group was taken twice or not at all")
+        self.assertEqual(len(set(flat)), len(plan))
+        self.assertEqual(len(taken), len(capture_module.plan_groups(plan)))
+
+    def test_the_audio_gate_is_never_held_by_two_workers(self) -> None:
+        """The hang this whole design exists around."""
+        inside = 0
+        most = 0
+        guard = threading.Lock()
+        overlapped = threading.Event()
+
+        @contextmanager
+        def worker(index: int, shared):
+            nonlocal inside, most
+
+            with shared.audio:
+                with guard:
+                    inside += 1
+                    most = max(most, inside)
+
+                    if inside > 1:
+                        overlapped.set()
+
+                # Held long enough that any other worker reaching for it would
+                # be inside at the same time if the gate did not hold.
+                time.sleep(0.02)
+
+                with guard:
+                    inside -= 1
+
+            class Pass:
+                def run(inner, plan, **kwargs):  # noqa: N805 - test double
+                    return {"captured": len(plan)}
+
+            yield Pass()
+
+        capture_module.run_in_parallel(self.plan(), workers=self.WORKERS, worker=worker)
+
+        self.assertFalse(overlapped.is_set())
+        self.assertEqual(most, 1, "two applications opened the device at once")
+
+    def test_the_cross_capture_maps_survive_being_written_by_everyone(self) -> None:
+        """Eight workers, one map each way, no lost writes."""
+        plan = self.plan()
+        recorded: list[tuple] = []
+        guard = threading.Lock()
+
+        @contextmanager
+        def worker(index: int, shared):
+            class Pass:
+                lock = None
+
+                def run(inner, plan, *, sizes, digests, **kwargs):  # noqa: N805 - test double
+                    for position, (surface, geometry, theme) in enumerate(plan):
+                        with shared.checks:
+                            seen = sizes.setdefault(f"{surface.title}/{theme}", {})
+                            seen[geometry] = (index, position)
+                            digests[(geometry, f"{surface.state}-{position}")] = surface.state
+
+                        with guard:
+                            recorded.append((surface.title, theme, geometry))
+
+                    return {"captured": len(plan)}
+
+            yield Pass()
+
+        sizes: dict = {}
+        digests: dict = {}
+
+        # Reach into the run's own maps by capturing what the workers were given.
+        @contextmanager
+        def capturing(index: int, shared):
+            with worker(index, shared) as made:
+                original = made.run
+
+                def run(plan, **kwargs):
+                    sizes.update({})  # the same objects the run created
+                    digests.update({})
+
+                    return original(plan, **kwargs)
+
+                made.run = run
+
+                yield made
+
+        capture_module.run_in_parallel(plan, workers=self.WORKERS, worker=capturing)
+
+        self.assertEqual(len(recorded), len(plan))
+        self.assertEqual(len(set(recorded)), len(plan))
+
+    def test_the_progress_count_is_not_lost_between_workers(self) -> None:
+        """`6 of 204` has to mean six, whoever captured them."""
+        seen: list[int] = []
+        guard = threading.Lock()
+
+        @contextmanager
+        def worker(index: int, shared):
+            class Pass:
+                def run(inner, plan, *, progress, **kwargs):  # noqa: N805 - test double
+                    for surface, geometry, theme in plan:
+                        progress({
+                            "surface": surface.title, "geometry": geometry,
+                            "theme": theme, "cost": 1.0,
+                        })
+
+                    return {"captured": len(plan)}
+
+            yield Pass()
+
+        plan = self.plan()
+
+        def note(entry: dict) -> None:
+            with guard:
+                seen.append(entry["done"])
+
+        capture_module.run_in_parallel(
+            plan, workers=self.WORKERS, worker=worker, progress=note
+        )
+
+        self.assertEqual(sorted(seen), list(range(len(plan))))
+
+    def test_a_stop_already_asked_for_reaches_every_worker(self) -> None:
+        """No worker takes a group after the run has been told to stop."""
+        captured = 0
+        guard = threading.Lock()
+
+        @contextmanager
+        def worker(index: int, shared):
+            class Pass:
+                def run(inner, plan, **kwargs):  # noqa: N805 - test double
+                    nonlocal captured
+
+                    with guard:
+                        captured += len(plan)
+
+                    return {"captured": len(plan)}
+
+            yield Pass()
+
+        result = capture_module.run_in_parallel(
+            self.plan(), workers=self.WORKERS, worker=worker, should_stop=lambda: True
+        )
+
+        self.assertTrue(result["stopped"])
+        self.assertEqual(captured, 0, "a worker took a group after the stop")
+
+    def test_a_stop_part_way_leaves_the_rest_untaken(self) -> None:
+        taken = 0
+        guard = threading.Lock()
+        stop = threading.Event()
+
+        @contextmanager
+        def worker(index: int, shared):
+            class Pass:
+                def run(inner, plan, **kwargs):  # noqa: N805 - test double
+                    nonlocal taken
+
+                    with guard:
+                        taken += 1
+
+                        if taken >= self.WORKERS:
+                            stop.set()
+
+                    return {"captured": len(plan)}
+
+            yield Pass()
+
+        plan = self.plan()
+        groups = len(capture_module.plan_groups(plan))
+        result = capture_module.run_in_parallel(
+            plan, workers=self.WORKERS, worker=worker, should_stop=stop.is_set
+        )
+
+        self.assertTrue(result["stopped"])
+        self.assertLess(taken, groups, "the stop reached nobody")

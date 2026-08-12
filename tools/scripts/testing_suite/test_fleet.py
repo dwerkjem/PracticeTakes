@@ -12,6 +12,8 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 import tempfile
+import threading
+import time
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -155,6 +157,92 @@ class ContentionMessageTests(unittest.TestCase):
         self.assertIn("instance is", fleet_module.contention_warning({1}))
         self.assertIn("instances are", fleet_module.contention_warning({1, 2}))
 
+
+
+class FleetConcurrencyTests(unittest.TestCase):
+    """Workers registering and retiring applications at the same time.
+
+    A parallel run adds and removes from this from every worker thread, and a
+    lost registration is an application nobody ends — which then holds the input
+    device and makes every run after it slower for reasons nothing explains.
+    That happened here, from a different cause, and cost an afternoon of
+    measurements that were all wrong.
+    """
+
+    WORKERS = 12
+
+    def test_nothing_registered_is_lost(self) -> None:
+        fleet = fleet_module.Fleet()
+        drivers = [FakeDriver(1000 + index) for index in range(self.WORKERS * 8)]
+        ready = threading.Barrier(self.WORKERS)
+
+        def register(start: int) -> None:
+            ready.wait(10)
+
+            for index in range(start, len(drivers), self.WORKERS):
+                fleet.add(drivers[index])
+
+        threads = [threading.Thread(target=register, args=(n,)) for n in range(self.WORKERS)]
+
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join(20)
+
+        self.assertEqual(len(fleet.pids()), len(drivers))
+        self.assertEqual(fleet.shut_down(), len(drivers))
+        self.assertTrue(all(driver.killed == 1 for driver in drivers))
+
+    def test_adding_and_removing_at_once_leaves_a_coherent_fleet(self) -> None:
+        fleet = fleet_module.Fleet()
+        kept = [FakeDriver(2000 + index) for index in range(self.WORKERS)]
+        churn = [FakeDriver(3000 + index) for index in range(self.WORKERS * 6)]
+        ready = threading.Barrier(self.WORKERS)
+
+        def work(worker: int) -> None:
+            ready.wait(10)
+            fleet.add(kept[worker])
+
+            for index in range(worker, len(churn), self.WORKERS):
+                fleet.add(churn[index])
+                fleet.remove(churn[index])
+
+        threads = [threading.Thread(target=work, args=(n,)) for n in range(self.WORKERS)]
+
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join(20)
+
+        self.assertEqual(fleet.pids(), {driver.pid for driver in kept})
+        self.assertEqual(fleet.shut_down(), len(kept))
+        self.assertTrue(all(driver.killed == 0 for driver in churn))
+
+    def test_shutting_down_while_workers_register_ends_everything_eventually(self) -> None:
+        """A run stopped part way is exactly this: teardown against live workers."""
+        fleet = fleet_module.Fleet()
+        drivers = [FakeDriver(4000 + index) for index in range(60)]
+        done = threading.Event()
+
+        def register() -> None:
+            for driver in drivers:
+                fleet.add(driver)
+                time.sleep(0.001)
+
+            done.set()
+
+        thread = threading.Thread(target=register)
+        thread.start()
+        time.sleep(0.01)
+        fleet.shut_down()
+        done.wait(20)
+        thread.join(20)
+        fleet.shut_down()
+
+        self.assertEqual(fleet.pids(), set())
+        self.assertTrue(all(driver.killed >= 1 for driver in drivers))
 
 if __name__ == "__main__":
     unittest.main()
