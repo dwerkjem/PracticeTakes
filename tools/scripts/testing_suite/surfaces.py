@@ -639,13 +639,12 @@ def capture_cost(surface: "Surface", *, first_of_group: bool = False) -> float:
     cost = CAPTURE_COST
 
     if first_of_group:
+        # Opening the state and filling the tool's history, both of which the
+        # rest of this surface's resolutions inherit rather than repeat.
         cost += STATE_CHANGE_COST + surface.warmup_seconds
 
         if surface.restart_before:
             cost += RESTART_COST
-    else:
-        # The state is already open; only the resize and the settle repeat.
-        cost += surface.warmup_seconds
 
     return cost
 

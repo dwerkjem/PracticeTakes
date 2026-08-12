@@ -255,6 +255,9 @@ class CapturePass:
         # device and instances contend for it; see `Shared`. A restart reopens
         # it, so a surface that restarts takes this as well as startup does.
         self.audio_gate = audio_gate or threading.Lock()
+        # (state, theme) the application is currently showing, or None when that
+        # is not known. See `move_to`.
+        self._open: tuple[str, str] | None = None
 
     # --- X plumbing ---------------------------------------------------------
 
@@ -336,8 +339,23 @@ class CapturePass:
         The theme is applied after the state, not before: opening a state
         rebuilds the workspace, and a palette set first would be correct for the
         shell and stale for whatever the state just created.
+
+        The state is opened only when it is not already the one open. That is
+        worth doing for the time — a full sweep opens 72 states instead of 292 —
+        but it is worth doing for correctness first: opening rebuilds the
+        workspace, which throws away whatever a tool had heard. Asking for four
+        window sizes used to mean building the surface four times and refilling
+        its history four times, and it is the same picture at four sizes.
+
+        This is what makes the warmup in `capture_one` correct to pay once per
+        surface. The two go together: reopen per resolution and the second
+        capture needs its own warmup; do not reopen and it does not. Changing
+        one without the other captures an empty graph, which looks like a
+        rendering bug.
         """
         try:
+            here = (surface.state, theme)
+
             if surface.restart_before:
                 # The one place a capture reopens the audio device. Left
                 # ungated, a restart in one worker can block in ALSA against
@@ -345,22 +363,33 @@ class CapturePass:
                 with self.audio_gate:
                     self.driver.restart()
 
-            reply = self.driver.open_state(surface.state)
+                self._open = None
 
-            if not reply.success:
-                return reply.error
+            if here != self._open:
+                # Cleared before rather than set after: a failure part way
+                # through leaves the application somewhere this cannot name, and
+                # the next capture has to build it again rather than assume.
+                self._open = None
+                reply = self.driver.open_state(surface.state)
 
-            if theme:
-                reason = self.driver.set_theme(theme)
+                if not reply.success:
+                    return reply.error
 
-                if reason:
-                    return reason
+                if theme:
+                    reason = self.driver.set_theme(theme)
+
+                    if reason:
+                        return reason
+
+                self._open = here
 
             if not surface.fixed_geometry:
                 return self.driver.set_geometry(geometry)
 
             return ""
         except ChannelError as error:
+            self._open = None
+
             return str(error)
 
     def capture_one(
@@ -370,11 +399,19 @@ class CapturePass:
         seen: dict[str, tuple[int, int]],
         digests: dict[tuple[str, str], str] | None = None,
         theme: str = surfaces.DARK,
+        warm: bool = True,
     ) -> tuple[int, int] | None:
         """Capture one surface at one resolution, recording whatever happened.
 
         Returns the window size when an image was stored, so the caller can hold
         each surface's sizes as the yardstick for its remaining resolutions.
+
+        `warm` is what the warmup is for: a tool drawing a history needs one to
+        draw, so the first capture of a surface waits for the tone to fill it.
+        The second waits for nothing — the tool has been listening throughout,
+        and asking for a different window size does not empty it. Paid once per
+        surface instead of once per resolution, that wait is 45 seconds of a
+        full sweep rather than 270.
         """
         def fail(reason: str) -> None:
             with self.lock:
@@ -402,7 +439,7 @@ class CapturePass:
 
         # After settling, not instead of it: the window is already the right
         # size, and this is time for the tool to have something to show.
-        if surface.warmup_seconds > 0:
+        if warm and surface.warmup_seconds > 0:
             self.sleep(surface.warmup_seconds)
         # Under the lock for the same reason as the digests: `seen` is shared
         # when passes run together, and the geometry it is being compared
@@ -523,6 +560,7 @@ class CapturePass:
         total_cost = surfaces.plan_cost(plan)
         spent = 0.0
         previous_group: tuple[str, str, str] | None = None
+        warmed: tuple[str, str, str] | None = None
 
         for surface, geometry, theme in plan:
             if should_stop is not None and should_stop():
@@ -558,7 +596,13 @@ class CapturePass:
             # resize anything, but keying them apart keeps the check honest if
             # that ever stops being true.
             seen = sizes.setdefault(f"{surface.title}/{theme}", {})
-            size = self.capture_one(surface, geometry, seen, digests, theme)
+            # Warmed once per surface. `group` is the plan's ordering; this is
+            # the first one actually *taken*, which differs when a resumed run
+            # skips the ones it already holds.
+            size = self.capture_one(
+                surface, geometry, seen, digests, theme, warm=group != warmed
+            )
+            warmed = group
 
             spent += cost
 

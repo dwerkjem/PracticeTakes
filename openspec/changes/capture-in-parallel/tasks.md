@@ -57,3 +57,16 @@
 - [x] 7.7 Replies never cross between drivers, and one hanging driver does not hold up another
 - [x] 7.8 Weight a plan by what a surface costs, not by counting surfaces
 - [x] 7.9 Estimate what is left from this run's own measured rate, and say nothing until there is one
+
+## 8. The sanitizers, and where a sweep's time goes
+
+- [x] 8.1 Race conditions, memory errors and leaks, and the audio callback offered in the hub, not only in CI
+- [x] 8.2 A build tree per sanitizer; RealtimeSanitizer gets Clang, the rest keep the system toolchain
+- [x] 8.3 Sanitizer options travel with the suite that needs them, and are asserted to match the workflows
+- [x] 8.4 Their own kind, so "run the tests" does not silently mean twenty minutes
+- [x] 8.5 Open a state once per surface and palette rather than once per resolution — 72 rebuilds instead of 292
+- [x] 8.6 Warm a tool's history once per surface, which only became correct with 8.5 — 45s of a sweep rather than 270
+- [x] 8.7 Tests tying 8.5 and 8.6 together, since separating them captures an empty graph
+- [ ] 8.8 **Measured and left alone:** the settle floor is 219s of a sweep, and shortening it weakens the
+      check that catches a capture taken mid-resize
+- [ ] 8.9 **Measured and left alone:** image conversion is 84ms a capture, 25s a sweep, already overlapped by workers

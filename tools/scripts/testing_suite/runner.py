@@ -64,6 +64,11 @@ DEFAULT_EXECUTABLE = CONTROL_BUILD / "bin" / "PracticeTakes"
 SOURCE_ROOT = REPOSITORY_ROOT / "src"
 
 BUILD_PATH = "/usr/bin:/bin"
+
+# What builds with unless a target says otherwise. Absolute, because a Nix
+# profile ahead of the system toolchain is what makes `juceaide` die partway
+# through with "libexpat.so.1 not found".
+DEFAULT_COMPILERS = ("/usr/bin/gcc", "/usr/bin/g++")
 LOG_LINES_KEPT = 200
 
 # How long a command gets to end politely before it is killed.
@@ -94,6 +99,11 @@ FAILED = "failed"
 # links into the build root -- so assuming either layout for both is wrong, and
 # was: a build that succeeded was reported as "the build finished but the binary
 # is not there". The target is looked for instead.
+#
+# A key is what the hub calls a build, not necessarily what CMake calls the
+# target: the sanitizer builds are all `PracticeTakesTests`, differing only in
+# how they were configured and where they went. `builds` says which target to
+# ask CMake for when the two differ.
 BUILD_TARGETS = {
     "PracticeTakes": {
         "directory": CONTROL_BUILD,
@@ -104,6 +114,30 @@ BUILD_TARGETS = {
         "directory": TEST_BUILD,
         "options": ("-DBUILD_TESTING=ON",),
         "why": "the C++ unit and benchmark binary",
+    },
+    # One tree per sanitizer. They cannot share: the instrumentation is a
+    # compile-time decision, and a tree reconfigured back and forth would
+    # rebuild everything on every switch anyway.
+    "PracticeTakesTests-asan": {
+        "directory": REPOSITORY_ROOT / "build-asan",
+        "builds": "PracticeTakesTests",
+        "options": ("-DBUILD_TESTING=ON", "-DPRACTICE_TAKES_SANITIZE=address"),
+        "why": "the tests under AddressSanitizer, for memory errors and leaks",
+    },
+    "PracticeTakesTests-tsan": {
+        "directory": REPOSITORY_ROOT / "build-tsan",
+        "builds": "PracticeTakesTests",
+        "options": ("-DBUILD_TESTING=ON", "-DPRACTICE_TAKES_SANITIZE=thread"),
+        "why": "the tests under ThreadSanitizer, for race conditions",
+    },
+    "PracticeTakesTests-rtsan": {
+        "directory": REPOSITORY_ROOT / "build-rtsan",
+        "builds": "PracticeTakesTests",
+        "options": ("-DBUILD_TESTING=ON", "-DPRACTICE_TAKES_SANITIZE=realtime"),
+        # RealtimeSanitizer is Clang's, and so is the annotation the audio
+        # callback carries. GCC will not build this at all.
+        "compilers": ("clang", "clang++"),
+        "why": "the tests under RealtimeSanitizer, for the audio callback",
     },
 }
 
@@ -124,9 +158,10 @@ def binary_path(target: str) -> Path | None:
         return None
 
     directory = entry["directory"]
+    built = entry.get("builds", target)
 
     for pattern in BINARY_LOCATIONS:
-        for candidate in sorted(directory.glob(pattern.format(target=target))):
+        for candidate in sorted(directory.glob(pattern.format(target=built))):
             if candidate.is_file() and os.access(candidate, os.X_OK):
                 return candidate
 
@@ -570,16 +605,18 @@ class Job:
 
     def _build(self, target: str, *, floor: int, ceiling: int) -> None:
         entry = BUILD_TARGETS[target]
+        built = entry.get("builds", target)
         self._say(f"building {target} — {entry['why']}", state=BUILDING, percent=floor)
 
+        c_compiler, cxx_compiler = entry.get("compilers", DEFAULT_COMPILERS)
         self._command(
             [
                 cmake_binary(),
                 "-S", str(REPOSITORY_ROOT),
                 "-B", str(entry["directory"]),
                 "-DCMAKE_BUILD_TYPE=Debug",
-                "-DCMAKE_C_COMPILER=/usr/bin/gcc",
-                "-DCMAKE_CXX_COMPILER=/usr/bin/g++",
+                f"-DCMAKE_C_COMPILER={c_compiler}",
+                f"-DCMAKE_CXX_COMPILER={cxx_compiler}",
                 *entry["options"],
             ],
             label=f"configuring {target}",
@@ -587,7 +624,7 @@ class Job:
             ceiling=floor + max(1, (ceiling - floor) // 10),
         )
         self._command(
-            [cmake_binary(), "--build", str(entry["directory"]), "--target", target, "--parallel"],
+            [cmake_binary(), "--build", str(entry["directory"]), "--target", built, "--parallel"],
             label=f"compiling {target}",
             floor=floor + max(1, (ceiling - floor) // 10),
             ceiling=ceiling,
@@ -659,6 +696,7 @@ class Job:
         working_directory: Path | None = None,
         capture: list[str] | None = None,
         sanitised: bool = True,
+        environment: dict[str, str] | None = None,
     ) -> int:
         """Run a command, streaming its output into the log. Returns the exit code."""
         self._say(f"{label}…", percent=floor)
@@ -670,7 +708,10 @@ class Job:
             process = subprocess.Popen(
                 arguments,
                 cwd=working_directory or REPOSITORY_ROOT,
-                env=build_environment() if sanitised else suite_environment(),
+                env={
+                    **(build_environment() if sanitised else suite_environment()),
+                    **(environment or {}),
+                },
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -798,6 +839,7 @@ class Job:
             working_directory=REPOSITORY_ROOT / suite.working_directory,
             capture=output,
             sanitised=False,
+            environment=dict(suite.environment),
         )
 
         # Before anything is written down. A killed process exits non-zero, and

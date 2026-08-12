@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import capture as capture_module  # noqa: E402
 import images  # noqa: E402
 import surfaces  # noqa: E402
-from driver import Reply  # noqa: E402
+from driver import ChannelError, Reply  # noqa: E402
 from store import Store  # noqa: E402
 
 PROVENANCE = {
@@ -434,7 +434,7 @@ class _StubPass(capture_module.CapturePass):
         self.run_id = 1
         self.lock = threading.Lock()
 
-    def capture_one(self, surface, geometry, seen, digests, theme):  # type: ignore[override]
+    def capture_one(self, surface, geometry, seen, digests, theme, warm=True):  # type: ignore[override]
         self.captured.append((surface.state, geometry, theme))
 
         return (1280, 800)
@@ -730,6 +730,7 @@ class AudioGateTests(unittest.TestCase):
             def __init__(inner):  # noqa: N805 - test double
                 inner.audio_gate = gate
                 inner.driver = inner
+                inner._open = None
 
             def restart(inner) -> None:  # noqa: N805 - standing in for the driver
                 held.append("locked" if gate.locked() else "UNGUARDED")
@@ -761,6 +762,7 @@ class AudioGateTests(unittest.TestCase):
             def __init__(inner):  # noqa: N805 - test double
                 inner.audio_gate = gate
                 inner.driver = inner
+                inner._open = None
 
             def open_state(inner, state):  # noqa: N805 - test double
                 return Reply(True, [])
@@ -876,7 +878,7 @@ class ProgressWeightTests(unittest.TestCase):
                 inner.store = _StubStore()
                 inner.run_id = 1
 
-            def capture_one(inner, surface, geometry, seen_sizes, digests, theme):  # noqa: N805
+            def capture_one(inner, surface, geometry, seen_sizes, digests, theme, warm=True):  # noqa: N805
                 return (1280, 800)
 
         Counting().run(plan, progress=seen.append)
@@ -1107,3 +1109,246 @@ class ConcurrencyTests(unittest.TestCase):
 
         self.assertTrue(result["stopped"])
         self.assertLess(taken, groups, "the stop reached nobody")
+
+
+class WarmupTests(unittest.TestCase):
+    """The wait that a tool drawing a history needs, paid once per surface.
+
+    A tone surface waits 2.5s so the tuner or the spectrogram has something to
+    show. Paid again for each of that surface's resolutions it was 270 seconds
+    of a full sweep; paid once it is 45. Nothing is lost: the tool has been
+    listening the whole time, and asking for a different window size does not
+    empty what it heard.
+    """
+
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        self.store = Store.open(self.root / "verification.db")
+        self.addCleanup(self.store.close)
+        self.run_id = self.store.start_run(
+            provenance=PROVENANCE, commit="abc", mode=surfaces.QUICK,
+            resolutions=("default", "constrained"),
+        )
+        self.slept: list[float] = []
+        self.original_convert = images.convert
+        images.convert = self.fake_convert
+        self.addCleanup(setattr, images, "convert", self.original_convert)
+        self.converted = 0
+
+    def fake_convert(self, source: Path, png: Path, thumb: Path):
+        png.write_bytes(b"png")
+        thumb.write_bytes(b"thumb")
+        self.converted += 1
+
+        return 1280, 800, f"digest-{self.converted}"
+
+    def make_pass(self):
+        outer = self
+        sizes = {"default": (1280, 800), "constrained": (800, 600)}
+        asked: list[str] = []
+
+        class TestablePass(capture_module.CapturePass):
+            def read_size(inner, title: str = ""):  # noqa: N805 - test double
+                return sizes.get(asked[-1] if asked else "default")
+
+            def _capture_to(inner, destination: Path, title: str = "") -> str:  # noqa: N805
+                destination.write_bytes(b"P6")
+
+                return ""
+
+            def move_to(inner, surface, geometry, theme=""):  # noqa: N805 - test double
+                asked.append(geometry)
+
+                return capture_module.CapturePass.move_to(inner, surface, geometry, theme)
+
+        return TestablePass(
+            store=self.store, run_id=self.run_id, driver=FakeDriver(),
+            tooling=capture_module.Tooling(Path("capture"), Path("control")),
+            image_directory=self.root / "images",
+            settle_seconds=2.0, poll_interval=0.0,
+            sleep=outer.slept.append,
+        )
+
+    def tone_plan(self) -> tuple:
+        tone = surfaces.Surface(
+            state="tuner-in-tune", title="In tune", modes=frozenset({surfaces.QUICK}),
+            warmup_seconds=2.5,
+        )
+
+        return tuple((tone, geometry, surfaces.DARK) for geometry in ("default", "constrained"))
+
+    def test_a_surface_warms_up_once_however_many_resolutions_it_has(self) -> None:
+        plan = self.tone_plan()
+        self.make_pass().run(plan)
+
+        self.assertEqual(self.slept, [2.5], "the warmup was paid for every resolution")
+
+    def test_each_surface_gets_its_own_warmup(self) -> None:
+        """Once per surface, not once per run: a different tool has a different
+        history to fill."""
+        first = surfaces.Surface(
+            state="tuner-in-tune", title="In tune", modes=frozenset({surfaces.QUICK}),
+            warmup_seconds=2.5,
+        )
+        second = surfaces.Surface(
+            state="spectrogram-tone", title="Spectrogram",
+            modes=frozenset({surfaces.QUICK}), warmup_seconds=2.5,
+        )
+        plan = (
+            (first, "default", surfaces.DARK), (first, "constrained", surfaces.DARK),
+            (second, "default", surfaces.DARK), (second, "constrained", surfaces.DARK),
+        )
+        self.make_pass().run(plan)
+
+        self.assertEqual(self.slept, [2.5, 2.5])
+
+    def test_the_same_surface_in_another_palette_warms_up_again(self) -> None:
+        """The state is reopened for a palette change, so the history is new."""
+        tone = surfaces.Surface(
+            state="tuner-in-tune", title="In tune", modes=frozenset({surfaces.QUICK}),
+            warmup_seconds=2.5,
+        )
+        plan = (
+            (tone, "default", surfaces.DARK),
+            (tone, "default", surfaces.LIGHT),
+        )
+        self.make_pass().run(plan)
+
+        self.assertEqual(self.slept, [2.5, 2.5])
+
+    def test_a_resumed_run_warms_up_the_first_one_it_actually_takes(self) -> None:
+        """Skipping the first resolution must not skip the warmup with it."""
+        plan = self.tone_plan()
+        self.store.record_capture(
+            self.run_id, state="tuner-in-tune", title="In tune",
+            geometry="default", theme=surfaces.DARK, image_path="x", thumbnail_path="y",
+            width=1, height=1, digest="d",
+        )
+        self.make_pass().run(plan, resume=True)
+
+        self.assertEqual(self.slept, [2.5])
+
+    def test_a_surface_with_no_tone_never_waits(self) -> None:
+        plain = surfaces.Surface(
+            state="empty", title="The shell", modes=frozenset({surfaces.QUICK})
+        )
+        self.make_pass().run(((plain, "default", surfaces.DARK),))
+
+        self.assertEqual(self.slept, [])
+
+
+class ReopeningTests(unittest.TestCase):
+    """How often the workspace is rebuilt.
+
+    Opening a state rebuilds it, which throws away whatever a tool had heard.
+    Asking for four window sizes used to build the surface four times and refill
+    its history four times — for four pictures of the same thing at different
+    sizes.
+
+    These and `WarmupTests` are one change in two halves. Reopen per resolution
+    and the second capture needs its own warmup; do not reopen and it does not.
+    Change one without the other and the capture is of an empty graph, which
+    reads as a rendering bug rather than as a harness bug.
+    """
+
+    def setUp(self) -> None:
+        self.driver = FakeDriver()
+
+    def make_pass(self):
+        return capture_module.CapturePass(
+            store=None, run_id=1, driver=self.driver,
+            tooling=capture_module.Tooling(Path("capture"), Path("control")),
+            image_directory=Path("."),
+        )
+
+    def surface(self, state: str = "tuner-in-tune", **fields):
+        return surfaces.Surface(
+            state=state, title=fields.pop("title", "A surface"),
+            modes=frozenset({surfaces.QUICK}), **fields,
+        )
+
+    def test_the_same_surface_at_several_sizes_is_opened_once(self) -> None:
+        pass_ = self.make_pass()
+        surface = self.surface()
+
+        for geometry in ("default", "constrained", "narrow", "maximised"):
+            pass_.move_to(surface, geometry, surfaces.DARK)
+
+        self.assertEqual(self.driver.opened, ["tuner-in-tune"])
+        self.assertEqual(len(self.driver.geometries), 4)
+
+    def test_a_different_surface_is_opened(self) -> None:
+        pass_ = self.make_pass()
+        pass_.move_to(self.surface("empty"), "default", surfaces.DARK)
+        pass_.move_to(self.surface("tuner-docked"), "default", surfaces.DARK)
+
+        self.assertEqual(self.driver.opened, ["empty", "tuner-docked"])
+
+    def test_a_palette_change_reopens(self) -> None:
+        """The theme is applied after the state, so the state has to come again."""
+        pass_ = self.make_pass()
+        surface = self.surface()
+        pass_.move_to(surface, "default", surfaces.DARK)
+        pass_.move_to(surface, "default", surfaces.LIGHT)
+
+        self.assertEqual(self.driver.opened, ["tuner-in-tune", "tuner-in-tune"])
+        self.assertEqual(self.driver.themes, [surfaces.DARK, surfaces.LIGHT])
+
+    def test_a_restart_forces_the_state_open_again(self) -> None:
+        """There is nothing open after a restart, whatever was open before."""
+        pass_ = self.make_pass()
+        surface = self.surface(restart_before=True)
+        pass_.move_to(surface, "default", surfaces.DARK)
+        pass_.move_to(surface, "constrained", surfaces.DARK)
+
+        self.assertEqual(self.driver.restarts, 2)
+        self.assertEqual(self.driver.opened, ["tuner-in-tune", "tuner-in-tune"])
+
+    def test_a_refused_state_is_not_remembered_as_open(self) -> None:
+        """Otherwise the next capture assumes a surface that was never built."""
+        pass_ = self.make_pass()
+        self.driver.refuse = {"tuner-in-tune"}
+        surface = self.surface()
+
+        self.assertNotEqual(pass_.move_to(surface, "default", surfaces.DARK), "")
+
+        self.driver.refuse = set()
+        pass_.move_to(surface, "constrained", surfaces.DARK)
+
+        self.assertEqual(self.driver.opened, ["tuner-in-tune", "tuner-in-tune"])
+
+    def test_a_broken_channel_is_not_remembered_as_open(self) -> None:
+        pass_ = self.make_pass()
+        surface = self.surface()
+
+        class Breaking(FakeDriver):
+            def open_state(inner, state):  # noqa: N805 - test double
+                inner.opened.append(state)
+
+                raise ChannelError("the application closed the channel")
+
+        pass_.driver = Breaking()
+
+        self.assertNotEqual(pass_.move_to(surface, "default", surfaces.DARK), "")
+        self.assertIsNone(pass_._open)
+
+    def test_a_full_sweep_opens_one_state_per_surface_and_palette(self) -> None:
+        """The number this change is about: 72 rather than 292."""
+        plan = surfaces.plan(surfaces.FULL, surfaces.SWEEP_GEOMETRIES, surfaces.THEMES)
+        pass_ = self.make_pass()
+
+        for surface, geometry, theme in plan:
+            pass_.move_to(surface, geometry, theme)
+
+        # One per surface-and-palette, plus the surfaces that restart first —
+        # those have nothing open afterwards whatever was open before.
+        restarts = sum(1 for surface, _, _ in plan if surface.restart_before)
+        restart_groups = sum(
+            1 for group in capture_module.plan_groups(plan) if group[0][0].restart_before
+        )
+        expected = len(capture_module.plan_groups(plan)) + restarts - restart_groups
+
+        self.assertEqual(len(self.driver.opened), expected)
+        self.assertLess(len(self.driver.opened), len(plan) / 3)

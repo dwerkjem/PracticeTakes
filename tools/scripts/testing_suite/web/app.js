@@ -190,7 +190,12 @@ function suiteRow(suite, result) {
 function renderSuites(view) {
   const results = (view.job && view.job.results) || {};
   const holder = element("suite-groups");
-  const titles = { tests: "Tests", performance: "Performance", ui: "User interface" };
+  const titles = {
+    tests: "Tests",
+    performance: "Performance",
+    ui: "User interface",
+    safety: "Races, leaks, and the audio callback",
+  };
 
   holder.innerHTML = view.kinds.map((kind) => `
     <section class="panel">

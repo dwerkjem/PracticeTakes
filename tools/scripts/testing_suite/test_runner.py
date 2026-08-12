@@ -103,6 +103,7 @@ class JobTests(unittest.TestCase):
         # Nothing here shells out or builds: the job's plumbing is what is under
         # test, not cmake.
         self.commands: list[list[str]] = []
+        self.environments: list[dict] = []
         self.built: list[str] = []
         self.exit_code = 0
         self.output = "Ran 10 tests in 0.5s\n\nOK\n"
@@ -162,7 +163,9 @@ class JobTests(unittest.TestCase):
                 outer.built.append(target)
 
             def _command(inner, arguments, *, label, floor, ceiling,  # noqa: N805 - test double
-                         working_directory=None, capture=None, sanitised=True):
+                         working_directory=None, capture=None, sanitised=True,
+                         environment=None):
+                outer.environments.append(dict(environment or {}))
                 outer.commands.append(list(arguments))
 
                 if capture is not None:
@@ -342,7 +345,9 @@ class JobTests(unittest.TestCase):
                 outer.built.append(target)
 
             def _command(inner, arguments, *, label, floor, ceiling,  # noqa: N805 - test double
-                         working_directory=None, capture=None, sanitised=True):
+                         working_directory=None, capture=None, sanitised=True,
+                         environment=None):
+                outer.environments.append(dict(environment or {}))
                 outer.commands.append(list(arguments))
 
                 if label == stop_during:
@@ -412,7 +417,9 @@ class JobTests(unittest.TestCase):
                 inner.stop()
 
             def _command(inner, arguments, *, label, floor, ceiling,  # noqa: N805 - test double
-                         working_directory=None, capture=None, sanitised=True):
+                         working_directory=None, capture=None, sanitised=True,
+                         environment=None):
+                outer.environments.append(dict(environment or {}))
                 outer.commands.append(list(arguments))
 
                 return 0
@@ -750,3 +757,146 @@ class RemainingTimeTests(unittest.TestCase):
         self.assertEqual(runner_module.describe_remaining(44), "under a minute left")
         self.assertEqual(runner_module.describe_remaining(75), "about 1 minute left")
         self.assertEqual(runner_module.describe_remaining(300), "about 5 minutes left")
+
+
+class SanitizerSuiteTests(unittest.TestCase):
+    """The checks CI runs, offered here too.
+
+    They were only ever in a workflow, which is the wrong way round: they are
+    the slow ones, and finding out on a pull request that a change races is
+    finding out an hour after writing it.
+
+    What these guard is the thing that quietly goes wrong — the local suite and
+    the CI job drifting apart until "the race check passed" means two different
+    things.
+    """
+
+    def workflow(self, name: str) -> str:
+        return (runner_module.REPOSITORY_ROOT / ".github" / "workflows" / name).read_text()
+
+    def suite(self, suite_id: str):
+        found = suites_module.by_id(suite_id)
+        self.assertIsNotNone(found, f"no suite {suite_id}")
+
+        return found
+
+    def test_each_sanitizer_has_a_build_tree_of_its_own(self) -> None:
+        """Instrumentation is a compile-time decision; one tree cannot serve two."""
+        directories = {
+            runner_module.BUILD_TARGETS[name]["directory"]
+            for name in ("PracticeTakesTests-asan", "PracticeTakesTests-tsan",
+                         "PracticeTakesTests-rtsan")
+        }
+
+        self.assertEqual(len(directories), 3)
+
+    def test_the_build_directories_match_the_ones_ci_uses(self) -> None:
+        """A local run and a CI run of the same name must be the same run."""
+        workflows = self.workflow("sanitizers.yml") + self.workflow("sanitizers-scheduled.yml")
+
+        for name in ("build-asan", "build-tsan", "build-rtsan"):
+            with self.subTest(tree=name):
+                self.assertIn(name, workflows)
+
+        for target, tree in (
+            ("PracticeTakesTests-asan", "build-asan"),
+            ("PracticeTakesTests-tsan", "build-tsan"),
+            ("PracticeTakesTests-rtsan", "build-rtsan"),
+        ):
+            with self.subTest(target=target):
+                self.assertEqual(
+                    runner_module.BUILD_TARGETS[target]["directory"].name, tree
+                )
+
+    def test_the_sanitizer_each_tree_asks_for_matches_ci(self) -> None:
+        for target, flavour in (
+            ("PracticeTakesTests-asan", "address"),
+            ("PracticeTakesTests-tsan", "thread"),
+            ("PracticeTakesTests-rtsan", "realtime"),
+        ):
+            with self.subTest(target=target):
+                self.assertIn(
+                    f"-DPRACTICE_TAKES_SANITIZE={flavour}",
+                    runner_module.BUILD_TARGETS[target]["options"],
+                )
+
+    def test_they_all_build_the_test_binary_rather_than_a_target_of_their_own(self) -> None:
+        for target in ("PracticeTakesTests-asan", "PracticeTakesTests-tsan",
+                       "PracticeTakesTests-rtsan"):
+            with self.subTest(target=target):
+                self.assertEqual(
+                    runner_module.BUILD_TARGETS[target]["builds"], "PracticeTakesTests"
+                )
+
+    def test_the_realtime_build_uses_clang(self) -> None:
+        """RealtimeSanitizer is Clang's, and so is the annotation it reads."""
+        compilers = runner_module.BUILD_TARGETS["PracticeTakesTests-rtsan"]["compilers"]
+
+        self.assertTrue(all("clang" in name for name in compilers))
+
+    def test_the_other_builds_keep_the_system_toolchain(self) -> None:
+        """A Nix profile ahead of the system one is what kills juceaide."""
+        for target in ("PracticeTakes", "PracticeTakesTests", "PracticeTakesTests-asan"):
+            with self.subTest(target=target):
+                self.assertNotIn("compilers", runner_module.BUILD_TARGETS[target])
+
+    def test_leak_detection_is_actually_switched_on(self) -> None:
+        """Without it AddressSanitizer finds errors and not leaks, quietly."""
+        options = self.suite("asan").environment["ASAN_OPTIONS"]
+
+        self.assertIn("detect_leaks=1", options)
+        self.assertIn("halt_on_error=1", options)
+
+    def test_the_race_suite_runs_only_the_concurrent_cases(self) -> None:
+        """The rest is single-threaded; the slowdown would buy nothing."""
+        self.assertIn("[.load]", self.suite("tsan").command)
+
+    def test_the_realtime_suite_runs_only_the_callback_cases(self) -> None:
+        self.assertIn("[callback]", self.suite("rtsan").command)
+
+    def test_the_sanitizer_options_match_the_ones_ci_uses(self) -> None:
+        workflows = self.workflow("sanitizers.yml") + self.workflow("sanitizers-scheduled.yml")
+
+        # YAML quotes a bare number, so compare against both spellings.
+        for suite_id in ("asan", "tsan", "rtsan"):
+            for name, value in self.suite(suite_id).environment.items():
+                with self.subTest(suite=suite_id, option=name):
+                    self.assertTrue(
+                        f"{name}: {value}" in workflows
+                        or f'{name}: "{value}"' in workflows,
+                        f"{name} differs between the hub and CI",
+                    )
+
+    def test_each_needs_the_tree_it_runs_out_of(self) -> None:
+        for suite_id, target in (
+            ("asan", "PracticeTakesTests-asan"),
+            ("tsan", "PracticeTakesTests-tsan"),
+            ("rtsan", "PracticeTakesTests-rtsan"),
+        ):
+            with self.subTest(suite=suite_id):
+                self.assertEqual(self.suite(suite_id).needs, (target,))
+
+    def test_they_are_their_own_kind_rather_than_ordinary_unit_tests(self) -> None:
+        """They take minutes and need their own build; grouping them with the
+        fast ones would make "run the tests" mean something nobody wanted."""
+        for suite_id in ("asan", "tsan", "rtsan"):
+            with self.subTest(suite=suite_id):
+                self.assertEqual(self.suite(suite_id).kind, suites_module.SAFETY)
+
+
+class SanitizerEnvironmentTests(JobTests):
+    """That the options actually reach the process, not just the definition."""
+
+    def test_the_environment_reaches_the_command(self) -> None:
+        self.present.add("PracticeTakesTests-tsan")
+        self.run_job(["tsan"])
+
+        used = [env for env in self.environments if "TSAN_OPTIONS" in env]
+
+        self.assertTrue(used, "the race suite ran without its sanitizer options")
+        self.assertEqual(used[0]["TSAN_OPTIONS"], suites_module.by_id("tsan").environment["TSAN_OPTIONS"])
+
+    def test_an_ordinary_suite_gets_no_extra_environment(self) -> None:
+        self.run_job(["python"])
+
+        self.assertEqual(self.environments, [{}])
