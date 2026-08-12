@@ -32,8 +32,10 @@
       of wedging, and photographed with "Opening mic..." in the title bar
 - [x] 5.3 The control channel answered under exactly those conditions — 34 states, 5.8s — which is
       what captured nothing at all before
-- [ ] 5.4 Still to do: confirm an ordinary machine with a working microphone is unchanged: input works, and no
-      recovery state appears
+- [x] 5.4 Confirmed headlessly against a real capture device on this machine (Xvfb display, no
+      window on the real desktop): launched, opened `tuner-docked` with no tone, polled `status`
+      every 500ms for 15s. `input` on the first poll, held for the whole window, `opening` never
+      seen. Clean exit, nothing left running.
 - [x] 5.5 Decided: a stuck recovery is never given up on and never replaced. The one-at-a-time
       flag already gives this — a second attempt would wait on what the first is waiting on, and
       abandoning threads to keep trying leaks one per attempt on a machine that stays busy. One

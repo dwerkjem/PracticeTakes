@@ -23,11 +23,23 @@
 ## 5. Verification
 
 - [x] 5.1 `ctest` green at 493
-- [ ] 5.2b Still to run: the `tsan` suite, which is the one that matters for the token
+- [x] 5.2b Ran the `tsan` suite against the token, and it was not clean the first time: a real data
+      race, `setSyntheticTone`'s `tone.reset()` racing `renderToneBlock`'s `SyntheticTone::advance()`
+      on the tone source's own timer thread whenever a tone changes while one is already playing --
+      which the test-control channel does on every `open-state`, so any two tone-bearing surfaces
+      captured back to back hit it. Fixed: `setSyntheticTone` now stops the tone source
+      unconditionally before touching `tone`, using the same `stopTimer()`/callback-mutex ordering
+      `updateToneSource` already relied on. Regression test added and verified in both directions
+      (reverting the fix reproduces the exact TSan report). 233 assertions across every
+      audio/tone/recovery/load case now pass clean under ThreadSanitizer.
 - [x] 5.2 Captured the tone surfaces at six workers and opened them: six harmonics, moving formant bands
 - [x] 5.3 Measured, hub full sweep: **178s at one worker, 97s at six** — the surfaces carrying a
       tone are no longer queued behind whichever worker won the device
-- [ ] 5.4 Still to do: confirm an ordinary run with a real microphone is unchanged
+- [x] 5.4 Confirmed headlessly against a real capture device (this machine has one), so nothing
+      needed to appear on a screen: launched the control-enabled build on a private Xvfb display,
+      opened `tuner-docked` with no tone requested, and polled `status` every 500ms for 15s. The
+      device path reported `input` on the very first poll and held it for the whole window --
+      never `opening`, never a lost `input`. Clean exit, no stray process or display afterwards.
 
 ## 6. A tone worth photographing
 
