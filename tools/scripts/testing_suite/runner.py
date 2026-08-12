@@ -35,7 +35,7 @@ Standard library only.
 
 from __future__ import annotations
 
-from contextlib import ExitStack
+from contextlib import contextmanager, ExitStack
 
 from dataclasses import dataclass, field
 import datetime as _datetime
@@ -54,7 +54,7 @@ import display as display_module
 import machine as machine_module
 import suites as suites_module
 import surfaces
-from driver import ApplicationDriver, missing_states
+from driver import STARTUP_TIMEOUT_SECONDS, ApplicationDriver, missing_states
 from store import Store
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -73,6 +73,14 @@ LOG_LINES_KEPT = 200
 
 # How long a command gets to end politely before it is killed.
 STOP_GRACE_SECONDS = 5.0
+
+# How many screens the hub captures on at once. A sweep is almost all waiting --
+# for a window to settle, for a tool to have something to draw -- and that
+# waiting overlaps. Not derived from the processor count: several instrumented
+# applications make the settle poll measure the machine's load rather than the
+# window's layout, and a capture that fails because the machine was busy is
+# worse than a slow one.
+CAPTURE_WORKERS = 6
 
 # How much of a plan's weight has to be finished before a time estimate is worth
 # showing. One surface is not a rate: the first is unrepresentative -- it pays
@@ -996,6 +1004,16 @@ class Job:
         # desktop: windows over whatever they were doing, the pointer taken, and
         # nothing else clickable for the length of the run. The button most
         # likely to be pressed was the one that behaved worst.
+        workers = CAPTURE_WORKERS if display_module.is_available() else 1
+
+        if workers > 1:
+            self._say(f"capturing on {workers} screens at once", percent=floor + 1)
+            self._capture_in_parallel(
+                run_id=run_id, plan=plan, tooling=tooling, executable=executable,
+                workers=workers, floor=floor, ceiling=ceiling)
+
+            return
+
         with ExitStack() as stack:
             try:
                 screen = stack.enter_context(display_module.virtual_display())
@@ -1007,6 +1025,75 @@ class Job:
             self._capture_with_display(
                 run_id=run_id, plan=plan, tooling=tooling, executable=executable,
                 floor=floor, ceiling=ceiling)
+
+    def _capture_in_parallel(
+        self, *, run_id: int, plan, tooling, executable, workers: int, floor: int, ceiling: int
+    ) -> None:
+        """The same pass on several screens, which is how the hub runs it now.
+
+        A sweep is almost entirely waiting -- for a window to settle, for a tool
+        to have a history to draw -- and that waiting overlaps. It could not
+        before: the tone needed an open input device, one process at a time
+        holds one, so every surface carrying a tone queued behind whichever
+        worker won it. Generating the tone without a device is what made this
+        worth wiring in.
+        """
+        began = time.monotonic()
+        images_at = self.store.path.parent / "images" / f"run-{run_id}"
+
+        @contextmanager
+        def worker(index: int, shared):
+            with display_module.virtual_display(publish=False) as screen:
+                driver = ApplicationDriver(executable, display=screen)
+
+                try:
+                    driver.start()
+
+                    with shared.audio:
+                        states = driver.list_states(timeout=STARTUP_TIMEOUT_SECONDS)
+
+                    absent = missing_states(states, surfaces.required_states())
+
+                    if absent:
+                        raise RuntimeError(
+                            "the application does not offer: " + ", ".join(absent))
+
+                    made = capture_module.CapturePass(
+                        store=self.store,
+                        run_id=run_id,
+                        driver=driver,
+                        tooling=tooling,
+                        image_directory=images_at,
+                        display=screen,
+                        lock=shared.checks,
+                        audio_gate=shared.audio,
+                    )
+                    made.has_input = driver.wait_for_input(timeout=4.0)
+
+                    yield made
+                finally:
+                    driver.stop()
+
+        def report(entry: dict) -> None:
+            fraction = capture_module.progress_fraction(entry)
+            left = remaining_seconds(entry, time.monotonic() - began)
+            self._say(
+                f"capturing {entry['surface']} at {entry['geometry']} "
+                f"in {entry.get('theme', 'dark')} "
+                f"({entry['done'] + 1} of {entry['total']}"
+                f"{', ' + describe_remaining(left) if left is not None else ''})",
+                percent=int(floor + (ceiling - floor) * fraction),
+            )
+
+        result = capture_module.run_in_parallel(
+            plan, workers=workers, worker=worker, progress=report,
+            should_stop=self._stop.is_set,
+        )
+
+        for problem in result.get("errors", []):
+            self._say(f"a worker stopped: {problem}")
+
+        self._record_capture_result(result, ceiling=ceiling)
 
     def _capture_with_display(
         self,
@@ -1056,6 +1143,9 @@ class Job:
         finally:
             driver.stop()
 
+        self._record_capture_result(result, ceiling=ceiling)
+
+    def _record_capture_result(self, result: dict, *, ceiling: int) -> None:
         # Stopped is neither passed nor failed. The export feeds a release gate,
         # and a run reported as failed because somebody pressed stop would
         # either block a release or teach everyone that failures can be ignored.

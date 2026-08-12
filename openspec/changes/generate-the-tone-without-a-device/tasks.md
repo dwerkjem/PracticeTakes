@@ -25,8 +25,9 @@
 - [x] 5.1 `ctest` green at 493
 - [ ] 5.2b Still to run: the `tsan` suite, which is the one that matters for the token
 - [x] 5.2 Captured the tone surfaces at six workers and opened them: six harmonics, moving formant bands
-- [ ] 5.3 Measure a sweep before and after, since removing the serialisation is the point
-- [ ] 5.4 Confirm an ordinary run with a real microphone is unchanged
+- [x] 5.3 Measured, hub full sweep: **178s at one worker, 97s at six** — the surfaces carrying a
+      tone are no longer queued behind whichever worker won the device
+- [ ] 5.4 Still to do: confirm an ordinary run with a real microphone is unchanged
 
 ## 6. A tone worth photographing
 
@@ -34,3 +35,6 @@
 - [x] 6.2 A formant that travels, so the spectrogram shows movement rather than parallel lines
 - [x] 6.3 Headroom corrected: charging every partial the full formant boost quietly halved the signal,
       which the amplitude test caught
+
+- [x] 6.4 The hub captures on several screens by default — it was still running one pass, which is
+      where a sweep is actually started from

@@ -861,13 +861,18 @@ def run_in_parallel(
             if not can_analyse:
                 quiet = [index for index in remaining if not needs_input(queue[index])]
 
-                # Only when nobody can hear. A worker that has run out of quiet
-                # work must *stop*, not help with the tone surfaces: the worker
-                # holding the device is still going to reach them, and this one
+                # Only when nobody can hear at all. A worker that has run out of
+                # quiet work stops rather than helping with the tone surfaces:
+                # one holding the device is still coming for them, and this one
                 # would photograph an empty tool and have it counted as
-                # captured. That is what it did -- `tuner-in-tune` came back as
-                # a blank graph saying "waiting for the microphone", and the
-                # run reported twelve captured either way.
+                # captured. That is what it did -- `tuner-in-tune` came back a
+                # blank graph saying "waiting for the microphone", in a run that
+                # reported twelve captured either way.
+                #
+                # Mostly moot now that a tone is generated without a device: a
+                # worker that reports no input at startup grows some the moment
+                # a tone is asked for. It stays because it costs nothing and it
+                # is the difference between "cannot" and "did not this time".
                 if not quiet and analysts:
                     return None
 
