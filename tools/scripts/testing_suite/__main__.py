@@ -726,7 +726,12 @@ def command_history(arguments) -> int:
     print(f"{len(data['runs'])} scored run(s) on machine {machine[:8]} "
           f"({data['synced']} synced, {data['local_only']} local only)\n")
 
-    for run in data["runs"][-arguments.limit :]:
+    # Not `data["runs"][-arguments.limit:]` unguarded: Python's `-0 == 0`, so a
+    # limit of zero -- asking to see none -- sliced from index 0 and showed
+    # every run instead of the last zero of them.
+    shown = data["runs"][-arguments.limit :] if arguments.limit > 0 else []
+
+    for run in shown:
         print(f"  {run['started_at']}  {run['commit'][:8]}  {run['mode']:<5}  "
               f"{run['pass_percent']:>5}% passed  ({run['failed']} failed)")
 
@@ -948,12 +953,18 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    arguments = parser.parse_args(argv)
+    # What was actually asked for: argparse itself falls back to sys.argv[1:]
+    # when `argv` is None, which the real console-script entry point always
+    # passes. `argv or []` below used to read that same None and silently
+    # produce `[]`, dropping any global option -- `--database`, most notably
+    # -- typed before a bare invocation with no subcommand.
+    given = sys.argv[1:] if argv is None else argv
+    arguments = parser.parse_args(given)
 
     # No subcommand means the hub. Typing the program's name should get you
     # somewhere useful, not a usage message.
     if getattr(arguments, "handler", None) is None:
-        arguments = parser.parse_args(["hub", *(argv or [])])
+        arguments = parser.parse_args(["hub", *given])
 
     try:
         return arguments.handler(arguments)
