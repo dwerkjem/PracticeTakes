@@ -28,11 +28,11 @@
 ## 5. Verification
 
 - [x] 5.1 `ctest` green, and the `asan` and `tsan` suites green
-- [ ] 5.2 Hold the input device from another process, start the application, and confirm the window
-      repaints, opens menus, and closes — the case that is a freeze today
-- [ ] 5.3 Confirm the control channel keeps answering under the same conditions, by capturing while
-      another instance is open — which captures nothing at all today
-- [ ] 5.4 Confirm an ordinary machine with a working microphone is unchanged: input works, and no
+- [x] 5.2 Held the device from a first instance and started a second: it answered in 5.8s instead
+      of wedging, and photographed with "Opening mic..." in the title bar
+- [x] 5.3 The control channel answered under exactly those conditions — 34 states, 5.8s — which is
+      what captured nothing at all before
+- [ ] 5.4 Still to do: confirm an ordinary machine with a working microphone is unchanged: input works, and no
       recovery state appears
 - [x] 5.5 Decided: a stuck recovery is never given up on and never replaced. The one-at-a-time
       flag already gives this — a second attempt would wait on what the first is waiting on, and
@@ -47,4 +47,6 @@
       hold JUCE's callback lock, read out of the JUCE source
 - [x] 6.3 The destructor does not close the device while a recovery is in flight — closing destroys
       the object that recovery may be inside `open` on
-- [ ] 6.4 The compact and full displays say "waiting for the microphone"; not yet seen in a capture
+- [x] 6.4 The warning banner said "No microphone detected" beside a title bar saying "Opening
+      mic..." — the exact confusion the state was added to remove. It reads the state now.
+- [x] 6.5 Seen: held the device from a first instance, started a second, photographed it

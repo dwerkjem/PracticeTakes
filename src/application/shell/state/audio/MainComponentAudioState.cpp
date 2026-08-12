@@ -84,6 +84,8 @@ void MainComponent::updateMicrophoneWarning()
         return;
     }
 
+    microphoneWarning->describe(
+        audioInputService.inputState() == AudioInputService::InputState::opening);
     microphoneWarning->setVisible(!isMicrophoneWarningDismissed);
     if (microphoneWarning->isVisible())
     {

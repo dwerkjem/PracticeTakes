@@ -14,6 +14,10 @@ class MainComponent::MicrophoneWarning final : public juce::Component
         setInterceptsMouseClicks(true, true);
 
         title.setText("No microphone detected", juce::dontSendNotification);
+        // Set again by `describe` when the situation is the other one. Both are
+        // "no usable input" and only one of them is anything the reader can act
+        // on, which is the whole reason this text is not fixed.
+
         title.setFont(juce::FontOptions(16.0f, juce::Font::bold));
         addAndMakeVisible(title);
 
@@ -83,6 +87,24 @@ class MainComponent::MicrophoneWarning final : public juce::Component
             isDarkTheme(currentTheme) ? juce::Colour::fromRGB(35, 29, 18) : juce::Colours::white);
         graphics.setFont(juce::FontOptions(17.0f, juce::Font::bold));
         graphics.drawText("!", 20, 22, 24, 25, juce::Justification::centred);
+    }
+
+    // Which of the two situations this is. "No microphone detected" next to a
+    // title bar saying "Opening mic..." is the confusion the opening state was
+    // added to remove, and this component said the first while the shell said
+    // the second.
+    void describe(bool isOpening)
+    {
+        title.setText(
+            isOpening ? "Waiting for the microphone" : "No microphone detected",
+            juce::dontSendNotification);
+        message.setText(
+            isOpening ? "The input device has not answered yet. Something else may be "
+                        "holding it -- another copy of Practice Takes, or another "
+                        "application."
+                      : "Choose an input device in Settings to use the tuner and "
+                        "spectrogram.",
+            juce::dontSendNotification);
     }
 
     void resized() override
