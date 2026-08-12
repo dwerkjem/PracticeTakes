@@ -553,6 +553,32 @@ void AudioInputService::deliverSamples(const float* samples, int numSamples) noe
 
 void AudioInputService::audioDeviceAboutToStart(juce::AudioIODevice* device)
 {
+    // Stopped here, synchronously, before the device is announced as running
+    // and before the first block can arrive. The audio callback renders the
+    // tone itself whenever one is requested (see audioDeviceIOCallbackWithContext
+    // -- it does that whether or not a device is present, so a device showing
+    // up does not make it stop), which means the instant this device starts
+    // delivering blocks, the audio thread becomes a second thing calling
+    // tone.render() on the same SyntheticTone. Until now the ToneSource timer
+    // thread was only told to stand down on the next updateToneSource() tick
+    // -- up to one message-thread cycle later -- and both threads could be
+    // inside render() together during that window, an unsynchronized write to
+    // tone's phase fields. TSan caught the sibling of this bug (setSyntheticTone
+    // racing the timer); this is the same race, entered a different way.
+    //
+    // Safe to block briefly here: every JUCE backend calls this synchronously
+    // from AudioIODevice::start(), on the caller's thread, strictly before
+    // registering the callback the real-time audio thread will invoke --
+    // confirmed against ALSAAudioIODevice::start() rather than assumed. The
+    // caller here is always a background thread (the recovery thread, the
+    // explicit-init thread) or the message thread (choosing a device in
+    // Settings), never the audio thread itself.
+    if (toneSourceRunning.exchange(false, std::memory_order_acq_rel))
+    {
+        toneSource.stopTimer();
+        formatVersion.fetch_add(1, std::memory_order_acq_rel);
+    }
+
     currentSampleRate.store(
         device != nullptr ? device->getCurrentSampleRate() : 44100.0, std::memory_order_release);
     currentInputChannels.store(
