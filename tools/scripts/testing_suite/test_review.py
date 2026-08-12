@@ -732,3 +732,93 @@ class DeleteCommentTests(unittest.TestCase):
         shown = review.capture_view(self.store, capture)
 
         self.assertEqual(shown["comments"], [{"id": comment_id, "body": "something"}])
+
+
+class BulkAxisTests(unittest.TestCase):
+    """One bulk action that answers each question differently.
+
+    Looking at a row of images usually produces one opinion held about all of
+    them, and it is rarely "everything here is fine" -- it is more often "these
+    work and that one looks off". A single verdict applied to every axis cannot
+    say that, so it was said three times or not at all.
+    """
+
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.store = Store.open(Path(self.directory.name) / "verification.db")
+        self.addCleanup(self.store.close)
+        self.run_id = self.store.start_run(
+            provenance=PROVENANCE, commit="abc", mode=surfaces.QUICK,
+            resolutions=("default",),
+        )
+        self.ids = [
+            self.store.record_capture(
+                self.run_id, state="empty", title="The shell with no tool open",
+                geometry="default", theme=surfaces.DARK, image_path=f"{index}.png",
+                thumbnail_path=f"{index}.thumb.png", width=1, height=1,
+                digest=f"digest-{index}",
+            )
+            for index in range(3)
+        ]
+
+    def verdicts(self, capture_id: int) -> dict:
+        return {row["question"]: row["verdict"] for row in self.store.verdicts(capture_id)}
+
+    def test_each_question_can_get_its_own_answer(self) -> None:
+        review.score_many(
+            self.store, self.ids,
+            axes={"works": "pass", "looks-correct": "fail", "looks-good": "skip"},
+        )
+
+        for capture_id in self.ids:
+            with self.subTest(capture=capture_id):
+                self.assertEqual(
+                    self.verdicts(capture_id),
+                    {"works": "pass", "looks-correct": "fail", "looks-good": "skip"},
+                )
+
+    def test_a_question_left_out_is_left_alone(self) -> None:
+        """Not mentioning something is not a verdict about it."""
+        review.score_many(self.store, self.ids, axes={"works": "pass"})
+
+        for capture_id in self.ids:
+            with self.subTest(capture=capture_id):
+                self.assertEqual(self.verdicts(capture_id), {"works": "pass"})
+
+    def test_a_blank_choice_is_left_out(self) -> None:
+        review.score_many(
+            self.store, self.ids, axes={"works": "pass", "looks-good": ""}
+        )
+
+        self.assertNotIn("looks-good", self.verdicts(self.ids[0]))
+
+    def test_an_answered_question_survives_unless_replacing(self) -> None:
+        review.score_many(self.store, self.ids, axes={"works": "fail"})
+        result = review.score_many(self.store, self.ids, axes={"works": "pass"})
+
+        self.assertEqual(self.verdicts(self.ids[0])["works"], "fail")
+        self.assertEqual(result["left_alone"], len(self.ids))
+
+    def test_replacing_says_so(self) -> None:
+        review.score_many(self.store, self.ids, axes={"works": "fail"})
+        review.score_many(self.store, self.ids, axes={"works": "pass"}, overwrite=True)
+
+        self.assertEqual(self.verdicts(self.ids[0])["works"], "pass")
+
+    def test_the_note_lands_on_every_verdict(self) -> None:
+        review.score_many(
+            self.store, self.ids, axes={"looks-good": "fail"}, note="the note is cut off"
+        )
+
+        rows = [row for row in self.store.verdicts(self.ids[0]) if row["question"] == "looks-good"]
+
+        self.assertEqual(rows[0]["note"], "the note is cut off")
+
+    def test_one_verdict_for_everything_still_works(self) -> None:
+        """The old shape, which the zoom view and `approve all shown` still use."""
+        review.score_many(self.store, self.ids, "pass")
+
+        self.assertEqual(
+            set(self.verdicts(self.ids[0]).values()), {"pass"}
+        )

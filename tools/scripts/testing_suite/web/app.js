@@ -335,6 +335,13 @@ element("restart-hub").addEventListener("click", restartHub);
 // until it moved to a display of its own -- and that is exactly when being able
 // to stop matters most.
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !element("bulk-modal").hidden) {
+    event.preventDefault();
+    closeBulkEdit();
+
+    return;
+  }
+
   if (event.key === "Escape" && state.job && state.job.running && !state.job.stopping) {
     // Before the zoom handler gets it: with a run going, Escape means stop.
     event.preventDefault();
@@ -484,19 +491,37 @@ function renderCard(capture) {
     row.className = `question${question.attended ? " attended" : ""}`;
     row.innerHTML = `<span class="prompt">${question.prompt}</span> ${verdictMarkup(question)}`;
 
-    if (!question.attended) {
-      ["pass", "fail", "skip"].forEach((verdict) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.textContent = verdict[0].toUpperCase();
-        button.title = verdict;
-        button.addEventListener("click", (event) => {
-          event.stopPropagation();
-          score(capture.id, question, verdict);
-        });
-        row.appendChild(button);
+    // Attended questions get the same buttons, and one more that does the
+    // thing they are waiting on: opens the real application on this surface.
+    // They were rendered with no controls at all, which reads as "not your
+    // job" — and the job was to run a separate command, find the surface
+    // again, and answer there.
+    if (question.attended) {
+      const attend = document.createElement("button");
+      attend.type = "button";
+      attend.className = "attend";
+      attend.textContent = "attend";
+      attend.title = `Open ${capture.state} and answer this against the running application`;
+      attend.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openInApp(capture);
       });
+      row.appendChild(attend);
     }
+
+    ["pass", "fail", "skip"].forEach((verdict) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = verdict[0].toUpperCase();
+      button.title = question.attended
+        ? `${verdict} — after looking at the running application`
+        : verdict;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        score(capture.id, question, verdict);
+      });
+      row.appendChild(button);
+    });
 
     questions.appendChild(row);
   });
@@ -584,8 +609,10 @@ function renderGrid(view) {
 
   const outstanding = view.outstanding || [];
   const attended = outstanding.filter((entry) => entry.attended).length;
+
   element("outstanding").textContent = outstanding.length
-    ? `${outstanding.length} unanswered (${attended} need the attended pass: \`test-suite attend\`). ` +
+    ? `${outstanding.length} unanswered (${attended} need the application open — ` +
+      "press “attend” on one to launch it). " +
       "The run exports as incomplete until they are answered."
     : "Everything is scored.";
 
@@ -860,9 +887,7 @@ function paintSelection() {
   // Only once there is a selection to act on. A row of "selected" buttons above
   // an empty selection is four things that do nothing, and the one that matters
   // is harder to find among them.
-  ["bulk-pass", "bulk-fail", "bulk-skip", "bulk-comment"].forEach((id) => {
-    element(id).hidden = count < 2;
-  });
+  element("bulk-edit").hidden = count < 2;
 }
 
 async function commentOnSelected() {
@@ -1023,10 +1048,144 @@ element("approve-shown").addEventListener("click", async () => {
   await reload();
 });
 
-element("bulk-pass").addEventListener("click", () => scoreSelection("pass"));
-element("bulk-fail").addEventListener("click", () => scoreSelection("fail"));
-element("bulk-skip").addEventListener("click", () => scoreSelection("skip"));
-element("bulk-comment").addEventListener("click", commentOnSelected);
+// --- Bulk edit -------------------------------------------------------------
+//
+// One opinion, applied to everything selected. Four buttons — pass all, fail
+// all, skip all, comment all — could each say one thing about every axis at
+// once, and the opinion somebody actually holds after looking at a row of
+// images is usually mixed: these work, that one looks off. This asks once and
+// takes the whole answer.
+
+const BULK_CHOICES = [
+  { value: "", label: "leave" },
+  { value: "pass", label: "pass" },
+  { value: "fail", label: "fail" },
+  { value: "skip", label: "skip" },
+];
+
+function bulkAxes() {
+  // The three fixed axes, plus whatever extra questions the selected surfaces
+  // ask. Taken from the captures themselves rather than hardcoded, so a
+  // surface with its own question can be answered in bulk too.
+  const seen = new Map();
+
+  (state.data.groups || []).forEach((group) => {
+    (group.captures || []).forEach((capture) => {
+      if (!state.selected.has(capture.id)) return;
+
+      (capture.questions || []).forEach((question) => {
+        if (!question.attended && !seen.has(question.id)) {
+          seen.set(question.id, question.prompt);
+        }
+      });
+    });
+  });
+
+  return [...seen.entries()].map(([id, prompt]) => ({ id, prompt }));
+}
+
+function openBulkEdit() {
+  const axes = bulkAxes();
+  const holder = element("bulk-axes");
+
+  element("bulk-count").textContent =
+    `${state.selected.size} captures selected. Anything left as “leave” is not answered.`;
+  holder.innerHTML = "";
+
+  if (!axes.length) {
+    holder.appendChild(buildNotice("These captures have no questions that can be answered here."));
+  }
+
+  axes.forEach((axis) => {
+    const row = document.createElement("div");
+    row.className = "bulk-axis";
+
+    const prompt = document.createElement("span");
+    prompt.className = "prompt";
+    prompt.textContent = axis.prompt;
+    row.appendChild(prompt);
+
+    BULK_CHOICES.forEach((choice) => {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+
+      input.type = "radio";
+      input.name = `bulk-${axis.id}`;
+      input.value = choice.value;
+      input.checked = choice.value === "";
+      label.className = `choice verdict-${choice.value || "leave"}`;
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(choice.label));
+      row.appendChild(label);
+    });
+
+    holder.appendChild(row);
+  });
+
+  element("bulk-note").value = "";
+  element("bulk-modal").hidden = false;
+  element("bulk-apply").focus();
+}
+
+function closeBulkEdit() {
+  element("bulk-modal").hidden = true;
+}
+
+async function applyBulkEdit() {
+  const axes = {};
+
+  bulkAxes().forEach((axis) => {
+    const chosen = document.querySelector(`input[name="bulk-${axis.id}"]:checked`);
+
+    if (chosen && chosen.value) axes[axis.id] = chosen.value;
+  });
+
+  const note = element("bulk-note").value.trim();
+  const ids = [...state.selected];
+
+  if (!Object.keys(axes).length && !note) {
+    window.alert("Choose a verdict for at least one question, or write a comment.");
+
+    return;
+  }
+
+  if (Object.keys(axes).length) {
+    const { ok, data } = await api("/api/score-many", {
+      capture_ids: ids,
+      axes,
+      note,
+      overwrite: element("overwrite").checked,
+    });
+
+    if (!ok) {
+      window.alert((data.problems || [data.error || "could not record that"]).join("\n"));
+
+      return;
+    }
+
+    if (data.left_alone) {
+      element("outstanding").textContent =
+        `Scored ${data.scored}; left ${data.left_alone} already-answered question(s) alone ` +
+        "(tick “replace answers” to change them).";
+    }
+  }
+
+  // A comment as well as the verdicts, not instead: a note on a verdict is the
+  // reason for it, and a note on its own is a remark about the picture.
+  if (note) await api("/api/comment", { capture_ids: ids, body: note });
+
+  closeBulkEdit();
+  await reload();
+}
+
+element("bulk-edit").addEventListener("click", openBulkEdit);
+element("bulk-cancel").addEventListener("click", closeBulkEdit);
+element("bulk-apply").addEventListener("click", applyBulkEdit);
+element("bulk-modal").addEventListener("click", (event) => {
+  // Only the backdrop, not the sheet: a click that lands on the dialog is
+  // somebody using it.
+  if (event.target === element("bulk-modal")) closeBulkEdit();
+});
 
 element("select-all").addEventListener("click", () => {
   // Everything *shown*, not everything in the run: with filters on, selecting

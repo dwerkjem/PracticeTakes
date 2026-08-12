@@ -81,13 +81,11 @@
 
         <span class="divider"></span>
         <button type="button" id="approve-shown" class="primary">Approve all shown</button>
-        <button type="button" id="bulk-pass" class="verdict-pass" hidden>Pass selected</button>
-        <button type="button" id="bulk-fail" class="verdict-fail" hidden>Fail selected…</button>
-        <button type="button" id="bulk-skip" hidden>Skip selected</button>
-        <button type="button" id="bulk-comment" hidden>Comment selected…</button>
-        <label class="inline small" title="Off: only fill in what has not been answered.">
-          <input type="checkbox" id="overwrite" /> overwrite answered
-        </label>
+        <!-- One button rather than four. Looking at a row of images usually
+             produces one opinion held about all of them, and it is rarely
+             "everything here is fine" — it is more often "these work and that
+             one looks off", which four buttons cannot say. -->
+        <button type="button" id="bulk-edit" class="primary" hidden>Bulk edit…</button>
 
         <span class="divider"></span>
         <span id="tag-buttons"></span>
@@ -155,6 +153,32 @@
         <div id="table-metrics"></div>
       </section>
     </main>
+
+    <!-- One opinion, applied to everything selected. Its own element rather
+         than the browser's prompt, which can ask one question with one answer
+         and cannot ask three. -->
+    <div id="bulk-modal" hidden>
+      <div id="bulk-sheet" role="dialog" aria-modal="true" aria-labelledby="bulk-title">
+        <h2 id="bulk-title">Bulk edit</h2>
+        <p id="bulk-count" class="muted small"></p>
+
+        <div id="bulk-axes"></div>
+
+        <label class="bulk-field">
+          Comment, applied to every selected capture
+          <textarea id="bulk-note" rows="3" placeholder="Optional"></textarea>
+        </label>
+
+        <label class="inline small" title="Off: only fill in what has not been answered.">
+          <input type="checkbox" id="overwrite" /> replace answers that are already there
+        </label>
+
+        <div class="bulk-actions">
+          <button type="button" id="bulk-cancel">Cancel</button>
+          <button type="button" id="bulk-apply" class="primary">Apply</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Zoom is where the judging actually happens: the image is big enough to
          judge, so the verdict belongs here rather than back in the grid. -->
