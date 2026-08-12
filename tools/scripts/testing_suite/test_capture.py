@@ -537,7 +537,7 @@ class ParallelCaptureTests(unittest.TestCase):
         return 1280, 800, digest
 
     @contextmanager
-    def worker(self, index: int, lock):
+    def worker(self, index: int, shared):
         """A screen and an application of this worker's own, faked."""
         outer = self
         display = f":{90 + len(self.displays)}"
@@ -573,7 +573,7 @@ class ParallelCaptureTests(unittest.TestCase):
             # what is under test here needs it to have happened.
             sleep=lambda _: None,
             display=display,
-            lock=lock,
+            lock=shared.checks,
         )
 
     def plan(self) -> tuple:
@@ -648,14 +648,150 @@ class ParallelCaptureTests(unittest.TestCase):
         self.assertTrue(any("stayed at 1280x800" in failure for failure in failures))
 
     def test_a_worker_that_dies_does_not_take_the_run_with_it(self) -> None:
+        """And loses nothing, now that work is taken rather than dealt.
+
+        A worker whose screen never came up has no share to lose: the groups it
+        would have been given are still in the queue, and whoever is free takes
+        them. The failure is still reported — a run that quietly captured
+        everything with a broken worker would hide a broken worker.
+        """
+        self.broken = {1}
+        alone = self.capture_with(1)
+        expected = self.rows()
+
+        self.setUp()
         self.broken = {1}
         result = self.capture_with(3)
 
-        self.assertGreater(result["captured"], 0)
-        self.assertGreater(result["failed"], 0)
         self.assertTrue(result["errors"])
         self.assertIn("never came up", result["errors"][0])
+        self.assertEqual(result["captured"], alone["captured"])
+        self.assertEqual(self.rows(), expected)
+
+    def test_every_worker_dying_is_not_a_silent_success(self) -> None:
+        self.broken = {0, 1, 2}
+        result = self.capture_with(3)
+
+        self.assertEqual(result["captured"], 0)
+        self.assertEqual(len(result["errors"]), 3)
+
+    def test_work_is_taken_rather_than_dealt(self) -> None:
+        """The point of the queue: one slow worker does not hold the run open.
+
+        Dealt in advance, whoever drew the surfaces carrying a tone would still
+        be settling while everyone else had stopped.
+        """
+        taken: dict[int, int] = {}
+        real = self.worker
+
+        @contextmanager
+        def counting(index: int, shared):
+            with real(index, shared) as pass_:
+                original = pass_.run
+
+                def run(plan, **kwargs):
+                    taken[index] = taken.get(index, 0) + 1
+
+                    return original(plan, **kwargs)
+
+                pass_.run = run
+
+                yield pass_
+
+        capture_module.run_in_parallel(self.plan(), workers=2, worker=counting)
+
+        self.assertEqual(sum(taken.values()), len(capture_module.plan_groups(self.plan())))
 
     def test_no_workers_is_refused(self) -> None:
         with self.assertRaises(ValueError):
             self.capture_with(0)
+
+
+class AudioGateTests(unittest.TestCase):
+    """Only one application opens the input device at a time.
+
+    There is one device on the machine and instances contend for it. Four
+    applications starting together left two blocked inside ALSA's open, on the
+    thread that answers the control channel — running, but never replying, so
+    their share of the plan was simply lost.
+
+    Opening is the only part that has to be alone: once an application has the
+    device it keeps it, and settling, photographing and converting — which is
+    where a run's time actually goes — overlap freely.
+    """
+
+    def test_a_restart_takes_the_gate(self) -> None:
+        """A surface that restarts reopens the device mid-run."""
+        held: list[str] = []
+        gate = threading.Lock()
+
+        class Watched(capture_module.CapturePass):
+            def __init__(inner):  # noqa: N805 - test double
+                inner.audio_gate = gate
+                inner.driver = inner
+
+            def restart(inner) -> None:  # noqa: N805 - standing in for the driver
+                held.append("locked" if gate.locked() else "UNGUARDED")
+
+            def open_state(inner, state):  # noqa: N805 - test double
+                return Reply(True, [])
+
+            def set_theme(inner, theme):  # noqa: N805 - test double
+                return ""
+
+            def set_geometry(inner, geometry):  # noqa: N805 - test double
+                return ""
+
+        restarting = surfaces.Surface(
+            state="tuner-docked", title="After a restart",
+            modes=frozenset({surfaces.FULL}), restart_before=True
+        )
+        Watched().move_to(restarting, "default", surfaces.DARK)
+
+        self.assertEqual(held, ["locked"])
+
+    def test_a_surface_that_does_not_restart_does_not_wait(self) -> None:
+        """Holding it for every surface would serialise the run it exists to keep parallel."""
+        gate = threading.Lock()
+        gate.acquire()
+        self.addCleanup(gate.release)
+
+        class Ordinary(capture_module.CapturePass):
+            def __init__(inner):  # noqa: N805 - test double
+                inner.audio_gate = gate
+                inner.driver = inner
+
+            def open_state(inner, state):  # noqa: N805 - test double
+                return Reply(True, [])
+
+            def set_theme(inner, theme):  # noqa: N805 - test double
+                return ""
+
+            def set_geometry(inner, geometry):  # noqa: N805 - test double
+                return ""
+
+        plain = surfaces.Surface(
+            state="empty", title="The shell", modes=frozenset({surfaces.QUICK})
+        )
+
+        # Would block forever if `move_to` took the gate unconditionally.
+        self.assertEqual(Ordinary().move_to(plain, "default", surfaces.DARK), "")
+
+    def test_a_parallel_run_hands_out_one_gate(self) -> None:
+        seen: list[int] = []
+
+        @contextmanager
+        def worker(index: int, shared):
+            seen.append(id(shared.audio))
+
+            raise RuntimeError("nothing to capture here")
+            yield  # noqa: PLW0101 - unreachable by design
+
+        capture_module.run_in_parallel(
+            surfaces.plan(surfaces.QUICK, ("default",), (surfaces.DARK,)),
+            workers=3,
+            worker=worker,
+        )
+
+        self.assertEqual(len(seen), 3)
+        self.assertEqual(len(set(seen)), 1, "workers were given different gates")

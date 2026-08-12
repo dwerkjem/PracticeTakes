@@ -233,6 +233,7 @@ class CapturePass:
         sleep: Callable[[float], None] = time.sleep,
         display: str = "",
         lock: threading.Lock | None = None,
+        audio_gate: threading.Lock | None = None,
     ) -> None:
         self.store = store
         self.run_id = run_id
@@ -250,6 +251,10 @@ class CapturePass:
         # Guards the store and the two cross-capture maps. A lock of its own
         # unless passes are sharing them, in which case they share this too.
         self.lock = lock or threading.Lock()
+        # Held while this application opens the input device. There is one
+        # device and instances contend for it; see `Shared`. A restart reopens
+        # it, so a surface that restarts takes this as well as startup does.
+        self.audio_gate = audio_gate or threading.Lock()
 
     # --- X plumbing ---------------------------------------------------------
 
@@ -334,7 +339,11 @@ class CapturePass:
         """
         try:
             if surface.restart_before:
-                self.driver.restart()
+                # The one place a capture reopens the audio device. Left
+                # ungated, a restart in one worker can block in ALSA against
+                # another's device and take this worker's whole share with it.
+                with self.audio_gate:
+                    self.driver.restart()
 
             reply = self.driver.open_state(surface.state)
 
@@ -559,23 +568,19 @@ class CapturePass:
 
 # --- Several at once --------------------------------------------------------
 
-def share_plan(
-    plan: tuple[tuple[surfaces.Surface, str, str], ...], workers: int
+def plan_groups(
+    plan: tuple[tuple[surfaces.Surface, str, str], ...],
 ) -> list[list[tuple[surfaces.Surface, str, str]]]:
-    """Split a plan between workers, keeping each surface's resolutions together.
+    """The plan as units of work, each one surface in one palette.
 
-    Grouped rather than dealt out one entry at a time. Consecutive entries for
-    one surface in one palette are the same application, moved: it opens the
-    state once and is then asked for four geometries. Handing those four to four
-    workers would open the state four times, which is the expensive part.
+    Grouped rather than one entry at a time. Consecutive entries for one surface
+    in one palette are the same application, moved: it opens the state once and
+    is then asked for several geometries. Handing those to different workers
+    would open the state once each, which is the expensive part.
 
-    Groups go round-robin, because the plan is ordered and contiguous blocks
-    would give one worker every surface that carries a tone -- each of which
-    sleeps for its warmup -- while another finishes early.
+    This is also what caps a run's parallelism: there is no useful worker beyond
+    the last group, however many are asked for.
     """
-    if workers < 1:
-        raise ValueError("a capture needs at least one worker")
-
     groups: list[list[tuple[surfaces.Surface, str, str]]] = []
     key: tuple[str, str, str] | None = None
 
@@ -589,30 +594,72 @@ def share_plan(
 
         groups[-1].append(entry)
 
+    return groups
+
+
+def share_plan(
+    plan: tuple[tuple[surfaces.Surface, str, str], ...], workers: int
+) -> list[list[tuple[surfaces.Surface, str, str]]]:
+    """Deal a plan out to a fixed number of workers.
+
+    Kept for reasoning about coverage -- every entry lands exactly once, and a
+    surface's resolutions stay together. The run itself does not use it: a fixed
+    share means a worker that draws four surfaces carrying a tone waits six
+    seconds to settle on each while another finishes early and stops, and no
+    arrangement decided in advance avoids that. `run_in_parallel` hands out
+    groups as workers come free instead.
+    """
+    if workers < 1:
+        raise ValueError("a capture needs at least one worker")
+
     shares: list[list[tuple[surfaces.Surface, str, str]]] = [[] for _ in range(workers)]
 
-    for index, group in enumerate(groups):
+    for index, group in enumerate(plan_groups(plan)):
         shares[index % workers].extend(group)
 
     return shares
+
+
+@dataclass(frozen=True)
+class Shared:
+    """What every worker in a parallel run holds in common.
+
+    `checks` guards the store and the two cross-capture maps -- things that are
+    only correct when every worker sees the whole run.
+
+    `audio` guards something else entirely: the moment an application opens the
+    input device. There is one device, and instances contend for it. Measured
+    here, four applications starting together left two of them blocked inside
+    ALSA's open, on the thread that answers the control channel -- so they ran
+    but never replied, and their share of the plan was lost.
+
+    Opening is the only part that has to be alone. Once an application has its
+    device it keeps it, and everything that takes the time in a run -- settling,
+    photographing, converting -- overlaps freely. So this is held across a
+    start, not across a capture.
+    """
+
+    checks: threading.Lock
+    audio: threading.Lock
 
 
 def run_in_parallel(
     plan: tuple[tuple[surfaces.Surface, str, str], ...],
     *,
     workers: int,
-    worker: Callable[[int, threading.Lock], object],
+    worker: Callable[[int, "Shared"], object],
     resume: bool = True,
     progress: Callable[[dict], None] | None = None,
     should_stop: Callable[[], bool] | None = None,
 ) -> dict:
     """Capture one plan on several screens at once, and report it as one run.
 
-    `worker(index, lock)` is a context manager yielding the pass that captures
+    `worker(index, shared)` is a context manager yielding the pass that captures
     this share -- which means the caller opens the screen, starts the
     application, and shuts both down again. All of that already belongs to the
     caller, and a coordinator that knew about any of it would have to be told
-    about all of it.
+    about all of it. `shared` carries the two locks every worker needs; see
+    `Shared`.
 
     The two cross-capture maps and one lock are shared across every worker. That
     is the whole reason this is threads: the checks only work by seeing the
@@ -622,11 +669,23 @@ def run_in_parallel(
     if workers < 1:
         raise ValueError("a capture needs at least one worker")
 
-    lock = threading.Lock()
+    shared = Shared(checks=threading.Lock(), audio=threading.Lock())
+    lock = shared.checks
     sizes: dict[str, dict[str, tuple[int, int]]] = {}
     digests: dict[tuple[str, str], str] = {}
-    shares = [share for share in share_plan(plan, workers) if share]
-    results: list[dict] = [{} for _ in shares]
+
+    # Handed out as workers come free rather than dealt in advance. A fixed
+    # share leaves whoever drew the surfaces that carry a tone -- six seconds to
+    # settle, then a warmup -- still going while everyone else has stopped, and
+    # no arrangement decided beforehand fixes that, because how long a surface
+    # takes is not known until it is taken.
+    queue: list[list[tuple[surfaces.Surface, str, str]]] = plan_groups(plan)
+    handed = 0
+
+    # No more workers than there is work: a plan of eight groups has nothing for
+    # a ninth application to do but start up and stop again.
+    running = min(workers, len(queue)) or 1
+    results: list[dict] = [{} for _ in range(running)]
     done = 0
 
     def report(entry: dict) -> None:
@@ -642,33 +701,66 @@ def run_in_parallel(
 
         progress({**entry, "done": said - 1, "total": len(plan)})
 
-    def work(index: int, share: list[tuple[surfaces.Surface, str, str]]) -> None:
+    def next_group() -> list[tuple[surfaces.Surface, str, str]] | None:
+        nonlocal handed
+
+        with lock:
+            if handed >= len(queue):
+                return None
+
+            handed += 1
+
+            return queue[handed - 1]
+
+    def add(index: int, result: dict) -> None:
+        into = results[index]
+
+        for name in ("captured", "failed", "already_captured", "not_reached"):
+            into[name] = into.get(name, 0) + result.get(name, 0)
+
+        into["stopped"] = into.get("stopped", False) or bool(result.get("stopped"))
+
+    def work(index: int) -> None:
+        taken = 0
+
         try:
-            with worker(index, lock) as pass_:
-                results[index] = pass_.run(
-                    tuple(share),
-                    resume=resume,
-                    progress=report,
-                    should_stop=should_stop,
-                    sizes=sizes,
-                    digests=digests,
-                )
+            # One application per worker for the whole run, not one per group:
+            # starting it is the part that has to wait for the audio device, and
+            # paying that per group would undo what this is for.
+            with worker(index, shared) as pass_:
+                while True:
+                    if should_stop is not None and should_stop():
+                        add(index, {"stopped": True})
+
+                        return
+
+                    group = next_group()
+
+                    if group is None:
+                        return
+
+                    taken = len(group)
+                    add(index, pass_.run(
+                        tuple(group),
+                        resume=resume,
+                        progress=report,
+                        should_stop=should_stop,
+                        sizes=sizes,
+                        digests=digests,
+                    ))
+                    taken = 0
         except Exception as error:  # noqa: BLE001 - one worker dying is not the run dying
             # Recorded as this worker's failure rather than raised: the other
             # workers are mid-capture, and losing their work to tidy up after
-            # this one would turn one broken display into a lost run.
-            results[index] = {
-                "captured": 0,
-                "failed": len(share),
-                "already_captured": 0,
-                "stopped": False,
-                "not_reached": 0,
-                "error": f"{type(error).__name__}: {error}",
-            }
+            # this one would turn one broken display into a lost run. Whatever
+            # it had already captured stays counted; only the group in its hands
+            # is lost, and the rest of the queue goes to somebody else.
+            add(index, {"failed": taken})
+            results[index]["error"] = f"{type(error).__name__}: {error}"
 
     threads = [
-        threading.Thread(target=work, args=(index, share), daemon=True)
-        for index, share in enumerate(shares)
+        threading.Thread(target=work, args=(index,), daemon=True)
+        for index in range(running)
     ]
 
     for thread in threads:
@@ -682,7 +774,7 @@ def run_in_parallel(
         "failed": sum(result.get("failed", 0) for result in results),
         "already_captured": sum(result.get("already_captured", 0) for result in results),
         "stopped": any(result.get("stopped") for result in results),
-        "workers": len(shares),
+        "workers": running,
         "errors": [result["error"] for result in results if result.get("error")],
     }
     total["not_reached"] = (

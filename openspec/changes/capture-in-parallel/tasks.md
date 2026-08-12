@@ -36,5 +36,12 @@
 - [x] 6.1 `ApplicationDriver.send` gets a deadline — a hung application was an unexplained wait on a pipe
 - [x] 6.2 `stop` sends `quit` before clearing the process it is quitting; it never had
 - [x] 6.3 Record the measured ceiling and its cause (design: *What running it actually found*)
-- [ ] 6.4 **Blocked:** raising the ceiling above 2 needs device recovery off the message thread — a proposal of its own
-- [ ] 6.5 **Deferred:** whether the hub offers a worker count, given the ceiling is 2
+- [x] 6.4 Gate the one moment that touches the device — an application opening it — and let capture overlap
+- [x] 6.5 Hand out work as workers come free, rather than splitting the plan in advance
+- [x] 6.6 Retire a worker that cannot start instead of retrying under the gate; kill rather than ask
+- [x] 6.7 Track the process ids this run started; end those and nothing else
+- [x] 6.8 Name the instances a run competes with, and say plainly that nothing will close them
+- [ ] 6.9 **Still open:** capturing while the application is open needs a synthetic-input mode
+      or device recovery off the message thread — an application change, its own proposal.
+      Measured: a *sequential* capture with another instance open captures nothing at all.
+- [ ] 6.10 **Deferred:** whether the hub offers a worker count

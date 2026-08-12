@@ -127,7 +127,7 @@ Measured on this machine, quick mode, 14 captures, both palettes.
 | 2 | 21s | 12 captured, 2 failed — identical |
 | 4 | 77s | 4–8 captured, and two applications never answered |
 
-### The ceiling is the audio device, not the settle check
+### First reading: the ceiling is the audio device, not the settle check
 
 The open question was how many workers before the settle check gets flaky. That
 was the wrong thing to watch. At four workers two applications hang before
@@ -154,8 +154,8 @@ disappearing, PipeWire restarting — freezes the interface, with no timeout and
 no way back. Fixing it means taking device recovery off the message thread,
 which is the audio ownership model and belongs in a proposal of its own.
 
-**So the useful worker count today is 2.** Not a guess: 1 and 2 agree exactly on
-what they captured, and 4 does not.
+That first reading put the useful count at 2. It was wrong about the cause of
+the *ceiling*, and right about the cause of the *hang* — see below.
 
 ### A hang is now a failure with a reason
 
@@ -168,3 +168,65 @@ Found while doing that: `stop` cleared `_process` before calling `send`, so
 `send` refused against the very application it was closing. `quit` had never
 been sent by anything, ever — every stop waited ten seconds and then killed the
 application, which also meant it never left the way a user's would.
+
+## Second reading: the device is contended, so stop overlapping the opens
+
+The hang is real and the stack above is accurate. But gating the one moment
+that touches the device — an application opening it — removes it, and that is a
+much smaller thing than the worker count.
+
+The gate is held across a start and released before any capturing, because the
+device is only contended while it is being acquired. Once an application has it,
+the parts a run actually spends its time on — settling for up to six seconds,
+warming up a tone, photographing, converting — overlap freely. `restart_before`
+surfaces take the same gate, since a restart reopens the device.
+
+With that, on this machine, quick mode, 14 captures:
+
+| Workers | Wall clock |
+| --- | --- |
+| 1 | 19–29s |
+| 4 | **10s** |
+| 6 | 11s |
+
+### Work is taken, not dealt
+
+The first version split the plan in advance. That leaves whoever drew the
+surfaces carrying a tone still settling while everyone else has stopped, and no
+split decided beforehand avoids it, because how long a surface takes is not
+known until it is taken. Workers now pull the next group when free.
+
+Two things fell out of that. A worker that cannot start loses nothing — the
+groups it never drew are still in the queue. And the worker count is capped by
+the number of groups, which the run reports: asking for 20 on an 8-group plan
+runs 8 and says so.
+
+### A retry under the gate is worse than no retry
+
+Trying a failed launch again while holding the gate every other worker is
+waiting on turned one bad start into seventy seconds of everybody waiting —
+slower than not running in parallel at all. And the thing that makes a launch
+fail, other instances holding the device, is not something a retry changes. A
+worker that cannot start now retires, and its work goes to the others.
+
+The same lesson applied to ending it: `stop` is polite first, five seconds for a
+reply and ten for the exit, and being polite to something known not to be
+listening spends fifteen seconds proving it twice — on every worker behind it.
+`kill` is for that case.
+
+## What this does not fix, and what it exposes
+
+**One application at a time is the real constraint, and it is not new.** With
+another Practice Takes open, a *sequential* capture — one worker, the way it has
+always run — captures nothing at all: it fails at `list-states` after sixty
+seconds. Measured, not inferred. The parallel run under the same conditions
+still got 5 of 14.
+
+So capturing has never worked while somebody has the application open. Nobody
+noticed because the failure had no voice: the run waited on a pipe. It says so
+now, and names the instances it is competing with without touching them.
+
+Fixing it properly means the capture instances not opening the shared input
+device at all — a synthetic-input mode, or device recovery off the message
+thread. Either is an application change and belongs in its own proposal. It
+would also do the thing actually wanted: capture while the application is open.

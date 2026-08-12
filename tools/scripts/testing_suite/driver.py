@@ -50,6 +50,13 @@ REPLY_TIMEOUT_SECONDS = 60.0
 # anyway -- waiting a minute first only delays the run's own shutdown.
 QUIT_TIMEOUT_SECONDS = 5.0
 
+# What the first command after a launch gets. Shorter than a general command,
+# because this is the one that catches an application which came up but cannot
+# open the input device -- and the answer to that is to start another, which is
+# only worth doing promptly. A healthy launch answers in well under a second,
+# and under contention in about six.
+STARTUP_TIMEOUT_SECONDS = 12.0
+
 
 @dataclass
 class Reply:
@@ -130,6 +137,34 @@ class ApplicationDriver:
         # Closed. A sentinel rather than silence, so a waiting `send` learns
         # about it now instead of at its deadline.
         self._lines.put(None)
+
+    def kill(self) -> None:
+        """End it now, without asking.
+
+        For an application that has already failed to answer. `stop` is polite
+        first -- five seconds for a reply, ten more for the exit -- and being
+        polite to something known not to be listening is fifteen seconds spent
+        proving it twice.
+        """
+        process = self._process
+
+        if process is None:
+            return
+
+        self._process = None
+        process.kill()
+
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+
+        for stream in (process.stdin, process.stdout):
+            if stream is not None:
+                try:
+                    stream.close()
+                except OSError:
+                    pass
 
     def stop(self) -> None:
         """Ask the application to quit, then make sure it actually did."""
@@ -214,8 +249,8 @@ class ApplicationDriver:
 
     # --- The vocabulary -----------------------------------------------------
 
-    def list_states(self) -> list[str]:
-        reply = self.send("list-states")
+    def list_states(self, timeout: float | None = None) -> list[str]:
+        reply = self.send("list-states", timeout=timeout)
 
         if not reply.success:
             raise ChannelError(reply.error)

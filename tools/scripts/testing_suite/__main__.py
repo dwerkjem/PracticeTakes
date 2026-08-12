@@ -42,6 +42,7 @@ import freshness as freshness_module  # noqa: E402
 import runner as runner_module  # noqa: E402
 import suites as suites_module  # noqa: E402
 import export as export_module  # noqa: E402
+import fleet as fleet_module  # noqa: E402
 import history as history_module  # noqa: E402
 import ingest as ingest_module  # noqa: E402
 import launcher as launcher_module  # noqa: E402
@@ -49,7 +50,12 @@ import machine as machine_module  # noqa: E402
 import review as review_module  # noqa: E402
 import server as server_module  # noqa: E402
 import surfaces  # noqa: E402
-from driver import ApplicationDriver, ChannelError, missing_states  # noqa: E402
+from driver import (  # noqa: E402
+    STARTUP_TIMEOUT_SECONDS,
+    ApplicationDriver,
+    ChannelError,
+    missing_states,
+)
 from store import Store, StoreError  # noqa: E402
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -198,6 +204,53 @@ def command_capture(arguments) -> int:
         return _capture_on_current_display(arguments, plan, store, resolutions)
 
 
+# One. A second attempt is made while holding the gate every other worker is
+# waiting on, and the thing that makes a launch fail -- other instances already
+# holding the input device -- is not something a retry changes. Trying twice
+# turned one bad launch into seventy seconds of everybody waiting, which was
+# slower than not running in parallel at all. A worker that cannot start
+# retires instead, and the queue it never drew from goes to the others.
+STARTUP_ATTEMPTS = 1
+
+
+def _start_under(driver, gate, fleet) -> list[str]:
+    """Start an application while holding the audio gate, retrying a bad launch.
+
+    Returns the states it offers, which doubles as proof that it is answering:
+    an application that cannot open the input device comes up, draws a window,
+    and never replies.
+    """
+    last: ChannelError | None = None
+
+    for _ in range(STARTUP_ATTEMPTS):
+        failed = False
+
+        with gate:
+            driver.start()
+            # Registered the moment it exists, so teardown can end it whatever
+            # happens next -- and so nothing ends it by name.
+            fleet.add(driver)
+
+            try:
+                return driver.list_states(timeout=STARTUP_TIMEOUT_SECONDS)
+            except ChannelError as error:
+                last = error
+                failed = True
+
+        # Killed outside the gate, and killed rather than asked. Every worker
+        # behind this one waits for the gate, and spending five seconds asking
+        # a process that is known not to answer -- then ten more waiting for it
+        # to go -- spends that on all of them. This is what made a run with one
+        # bad launch take longer than the whole sequential pass.
+        if failed:
+            driver.kill()
+            fleet.remove(driver)
+
+    raise ChannelError(
+        f"The application would not start after {STARTUP_ATTEMPTS} attempts: {last}"
+    )
+
+
 def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
     """One plan, several screens, one run.
 
@@ -223,15 +276,36 @@ def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
         audio_device=arguments.audio_device,
     )
     images_at = image_directory(store, run_id)
+    fleet = fleet_module.Fleet()
+
+    # Said before anything starts. An application somebody else is running holds
+    # the input device, and a worker that cannot open one comes up, draws a
+    # window, and never replies -- which reads as a broken build rather than as
+    # a busy machine.
+    warning = fleet_module.contention_warning(fleet.foreign())
+
+    if warning:
+        print(warning, file=sys.stderr)
 
     @contextmanager
-    def worker(index: int, lock):
+    def worker(index: int, shared):
         with display_module.virtual_display(publish=False) as screen:
             driver = ApplicationDriver(arguments.executable, display=screen)
-            driver.start()
 
+            # One application opens the input device at a time. Held until this
+            # one answers, which is the proof that it is past the open rather
+            # than a guess at how long one takes -- and released before any
+            # capturing, because the device is only contended while it is being
+            # acquired.
+            #
+            # Tried more than once, because the gate cannot cover everything:
+            # the application reopens the device from a timer of its own when it
+            # decides it has none, and that can land while another worker holds
+            # it. One that came up without a device is not going to find one, so
+            # it is replaced rather than waited on.
             try:
-                absent = missing_states(driver.list_states(), surfaces.required_states())
+                states = _start_under(driver, shared.audio, fleet)
+                absent = missing_states(states, surfaces.required_states())
 
                 if absent:
                     raise capture_module.CaptureError(
@@ -246,10 +320,12 @@ def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
                     image_directory=images_at,
                     window_title=arguments.window_title,
                     display=screen,
-                    lock=lock,
+                    lock=shared.checks,
+                    audio_gate=shared.audio,
                 )
             finally:
                 driver.stop()
+                fleet.remove(driver)
 
     def say(entry: dict) -> None:
         print(
@@ -258,9 +334,19 @@ def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
         )
 
     print(f"Capturing on {arguments.workers} screens at once; nothing will appear on yours.")
-    result = capture_module.run_in_parallel(
-        plan, workers=arguments.workers, worker=worker, progress=say
-    )
+
+    try:
+        result = capture_module.run_in_parallel(
+            plan, workers=arguments.workers, worker=worker, progress=say
+        )
+    finally:
+        # Only what this run started. An interrupted run used to leave
+        # applications behind holding the input device, which made every run
+        # after it slower for reasons nothing explained.
+        left = fleet.shut_down()
+
+        if left:
+            print(f"Ended {left} application(s) this run had left.", file=sys.stderr)
 
     for error in result["errors"]:
         print(f"A worker stopped: {error}", file=sys.stderr)
