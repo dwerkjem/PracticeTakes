@@ -38,6 +38,14 @@ void MainComponent::updateMicrophoneStateControl()
         tooltip = "No microphone is available; open Settings to choose an input";
         colour = palette.muted;
         break;
+    case AudioInputService::InputState::opening:
+        // Not the same as having none, and the difference is what somebody
+        // needs told: nothing to plug in would fix this, and the application
+        // has not stopped working.
+        text = "Opening mic...";
+        tooltip = "Waiting for the input device. Something else may be holding it";
+        colour = palette.warning;
+        break;
     case AudioInputService::InputState::muted:
         text = "Mic muted - Unmute";
         tooltip = "Resume audio analysis using the selected microphone";

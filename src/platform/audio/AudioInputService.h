@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <vector>
 
 // Owns the application's only microphone callback and fans captured input into
@@ -32,6 +33,11 @@ class AudioInputService final
     enum class InputState
     {
         disconnected,
+        // Trying to open one. Distinct from having none, because "no
+        // microphone" and "the microphone is not answering" have different
+        // answers, and the second is the one somebody would otherwise read as
+        // the application having crashed.
+        opening,
         muted,
         active,
         clipping
@@ -142,17 +148,33 @@ class AudioInputService final
     // Behind a seam so a test can supply one that blocks. Nothing else can
     // answer "what does this do when the device never opens", and that is the
     // question this file has to have an answer to.
-    void reopenDevice();
+    static void reopenDevice(juce::AudioDeviceManager& deviceManager);
 
     // One recovery: the flag, the step, the flag again. Separate from the scan
     // that decides to call it, because the deciding needs a device backend to
     // enumerate and this does not -- and this is the part that is about to move
     // to a thread of its own.
     void attemptRecovery();
+
+    // Whether a recovery is still running. The scan asks before starting
+    // another: what makes an open block is another holder of the device, which
+    // a second attempt does not change -- it only queues a wait on what the
+    // first is waiting on.
+    [[nodiscard]] bool recoveryInFlight() const;
     void initialiseInput(const juce::XmlElement* state, bool force);
     void publishState();
 
-    juce::AudioDeviceManager manager;
+    // Held through a shared pointer, and this is load-bearing rather than
+    // style. A recovery stuck inside `snd_pcm_prepare` cannot be joined at
+    // shutdown -- waiting for it would reproduce the freeze this exists to fix,
+    // at the moment somebody is trying to escape it -- so the thread outlives
+    // this object, and the manager it is inside has to outlive it too. The
+    // thread holds a copy; the manager goes when the last one does.
+    //
+    // As a by-value member this was a use-after-free waiting for a slow device.
+    std::shared_ptr<juce::AudioDeviceManager> ownedManager =
+        std::make_shared<juce::AudioDeviceManager>();
+    juce::AudioDeviceManager& manager = *ownedManager;
     mutable juce::CriticalSection consumerLock;
     std::array<ConsumerSlot, maximumConsumers> consumers;
     juce::String lastDeviceName;
@@ -188,13 +210,24 @@ class AudioInputService final
     std::uint64_t lastReportedDroppedBlocks = 0;
     int clippingHoldTicks = 0;
     int ticksUntilDeviceScan = disconnectedDeviceScanIntervalTicks;
-    bool recovering = false;
     bool initialised = false;
+
+    // A recovery in flight. Shared with the thread running it, because that
+    // thread may still be inside the device when this object is gone: it
+    // reports through here and touches nothing else that could have gone.
+    struct Flight
+    {
+        std::atomic<bool> running{true};
+    };
+
+    std::shared_ptr<Flight> flight;
 
     // What a recovery does when it gets as far as the device. Replaced by tests
     // with something that blocks, because a real device that never opens cannot
     // be arranged on demand.
-    std::function<void()> reopen = [this] { reopenDevice(); };
+    // Captures the manager's owner, never `this`: the thread running it may
+    // outlive this object.
+    std::function<void()> reopen = [owner = ownedManager] { reopenDevice(*owner); };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioInputService)
 };

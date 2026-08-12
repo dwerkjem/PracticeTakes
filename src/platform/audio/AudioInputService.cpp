@@ -3,6 +3,8 @@
 #include "AudioRecoveryPolicy.h"
 
 #include <cmath>
+#include <thread>
+#include <utility>
 
 namespace
 {
@@ -52,7 +54,30 @@ AudioInputService::~AudioInputService()
 {
     stopTimer();
     manager.removeChangeListener(this);
+
+    // Before anything else, and unconditionally. This is what makes abandoning
+    // a stuck recovery safe: the manager must not be able to call back into an
+    // object that is going away. It is also safe to do *while* a recovery is
+    // inside the device -- `removeAudioCallback` takes JUCE's callback lock,
+    // and opening a device does not hold it. Checked against the JUCE source
+    // rather than assumed, because the whole design rests on it.
     manager.removeAudioCallback(this);
+
+    if (recoveryInFlight())
+    {
+        // Deliberately not closed, and deliberately not waited for. Closing
+        // destroys the device object a recovery may be inside `open` on, and
+        // waiting is the freeze this exists to fix, arriving at the moment
+        // somebody is trying to escape it.
+        //
+        // The manager stays alive in the recovery thread's own copy and is
+        // destroyed when that thread finally returns -- which closes the device
+        // then. If it never returns, one manager and one thread are abandoned
+        // for the life of the process, which is the price of being able to
+        // quit at all.
+        return;
+    }
+
     manager.closeAudioDevice();
 }
 
@@ -176,7 +201,10 @@ AudioInputService::InputState AudioInputService::inputState() const
 {
     if (!hasUsableInput())
     {
-        return InputState::disconnected;
+        // Having none and trying to get one look the same from here and are
+        // not the same thing to a person: one means plug something in, the
+        // other means something else is holding it.
+        return recoveryInFlight() ? InputState::opening : InputState::disconnected;
     }
     if (muted.load(std::memory_order_relaxed))
     {
@@ -268,10 +296,11 @@ void AudioInputService::initialiseInput(const juce::XmlElement* state, bool forc
     }
 
     initialised = true;
-    recovering = true;
+    // Explicit, and on the message thread on purpose: somebody asked for this
+    // and is waiting to see the result. The automatic retry is the one that
+    // must not block, and it is the only one that moved.
     manager.closeAudioDevice();
     juce::ignoreUnused(manager.initialise(2, 0, state, true));
-    recovering = false;
     publishState();
 }
 
@@ -411,7 +440,6 @@ void AudioInputService::changeListenerCallback(juce::ChangeBroadcaster*)
         {
             lastDeviceName = device->getName();
         }
-        recovering = false;
         ticksUntilDeviceScan = connectedDeviceScanIntervalTicks;
     }
     else
@@ -544,7 +572,7 @@ void AudioInputService::scanForDeviceChanges()
     if (AudioRecoveryPolicy::shouldAttemptRecovery(
             hasUsableInput(), currentDevice != nullptr,
             currentDevice != nullptr && currentDevice->isOpen(), hasEnumeratedInput) &&
-        !recovering)
+        !recoveryInFlight())
     {
         // Never tear down a device while its backend still considers it open.
         // In particular, closing a live ALSA mmap reader here can race its
@@ -554,26 +582,52 @@ void AudioInputService::scanForDeviceChanges()
     }
 }
 
-void AudioInputService::attemptRecovery()
+bool AudioInputService::recoveryInFlight() const
 {
-    recovering = true;
-    reopen();
-    recovering = false;
+    return flight != nullptr && flight->running.load(std::memory_order_acquire);
 }
 
-void AudioInputService::reopenDevice()
+void AudioInputService::attemptRecovery()
+{
+    if (recoveryInFlight())
+    {
+        return;
+    }
+
+    // A thread per attempt, detached, holding only what outlives this object: a
+    // copy of the step, and the state it reports through. It is not joined
+    // anywhere -- an open that never returns would make joining it a hang, and
+    // the one place that would happen is shutdown, which is exactly when a hang
+    // is least forgivable.
+    //
+    // At most one exists, because nothing starts a second while this one runs.
+    // A recovery that never finishes therefore costs one abandoned thread and
+    // one device manager, and no more however long the device stays busy.
+    auto inFlight = std::make_shared<Flight>();
+    flight = inFlight;
+
+    std::thread(
+        [step = reopen, inFlight]
+        {
+            step();
+            inFlight->running.store(false, std::memory_order_release);
+        })
+        .detach();
+}
+
+void AudioInputService::reopenDevice(juce::AudioDeviceManager& deviceManager)
 {
     juce::AudioDeviceManager::AudioDeviceSetup setup;
-    manager.getAudioDeviceSetup(setup);
+    deviceManager.getAudioDeviceSetup(setup);
 
-    if (manager.getCurrentAudioDevice() != nullptr)
+    if (deviceManager.getCurrentAudioDevice() != nullptr)
     {
-        manager.closeAudioDevice();
+        deviceManager.closeAudioDevice();
     }
 
     if (setup.inputDeviceName.isNotEmpty() || setup.outputDeviceName.isNotEmpty())
     {
-        manager.restartLastAudioDevice();
+        deviceManager.restartLastAudioDevice();
     }
     else
     {
@@ -581,7 +635,7 @@ void AudioInputService::reopenDevice()
         // `scanForDeviceChanges` has already established that it offers
         // something; without that this would open the default output and call
         // it a recovery.
-        juce::ignoreUnused(manager.initialise(2, 0, nullptr, true));
+        juce::ignoreUnused(deviceManager.initialise(2, 0, nullptr, true));
     }
 }
 
