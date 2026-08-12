@@ -419,3 +419,78 @@ TEST_CASE("the service can be destroyed while a recovery is stuck", "[audio][rec
 
     REQUIRE(finished.load());
 }
+
+// --- The tone without a device ----------------------------------------------
+//
+// The tone is never heard. It exists so a tool has something to analyse for a
+// capture, and until now it was generated inside the audio callback -- so it
+// needed a device it had no other use for. One process at a time holds that
+// device, which serialised every surface carrying a tone onto whichever one
+// won it.
+
+TEST_CASE("a tone with no device still reaches a tool", "[audio][tone]")
+{
+    ServiceUnderTest harness;
+    SilentConsumer consumer;
+    harness.service.addListener(&consumer);
+
+    // Nothing is open here: a bare test process has no device running, which is
+    // exactly the situation a capture worker without one is in.
+    REQUIRE_FALSE(harness.service.hasUsableInput());
+
+    harness.service.setSyntheticTone(440.0f);
+
+    std::vector<float> heard(4096, 0.0f);
+    std::size_t got = 0;
+
+    for (auto waited = 0; waited < 3000 && got == 0; waited += 20)
+    {
+        juce::Thread::sleep(20);
+        got = harness.service.readSamples(&consumer, heard.data(), heard.size());
+    }
+
+    harness.service.setSyntheticTone(0.0f);
+    harness.service.removeListener(&consumer);
+
+    REQUIRE(got > 0);
+    REQUIRE(std::any_of(
+        heard.begin(), heard.begin() + static_cast<long>(got),
+        [](float sample) { return std::abs(sample) > 0.001f; }));
+}
+
+TEST_CASE("a tone with no device reports as input rather than as missing", "[audio][tone]")
+{
+    ServiceUnderTest harness;
+
+    REQUIRE(harness.service.inputState() == AudioInputService::InputState::disconnected);
+
+    harness.service.setSyntheticTone(440.0f);
+
+    for (auto waited = 0; waited < 2000 && !harness.service.hasUsableInput(); waited += 20)
+    {
+        juce::Thread::sleep(20);
+    }
+
+    const auto state = harness.service.inputState();
+    harness.service.setSyntheticTone(0.0f);
+
+    REQUIRE(harness.service.hasUsableInput() == false);
+    REQUIRE(state == AudioInputService::InputState::active);
+}
+
+TEST_CASE("clearing the tone stops the generator", "[audio][tone]")
+{
+    ServiceUnderTest harness;
+    harness.service.setSyntheticTone(440.0f);
+
+    for (auto waited = 0; waited < 2000 && !harness.service.hasUsableInput(); waited += 20)
+    {
+        juce::Thread::sleep(20);
+    }
+
+    REQUIRE(harness.service.hasUsableInput());
+
+    harness.service.setSyntheticTone(0.0f);
+
+    REQUIRE_FALSE(harness.service.hasUsableInput());
+}
