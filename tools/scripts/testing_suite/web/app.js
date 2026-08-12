@@ -781,6 +781,34 @@ function facetLabel(name) {
   return name.replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase());
 }
 
+// How many captures would remain if this value were also kept.
+//
+// Counted against the filters already on, not against the whole run. The number
+// beside a value is what clicking it gets you, and a value that gets you
+// nothing is not an option -- picking "dark" makes "light" impossible, and an
+// impossible choice sitting in a list is a thing to try and be confused by.
+function reachable(name, value) {
+  const sets = filterFor(name);
+  const proposed = {
+    ...state.filters,
+    [name]: { include: new Set([...sets.include, value]), exclude: sets.exclude },
+  };
+  const was = state.filters;
+  state.filters = proposed;
+
+  let count = 0;
+
+  (state.data.groups || []).forEach((group) => {
+    (group.captures || []).forEach((capture) => {
+      if (matchesFilters(capture)) count += 1;
+    });
+  });
+
+  state.filters = was;
+
+  return count;
+}
+
 function facetMenu(name, values) {
   const menu = document.createElement("details");
   menu.className = "facet-menu";
@@ -798,18 +826,35 @@ function facetMenu(name, values) {
   panel.innerHTML =
     '<div class="facet-hint">click to keep · shift-click to drop · click again to clear</div>';
 
-  values.forEach(([value, count]) => {
+  let offered = 0;
+
+  values.forEach(([value]) => {
     const state_ = sets.include.has(value) ? "include"
       : sets.exclude.has(value) ? "exclude" : "off";
+
+    // What clicking this would leave. A chosen value keeps its place whatever
+    // the number says -- it is how you take it off again, and a control that
+    // vanishes when used is worse than one that leads nowhere.
+    const count = state_ === "off" ? reachable(name, value) : null;
+
+    if (state_ === "off" && count === 0) return;
+
+    offered += 1;
+
     const row = document.createElement("button");
     row.type = "button";
     row.className = `facet-option ${state_}`;
     row.innerHTML =
       `<span class="mark">${state_ === "include" ? "✓" : state_ === "exclude" ? "✕" : ""}</span>` +
-      `<span class="value">${value}</span><span class="count">${count}</span>`;
+      `<span class="value">${value}</span>` +
+      `<span class="count">${count === null ? "" : count}</span>`;
     row.addEventListener("click", (event) => cycleFilter(name, value, event.shiftKey));
     panel.appendChild(row);
   });
+
+  // Nothing left to choose and nothing chosen: the menu would open on a hint
+  // and a blank space.
+  if (!offered) return null;
 
   menu.appendChild(panel);
 
@@ -839,7 +884,9 @@ function renderFilters(view) {
   Object.entries(facets).forEach(([name, values]) => {
     if (values.length < 2) return;   // A facet with one value filters nothing.
 
-    row.appendChild(facetMenu(name, values));
+    const menu = facetMenu(name, values);
+
+    if (menu) row.appendChild(menu);
   });
 
   holder.appendChild(row);

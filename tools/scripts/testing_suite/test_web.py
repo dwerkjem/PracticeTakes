@@ -174,6 +174,34 @@ class PageWiringTests(unittest.TestCase):
 
         self.assertLess(matches.index("sets.exclude.has(value)"), matches.index("sets.include.size"))
 
+    def test_an_option_that_would_show_nothing_is_not_offered(self) -> None:
+        """Picking "dark" makes "light" impossible, and an impossible choice
+        sitting in a list is a thing to try and be confused by."""
+        body = script()
+        menu = body[body.index("function facetMenu"):body.index("// One open at a time")]
+
+        self.assertIn("reachable(name, value)", menu)
+        self.assertIn('if (state_ === "off" && count === 0) return;', menu)
+
+    def test_a_chosen_option_stays_however_few_it_leaves(self) -> None:
+        """It is how you take it off again; a control that vanishes when used
+        is worse than one that leads nowhere."""
+        body = script()
+        menu = body[body.index("function facetMenu"):body.index("// One open at a time")]
+
+        self.assertIn('state_ === "off" ? reachable', menu)
+
+    def test_the_count_is_against_the_filters_already_on(self) -> None:
+        """A number counted against the whole run promises captures that the
+        other filters have already excluded."""
+        body = script()
+        counter = body[body.index("function reachable"):body.index("function facetMenu")]
+
+        self.assertIn("...state.filters", counter)
+        self.assertIn("matchesFilters(capture)", counter)
+        # And it puts the filters back, or every count after the first is wrong.
+        self.assertIn("state.filters = was", counter)
+
     def test_the_facets_are_dropdowns(self) -> None:
         body = script()
 
