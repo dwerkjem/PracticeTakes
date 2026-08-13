@@ -1,7 +1,15 @@
 # tool-registry Specification
 
 ## Purpose
-TBD - created by archiving change tool-registry-contract. Update Purpose after archive.
+
+Defines the single contract every analysis tool is declared and built through, so
+that adding a tool is one registry entry and no change to the application shell.
+Covers what a registry entry carries, how a tool's stable identity differs from
+one live instance of it, the instance policy the shell enforces on its behalf,
+the shared services a tool is handed and may not outlive, how per-instance
+settings are serialised, and the order its lifecycle runs in. The rule this
+exists to hold: no part of the shell names an individual tool.
+
 ## Requirements
 ### Requirement: Tools are declared in one registry entry
 The application SHALL discover every analysis tool through a registry of
