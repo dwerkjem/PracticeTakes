@@ -1,7 +1,16 @@
 # feedback-email-dispatch Specification
 
 ## Purpose
-TBD - created by archiving change activate-feedback-email-dispatch. Update Purpose after archive.
+
+Defines how feedback submitted from inside the application is delivered onward by
+email, and — more to the point — how the dispatcher accounts for itself when it
+delivers nothing. Silence has several causes (nothing queued, a daily limit
+reached, a refused configuration, a failed send) and treating them alike leaves
+an administrator unable to tell a quiet day from a broken one. Covers those
+distinct outcomes, rejecting a configuration that could never deliver before it
+is used rather than after, the status and on-demand dispatch an administrator can
+reach, and the audited record of every attempt with its actor and result.
+
 ## Requirements
 ### Requirement: The dispatcher distinguishes every reason it sent nothing
 The feedback email dispatcher SHALL return a result that names which of the
