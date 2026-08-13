@@ -246,34 +246,98 @@ void SpectrogramComponent::drawFrequencyGrid(juce::Graphics& graphics) const
     }
 }
 
+void SpectrogramComponent::drawRotatedSpectrogram(
+    juce::Graphics& graphics,
+    juce::Rectangle<int> bounds) const
+{
+    // Time down the pane instead of across it, for a pane that is tall and thin.
+    // A trace scrolling left to right through 180px is a second of history and a
+    // smear; the same trace scrolling downward has the long axis to spend.
+    //
+    // Only the mapping onto the screen turns. The image is still generated with
+    // time along its width and frequency up its height -- rotating the source
+    // would mean rewriting the scroll in `updateSpectrogramColumn` and
+    // re-deriving every column already in the history, to arrive at a picture
+    // this transform gives exactly.
+    //
+    // Stated as corners rather than as an angle, because the thing being decided
+    // is where the oldest column, the newest column, and the lowest frequency
+    // each land. A rotation plus a translation encodes the same choice in a form
+    // no reader can check. Worked through, it is a 90-degree clockwise turn of
+    // the full view: time ran left to right and now runs top to bottom;
+    // frequency ran low at the bottom and now runs low at the left.
+    const auto area = bounds.toFloat();
+    const auto imageRight = static_cast<float>(spectrogramImage.getWidth());
+    const auto imageBottom = static_cast<float>(spectrogramImage.getHeight());
+
+    const auto transform = juce::AffineTransform::fromTargetPoints(
+        // Oldest column, highest frequency.
+        0.0f, 0.0f, area.getRight(), area.getY(),
+        // Newest column, highest frequency: time runs down, so the newest is at
+        // the bottom, which is where the eye already looks for "now".
+        imageRight, 0.0f, area.getRight(), area.getBottom(),
+        // Oldest column, lowest frequency: low frequencies to the left.
+        0.0f, imageBottom, area.getX(), area.getY());
+
+    juce::Graphics::ScopedSaveState saved(graphics);
+    graphics.reduceClipRegion(bounds);
+    graphics.drawImageTransformed(spectrogramImage, transform);
+}
+
 void SpectrogramComponent::paint(juce::Graphics& graphics)
 {
     graphics.fillAll(backgroundColour());
+
+    const auto shape = compact::shapeFor(getWidth(), getHeight());
+    const auto compactPane = shape != compact::Shape::full;
 
     graphics.setColour(panelColour());
     graphics.fillRoundedRectangle(spectrogramBounds.toFloat(), 8.0f);
 
     if (audioErrorMessage.isEmpty())
     {
-        graphics.drawImage(
-            spectrogramImage, spectrogramBounds.toFloat(), juce::RectanglePlacement::stretchToFit);
+        if (shape == compact::Shape::vertical)
+        {
+            drawRotatedSpectrogram(graphics, spectrogramBounds);
+        }
+        else
+        {
+            // Short and wide keeps the orientation it already had. The pane is
+            // short of height, which is the axis the plot spends on frequency,
+            // and turning it would put time on the short axis instead -- the
+            // trade the vertical case exists to avoid, made backwards.
+            graphics.drawImage(
+                spectrogramImage, spectrogramBounds.toFloat(),
+                juce::RectanglePlacement::stretchToFit);
+        }
     }
     else
     {
         graphics.setColour(mutedColour());
-        graphics.setFont(juce::FontOptions(17.0f));
+        graphics.setFont(juce::FontOptions(compactPane ? 12.0f : 17.0f));
         graphics.drawFittedText(
-            audioErrorMessage, spectrogramBounds.reduced(20), juce::Justification::centred, 2);
+            audioErrorMessage, spectrogramBounds.reduced(compactPane ? 4 : 20),
+            juce::Justification::centred, compactPane ? 3 : 2);
     }
 
     graphics.setColour(outlineColour());
     graphics.drawRoundedRectangle(spectrogramBounds.toFloat(), 8.0f, 1.0f);
 
-    drawFrequencyGrid(graphics);
+    // The grid is labelled, and a label is the first thing worth losing: at this
+    // size "10 kHz" in 11pt over a 144px plot covers the signal it is annotating.
+    // The plot keeps its logarithmic shape either way, so the frequencies are
+    // still where a reader who knows the tool expects them.
+    if (!compactPane)
+    {
+        drawFrequencyGrid(graphics);
+    }
 }
 
 void SpectrogramComponent::resized()
 {
-    auto bounds = getLocalBounds().reduced(18);
-    spectrogramBounds = bounds;
+    // The 18px frame is comfortable on a full pane and is most of a small one:
+    // at the 180px floor it would spend a fifth of the width on margin. The plot
+    // is the tool, so below the threshold the frame gives way to it.
+    const auto inset = compact::isCompact(getWidth(), getHeight()) ? 4 : 18;
+    spectrogramBounds = getLocalBounds().reduced(inset);
 }

@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include "../../../application/theme/Theme.h"
+#include "../../../application/tools/CompactPresentation.h"
 #include "../../../application/tools/ToolComponent.h"
 #include "../../../platform/audio/AudioInputService.h"
 
@@ -56,6 +57,7 @@ class SpectrogramComponent final
     [[nodiscard]] float yForFrequency(double frequency) const;
     [[nodiscard]] juce::String frequencyLabel(double frequency) const;
     void drawFrequencyGrid(juce::Graphics& graphics) const;
+    void drawRotatedSpectrogram(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     [[nodiscard]] juce::Colour backgroundColour() const;
     [[nodiscard]] juce::Colour panelColour() const;
     [[nodiscard]] juce::Colour mutedColour() const;
