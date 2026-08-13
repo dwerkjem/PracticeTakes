@@ -140,13 +140,27 @@ class WorkspaceSplitPane final : public juce::Component
 
     [[nodiscard]] static int minimumWidthOf(juce::Component* child)
     {
-        // The one cast this class makes, and it asks about its own type rather
-        // than naming a tool -- the distinction the tool registry exists to
-        // keep. A tabbed group or a docked panel is a leaf here: its tabs share
-        // one pane, so it needs what one pane needs.
+        // A split asks about its own type rather than naming a tool -- the
+        // distinction the tool registry exists to keep.
         if (const auto* split = dynamic_cast<const WorkspaceSplitPane*>(child))
         {
             return split->minimumWidth();
+        }
+
+        // A tabbed group is a leaf here -- its tabs share one pane, so its
+        // *content* needs what one pane needs -- but the bar itself is chrome
+        // the content never sees, spent off whichever axis the bar lies along.
+        // TabsAtLeft/TabsAtRight spend it here; TabsAtTop/TabsAtBottom do not,
+        // because JUCE already degrades a bar that runs out of its own axis by
+        // shrinking tabs and folding the rest behind an overflow button rather
+        // than drawing past the edge -- the graceful case #150 needed but a
+        // plain leaf never had.
+        if (const auto* tabs = dynamic_cast<const juce::TabbedComponent*>(child))
+        {
+            const auto barSpendsWidth =
+                tabs->getOrientation() == juce::TabbedButtonBar::TabsAtLeft ||
+                tabs->getOrientation() == juce::TabbedButtonBar::TabsAtRight;
+            return minimumHorizontalPaneSize + (barSpendsWidth ? tabs->getTabBarDepth() : 0);
         }
 
         return minimumHorizontalPaneSize;
@@ -157,6 +171,18 @@ class WorkspaceSplitPane final : public juce::Component
         if (const auto* split = dynamic_cast<const WorkspaceSplitPane*>(child))
         {
             return split->minimumHeight();
+        }
+
+        if (const auto* tabs = dynamic_cast<const juce::TabbedComponent*>(child))
+        {
+            // TabsAtTop is the only orientation this workspace builds
+            // (MainComponentWorkspaceLayout.cpp), at a depth of 38 -- read from
+            // the component rather than repeated as a second constant that
+            // could drift from the one actually configured there.
+            const auto barSpendsHeight =
+                tabs->getOrientation() == juce::TabbedButtonBar::TabsAtTop ||
+                tabs->getOrientation() == juce::TabbedButtonBar::TabsAtBottom;
+            return minimumVerticalPaneSize + (barSpendsHeight ? tabs->getTabBarDepth() : 0);
         }
 
         return minimumVerticalPaneSize;
