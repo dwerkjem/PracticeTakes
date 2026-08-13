@@ -175,14 +175,29 @@ in before the sanitizer work.
 Steps 1 and 2 are safe on their own: a tool that never gets a small pane never
 draws small.
 
-## Open Questions
+## Open Questions — resolved
 
-- **Where is the threshold — per tool, or one number?** A single number is
-  simpler to reason about; per-tool matches the fact that the tuner and the
-  spectrogram run out of room at different widths.
-- **What should a tabbed group do?** Tabs share one pane, so they are not the
-  same problem, but a tab bar has its own minimum and the same overflow question
-  applies to it.
-- **Should the vertical floor of 280 move too?** The same arithmetic applies to
-  stacked panes; nobody has reported it, which may only mean nobody has stacked
-  four tools.
+- **Where is the threshold — per tool, or one number?** One number:
+  `CompactPresentation.h`'s `fullWidth`/`fullHeight` (320×220), shared by all
+  three tools and by `DockedToolPanel`'s own chrome-hiding. Per-tool was
+  rejected implicitly by never being built — one shared rule is what keeps two
+  tools at the same pane size from disagreeing about which of them is "small".
+
+- **What should a tabbed group do? — decided 2026-08-13.** Give the tab bar's
+  own depth a place in the arithmetic, on whichever axis it actually spends:
+  `WorkspaceSplitPane::minimumWidthOf`/`minimumHeightOf` now recognise a
+  `juce::TabbedComponent` child and add its `getTabBarDepth()` to the pane
+  floor on that axis. This was not the same defect #150 was — JUCE's
+  `TabbedButtonBar` already degrades a tab bar that runs out of room on its own
+  axis by shrinking tabs and folding the rest behind an overflow button, rather
+  than drawing past the edge — but it was the *same shape* of defect: a
+  composite component's real minimum, quietly larger than the flat constant
+  standing in for it, on the axis the bar's chrome actually costs (height, for
+  the `TabsAtTop` this workspace builds). Read from the component
+  (`getTabBarDepth()`) rather than duplicated as a second constant that could
+  drift from `MainComponentWorkspaceLayout.cpp`'s `setTabBarDepth(38)`.
+
+- **Should the vertical floor of 280 move too?** It already had — 280 → 120,
+  done alongside the horizontal floor in task 4.2, on the same reasoning: the
+  same arithmetic applies to stacked panes, and there was no reason to leave
+  one axis fixed while lowering the other.
