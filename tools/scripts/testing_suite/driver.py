@@ -276,6 +276,50 @@ class ApplicationDriver:
 
         return reply.items[0]
 
+    def has_input(self, timeout: float | None = None) -> bool:
+        """Whether the application has something to analyse.
+
+        The device is opened without blocking now, so a window can be up and
+        drawn before there is any input behind it. A tool photographed then is
+        a picture of a tool that has not heard anything -- a flaky golden
+        rather than a defect in the build.
+
+        False for an application that predates this reply, which is the safe
+        way round: the caller waits its timeout and captures anyway.
+        """
+        reply = self.send("status", timeout=timeout)
+
+        return reply.success and len(reply.items) > 1 and reply.items[1] == "input"
+
+    def wait_for_input(self, timeout: float = 20.0, interval: float = 0.25) -> bool:
+        """Block until there is input to analyse, or say there was none.
+
+        `timeout` bounds this call as a whole, not one status check: without an
+        explicit timeout on `has_input`, `send` falls back to its own default of
+        sixty seconds, so an application that stops answering could hold this
+        well past the caller's stated deadline. Passing what is left of *this*
+        deadline keeps a single slow reply from outrunning it, and a channel
+        that breaks entirely -- the application exited, or gave up waiting --
+        is reported the same way a plain timeout is: `False`, never raised. A
+        caller asking whether there is something to analyse is not asking
+        whether the channel is healthy.
+        """
+        deadline = time.monotonic() + timeout
+
+        while True:
+            remaining = deadline - time.monotonic()
+
+            if remaining <= 0:
+                return False
+
+            try:
+                if self.has_input(timeout=remaining):
+                    return True
+            except ChannelError:
+                return False
+
+            time.sleep(min(interval, max(0.0, deadline - time.monotonic())))
+
     def restart(self) -> None:
         """Relaunch, for surfaces that verify something surviving a restart."""
         self.stop()

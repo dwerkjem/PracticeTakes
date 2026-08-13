@@ -41,6 +41,26 @@ struct AudioInputServiceCallbackAccess
             inputChannelData, numInputChannels, outputChannelData, numOutputChannels, numSamples,
             context);
     }
+
+    // What every JUCE backend calls synchronously, on the caller's thread,
+    // before the real-time thread can invoke the callback above for a device
+    // session -- confirmed against ALSAAudioIODevice::start() rather than
+    // assumed. `nullptr` is a real caller shape: the service already treats a
+    // null device as "use the defaults".
+    static void aboutToStart(AudioInputService& service, juce::AudioIODevice* device = nullptr)
+    {
+        service.audioDeviceAboutToStart(device);
+    }
+
+    static void stopped(AudioInputService& service)
+    {
+        service.audioDeviceStopped();
+    }
+
+    static bool toneSourceRunning(const AudioInputService& service)
+    {
+        return service.toneSourceRunning.load(std::memory_order_acquire);
+    }
 };
 
 // The recovery's one blocking step, replaceable. Named rather than implied, for
@@ -418,4 +438,205 @@ TEST_CASE("the service can be destroyed while a recovery is stuck", "[audio][rec
     }
 
     REQUIRE(finished.load());
+}
+
+// --- The tone without a device ----------------------------------------------
+//
+// The tone is never heard. It exists so a tool has something to analyse for a
+// capture, and until now it was generated inside the audio callback -- so it
+// needed a device it had no other use for. One process at a time holds that
+// device, which serialised every surface carrying a tone onto whichever one
+// won it.
+
+TEST_CASE("a tone with no device still reaches a tool", "[audio][tone]")
+{
+    ServiceUnderTest harness;
+    SilentConsumer consumer;
+    harness.service.addListener(&consumer);
+
+    // Nothing is open here: a bare test process has no device running, which is
+    // exactly the situation a capture worker without one is in.
+    REQUIRE_FALSE(harness.service.hasUsableInput());
+
+    harness.service.setSyntheticTone(440.0f);
+
+    std::vector<float> heard(4096, 0.0f);
+    std::size_t got = 0;
+
+    for (auto waited = 0; waited < 3000 && got == 0; waited += 20)
+    {
+        juce::Thread::sleep(20);
+        got = harness.service.readSamples(&consumer, heard.data(), heard.size());
+    }
+
+    harness.service.setSyntheticTone(0.0f);
+    harness.service.removeListener(&consumer);
+
+    REQUIRE(got > 0);
+    REQUIRE(std::any_of(
+        heard.begin(), heard.begin() + static_cast<long>(got),
+        [](float sample) { return std::abs(sample) > 0.001f; }));
+}
+
+TEST_CASE("a tone with no device reports as input rather than as missing", "[audio][tone]")
+{
+    ServiceUnderTest harness;
+
+    REQUIRE(harness.service.inputState() == AudioInputService::InputState::disconnected);
+
+    harness.service.setSyntheticTone(440.0f);
+
+    for (auto waited = 0; waited < 2000 && !harness.service.hasUsableInput(); waited += 20)
+    {
+        juce::Thread::sleep(20);
+    }
+
+    const auto state = harness.service.inputState();
+    harness.service.setSyntheticTone(0.0f);
+
+    REQUIRE(harness.service.hasUsableInput() == false);
+    REQUIRE(state == AudioInputService::InputState::active);
+}
+
+TEST_CASE("clearing the tone stops the generator", "[audio][tone]")
+{
+    ServiceUnderTest harness;
+    harness.service.setSyntheticTone(440.0f);
+
+    for (auto waited = 0; waited < 2000 && !harness.service.hasUsableInput(); waited += 20)
+    {
+        juce::Thread::sleep(20);
+    }
+
+    REQUIRE(harness.service.hasUsableInput());
+
+    harness.service.setSyntheticTone(0.0f);
+
+    REQUIRE_FALSE(harness.service.hasUsableInput());
+}
+
+TEST_CASE(
+    "changing the tone while it is already playing does not race the generator",
+    "[audio][tone][.load]")
+{
+    // What the test-control channel actually does: `open-state` calls
+    // `setSyntheticTone` every time, whether or not one is already running.
+    // Two capture surfaces carrying a tone back to back -- an ordinary
+    // sequence, not a contrived one -- call this while the generator's own
+    // timer thread is mid-block, writing the same phase fields `reset()`
+    // writes. TSan caught the race the first version of this had: no ordering
+    // between `tone.reset()` on this thread and `SyntheticTone::advance()` on
+    // the timer thread.
+    //
+    // A single-threaded assertion cannot observe that a race did not happen;
+    // what this pins is the shape that exposed it, so a regression is
+    // reachable by the tools that can see it. Tagged [.load] to run under
+    // ThreadSanitizer rather than every ordinary build.
+    ServiceUnderTest harness;
+
+    for (auto frequency = 220.0f; frequency < 240.0f; frequency += 1.0f)
+    {
+        harness.service.setSyntheticTone(frequency);
+        juce::Thread::sleep(1);
+    }
+
+    for (auto waited = 0; waited < 2000 && !harness.service.hasUsableInput(); waited += 20)
+    {
+        juce::Thread::sleep(20);
+    }
+
+    REQUIRE(harness.service.hasUsableInput());
+
+    harness.service.setSyntheticTone(0.0f);
+}
+
+// --- The audio callback and the tone source, sharing SyntheticTone ---------
+//
+// A tone is rendered by two different callers depending on whether a device is
+// delivering blocks: the ToneSource timer thread when there is none, the audio
+// callback itself when there is -- audioDeviceIOCallbackWithContext renders the
+// tone whenever one is requested, whether or not a device is present, so a
+// device showing up does not make it stop asking. Nothing used to make those
+// two callers mutually exclusive except the message thread's own polling of
+// updateToneSource(), up to one cycle behind an actual device starting. TSan
+// found the same class of race here that it found for setSyntheticTone: two
+// threads inside SyntheticTone::render() at once.
+
+TEST_CASE(
+    "a device about to start stops the tone source before the first block can arrive",
+    "[audio][tone]")
+{
+    // The fix, pinned directly: this must be true the instant aboutToStart
+    // returns, not eventually. Every JUCE backend calls this synchronously
+    // before the real-time thread can invoke the callback, so "eventually" was
+    // the bug.
+    ServiceUnderTest harness;
+    harness.service.setSyntheticTone(440.0f);
+
+    for (auto waited = 0;
+         waited < 2000 && !AudioInputServiceCallbackAccess::toneSourceRunning(harness.service);
+         waited += 20)
+    {
+        juce::Thread::sleep(20);
+    }
+
+    REQUIRE(AudioInputServiceCallbackAccess::toneSourceRunning(harness.service));
+
+    AudioInputServiceCallbackAccess::aboutToStart(harness.service);
+
+    REQUIRE_FALSE(AudioInputServiceCallbackAccess::toneSourceRunning(harness.service));
+
+    AudioInputServiceCallbackAccess::stopped(harness.service);
+    harness.service.setSyntheticTone(0.0f);
+}
+
+TEST_CASE(
+    "a device starting while its tone plays does not race the tone source",
+    "[audio][tone][.load]")
+{
+    // The real sequence, repeated under load rather than asserted once: ask
+    // for a tone with no device, let the ToneSource actually start, then
+    // simulate a device arriving -- aboutToStart, then real callback
+    // invocations spanning several of the ToneSource's own 20ms ticks (not
+    // just a handful back to back, which finish in microseconds and stand a
+    // poor chance of actually overlapping a periodic timer), audioDeviceStopped
+    // -- and do it again immediately, with no pause for the message thread to
+    // catch up in between. That gap is exactly the window the original bug
+    // lived in; spanning several ticks per cycle, repeated, is what gives
+    // ThreadSanitizer a real chance to see a regression rather than a lucky
+    // miss.
+    ServiceUnderTest harness;
+    Buffers buffers;
+
+    for (auto cycle = 0; cycle < 8; ++cycle)
+    {
+        harness.service.setSyntheticTone(440.0f);
+
+        for (auto waited = 0;
+             waited < 2000 && !AudioInputServiceCallbackAccess::toneSourceRunning(harness.service);
+             waited += 20)
+        {
+            juce::Thread::sleep(20);
+        }
+
+        REQUIRE(AudioInputServiceCallbackAccess::toneSourceRunning(harness.service));
+
+        // Deliberately no assertion on what aboutToStart leaves behind here --
+        // that is the previous test's job, and it fails outright without the
+        // fix. This test's job is to reach the concurrent section regardless,
+        // so a reverted fix is caught by ThreadSanitizer actually observing the
+        // two threads in render() together, not by an assertion that stops the
+        // test before it gets there.
+        AudioInputServiceCallbackAccess::aboutToStart(harness.service);
+
+        const auto until = juce::Time::getMillisecondCounterHiRes() + 90.0;
+        while (juce::Time::getMillisecondCounterHiRes() < until)
+        {
+            drive(harness.service, buffers);
+        }
+
+        AudioInputServiceCallbackAccess::stopped(harness.service);
+    }
+
+    harness.service.setSyntheticTone(0.0f);
 }

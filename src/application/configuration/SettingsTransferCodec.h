@@ -33,7 +33,13 @@ struct SettingsTransferModel
     AppSettings::State state;
     bool feedbackInvitationsDisabled = false;
 
-    bool operator==(const SettingsTransferModel&) const = default;
+    // No operator== here on purpose. `AppSettings::State` compares nothing of
+    // its own, so a defaulted comparison on this type is implicitly deleted --
+    // present in the header, absent at every call site, and it fails to
+    // compile with an error that points at the wrong type when someone
+    // reaches for it. See #160. Giving `State` (and `TunerSettings`,
+    // `RecentTool`, `WorkspaceCatalog`) a real comparison so a round-trip
+    // equality assertion becomes possible is a separate, larger decision.
 };
 
 struct SettingsTransferDecodeResult

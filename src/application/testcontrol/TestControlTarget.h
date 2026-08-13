@@ -44,6 +44,12 @@ class TestControlTarget
     // not in an approved state (at startup, or after a click changed things).
     [[nodiscard]] virtual std::string currentStateId() const = 0;
 
+    // Whether the application has a working input device. Reported because the
+    // device is opened without blocking now: a harness that photographed a tool
+    // the moment the window appeared would sometimes catch it before there was
+    // anything to analyse, which is a flaky golden rather than a defect.
+    [[nodiscard]] virtual bool hasInput() const = 0;
+
     // Begin an orderly shutdown, so the harness exercises the real quit path
     // rather than killing the process.
     virtual void requestQuit() = 0;

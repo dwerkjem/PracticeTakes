@@ -35,7 +35,7 @@ Standard library only.
 
 from __future__ import annotations
 
-from contextlib import ExitStack
+from contextlib import contextmanager, ExitStack
 
 from dataclasses import dataclass, field
 import datetime as _datetime
@@ -54,7 +54,7 @@ import display as display_module
 import machine as machine_module
 import suites as suites_module
 import surfaces
-from driver import ApplicationDriver, missing_states
+from driver import STARTUP_TIMEOUT_SECONDS, ApplicationDriver, missing_states
 from store import Store
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -73,6 +73,14 @@ LOG_LINES_KEPT = 200
 
 # How long a command gets to end politely before it is killed.
 STOP_GRACE_SECONDS = 5.0
+
+# How many screens the hub captures on at once. A sweep is almost all waiting --
+# for a window to settle, for a tool to have something to draw -- and that
+# waiting overlaps. Not derived from the processor count: several instrumented
+# applications make the settle poll measure the machine's load rather than the
+# window's layout, and a capture that fails because the machine was busy is
+# worse than a slow one.
+CAPTURE_WORKERS = 6
 
 # How much of a plan's weight has to be finished before a time estimate is worth
 # showing. One surface is not a rate: the first is unrepresentative -- it pays
@@ -138,7 +146,22 @@ BUILD_TARGETS = {
         "options": ("-DBUILD_TESTING=ON", "-DPRACTICE_TAKES_SANITIZE=realtime"),
         # RealtimeSanitizer is Clang's, and so is the annotation the audio
         # callback carries. GCC will not build this at all.
-        "compilers": ("clang", "clang++"),
+        # Candidates, newest first, and the first one that actually takes the
+        # flag wins. Not a single name: Debian's `clang` is whatever version is
+        # the default -- 19 on trixie -- and installing clang-20 beside it
+        # leaves `/usr/bin/clang` pointing at the old one. Hardcoding `clang`
+        # would keep refusing to build on a machine that had just been given
+        # everything it needed.
+        "compilers": (
+            ("clang-21", "clang++-21"),
+            ("clang-20", "clang++-20"),
+            ("clang", "clang++"),
+        ),
+        # Having a clang is not the requirement -- RealtimeSanitizer landed in
+        # Clang 20, and 19 accepts every other `-fsanitize` argument and
+        # refuses this one partway through a build. CI pins clang-20 for the
+        # same reason.
+        "needs_flag": "-fsanitize=realtime",
         "why": "the tests under RealtimeSanitizer, for the audio callback",
     },
 }
@@ -300,11 +323,88 @@ def missing_compiler(target: str) -> str:
     if entry is None or "compilers" not in entry:
         return ""
 
-    for name in entry["compilers"]:
-        if "/" not in name and shutil.which(name, path=suite_environment().get("PATH", "")) is None:
-            return f"`{name}` is not installed, and {target} cannot be built without it"
+    if usable_compilers(target) is not None:
+        return ""
 
-    return ""
+    flag = entry.get("needs_flag", "")
+    names = ", ".join(f"`{pair[1]}`" for pair in _candidates(entry))
+
+    if flag:
+        return (
+            f"no compiler here supports `{flag}`, which {target} needs. Tried "
+            f"{names} — RealtimeSanitizer arrived in Clang 20, and this "
+            f"distribution's default clang is older"
+        )
+
+    return f"none of {names} is installed, and {target} cannot be built without one"
+
+
+def _candidates(entry: dict) -> tuple[tuple[str, str], ...]:
+    """The compiler pairs to try, whether one was given or several."""
+    compilers = entry.get("compilers", (DEFAULT_COMPILERS,))
+
+    return compilers if isinstance(compilers[0], tuple) else (compilers,)
+
+
+def usable_compilers(target: str) -> tuple[str, str] | None:
+    """The first compiler pair that is installed and takes what this needs.
+
+    None when there is no such pair, which is what `missing_compiler` turns
+    into a sentence.
+    """
+    entry = BUILD_TARGETS.get(target)
+
+    if entry is None:
+        return DEFAULT_COMPILERS
+
+    path = suite_environment().get("PATH", "")
+    flag = entry.get("needs_flag", "")
+
+    for pair in _candidates(entry):
+        if any("/" not in name and shutil.which(name, path=path) is None for name in pair):
+            continue
+
+        if flag and not _compiler_accepts(pair[1], flag):
+            continue
+
+        return pair
+
+    return None
+
+
+# Asked once per compiler and flag: it costs a process, and the answer does not
+# change while the hub is running.
+_flag_support: dict[tuple[str, str], bool] = {}
+
+
+def _compiler_accepts(compiler: str, flag: str) -> bool:
+    """Whether this compiler will take the flag, asked rather than assumed.
+
+    A version number would be a proxy for this and a worse one: what matters is
+    whether the build will go through, and the compiler is the only thing that
+    knows. Costs one empty compile.
+    """
+    remembered = _flag_support.get((compiler, flag))
+
+    if remembered is not None:
+        return remembered
+
+    try:
+        completed = subprocess.run(
+            [compiler, flag, "-xc++", "-fsyntax-only", "-"],
+            input="int main() { return 0; }\n",
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env=build_environment(),
+        )
+        accepted = completed.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        accepted = False
+
+    _flag_support[(compiler, flag)] = accepted
+
+    return accepted
 
 
 def build_overview() -> list[dict]:
@@ -492,6 +592,28 @@ class Job:
         if not chosen:
             return False
 
+        # The same check the suites get. Without it the banner's build button
+        # started a build that could not work, CMake failed somewhere in the
+        # middle, and what came back was a complaint about a missing binary
+        # rather than the missing compiler that was the actual answer.
+        blocked = [(target, missing_compiler(target)) for target in chosen]
+        blocked = [(target, reason) for target, reason in blocked if reason]
+
+        if blocked and len(blocked) == len(chosen):
+            with self._lock:
+                self.state = FINISHED
+                self.message = blocked[0][1]
+                self.finished_at = _now()
+                self.log = [blocked[0][1]]
+                self.percent = 100
+
+            return False
+
+        for target, reason in blocked:
+            self._say(f"skipping {target}: {reason}")
+
+        chosen = [target for target in chosen if not missing_compiler(target)]
+
         with self._lock:
             if self.running:
                 return False
@@ -657,7 +779,7 @@ class Job:
         built = entry.get("builds", target)
         self._say(f"building {target} — {entry['why']}", state=BUILDING, percent=floor)
 
-        c_compiler, cxx_compiler = entry.get("compilers", DEFAULT_COMPILERS)
+        c_compiler, cxx_compiler = usable_compilers(target) or DEFAULT_COMPILERS
         self._command(
             [
                 cmake_binary(),
@@ -686,11 +808,16 @@ class Job:
             raise RunStopped
 
         if binary_path(target) is None:
+            # `built`, not `target`: the sanitizer builds are named for the tree
+            # they live in and all produce `PracticeTakesTests`. Naming the
+            # wrong file sent somebody looking for a binary that was never
+            # supposed to exist.
             looked = ", ".join(
-                str(entry["directory"] / pattern.format(target=target))
+                str(entry["directory"] / pattern.format(target=built))
                 for pattern in BINARY_LOCATIONS
             )
-            raise RuntimeError(f"the build finished but {target} is not in any of: {looked}")
+            raise RuntimeError(
+                f"the build of {target} finished but {built} is not in any of: {looked}")
 
     def _end(self, process: subprocess.Popen, label: str) -> None:
         """Signal a running command and everything it started.
@@ -996,6 +1123,16 @@ class Job:
         # desktop: windows over whatever they were doing, the pointer taken, and
         # nothing else clickable for the length of the run. The button most
         # likely to be pressed was the one that behaved worst.
+        workers = CAPTURE_WORKERS if display_module.is_available() else 1
+
+        if workers > 1:
+            self._say(f"capturing on {workers} screens at once", percent=floor + 1)
+            self._capture_in_parallel(
+                run_id=run_id, plan=plan, tooling=tooling, executable=executable,
+                workers=workers, floor=floor, ceiling=ceiling)
+
+            return
+
         with ExitStack() as stack:
             try:
                 screen = stack.enter_context(display_module.virtual_display())
@@ -1007,6 +1144,75 @@ class Job:
             self._capture_with_display(
                 run_id=run_id, plan=plan, tooling=tooling, executable=executable,
                 floor=floor, ceiling=ceiling)
+
+    def _capture_in_parallel(
+        self, *, run_id: int, plan, tooling, executable, workers: int, floor: int, ceiling: int
+    ) -> None:
+        """The same pass on several screens, which is how the hub runs it now.
+
+        A sweep is almost entirely waiting -- for a window to settle, for a tool
+        to have a history to draw -- and that waiting overlaps. It could not
+        before: the tone needed an open input device, one process at a time
+        holds one, so every surface carrying a tone queued behind whichever
+        worker won it. Generating the tone without a device is what made this
+        worth wiring in.
+        """
+        began = time.monotonic()
+        images_at = self.store.path.parent / "images" / f"run-{run_id}"
+
+        @contextmanager
+        def worker(index: int, shared):
+            with display_module.virtual_display(publish=False) as screen:
+                driver = ApplicationDriver(executable, display=screen)
+
+                try:
+                    driver.start()
+
+                    with shared.audio:
+                        states = driver.list_states(timeout=STARTUP_TIMEOUT_SECONDS)
+
+                    absent = missing_states(states, surfaces.required_states())
+
+                    if absent:
+                        raise RuntimeError(
+                            "the application does not offer: " + ", ".join(absent))
+
+                    made = capture_module.CapturePass(
+                        store=self.store,
+                        run_id=run_id,
+                        driver=driver,
+                        tooling=tooling,
+                        image_directory=images_at,
+                        display=screen,
+                        lock=shared.checks,
+                        audio_gate=shared.audio,
+                    )
+                    made.has_input = driver.wait_for_input(timeout=4.0)
+
+                    yield made
+                finally:
+                    driver.stop()
+
+        def report(entry: dict) -> None:
+            fraction = capture_module.progress_fraction(entry)
+            left = remaining_seconds(entry, time.monotonic() - began)
+            self._say(
+                f"capturing {entry['surface']} at {entry['geometry']} "
+                f"in {entry.get('theme', 'dark')} "
+                f"({entry['done'] + 1} of {entry['total']}"
+                f"{', ' + describe_remaining(left) if left is not None else ''})",
+                percent=int(floor + (ceiling - floor) * fraction),
+            )
+
+        result = capture_module.run_in_parallel(
+            plan, workers=workers, worker=worker, progress=report,
+            should_stop=self._stop.is_set,
+        )
+
+        for problem in result.get("errors", []):
+            self._say(f"a worker stopped: {problem}")
+
+        self._record_capture_result(result, ceiling=ceiling)
 
     def _capture_with_display(
         self,
@@ -1026,6 +1232,12 @@ class Job:
 
             if absent:
                 raise RuntimeError("the application does not offer: " + ", ".join(absent))
+
+            # The device opens without blocking, so the window can be up before
+            # there is anything behind it. Waited for once, here, rather than
+            # per surface: once it is open it stays open.
+            if not driver.wait_for_input():
+                self._say("no input device yet; capturing anyway")
 
             began = time.monotonic()
 
@@ -1050,6 +1262,9 @@ class Job:
         finally:
             driver.stop()
 
+        self._record_capture_result(result, ceiling=ceiling)
+
+    def _record_capture_result(self, result: dict, *, ceiling: int) -> None:
         # Stopped is neither passed nor failed. The export feeds a release gate,
         # and a run reported as failed because somebody pressed stop would
         # either block a release or teach everyone that failures can be ignored.

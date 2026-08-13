@@ -303,8 +303,89 @@ button:hover { border-color: var(--accent); }
 .question .verdict-skip { color: var(--skip); }
 .question button { padding: 0 6px; font-size: 11px; }
 
+/* The one control that does something other than record an opinion. */
+.question .attend { border-color: var(--accent); color: var(--accent); padding: 0 8px; }
+
 .comments { margin-top: 6px; font-size: 12px; color: var(--muted); }
 .comments li { margin-left: 14px; }
+
+/* --- Bulk edit ------------------------------------------------------------
+   Its own element rather than the browser's prompt, which asks one question and
+   takes one answer, where the opinion held about a row of images is usually
+   several. */
+
+#bulk-modal[hidden] { display: none; }
+
+#bulk-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 11, 14, 0.72);
+}
+
+#bulk-sheet {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px 20px;
+  width: min(560px, calc(100vw - 40px));
+  max-height: calc(100vh - 60px);
+  overflow: auto;
+  box-shadow: 0 20px 50px rgba(10, 11, 14, 0.7);
+}
+
+#bulk-sheet h2 { margin: 0 0 4px; font-size: 16px; }
+#bulk-count { margin: 0 0 14px; }
+
+.bulk-axis {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.bulk-axis .prompt { flex: 1; min-width: 16ch; }
+
+/* The whole word is the target, not a four-pixel circle beside it. */
+.bulk-axis .choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.bulk-axis .choice:has(input:checked) { border-color: currentColor; }
+.bulk-axis .choice.verdict-pass:has(input:checked) { color: var(--pass); }
+.bulk-axis .choice.verdict-fail:has(input:checked) { color: var(--fail); }
+.bulk-axis .choice.verdict-skip:has(input:checked) { color: var(--skip); }
+.bulk-axis .choice.verdict-leave:has(input:checked) { color: var(--text); }
+
+.bulk-field { display: block; margin: 14px 0 10px; }
+
+#bulk-note {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  background: #12141a;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 8px;
+  font: inherit;
+  resize: vertical;
+}
+
+.bulk-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 
 #zoom {
   position: fixed;

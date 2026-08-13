@@ -2,6 +2,7 @@
 
 #include "AudioRecoveryPolicy.h"
 
+#include <algorithm>
 #include <cmath>
 #include <thread>
 #include <utility>
@@ -194,6 +195,14 @@ bool AudioInputService::hasUsableInput() const
     // and already delivering input callbacks. audioDeviceAboutToStart/stopped
     // is the authoritative lifecycle signal and avoids repeatedly reopening a
     // live device because of that backend reporting mismatch.
+    if (toneSourceRunning.load(std::memory_order_acquire))
+    {
+        // Being fed a tone *is* having input. A tool drawing "microphone
+        // disconnected" over a graph of a signal it is being given would be
+        // describing its own plumbing rather than what it has.
+        return true;
+    }
+
     return device != nullptr && device->isOpen() && deviceRunning.load(std::memory_order_acquire);
 }
 
@@ -296,11 +305,24 @@ void AudioInputService::initialiseInput(const juce::XmlElement* state, bool forc
     }
 
     initialised = true;
-    // Explicit, and on the message thread on purpose: somebody asked for this
-    // and is waiting to see the result. The automatic retry is the one that
-    // must not block, and it is the only one that moved.
-    manager.closeAudioDevice();
-    juce::ignoreUnused(manager.initialise(2, 0, state, true));
+
+    // Nobody asked for a device here -- they started the application, or they
+    // imported settings. Opening one is automatic, so it is the same class of
+    // work as the recovery timer and blocks the message thread the same way:
+    // this is where a second instance stalled for six seconds before answering
+    // anything, and where four of them stalled past any deadline worth having.
+    //
+    // A saved state has to be copied: the caller's XML does not outlive this
+    // call, and the thread reading it starts after the call returns.
+    auto saved = state != nullptr ? std::make_shared<juce::XmlElement>(*state)
+                                  : std::shared_ptr<juce::XmlElement>{};
+
+    startDeviceWork(
+        [owner = ownedManager, saved]
+        {
+            owner->closeAudioDevice();
+            juce::ignoreUnused(owner->initialise(2, 0, saved.get(), true));
+        });
     publishState();
 }
 
@@ -326,11 +348,102 @@ void AudioInputService::setSyntheticTone(float frequencyHz, float amplitude)
         toneBlock.resize(maximumToneBlock);
     }
 
+    // Stopped before `tone` is touched, not just before the frequency changes.
+    // `reset()` below writes the generator's phase fields directly, and if the
+    // source is already running -- changing the tone on an open state, which
+    // the test-control channel does on every `open-state` -- the timer thread
+    // is concurrently writing those same fields through
+    // `renderToneBlock -> SyntheticTone::advance`. TSan caught the race:
+    // `SyntheticTone.h:125` written from both threads with nothing ordering
+    // them.
+    //
+    // `stopTimer` is the ordering. It blocks until any callback already in
+    // flight has returned -- JUCE's HighResolutionTimer takes the same mutex
+    // on both sides -- so nothing can still be inside `render()` once this
+    // call returns, whether or not the timer happened to be running. Message
+    // thread only; the audio thread never calls this.
+    toneSource.stopTimer();
+    toneSourceRunning.store(false, std::memory_order_release);
+
     // From a known point, so what a capture shows does not depend on how long
     // the capture before it took.
     tone.reset();
     toneAmplitude.store(juce::jlimit(0.0f, 1.0f, amplitude), std::memory_order_relaxed);
     toneFrequency.store(juce::jmax(0.0f, frequencyHz), std::memory_order_release);
+
+    // A second block for the generator. Separate from the callback's, because
+    // both can exist at once for the block it takes the generator to notice a
+    // device has started, and they must not write into the same memory.
+    if (generatedBlock.size() < maximumToneBlock)
+    {
+        generatedBlock.resize(maximumToneBlock);
+    }
+
+    updateToneSource();
+    publishState();
+}
+
+void AudioInputService::updateToneSource()
+{
+    // Only with a tone asked for and nothing else delivering. A device is the
+    // better signal when there is one -- it is what a person's microphone
+    // sounds like -- and two producers is the thing `deliverSamples` guards
+    // against rather than something to arrange on purpose.
+    const auto wanted = toneFrequency.load(std::memory_order_acquire) > 0.0f &&
+                        !deviceRunning.load(std::memory_order_acquire);
+
+    if (wanted == toneSourceRunning.load(std::memory_order_acquire))
+    {
+        return;
+    }
+
+    if (wanted)
+    {
+        // Told before it starts, the way a device tells them, so a tool has a
+        // rate and a channel count before the first samples arrive.
+        currentSampleRate.store(generatedSampleRate, std::memory_order_release);
+        currentInputChannels.store(1, std::memory_order_release);
+        toneSourceRunning.store(true, std::memory_order_release);
+        formatVersion.fetch_add(1, std::memory_order_acq_rel);
+        toneSource.startTimer(toneBlockMilliseconds);
+    }
+    else
+    {
+        // Stopped before the flag clears: `stopTimer` waits for a callback in
+        // progress, so after this nothing is left that could still be filling.
+        toneSource.stopTimer();
+        toneSourceRunning.store(false, std::memory_order_release);
+        formatVersion.fetch_add(1, std::memory_order_acq_rel);
+    }
+}
+
+void AudioInputService::renderToneBlock()
+{
+    const auto frequency = toneFrequency.load(std::memory_order_acquire);
+
+    if (frequency <= 0.0f || generatedBlock.empty())
+    {
+        return;
+    }
+
+    const auto rate = currentSampleRate.load(std::memory_order_relaxed);
+    const auto count = std::min(
+        generatedBlock.size(), static_cast<std::size_t>(rate * toneBlockMilliseconds / 1000.0));
+
+    if (count == 0)
+    {
+        return;
+    }
+
+    tone.render(
+        generatedBlock.data(), count, static_cast<double>(frequency), rate,
+        toneAmplitude.load(std::memory_order_relaxed));
+    deliverSamples(generatedBlock.data(), static_cast<int>(count));
+}
+
+void AudioInputService::ToneSource::hiResTimerCallback()
+{
+    service.renderToneBlock();
 }
 
 float AudioInputService::syntheticTone() const noexcept
@@ -395,8 +508,29 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
         return;
     }
 
+    deliverSamples(inputSamples, numSamples);
+}
+
+void AudioInputService::deliverSamples(const float* samples, int numSamples) noexcept
+    PRACTICE_TAKES_NONBLOCKING
+{
+    // The one place samples enter the analysis path, whether they came from a
+    // device or from the generator. Non-blocking because the device's caller is
+    // the audio thread; the generator's caller simply inherits that.
+    //
+    // The token is what keeps the FIFOs single-producer. They are lock-free on
+    // the assumption of exactly one writer, and a device starting while the
+    // generator is mid-block would quietly be a second -- a corruption no test
+    // would see, presenting as a tool drawing nonsense. An exchange, not a
+    // lock: whoever loses skips this block, which is a dropped block and
+    // already a thing the accounting knows how to say.
+    if (filling.exchange(true, std::memory_order_acquire))
+    {
+        return;
+    }
+
     const auto currentGain = gain.load(std::memory_order_relaxed);
-    const auto sampleRange = juce::FloatVectorOperations::findMinAndMax(inputSamples, numSamples);
+    const auto sampleRange = juce::FloatVectorOperations::findMinAndMax(samples, numSamples);
     const auto peakLevel =
         juce::jmax(std::abs(sampleRange.getStart()), std::abs(sampleRange.getEnd())) * currentGain;
     storeMaximum(peakSinceLastTimer, peakLevel);
@@ -409,14 +543,42 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
     {
         if (consumer.active.load(std::memory_order_acquire))
         {
-            juce::ignoreUnused(consumer.fifo.push(
-                inputSamples, static_cast<std::size_t>(numSamples), currentGain));
+            juce::ignoreUnused(
+                consumer.fifo.push(samples, static_cast<std::size_t>(numSamples), currentGain));
         }
     }
+
+    filling.store(false, std::memory_order_release);
 }
 
 void AudioInputService::audioDeviceAboutToStart(juce::AudioIODevice* device)
 {
+    // Stopped here, synchronously, before the device is announced as running
+    // and before the first block can arrive. The audio callback renders the
+    // tone itself whenever one is requested (see audioDeviceIOCallbackWithContext
+    // -- it does that whether or not a device is present, so a device showing
+    // up does not make it stop), which means the instant this device starts
+    // delivering blocks, the audio thread becomes a second thing calling
+    // tone.render() on the same SyntheticTone. Until now the ToneSource timer
+    // thread was only told to stand down on the next updateToneSource() tick
+    // -- up to one message-thread cycle later -- and both threads could be
+    // inside render() together during that window, an unsynchronized write to
+    // tone's phase fields. TSan caught the sibling of this bug (setSyntheticTone
+    // racing the timer); this is the same race, entered a different way.
+    //
+    // Safe to block briefly here: every JUCE backend calls this synchronously
+    // from AudioIODevice::start(), on the caller's thread, strictly before
+    // registering the callback the real-time audio thread will invoke --
+    // confirmed against ALSAAudioIODevice::start() rather than assumed. The
+    // caller here is always a background thread (the recovery thread, the
+    // explicit-init thread) or the message thread (choosing a device in
+    // Settings), never the audio thread itself.
+    if (toneSourceRunning.exchange(false, std::memory_order_acq_rel))
+    {
+        toneSource.stopTimer();
+        formatVersion.fetch_add(1, std::memory_order_acq_rel);
+    }
+
     currentSampleRate.store(
         device != nullptr ? device->getCurrentSampleRate() : 44100.0, std::memory_order_release);
     currentInputChannels.store(
@@ -473,6 +635,12 @@ void AudioInputService::timerCallback()
     {
         deliverFormatChange();
     }
+
+    // A device starting or going away changes whether the generator should be
+    // running, and only this thread may start or stop a timer. Until the next
+    // tick both could be delivering, which is what the token in
+    // `deliverSamples` is for.
+    updateToneSource();
 
     if (--ticksUntilDeviceScan <= 0)
     {
@@ -589,6 +757,11 @@ bool AudioInputService::recoveryInFlight() const
 
 void AudioInputService::attemptRecovery()
 {
+    startDeviceWork(reopen);
+}
+
+void AudioInputService::startDeviceWork(std::function<void()> step)
+{
     if (recoveryInFlight())
     {
         return;
@@ -607,7 +780,7 @@ void AudioInputService::attemptRecovery()
     flight = inFlight;
 
     std::thread(
-        [step = reopen, inFlight]
+        [step = std::move(step), inFlight]
         {
             step();
             inFlight->running.store(false, std::memory_order_release);

@@ -79,6 +79,45 @@ class ReplyTimeoutTests(unittest.TestCase):
         self.assertNotIn("not responding", str(raised.exception))
 
 
+class WaitForInputTests(unittest.TestCase):
+    """`wait_for_input` promises a bool within its own timeout, never a raise.
+
+    `has_input` calls `send("status")` underneath, and `send` falls back to a
+    sixty-second default when nobody says otherwise. Called without a timeout
+    of its own, an application that stopped answering would hold this well
+    past whatever deadline the caller actually asked for.
+    """
+
+    def driver_talking_to(self, script: str) -> driver.ApplicationDriver:
+        source = Path(self.directory.name) / "app.sh"
+        source.write_text(f"#!/bin/sh\n{script}\n")
+        source.chmod(0o755)
+        made = driver.ApplicationDriver(source)
+        made.start()
+        self.addCleanup(made.stop)
+
+        return made
+
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+
+    def test_an_application_that_never_answers_still_honours_the_deadline(self) -> None:
+        talking = self.driver_talking_to("sleep 3")
+
+        began = time.monotonic()
+        result = talking.wait_for_input(timeout=0.5, interval=0.1)
+        took = time.monotonic() - began
+
+        self.assertFalse(result)
+        self.assertLess(took, 2.0, "should not have waited for send()'s own 60s default")
+
+    def test_a_channel_that_closes_mid_wait_is_reported_as_no_input_not_raised(self) -> None:
+        talking = self.driver_talking_to("exit 0")
+
+        self.assertFalse(talking.wait_for_input(timeout=2.0, interval=0.1))
+
+
 class StoppingTests(unittest.TestCase):
     """Leaving the application the way a user would."""
 

@@ -496,6 +496,12 @@ class ReviewHandler(BaseHTTPRequestHandler):
                 str(payload.get("verdict", "")),
                 str(payload.get("note", "")),
                 overwrite=bool(payload.get("overwrite", False)),
+                axes={
+                    str(name): str(choice)
+                    for name, choice in (payload.get("axes") or {}).items()
+                    if choice
+                }
+                or None,
             )
             self._send_json(result, status=400 if result["problems"] else 200)
         elif parsed.path == "/api/tag":

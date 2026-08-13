@@ -320,9 +320,20 @@ class CapturePass:
             return None
 
         try:
-            return int(parts[0]), int(parts[1])
+            width, height = int(parts[0]), int(parts[1])
         except ValueError:
             return None
+
+        # Zero is not a size. A window that reports one is unmapped, or was
+        # asked about before the server had it -- and everything downstream
+        # takes it at face value: the image is empty, the geometry check
+        # compares nothing against nothing, and the capture is recorded as a
+        # success. Treated as "no reading yet", which is what it is, so the
+        # settle loop keeps asking instead of photographing a void.
+        if width <= 0 or height <= 0:
+            return None
+
+        return width, height
 
     def _capture_to(self, destination: Path, title: str = "") -> str:
         pid = self.driver.pid
@@ -547,8 +558,6 @@ class CapturePass:
         run and a broken one are different, and the export feeds a release
         gate.
         """
-        already = self.store.captured_keys(self.run_id) if resume else set()
-
         # Both maps compare captures against *other* captures, so passing them
         # in is how several passes keep one view of the run between them. A pass
         # given neither keeps its own, which is every caller that captures alone.
@@ -562,6 +571,37 @@ class CapturePass:
         # (resolution, digest) -> the state that produced it: two states with the
         # same pixels at the same resolution means one captured the wrong window.
         digests = {} if digests is None else digests
+
+        # A resumed run's own memory of the plan is exactly one process old: a
+        # fresh `sizes`/`digests` here means the checks above have no idea what
+        # ran before the interruption, only what runs after it. A surface
+        # captured before the interruption is skipped below (`already`), which
+        # is correct, but its size and digest still have to seed the maps --
+        # otherwise the geometry the earlier process captured is invisible to
+        # `geometry_problem`/`duplicate_problem` for every surface reached in
+        # this process, the same blind spot a from-scratch run does not have.
+        # One query serves both `already` and the seeding, since `captures()`
+        # already has everything `captured_keys()` would have asked for.
+        already: set[tuple[str, str, str, str]] = set()
+
+        if resume:
+            for stored in self.store.captures(self.run_id):
+                if not (stored.image_path or stored.failure):
+                    continue
+
+                already.add(
+                    (stored.surface_state, stored.surface_title, stored.geometry, stored.theme)
+                )
+
+                if stored.failed:
+                    continue
+
+                seen = sizes.setdefault(f"{stored.surface_title}/{stored.theme}", {})
+                seen.setdefault(stored.geometry, (stored.width, stored.height))
+                digests.setdefault(
+                    (f"{stored.geometry}/{stored.theme}", stored.digest), stored.surface_state
+                )
+
         captured = 0
         failed = 0
         skipped = 0
@@ -627,10 +667,21 @@ class CapturePass:
                 # surface after it would be recorded as a failure it had nothing
                 # to do with.
                 if self.channel_broken:
-                    raise ChannelError(
+                    error = ChannelError(
                         "the application stopped answering, so this worker "
                         "captured no more"
                     )
+                    # This group's tally so far, carried on the exception: the
+                    # surfaces already captured or skipped-as-already-captured
+                    # are already rows in the store, and the caller's handler
+                    # only sees `len(group)`, with no other way to tell how much
+                    # of it actually completed before the channel broke.
+                    error.partial_result = {
+                        "captured": captured,
+                        "failed": failed,
+                        "already_captured": skipped,
+                    }
+                    raise error
 
                 continue
 
@@ -665,6 +716,16 @@ def progress_fraction(entry: dict) -> float:
         return min(1.0, float(entry.get("cost_done", 0.0)) / total)
 
     return float(entry.get("done", 0)) / max(1.0, float(entry.get("total", 1)))
+
+
+def needs_input(group: list[tuple[surfaces.Surface, str, str]]) -> bool:
+    """Whether this group is of a tool that has to be hearing something.
+
+    The warmup is the marker: a surface that waits for a tone is a surface
+    whose picture is of an analysis, and an analysis of silence is a picture of
+    nothing.
+    """
+    return any(surface.warmup_seconds > 0 for surface, _, _ in group)
 
 
 def plan_groups(
@@ -779,7 +840,13 @@ def run_in_parallel(
     # no arrangement decided beforehand fixes that, because how long a surface
     # takes is not known until it is taken.
     queue: list[list[tuple[surfaces.Surface, str, str]]] = plan_groups(plan)
-    handed = 0
+    taken: set[int] = set()
+
+    # How many workers got the input device. Zero means nobody can hear, and the
+    # surfaces that need to are captured anyway rather than left out -- the tool
+    # says in the picture that it is waiting, which is visible, where a missing
+    # capture is not.
+    analysts = 0
 
     # No more workers than there is work: a plan of eight groups has nothing for
     # a ninth application to do but start up and stop again.
@@ -813,16 +880,59 @@ def run_in_parallel(
             "cost_total": total_cost,
         })
 
-    def next_group() -> list[tuple[surfaces.Surface, str, str]] | None:
-        nonlocal handed
+    def note_input(can_analyse: bool) -> None:
+        nonlocal analysts
 
+        if can_analyse:
+            with lock:
+                analysts += 1
+
+    def next_group(can_analyse: bool) -> list[tuple[surfaces.Surface, str, str]] | None:
+        """The next group this worker can honestly capture.
+
+        One application at a time can hold the input device -- measured, with
+        four workers running and seven of eight reporting none. A surface that
+        carries a tone photographed by a worker without input is a picture of a
+        tool that has heard nothing, and it is counted as captured, which makes
+        it the worst kind of wrong.
+
+        So those groups go to workers that have input. A worker without takes
+        them only when nothing else is left, because a machine with no
+        microphone at all should still produce the images, and the tool says in
+        the picture that it is waiting.
+        """
         with lock:
-            if handed >= len(queue):
+            remaining = [index for index in range(len(queue)) if index not in taken]
+
+            if not remaining:
                 return None
 
-            handed += 1
+            wanted = remaining
 
-            return queue[handed - 1]
+            if not can_analyse:
+                quiet = [index for index in remaining if not needs_input(queue[index])]
+
+                # Only when nobody can hear at all. A worker that has run out of
+                # quiet work stops rather than helping with the tone surfaces:
+                # one holding the device is still coming for them, and this one
+                # would photograph an empty tool and have it counted as
+                # captured. That is what it did -- `tuner-in-tune` came back a
+                # blank graph saying "waiting for the microphone", in a run that
+                # reported twelve captured either way.
+                #
+                # Mostly moot now that a tone is generated without a device: a
+                # worker that reports no input at startup grows some the moment
+                # a tone is asked for. It stays because it costs nothing and it
+                # is the difference between "cannot" and "did not this time".
+                if not quiet and analysts:
+                    return None
+
+                wanted = quiet or remaining
+
+            chosen = wanted[0]
+            taken.add(chosen)
+
+            return queue[chosen]
 
     def add(index: int, result: dict) -> None:
         into = results[index]
@@ -840,13 +950,16 @@ def run_in_parallel(
             # starting it is the part that has to wait for the audio device, and
             # paying that per group would undo what this is for.
             with worker(index, shared) as pass_:
+                analyses = bool(getattr(pass_, "has_input", True))
+                note_input(analyses)
+
                 while True:
                     if should_stop is not None and should_stop():
                         add(index, {"stopped": True})
 
                         return
 
-                    group = next_group()
+                    group = next_group(analyses)
 
                     if group is None:
                         return
@@ -867,7 +980,18 @@ def run_in_parallel(
             # this one would turn one broken display into a lost run. Whatever
             # it had already captured stays counted; only the group in its hands
             # is lost, and the rest of the queue goes to somebody else.
-            add(index, {"failed": taken})
+            #
+            # "The group in its hands" is not automatically "all of it failed",
+            # though: pass_.run() may have captured or skipped some of the
+            # group's surfaces -- real rows in the store -- before hitting the
+            # one that broke the channel. Use its partial tally when one was
+            # left on the exception, so those are not also counted as failed.
+            partial = getattr(error, "partial_result", None)
+            if partial is None:
+                add(index, {"failed": taken})
+            else:
+                reached = sum(partial.values())
+                add(index, {**partial, "failed": partial["failed"] + max(0, taken - reached)})
             results[index]["error"] = f"{type(error).__name__}: {error}"
 
     threads = [

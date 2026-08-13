@@ -27,6 +27,7 @@ class FunctionTestControlTarget final : public TestControlTarget
     std::function<bool(const std::string&)> onGeometry;
     std::function<bool(const std::string&)> onTheme;
     std::function<std::string()> onCurrentStateId;
+    std::function<bool()> onHasInput;
     std::function<void()> onQuit;
 
     bool applyState(const ApprovedWindowState& state) override
@@ -52,6 +53,11 @@ class FunctionTestControlTarget final : public TestControlTarget
     [[nodiscard]] std::string currentStateId() const override
     {
         return onCurrentStateId ? onCurrentStateId() : std::string{};
+    }
+
+    [[nodiscard]] bool hasInput() const override
+    {
+        return onHasInput && onHasInput();
     }
 
     void requestQuit() override

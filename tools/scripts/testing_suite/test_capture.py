@@ -317,6 +317,29 @@ class CapturePassTests(unittest.TestCase):
         self.assertEqual(result["captured"], 0)
         self.assertEqual(result["already_captured"], len(self.plan()))
 
+    def test_a_resumed_pass_still_catches_a_window_that_never_resized(self) -> None:
+        """`geometry_problem` compares a capture against the same surface's
+        other captures -- including ones from *before* an interruption. A
+        resumed pass is a fresh process with no `sizes` of its own; unless it
+        is seeded from the store first, it has no memory of what an earlier
+        process already captured, and cannot catch a window still stuck at
+        that size now.
+        """
+        stuck_sizes = {"default": (1280, 800), "constrained": (1280, 800)}
+        plan = self.plan()
+        only_default = tuple(entry for entry in plan if entry[1] == "default")
+
+        self.make_pass(sizes=stuck_sizes).run(only_default)
+        result = self.make_pass(sizes=stuck_sizes).run(plan)
+
+        stuck = [
+            capture for capture in self.store.captures(self.run_id)
+            if capture.geometry == "constrained" and capture.failed
+        ]
+
+        self.assertTrue(result["failed"])
+        self.assertTrue(stuck, "a window stuck at the earlier size should still be caught")
+
     def test_a_fixed_geometry_surface_is_captured_once(self) -> None:
         """Resizing it would destroy the thing under test."""
         fullscreen = next(s for s in surfaces.SURFACES if s.state == "fullscreen")
@@ -443,6 +466,9 @@ class _StubPass(capture_module.CapturePass):
 class _StubStore:
     def captured_keys(self, run_id: int) -> set:
         return set()
+
+    def captures(self, run_id: int) -> list:
+        return []
 
 
 class SharingThePlanTests(unittest.TestCase):
@@ -706,6 +732,41 @@ class ParallelCaptureTests(unittest.TestCase):
     def test_no_workers_is_refused(self) -> None:
         with self.assertRaises(ValueError):
             self.capture_with(0)
+
+    def test_a_broken_channel_mid_group_keeps_what_it_already_captured(self) -> None:
+        """A group is one surface's several geometries, captured without
+        reopening between them (see `plan_groups`). If the channel breaks on
+        the second geometry, the first is already a row in the store -- the
+        run's totals must not also count it as failed, on top of counting it
+        as captured.
+        """
+        calls = {"set_geometry": 0}
+
+        class Breaking(FakeDriver):
+            def set_geometry(inner, geometry):  # noqa: N805 - test double
+                calls["set_geometry"] += 1
+
+                if calls["set_geometry"] == 2:
+                    raise ChannelError("the application closed the channel")
+
+                return super().set_geometry(geometry)
+
+        real_worker = self.worker
+
+        @contextmanager
+        def worker(index, shared):
+            with real_worker(index, shared) as pass_:
+                pass_.driver = Breaking()
+
+                yield pass_
+
+        result = capture_module.run_in_parallel(self.plan(), workers=1, worker=worker)
+
+        successful = [row for row in self.store.captures(self.run_id) if not row.failed]
+
+        self.assertEqual(len(successful), 1, "the first geometry should have been captured")
+        self.assertEqual(result["captured"], 1)
+        self.assertTrue(result["errors"])
 
 
 class AudioGateTests(unittest.TestCase):
@@ -1352,3 +1413,140 @@ class ReopeningTests(unittest.TestCase):
 
         self.assertEqual(len(self.driver.opened), expected)
         self.assertLess(len(self.driver.opened), len(plan) / 3)
+
+
+class InputRoutingTests(unittest.TestCase):
+    """Which worker may take a surface that has to be hearing something.
+
+    One application at a time holds the input device. Measured with eight
+    workers running: seven reported none. A tone surface photographed by a
+    worker without input is a picture of a tool that has heard nothing, and it
+    is counted as captured — which is how a blank tuner saying "waiting for the
+    microphone" landed in a run that reported twelve captured.
+    """
+
+    def plan(self) -> tuple:
+        return surfaces.plan(surfaces.QUICK, ("default", "constrained"), surfaces.THEMES)
+
+    def capture_with(self, deaf: set[int], workers: int = 4) -> dict:
+        took: dict[int, list] = {}
+        guard = threading.Lock()
+
+        @contextmanager
+        def worker(index: int, shared):
+            class Pass:
+                has_input = index not in deaf
+
+                def run(inner, plan, **kwargs):  # noqa: N805 - test double
+                    with guard:
+                        took.setdefault(index, []).extend(plan)
+
+                    return {"captured": len(plan)}
+
+            yield Pass()
+
+        result = capture_module.run_in_parallel(
+            self.plan(), workers=workers, worker=worker
+        )
+
+        return {"result": result, "took": took}
+
+    def test_a_worker_without_input_never_takes_a_tone_surface(self) -> None:
+        run = self.capture_with(deaf={1, 2, 3})
+
+        for index, entries in run["took"].items():
+            if index in {1, 2, 3}:
+                with self.subTest(worker=index):
+                    self.assertFalse(
+                        any(surface.warmup_seconds > 0 for surface, _, _ in entries),
+                        "a worker with no input photographed a tool that needed one",
+                    )
+
+    def test_everything_is_still_captured(self) -> None:
+        run = self.capture_with(deaf={1, 2, 3})
+        dealt = [entry for entries in run["took"].values() for entry in entries]
+
+        self.assertEqual(len(dealt), len(self.plan()))
+
+    def test_nobody_hearing_means_the_pictures_are_taken_anyway(self) -> None:
+        """A missing capture is invisible; a tool saying it is waiting is not."""
+        run = self.capture_with(deaf={0, 1, 2, 3})
+        dealt = [entry for entries in run["took"].values() for entry in entries]
+
+        self.assertEqual(len(dealt), len(self.plan()))
+        self.assertTrue(any(surface.warmup_seconds > 0 for surface, _, _ in dealt))
+
+    def test_the_worker_that_can_hear_takes_them_all(self) -> None:
+        run = self.capture_with(deaf={1, 2, 3})
+        tone = [
+            entry
+            for entries in run["took"].values()
+            for entry in entries
+            if entry[0].warmup_seconds > 0
+        ]
+
+        self.assertTrue(tone)
+        self.assertEqual(
+            {surface.title for surface, _, _ in tone},
+            {surface.title for surface, _, _ in self.plan() if surface.warmup_seconds > 0},
+        )
+
+
+class ZeroSizeTests(unittest.TestCase):
+    """A window that reports no size.
+
+    Everything downstream takes a size at face value: the image is written, the
+    geometry check compares nothing against nothing, and the capture is
+    recorded as a success. An empty picture that counts as captured is the
+    failure this whole harness exists to catch, so it is refused at the reading
+    rather than found in the grid.
+    """
+
+    def read(self, output: str):
+        class Reading(capture_module.CapturePass):
+            def __init__(inner):  # noqa: N805 - test double
+                inner.driver = FakeDriver()
+                inner.tooling = capture_module.Tooling(Path("capture"), Path("control"))
+                inner.window_title = None
+                inner.display = ""
+
+            def _window_arguments(inner, title: str = ""):  # noqa: N805 - test double
+                return []
+
+        pass_ = Reading()
+        original = capture_module.subprocess.run
+
+        class Completed:
+            returncode = 0
+            stdout = output
+
+        capture_module.subprocess.run = lambda *a, **k: Completed()
+        self.addCleanup(setattr, capture_module.subprocess, "run", original)
+
+        return pass_.read_size()
+
+    def test_a_real_size_is_read(self) -> None:
+        self.assertEqual(self.read("1280 800"), (1280, 800))
+
+    def test_zero_by_zero_is_not_a_size(self) -> None:
+        self.assertIsNone(self.read("0 0"))
+
+    def test_either_dimension_being_zero_is_not_a_size(self) -> None:
+        self.assertIsNone(self.read("1280 0"))
+        self.assertIsNone(self.read("0 800"))
+
+    def test_a_negative_dimension_is_not_a_size(self) -> None:
+        self.assertIsNone(self.read("-1 -1"))
+
+    def test_something_unreadable_is_still_not_a_size(self) -> None:
+        self.assertIsNone(self.read("wide tall"))
+        self.assertIsNone(self.read(""))
+
+    def test_a_window_with_no_size_never_settles(self) -> None:
+        """So the pass records a failure rather than photographing a void."""
+        self.assertIsNone(
+            capture_module.settled_size(
+                lambda: None, settle_seconds=0.5, sleep=lambda _: None,
+                clock=iter([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]).__next__,
+            )
+        )

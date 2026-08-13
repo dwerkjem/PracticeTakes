@@ -23,9 +23,10 @@ const state = {
   // Previews default to large: the grid exists so you can see what is being
   // reviewed, and a thumbnail you have to squint at defeats the whole thing.
   size: window.localStorage.getItem("preview-size") || "large",
-  // facet name -> Set of chosen values. Empty means "no opinion", which is what
-  // makes several filters compose: within a facet the choices are alternatives,
-  // between facets they all have to hold.
+  // facet name -> Set of chosen values. Empty means "no opinion". Every chosen
+  // value has to hold, within a facet and between them alike: naming two things
+  // means wanting both, and a facet whose captures only ever carry one value
+  // shows nothing when two are named, which is what that honestly means.
   filters: {},
 };
 
@@ -335,6 +336,13 @@ element("restart-hub").addEventListener("click", restartHub);
 // until it moved to a display of its own -- and that is exactly when being able
 // to stop matters most.
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !element("bulk-modal").hidden) {
+    event.preventDefault();
+    closeBulkEdit();
+
+    return;
+  }
+
   if (event.key === "Escape" && state.job && state.job.running && !state.job.stopping) {
     // Before the zoom handler gets it: with a run going, Escape means stop.
     event.preventDefault();
@@ -484,19 +492,37 @@ function renderCard(capture) {
     row.className = `question${question.attended ? " attended" : ""}`;
     row.innerHTML = `<span class="prompt">${question.prompt}</span> ${verdictMarkup(question)}`;
 
-    if (!question.attended) {
-      ["pass", "fail", "skip"].forEach((verdict) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.textContent = verdict[0].toUpperCase();
-        button.title = verdict;
-        button.addEventListener("click", (event) => {
-          event.stopPropagation();
-          score(capture.id, question, verdict);
-        });
-        row.appendChild(button);
+    // Attended questions get the same buttons, and one more that does the
+    // thing they are waiting on: opens the real application on this surface.
+    // They were rendered with no controls at all, which reads as "not your
+    // job" — and the job was to run a separate command, find the surface
+    // again, and answer there.
+    if (question.attended) {
+      const attend = document.createElement("button");
+      attend.type = "button";
+      attend.className = "attend";
+      attend.textContent = "attend";
+      attend.title = `Open ${capture.state} and answer this against the running application`;
+      attend.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openInApp(capture);
       });
+      row.appendChild(attend);
     }
+
+    ["pass", "fail", "skip"].forEach((verdict) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = verdict[0].toUpperCase();
+      button.title = question.attended
+        ? `${verdict} — after looking at the running application`
+        : verdict;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        score(capture.id, question, verdict);
+      });
+      row.appendChild(button);
+    });
 
     questions.appendChild(row);
   });
@@ -584,8 +610,10 @@ function renderGrid(view) {
 
   const outstanding = view.outstanding || [];
   const attended = outstanding.filter((entry) => entry.attended).length;
+
   element("outstanding").textContent = outstanding.length
-    ? `${outstanding.length} unanswered (${attended} need the attended pass: \`test-suite attend\`). ` +
+    ? `${outstanding.length} unanswered (${attended} need the application open — ` +
+      "press “attend” on one to launch it). " +
       "The run exports as incomplete until they are answered."
     : "Everything is scored.";
 
@@ -688,7 +716,12 @@ function matchesFilters(capture) {
 
     if (!sets.include.size) return true;
 
-    return values.some((value) => sets.include.has(value));
+    // Every value kept has to hold, not any of them. "This or that" is not an
+    // opinion anybody forms while narrowing a contact sheet: the reason to
+    // name two things is that you want both. A facet that only ever holds one
+    // value per capture -- a palette, a size -- therefore shows nothing when
+    // two are named, which is what "dark and light" honestly means.
+    return [...sets.include].every((value) => values.includes(value));
   });
 }
 
@@ -700,19 +733,27 @@ function applyFilters() {
   renderGrid(state.data);
 }
 
-// Click cycles a value: off -> include -> exclude -> off. Three states in one
-// control, because a separate button per direction doubles the row and still
-// has to say which one is on.
-function cycleFilter(name, value) {
+// Click keeps a value, shift-click drops it, and clicking an active one turns
+// it off whichever way it was on.
+//
+// It used to cycle: off -> keep -> drop -> off. One control for both
+// directions, which is tidy, and which means turning off a filter you have just
+// switched on costs two more clicks through a state you did not want. Saying
+// "drop" with the modifier is the same information and none of the detour.
+function cycleFilter(name, value, negate = false) {
   const sets = filterFor(name);
   const include = new Set(sets.include);
   const exclude = new Set(sets.exclude);
 
-  if (include.has(value)) {
+  if (include.has(value) || exclude.has(value)) {
+    // Whichever way round it was on, one click is off. The alternative --
+    // shift-clicking a kept value to make it a dropped one -- reads as
+    // "change direction" and is a thing nobody asked for while looking at a
+    // grid; select it again if that is what was meant.
     include.delete(value);
-    exclude.add(value);
-  } else if (exclude.has(value)) {
     exclude.delete(value);
+  } else if (negate) {
+    exclude.add(value);
   } else {
     include.add(value);
   }
@@ -740,6 +781,40 @@ function facetLabel(name) {
   return name.replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase());
 }
 
+// How many captures would remain if this value were also kept.
+//
+// Counted against the filters already on, not against the whole run. The number
+// beside a value is what clicking it gets you, and a value that gets you
+// nothing is not an option -- picking "dark" makes "light" impossible, and an
+// impossible choice sitting in a list is a thing to try and be confused by.
+function countMatching(filters) {
+  const was = state.filters;
+  state.filters = filters;
+
+  let count = 0;
+
+  (state.data.groups || []).forEach((group) => {
+    (group.captures || []).forEach((capture) => {
+      if (matchesFilters(capture)) count += 1;
+    });
+  });
+
+  // Put back, or every count after the first is taken against a filter set
+  // nobody asked for.
+  state.filters = was;
+
+  return count;
+}
+
+function reachable(name, value) {
+  const sets = filterFor(name);
+
+  return countMatching({
+    ...state.filters,
+    [name]: { include: new Set([...sets.include, value]), exclude: sets.exclude },
+  });
+}
+
 function facetMenu(name, values) {
   const menu = document.createElement("details");
   menu.className = "facet-menu";
@@ -754,20 +829,44 @@ function facetMenu(name, values) {
 
   const panel = document.createElement("div");
   panel.className = "facet-panel";
-  panel.innerHTML = '<div class="facet-hint">click to keep · again to exclude · again to clear</div>';
+  panel.innerHTML =
+    '<div class="facet-hint">click to keep · shift-click to drop · click again to clear</div>';
 
-  values.forEach(([value, count]) => {
+  let offered = 0;
+  const shown = countMatching(state.filters);
+
+  values.forEach(([value]) => {
     const state_ = sets.include.has(value) ? "include"
       : sets.exclude.has(value) ? "exclude" : "off";
+
+    // Every number is how many captures remain, never how many exist. For a
+    // value that is on, that is what the grid is showing; for one that is off,
+    // it is what clicking it would leave. A count taken against the whole run
+    // promises captures the other filters have already excluded.
+    //
+    // A chosen value keeps its place whatever its number says -- it is how you
+    // take it off again, and a control that vanishes when used is worse than
+    // one that leads nowhere.
+    const count = state_ === "off" ? reachable(name, value) : shown;
+
+    if (state_ === "off" && count === 0) return;
+
+    offered += 1;
+
     const row = document.createElement("button");
     row.type = "button";
     row.className = `facet-option ${state_}`;
     row.innerHTML =
       `<span class="mark">${state_ === "include" ? "✓" : state_ === "exclude" ? "✕" : ""}</span>` +
-      `<span class="value">${value}</span><span class="count">${count}</span>`;
-    row.addEventListener("click", () => cycleFilter(name, value));
+      `<span class="value">${value}</span>` +
+      `<span class="count">${count}</span>`;
+    row.addEventListener("click", (event) => cycleFilter(name, value, event.shiftKey));
     panel.appendChild(row);
   });
+
+  // Nothing left to choose and nothing chosen: the menu would open on a hint
+  // and a blank space.
+  if (!offered) return null;
 
   menu.appendChild(panel);
 
@@ -797,7 +896,9 @@ function renderFilters(view) {
   Object.entries(facets).forEach(([name, values]) => {
     if (values.length < 2) return;   // A facet with one value filters nothing.
 
-    row.appendChild(facetMenu(name, values));
+    const menu = facetMenu(name, values);
+
+    if (menu) row.appendChild(menu);
   });
 
   holder.appendChild(row);
@@ -860,9 +961,7 @@ function paintSelection() {
   // Only once there is a selection to act on. A row of "selected" buttons above
   // an empty selection is four things that do nothing, and the one that matters
   // is harder to find among them.
-  ["bulk-pass", "bulk-fail", "bulk-skip", "bulk-comment"].forEach((id) => {
-    element(id).hidden = count < 2;
-  });
+  element("bulk-edit").hidden = count < 2;
 }
 
 async function commentOnSelected() {
@@ -1023,10 +1122,144 @@ element("approve-shown").addEventListener("click", async () => {
   await reload();
 });
 
-element("bulk-pass").addEventListener("click", () => scoreSelection("pass"));
-element("bulk-fail").addEventListener("click", () => scoreSelection("fail"));
-element("bulk-skip").addEventListener("click", () => scoreSelection("skip"));
-element("bulk-comment").addEventListener("click", commentOnSelected);
+// --- Bulk edit -------------------------------------------------------------
+//
+// One opinion, applied to everything selected. Four buttons — pass all, fail
+// all, skip all, comment all — could each say one thing about every axis at
+// once, and the opinion somebody actually holds after looking at a row of
+// images is usually mixed: these work, that one looks off. This asks once and
+// takes the whole answer.
+
+const BULK_CHOICES = [
+  { value: "", label: "leave" },
+  { value: "pass", label: "pass" },
+  { value: "fail", label: "fail" },
+  { value: "skip", label: "skip" },
+];
+
+function bulkAxes() {
+  // The three fixed axes, plus whatever extra questions the selected surfaces
+  // ask. Taken from the captures themselves rather than hardcoded, so a
+  // surface with its own question can be answered in bulk too.
+  const seen = new Map();
+
+  (state.data.groups || []).forEach((group) => {
+    (group.captures || []).forEach((capture) => {
+      if (!state.selected.has(capture.id)) return;
+
+      (capture.questions || []).forEach((question) => {
+        if (!question.attended && !seen.has(question.id)) {
+          seen.set(question.id, question.prompt);
+        }
+      });
+    });
+  });
+
+  return [...seen.entries()].map(([id, prompt]) => ({ id, prompt }));
+}
+
+function openBulkEdit() {
+  const axes = bulkAxes();
+  const holder = element("bulk-axes");
+
+  element("bulk-count").textContent =
+    `${state.selected.size} captures selected. Anything left as “leave” is not answered.`;
+  holder.innerHTML = "";
+
+  if (!axes.length) {
+    holder.appendChild(buildNotice("These captures have no questions that can be answered here."));
+  }
+
+  axes.forEach((axis) => {
+    const row = document.createElement("div");
+    row.className = "bulk-axis";
+
+    const prompt = document.createElement("span");
+    prompt.className = "prompt";
+    prompt.textContent = axis.prompt;
+    row.appendChild(prompt);
+
+    BULK_CHOICES.forEach((choice) => {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+
+      input.type = "radio";
+      input.name = `bulk-${axis.id}`;
+      input.value = choice.value;
+      input.checked = choice.value === "";
+      label.className = `choice verdict-${choice.value || "leave"}`;
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(choice.label));
+      row.appendChild(label);
+    });
+
+    holder.appendChild(row);
+  });
+
+  element("bulk-note").value = "";
+  element("bulk-modal").hidden = false;
+  element("bulk-apply").focus();
+}
+
+function closeBulkEdit() {
+  element("bulk-modal").hidden = true;
+}
+
+async function applyBulkEdit() {
+  const axes = {};
+
+  bulkAxes().forEach((axis) => {
+    const chosen = document.querySelector(`input[name="bulk-${axis.id}"]:checked`);
+
+    if (chosen && chosen.value) axes[axis.id] = chosen.value;
+  });
+
+  const note = element("bulk-note").value.trim();
+  const ids = [...state.selected];
+
+  if (!Object.keys(axes).length && !note) {
+    window.alert("Choose a verdict for at least one question, or write a comment.");
+
+    return;
+  }
+
+  if (Object.keys(axes).length) {
+    const { ok, data } = await api("/api/score-many", {
+      capture_ids: ids,
+      axes,
+      note,
+      overwrite: element("overwrite").checked,
+    });
+
+    if (!ok) {
+      window.alert((data.problems || [data.error || "could not record that"]).join("\n"));
+
+      return;
+    }
+
+    if (data.left_alone) {
+      element("outstanding").textContent =
+        `Scored ${data.scored}; left ${data.left_alone} already-answered question(s) alone ` +
+        "(tick “replace answers” to change them).";
+    }
+  }
+
+  // A comment as well as the verdicts, not instead: a note on a verdict is the
+  // reason for it, and a note on its own is a remark about the picture.
+  if (note) await api("/api/comment", { capture_ids: ids, body: note });
+
+  closeBulkEdit();
+  await reload();
+}
+
+element("bulk-edit").addEventListener("click", openBulkEdit);
+element("bulk-cancel").addEventListener("click", closeBulkEdit);
+element("bulk-apply").addEventListener("click", applyBulkEdit);
+element("bulk-modal").addEventListener("click", (event) => {
+  // Only the backdrop, not the sheet: a click that lands on the dialog is
+  // somebody using it.
+  if (event.target === element("bulk-modal")) closeBulkEdit();
+});
 
 element("select-all").addEventListener("click", () => {
   // Everything *shown*, not everything in the run: with filters on, selecting

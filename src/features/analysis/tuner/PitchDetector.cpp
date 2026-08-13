@@ -32,11 +32,17 @@ PitchDetector::detect(std::span<const float, windowSize> samples, double sampleR
         return result;
     }
 
-    std::fill(fftInput.begin(), fftInput.end(), std::complex<float>{});
+    // Filled in two pieces rather than zeroed and overwritten: the first
+    // `samples.size()` entries are about to be replaced by the signal, so
+    // zeroing them first is `windowSize` writes that are thrown away every
+    // single frame. Only the zero-padding half needs the fill.
     for (std::size_t index = 0; index < samples.size(); ++index)
     {
         fftInput[index] = {samples[index], 0.0f};
     }
+    std::fill(
+        fftInput.begin() + static_cast<std::ptrdiff_t>(samples.size()), fftInput.end(),
+        std::complex<float>{});
 
     fft.perform(fftInput.data(), fftOutput.data(), false);
     for (std::size_t index = 0; index < fftOutput.size(); ++index)

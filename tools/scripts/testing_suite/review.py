@@ -325,10 +325,11 @@ def score(
 def score_many(
     store: Store,
     capture_ids: list[int],
-    verdict: str,
+    verdict: str = "",
     note: str = "",
     *,
     overwrite: bool = False,
+    axes: dict[str, str] | None = None,
 ) -> dict:
     """Apply one verdict to every reviewable question on every selected capture.
 
@@ -344,6 +345,13 @@ def score_many(
     replace them anyway.
 
     A note is optional, including on a failure.
+
+    `axes` answers each question differently in one go -- pass what works, fail
+    what looks wrong, leave the rest. Reviewing a row of images usually produces
+    one opinion held about all of them, and that opinion is rarely "everything
+    about these is fine": it is more often "these work and this one looks off".
+    An axis missing from the map is left alone, whatever `overwrite` says,
+    because not mentioning something is not a verdict about it.
     """
     scored = 0
     skipped = 0
@@ -360,6 +368,11 @@ def score_many(
         answered = {row["question"] for row in store.verdicts(capture_id)}
 
         for question in _question_lookup(capture.surface_state, capture.surface_title, False):
+            wanted = axes.get(question.id, "") if axes is not None else verdict
+
+            if not wanted:
+                continue
+
             if question.id in answered and not overwrite:
                 skipped += 1
 
@@ -369,7 +382,7 @@ def score_many(
                 capture_id,
                 question=question.id,
                 prompt=question.prompt,
-                verdict=verdict,
+                verdict=wanted,
                 note=note,
             )
 
