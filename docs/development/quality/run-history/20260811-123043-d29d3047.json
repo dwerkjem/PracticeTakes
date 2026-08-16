@@ -1,0 +1,16 @@
+{
+  "capture_failures": 0,
+  "captures": 6,
+  "commit": "4a039ae83301",
+  "complete": false,
+  "failed": 2,
+  "key": "d29d30476b5f447e:2026-08-11T12:30:43:4a039ae83301",
+  "machine": "d29d30476b5f447e",
+  "machine_description": "11th Gen Intel(R) Core(TM) i7-11700KF @ 3.60GHz \u00b7 1920x1200",
+  "measurements": [],
+  "mode": "full",
+  "passed": 16,
+  "skipped": 0,
+  "started_at": "2026-08-11T12:30:43",
+  "suites": []
+}

@@ -46,6 +46,10 @@ def declared_ids() -> set[str]:
     return from_markup | from_script | interpolated
 
 
+def stylesheet() -> str:
+    return (WEB_ROOT / "style.css").read_text(encoding="utf-8")
+
+
 def referenced_ids() -> set[str]:
     text = script()
 
@@ -128,14 +132,40 @@ class PageWiringTests(unittest.TestCase):
 
         self.assertIn("delete state.filters[name]", cycle)
 
-    def test_a_value_cycles_through_keep_exclude_and_off(self) -> None:
+    def test_a_filter_that_is_on_comes_off_in_one_click(self) -> None:
+        """It used to cycle keep -> drop -> off, so turning off a filter you had
+        just switched on cost two more clicks through a state you did not
+        want."""
+        body = script()
+        cycle = body[body.index("function cycleFilter"):body.index("function clearValue")]
+        first = cycle.index("include.has(value) || exclude.has(value)")
+
+        # The already-on case is tested before either direction is added, so it
+        # wins whichever way round the value was on.
+        self.assertLess(first, cycle.index("exclude.add(value)"))
+        self.assertLess(first, cycle.index("include.add(value)"))
+
+    def test_the_modifier_is_what_drops_a_value(self) -> None:
         body = script()
         cycle = body[body.index("function cycleFilter"):body.index("function clearValue")]
 
-        # include -> exclude -> off, in that order.
-        self.assertLess(cycle.index("include.has(value)"), cycle.index("exclude.has(value)"))
-        self.assertIn("exclude.add(value)", cycle)
-        self.assertIn("exclude.delete(value)", cycle)
+        self.assertIn("negate", cycle)
+        self.assertRegex(body, r"cycleFilter\(name, value, event\.shiftKey\)")
+
+    def test_the_hint_says_what_the_controls_do(self) -> None:
+        """A modifier nobody is told about is a feature nobody has."""
+        hint = script()[script().index("facet-hint"):]
+
+        self.assertIn("shift-click", hint[:200])
+
+    def test_kept_values_all_have_to_hold(self) -> None:
+        """Naming two things means wanting both. "This or that" is not an
+        opinion anybody forms while narrowing a contact sheet."""
+        body = script()
+        matches = body[body.index("function matchesFilters"):body.index("// Everything that depends")]
+
+        self.assertIn("sets.include].every(", matches)
+        self.assertNotIn("values.some((value) => sets.include.has(value))", matches)
 
     def test_excluding_beats_including(self) -> None:
         """Naming a value in both is a contradiction; dropping it is the safer reading."""
@@ -144,11 +174,91 @@ class PageWiringTests(unittest.TestCase):
 
         self.assertLess(matches.index("sets.exclude.has(value)"), matches.index("sets.include.size"))
 
+    def test_an_option_that_would_show_nothing_is_not_offered(self) -> None:
+        """Picking "dark" makes "light" impossible, and an impossible choice
+        sitting in a list is a thing to try and be confused by."""
+        body = script()
+        menu = body[body.index("function facetMenu"):body.index("// One open at a time")]
+
+        self.assertIn("reachable(name, value)", menu)
+        self.assertIn('if (state_ === "off" && count === 0) return;', menu)
+
+    def test_a_chosen_option_stays_however_few_it_leaves(self) -> None:
+        """It is how you take it off again; a control that vanishes when used
+        is worse than one that leads nowhere."""
+        body = script()
+        menu = body[body.index("function facetMenu"):body.index("// One open at a time")]
+
+        self.assertIn('state_ === "off" ? reachable(name, value) : shown', menu)
+
+    def test_every_number_is_what_remains(self) -> None:
+        """Never how many exist. A count against the whole run promises
+        captures the other filters have already excluded."""
+        body = script()
+        menu = body[body.index("function facetMenu"):body.index("// One open at a time")]
+
+        # Both branches come from a count taken against the live filters.
+        self.assertIn("const shown = countMatching(state.filters)", menu)
+        self.assertNotIn("values.forEach(([value, count])", menu)
+
+    def test_the_count_is_against_the_filters_already_on(self) -> None:
+        """A number counted against the whole run promises captures that the
+        other filters have already excluded."""
+        body = script()
+        counter = body[body.index("function countMatching"):body.index("function facetMenu")]
+
+        self.assertIn("...state.filters", counter)
+        self.assertIn("matchesFilters(capture)", counter)
+        # And it puts the filters back, or every count after the first is wrong.
+        self.assertIn("state.filters = was", counter)
+
     def test_the_facets_are_dropdowns(self) -> None:
         body = script()
 
         self.assertIn('createElement("details")', body)
         self.assertIn("facet-panel", body)
+
+    def test_the_stop_key_reads_the_polled_job_not_the_last_reload(self) -> None:
+        """`state.data` is only replaced by a full reload.
+
+        Escape used to ask `state.data.job.running`, which during a run still
+        held what was true before it started — not running — so the key did
+        nothing for the entire run, which is exactly when it is wanted.
+        """
+        text = script()
+
+        self.assertNotIn("state.data.job", text)
+        self.assertIn("state.job = job", text)
+        self.assertRegex(text, r'event\.key === "Escape" && state\.job')
+
+    def test_nothing_hidden_is_laid_out_without_being_hideable(self) -> None:
+        """Styling an element by id can stop `hidden` from hiding it.
+
+        `[hidden] { display: none }` is a browser rule with no specificity to
+        speak of, so `#thing { display: flex }` silently outranks it and the
+        element is on the page forever. That shipped here once: a restart
+        button sat above a hub that had nothing to restart, in an otherwise
+        empty banner.
+        """
+        css = stylesheet()
+        hideable = set(re.findall(r'id="([^"]+)"[^>]*\shidden', markup()))
+        self.assertTrue(hideable)
+
+        for name in sorted(hideable):
+            laid_out = re.search(
+                rf"#{re.escape(name)}\s*\{{[^}}]*\bdisplay\s*:", css
+            )
+
+            if not laid_out:
+                continue
+
+            with self.subTest(id=name):
+                self.assertRegex(
+                    css,
+                    rf"#{re.escape(name)}\[hidden\]\s*\{{[^}}]*display\s*:\s*none",
+                    f"#{name} is given a display by id but has no [hidden] rule, "
+                    f"so hiding it in the script will not hide it",
+                )
 
     def test_the_stylesheet_and_script_are_linked(self) -> None:
         self.assertIn('href="/web/style.css"', markup())

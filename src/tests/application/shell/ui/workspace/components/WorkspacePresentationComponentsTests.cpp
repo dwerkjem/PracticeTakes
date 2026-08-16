@@ -61,3 +61,59 @@ TEST_CASE(
     REQUIRE(selected.has_value());
     CHECK(*selected == tuner);
 }
+// A docked tool that is off the edge of the window is invisible, and nothing in
+// the application says so -- no warning, no scroll bar, no gap where it should
+// be. #150 was found by a person noticing that a capture of three docked tools
+// came out byte-identical to a capture of two, which is a long way round for
+// arithmetic that fits on one line.
+//
+// These check that arithmetic, so the next time a floor is raised the build
+// fails on a machine with no display.
+
+TEST_CASE(
+    "panes at the floor fit the narrowest window the application allows",
+    "[workspace][sizing]")
+{
+    // main.cpp: setResizeLimits(980, 600, 3200, 2200). Repeated rather than
+    // shared, because the point is that these two numbers must agree and a
+    // shared constant would let them agree while both being wrong.
+    constexpr int narrowestWindow = 980;
+    constexpr int shortestWindow = 600;
+
+    // Four is past anything the tool catalogue offers today, which is what
+    // makes it the interesting case: the floor should not be sized to exactly
+    // the number of tools that happen to exist.
+    for (const auto paneCount : {2, 3, 4})
+    {
+        CHECK(WorkspaceSplitPane::minimumWidthForPanes(paneCount) <= narrowestWindow);
+        CHECK(WorkspaceSplitPane::minimumHeightForPanes(paneCount) <= shortestWindow);
+    }
+}
+
+TEST_CASE("three docked panes fit where they used to overflow", "[workspace][sizing]")
+{
+    // The exact defect. The old floor of 480 needed 1456px for three panes,
+    // which no legal window could give, so the third was laid out past the
+    // right edge -- visible as a clipped tool at 1600, and no tool at all at
+    // 800x600.
+    constexpr int oldFloor = 480;
+    constexpr int threePanesAtOldFloor = 3 * oldFloor + 2 * WorkspaceSplitPane::dividerThickness;
+
+    CHECK(threePanesAtOldFloor == 1456);
+    CHECK(threePanesAtOldFloor > 980);
+    CHECK(WorkspaceSplitPane::minimumWidthForPanes(3) < 800);
+}
+
+TEST_CASE(
+    "the floor leaves room for a compact tool rather than a squeezed one",
+    "[workspace][sizing]")
+{
+    // A floor is a promise that a pane is never narrower than this, so it has
+    // to be a width a tool can be *read* at. The tuner switches to its compact
+    // form below 320px; a floor above that would guarantee panes that are too
+    // narrow for the full display and too wide to have switched away from it.
+    CHECK(WorkspaceSplitPane::minimumHorizontalPaneSize < 320);
+
+    // And not so small that "fits" stops meaning anything.
+    CHECK(WorkspaceSplitPane::minimumHorizontalPaneSize >= 120);
+}

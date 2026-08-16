@@ -97,6 +97,9 @@ void SpectrogramComponent::audioInputStateChanged(AudioInputService::InputState 
     case AudioInputService::InputState::disconnected:
         audioErrorMessage = "Microphone disconnected.";
         break;
+    case AudioInputService::InputState::opening:
+        audioErrorMessage = "Waiting for the microphone.";
+        break;
     case AudioInputService::InputState::muted:
         audioErrorMessage = "Microphone muted.";
         break;

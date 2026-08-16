@@ -1,3 +1,17 @@
+# Recipients that may decrypt the mirrors under .secrets/.
+#
+# The second is derived deterministically from ~/.ssh/id_ed25519 by ssh-to-age
+# (both are Curve25519, so the conversion is a re-encoding, not a KDF). It is
+# recomputable at any time and discloses nothing, being a public key:
+#
+#     ssh-to-age -i ~/.ssh/id_ed25519.pub
+#
+# The standalone recipient this replaced existed only as a file on one machine,
+# so losing that machine lost every secret. This one is recoverable from the SSH
+# key, which is itself on the recovery stick. It was retired only after the
+# derived identity was proven to decrypt every mirror with the old key moved out
+# of reach -- doing that in the other order produces files nobody can read,
+# silently, because sops will happily re-encrypt to a recipient you cannot use.
 creation_rules:
   - path_regex: ^\.secrets/.*\.sops$
-    age: age14q6phf8e8wknptzlfwp7zxf5e8w4dm8a539z89plj288q9ez7anqmxq57a
+    age: age18qqk80sc9s3dnv2r4w8s32d9mllmzdrnj7shdx5lrsvwhgkh9edq2we8l3

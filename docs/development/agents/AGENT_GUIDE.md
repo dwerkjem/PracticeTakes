@@ -245,6 +245,13 @@ not shared mutable state. See `docs/development/performance/audio-thread-safety.
 for the fuller contract and `docs/development/architecture/ARCHITECTURE_QA.md` for the PR
 checklist version of these rules.
 
+The callback is annotated `noexcept PRACTICE_TAKES_NONBLOCKING`, and a
+RealtimeSanitizer job fails any pull request that introduces an allocation, a
+lock, or a blocking call inside it. That covers only the paths
+`src/tests/platform/audio/AudioInputServiceTests.cpp` drives, and only under
+Clang — the rules above still bind everywhere else. Keep the annotation and its
+`noexcept` when touching the signature.
+
 ### Testability pattern
 
 Pure logic (state machines, layout trees, policy decisions) is deliberately
@@ -253,10 +260,11 @@ display — e.g. `ui/workspace/model/WorkspaceLayoutState.h` has no JUCE
 dependency and is covered by
 `src/tests/application/shell/ui/workspace/model/WorkspaceLayoutStateTests.cpp`.
 Follow this split for new non-trivial logic rather than embedding it directly
-in a `Component` subclass. Roughly a third of `src/` (the JUCE `Component`-heavy
-files: `AudioInputService.cpp`, `FeedbackComponent.cpp`, `TunerComponent`,
+in a `Component` subclass. Roughly two fifths of `src/` (the JUCE
+`Component`-heavy files: `FeedbackComponent.cpp`, `TunerComponent`,
 `SpectrogramComponent`, `MainComponent*`) is currently outside
-`PracticeTakesTests` for this reason — see
+`PracticeTakesTests` for this reason. `AudioInputService.cpp` is now in the test
+target, but only its audio callback is exercised — see
 `docs/development/quality/QA_STRATEGY.md` area 9 before assuming a change there is
 covered.
 
@@ -312,3 +320,30 @@ against it — they can drift (`docs/development/quality/QA_STRATEGY.md` area 12
   for C++ changes under `src/**`/`src/tests/**`; `npm run check && npm run test`
   from `src/services/` for `src/services/**`; `python tools/scripts/run_tests.py` for
   `tools/scripts/**`.
+
+## Agent skills
+
+Configuration the installed engineering skills read. These files use
+repository-specific paths rather than the skills' defaults, because the root
+must stay minimal — see the hard constraint above.
+
+### Issue tracker
+
+Issues live as GitHub issues on `dwerkjem/PracticeTakes`, driven through the
+`gh` CLI, and are labelled by `area:`/`type:`/`priority:`. GitHub is the
+request surface; `openspec/changes/` remains the design surface. See
+[`issue-tracker.md`](issue-tracker.md).
+
+### Triage labels
+
+The four triage states take a `status:` prefix to match this repository's label
+families (`status:needs-triage`, `status:needs-info`,
+`status:ready-for-agent`, `status:ready-for-human`); `wontfix` is reused
+unprefixed. See [`triage-labels.md`](triage-labels.md).
+
+### Domain docs
+
+Single-context. The glossary is
+`docs/development/architecture/CONTEXT.md` and ADRs go in
+`docs/development/architecture/adr/` — **not** the skills' default root
+`CONTEXT.md` and `docs/adr/`. See [`domain.md`](domain.md).

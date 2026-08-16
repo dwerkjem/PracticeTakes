@@ -5,12 +5,14 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
+import json
 from pathlib import Path
 import re
 import subprocess
 import tempfile
 from typing import Iterator
 import unittest
+import unittest.mock
 
 
 MODULE_PATH = Path(__file__).with_name("secrets_manager.py")
@@ -98,7 +100,6 @@ class RepositoryPatternTests(unittest.TestCase):
             ".env.local",
             "src/services/feedback-intake/.env",
             "src/services/feedback-intake/.dev.vars",
-            "src/services/feedback-intake/wrangler.jsonc",
             "secrets/cloudflare.env",
             "tools/deploy.secret",
         ):
@@ -112,7 +113,6 @@ class RepositoryPatternTests(unittest.TestCase):
             ".env.example",
             "src/services/feedback-intake/.env.example",
             "src/services/feedback-intake/.dev.vars.example",
-            "src/services/feedback-intake/wrangler.example.jsonc",
             ".secrets/src/services/feedback-intake/.env.sops",
             "README.md",
             "src/Main.cpp",
@@ -121,6 +121,153 @@ class RepositoryPatternTests(unittest.TestCase):
                 self.assertFalse(
                     secrets_manager.is_secret_path(relative, self.rules)
                 )
+
+    def test_the_worker_configuration_is_not_a_secret(self) -> None:
+        """wrangler.jsonc holds a D1 database_id and nothing else non-public.
+
+        An identifier grants no access without separate credentials, so managing
+        it as a secret bought a rotation obligation it could never discharge and
+        left a template file free to drift from the real one. It is tracked now,
+        with no example alongside it.
+        """
+        self.assertFalse(
+            secrets_manager.is_secret_path(
+                "src/services/feedback-intake/wrangler.jsonc", self.rules
+            )
+        )
+
+
+class CommitGateTests(unittest.TestCase):
+    """The pre-commit gate, which had no coverage before the vault migration.
+
+    It is the only thing standing between a plaintext credential and the remote
+    now that the encrypted mirrors are no longer committed, so its two jobs are
+    pinned here: unstage a newly added secret, and refuse outright if one is
+    already tracked.
+    """
+
+    def _repository(self, root: Path) -> None:
+        (root / "tools").mkdir(parents=True, exist_ok=True)
+        (root / "tools" / "secret-patterns").write_text(
+            "**/.env\n!**/.env.example\n", encoding="utf-8"
+        )
+        for command in (
+            ["git", "config", "user.email", "t@example.com"],
+            ["git", "config", "user.name", "t"],
+        ):
+            subprocess.run(command, cwd=root, check=True)
+
+    def _staged(self, root: Path) -> list[str]:
+        out = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=root, capture_output=True, text=True, check=True,
+        )
+        return sorted(p for p in out.stdout.split() if p)
+
+    def test_a_newly_staged_plaintext_secret_is_unstaged(self) -> None:
+        with temporary_repository() as root:
+            self._repository(root)
+            (root / ".env").write_text("TOKEN=live-value\n", encoding="utf-8")
+            subprocess.run(["git", "add", "-f", ".env"], cwd=root, check=True)
+            self.assertIn(".env", self._staged(root))
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(secrets_manager.protect_command(root), 0)
+
+            self.assertNotIn(".env", self._staged(root))
+            # Unstaged, not deleted -- the developer still needs the file.
+            self.assertTrue((root / ".env").is_file())
+
+    def test_an_already_tracked_plaintext_secret_is_refused(self) -> None:
+        """Unstaging cannot help here -- the secret is already in history.
+
+        The gate refuses rather than silently unstaging, because quietly
+        dropping the change would leave the committed credential in place while
+        looking like it had been dealt with.
+        """
+        with temporary_repository() as root:
+            self._repository(root)
+            (root / ".env").write_text("TOKEN=live-value\n", encoding="utf-8")
+            subprocess.run(["git", "add", "-f", ".env"], cwd=root, check=True)
+            subprocess.run(
+                ["git", "commit", "--quiet", "-m", "oops"], cwd=root, check=True
+            )
+            # The gate reads `git diff --cached`, so a tracked secret only
+            # reaches it when it is being changed. An unmodified tracked secret
+            # is the `audit` command's job, not this one.
+            (root / ".env").write_text("TOKEN=rotated\n", encoding="utf-8")
+            subprocess.run(["git", "add", "-f", ".env"], cwd=root, check=True)
+
+            with self.assertRaises(secrets_manager.SecretsError):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    secrets_manager.protect_command(root)
+
+    def test_audit_catches_a_tracked_secret_the_gate_would_not_see(self) -> None:
+        """The complement: committed and unmodified, so no staged diff exists."""
+        with temporary_repository() as root:
+            self._repository(root)
+            (root / ".env").write_text("TOKEN=live-value\n", encoding="utf-8")
+            subprocess.run(["git", "add", "-f", ".env"], cwd=root, check=True)
+            subprocess.run(
+                ["git", "commit", "--quiet", "-m", "oops"], cwd=root, check=True
+            )
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                secrets_manager.protect_command(root)  # sees nothing staged
+
+            with self.assertRaises(secrets_manager.SecretsError):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    secrets_manager.audit_command(root)
+
+    def test_the_gate_no_longer_stages_encrypted_mirrors(self) -> None:
+        """The narrowing: mirrors are untracked, so nothing should be staged."""
+        with temporary_repository() as root:
+            self._repository(root)
+            (root / ".env").write_text("TOKEN=live-value\n", encoding="utf-8")
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                secrets_manager.protect_command(root)
+
+            self.assertEqual(self._staged(root), [])
+            self.assertFalse((root / ".secrets").exists())
+
+    def test_sync_does_not_stage_ignored_mirrors(self) -> None:
+        """`encrypt` stopped staging mirrors; `sync` kept doing it and failed.
+
+        `git add` on a path inside an ignored `.secrets/` exits non-zero, and the
+        raise happened before `save_state`, so the run left mirrors on disk with
+        no sync baseline recorded for them.
+        """
+        with temporary_repository() as root:
+            self._repository(root)
+            (root / ".gitignore").write_text("/.secrets/\n", encoding="utf-8")
+            (root / ".env").write_text("TOKEN=live-value\n", encoding="utf-8")
+
+            with unittest.mock.patch.object(
+                secrets_manager, "encrypt_bytes",
+                lambda _root, _relative, plaintext: b"ENC:" + plaintext,
+            ):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    secrets_manager.sync_command(root, prefer=None)
+
+            self.assertEqual(self._staged(root), [])
+            self.assertTrue((root / ".secrets" / ".env.sops").is_file())
+            # save_state runs only if nothing raised before it.
+            state = json.loads(
+                secrets_manager.state_path(root).read_text(encoding="utf-8")
+            )
+            self.assertIn(".env", state)
+
+    def test_a_staged_non_secret_is_left_alone(self) -> None:
+        with temporary_repository() as root:
+            self._repository(root)
+            (root / "README.md").write_text("hello\n", encoding="utf-8")
+            subprocess.run(["git", "add", "README.md"], cwd=root, check=True)
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                secrets_manager.protect_command(root)
+
+            self.assertIn("README.md", self._staged(root))
 
 
 class InitTests(unittest.TestCase):
@@ -153,43 +300,6 @@ class SyncConflictTests(unittest.TestCase):
             secrets_manager.clear_sync_conflict(root, relative)
             for copy in copies:
                 self.assertFalse(copy.exists())
-
-
-class PlaintextMergeTests(unittest.TestCase):
-    def test_non_overlapping_secret_edits_merge_cleanly(self) -> None:
-        with temporary_repository() as root:
-            merged, clean = secrets_manager.merge_plaintext(
-                root,
-                b"FIRST=ours\nKEEP_A=base\nKEEP_B=base\nSECOND=base\n",
-                b"FIRST=base\nKEEP_A=base\nKEEP_B=base\nSECOND=base\n",
-                b"FIRST=base\nKEEP_A=base\nKEEP_B=base\nSECOND=theirs\n",
-            )
-        self.assertTrue(clean)
-        self.assertEqual(
-            merged,
-            b"FIRST=ours\nKEEP_A=base\nKEEP_B=base\nSECOND=theirs\n",
-        )
-
-    def test_overlapping_secret_edits_produce_markers(self) -> None:
-        with temporary_repository() as root:
-            merged, clean = secrets_manager.merge_plaintext(
-                root,
-                b"TOKEN=ours\n",
-                b"TOKEN=base\n",
-                b"TOKEN=theirs\n",
-            )
-        self.assertFalse(clean)
-        self.assertIn(b"<<<<<<<", merged)
-        self.assertIn(b">>>>>>>", merged)
-
-    def test_scratch_plaintext_stays_inside_the_git_directory(self) -> None:
-        with temporary_repository() as root:
-            secrets_manager.merge_plaintext(root, b"A=1\n", b"A=1\n", b"A=1\n")
-            scratch_root = (
-                secrets_manager.git_directory(root)
-                / secrets_manager.CONFLICT_DIRECTORY
-            )
-            self.assertEqual(list(scratch_root.glob("merge-*")), [])
 
 
 if __name__ == "__main__":

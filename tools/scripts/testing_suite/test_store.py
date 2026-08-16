@@ -252,6 +252,23 @@ class CaptureRecordingTests(StoreTestCase):
         self.assertEqual(first, second)
         self.assertEqual(len(self.store.captures(run_id)), 1)
 
+    def test_recapturing_after_a_later_insert_still_returns_its_own_id(self) -> None:
+        """sqlite3's cursor.lastrowid only moves on an actual INSERT, so a
+        re-capture that takes the ON CONFLICT DO UPDATE path must not trust it:
+        by the time this update runs, the connection's lastrowid is left
+        pointing at whatever other row was inserted most recently -- a
+        different capture entirely if one landed in between, as it does here.
+        """
+        run_id = self.start_run()
+        first = self.capture(run_id, "default")
+        other = self.capture(run_id, "constrained")
+        self.assertNotEqual(first, other)
+
+        recaptured = self.capture(run_id, "default", width=999)
+
+        self.assertEqual(recaptured, first)
+        self.assertEqual(len(self.store.captures(run_id)), 2)
+
     def test_a_failed_capture_is_a_row_not_an_absence(self) -> None:
         """A surface nobody could look at is a finding, not a gap in the grid."""
         run_id = self.start_run()

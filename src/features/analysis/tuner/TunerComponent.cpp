@@ -2,28 +2,43 @@
 
 #include "TunerSettingsCodec.h"
 
+#include "application/theme/AppLookAndFeel.h"
+
+// The display-mode label and chooser as one component, so a docked panel adopts
+// the pair with a single reparent and lays out one thing.
+class TunerComponent::ModeChooser final : public juce::Component
+{
+  public:
+    ModeChooser(juce::Label& labelToUse, juce::ComboBox& boxToUse)
+        : label(labelToUse), box(boxToUse)
+    {
+        addAndMakeVisible(label);
+        addAndMakeVisible(box);
+    }
+
+    void resized() override
+    {
+        auto bounds = getLocalBounds();
+        // The label takes what it needs and the box the rest, so this reads the
+        // same on a header line as it did on a row of its own.
+        label.setBounds(bounds.removeFromLeft(juce::jmin(88, bounds.getWidth() / 2)));
+        bounds.removeFromLeft(6);
+        box.setBounds(bounds);
+    }
+
+  private:
+    juce::Label& label;
+    juce::ComboBox& box;
+};
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
-namespace
-{
-constexpr double immediatePitchJumpSemitones = 5.0;
-constexpr double matchingJumpToleranceSemitones = 1.5;
-constexpr int pitchJumpConfirmationFrames = 4;
-
-constexpr std::array<const char*, 12> noteNames{
-    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-
-[[nodiscard]] juce::String noteNameForMidi(int midiNote)
-{
-    const auto noteIndex = ((midiNote % 12) + 12) % 12;
-    const auto octave = (midiNote / 12) - 1;
-
-    return juce::String(noteNames[static_cast<std::size_t>(noteIndex)]) + juce::String(octave);
-}
-
-} // namespace
+// The thresholds that decide a glide from a misdetection, the smoothing, and
+// the note lock all live in PitchTracker now. noteNameForMidi comes from the
+// same header, so this file and TunerDrawing.cpp cannot disagree about the name
+// of a note -- they held separate identical copies before.
 
 //==============================================================================
 TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService)
@@ -38,7 +53,7 @@ TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService)
         addAndMakeVisible(label);
     };
 
-    configureLabel(displayModeLabel, "Display");
+    configureLabel(displayModeLabel, "Display mode");
     configureLabel(easingLabel, "Pitch easing");
     configureLabel(averagingLabel, "Average window");
     configureLabel(thresholdLabel, "Note switch");
@@ -55,16 +70,12 @@ TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService)
         resized();
         repaint();
     };
-    addAndMakeVisible(displayModeBox);
 
-    advancedSettingsButton.onClick = [this]
-    {
-        areAdvancedSettingsExpanded = !areAdvancedSettingsExpanded;
-        updateAdvancedSettingsVisibility();
-        resized();
-        repaint();
-    };
-    addAndMakeVisible(advancedSettingsButton);
+    // The advanced settings live behind the panel's "..." menu rather than a
+    // button of their own. Most sessions never open them, and a permanent row
+    // for them was a row the display did not get.
+    modeChooser = std::make_unique<ModeChooser>(displayModeLabel, displayModeBox);
+    addAndMakeVisible(*modeChooser);
 
     configureSlider(easingSlider, 0.02, 1.0, 0.01, AppDefaults::Tuner::easing, "");
     configureSlider(averagingSlider, 1.0, 15.0, 1.0, AppDefaults::Tuner::averaging, " samples");
@@ -124,6 +135,12 @@ bool TunerComponent::showView(const juce::String& view)
 
     if (view == "advanced")
     {
+        // The display too, not only the panel. A state has to describe what is
+        // on screen rather than what changed about it: without this, the
+        // advanced surface inherited whichever display the previous state left
+        // selected, so the same capture showed the graph or the meter
+        // depending on what came before it in the run.
+        selectMode(DisplayMode::graph);
         areAdvancedSettingsExpanded = true;
         updateAdvancedSettingsVisibility();
         resized();
@@ -217,7 +234,7 @@ void TunerComponent::applyThemeToControls()
         label->setColour(juce::Label::textColourId, palette.muted);
     }
 
-    for (auto* button : {&advancedSettingsButton, &clearGraphButton})
+    for (auto* button : {&clearGraphButton})
     {
         button->setColour(juce::TextButton::buttonColourId, palette.control);
         button->setColour(juce::TextButton::buttonOnColourId, palette.accent.withAlpha(0.75f));
@@ -262,9 +279,6 @@ void TunerComponent::configureSlider(
 
 void TunerComponent::updateAdvancedSettingsVisibility()
 {
-    advancedSettingsButton.setButtonText(
-        areAdvancedSettingsExpanded ? "Advanced settings  v" : "Advanced settings  >");
-
     for (auto* component : std::array<juce::Component*, 10>{
              &easingLabel, &easingSlider, &averagingLabel, &averagingSlider, &thresholdLabel,
              &thresholdSlider, &dropoutLabel, &dropoutSlider, &durationLabel, &durationSlider})
@@ -287,13 +301,50 @@ void TunerComponent::updateGraphControlAvailability()
 
 int TunerComponent::controlAreaHeight() const
 {
-    constexpr int displaySelectorHeight = 32;
-    constexpr int gapBelowDisplaySelector = 8;
-    constexpr int advancedButtonHeight = 34;
     constexpr int expandedRowsHeight = 5 * 30 + 8 + 36;
 
-    return displaySelectorHeight + gapBelowDisplaySelector + advancedButtonHeight +
-           (areAdvancedSettingsExpanded ? expandedRowsHeight : 0);
+    // Nothing but the advanced rows, and only while they are open. The mode
+    // chooser is on the header line when the tuner is docked, and the tuner
+    // adds a row for it only when nobody adopted it -- which resized() works
+    // out, since it is the only place that knows.
+    return (areAdvancedSettingsExpanded ? expandedRowsHeight + 8 : 0) +
+           (isModeChooserAdopted() ? 0 : modeChooserHeight + 8);
+}
+
+bool TunerComponent::isModeChooserAdopted() const
+{
+    // Adopted means some other component -- a docked panel's header -- took it
+    // as a child. Floating, nobody does, so the tuner shows it itself.
+    return modeChooser != nullptr && modeChooser->getParentComponent() != nullptr &&
+           modeChooser->getParentComponent() != this;
+}
+
+void TunerComponent::placeModeChooser(juce::Rectangle<int> area)
+{
+    if (modeChooser == nullptr)
+    {
+        return;
+    }
+
+    addAndMakeVisible(*modeChooser);
+    modeChooser->setBounds(area);
+}
+
+juce::Component* TunerComponent::headerControl()
+{
+    return modeChooser.get();
+}
+
+std::vector<ToolComponent::MenuEntry> TunerComponent::optionsMenuEntries()
+{
+    return {
+        {areAdvancedSettingsExpanded ? "Hide advanced settings" : "Advanced settings", [this]
+         {
+             areAdvancedSettingsExpanded = !areAdvancedSettingsExpanded;
+             updateAdvancedSettingsVisibility();
+             resized();
+             repaint();
+         }}};
 }
 
 juce::String TunerComponent::statusText() const
@@ -308,8 +359,11 @@ juce::String TunerComponent::statusText() const
         return "Play or sing a sustained note";
     }
 
+    // One space, not the three the design's HTML carries -- a browser collapses
+    // runs of whitespace and renders exactly one, which is what the reference
+    // actually shows. JUCE draws all three.
     const auto centsSign = displayedCents > 0.0 ? "+" : "";
-    return juce::String(displayedFrequency, 1) + " Hz   " + centsSign +
+    return juce::String(displayedFrequency, 1) + " Hz " + centsSign +
            juce::String(displayedCents, 1) + " cents";
 }
 
@@ -338,6 +392,9 @@ void TunerComponent::audioInputStateChanged(AudioInputService::InputState state)
     {
     case AudioInputService::InputState::disconnected:
         audioErrorMessage = "Microphone disconnected.";
+        break;
+    case AudioInputService::InputState::opening:
+        audioErrorMessage = "Waiting for the microphone.";
         break;
     case AudioInputService::InputState::muted:
         audioErrorMessage = "Microphone muted.";
@@ -397,154 +454,42 @@ void TunerComponent::timerCallback()
 
     const auto analysis = pitchDetector.detect(analysisBuffer, currentSampleRate.load());
     inputLevel = analysis.inputLevel;
-    if (analysis.frequency > 0.0)
-    {
-        handleDetectedPitch(analysis.frequency);
-    }
-    else
-    {
-        handleMissingPitch();
-    }
+
+    const auto update =
+        analysis.frequency > 0.0 ? pitchTracker.detected(analysis.frequency, trackerSettings())
+                                 : pitchTracker.missing(trackerSettings());
+    applyTrackerUpdate(update);
 
     repaint();
 }
 
-void TunerComponent::handleDetectedPitch(double frequency)
+PitchTracker::Settings TunerComponent::trackerSettings() const
 {
-    if (!isConfirmedPitch(frequency))
-    {
-        // Do not let a suspected harmonic alter the smoothing history or draw
-        // a line to it in the graph. A real large interval will be admitted
-        // after it remains stable for a few consecutive analysis frames.
-        addHistoryPoint(std::numeric_limits<double>::quiet_NaN());
-        return;
-    }
-
-    framesWithoutPitch = 0;
-
-    const auto stableFrequency = smoothFrequency(frequency);
-    updateDisplayedNote(stableFrequency);
-    addHistoryPoint(smoothedMidiNote);
-    hasSignal = true;
+    // Read straight off the sliders each frame, so a mid-note adjustment takes
+    // effect immediately rather than at the next note.
+    return {
+        easingSlider.getValue(),
+        averagingSlider.getValue(),
+        thresholdSlider.getValue(),
+        dropoutSlider.getValue(),
+    };
 }
 
-bool TunerComponent::isConfirmedPitch(double frequency)
+void TunerComponent::applyTrackerUpdate(const PitchTracker::Update& update)
 {
-    const auto midiPitch = frequencyToMidi(frequency);
-    if (std::abs(smoothedMidiNote) <= std::numeric_limits<double>::epsilon() ||
-        std::abs(midiPitch - smoothedMidiNote) <= immediatePitchJumpSemitones)
-    {
-        pendingJumpFrames = 0;
-        pendingJumpMidiNote = 0.0;
-        return true;
-    }
+    hasSignal = update.hasSignal;
+    displayedFrequency = update.displayedFrequency;
+    displayedCents = update.displayedCents;
+    lockedMidiNote = update.displayedMidiNote;
+    hasLockedMidiNote = update.hasDisplayedNote;
+    displayedNote = update.hasDisplayedNote
+                        ? juce::String(noteNameForMidi(update.displayedMidiNote))
+                        : juce::String("--");
 
-    if (pendingJumpFrames == 0 ||
-        std::abs(midiPitch - pendingJumpMidiNote) > matchingJumpToleranceSemitones)
-    {
-        pendingJumpMidiNote = midiPitch;
-        pendingJumpFrames = 1;
-        return false;
-    }
-
-    // Follow a genuine glide while requiring all confirming frames to remain
-    // in the same small pitch neighbourhood.
-    pendingJumpMidiNote +=
-        (midiPitch - pendingJumpMidiNote) / static_cast<double>(pendingJumpFrames + 1);
-    ++pendingJumpFrames;
-
-    if (pendingJumpFrames < pitchJumpConfirmationFrames)
-    {
-        return false;
-    }
-
-    // Begin a fresh smoothing segment at the confirmed note. Otherwise the
-    // old pitch would keep making the newly accepted note look like a jump.
-    smoothedMidiNote = midiPitch;
-    recentPitchCount = 0;
-    recentPitchWriteIndex = 0;
-    pendingJumpFrames = 0;
-    pendingJumpMidiNote = 0.0;
-    return true;
-}
-
-void TunerComponent::handleMissingPitch()
-{
-    pendingJumpFrames = 0;
-    pendingJumpMidiNote = 0.0;
-    ++framesWithoutPitch;
-    addHistoryPoint(std::numeric_limits<double>::quiet_NaN());
-
-    if (framesWithoutPitch >= static_cast<int>(dropoutSlider.getValue()))
-    {
-        resetPitchTracking();
-    }
-}
-
-double TunerComponent::smoothFrequency(double frequency)
-{
-    const auto midiPitch = frequencyToMidi(frequency);
-
-    recentMidiPitches[static_cast<std::size_t>(recentPitchWriteIndex)] = midiPitch;
-    recentPitchWriteIndex = (recentPitchWriteIndex + 1) % maximumAverageWindow;
-    recentPitchCount = std::min(recentPitchCount + 1, maximumAverageWindow);
-
-    const auto averagedMidiPitch = averageRecentMidiPitches();
-    const auto easing = easingSlider.getValue();
-
-    smoothedMidiNote = std::abs(smoothedMidiNote) <= std::numeric_limits<double>::epsilon()
-                           ? averagedMidiPitch
-                           : smoothedMidiNote + easing * (averagedMidiPitch - smoothedMidiNote);
-
-    return midiToFrequency(smoothedMidiNote);
-}
-
-double TunerComponent::averageRecentMidiPitches() const
-{
-    const auto requestedWindow = static_cast<int>(averagingSlider.getValue());
-    const auto pitchesToAverage = std::min(requestedWindow, recentPitchCount);
-
-    double sum = 0.0;
-    for (int offset = 0; offset < pitchesToAverage; ++offset)
-    {
-        const auto index =
-            (recentPitchWriteIndex - 1 - offset + maximumAverageWindow) % maximumAverageWindow;
-        sum += recentMidiPitches[static_cast<std::size_t>(index)];
-    }
-
-    return sum / static_cast<double>(std::max(1, pitchesToAverage));
-}
-
-double TunerComponent::frequencyToMidi(double frequency)
-{
-    return 69.0 + 12.0 * std::log2(frequency / referenceFrequencyHz);
-}
-
-double TunerComponent::midiToFrequency(double midiPitch)
-{
-    return referenceFrequencyHz * std::pow(2.0, (midiPitch - 69.0) / 12.0);
-}
-
-void TunerComponent::updateDisplayedNote(double frequency)
-{
-    const auto midiPitch = frequencyToMidi(frequency);
-    const auto nearestMidiNote = static_cast<int>(std::round(midiPitch));
-
-    if (!hasLockedMidiNote)
-    {
-        lockedMidiNote = nearestMidiNote;
-        hasLockedMidiNote = true;
-    }
-    else if (std::abs(midiPitch - static_cast<double>(lockedMidiNote)) > thresholdSlider.getValue())
-    {
-        // Keep the current note label until the pitch moves far enough away.
-        // This prevents the display from rapidly switching near a boundary.
-        lockedMidiNote = nearestMidiNote;
-    }
-
-    displayedNote = noteNameForMidi(lockedMidiNote);
-    displayedFrequency = frequency;
-    displayedCents = 100.0 * (midiPitch - static_cast<double>(lockedMidiNote));
+    // Every frame contributes a point. A NaN is a deliberate gap -- silence, or
+    // a reading rejected as a suspected harmonic -- and the graph draws a break
+    // rather than a line across it.
+    addHistoryPoint(update.historyMidiNote);
 }
 
 void TunerComponent::addHistoryPoint(double midiPitch)
@@ -564,13 +509,11 @@ void TunerComponent::addHistoryPoint(double midiPitch)
 
 void TunerComponent::resetPitchTracking()
 {
-    recentMidiPitches.fill(0.0);
-    recentPitchCount = 0;
-    recentPitchWriteIndex = 0;
-    smoothedMidiNote = 0.0;
-    framesWithoutPitch = 0;
-    pendingJumpFrames = 0;
-    pendingJumpMidiNote = 0.0;
+    // Two resets that used to be one. The tracker forgets what it has heard;
+    // the component clears what it is showing. They were entangled before, so
+    // neither could be exercised without the other.
+    pitchTracker.reset();
+
     hasLockedMidiNote = false;
     hasSignal = false;
     displayedFrequency = 0.0;

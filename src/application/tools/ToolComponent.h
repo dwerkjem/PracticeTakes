@@ -5,7 +5,11 @@
 #include "../theme/ThemeType.h"
 #include "ToolSettingsPayload.h"
 
+#include <functional>
 #include <optional>
+#include <string>
+#include <utility>
+#include <vector>
 
 // What the shell requires of a tool, and the whole of what it may assume.
 //
@@ -59,5 +63,39 @@ class ToolComponent : public juce::Component
         juce::ignoreUnused(view);
 
         return false;
+    }
+
+    // A control the tool wants on its panel's header line rather than inside
+    // its own body -- the tuner's display-mode chooser, which is a property of
+    // the whole tool rather than of the thing it is currently drawing.
+    //
+    // The tool owns it either way. A docked panel *reparents* it into the
+    // header, the same move the workspace already makes with the tool itself
+    // when it changes presentation, and hands it back when the panel goes away.
+    // A floating tool has no header to put it in, so it keeps it and lays it
+    // out itself; a tool must therefore work whether or not anyone adopts it.
+    //
+    // Null means the tool has nothing for the header, which is every tool but
+    // the tuner today.
+    [[nodiscard]] virtual juce::Component* headerControl()
+    {
+        return nullptr;
+    }
+
+    // Entries this tool adds to the "..." menu on its panel.
+    //
+    // For actions that are worth reaching but not worth spending a row of the
+    // panel on -- the tuner's advanced settings, which most sessions never
+    // touch. The shell shows the labels and calls the actions without knowing
+    // what either means, which is the same arrangement as showView.
+    struct MenuEntry
+    {
+        juce::String label;
+        std::function<void()> action;
+    };
+
+    [[nodiscard]] virtual std::vector<MenuEntry> optionsMenuEntries()
+    {
+        return {};
     }
 };

@@ -30,7 +30,9 @@ UNIT = "tests"
 PERFORMANCE = "performance"
 INTERFACE = "ui"
 
-KINDS = (UNIT, PERFORMANCE, INTERFACE)
+SAFETY = "safety"
+
+KINDS = (UNIT, PERFORMANCE, INTERFACE, SAFETY)
 
 
 @dataclass(frozen=True)
@@ -67,6 +69,11 @@ class Suite:
     needs_display: bool = False
 
     tags: tuple[str, ...] = field(default_factory=tuple)
+
+    # Added to the environment this suite runs in. The sanitizers are configured
+    # this way and nowhere else: their options belong beside the command that
+    # needs them rather than in a shell profile somebody has to know about.
+    environment: dict = field(default_factory=dict)
 
 
 # --- Parsers ----------------------------------------------------------------
@@ -116,6 +123,30 @@ def parse_vitest(output: str) -> dict:
         "failures": int(tests.group(1) or 0),
         "duration_seconds": 0.0,
     }
+
+
+def parse_catch2(output: str) -> dict:
+    """Catch2's own summary line. Counts only -- the exit code is the verdict.
+
+    A sanitizer report is not in this line at all: it goes to stderr and turns
+    the exit code non-zero, which is what decides pass or fail. Reading counts
+    that say "all passed" from a run the sanitizer killed is exactly why counts
+    never decide anything here.
+    """
+    match = re.search(
+        r"(?:assertions|test cases):\s+(\d+)\s*\|\s*(\d+) passed\s*\|\s*(\d+) failed",
+        output,
+    )
+
+    if match:
+        return {"cases": int(match.group(1)), "failures": int(match.group(3))}
+
+    passing = re.search(r"All tests passed \((\d+) assertions? in (\d+) test cases?\)", output)
+
+    if passing:
+        return {"cases": int(passing.group(2)), "failures": 0}
+
+    return {}
 
 
 def parse_catch2_benchmarks(output: str) -> dict:
@@ -229,6 +260,67 @@ SUITES: tuple[Suite, ...] = (
         description="Photograph every surface at every resolution, for the review grid.",
         needs=("PracticeTakes",),
         needs_display=True,
+    ),
+
+    # --- The sanitizers -------------------------------------------------------
+    #
+    # These run in CI and never ran here, which is the wrong way round: they are
+    # slow, they need their own build tree, and finding out on a pull request
+    # that a change races is finding out an hour after writing it.
+    #
+    # Each is the same suite CI runs, with the same options, deliberately: two
+    # definitions of "the race check" that drift is worse than one that is
+    # occasionally inconvenient. See .github/workflows/sanitizers.yml and
+    # sanitizers-scheduled.yml.
+    Suite(
+        id="asan",
+        label="Memory errors and leaks",
+        kind=SAFETY,
+        description=(
+            "The whole C++ suite under AddressSanitizer and UBSan. Catches "
+            "use-after-free, overflows, undefined behaviour, and anything the "
+            "tests allocate and never release."
+        ),
+        command=("ctest", "--test-dir", "build-asan", "--output-on-failure"),
+        needs=("PracticeTakesTests-asan",),
+        parser=parse_ctest,
+        environment={
+            # halt_on_error keeps the first report as the one a reader sees;
+            # without it a cascade of consequences buries the cause.
+            "ASAN_OPTIONS": "halt_on_error=1:detect_leaks=1",
+            "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1",
+        },
+    ),
+    Suite(
+        id="tsan",
+        label="Race conditions",
+        kind=SAFETY,
+        description=(
+            "The concurrency cases under ThreadSanitizer. Only [.load]: the "
+            "rest of the suite is single-threaded, so the slowdown would be "
+            "spent observing code that cannot race."
+        ),
+        command=("{PracticeTakesTests-tsan}", "[.load]", "--order", "lex"),
+        needs=("PracticeTakesTests-tsan",),
+        parser=parse_catch2,
+        environment={
+            "TSAN_OPTIONS": "halt_on_error=1:second_deadlock_stack=1",
+            "PRACTICE_TAKES_SOAK_MILLISECONDS": "1500",
+        },
+    ),
+    Suite(
+        id="rtsan",
+        label="Audio callback is non-blocking",
+        kind=SAFETY,
+        description=(
+            "The [callback] cases under RealtimeSanitizer, which fails on an "
+            "allocation, a lock, or a blocking call inside the audio callback. "
+            "Needs Clang; the annotation is a Clang attribute."
+        ),
+        command=("{PracticeTakesTests-rtsan}", "[callback]", "--order", "lex"),
+        needs=("PracticeTakesTests-rtsan",),
+        parser=parse_catch2,
+        environment={"RTSAN_OPTIONS": "halt_on_error=1"},
     ),
 )
 

@@ -22,8 +22,22 @@
       <div id="progress" hidden>
         <div id="progress-bar"><span id="progress-fill"></span></div>
         <div id="progress-message" class="muted"></div>
+        <!-- Only while something is running. A full sweep is two hundred
+             captures and there was no way to end one. -->
+        <button type="button" id="stop-run" title="Stop the run (Esc)">
+          Stop run
+        </button>
       </div>
     </header>
+
+    <!-- Outside every view, because the mismatch it reports makes buttons in
+         all of them do nothing. -->
+    <div id="stale-server" class="notice" hidden>
+      <span id="stale-server-message"></span>
+      <!-- The way out, beside the problem. Nowhere else, because there is
+           nothing to restart when the hub is current. -->
+      <button type="button" id="restart-hub">Restart the hub</button>
+    </div>
 
     <!-- Run: pick what to run, and run it. The landing view, because an empty
          store is what everyone sees first and it needs a way forward. -->
@@ -44,6 +58,12 @@
         <button type="button" id="run-tests">Tests only</button>
         <button type="button" id="run-performance">Performance only</button>
         <button type="button" id="run-ui">UI only</button>
+
+        <!-- Building belongs with running: it is the same decision made one
+             step earlier, and the run buttons are where you are already
+             looking. Filled by the script, one per target. -->
+        <span class="divider"></span>
+        <span id="build-buttons"></span>
       </div>
 
       <section class="panel">
@@ -61,12 +81,11 @@
 
         <span class="divider"></span>
         <button type="button" id="approve-shown" class="primary">Approve all shown</button>
-        <button type="button" id="bulk-pass" class="verdict-pass">Pass selected</button>
-        <button type="button" id="bulk-fail" class="verdict-fail">Fail selected…</button>
-        <button type="button" id="bulk-skip">Skip selected</button>
-        <label class="inline small" title="Off: only fill in what has not been answered.">
-          <input type="checkbox" id="overwrite" /> overwrite answered
-        </label>
+        <!-- One button rather than four. Looking at a row of images usually
+             produces one opinion held about all of them, and it is rarely
+             "everything here is fine" — it is more often "these work and that
+             one looks off", which four buttons cannot say. -->
+        <button type="button" id="bulk-edit" class="primary" hidden>Bulk edit…</button>
 
         <span class="divider"></span>
         <span id="tag-buttons"></span>
@@ -134,6 +153,32 @@
         <div id="table-metrics"></div>
       </section>
     </main>
+
+    <!-- One opinion, applied to everything selected. Its own element rather
+         than the browser's prompt, which can ask one question with one answer
+         and cannot ask three. -->
+    <div id="bulk-modal" hidden>
+      <div id="bulk-sheet" role="dialog" aria-modal="true" aria-labelledby="bulk-title">
+        <h2 id="bulk-title">Bulk edit</h2>
+        <p id="bulk-count" class="muted small"></p>
+
+        <div id="bulk-axes"></div>
+
+        <label class="bulk-field">
+          Comment, applied to every selected capture
+          <textarea id="bulk-note" rows="3" placeholder="Optional"></textarea>
+        </label>
+
+        <label class="inline small" title="Off: only fill in what has not been answered.">
+          <input type="checkbox" id="overwrite" /> replace answers that are already there
+        </label>
+
+        <div class="bulk-actions">
+          <button type="button" id="bulk-cancel">Cancel</button>
+          <button type="button" id="bulk-apply" class="primary">Apply</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Zoom is where the judging actually happens: the image is big enough to
          judge, so the verdict belongs here rather than back in the grid. -->

@@ -10,10 +10,11 @@ The public API is write-only:
 - `POST /v1/submissions` consumes that authorization once and returns a receipt identifier.
 
 Every accepted submission is stored before the client receives its receipt. Email is a separate,
-scheduled delivery path: D1 retains all unemailed reports, and the Worker sends at most three
-emails per UTC day. At each of the three schedules it divides the current backlog by the remaining
+scheduled delivery path: D1 retains all unemailed reports, and the Worker sends at most
+`FEEDBACK_MAX_DAILY_EMAILS` emails per UTC day — three unless configured otherwise, counting
+manual dispatches. At each of the three schedules it divides the current backlog by the remaining
 daily email slots, so five queued reports are sent as batches of two, two, and one instead of one
-large digest. Reports received after the third email remain queued for the next UTC day. Failed
+large digest. Reports received after the last email remain queued for the next UTC day. Failed
 email batches are released back to the queue with their daily send slot and retried later. A single
 email contains at most 100 reports so the complete messages remain safely below the provider's
 message-size limit; larger backlogs continue on following days without dropping records.
@@ -36,6 +37,14 @@ email before serving any page, asset, or API response. Administrative responses 
 - `GET /v1/admin/operations` reports bounded 24-hour telemetry, storage, quarantine, delay, and
   retention status.
 - `POST /v1/admin/maintenance/retention` runs the configured retention policy immediately.
+- `GET /v1/admin/notifications` reports whether feedback email delivery is configured and what is
+  wrong if it is not, the queue depth and oldest queued report, the day's sends against
+  `FEEDBACK_MAX_DAILY_EMAILS`, and the last dispatch attempt. It sends nothing.
+- `POST /v1/admin/notifications/dispatch` runs a real dispatch immediately under the caller's
+  identity. It consumes one of the day's sends and offers no way to exceed the limit. `200` for
+  `sent`, `nothing_pending`, and `daily_limit_reached`; `503` for `not_configured` and
+  `send_failed`. A failed send reports a classified `failureReason`, never the provider's own
+  text — that goes to the service log only. See `docs/development/operations/EMAIL_DISPATCH.md`.
 
 Hosted administration is disabled unless `ADMIN_ROUTES_ENABLED` is exactly `true`. Even when it is
 enabled, missing or invalid `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, `ADMIN_EMAILS`, or Access JWT values
@@ -170,8 +179,10 @@ installed unit still runs from the checkout. Pass `--pull-source` to perform a f
    `openssl rand -hex 32 | npx wrangler secret put SUBMISSION_SIGNING_KEY`.
 6. Ensure the account has a Cloudflare Zero Trust team and an identity provider. Cloudflare's
    one-time PIN provider is sufficient for a single administrator.
-7. Enable Cloudflare Email Service for the sender domain and verify the administrator address as
-   a permitted destination. The notification sender must use that onboarded domain.
+7. Onboard the sender's domain to Cloudflare Email Sending
+   (`npx wrangler email sending enable <domain>`) and confirm its SPF and DKIM records resolve.
+   The notification sender must use that onboarded domain; a `workers.dev` host cannot send.
+   `docs/development/operations/EMAIL_DISPATCH.md` walks through this and how to verify it.
 8. Put a short-lived setup token scoped to **Access: Apps and Policies Write** and **Workers
    Scripts Write** in the ignored `src/services/feedback-intake/.env` file. Configure the following
    values there, then run the idempotent setup:
@@ -181,8 +192,11 @@ installed unit still runs from the checkout. Pass `--pull-source` to perform a f
    CLOUDFLARE_SETUP_API_TOKEN=...
    ACCESS_HOSTNAME=practice-takes-feedback-intake.derekrneilson.workers.dev
    ADMIN_EMAIL=developer@example.com
-   FEEDBACK_NOTIFICATION_FROM=feedback@example.com
+   FEEDBACK_NOTIFICATION_FROM=feedback@a-domain-you-own.example
    ```
+
+   Setup refuses a sender on `example.com`, a `.invalid`/`.test`/`.local` domain, or a
+   `workers.dev` host, because none of those can deliver.
 
    From the repository root:
 

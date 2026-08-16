@@ -10,6 +10,11 @@
 const state = {
   view: "run",
   data: null,
+  // The job as of the last poll, kept apart from `data` because `data` is only
+  // replaced by a full reload. Escape used to read `data.job`, which during a
+  // run still said what was true before it started -- not running -- so the key
+  // did nothing for the whole run.
+  job: null,
   order: [],          // capture ids, in the order they are rendered
   selected: new Set(),
   lastClicked: null,
@@ -18,9 +23,10 @@ const state = {
   // Previews default to large: the grid exists so you can see what is being
   // reviewed, and a thumbnail you have to squint at defeats the whole thing.
   size: window.localStorage.getItem("preview-size") || "large",
-  // facet name -> Set of chosen values. Empty means "no opinion", which is what
-  // makes several filters compose: within a facet the choices are alternatives,
-  // between facets they all have to hold.
+  // facet name -> Set of chosen values. Empty means "no opinion". Every chosen
+  // value has to hold, within a facet and between them alike: naming two things
+  // means wanting both, and a facet whose captures only ever carry one value
+  // shows nothing when two are named, which is what that honestly means.
   filters: {},
 };
 
@@ -55,24 +61,122 @@ document.querySelectorAll("#tabs button").forEach((button) => {
 
 // --- The run view ----------------------------------------------------------
 
-function renderBuilds(view) {
-  const holder = element("build-state");
-  const missing = (view.builds || []).filter((build) => !build.present);
-  const stale = (view.builds || []).filter((build) => build.present && build.stale);
-  const lines = [];
+// A hub left running while the suite is edited answers a fresh page with old
+// code: a comment saves and renders blank, a delete button posts to a route
+// that does not exist yet. Both look like broken features. Say which it is.
+function renderStaleServer(view) {
+  const banner = element("stale-server");
+  const warning = view.stale_server || "";
 
-  // Said up front rather than discovered ten minutes in: a cold build is the
-  // slowest thing here by far, and knowing it is coming changes what you click.
-  missing.forEach((build) => lines.push(
-    `<div class="notice">${build.target} is not built — ${build.reason}. Running anything that needs it will build it first (several minutes).</div>`));
-  stale.forEach((build) => lines.push(
-    `<div class="notice subtle">${build.target} was built before your latest source change. Tick "rebuild" to be sure.</div>`));
+  element("stale-server-message").textContent = warning;
+  banner.hidden = !warning;
+}
 
-  if (!view.display) {
-    lines.push('<div class="notice">No display detected — UI suites will be skipped rather than failing.</div>');
+// One build, on its own, now. The slow part of everything here is the build,
+// and wanting it done without also running two hundred captures is the normal
+// state of someone who has just edited the application.
+async function buildTargets(targets) {
+  const { ok, data } = await api("/api/build", { targets });
+
+  if (!ok) {
+    window.alert(data.error || "could not start a build");
+
+    return;
   }
 
-  holder.innerHTML = lines.join("");
+  renderJob(data);
+  poll();
+}
+
+function buildNotice(text) {
+  const notice = document.createElement("div");
+  notice.className = "notice";
+  notice.appendChild(document.createTextNode(text));
+
+  return notice;
+}
+
+// One line for every build that is behind, whatever it is behind by. Missing
+// and out-of-date were a notice each, which on five targets was four banners
+// stacked above the thing you came here to press — and the difference between
+// them is not a decision anybody makes. Either way it gets built.
+function needsBuildingNotice(behind, running) {
+  const notice = document.createElement("div");
+  notice.className = "notice needs-building";
+  notice.appendChild(document.createTextNode(
+    behind.length === 1 ? "Needs building: " : "Need building: "));
+
+  behind.forEach((build) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "inline-action";
+    button.textContent = build.target;
+    button.title = build.reason;
+    button.disabled = running;
+    button.addEventListener("click", () => buildTargets([build.target]));
+    notice.appendChild(button);
+  });
+
+  if (behind.length > 1) {
+    const all = document.createElement("button");
+    all.type = "button";
+    all.className = "inline-action all";
+    all.textContent = "all of them";
+    all.disabled = running;
+    all.addEventListener("click", () => buildTargets(behind.map((build) => build.target)));
+    notice.appendChild(all);
+  }
+
+  return notice;
+}
+
+function renderBuilds(view) {
+  const holder = element("build-state");
+  const row = element("build-buttons");
+  const builds = view.builds || [];
+  const running = Boolean(view.job && view.job.running);
+
+  holder.innerHTML = "";
+  row.innerHTML = "";
+
+  // Beside the run buttons, and only the two you run constantly. The sanitizer
+  // trees have one each too and that made a row of six; they are reached from
+  // the banner when they are behind, and built by their own suite otherwise.
+  const primary = builds.filter((build) => build.primary);
+
+  primary.forEach((build) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `build-button ${build.present ? "built" : "not-built"}`;
+    button.textContent = `${build.present ? "Rebuild" : "Build"} ${build.target}`;
+    button.title = build.present
+      ? `${build.target} is built${build.stale ? ", but predates your latest source change" : ""}`
+      : build.reason;
+    button.disabled = running;
+    button.addEventListener("click", () => buildTargets([build.target]));
+    row.appendChild(button);
+  });
+
+  if (primary.length > 1) {
+    const every = document.createElement("button");
+    const all = primary.every((build) => build.present);
+
+    every.type = "button";
+    every.className = `build-button ${all ? "built" : "not-built"}`;
+    every.textContent = all ? "Rebuild everything" : "Build everything";
+    every.disabled = running;
+    every.addEventListener("click", () => buildTargets(primary.map((build) => build.target)));
+    row.appendChild(every);
+  }
+
+  const behind = builds.filter((build) => !build.present || build.stale);
+
+  if (behind.length) holder.appendChild(needsBuildingNotice(behind, running));
+
+  if (!view.display) {
+    holder.appendChild(buildNotice(
+      "No display detected — UI suites will be skipped rather than failing."));
+  }
 }
 
 function suiteRow(suite, result) {
@@ -97,7 +201,12 @@ function suiteRow(suite, result) {
 function renderSuites(view) {
   const results = (view.job && view.job.results) || {};
   const holder = element("suite-groups");
-  const titles = { tests: "Tests", performance: "Performance", ui: "User interface" };
+  const titles = {
+    tests: "Tests",
+    performance: "Performance",
+    ui: "User interface",
+    safety: "Races, leaks, and the audio callback",
+  };
 
   holder.innerHTML = view.kinds.map((kind) => `
     <section class="panel">
@@ -159,6 +268,88 @@ async function runSuites(ids) {
   poll();
 }
 
+async function stopRun() {
+  const { ok, data } = await api("/api/stop-run", {});
+
+  if (ok && data.stopping) {
+    element("progress-message").textContent = "stopping\u2026";
+  }
+
+  poll();
+}
+
+element("stop-run").addEventListener("click", stopRun);
+
+const pause = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+async function hubBoot() {
+  try {
+    const response = await fetch("/api/session", { cache: "no-store" });
+
+    return response.ok ? (await response.json()).boot || "" : "";
+  } catch (error) {
+    return "";
+  }
+}
+
+// Reload when a different process answers, rather than when anything does.
+// A restart replaces the hub in place: the pid does not change and the port is
+// often back within the second, so "wait for it to go down" is a race whose
+// losing side reloads into the old code -- the exact fault being escaped.
+async function waitForNewHub(say, previous) {
+  for (let attempt = 0; attempt < 240; attempt += 1) {
+    await pause(250);
+
+    const boot = await hubBoot();
+
+    if (boot && boot !== previous) {
+      window.location.reload();
+
+      return;
+    }
+  }
+
+  say("the hub has not come back — check the terminal it is running in");
+}
+
+async function restartHub() {
+  const button = element("restart-hub");
+  const say = (text) => { element("stale-server-message").textContent = text; };
+  const previous = await hubBoot();
+  const { ok, data } = await api("/api/restart-hub", {});
+
+  if (!ok) {
+    window.alert(data.error || "could not restart the hub");
+
+    return;
+  }
+
+  button.disabled = true;
+  say("restarting… this page will reload itself when the hub is back.");
+  waitForNewHub(say, previous);
+}
+
+element("restart-hub").addEventListener("click", restartHub);
+
+// Escape as well as the button. The reason to want a key is the case where the
+// pointer is not usable, which is what a capture run on the desktop display did
+// until it moved to a display of its own -- and that is exactly when being able
+// to stop matters most.
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !element("bulk-modal").hidden) {
+    event.preventDefault();
+    closeBulkEdit();
+
+    return;
+  }
+
+  if (event.key === "Escape" && state.job && state.job.running && !state.job.stopping) {
+    // Before the zoom handler gets it: with a run going, Escape means stop.
+    event.preventDefault();
+    stopRun();
+  }
+});
+
 element("run-selected").addEventListener("click", () => runSuites(chosenSuites()));
 element("run-all").addEventListener("click", () =>
   runSuites(state.data.suites.map((suite) => suite.id)));
@@ -170,10 +361,19 @@ element("run-all").addEventListener("click", () =>
 // --- Progress --------------------------------------------------------------
 
 function renderJob(job) {
+  state.job = job || null;
+
   const bar = element("progress");
   bar.hidden = !job || (!job.running && job.state === "idle");
 
   if (!job || job.state === "idle") return;
+
+  // Only offered while there is something to stop, and disabled once asked so
+  // a second press does not read as the first having been ignored.
+  const stop = element("stop-run");
+  stop.hidden = !job.running;
+  stop.disabled = Boolean(job.stopping);
+  stop.textContent = job.stopping ? "Stopping\u2026" : "Stop run";
 
   element("progress-fill").style.width = `${job.percent}%`;
   element("progress-fill").className = job.state === "failed" ? "failed" : "";
@@ -292,19 +492,37 @@ function renderCard(capture) {
     row.className = `question${question.attended ? " attended" : ""}`;
     row.innerHTML = `<span class="prompt">${question.prompt}</span> ${verdictMarkup(question)}`;
 
-    if (!question.attended) {
-      ["pass", "fail", "skip"].forEach((verdict) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.textContent = verdict[0].toUpperCase();
-        button.title = verdict;
-        button.addEventListener("click", (event) => {
-          event.stopPropagation();
-          score(capture.id, question, verdict);
-        });
-        row.appendChild(button);
+    // Attended questions get the same buttons, and one more that does the
+    // thing they are waiting on: opens the real application on this surface.
+    // They were rendered with no controls at all, which reads as "not your
+    // job" — and the job was to run a separate command, find the surface
+    // again, and answer there.
+    if (question.attended) {
+      const attend = document.createElement("button");
+      attend.type = "button";
+      attend.className = "attend";
+      attend.textContent = "attend";
+      attend.title = `Open ${capture.state} and answer this against the running application`;
+      attend.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openInApp(capture);
       });
+      row.appendChild(attend);
     }
+
+    ["pass", "fail", "skip"].forEach((verdict) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = verdict[0].toUpperCase();
+      button.title = question.attended
+        ? `${verdict} — after looking at the running application`
+        : verdict;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        score(capture.id, question, verdict);
+      });
+      row.appendChild(button);
+    });
 
     questions.appendChild(row);
   });
@@ -314,9 +532,30 @@ function renderCard(capture) {
   if (capture.comments.length) {
     const list = document.createElement("ul");
     list.className = "comments";
-    capture.comments.forEach((body) => {
+    capture.comments.forEach((entry) => {
       const item = document.createElement("li");
-      item.textContent = body;
+      item.textContent = entry.body;
+
+      // A comment is a note somebody typed, and typing one by accident is easy.
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "comment-delete";
+      remove.title = "Delete this comment";
+      remove.textContent = "\u00d7";
+      remove.addEventListener("click", async (event) => {
+        event.stopPropagation();
+
+        const { ok, data } = await api("/api/delete-comment", { comment_id: entry.id });
+
+        if (!ok) {
+          window.alert(data.error || "could not delete that");
+          return;
+        }
+
+        await reload();
+      });
+
+      item.appendChild(remove);
       list.appendChild(item);
     });
     card.appendChild(list);
@@ -371,8 +610,10 @@ function renderGrid(view) {
 
   const outstanding = view.outstanding || [];
   const attended = outstanding.filter((entry) => entry.attended).length;
+
   element("outstanding").textContent = outstanding.length
-    ? `${outstanding.length} unanswered (${attended} need the attended pass: \`test-suite attend\`). ` +
+    ? `${outstanding.length} unanswered (${attended} need the application open — ` +
+      "press “attend” on one to launch it). " +
       "The run exports as incomplete until they are answered."
     : "Everything is scored.";
 
@@ -475,7 +716,12 @@ function matchesFilters(capture) {
 
     if (!sets.include.size) return true;
 
-    return values.some((value) => sets.include.has(value));
+    // Every value kept has to hold, not any of them. "This or that" is not an
+    // opinion anybody forms while narrowing a contact sheet: the reason to
+    // name two things is that you want both. A facet that only ever holds one
+    // value per capture -- a palette, a size -- therefore shows nothing when
+    // two are named, which is what "dark and light" honestly means.
+    return [...sets.include].every((value) => values.includes(value));
   });
 }
 
@@ -487,19 +733,27 @@ function applyFilters() {
   renderGrid(state.data);
 }
 
-// Click cycles a value: off -> include -> exclude -> off. Three states in one
-// control, because a separate button per direction doubles the row and still
-// has to say which one is on.
-function cycleFilter(name, value) {
+// Click keeps a value, shift-click drops it, and clicking an active one turns
+// it off whichever way it was on.
+//
+// It used to cycle: off -> keep -> drop -> off. One control for both
+// directions, which is tidy, and which means turning off a filter you have just
+// switched on costs two more clicks through a state you did not want. Saying
+// "drop" with the modifier is the same information and none of the detour.
+function cycleFilter(name, value, negate = false) {
   const sets = filterFor(name);
   const include = new Set(sets.include);
   const exclude = new Set(sets.exclude);
 
-  if (include.has(value)) {
+  if (include.has(value) || exclude.has(value)) {
+    // Whichever way round it was on, one click is off. The alternative --
+    // shift-clicking a kept value to make it a dropped one -- reads as
+    // "change direction" and is a thing nobody asked for while looking at a
+    // grid; select it again if that is what was meant.
     include.delete(value);
-    exclude.add(value);
-  } else if (exclude.has(value)) {
     exclude.delete(value);
+  } else if (negate) {
+    exclude.add(value);
   } else {
     include.add(value);
   }
@@ -527,6 +781,40 @@ function facetLabel(name) {
   return name.replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase());
 }
 
+// How many captures would remain if this value were also kept.
+//
+// Counted against the filters already on, not against the whole run. The number
+// beside a value is what clicking it gets you, and a value that gets you
+// nothing is not an option -- picking "dark" makes "light" impossible, and an
+// impossible choice sitting in a list is a thing to try and be confused by.
+function countMatching(filters) {
+  const was = state.filters;
+  state.filters = filters;
+
+  let count = 0;
+
+  (state.data.groups || []).forEach((group) => {
+    (group.captures || []).forEach((capture) => {
+      if (matchesFilters(capture)) count += 1;
+    });
+  });
+
+  // Put back, or every count after the first is taken against a filter set
+  // nobody asked for.
+  state.filters = was;
+
+  return count;
+}
+
+function reachable(name, value) {
+  const sets = filterFor(name);
+
+  return countMatching({
+    ...state.filters,
+    [name]: { include: new Set([...sets.include, value]), exclude: sets.exclude },
+  });
+}
+
 function facetMenu(name, values) {
   const menu = document.createElement("details");
   menu.className = "facet-menu";
@@ -541,20 +829,44 @@ function facetMenu(name, values) {
 
   const panel = document.createElement("div");
   panel.className = "facet-panel";
-  panel.innerHTML = '<div class="facet-hint">click to keep · again to exclude · again to clear</div>';
+  panel.innerHTML =
+    '<div class="facet-hint">click to keep · shift-click to drop · click again to clear</div>';
 
-  values.forEach(([value, count]) => {
+  let offered = 0;
+  const shown = countMatching(state.filters);
+
+  values.forEach(([value]) => {
     const state_ = sets.include.has(value) ? "include"
       : sets.exclude.has(value) ? "exclude" : "off";
+
+    // Every number is how many captures remain, never how many exist. For a
+    // value that is on, that is what the grid is showing; for one that is off,
+    // it is what clicking it would leave. A count taken against the whole run
+    // promises captures the other filters have already excluded.
+    //
+    // A chosen value keeps its place whatever its number says -- it is how you
+    // take it off again, and a control that vanishes when used is worse than
+    // one that leads nowhere.
+    const count = state_ === "off" ? reachable(name, value) : shown;
+
+    if (state_ === "off" && count === 0) return;
+
+    offered += 1;
+
     const row = document.createElement("button");
     row.type = "button";
     row.className = `facet-option ${state_}`;
     row.innerHTML =
       `<span class="mark">${state_ === "include" ? "✓" : state_ === "exclude" ? "✕" : ""}</span>` +
-      `<span class="value">${value}</span><span class="count">${count}</span>`;
-    row.addEventListener("click", () => cycleFilter(name, value));
+      `<span class="value">${value}</span>` +
+      `<span class="count">${count}</span>`;
+    row.addEventListener("click", (event) => cycleFilter(name, value, event.shiftKey));
     panel.appendChild(row);
   });
+
+  // Nothing left to choose and nothing chosen: the menu would open on a hint
+  // and a blank space.
+  if (!offered) return null;
 
   menu.appendChild(panel);
 
@@ -584,7 +896,9 @@ function renderFilters(view) {
   Object.entries(facets).forEach(([name, values]) => {
     if (values.length < 2) return;   // A facet with one value filters nothing.
 
-    row.appendChild(facetMenu(name, values));
+    const menu = facetMenu(name, values);
+
+    if (menu) row.appendChild(menu);
   });
 
   holder.appendChild(row);
@@ -643,6 +957,34 @@ function paintSelection() {
   const count = state.selected.size;
   element("selection-count").textContent =
     count === 0 ? "nothing selected" : `${count} selected`;
+
+  // Only once there is a selection to act on. A row of "selected" buttons above
+  // an empty selection is four things that do nothing, and the one that matters
+  // is harder to find among them.
+  element("bulk-edit").hidden = count < 2;
+}
+
+async function commentOnSelected() {
+  const ids = [...state.selected];
+
+  if (ids.length < 2) return;
+
+  const body = window.prompt(`Comment on ${ids.length} captures:`);
+
+  if (!body || !body.trim()) return;
+
+  const { ok, data } = await api("/api/comment", { capture_ids: ids, body });
+
+  if (!ok) {
+    window.alert(data.error || "could not comment");
+    return;
+  }
+
+  if (data.missed && data.missed.length) {
+    window.alert(`Commented on ${data.written}; ${data.missed.length} could not be found.`);
+  }
+
+  await reload();
 }
 
 function selectFrom(id, event) {
@@ -780,9 +1122,144 @@ element("approve-shown").addEventListener("click", async () => {
   await reload();
 });
 
-element("bulk-pass").addEventListener("click", () => scoreSelection("pass"));
-element("bulk-fail").addEventListener("click", () => scoreSelection("fail"));
-element("bulk-skip").addEventListener("click", () => scoreSelection("skip"));
+// --- Bulk edit -------------------------------------------------------------
+//
+// One opinion, applied to everything selected. Four buttons — pass all, fail
+// all, skip all, comment all — could each say one thing about every axis at
+// once, and the opinion somebody actually holds after looking at a row of
+// images is usually mixed: these work, that one looks off. This asks once and
+// takes the whole answer.
+
+const BULK_CHOICES = [
+  { value: "", label: "leave" },
+  { value: "pass", label: "pass" },
+  { value: "fail", label: "fail" },
+  { value: "skip", label: "skip" },
+];
+
+function bulkAxes() {
+  // The three fixed axes, plus whatever extra questions the selected surfaces
+  // ask. Taken from the captures themselves rather than hardcoded, so a
+  // surface with its own question can be answered in bulk too.
+  const seen = new Map();
+
+  (state.data.groups || []).forEach((group) => {
+    (group.captures || []).forEach((capture) => {
+      if (!state.selected.has(capture.id)) return;
+
+      (capture.questions || []).forEach((question) => {
+        if (!question.attended && !seen.has(question.id)) {
+          seen.set(question.id, question.prompt);
+        }
+      });
+    });
+  });
+
+  return [...seen.entries()].map(([id, prompt]) => ({ id, prompt }));
+}
+
+function openBulkEdit() {
+  const axes = bulkAxes();
+  const holder = element("bulk-axes");
+
+  element("bulk-count").textContent =
+    `${state.selected.size} captures selected. Anything left as “leave” is not answered.`;
+  holder.innerHTML = "";
+
+  if (!axes.length) {
+    holder.appendChild(buildNotice("These captures have no questions that can be answered here."));
+  }
+
+  axes.forEach((axis) => {
+    const row = document.createElement("div");
+    row.className = "bulk-axis";
+
+    const prompt = document.createElement("span");
+    prompt.className = "prompt";
+    prompt.textContent = axis.prompt;
+    row.appendChild(prompt);
+
+    BULK_CHOICES.forEach((choice) => {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+
+      input.type = "radio";
+      input.name = `bulk-${axis.id}`;
+      input.value = choice.value;
+      input.checked = choice.value === "";
+      label.className = `choice verdict-${choice.value || "leave"}`;
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(choice.label));
+      row.appendChild(label);
+    });
+
+    holder.appendChild(row);
+  });
+
+  element("bulk-note").value = "";
+  element("bulk-modal").hidden = false;
+  element("bulk-apply").focus();
+}
+
+function closeBulkEdit() {
+  element("bulk-modal").hidden = true;
+}
+
+async function applyBulkEdit() {
+  const axes = {};
+
+  bulkAxes().forEach((axis) => {
+    const chosen = document.querySelector(`input[name="bulk-${axis.id}"]:checked`);
+
+    if (chosen && chosen.value) axes[axis.id] = chosen.value;
+  });
+
+  const note = element("bulk-note").value.trim();
+  const ids = [...state.selected];
+
+  if (!Object.keys(axes).length && !note) {
+    window.alert("Choose a verdict for at least one question, or write a comment.");
+
+    return;
+  }
+
+  if (Object.keys(axes).length) {
+    const { ok, data } = await api("/api/score-many", {
+      capture_ids: ids,
+      axes,
+      note,
+      overwrite: element("overwrite").checked,
+    });
+
+    if (!ok) {
+      window.alert((data.problems || [data.error || "could not record that"]).join("\n"));
+
+      return;
+    }
+
+    if (data.left_alone) {
+      element("outstanding").textContent =
+        `Scored ${data.scored}; left ${data.left_alone} already-answered question(s) alone ` +
+        "(tick “replace answers” to change them).";
+    }
+  }
+
+  // A comment as well as the verdicts, not instead: a note on a verdict is the
+  // reason for it, and a note on its own is a remark about the picture.
+  if (note) await api("/api/comment", { capture_ids: ids, body: note });
+
+  closeBulkEdit();
+  await reload();
+}
+
+element("bulk-edit").addEventListener("click", openBulkEdit);
+element("bulk-cancel").addEventListener("click", closeBulkEdit);
+element("bulk-apply").addEventListener("click", applyBulkEdit);
+element("bulk-modal").addEventListener("click", (event) => {
+  // Only the backdrop, not the sheet: a click that lands on the dialog is
+  // somebody using it.
+  if (event.target === element("bulk-modal")) closeBulkEdit();
+});
 
 element("select-all").addEventListener("click", () => {
   // Everything *shown*, not everything in the run: with filters on, selecting
@@ -1325,6 +1802,7 @@ async function reload() {
   const { data } = await api("/api/run");
   state.data = data;
 
+  renderStaleServer(data);
   renderBuilds(data);
   renderOptions(data);
   renderSuites(data);

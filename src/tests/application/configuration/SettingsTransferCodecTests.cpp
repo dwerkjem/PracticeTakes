@@ -38,9 +38,8 @@ class TemporaryTransferDirectory final
 {
   public:
     TemporaryTransferDirectory()
-        : path(
-              juce::File::getSpecialLocation(juce::File::tempDirectory)
-                  .getNonexistentChildFile("practice-takes-transfer", {}, true))
+        : path(juce::File::getSpecialLocation(juce::File::tempDirectory)
+                   .getNonexistentChildFile("practice-takes-transfer", {}, true))
     {
         REQUIRE(path.createDirectory().wasOk());
     }
@@ -299,9 +298,8 @@ TEST_CASE(
     CHECK_FALSE(future.error.empty());
 
     const auto oversizedFile = temporary.path.getChildFile("oversized.ptsettings");
-    REQUIRE(oversizedFile.replaceWithText(
-        juce::String::repeatedString(
-            "x", static_cast<int>(SettingsTransferCodec::maximumDocumentBytes + 1))));
+    REQUIRE(oversizedFile.replaceWithText(juce::String::repeatedString(
+        "x", static_cast<int>(SettingsTransferCodec::maximumDocumentBytes + 1))));
     const auto oversized = SettingsImportTransaction::stage(oversizedFile, {});
     CHECK(oversized.status == SettingsImportStageStatus::tooLarge);
     CHECK_FALSE(oversized.model.has_value());

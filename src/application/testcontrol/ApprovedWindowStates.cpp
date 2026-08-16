@@ -35,13 +35,13 @@ const std::vector<ApprovedWindowState>& states()
          "The tuner, docked in the workspace"},
         {"tuner-in-tune", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
          WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
-         "The tuner reading a note dead in tune", 440.0, ""},
+         "The tuner reading a note dead in tune", 440.0, "graph"},
         {"tuner-sharp", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
          WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
-         "The tuner reading a note sharp", 452.0, ""},
+         "The tuner reading a note sharp", 452.0, "graph"},
         {"tuner-flat", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
          WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
-         "The tuner reading a note flat", 428.0, ""},
+         "The tuner reading a note flat", 428.0, "graph"},
         {"tuner-bar", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
          WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
          "The tuner in its bar view, reading a note", 440.0, "bar"},
@@ -249,7 +249,7 @@ const std::vector<std::string>& approvedThemeNames()
 const std::vector<std::string>& approvedGeometryNames()
 {
     static const std::vector<std::string> names{
-        "normal", "narrow", "tiny", "maximised", "fullscreen"};
+        "normal", "narrow", "tiny", "maximised", "fullscreen", "slim", "squat"};
 
     return names;
 }

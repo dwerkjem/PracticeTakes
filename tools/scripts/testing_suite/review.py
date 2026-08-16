@@ -12,6 +12,8 @@ Standard library only.
 
 from __future__ import annotations
 
+import sqlite3
+
 from pathlib import Path
 
 import surfaces
@@ -174,7 +176,11 @@ def capture_view(store: Store, capture, *, include_attended: bool = True) -> dic
         "notice": capture.notice,
         "unavailable": image_available(capture),
         "tags": tags,
-        "comments": [row["body"] for row in store.comments_for(capture.id)],
+        # id alongside the text: the page has to be able to name the one to
+        # delete, and position in a list is not a name.
+        "comments": [
+            {"id": row["id"], "body": row["body"]} for row in store.comments_for(capture.id)
+        ],
         "questions": asked,
     }
 
@@ -319,10 +325,11 @@ def score(
 def score_many(
     store: Store,
     capture_ids: list[int],
-    verdict: str,
+    verdict: str = "",
     note: str = "",
     *,
     overwrite: bool = False,
+    axes: dict[str, str] | None = None,
 ) -> dict:
     """Apply one verdict to every reviewable question on every selected capture.
 
@@ -338,6 +345,13 @@ def score_many(
     replace them anyway.
 
     A note is optional, including on a failure.
+
+    `axes` answers each question differently in one go -- pass what works, fail
+    what looks wrong, leave the rest. Reviewing a row of images usually produces
+    one opinion held about all of them, and that opinion is rarely "everything
+    about these is fine": it is more often "these work and this one looks off".
+    An axis missing from the map is left alone, whatever `overwrite` says,
+    because not mentioning something is not a verdict about it.
     """
     scored = 0
     skipped = 0
@@ -354,6 +368,11 @@ def score_many(
         answered = {row["question"] for row in store.verdicts(capture_id)}
 
         for question in _question_lookup(capture.surface_state, capture.surface_title, False):
+            wanted = axes.get(question.id, "") if axes is not None else verdict
+
+            if not wanted:
+                continue
+
             if question.id in answered and not overwrite:
                 skipped += 1
 
@@ -363,7 +382,7 @@ def score_many(
                 capture_id,
                 question=question.id,
                 prompt=question.prompt,
-                verdict=verdict,
+                verdict=wanted,
                 note=note,
             )
 
@@ -393,6 +412,48 @@ def add_comment(store: Store, capture_id: int, body: str) -> dict:
         return {"id": store.add_comment(capture_id, body)}
     except StoreError as error:
         return {"error": str(error)}
+
+
+def add_comment_to_many(store: Store, capture_ids: list[int], body: str) -> dict:
+    """One comment, written against every capture given.
+
+    A row each rather than a comment that belongs to a selection: a capture read
+    on its own still has to show what was said about it, and a shared comment
+    would raise the question of what it shows outside the selection that made
+    it.
+
+    All or nothing is deliberately *not* the rule. A selection that has lost one
+    capture since it was made should still comment on the rest, and say which it
+    could not.
+    """
+    if not body.strip():
+        return {"error": "a comment needs something in it"}
+
+    if not capture_ids:
+        return {"error": "no captures selected"}
+
+    written: list[int] = []
+    missed: list[int] = []
+
+    for capture_id in capture_ids:
+        try:
+            store.add_comment(int(capture_id), body)
+            written.append(int(capture_id))
+        except (StoreError, sqlite3.Error):
+            # A capture that has gone raises from the database rather than from
+            # the store's own checks -- the foreign key is what refuses it -- so
+            # both have to be caught, or one missing capture takes the whole
+            # selection down with it.
+            missed.append(int(capture_id))
+
+    return {"written": len(written), "captures": written, "missed": missed}
+
+
+def delete_comment(store: Store, comment_id: int) -> dict:
+    if store.delete_comment(comment_id):
+        return {"deleted": comment_id}
+
+    return {"error": "that comment is not there"}
 
 
 def failures(store: Store, run_id: int) -> list[dict]:

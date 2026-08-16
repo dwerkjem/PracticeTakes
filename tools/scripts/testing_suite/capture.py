@@ -28,9 +28,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+import os
 from pathlib import Path
 import re
 import subprocess
+import threading
 import time
 
 import images
@@ -45,6 +47,13 @@ TOOL_BUILD_DIRECTORY = REPOSITORY_ROOT / "build" / "ui-validation"
 # How long a window is given to adopt a geometry before the attempt is recorded
 # as a failure. Generous: a window manager under load is slow, and a false
 # failure here costs a recapture while a false success costs a wrong verdict.
+# What one control command gets during a capture, as opposed to the minute a
+# command gets in general. Mid-run an application either answers in a moment or
+# has stopped answering: the thing that stops it is the input device, and it
+# does not come back. Sixty seconds each, over a surface's worth of commands,
+# is a wedged worker costing more than the run it was speeding up.
+COMMAND_TIMEOUT_SECONDS = 20.0
+
 SETTLE_SECONDS = 6.0
 POLL_INTERVAL_SECONDS = 0.25
 STABLE_POLLS = 3
@@ -229,6 +238,9 @@ class CapturePass:
         settle_seconds: float = SETTLE_SECONDS,
         poll_interval: float = POLL_INTERVAL_SECONDS,
         sleep: Callable[[float], None] = time.sleep,
+        display: str = "",
+        lock: threading.Lock | None = None,
+        audio_gate: threading.Lock | None = None,
     ) -> None:
         self.store = store
         self.run_id = run_id
@@ -239,8 +251,39 @@ class CapturePass:
         self.settle_seconds = settle_seconds
         self.poll_interval = poll_interval
         self.sleep = sleep
+        # Which screen to read windows from. Empty inherits, which is right for
+        # one pass; several passes at once each name their own, because
+        # `os.environ` cannot hold two answers.
+        self.display = display
+        # Guards the store and the two cross-capture maps. A lock of its own
+        # unless passes are sharing them, in which case they share this too.
+        self.lock = lock or threading.Lock()
+        # Held while this application opens the input device. There is one
+        # device and instances contend for it; see `Shared`. A restart reopens
+        # it, so a surface that restarts takes this as well as startup does.
+        self.audio_gate = audio_gate or threading.Lock()
+        # (state, theme) the application is currently showing, or None when that
+        # is not known. See `move_to`.
+        self._open: tuple[str, str] | None = None
+        # Set when a command times out or the channel breaks. The application is
+        # not coming back, and asking it for the next surface -- and the one
+        # after -- buys nothing but the deadline again each time.
+        self.channel_broken = False
+        self.driver.default_timeout = COMMAND_TIMEOUT_SECONDS
 
     # --- X plumbing ---------------------------------------------------------
+
+    def _environment(self) -> dict[str, str] | None:
+        """The environment for the X utilities this pass runs.
+
+        One place, because a call site that forgets is a capture of whatever is
+        on another worker's screen -- an image that looks entirely plausible and
+        is of the wrong thing.
+        """
+        if not self.display:
+            return None
+
+        return {**os.environ, "DISPLAY": self.display}
 
     def _window_arguments(self, title: str = "") -> list[str]:
         """Which window to act on: the surface's own, or the run's default.
@@ -265,6 +308,7 @@ class CapturePass:
             capture_output=True,
             text=True,
             check=False,
+            env=self._environment(),
         )
 
         if completed.returncode != 0:
@@ -276,9 +320,20 @@ class CapturePass:
             return None
 
         try:
-            return int(parts[0]), int(parts[1])
+            width, height = int(parts[0]), int(parts[1])
         except ValueError:
             return None
+
+        # Zero is not a size. A window that reports one is unmapped, or was
+        # asked about before the server had it -- and everything downstream
+        # takes it at face value: the image is empty, the geometry check
+        # compares nothing against nothing, and the capture is recorded as a
+        # success. Treated as "no reading yet", which is what it is, so the
+        # settle loop keeps asking instead of photographing a void.
+        if width <= 0 or height <= 0:
+            return None
+
+        return width, height
 
     def _capture_to(self, destination: Path, title: str = "") -> str:
         pid = self.driver.pid
@@ -291,6 +346,7 @@ class CapturePass:
             capture_output=True,
             text=True,
             check=False,
+            env=self._environment(),
         )
 
         if completed.returncode != 0:
@@ -306,27 +362,58 @@ class CapturePass:
         The theme is applied after the state, not before: opening a state
         rebuilds the workspace, and a palette set first would be correct for the
         shell and stale for whatever the state just created.
+
+        The state is opened only when it is not already the one open. That is
+        worth doing for the time — a full sweep opens 72 states instead of 292 —
+        but it is worth doing for correctness first: opening rebuilds the
+        workspace, which throws away whatever a tool had heard. Asking for four
+        window sizes used to mean building the surface four times and refilling
+        its history four times, and it is the same picture at four sizes.
+
+        This is what makes the warmup in `capture_one` correct to pay once per
+        surface. The two go together: reopen per resolution and the second
+        capture needs its own warmup; do not reopen and it does not. Changing
+        one without the other captures an empty graph, which looks like a
+        rendering bug.
         """
         try:
+            here = (surface.state, theme)
+
             if surface.restart_before:
-                self.driver.restart()
+                # The one place a capture reopens the audio device. Left
+                # ungated, a restart in one worker can block in ALSA against
+                # another's device and take this worker's whole share with it.
+                with self.audio_gate:
+                    self.driver.restart()
 
-            reply = self.driver.open_state(surface.state)
+                self._open = None
 
-            if not reply.success:
-                return reply.error
+            if here != self._open:
+                # Cleared before rather than set after: a failure part way
+                # through leaves the application somewhere this cannot name, and
+                # the next capture has to build it again rather than assume.
+                self._open = None
+                reply = self.driver.open_state(surface.state)
 
-            if theme:
-                reason = self.driver.set_theme(theme)
+                if not reply.success:
+                    return reply.error
 
-                if reason:
-                    return reason
+                if theme:
+                    reason = self.driver.set_theme(theme)
+
+                    if reason:
+                        return reason
+
+                self._open = here
 
             if not surface.fixed_geometry:
                 return self.driver.set_geometry(geometry)
 
             return ""
         except ChannelError as error:
+            self._open = None
+            self.channel_broken = True
+
             return str(error)
 
     def capture_one(
@@ -336,21 +423,30 @@ class CapturePass:
         seen: dict[str, tuple[int, int]],
         digests: dict[tuple[str, str], str] | None = None,
         theme: str = surfaces.DARK,
+        warm: bool = True,
     ) -> tuple[int, int] | None:
         """Capture one surface at one resolution, recording whatever happened.
 
         Returns the window size when an image was stored, so the caller can hold
         each surface's sizes as the yardstick for its remaining resolutions.
+
+        `warm` is what the warmup is for: a tool drawing a history needs one to
+        draw, so the first capture of a surface waits for the tone to fill it.
+        The second waits for nothing — the tool has been listening throughout,
+        and asking for a different window size does not empty it. Paid once per
+        surface instead of once per resolution, that wait is 45 seconds of a
+        full sweep rather than 270.
         """
         def fail(reason: str) -> None:
-            self.store.record_capture(
-                self.run_id,
-                state=surface.state,
-                title=surface.title,
-                geometry=geometry,
-                theme=theme,
-                failure=reason,
-            )
+            with self.lock:
+                self.store.record_capture(
+                    self.run_id,
+                    state=surface.state,
+                    title=surface.title,
+                    geometry=geometry,
+                    theme=theme,
+                    failure=reason,
+                )
 
         reason = self.move_to(surface, geometry, theme)
 
@@ -367,9 +463,13 @@ class CapturePass:
 
         # After settling, not instead of it: the window is already the right
         # size, and this is time for the tool to have something to show.
-        if surface.warmup_seconds > 0:
+        if warm and surface.warmup_seconds > 0:
             self.sleep(surface.warmup_seconds)
-        problem = geometry_problem(geometry, size, seen)
+        # Under the lock for the same reason as the digests: `seen` is shared
+        # when passes run together, and the geometry it is being compared
+        # against may be another pass's, written a moment ago.
+        with self.lock:
+            problem = geometry_problem(geometry, size, seen)
 
         if problem:
             fail(problem)
@@ -401,26 +501,33 @@ class CapturePass:
         # Keyed by palette as well: the same surface in dark and in light is
         # expected to differ, and two surfaces matching in one palette says
         # nothing about the other.
-        notice = duplicate_problem(
-            surface.state, f"{geometry}/{theme}", digest, digests if digests is not None else {}
-        )
+        #
+        # Asked and answered under one lock. Two passes sharing this map would
+        # otherwise both look before either writes, and each would find the
+        # other's collision absent -- so the check would report success on
+        # exactly the pair it exists to catch.
+        with self.lock:
+            notice = duplicate_problem(
+                surface.state, f"{geometry}/{theme}", digest, digests if digests is not None else {}
+            )
 
-        if digests is not None:
-            digests.setdefault((f"{geometry}/{theme}", digest), surface.state)
+            if digests is not None:
+                digests.setdefault((f"{geometry}/{theme}", digest), surface.state)
 
-        self.store.record_capture(
-            self.run_id,
-            state=surface.state,
-            title=surface.title,
-            geometry=geometry,
-            theme=theme,
-            image_path=str(png_path),
-            thumbnail_path=str(thumbnail_path),
-            width=width,
-            height=height,
-            digest=digest,
-            notice=notice,
-        )
+        with self.lock:
+            self.store.record_capture(
+                self.run_id,
+                state=surface.state,
+                title=surface.title,
+                geometry=geometry,
+                theme=theme,
+                image_path=str(png_path),
+                thumbnail_path=str(thumbnail_path),
+                width=width,
+                height=height,
+                digest=digest,
+                notice=notice,
+            )
 
         return size
 
@@ -430,26 +537,97 @@ class CapturePass:
         *,
         resume: bool = True,
         progress: Callable[[dict], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+        sizes: dict[str, dict[str, tuple[int, int]]] | None = None,
+        digests: dict[tuple[str, str], str] | None = None,
     ) -> dict:
         """Walk the plan. Never raises for one surface's sake.
 
         `progress` is called after each surface, so a caller running this in the
         background -- the review page's capture button -- can say what is
         happening rather than showing a spinner for ten minutes.
+
+        `should_stop` is asked at each surface boundary. Between surfaces is the
+        only safe place: one capture asks for a geometry, waits for the window
+        to settle, photographs it, converts it, and writes a row, and stopping
+        part way through leaves a partial image or a row pointing at no file. A
+        surface takes seconds, so the delay between asking to stop and stopping
+        is bounded by one of them.
+
+        Surfaces not reached are counted as stopped, never as failed. A stopped
+        run and a broken one are different, and the export feeds a release
+        gate.
         """
-        already = self.store.captured_keys(self.run_id) if resume else set()
-        sizes: dict[str, dict[str, tuple[int, int]]] = {}
+        # Both maps compare captures against *other* captures, so passing them
+        # in is how several passes keep one view of the run between them. A pass
+        # given neither keeps its own, which is every caller that captures alone.
+        #
+        # Splitting them per pass would leave each comparing against its own
+        # share -- a quarter of the run, four ways -- and `duplicate_problem`
+        # would stop seeing the cross-surface collision it exists to catch,
+        # while still reporting success.
+        sizes = {} if sizes is None else sizes
 
         # (resolution, digest) -> the state that produced it: two states with the
         # same pixels at the same resolution means one captured the wrong window.
-        digests: dict[tuple[str, str], str] = {}
+        digests = {} if digests is None else digests
+
+        # A resumed run's own memory of the plan is exactly one process old: a
+        # fresh `sizes`/`digests` here means the checks above have no idea what
+        # ran before the interruption, only what runs after it. A surface
+        # captured before the interruption is skipped below (`already`), which
+        # is correct, but its size and digest still have to seed the maps --
+        # otherwise the geometry the earlier process captured is invisible to
+        # `geometry_problem`/`duplicate_problem` for every surface reached in
+        # this process, the same blind spot a from-scratch run does not have.
+        # One query serves both `already` and the seeding, since `captures()`
+        # already has everything `captured_keys()` would have asked for.
+        already: set[tuple[str, str, str, str]] = set()
+
+        if resume:
+            for stored in self.store.captures(self.run_id):
+                if not (stored.image_path or stored.failure):
+                    continue
+
+                already.add(
+                    (stored.surface_state, stored.surface_title, stored.geometry, stored.theme)
+                )
+
+                if stored.failed:
+                    continue
+
+                seen = sizes.setdefault(f"{stored.surface_title}/{stored.theme}", {})
+                seen.setdefault(stored.geometry, (stored.width, stored.height))
+                digests.setdefault(
+                    (f"{stored.geometry}/{stored.theme}", stored.digest), stored.surface_state
+                )
+
         captured = 0
         failed = 0
         skipped = 0
+        stopped = False
+
+        # Weighted as well as counted. Half the surfaces is not half the time:
+        # the ones carrying a tone wait their warmup and then settle, and a bar
+        # that counts them equally is past the middle long before the run is.
+        total_cost = surfaces.plan_cost(plan)
+        spent = 0.0
+        previous_group: tuple[str, str, str] | None = None
+        warmed: tuple[str, str, str] | None = None
 
         for surface, geometry, theme in plan:
+            if should_stop is not None and should_stop():
+                stopped = True
+
+                break
+
+            group = (surface.state, surface.title, theme)
+            cost = surfaces.capture_cost(surface, first_of_group=group != previous_group)
+            previous_group = group
+
             if (surface.state, surface.title, geometry, theme) in already:
                 skipped += 1
+                spent += cost
 
                 continue
 
@@ -461,6 +639,9 @@ class CapturePass:
                         "theme": theme,
                         "done": captured + failed + skipped,
                         "total": len(plan),
+                        "cost": cost,
+                        "cost_done": spent,
+                        "cost_total": total_cost,
                     }
                 )
 
@@ -468,14 +649,374 @@ class CapturePass:
             # resize anything, but keying them apart keeps the check honest if
             # that ever stops being true.
             seen = sizes.setdefault(f"{surface.title}/{theme}", {})
-            size = self.capture_one(surface, geometry, seen, digests, theme)
+            # Warmed once per surface. `group` is the plan's ordering; this is
+            # the first one actually *taken*, which differs when a resumed run
+            # skips the ones it already holds.
+            size = self.capture_one(
+                surface, geometry, seen, digests, theme, warm=group != warmed
+            )
+            warmed = group
+
+            spent += cost
 
             if size is None:
                 failed += 1
 
+                # One failed capture is a defect in the build; an application
+                # that has stopped answering is a defect in the run, and every
+                # surface after it would be recorded as a failure it had nothing
+                # to do with.
+                if self.channel_broken:
+                    error = ChannelError(
+                        "the application stopped answering, so this worker "
+                        "captured no more"
+                    )
+                    # This group's tally so far, carried on the exception: the
+                    # surfaces already captured or skipped-as-already-captured
+                    # are already rows in the store, and the caller's handler
+                    # only sees `len(group)`, with no other way to tell how much
+                    # of it actually completed before the channel broke.
+                    error.partial_result = {
+                        "captured": captured,
+                        "failed": failed,
+                        "already_captured": skipped,
+                    }
+                    raise error
+
                 continue
 
             captured += 1
-            seen[geometry] = size
 
-        return {"captured": captured, "failed": failed, "already_captured": skipped}
+            with self.lock:
+                seen[geometry] = size
+
+        return {
+            "captured": captured,
+            "failed": failed,
+            "already_captured": skipped,
+            "stopped": stopped,
+            # What the run did not reach. Reported separately from failures so
+            # nothing downstream mistakes "we stopped" for "the build is broken".
+            "not_reached": max(0, len(plan) - captured - failed - skipped) if stopped else 0,
+        }
+
+
+# --- Several at once --------------------------------------------------------
+
+def progress_fraction(entry: dict) -> float:
+    """How far through a run is, by weight where there is one and count where not.
+
+    Weight, because half the surfaces is not half the time. Count as a fallback,
+    so a caller that reports progress without weights still gets a bar that
+    moves rather than one stuck at zero.
+    """
+    total = float(entry.get("cost_total", 0.0))
+
+    if total > 0.0:
+        return min(1.0, float(entry.get("cost_done", 0.0)) / total)
+
+    return float(entry.get("done", 0)) / max(1.0, float(entry.get("total", 1)))
+
+
+def needs_input(group: list[tuple[surfaces.Surface, str, str]]) -> bool:
+    """Whether this group is of a tool that has to be hearing something.
+
+    The warmup is the marker: a surface that waits for a tone is a surface
+    whose picture is of an analysis, and an analysis of silence is a picture of
+    nothing.
+    """
+    return any(surface.warmup_seconds > 0 for surface, _, _ in group)
+
+
+def plan_groups(
+    plan: tuple[tuple[surfaces.Surface, str, str], ...],
+) -> list[list[tuple[surfaces.Surface, str, str]]]:
+    """The plan as units of work, each one surface in one palette.
+
+    Grouped rather than one entry at a time. Consecutive entries for one surface
+    in one palette are the same application, moved: it opens the state once and
+    is then asked for several geometries. Handing those to different workers
+    would open the state once each, which is the expensive part.
+
+    This is also what caps a run's parallelism: there is no useful worker beyond
+    the last group, however many are asked for.
+    """
+    groups: list[list[tuple[surfaces.Surface, str, str]]] = []
+    key: tuple[str, str, str] | None = None
+
+    for entry in plan:
+        surface, _, theme = entry
+        here = (surface.state, surface.title, theme)
+
+        if here != key:
+            groups.append([])
+            key = here
+
+        groups[-1].append(entry)
+
+    return groups
+
+
+def share_plan(
+    plan: tuple[tuple[surfaces.Surface, str, str], ...], workers: int
+) -> list[list[tuple[surfaces.Surface, str, str]]]:
+    """Deal a plan out to a fixed number of workers.
+
+    Kept for reasoning about coverage -- every entry lands exactly once, and a
+    surface's resolutions stay together. The run itself does not use it: a fixed
+    share means a worker that draws four surfaces carrying a tone waits six
+    seconds to settle on each while another finishes early and stops, and no
+    arrangement decided in advance avoids that. `run_in_parallel` hands out
+    groups as workers come free instead.
+    """
+    if workers < 1:
+        raise ValueError("a capture needs at least one worker")
+
+    shares: list[list[tuple[surfaces.Surface, str, str]]] = [[] for _ in range(workers)]
+
+    for index, group in enumerate(plan_groups(plan)):
+        shares[index % workers].extend(group)
+
+    return shares
+
+
+@dataclass(frozen=True)
+class Shared:
+    """What every worker in a parallel run holds in common.
+
+    `checks` guards the store and the two cross-capture maps -- things that are
+    only correct when every worker sees the whole run.
+
+    `audio` guards something else entirely: the moment an application opens the
+    input device. There is one device, and instances contend for it. Measured
+    here, four applications starting together left two of them blocked inside
+    ALSA's open, on the thread that answers the control channel -- so they ran
+    but never replied, and their share of the plan was lost.
+
+    Opening is the only part that has to be alone. Once an application has its
+    device it keeps it, and everything that takes the time in a run -- settling,
+    photographing, converting -- overlaps freely. So this is held across a
+    start, not across a capture.
+    """
+
+    checks: threading.Lock
+    audio: threading.Lock
+
+
+def run_in_parallel(
+    plan: tuple[tuple[surfaces.Surface, str, str], ...],
+    *,
+    workers: int,
+    worker: Callable[[int, "Shared"], object],
+    resume: bool = True,
+    progress: Callable[[dict], None] | None = None,
+    should_stop: Callable[[], bool] | None = None,
+) -> dict:
+    """Capture one plan on several screens at once, and report it as one run.
+
+    `worker(index, shared)` is a context manager yielding the pass that captures
+    this share -- which means the caller opens the screen, starts the
+    application, and shuts both down again. All of that already belongs to the
+    caller, and a coordinator that knew about any of it would have to be told
+    about all of it. `shared` carries the two locks every worker needs; see
+    `Shared`.
+
+    The two cross-capture maps and one lock are shared across every worker. That
+    is the whole reason this is threads: the checks only work by seeing the
+    whole run, and a worker that could see only its own share would compare each
+    capture against a fraction of the run while still reporting success.
+    """
+    if workers < 1:
+        raise ValueError("a capture needs at least one worker")
+
+    shared = Shared(checks=threading.Lock(), audio=threading.Lock())
+    lock = shared.checks
+    sizes: dict[str, dict[str, tuple[int, int]]] = {}
+    digests: dict[tuple[str, str], str] = {}
+
+    # Handed out as workers come free rather than dealt in advance. A fixed
+    # share leaves whoever drew the surfaces that carry a tone -- six seconds to
+    # settle, then a warmup -- still going while everyone else has stopped, and
+    # no arrangement decided beforehand fixes that, because how long a surface
+    # takes is not known until it is taken.
+    queue: list[list[tuple[surfaces.Surface, str, str]]] = plan_groups(plan)
+    taken: set[int] = set()
+
+    # How many workers got the input device. Zero means nobody can hear, and the
+    # surfaces that need to are captured anyway rather than left out -- the tool
+    # says in the picture that it is waiting, which is visible, where a missing
+    # capture is not.
+    analysts = 0
+
+    # No more workers than there is work: a plan of eight groups has nothing for
+    # a ninth application to do but start up and stop again.
+    running = min(workers, len(queue)) or 1
+    results: list[dict] = [{} for _ in range(running)]
+    done = 0
+    spent = 0.0
+    total_cost = surfaces.plan_cost(plan)
+
+    def report(entry: dict) -> None:
+        """One count across every worker, so "6 of 204" means what it says.
+
+        The weights are summed here too, for the same reason: a worker knows
+        what its own share has cost, and the bar is about the run.
+        """
+        nonlocal done, spent
+
+        if progress is None:
+            return
+
+        with lock:
+            done += 1
+            spent += float(entry.get("cost", 0.0))
+            said, cost_done = done, spent
+
+        progress({
+            **entry,
+            "done": said - 1,
+            "total": len(plan),
+            "cost_done": cost_done - float(entry.get("cost", 0.0)),
+            "cost_total": total_cost,
+        })
+
+    def note_input(can_analyse: bool) -> None:
+        nonlocal analysts
+
+        if can_analyse:
+            with lock:
+                analysts += 1
+
+    def next_group(can_analyse: bool) -> list[tuple[surfaces.Surface, str, str]] | None:
+        """The next group this worker can honestly capture.
+
+        One application at a time can hold the input device -- measured, with
+        four workers running and seven of eight reporting none. A surface that
+        carries a tone photographed by a worker without input is a picture of a
+        tool that has heard nothing, and it is counted as captured, which makes
+        it the worst kind of wrong.
+
+        So those groups go to workers that have input. A worker without takes
+        them only when nothing else is left, because a machine with no
+        microphone at all should still produce the images, and the tool says in
+        the picture that it is waiting.
+        """
+        with lock:
+            remaining = [index for index in range(len(queue)) if index not in taken]
+
+            if not remaining:
+                return None
+
+            wanted = remaining
+
+            if not can_analyse:
+                quiet = [index for index in remaining if not needs_input(queue[index])]
+
+                # Only when nobody can hear at all. A worker that has run out of
+                # quiet work stops rather than helping with the tone surfaces:
+                # one holding the device is still coming for them, and this one
+                # would photograph an empty tool and have it counted as
+                # captured. That is what it did -- `tuner-in-tune` came back a
+                # blank graph saying "waiting for the microphone", in a run that
+                # reported twelve captured either way.
+                #
+                # Mostly moot now that a tone is generated without a device: a
+                # worker that reports no input at startup grows some the moment
+                # a tone is asked for. It stays because it costs nothing and it
+                # is the difference between "cannot" and "did not this time".
+                if not quiet and analysts:
+                    return None
+
+                wanted = quiet or remaining
+
+            chosen = wanted[0]
+            taken.add(chosen)
+
+            return queue[chosen]
+
+    def add(index: int, result: dict) -> None:
+        into = results[index]
+
+        for name in ("captured", "failed", "already_captured", "not_reached"):
+            into[name] = into.get(name, 0) + result.get(name, 0)
+
+        into["stopped"] = into.get("stopped", False) or bool(result.get("stopped"))
+
+    def work(index: int) -> None:
+        taken = 0
+
+        try:
+            # One application per worker for the whole run, not one per group:
+            # starting it is the part that has to wait for the audio device, and
+            # paying that per group would undo what this is for.
+            with worker(index, shared) as pass_:
+                analyses = bool(getattr(pass_, "has_input", True))
+                note_input(analyses)
+
+                while True:
+                    if should_stop is not None and should_stop():
+                        add(index, {"stopped": True})
+
+                        return
+
+                    group = next_group(analyses)
+
+                    if group is None:
+                        return
+
+                    taken = len(group)
+                    add(index, pass_.run(
+                        tuple(group),
+                        resume=resume,
+                        progress=report,
+                        should_stop=should_stop,
+                        sizes=sizes,
+                        digests=digests,
+                    ))
+                    taken = 0
+        except Exception as error:  # noqa: BLE001 - one worker dying is not the run dying
+            # Recorded as this worker's failure rather than raised: the other
+            # workers are mid-capture, and losing their work to tidy up after
+            # this one would turn one broken display into a lost run. Whatever
+            # it had already captured stays counted; only the group in its hands
+            # is lost, and the rest of the queue goes to somebody else.
+            #
+            # "The group in its hands" is not automatically "all of it failed",
+            # though: pass_.run() may have captured or skipped some of the
+            # group's surfaces -- real rows in the store -- before hitting the
+            # one that broke the channel. Use its partial tally when one was
+            # left on the exception, so those are not also counted as failed.
+            partial = getattr(error, "partial_result", None)
+            if partial is None:
+                add(index, {"failed": taken})
+            else:
+                reached = sum(partial.values())
+                add(index, {**partial, "failed": partial["failed"] + max(0, taken - reached)})
+            results[index]["error"] = f"{type(error).__name__}: {error}"
+
+    threads = [
+        threading.Thread(target=work, args=(index,), daemon=True)
+        for index in range(running)
+    ]
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    total = {
+        "captured": sum(result.get("captured", 0) for result in results),
+        "failed": sum(result.get("failed", 0) for result in results),
+        "already_captured": sum(result.get("already_captured", 0) for result in results),
+        "stopped": any(result.get("stopped") for result in results),
+        "workers": running,
+        "errors": [result["error"] for result in results if result.get("error")],
+    }
+    total["not_reached"] = (
+        max(0, len(plan) - total["captured"] - total["failed"] - total["already_captured"])
+        if total["stopped"]
+        else 0
+    )
+
+    return total

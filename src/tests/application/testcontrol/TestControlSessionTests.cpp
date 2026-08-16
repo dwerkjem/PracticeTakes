@@ -20,6 +20,7 @@ struct FakeTarget : TestControlTarget
     std::vector<std::string> geometries;
     std::vector<std::string> themes;
     std::string current;
+    bool inputAvailable = true;
     bool quitRequested = false;
 
     bool refuseState = false;
@@ -79,6 +80,11 @@ struct FakeTarget : TestControlTarget
     [[nodiscard]] std::string currentStateId() const override
     {
         return current;
+    }
+
+    [[nodiscard]] bool hasInput() const override
+    {
+        return inputAvailable;
     }
 
     void requestQuit() override
@@ -197,8 +203,23 @@ TEST_CASE("status reports the current state", "[testcontrol][session]")
     const Response response = session.handleLine("status");
 
     CHECK(response.success);
-    REQUIRE(response.items.size() == 1);
+    REQUIRE(response.items.size() == 2);
     CHECK(response.items.front() == "spectrogram-docked");
+}
+
+TEST_CASE("status says whether there is anything to analyse", "[testcontrol][session]")
+{
+    // The capture harness waits on this. The device is opened without blocking
+    // now, so a tool photographed the moment its window appears may not have
+    // heard anything yet -- which is a flaky golden, not a defect in the build.
+    FakeTarget target;
+    TestControlSession session{target};
+
+    target.inputAvailable = true;
+    REQUIRE(session.handleLine("status").items.at(1) == "input");
+
+    target.inputAvailable = false;
+    REQUIRE(session.handleLine("status").items.at(1) == "no-input");
 }
 
 TEST_CASE("status says none rather than inventing a state", "[testcontrol][session]")
@@ -211,7 +232,7 @@ TEST_CASE("status says none rather than inventing a state", "[testcontrol][sessi
     const Response response = session.handleLine("status");
 
     CHECK(response.success);
-    REQUIRE(response.items.size() == 1);
+    REQUIRE(response.items.size() == 2);
     CHECK(response.items.front() == "none");
 }
 

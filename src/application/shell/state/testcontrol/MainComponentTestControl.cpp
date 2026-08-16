@@ -108,6 +108,25 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
         rebuildWorkspaceContainer();
     }
 
+    // A state that names no view must still be in a known one. Left alone, a
+    // tool keeps whatever the previous state selected, so the same state
+    // captured twice in a run could show two different displays depending on
+    // what preceded it -- which is exactly what "tuner-in-tune" did, showing
+    // the graph in the first palette pass and the meter in the second.
+    //
+    // resetToDefaults is the tool's own answer to "what do you look like with
+    // nothing asked of you", and the shell still does not know what that means.
+    if (state.toolView.empty())
+    {
+        for (auto& live : liveTools)
+        {
+            if (live.component != nullptr)
+            {
+                live.component->resetToDefaults();
+            }
+        }
+    }
+
     if (!state.toolView.empty())
     {
         // Asked of the tool by name. The shell does not know which tool it is
@@ -256,6 +275,30 @@ bool MainComponent::applyTestControlGeometry(const std::string& geometry)
     {
         window->setFullScreen(false);
         window->setSize(640, 480);
+
+        return true;
+    }
+
+    // Tall and thin, and short and wide. A window this shape is what puts a
+    // *pane* below the size its tool can draw at -- the sweep's other
+    // geometries shrink the window but leave a single docked tool a pane with
+    // plenty of room, so the compact displays never appear in a capture.
+    //
+    // Both are outside what a window manager would allow, like "tiny", because
+    // reaching a small pane through the window is the only way when one tool
+    // fills the workspace.
+    if (geometry == "slim")
+    {
+        window->setFullScreen(false);
+        window->setSize(340, 780);
+
+        return true;
+    }
+
+    if (geometry == "squat")
+    {
+        window->setFullScreen(false);
+        window->setSize(1100, 300);
 
         return true;
     }

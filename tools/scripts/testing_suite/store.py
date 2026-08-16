@@ -555,7 +555,7 @@ class Store:
         notice: str = "",
     ) -> int:
         """Store one capture, or the reason there is no image for it."""
-        cursor = self.execute(
+        self.execute(
             """
             INSERT INTO capture
                 (run_id, surface_state, surface_title, geometry, theme, image_path,
@@ -590,9 +590,14 @@ class Store:
         )
         self.commit()
 
-        if cursor.lastrowid:
-            return int(cursor.lastrowid)
-
+        # Not cursor.lastrowid: sqlite3's lastrowid tracks SQLite's
+        # last_insert_rowid(), which is connection-global and only moves on an
+        # actual INSERT. When this statement's ON CONFLICT DO UPDATE branch
+        # fires instead, lastrowid is left holding whatever row some earlier,
+        # unrelated INSERT on this connection produced -- silently returning
+        # the wrong capture's id. The lookup below matches the same
+        # (run_id, state, title, geometry, theme) key the upsert conflicts on,
+        # so it is correct whichever branch fired.
         return int(self.capture_id(run_id, state, title, geometry, theme) or 0)
 
     def capture_id(
@@ -771,6 +776,19 @@ class Store:
         self.commit()
 
         return int(cursor.lastrowid)
+
+    def delete_comment(self, comment_id: int) -> bool:
+        """Remove one comment. False when there was nothing to remove.
+
+        A comment is a note somebody typed, not a record of what the build did,
+        so it is deleted outright rather than marked. Nothing downstream reads
+        comments -- the export carries verdicts and measurements -- so there is
+        nothing for a tombstone to protect.
+        """
+        cursor = self.execute("DELETE FROM comment WHERE id = ?", (int(comment_id),))
+        self.commit()
+
+        return cursor.rowcount > 0
 
     def comments_for(self, capture_id: int) -> list[sqlite3.Row]:
         return list(

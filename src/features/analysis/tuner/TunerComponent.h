@@ -4,12 +4,15 @@
 
 #include "../../../application/configuration/AppDefaults.h"
 #include "../../../application/theme/Theme.h"
+#include "../../../application/tools/CompactPresentation.h"
 #include "../../../application/tools/ToolComponent.h"
 #include "../../../platform/audio/AudioInputService.h"
 #include "PitchDetector.h"
+#include "PitchTracker.h"
 
 #include <array>
 #include <atomic>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -38,8 +41,16 @@ class TunerComponent final
     [[nodiscard]] std::optional<ToolSettingsPayload> captureSettings() const override;
     void applySettings(const ToolSettingsPayload& payload) override;
     [[nodiscard]] bool showView(const juce::String& view) override;
+    [[nodiscard]] juce::Component* headerControl() override;
+    [[nodiscard]] std::vector<MenuEntry> optionsMenuEntries() override;
 
   private:
+    // The display-mode label and chooser, in one component so a panel can adopt
+    // the pair with a single reparent. Which display the tuner is drawing is a
+    // property of the tool rather than of what it is currently showing, so it
+    // belongs on the panel's header line -- and a row of its own at the bottom
+    // of the panel was a row the graph did not get.
+    class ModeChooser;
     enum class DisplayMode
     {
         graph = 1,
@@ -49,10 +60,16 @@ class TunerComponent final
 
     static constexpr int fifoCapacity = 65536;
     static constexpr int analysisWindowSize = PitchDetector::windowSize;
-    static constexpr int maximumAverageWindow = 15;
     static constexpr int maximumGraphPoints = 1200;
     static constexpr int analysisRefreshRateHz = 20;
-    static constexpr double referenceFrequencyHz = 440.0;
+
+    // paint() and resized() each walk the same vertical layout and have to
+    // agree about what sits above the display. Named, because the two used to
+    // carry the same magic 142 independently and nothing would have caught them
+    // drifting apart except noticing the controls had slipped.
+    static constexpr int statusHeight = 22;
+    static constexpr int statusGap = 6;
+    static constexpr int modeChooserHeight = 32;
 
     // Audio capture ---------------------------------------------------------
     void audioInputAboutToStart(double sampleRate, int inputChannels) override;
@@ -61,18 +78,14 @@ class TunerComponent final
     [[nodiscard]] bool drainAudioFifo();
 
     // Pitch analysis --------------------------------------------------------
+    // The tracking itself lives in PitchTracker, which is JUCE-free and tested
+    // directly. What remains here is turning one of its updates into the
+    // widgets' state and the graph.
     void timerCallback() override;
-    [[nodiscard]] double smoothFrequency(double frequency);
-    [[nodiscard]] bool isConfirmedPitch(double frequency);
-    [[nodiscard]] double averageRecentMidiPitches() const;
-    [[nodiscard]] static double frequencyToMidi(double frequency);
-    [[nodiscard]] static double midiToFrequency(double midiPitch);
-
-    void handleDetectedPitch(double frequency);
-    void handleMissingPitch();
-    void resetPitchTracking();
-    void updateDisplayedNote(double frequency);
+    [[nodiscard]] PitchTracker::Settings trackerSettings() const;
+    void applyTrackerUpdate(const PitchTracker::Update& update);
     void addHistoryPoint(double midiPitch);
+    void resetPitchTracking();
 
     // Controls and appearance ----------------------------------------------
     void configureSlider(
@@ -86,19 +99,44 @@ class TunerComponent final
     void updateGraphControlAvailability();
     void applyThemeToControls();
     [[nodiscard]] int controlAreaHeight() const;
+    [[nodiscard]] bool isModeChooserAdopted() const;
+    // Defined beside ModeChooser, which is only complete in TunerComponent.cpp.
+    void placeModeChooser(juce::Rectangle<int> area);
     [[nodiscard]] juce::String statusText() const;
 
     // Drawing ---------------------------------------------------------------
     void drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
+    void drawNoteWatermark(juce::Graphics& graphics, juce::Rectangle<int> area) const;
+    void drawCompactDisplay(
+        juce::Graphics& graphics,
+        juce::Rectangle<int> bounds,
+        compact::Shape shape) const;
+    void drawCompactGraph(
+        juce::Graphics& graphics,
+        juce::Rectangle<int> bounds,
+        compact::Shape shape) const;
+    void drawCompactBar(juce::Graphics& graphics, juce::Rectangle<int> bounds, compact::Shape shape)
+        const;
+    void drawCompactMeter(
+        juce::Graphics& graphics,
+        juce::Rectangle<int> bounds,
+        compact::Shape shape) const;
+    void drawCompactReading(juce::Graphics& graphics, juce::Rectangle<int> area) const;
+    [[nodiscard]] juce::String directionLabel() const;
     void drawSelectedDisplay(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
 
     AudioInputService& audioInputService;
 
     juce::Label displayModeLabel;
     juce::ComboBox displayModeBox;
-    juce::TextButton advancedSettingsButton{"Advanced settings  >"};
+
+    // Owned here, but reparented into the docked panel's header when there is
+    // one. Declared after the two controls it lays out, so it is destroyed
+    // first and never lays out a dangling reference.
+    std::unique_ptr<ModeChooser> modeChooser;
+
     juce::Label easingLabel;
     juce::Label averagingLabel;
     juce::Label thresholdLabel;
@@ -116,24 +154,19 @@ class TunerComponent final
     std::array<float, fifoCapacity> drainBuffer{};
     std::array<float, analysisWindowSize> analysisBuffer{};
     PitchDetector pitchDetector;
-
-    // A short circular history stabilizes the pitch before display easing.
-    std::array<double, maximumAverageWindow> recentMidiPitches{};
-    int recentPitchCount = 0;
-    int recentPitchWriteIndex = 0;
+    PitchTracker pitchTracker;
 
     std::vector<double> graphHistory;
     std::atomic<double> currentSampleRate{44100.0};
 
-    double smoothedMidiNote = 0.0;
+    // Mirrors of the tracker's latest update. They are members because the
+    // drawing code in TunerDrawing.cpp reads them directly; nothing here
+    // computes them.
     double displayedFrequency = 0.0;
     double displayedCents = 0.0;
     juce::String displayedNote{"--"};
     float inputLevel = 0.0f;
     int lockedMidiNote = 69;
-    int framesWithoutPitch = 0;
-    double pendingJumpMidiNote = 0.0;
-    int pendingJumpFrames = 0;
 
     bool hasLockedMidiNote = false;
     bool hasSignal = false;

@@ -398,6 +398,9 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             testControlTarget.onCurrentStateId = [this]
             { return content != nullptr ? content->currentTestControlStateId() : std::string{}; };
 
+            testControlTarget.onHasInput = [this]
+            { return content != nullptr && content->hasUsableMicrophone(); };
+
             testControlTarget.onQuit = []
             { juce::JUCEApplication::getInstance()->systemRequestedQuit(); };
 

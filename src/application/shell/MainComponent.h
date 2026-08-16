@@ -5,6 +5,7 @@
 #include "../../platform/audio/AudioInputService.h"
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
+#include "../theme/AppLookAndFeel.h"
 #include "../theme/Theme.h"
 #include "../tools/BuiltInTools.h"
 #include "../tools/ToolInstanceId.h"
@@ -230,7 +231,14 @@ class MainComponent final
 
     // Microphone state ------------------------------------------------------
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
+
+  public:
+    // Public for the test control channel, which reports it so a capture can
+    // wait for something to analyse rather than photograph a tool that has not
+    // heard anything yet.
     [[nodiscard]] bool hasUsableMicrophone() const;
+
+  private:
     void updateMicrophoneStateControl();
     void updateMicrophoneWarning();
     void dismissMicrophoneWarning();
@@ -238,7 +246,10 @@ class MainComponent final
     // One audio device manager is shared by every open analysis tool.
     AudioInputService audioInputService;
     juce::ApplicationProperties applicationProperties;
-    juce::LookAndFeel_V4 appLookAndFeel;
+    // Declared here, before liveTools, on purpose -- see the note on liveTools
+    // below. AppLookAndFeel differs from LookAndFeel_V4 only in carrying the
+    // embedded UI typeface.
+    AppLookAndFeel appLookAndFeel;
 
     juce::TextButton fileButton{"File"};
     juce::TextButton settingsButton{"Settings"};

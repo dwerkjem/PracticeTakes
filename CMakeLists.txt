@@ -54,6 +54,16 @@ option(PRACTICE_TAKES_ENABLE_TEST_CONTROL
 option(PRACTICE_TAKES_ENABLE_COVERAGE
     "Instrument PracticeTakesTests for gcov coverage measurement" OFF)
 
+# Runtime verification of PracticeTakesTests. Like coverage, each of these needs
+# its own build tree — instrumented objects are not interchangeable with
+# ordinary ones. Address and Thread cannot be combined: both rewrite memory
+# layout and the pair is rejected below rather than producing a binary that
+# misbehaves in ways nobody would think to attribute to the build flags.
+set(PRACTICE_TAKES_SANITIZE "" CACHE STRING
+    "Sanitizers for PracticeTakesTests: '', 'address', 'thread', or 'realtime'. \
+UndefinedBehaviorSanitizer accompanies 'address'.")
+set_property(CACHE PRACTICE_TAKES_SANITIZE PROPERTY STRINGS "" address thread realtime)
+
 if(PRACTICE_TAKES_FEEDBACK_ENDPOINT STREQUAL "")
     set(PRACTICE_TAKES_USE_CURL 0)
 else()
@@ -147,6 +157,25 @@ juce_add_binary_data(PracticeTakesIcon
     SOURCES "${PRACTICE_TAKES_ICON_DIRECTORY}/practice-takes-128.png"
 )
 
+# The UI typeface is embedded rather than looked up by name, so the application
+# renders identically on a machine that has never heard of IBM Plex. A
+# name-based lookup would silently fall back to the platform sans and the only
+# symptom would be that screenshots stopped matching.
+#
+# Regular and Bold only. JUCE's font model is plain/bold, so the design's 500
+# and 600 weights collapse onto these two; carrying Medium and SemiBold as well
+# would need a name-keyed lookup and another 400 KB for weights nothing asks
+# for by name. See tools/packaging/fonts/README.md.
+set(PRACTICE_TAKES_FONT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/tools/packaging/fonts")
+
+juce_add_binary_data(PracticeTakesFonts
+    HEADER_NAME PracticeTakesFonts.h
+    NAMESPACE PracticeTakesFonts
+    SOURCES
+        "${PRACTICE_TAKES_FONT_DIRECTORY}/IBMPlexSans-Regular.ttf"
+        "${PRACTICE_TAKES_FONT_DIRECTORY}/IBMPlexSans-Bold.ttf"
+)
+
 # The space-free binary name is what the Debian package, the NSIS installer,
 # and the tooling scripts under tools/scripts/ all expect. Apple is deliberately
 # excluded: juce_add_gui_app names both the bundle and its executable after
@@ -237,6 +266,7 @@ target_sources(PracticeTakes
         src/application/testcontrol/TestControlSession.cpp
         src/application/testcontrol/TestControlSession.h
         src/application/testcontrol/TestControlTarget.h
+        src/application/theme/AppLookAndFeel.cpp
         src/application/theme/Theme.cpp
         src/application/theme/Theme.h
         src/application/theme/ThemeType.h
@@ -258,6 +288,8 @@ target_sources(PracticeTakes
         src/features/analysis/harmonics/HarmonicAnalyzerComponent.h
         src/features/analysis/tuner/PitchDetector.cpp
         src/features/analysis/tuner/PitchDetector.h
+        src/features/analysis/tuner/PitchTracker.cpp
+        src/features/analysis/tuner/PitchTracker.h
         src/features/analysis/tuner/TunerComponent.cpp
         src/features/analysis/tuner/TunerComponent.h
         src/features/analysis/tuner/TunerSettingsCodec.cpp
@@ -335,6 +367,7 @@ target_compile_definitions(PracticeTakes
 target_link_libraries(PracticeTakes
     PRIVATE
         PracticeTakesIcon
+        PracticeTakesFonts
         juce::juce_audio_utils
         juce::juce_dsp
         juce::juce_gui_extra
@@ -350,6 +383,8 @@ endif()
 
 if(BUILD_TESTING)
     add_executable(PracticeTakesTests
+        src/platform/audio/AudioInputService.cpp
+        src/platform/audio/AudioInputService.h
         src/tests/application/configuration/AppDefaultsTests.cpp
         src/tests/application/configuration/SettingsPersistenceTests.cpp
         src/tests/application/configuration/SettingsTransferCodecTests.cpp
@@ -367,6 +402,8 @@ if(BUILD_TESTING)
         src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp
         src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
         src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp
+        src/tests/application/theme/AppLookAndFeelTests.cpp
+        src/tests/application/tools/CompactPresentationTests.cpp
         src/tests/application/tools/ToolCatalogTests.cpp
         src/tests/application/tools/ToolLifecycleTests.cpp
         src/tests/application/tools/UnknownToolIntegrationTests.cpp
@@ -377,9 +414,11 @@ if(BUILD_TESTING)
         src/tests/application/theme/ThemeContrastTests.cpp
         src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
         src/tests/features/analysis/tuner/PitchDetectorTests.cpp
+        src/tests/features/analysis/tuner/PitchTrackerTests.cpp
         src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
         src/tests/features/performance/ApplicationLaunchTimerTests.cpp
         src/tests/platform/audio/AudioRecoveryPolicyTests.cpp
+        src/tests/platform/audio/AudioInputServiceTests.cpp
         src/tests/platform/audio/AudioSampleFifoLoadTests.cpp
         src/tests/platform/audio/AudioSampleFifoTests.cpp
         src/tests/platform/audio/SyntheticToneTests.cpp
@@ -405,9 +444,11 @@ if(BUILD_TESTING)
         src/application/testcontrol/TestControlClicker.cpp
         src/application/testcontrol/TestControlCommand.cpp
         src/application/testcontrol/TestControlSession.cpp
+        src/application/theme/AppLookAndFeel.cpp
         src/application/theme/Theme.cpp
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
         src/features/analysis/tuner/PitchDetector.cpp
+        src/features/analysis/tuner/PitchTracker.cpp
         src/features/performance/ApplicationLaunchTimer.cpp
         src/platform/score/ScoreBuilder.cpp
         src/platform/score/ScoreInvariants.cpp
@@ -445,6 +486,8 @@ if(BUILD_TESTING)
     target_link_libraries(PracticeTakesTests
         PRIVATE
             Catch2::Catch2WithMain
+            PracticeTakesFonts
+            juce::juce_audio_devices
             juce::juce_data_structures
             juce::juce_dsp
             juce::juce_graphics
@@ -465,6 +508,49 @@ if(BUILD_TESTING)
         target_link_options(PracticeTakesTests PRIVATE --coverage)
     endif()
 
+    if(NOT PRACTICE_TAKES_SANITIZE STREQUAL "")
+        if(NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+            message(FATAL_ERROR
+                "PRACTICE_TAKES_SANITIZE needs a GCC or Clang toolchain, "
+                "but the compiler is ${CMAKE_CXX_COMPILER_ID}")
+        endif()
+        if(PRACTICE_TAKES_ENABLE_COVERAGE)
+            message(FATAL_ERROR
+                "PRACTICE_TAKES_SANITIZE and PRACTICE_TAKES_ENABLE_COVERAGE cannot "
+                "share a build tree; configure them separately")
+        endif()
+
+        # -fno-omit-frame-pointer so a report names the frames that led to the
+        # fault; -O1 keeps the suite quick without inlining the stack away.
+        set(practice_takes_sanitizer_flags -fno-omit-frame-pointer -O1 -g)
+
+        if(PRACTICE_TAKES_SANITIZE STREQUAL "address")
+            # UBSan rides along: it composes with ASan, costs little, and finding
+            # undefined behaviour needs no separate run.
+            list(APPEND practice_takes_sanitizer_flags
+                -fsanitize=address,undefined -fno-sanitize-recover=all)
+        elseif(PRACTICE_TAKES_SANITIZE STREQUAL "thread")
+            list(APPEND practice_takes_sanitizer_flags -fsanitize=thread)
+        elseif(PRACTICE_TAKES_SANITIZE STREQUAL "realtime")
+            if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+                message(FATAL_ERROR
+                    "PRACTICE_TAKES_SANITIZE=realtime needs Clang 20 or newer; "
+                    "the compiler is ${CMAKE_CXX_COMPILER_ID}. GCC has no "
+                    "RealtimeSanitizer.")
+            endif()
+            list(APPEND practice_takes_sanitizer_flags -fsanitize=realtime)
+        else()
+            message(FATAL_ERROR
+                "PRACTICE_TAKES_SANITIZE must be '', 'address', 'thread', or "
+                "'realtime'; got '${PRACTICE_TAKES_SANITIZE}'")
+        endif()
+
+        target_compile_options(PracticeTakesTests PRIVATE ${practice_takes_sanitizer_flags})
+        target_link_options(PracticeTakesTests PRIVATE ${practice_takes_sanitizer_flags})
+        message(STATUS
+            "PracticeTakesTests instrumented with ${PRACTICE_TAKES_SANITIZE} sanitizer")
+    endif()
+
     target_compile_definitions(PracticeTakesTests
         PRIVATE
             PRACTICE_TAKES_VERSION="${PROJECT_VERSION}"
@@ -478,7 +564,16 @@ if(BUILD_TESTING)
     endif()
 
     include(Catch)
-    catch_discover_tests(PracticeTakesTests)
+    if(PRACTICE_TAKES_SANITIZE STREQUAL "address")
+        # JUCE's font enumeration reaches fontconfig, which caches for the
+        # lifetime of the process. Every entry in the file explains itself, and
+        # none of them may cover a frame under src/.
+        catch_discover_tests(PracticeTakesTests
+            PROPERTIES ENVIRONMENT
+                "LSAN_OPTIONS=suppressions=${CMAKE_CURRENT_SOURCE_DIR}/tools/sanitizers/lsan.supp:print_suppressions=0")
+    else()
+        catch_discover_tests(PracticeTakesTests)
+    endif()
 endif()
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/Packaging.cmake")

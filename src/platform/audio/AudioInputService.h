@@ -1,14 +1,23 @@
 #pragma once
 
-#include <JuceHeader.h>
+// Modular JUCE includes rather than the generated JuceHeader.h umbrella:
+// JuceHeader.h is produced for the PracticeTakes application target only, so a
+// file that uses it cannot be compiled into PracticeTakesTests. That is the
+// mechanical reason this service had no tests.
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_core/juce_core.h>
+#include <juce_events/juce_events.h>
 
 #include "AudioSampleFifo.h"
+#include "RealtimeSafety.h"
 #include "SyntheticTone.h"
 
 #include <array>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
+#include <memory>
 #include <vector>
 
 // Owns the application's only microphone callback and fans captured input into
@@ -24,6 +33,11 @@ class AudioInputService final
     enum class InputState
     {
         disconnected,
+        // Trying to open one. Distinct from having none, because "no
+        // microphone" and "the microphone is not answering" have different
+        // answers, and the second is the one somebody would otherwise read as
+        // the application having crashed.
+        opening,
         muted,
         active,
         clipping
@@ -74,6 +88,24 @@ class AudioInputService final
     [[nodiscard]] std::unique_ptr<juce::XmlElement> createDeviceState() const;
 
   private:
+    // The device callback is private, and the AudioIODeviceCallback base is
+    // inherited privately, because nothing in the application may invoke it --
+    // only the device does. A test must, though, and for a reason that is not
+    // convenience: the real-time contract in
+    // docs/development/performance/audio-thread-safety.md is only verifiable
+    // against the callback actually running, and RealtimeSanitizer observes
+    // code that executes. Until something drove this function, a green
+    // real-time check meant nothing.
+    //
+    // One named type gets in, rather than widening the class's surface.
+    friend struct AudioInputServiceCallbackAccess;
+
+    // The same bargain for recovery. What this file has to answer is "what
+    // happens when the device never opens", and a device that never opens
+    // cannot be arranged from a test -- so the step that opens it is
+    // replaceable, by one named type and nothing else.
+    friend struct AudioInputServiceRecoveryAccess;
+
     static constexpr std::size_t maximumConsumers = 8;
     static constexpr std::size_t consumerFifoCapacity = 65536;
     static constexpr int serviceRefreshRateHz = 20;
@@ -87,13 +119,48 @@ class AudioInputService final
         std::atomic<bool> active{false};
     };
 
+    // noexcept and non-blocking are load-bearing, not decoration: see
+    // RealtimeSafety.h. Overriding with a stricter exception specification than
+    // JUCE's base declares is legal and is what makes the annotation possible.
     void audioDeviceIOCallbackWithContext(
         const float* const* inputChannelData,
         int numInputChannels,
         float* const* outputChannelData,
         int numOutputChannels,
         int numSamples,
-        const juce::AudioIODeviceCallbackContext&) override;
+        const juce::AudioIODeviceCallbackContext&) noexcept PRACTICE_TAKES_NONBLOCKING override;
+    // Samples into the analysis FIFOs, from a device or from the generator.
+    // Annotated because the device's caller is the audio thread.
+    void deliverSamples(const float* samples, int numSamples) noexcept PRACTICE_TAKES_NONBLOCKING;
+
+    // The tone with no device behind it. A timer of its own rather than the
+    // service's: the service's runs at a refresh rate chosen for the interface,
+    // and this has to deliver a steady stream of samples.
+    //
+    // It only ever runs when a tone has been asked for and no device is
+    // delivering, which is the capture harness and nothing else -- an ordinary
+    // run never starts one.
+    class ToneSource final : public juce::HighResolutionTimer
+    {
+      public:
+        explicit ToneSource(AudioInputService& owner) : service(owner) {}
+        ~ToneSource() override
+        {
+            stopTimer();
+        }
+
+        void hiResTimerCallback() override;
+
+      private:
+        AudioInputService& service;
+    };
+
+    // Whether the generator should be running, and start or stop it to match.
+    void updateToneSource();
+
+    // One block of generated tone into the analysis path.
+    void renderToneBlock();
+
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
     void audioDeviceStopped() override;
     void changeListenerCallback(juce::ChangeBroadcaster*) override;
@@ -104,10 +171,48 @@ class AudioInputService final
     [[nodiscard]] std::array<Listener*, maximumConsumers> listenerSnapshot() const;
     void deliverFormatChange();
     void scanForDeviceChanges();
+
+    // Closing the device and opening it again: the one step of a recovery that
+    // can wait without limit. `snd_pcm_prepare` through PipeWire waits on a
+    // condition variable that another holder of the device never signals, and
+    // there is no timeout to reach.
+    //
+    // Behind a seam so a test can supply one that blocks. Nothing else can
+    // answer "what does this do when the device never opens", and that is the
+    // question this file has to have an answer to.
+    static void reopenDevice(juce::AudioDeviceManager& deviceManager);
+
+    // One recovery: the flag, the step, the flag again. Separate from the scan
+    // that decides to call it, because the deciding needs a device backend to
+    // enumerate and this does not -- and this is the part that is about to move
+    // to a thread of its own.
+    void attemptRecovery();
+
+    // Run one piece of device work on a thread, unless some is already running.
+    // Everything automatic goes through here -- the startup open and the
+    // recovery retry alike -- because neither was asked for by anybody waiting,
+    // and both can wait forever.
+    void startDeviceWork(std::function<void()> step);
+
+    // Whether a recovery is still running. The scan asks before starting
+    // another: what makes an open block is another holder of the device, which
+    // a second attempt does not change -- it only queues a wait on what the
+    // first is waiting on.
+    [[nodiscard]] bool recoveryInFlight() const;
     void initialiseInput(const juce::XmlElement* state, bool force);
     void publishState();
 
-    juce::AudioDeviceManager manager;
+    // Held through a shared pointer, and this is load-bearing rather than
+    // style. A recovery stuck inside `snd_pcm_prepare` cannot be joined at
+    // shutdown -- waiting for it would reproduce the freeze this exists to fix,
+    // at the moment somebody is trying to escape it -- so the thread outlives
+    // this object, and the manager it is inside has to outlive it too. The
+    // thread holds a copy; the manager goes when the last one does.
+    //
+    // As a by-value member this was a use-after-free waiting for a slow device.
+    std::shared_ptr<juce::AudioDeviceManager> ownedManager =
+        std::make_shared<juce::AudioDeviceManager>();
+    juce::AudioDeviceManager& manager = *ownedManager;
     mutable juce::CriticalSection consumerLock;
     std::array<ConsumerSlot, maximumConsumers> consumers;
     juce::String lastDeviceName;
@@ -115,6 +220,9 @@ class AudioInputService final
 
     std::atomic<unsigned int> callbacksInProgress{0};
     std::atomic<bool> muted{false};
+
+    // Held by whichever producer is filling the FIFOs. See `deliverSamples`.
+    std::atomic<bool> filling{false};
 
     // A synthetic tone, for verification. Zero means the device's own input.
     //
@@ -130,6 +238,11 @@ class AudioInputService final
     std::atomic<float> toneAmplitude{0.45f};
     SyntheticTone tone;
     std::vector<float> toneBlock;
+
+    // The generator's own block. Separate from the callback's, because for the
+    // one tick it takes to notice a device has started they can both exist, and
+    // two writers into one buffer is not something to leave to timing.
+    std::vector<float> generatedBlock;
     std::atomic<float> gain{1.0f};
     std::atomic<float> peakSinceLastTimer{0.0f};
     std::atomic<float> displayedInputLevel{0.0f};
@@ -143,8 +256,37 @@ class AudioInputService final
     std::uint64_t lastReportedDroppedBlocks = 0;
     int clippingHoldTicks = 0;
     int ticksUntilDeviceScan = disconnectedDeviceScanIntervalTicks;
-    bool recovering = false;
     bool initialised = false;
+
+    // A recovery in flight. Shared with the thread running it, because that
+    // thread may still be inside the device when this object is gone: it
+    // reports through here and touches nothing else that could have gone.
+    struct Flight
+    {
+        std::atomic<bool> running{true};
+    };
+
+    std::shared_ptr<Flight> flight;
+
+    // What a recovery does when it gets as far as the device. Replaced by tests
+    // with something that blocks, because a real device that never opens cannot
+    // be arranged on demand.
+    // Captures the manager's owner, never `this`: the thread running it may
+    // outlive this object.
+    // How much tone to render per tick, and how often. Twenty milliseconds is
+    // short enough that a tool draining on a thirty-hertz timer never starves,
+    // and long enough that the generator is not woken constantly.
+    static constexpr int toneBlockMilliseconds = 20;
+
+    // What the generator claims to be running at. A device reports its own; this
+    // picks the rate every backend here supports, so a tool's analysis is set up
+    // the same way either way.
+    static constexpr double generatedSampleRate = 44100.0;
+
+    ToneSource toneSource{*this};
+    std::atomic<bool> toneSourceRunning{false};
+
+    std::function<void()> reopen = [owner = ownedManager] { reopenDevice(*owner); };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioInputService)
 };

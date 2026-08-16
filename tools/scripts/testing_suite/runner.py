@@ -35,6 +35,8 @@ Standard library only.
 
 from __future__ import annotations
 
+from contextlib import contextmanager, ExitStack
+
 from dataclasses import dataclass, field
 import datetime as _datetime
 import os
@@ -42,15 +44,17 @@ from pathlib import Path
 import platform as _platform
 import re
 import shutil
+import signal
 import subprocess
 import threading
 import time
 
 import capture as capture_module
+import display as display_module
 import machine as machine_module
 import suites as suites_module
 import surfaces
-from driver import ApplicationDriver, missing_states
+from driver import STARTUP_TIMEOUT_SECONDS, ApplicationDriver, missing_states
 from store import Store
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -60,7 +64,34 @@ DEFAULT_EXECUTABLE = CONTROL_BUILD / "bin" / "PracticeTakes"
 SOURCE_ROOT = REPOSITORY_ROOT / "src"
 
 BUILD_PATH = "/usr/bin:/bin"
+
+# What builds with unless a target says otherwise. Absolute, because a Nix
+# profile ahead of the system toolchain is what makes `juceaide` die partway
+# through with "libexpat.so.1 not found".
+DEFAULT_COMPILERS = ("/usr/bin/gcc", "/usr/bin/g++")
 LOG_LINES_KEPT = 200
+
+# How long a command gets to end politely before it is killed.
+STOP_GRACE_SECONDS = 5.0
+
+# How many screens the hub captures on at once. A sweep is almost all waiting --
+# for a window to settle, for a tool to have something to draw -- and that
+# waiting overlaps. Not derived from the processor count: several instrumented
+# applications make the settle poll measure the machine's load rather than the
+# window's layout, and a capture that fails because the machine was busy is
+# worse than a slow one.
+CAPTURE_WORKERS = 6
+
+# How much of a plan's weight has to be finished before a time estimate is worth
+# showing. One surface is not a rate: the first is unrepresentative -- it pays
+# for the application's first paint -- and an estimate that swings from four
+# minutes to forty is worse than none.
+ESTIMATE_AFTER_COST = 4.0
+
+# What `_command` reports for a command that was never started, or was ended by
+# a stop. Distinct from any exit code a real command produces, so "we stopped
+# this" is never mistaken for "this failed".
+STOPPED_CODE = -1000
 
 IDLE = "idle"
 BUILDING = "building"
@@ -76,16 +107,62 @@ FAILED = "failed"
 # links into the build root -- so assuming either layout for both is wrong, and
 # was: a build that succeeded was reported as "the build finished but the binary
 # is not there". The target is looked for instead.
+#
+# A key is what the hub calls a build, not necessarily what CMake calls the
+# target: the sanitizer builds are all `PracticeTakesTests`, differing only in
+# how they were configured and where they went. `builds` says which target to
+# ask CMake for when the two differ.
 BUILD_TARGETS = {
     "PracticeTakes": {
+        "primary": True,
         "directory": CONTROL_BUILD,
         "options": ("-DPRACTICE_TAKES_ENABLE_TEST_CONTROL=ON",),
         "why": "the application, with the control channel the suite drives it through",
     },
     "PracticeTakesTests": {
+        "primary": True,
         "directory": TEST_BUILD,
         "options": ("-DBUILD_TESTING=ON",),
         "why": "the C++ unit and benchmark binary",
+    },
+    # One tree per sanitizer. They cannot share: the instrumentation is a
+    # compile-time decision, and a tree reconfigured back and forth would
+    # rebuild everything on every switch anyway.
+    "PracticeTakesTests-asan": {
+        "directory": REPOSITORY_ROOT / "build-asan",
+        "builds": "PracticeTakesTests",
+        "options": ("-DBUILD_TESTING=ON", "-DPRACTICE_TAKES_SANITIZE=address"),
+        "why": "the tests under AddressSanitizer, for memory errors and leaks",
+    },
+    "PracticeTakesTests-tsan": {
+        "directory": REPOSITORY_ROOT / "build-tsan",
+        "builds": "PracticeTakesTests",
+        "options": ("-DBUILD_TESTING=ON", "-DPRACTICE_TAKES_SANITIZE=thread"),
+        "why": "the tests under ThreadSanitizer, for race conditions",
+    },
+    "PracticeTakesTests-rtsan": {
+        "directory": REPOSITORY_ROOT / "build-rtsan",
+        "builds": "PracticeTakesTests",
+        "options": ("-DBUILD_TESTING=ON", "-DPRACTICE_TAKES_SANITIZE=realtime"),
+        # RealtimeSanitizer is Clang's, and so is the annotation the audio
+        # callback carries. GCC will not build this at all.
+        # Candidates, newest first, and the first one that actually takes the
+        # flag wins. Not a single name: Debian's `clang` is whatever version is
+        # the default -- 19 on trixie -- and installing clang-20 beside it
+        # leaves `/usr/bin/clang` pointing at the old one. Hardcoding `clang`
+        # would keep refusing to build on a machine that had just been given
+        # everything it needed.
+        "compilers": (
+            ("clang-21", "clang++-21"),
+            ("clang-20", "clang++-20"),
+            ("clang", "clang++"),
+        ),
+        # Having a clang is not the requirement -- RealtimeSanitizer landed in
+        # Clang 20, and 19 accepts every other `-fsanitize` argument and
+        # refuses this one partway through a build. CI pins clang-20 for the
+        # same reason.
+        "needs_flag": "-fsanitize=realtime",
+        "why": "the tests under RealtimeSanitizer, for the audio callback",
     },
 }
 
@@ -106,9 +183,10 @@ def binary_path(target: str) -> Path | None:
         return None
 
     directory = entry["directory"]
+    built = entry.get("builds", target)
 
     for pattern in BINARY_LOCATIONS:
-        for candidate in sorted(directory.glob(pattern.format(target=target))):
+        for candidate in sorted(directory.glob(pattern.format(target=built))):
             if candidate.is_file() and os.access(candidate, os.X_OK):
                 return candidate
 
@@ -181,8 +259,10 @@ def build_state(target: str = "PracticeTakes") -> dict:
 
     binary = binary_path(target)
 
+    primary = bool(entry.get("primary", False))
+
     if binary is None:
-        return {"target": target, "present": False, "stale": False,
+        return {"target": target, "present": False, "stale": False, "primary": primary,
                 "reason": f"not built yet — {entry['why']}"}
 
     stale = binary.stat().st_mtime < newest_source_change()
@@ -191,9 +271,140 @@ def build_state(target: str = "PracticeTakes") -> dict:
         "target": target,
         "present": True,
         "stale": stale,
+        "primary": primary,
         "path": str(binary),
         "reason": "sources have changed since this was built" if stale else "",
     }
+
+
+def remaining_seconds(entry: dict, elapsed: float) -> float | None:
+    """How much longer this pass has, or None while that is still a guess.
+
+    The plan's own weights say which surfaces are the expensive ones; this run's
+    measured rate says what one of those weights is worth on this machine
+    today. Neither alone is enough -- a static estimate is wrong on a slow
+    machine, and a rate with nothing to scale is wrong whenever what is left
+    does not resemble what is done.
+
+    None until enough has finished to divide by, because a number that swings
+    from four minutes to forty in its first seconds is worse than no number.
+    """
+    done = float(entry.get("cost_done", 0.0))
+    total = float(entry.get("cost_total", 0.0))
+
+    if total <= 0.0 or done < ESTIMATE_AFTER_COST or elapsed <= 0.0:
+        return None
+
+    return max(0.0, (total - done) * (elapsed / done))
+
+
+def describe_remaining(seconds: float) -> str:
+    """A duration to read at a glance, rounded to what it can honestly claim."""
+    if seconds < 45:
+        return "under a minute left"
+
+    minutes = int(seconds / 60 + 0.5)
+
+    return f"about {minutes} minute{'' if minutes == 1 else 's'} left"
+
+
+def missing_compiler(target: str) -> str:
+    """Why this target cannot be built here at all, or "" when it can.
+
+    A target that names its own compiler is naming a requirement, not a
+    preference: RealtimeSanitizer is Clang's, and so is the annotation the audio
+    callback carries. GCC does not build it wrongly -- it does not build it.
+
+    Reported the way a missing `npm` is: a tool that is not installed means the
+    suite never ran, and calling that a failure costs somebody an afternoon.
+    """
+    entry = BUILD_TARGETS.get(target)
+
+    if entry is None or "compilers" not in entry:
+        return ""
+
+    if usable_compilers(target) is not None:
+        return ""
+
+    flag = entry.get("needs_flag", "")
+    names = ", ".join(f"`{pair[1]}`" for pair in _candidates(entry))
+
+    if flag:
+        return (
+            f"no compiler here supports `{flag}`, which {target} needs. Tried "
+            f"{names} — RealtimeSanitizer arrived in Clang 20, and this "
+            f"distribution's default clang is older"
+        )
+
+    return f"none of {names} is installed, and {target} cannot be built without one"
+
+
+def _candidates(entry: dict) -> tuple[tuple[str, str], ...]:
+    """The compiler pairs to try, whether one was given or several."""
+    compilers = entry.get("compilers", (DEFAULT_COMPILERS,))
+
+    return compilers if isinstance(compilers[0], tuple) else (compilers,)
+
+
+def usable_compilers(target: str) -> tuple[str, str] | None:
+    """The first compiler pair that is installed and takes what this needs.
+
+    None when there is no such pair, which is what `missing_compiler` turns
+    into a sentence.
+    """
+    entry = BUILD_TARGETS.get(target)
+
+    if entry is None:
+        return DEFAULT_COMPILERS
+
+    path = suite_environment().get("PATH", "")
+    flag = entry.get("needs_flag", "")
+
+    for pair in _candidates(entry):
+        if any("/" not in name and shutil.which(name, path=path) is None for name in pair):
+            continue
+
+        if flag and not _compiler_accepts(pair[1], flag):
+            continue
+
+        return pair
+
+    return None
+
+
+# Asked once per compiler and flag: it costs a process, and the answer does not
+# change while the hub is running.
+_flag_support: dict[tuple[str, str], bool] = {}
+
+
+def _compiler_accepts(compiler: str, flag: str) -> bool:
+    """Whether this compiler will take the flag, asked rather than assumed.
+
+    A version number would be a proxy for this and a worse one: what matters is
+    whether the build will go through, and the compiler is the only thing that
+    knows. Costs one empty compile.
+    """
+    remembered = _flag_support.get((compiler, flag))
+
+    if remembered is not None:
+        return remembered
+
+    try:
+        completed = subprocess.run(
+            [compiler, flag, "-xc++", "-fsyntax-only", "-"],
+            input="int main() { return 0; }\n",
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env=build_environment(),
+        )
+        accepted = completed.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        accepted = False
+
+    _flag_support[(compiler, flag)] = accepted
+
+    return accepted
 
 
 def build_overview() -> list[dict]:
@@ -227,6 +438,17 @@ def missing_program(command: str) -> str:
     return ""
 
 
+class RunStopped(Exception):
+    """Raised to unwind a job that was asked to stop.
+
+    An exception rather than a return value checked at each step: the stop can
+    happen inside a build, inside a suite, or between them, and every one of
+    those paths has to end in the same place. A code that has to be checked is
+    a code somebody forgets to check, and forgetting here means a stopped run
+    quietly carrying on to the next suite.
+    """
+
+
 @dataclass
 class Job:
     """One background run of one or more suites."""
@@ -244,15 +466,39 @@ class Job:
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     _thread: threading.Thread | None = field(default=None, repr=False)
 
+    # Raised by `stop`, read by the capture pass between surfaces. An Event
+    # rather than a bool because it is set from the request thread and read from
+    # the run thread, and because "is it set" is the whole interface.
+    _stop: threading.Event = field(default_factory=threading.Event, repr=False)
+
     # --- Status -------------------------------------------------------------
 
     @property
     def running(self) -> bool:
         return self.state in (BUILDING, RUNNING)
 
+    def stop(self) -> bool:
+        """Ask a run in progress to stop. False when there is nothing to stop.
+
+        The run ends at the next surface boundary rather than here: a capture
+        interrupted between photographing and writing its row leaves a row with
+        no file behind it.
+        """
+        with self._lock:
+            if not self.running:
+                return False
+
+        self._stop.set()
+
+        return True
+
+    def stopping(self) -> bool:
+        return self._stop.is_set()
+
     def status(self) -> dict:
         with self._lock:
             return {
+                "stopping": self._stop.is_set(),
                 "state": self.state,
                 "message": self.message,
                 "run_id": self.run_id,
@@ -305,6 +551,8 @@ class Job:
             if self.running:
                 return False
 
+            # A previous run's stop must not end this one before it begins.
+            self._stop.clear()
             self.state = BUILDING
             self.message = "starting"
             self.percent = 0
@@ -327,6 +575,92 @@ class Job:
 
         return True
 
+    def start_build(self, targets: list[str] | None = None) -> bool:
+        """Build, and do nothing else. False when something is already running.
+
+        A build on its own, rather than one that happens on the way to a suite:
+        the build is the slow part, it is what a source change invalidates, and
+        wanting it done now without also running two hundred captures is the
+        normal state of someone who has just edited the application.
+
+        Deliberately no run row. A run is a record of what was verified, and a
+        build verified nothing -- a row with no captures and no results under it
+        would show up in the history as a run that did nothing.
+        """
+        chosen = [target for target in (targets or list(BUILD_TARGETS)) if target in BUILD_TARGETS]
+
+        if not chosen:
+            return False
+
+        # The same check the suites get. Without it the banner's build button
+        # started a build that could not work, CMake failed somewhere in the
+        # middle, and what came back was a complaint about a missing binary
+        # rather than the missing compiler that was the actual answer.
+        blocked = [(target, missing_compiler(target)) for target in chosen]
+        blocked = [(target, reason) for target, reason in blocked if reason]
+
+        if blocked and len(blocked) == len(chosen):
+            with self._lock:
+                self.state = FINISHED
+                self.message = blocked[0][1]
+                self.finished_at = _now()
+                self.log = [blocked[0][1]]
+                self.percent = 100
+
+            return False
+
+        for target, reason in blocked:
+            self._say(f"skipping {target}: {reason}")
+
+        chosen = [target for target in chosen if not missing_compiler(target)]
+
+        with self._lock:
+            if self.running:
+                return False
+
+            self._stop.clear()
+            self.state = BUILDING
+            self.message = "starting"
+            self.percent = 0
+            self.run_id = None
+            self.started_at = _now()
+            self.finished_at = ""
+            self.queued = list(chosen)
+            self.results = {}
+            self.log = []
+
+        self._thread = threading.Thread(
+            target=self._build_only, kwargs={"chosen": chosen}, daemon=True
+        )
+        self._thread.start()
+
+        return True
+
+    def _build_only(self, *, chosen: list[str]) -> None:
+        done: list[str] = []
+
+        try:
+            for index, target in enumerate(chosen):
+                if self.stopping():
+                    raise RunStopped
+
+                self._build(
+                    target,
+                    floor=int(100 * index / len(chosen)),
+                    ceiling=int(100 * (index + 1) / len(chosen)),
+                )
+                done.append(target)
+
+            self._say(f"built {', '.join(chosen)}", state=FINISHED, percent=100)
+        except RunStopped:
+            built = f", built {', '.join(done)} first" if done else ""
+            self._say(f"stopped{built}", state=FINISHED, percent=100)
+        except Exception as error:  # noqa: BLE001 - a background job reports rather than crashes
+            self._say(f"build failed: {error}", state=FAILED)
+        finally:
+            with self._lock:
+                self.finished_at = _now()
+
     def wait(self, timeout: float | None = None) -> None:
         """For the command line and for tests; the page polls instead."""
         if self._thread is not None:
@@ -348,9 +682,31 @@ class Job:
             with self._lock:
                 self.run_id = run_id
 
-            needed: list[str] = []
+            # A suite whose build needs a compiler this machine does not have
+            # is dropped before anything is built, rather than discovered as a
+            # wall of CMake output partway through.
+            runnable: list[str] = []
 
             for suite_id in chosen:
+                suite = suites_module.by_id(suite_id)
+                blocked = next(
+                    (
+                        reason
+                        for target in (suite.needs if suite else ())
+                        if (reason := missing_compiler(target))
+                    ),
+                    "",
+                )
+
+                if blocked:
+                    self._record(suite_id, state="unavailable", message=blocked)
+                    self._say(f"{suite.label if suite else suite_id}: skipped — {blocked}")
+                else:
+                    runnable.append(suite_id)
+
+            needed: list[str] = []
+
+            for suite_id in runnable:
                 suite = suites_module.by_id(suite_id)
 
                 for target in suite.needs if suite else ():
@@ -358,11 +714,17 @@ class Job:
                         needed.append(target)
 
             for index, target in enumerate(needed):
+                if self.stopping():
+                    raise RunStopped
+
                 floor = int(40 * index / len(needed))
                 self._build(target, floor=floor, ceiling=int(40 * (index + 1) / len(needed)))
 
-            for index, suite_id in enumerate(chosen):
-                base = 40 + int(60 * index / len(chosen))
+            for index, suite_id in enumerate(runnable):
+                if self.stopping():
+                    raise RunStopped
+
+                base = 40 + int(60 * index / max(1, len(runnable)))
                 self._run_suite(
                     suites_module.by_id(suite_id),
                     run_id=run_id,
@@ -370,7 +732,7 @@ class Job:
                     resolutions=resolutions,
                     themes=themes,
                     floor=base,
-                    ceiling=40 + int(60 * (index + 1) / len(chosen)),
+                    ceiling=40 + int(60 * (index + 1) / max(1, len(runnable))),
                 )
 
             failed = [
@@ -378,13 +740,32 @@ class Job:
             ]
             ran = [
                 entry for entry in self.results.values()
-                if entry.get("state") not in ("skipped", "unavailable")
+                if entry.get("state") not in ("skipped", "unavailable", "stopped")
             ]
             summary = f"{len(ran) - len(failed)} of {len(ran)} suite(s) passed"
 
             if len(ran) < len(chosen):
                 summary += f", {len(chosen) - len(ran)} could not run"
             self._say(summary, state=FINISHED if not failed else FAILED, percent=100)
+        except RunStopped:
+            # Everything that never got its turn, said out loud. A suite left
+            # sitting at "queued" reads as still to come, and nothing is coming.
+            for suite_id, entry in list(self.results.items()):
+                if entry.get("state") in ("queued", "running"):
+                    self._record(suite_id, state="stopped", message="the run was stopped")
+
+            done = [
+                entry for entry in self.results.values()
+                if entry.get("state") in ("passed", "failed")
+            ]
+            # Finished, not failed: stopping is a decision somebody made, and a
+            # run marked failed for it either blocks a release or teaches
+            # everyone that failures can be ignored.
+            self._say(
+                f"stopped — {len(done)} of {len(chosen)} suite(s) ran",
+                state=FINISHED,
+                percent=100,
+            )
         except Exception as error:  # noqa: BLE001 - a background job reports rather than crashes
             self._say(f"stopped: {error}", state=FAILED)
         finally:
@@ -395,16 +776,18 @@ class Job:
 
     def _build(self, target: str, *, floor: int, ceiling: int) -> None:
         entry = BUILD_TARGETS[target]
+        built = entry.get("builds", target)
         self._say(f"building {target} — {entry['why']}", state=BUILDING, percent=floor)
 
+        c_compiler, cxx_compiler = usable_compilers(target) or DEFAULT_COMPILERS
         self._command(
             [
                 cmake_binary(),
                 "-S", str(REPOSITORY_ROOT),
                 "-B", str(entry["directory"]),
                 "-DCMAKE_BUILD_TYPE=Debug",
-                "-DCMAKE_C_COMPILER=/usr/bin/gcc",
-                "-DCMAKE_CXX_COMPILER=/usr/bin/g++",
+                f"-DCMAKE_C_COMPILER={c_compiler}",
+                f"-DCMAKE_CXX_COMPILER={cxx_compiler}",
                 *entry["options"],
             ],
             label=f"configuring {target}",
@@ -412,18 +795,72 @@ class Job:
             ceiling=floor + max(1, (ceiling - floor) // 10),
         )
         self._command(
-            [cmake_binary(), "--build", str(entry["directory"]), "--target", target, "--parallel"],
+            [cmake_binary(), "--build", str(entry["directory"]), "--target", built, "--parallel"],
             label=f"compiling {target}",
             floor=floor + max(1, (ceiling - floor) // 10),
             ceiling=ceiling,
         )
 
+        # A stopped build leaves no binary, which is not the same thing as a
+        # build that finished and produced nothing -- and only one of those is
+        # worth a message about where it looked.
+        if self.stopping():
+            raise RunStopped
+
         if binary_path(target) is None:
+            # `built`, not `target`: the sanitizer builds are named for the tree
+            # they live in and all produce `PracticeTakesTests`. Naming the
+            # wrong file sent somebody looking for a binary that was never
+            # supposed to exist.
             looked = ", ".join(
-                str(entry["directory"] / pattern.format(target=target))
+                str(entry["directory"] / pattern.format(target=built))
                 for pattern in BINARY_LOCATIONS
             )
-            raise RuntimeError(f"the build finished but {target} is not in any of: {looked}")
+            raise RuntimeError(
+                f"the build of {target} finished but {built} is not in any of: {looked}")
+
+    def _end(self, process: subprocess.Popen, label: str) -> None:
+        """Signal a running command and everything it started.
+
+        The process group, not the process. A build is cmake, which is make or
+        ninja, which is however many compilers -- signalling only the one this
+        job can see leaves the machine compiling for another minute while the
+        page says the run has stopped.
+
+        `terminate` first so a suite can tidy up; `kill` after a grace, because
+        a stop that waits indefinitely for a well-behaved exit is the thing
+        being fixed.
+        """
+        try:
+            group = os.getpgid(process.pid)
+        except OSError:  # already gone
+            return
+
+        self._say(f"stopping {label}…")
+
+        try:
+            os.killpg(group, signal.SIGTERM)
+            process.wait(STOP_GRACE_SECONDS)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(group, signal.SIGKILL)
+            except OSError:
+                pass
+        except OSError:
+            pass
+
+    def _watch_for_stop(self, process: subprocess.Popen, label: str) -> None:
+        """End the command if the job is asked to stop while it runs.
+
+        A thread rather than a check in the read loop: a suite that is thinking
+        rather than printing -- a long test case, a link step -- produces no
+        line to check on, and that is exactly when somebody presses stop.
+        """
+        while process.poll() is None:
+            if self._stop.wait(0.25):
+                self._end(process, label)
+
+                return
 
     def _command(
         self,
@@ -435,19 +872,29 @@ class Job:
         working_directory: Path | None = None,
         capture: list[str] | None = None,
         sanitised: bool = True,
+        environment: dict[str, str] | None = None,
     ) -> int:
         """Run a command, streaming its output into the log. Returns the exit code."""
         self._say(f"{label}…", percent=floor)
+
+        if self.stopping():
+            return STOPPED_CODE
 
         try:
             process = subprocess.Popen(
                 arguments,
                 cwd=working_directory or REPOSITORY_ROOT,
-                env=build_environment() if sanitised else suite_environment(),
+                env={
+                    **(build_environment() if sanitised else suite_environment()),
+                    **(environment or {}),
+                },
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
+                # Its own process group, so a stop reaches the whole tree of
+                # things it starts rather than just the top of it.
+                start_new_session=True,
             )
         except (OSError, ValueError) as error:
             self._say(f"{label} could not start: {error}")
@@ -456,26 +903,34 @@ class Job:
 
         assert process.stdout is not None
 
-        for line in process.stdout:
-            line = line.rstrip()
+        # `with` so the pipe is closed however this ends. A run is dozens of
+        # commands and the hub is long-lived, so leaking one file each is a
+        # descriptor limit somebody eventually hits.
+        with process:
+            threading.Thread(
+                target=self._watch_for_stop, args=(process, label), daemon=True
+            ).start()
 
-            if not line:
-                continue
+            for line in process.stdout:
+                line = line.rstrip()
 
-            if capture is not None:
-                capture.append(line)
+                if not line:
+                    continue
 
-            # cmake prints "[ 42%] Building ..."; map that onto this step's band
-            # so the page shows real progress rather than a spinner.
-            match = re.match(r"\[\s*(\d+)%\]", line)
-            percent = None
+                if capture is not None:
+                    capture.append(line)
 
-            if match:
-                percent = int(floor + (ceiling - floor) * int(match.group(1)) / 100)
+                # cmake prints "[ 42%] Building ..."; map that onto this step's
+                # band so the page shows real progress rather than a spinner.
+                match = re.match(r"\[\s*(\d+)%\]", line)
+                percent = None
 
-            self._say(line, percent=percent)
+                if match:
+                    percent = int(floor + (ceiling - floor) * int(match.group(1)) / 100)
 
-        return process.wait()
+                self._say(line, percent=percent)
+
+            return process.wait()
 
     # --- Suites -------------------------------------------------------------
 
@@ -535,6 +990,11 @@ class Job:
                 sanitised=False,
             )
 
+            if self.stopping():
+                self._record(suite.id, state="stopped", message="stopped part way")
+
+                raise RunStopped
+
             if prepared != 0:
                 self._record(
                     suite.id,
@@ -555,7 +1015,18 @@ class Job:
             working_directory=REPOSITORY_ROOT / suite.working_directory,
             capture=output,
             sanitised=False,
+            environment=dict(suite.environment),
         )
+
+        # Before anything is written down. A killed process exits non-zero, and
+        # recording that as a test result would put failures in the store, and
+        # in the export the release gate reads, for tests that never finished.
+        if self.stopping():
+            self._record(suite.id, state="stopped", message="stopped part way")
+            self._say(f"{suite.label}: stopped", percent=ceiling)
+
+            raise RunStopped
+
         seconds = (_datetime.datetime.now() - started).total_seconds()
         parsed = suite.parser("\n".join(output)) if suite.parser else {}
 
@@ -606,7 +1077,9 @@ class Job:
         resolved: list[str] = []
 
         for argument in command:
-            match = re.fullmatch(r"\{(\w+)\}", argument)
+            # Hyphens included: the sanitizer builds are named for the tree
+            # they live in, not for the CMake target they all share.
+            match = re.fullmatch(r"\{([\w-]+)\}", argument)
 
             if match:
                 found = binary_path(match.group(1))
@@ -645,6 +1118,112 @@ class Job:
         if executable is None:
             raise RuntimeError("PracticeTakes is not built")
 
+        # On a screen of its own, like the command line does. Without this the
+        # hub's "run everything" opened the application on the operator's
+        # desktop: windows over whatever they were doing, the pointer taken, and
+        # nothing else clickable for the length of the run. The button most
+        # likely to be pressed was the one that behaved worst.
+        workers = CAPTURE_WORKERS if display_module.is_available() else 1
+
+        if workers > 1:
+            self._say(f"capturing on {workers} screens at once", percent=floor + 1)
+            self._capture_in_parallel(
+                run_id=run_id, plan=plan, tooling=tooling, executable=executable,
+                workers=workers, floor=floor, ceiling=ceiling)
+
+            return
+
+        with ExitStack() as stack:
+            try:
+                screen = stack.enter_context(display_module.virtual_display())
+                self._say(f"capturing on a virtual display ({screen})", percent=floor + 1)
+            except display_module.VirtualDisplayError as error:
+                # Not fatal here: the hub has to work on a machine without Xvfb.
+                self._say(f"{error} Capturing on the desktop display.", percent=floor + 1)
+
+            self._capture_with_display(
+                run_id=run_id, plan=plan, tooling=tooling, executable=executable,
+                floor=floor, ceiling=ceiling)
+
+    def _capture_in_parallel(
+        self, *, run_id: int, plan, tooling, executable, workers: int, floor: int, ceiling: int
+    ) -> None:
+        """The same pass on several screens, which is how the hub runs it now.
+
+        A sweep is almost entirely waiting -- for a window to settle, for a tool
+        to have a history to draw -- and that waiting overlaps. It could not
+        before: the tone needed an open input device, one process at a time
+        holds one, so every surface carrying a tone queued behind whichever
+        worker won it. Generating the tone without a device is what made this
+        worth wiring in.
+        """
+        began = time.monotonic()
+        images_at = self.store.path.parent / "images" / f"run-{run_id}"
+
+        @contextmanager
+        def worker(index: int, shared):
+            with display_module.virtual_display(publish=False) as screen:
+                driver = ApplicationDriver(executable, display=screen)
+
+                try:
+                    driver.start()
+
+                    with shared.audio:
+                        states = driver.list_states(timeout=STARTUP_TIMEOUT_SECONDS)
+
+                    absent = missing_states(states, surfaces.required_states())
+
+                    if absent:
+                        raise RuntimeError(
+                            "the application does not offer: " + ", ".join(absent))
+
+                    made = capture_module.CapturePass(
+                        store=self.store,
+                        run_id=run_id,
+                        driver=driver,
+                        tooling=tooling,
+                        image_directory=images_at,
+                        display=screen,
+                        lock=shared.checks,
+                        audio_gate=shared.audio,
+                    )
+                    made.has_input = driver.wait_for_input(timeout=4.0)
+
+                    yield made
+                finally:
+                    driver.stop()
+
+        def report(entry: dict) -> None:
+            fraction = capture_module.progress_fraction(entry)
+            left = remaining_seconds(entry, time.monotonic() - began)
+            self._say(
+                f"capturing {entry['surface']} at {entry['geometry']} "
+                f"in {entry.get('theme', 'dark')} "
+                f"({entry['done'] + 1} of {entry['total']}"
+                f"{', ' + describe_remaining(left) if left is not None else ''})",
+                percent=int(floor + (ceiling - floor) * fraction),
+            )
+
+        result = capture_module.run_in_parallel(
+            plan, workers=workers, worker=worker, progress=report,
+            should_stop=self._stop.is_set,
+        )
+
+        for problem in result.get("errors", []):
+            self._say(f"a worker stopped: {problem}")
+
+        self._record_capture_result(result, ceiling=ceiling)
+
+    def _capture_with_display(
+        self,
+        *,
+        run_id: int,
+        plan,
+        tooling,
+        executable,
+        floor: int,
+        ceiling: int,
+    ) -> None:
         driver = ApplicationDriver(executable)
         driver.start()
 
@@ -654,12 +1233,22 @@ class Job:
             if absent:
                 raise RuntimeError("the application does not offer: " + ", ".join(absent))
 
+            # The device opens without blocking, so the window can be up before
+            # there is anything behind it. Waited for once, here, rather than
+            # per surface: once it is open it stays open.
+            if not driver.wait_for_input():
+                self._say("no input device yet; capturing anyway")
+
+            began = time.monotonic()
+
             def report(entry: dict) -> None:
-                fraction = entry["done"] / max(1, entry["total"])
+                fraction = capture_module.progress_fraction(entry)
+                left = remaining_seconds(entry, time.monotonic() - began)
                 self._say(
                     f"capturing {entry['surface']} at {entry['geometry']} "
                     f"in {entry.get('theme', 'dark')} "
-                    f"({entry['done'] + 1} of {entry['total']})",
+                    f"({entry['done'] + 1} of {entry['total']}"
+                    f"{', ' + describe_remaining(left) if left is not None else ''})",
                     percent=int(floor + (ceiling - floor) * fraction),
                 )
 
@@ -669,21 +1258,43 @@ class Job:
                 driver=driver,
                 tooling=tooling,
                 image_directory=self.store.path.parent / "images" / f"run-{run_id}",
-            ).run(plan, progress=report)
+            ).run(plan, progress=report, should_stop=self._stop.is_set)
         finally:
             driver.stop()
 
+        self._record_capture_result(result, ceiling=ceiling)
+
+    def _record_capture_result(self, result: dict, *, ceiling: int) -> None:
+        # Stopped is neither passed nor failed. The export feeds a release gate,
+        # and a run reported as failed because somebody pressed stop would
+        # either block a release or teach everyone that failures can be ignored.
+        # `skipped` and `unavailable` are already treated this way; this joins
+        # them.
+        if result.get("stopped"):
+            state = "stopped"
+            summary = (
+                f"stopped after {result['captured']} captured, "
+                f"{result['not_reached']} not reached"
+            )
+        else:
+            state = "failed" if result["failed"] else "passed"
+            summary = f"{result['captured']} captured"
+
         self._record(
             suite_id="ui-capture",
-            state="failed" if result["failed"] else "passed",
+            state=state,
             cases=result["captured"] + result["failed"],
             failures=result["failed"],
-            message=f"{result['captured']} captured",
+            message=summary,
         )
-        self._say(
-            f"UI capture: {result['captured']} captured, {result['failed']} failed",
-            percent=ceiling,
-        )
+        self._say(f"UI capture: {summary}", percent=ceiling)
+
+        # Unwind like every other stop, so the run says it was stopped. Left to
+        # return normally, a stopped capture reached the end of `_work` and was
+        # summarised as "0 of 0 suite(s) passed, 1 could not run" -- true, and
+        # no help at all to somebody who has just pressed stop.
+        if result.get("stopped"):
+            raise RunStopped
 
 
 def _commit() -> str:

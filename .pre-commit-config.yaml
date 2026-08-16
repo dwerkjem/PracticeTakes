@@ -19,8 +19,12 @@ repos:
         stages:
           - pre-commit
           - pre-merge-commit
+      # Encrypted mirrors are no longer committed, so there is nothing left for
+      # this hook to stage. What remains is the half that prevents accidents:
+      # keeping plaintext secrets out of the index. Refreshing the mirrors is
+      # the `encrypt` command, run deliberately rather than on every commit.
       - id: sops-secrets
-        name: Encrypt and stage configured secrets with SOPS
+        name: Keep plaintext secrets out of the Git index
         entry: python3 tools/scripts/secrets/secrets_manager.py pre-commit
         language: system
         pass_filenames: false
@@ -41,3 +45,14 @@ repos:
         entry: python3 tools/scripts/quality/run_clang_format.py
         language: python
         files: '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$'
+        # Pinned so the hook formats with the same version CI checks with.
+        # Without this the hook used whatever clang-format was on PATH -- 21.1.8
+        # on a current distribution -- which disagrees with CI's 18.1.8 at the
+        # column limit, so a tree could be clean locally and red in CI. Because
+        # language: python builds this hook its own environment, the pinned
+        # binary lands on PATH ahead of the system one.
+        #
+        # Keep this version in step with the `coverage` extra in pyproject.toml,
+        # which pins it for `uv run` and for the coverage tooling.
+        additional_dependencies:
+          - clang-format==18.1.8

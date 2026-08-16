@@ -36,6 +36,23 @@ It never installs packages without an interactive confirmation or the explicit
 `--install-dependencies` option. Other Linux distributions receive a clear
 manual-installation message.
 
+One thing is offered separately and never installed silently: **Clang 20, for
+running the RealtimeSanitizer check locally**. Debian 13 ships Clang 19 and
+RealtimeSanitizer arrived in 20, so it needs the LLVM repository
+(`apt.llvm.org`) — which is a bigger thing to add to a machine than a package
+the distribution already has. Nothing needs it to build or test Practice Takes;
+it buys running the audio-callback check here instead of waiting for the pull
+request, where it runs either way.
+
+```bash
+./tools/scripts/build/install-clang-20.sh
+```
+
+The testing suite finds whatever that installs on its own — it tries
+`clang++-21`, `clang++-20`, then `clang++`, and uses the first that actually
+accepts `-fsanitize=realtime`. Nothing needs configuring afterwards, and
+`clang` is left pointing wherever the distribution had it.
+
 Use `--jobs N` to limit the number of concurrent compiler processes. This is
 useful on laptops where an unrestricted parallel build can exhaust memory and
 cause VS Code or other applications to close. The same value can be supplied

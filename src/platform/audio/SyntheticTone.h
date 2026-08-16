@@ -64,9 +64,35 @@ class SyntheticTone
         // history a freshly opened capture has to draw.
         float driftHz = 0.55f;
 
-        // Relative levels of the second and third partials.
+        // The overtones. Six of them, falling away the way a voice's do, so the
+        // harmonic analyser has a spectrum to draw rather than a single bar and
+        // the spectrogram has a stack of stripes rather than one line.
+        //
+        // Two partials was enough to prove the tools were reading something. It
+        // was not enough to show what they can do: an analyser with two bars
+        // looks the same whether it is working well or barely.
         float secondPartial = 0.34f;
-        float thirdPartial = 0.16f;
+        float thirdPartial = 0.20f;
+        float fourthPartial = 0.13f;
+        float fifthPartial = 0.09f;
+        float sixthPartial = 0.06f;
+
+        // A formant: a band of the spectrum that is louder than the rest, and
+        // which moves. This is what a vowel is, and what makes the spectrogram
+        // show something travelling rather than a set of parallel lines that
+        // could be a still image.
+        //
+        // Slow -- a full sweep takes about eight seconds -- so a capture with a
+        // few seconds of history shows part of a movement rather than a blur,
+        // and two captures of the same surface do not look identical.
+        float formantHz = 0.12f;
+
+        // Which partial the band sits over at either end of its travel, and how
+        // sharply it falls away on each side.
+        float formantLowPartial = 1.5f;
+        float formantHighPartial = 5.0f;
+        float formantWidth = 1.6f;
+        float formantDepth = 0.9f;
 
         // How far the level swells, and how fast.
         //
@@ -99,6 +125,10 @@ class SyntheticTone
         phase_ = 0.0;
         secondPhase_ = 0.0;
         thirdPhase_ = 0.0;
+        fourthPhase_ = 0.0;
+        fifthPhase_ = 0.0;
+        sixthPhase_ = 0.0;
+        formantPhase_ = 0.0;
         vibratoPhase_ = 0.0;
         driftPhase_ = 0.0;
         tremoloPhase_ = 0.0;
@@ -130,6 +160,11 @@ class SyntheticTone
         const auto vibratoStep = shape_.vibratoHz * turnsPerSample;
         const auto driftStep = shape_.driftHz * turnsPerSample;
         const auto tremoloStep = shape_.tremoloHz * turnsPerSample;
+        const auto formantStep = shape_.formantHz * turnsPerSample;
+        const auto formantMid =
+            0.5 * static_cast<double>(shape_.formantLowPartial + shape_.formantHighPartial);
+        const auto formantSwing =
+            0.5 * static_cast<double>(shape_.formantHighPartial - shape_.formantLowPartial);
 
         // A cent is a ratio, so the sway is applied as one -- an even wobble
         // in pitch rather than in hertz, which is what a voice does.
@@ -140,9 +175,20 @@ class SyntheticTone
         // that was asked for. Without it, deepening the tremolo would quietly
         // push the signal towards clipping and light up an indicator that has
         // nothing wrong to report.
-        const auto scale =
-            1.0f / ((1.0f + shape_.tremoloDepth) *
-                    (1.0f + shape_.secondPartial + shape_.thirdPartial + shape_.noise));
+        //
+        // The sum of the partials, with no allowance for the moving band at all.
+        //
+        // Two corrections that pull opposite ways, and the sum wins: the band
+        // lifts a couple of partials at a time, but six partials never peak
+        // together -- they are at six different frequencies, so their maxima
+        // land at six different moments. Charging the full boost on top of the
+        // full sum was doubly pessimistic and quietly halved the signal, which
+        // showed up as a tone that no longer reached half the amplitude asked
+        // for.
+        const auto partialSum =
+            (1.0f + shape_.secondPartial + shape_.thirdPartial + shape_.fourthPartial +
+             shape_.fifthPartial + shape_.sixthPartial);
+        const auto scale = 1.0f / ((1.0f + shape_.tremoloDepth) * (partialSum + shape_.noise));
 
         for (std::size_t index = 0; index < count; ++index)
         {
@@ -154,14 +200,27 @@ class SyntheticTone
             const auto level =
                 amplitude * (1.0f + shape_.tremoloDepth * read(tremoloPhase_)) * scale;
 
-            const auto voiced = read(phase_) + shape_.secondPartial * read(secondPhase_) +
-                                shape_.thirdPartial * read(thirdPhase_);
+            // Where the loud band is right now, in partials.
+            const auto centre =
+                formantMid + formantSwing * static_cast<double>(read(formantPhase_));
+
+            const auto voiced =
+                emphasis(1.0, centre) * read(phase_) +
+                shape_.secondPartial * emphasis(2.0, centre) * read(secondPhase_) +
+                shape_.thirdPartial * emphasis(3.0, centre) * read(thirdPhase_) +
+                shape_.fourthPartial * emphasis(4.0, centre) * read(fourthPhase_) +
+                shape_.fifthPartial * emphasis(5.0, centre) * read(fifthPhase_) +
+                shape_.sixthPartial * emphasis(6.0, centre) * read(sixthPhase_);
 
             destination[index] = level * (voiced + shape_.noise * noise());
 
             advance(phase_, step);
             advance(secondPhase_, step * 2.0);
             advance(thirdPhase_, step * 3.0);
+            advance(fourthPhase_, step * 4.0);
+            advance(fifthPhase_, step * 5.0);
+            advance(sixthPhase_, step * 6.0);
+            advance(formantPhase_, formantStep);
             advance(vibratoPhase_, vibratoStep);
             advance(driftPhase_, driftStep);
             advance(tremoloPhase_, tremoloStep);
@@ -169,6 +228,16 @@ class SyntheticTone
     }
 
   private:
+    // How much this partial is lifted by the moving band. A bell around the
+    // centre rather than a filter: the shape only has to be plausible and
+    // smooth, and this costs two multiplies where a filter would cost state.
+    [[nodiscard]] float emphasis(double partial, double centre) const noexcept
+    {
+        const auto distance = (partial - centre) / static_cast<double>(shape_.formantWidth);
+
+        return 1.0f + shape_.formantDepth * static_cast<float>(1.0 / (1.0 + distance * distance));
+    }
+
     [[nodiscard]] float read(double phase) const noexcept
     {
         return table_[static_cast<std::size_t>(phase) % tableSize];
@@ -201,6 +270,10 @@ class SyntheticTone
     double phase_ = 0.0;
     double secondPhase_ = 0.0;
     double thirdPhase_ = 0.0;
+    double fourthPhase_ = 0.0;
+    double fifthPhase_ = 0.0;
+    double sixthPhase_ = 0.0;
+    double formantPhase_ = 0.0;
     double vibratoPhase_ = 0.0;
     double driftPhase_ = 0.0;
     double tremoloPhase_ = 0.0;
