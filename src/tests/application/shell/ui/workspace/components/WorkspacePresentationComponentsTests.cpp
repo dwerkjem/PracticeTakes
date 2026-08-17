@@ -117,3 +117,48 @@ TEST_CASE(
     // And not so small that "fits" stops meaning anything.
     CHECK(WorkspaceSplitPane::minimumHorizontalPaneSize >= 120);
 }
+
+// A tabbed group is a leaf to WorkspaceSplitPane -- its tabs share one pane --
+// but it is not *just* a pane: TabsAtTop spends part of whatever height it is
+// given on the tab bar before its content sees any of it. Treating it as a
+// plain leaf understated what it needs by exactly the bar's depth, the same
+// shape of bug #150 was: a component's real minimum quietly larger than the
+// flat constant standing in for it.
+TEST_CASE(
+    "a tabbed group needs its own bar's depth on top of the pane floor",
+    "[workspace][sizing][tabs]")
+{
+    juce::LookAndFeel_V4 lookAndFeel;
+    juce::Component firstTabContentA;
+    juce::Component secondTabContentA;
+    juce::TabbedComponent tabsA(juce::TabbedButtonBar::TabsAtTop);
+    tabsA.setTabBarDepth(38);
+    tabsA.addTab("First", juce::Colours::black, &firstTabContentA, false);
+    tabsA.addTab("Second", juce::Colours::black, &secondTabContentA, false);
+
+    // Stacked (vertical split): the tab bar competes with the content for
+    // height, so the group's minimum height must cover both.
+    juce::Component siblingA;
+    WorkspaceSplitPane stacked(tabsA, siblingA, true, 0.5, lookAndFeel);
+
+    CHECK(
+        stacked.minimumForChild(&tabsA) ==
+        WorkspaceSplitPane::minimumVerticalPaneSize + tabsA.getTabBarDepth());
+
+    // Side by side (horizontal split), a second group so it is not reparented
+    // out of `stacked` mid-test: TabsAtTop spends no width on the bar -- a tab
+    // bar that runs out of width shrinks its tabs and folds the rest behind an
+    // overflow button (JUCE's own TabbedButtonBar::resized), which is the
+    // graceful degradation #150 needed and a plain leaf never had. The group's
+    // minimum width is exactly the plain floor, not inflated by a depth spent
+    // on the other axis.
+    juce::Component firstTabContentB;
+    juce::TabbedComponent tabsB(juce::TabbedButtonBar::TabsAtTop);
+    tabsB.setTabBarDepth(38);
+    tabsB.addTab("First", juce::Colours::black, &firstTabContentB, false);
+
+    juce::Component siblingB;
+    WorkspaceSplitPane sideBySide(tabsB, siblingB, false, 0.5, lookAndFeel);
+
+    CHECK(sideBySide.minimumForChild(&tabsB) == WorkspaceSplitPane::minimumHorizontalPaneSize);
+}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../../application/theme/Theme.h"
+#include "../../../application/tools/CompactPresentation.h"
 #include "../../../application/tools/ToolComponent.h"
 #include "../../../platform/audio/AudioInputService.h"
 #include "HarmonicAnalyzer.h"
@@ -34,6 +35,8 @@ class HarmonicAnalyzerComponent final
     void timerCallback() override;
     void appendHistory(const HarmonicAnalyzer::Result& result);
     [[nodiscard]] juce::Colour harmonicColour(int harmonic) const;
+    [[nodiscard]] int visibleHarmonicCount(compact::Shape shape) const;
+    void drawCompactHarmonics(juce::Graphics& graphics, compact::Shape shape) const;
 
     AudioInputService& audioInputService;
     HarmonicAnalyzer analyzer;
