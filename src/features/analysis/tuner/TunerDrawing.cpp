@@ -793,9 +793,24 @@ void TunerComponent::resized()
     }
 
     bounds.removeFromTop(8);
-    const auto placeSliderRow = [&bounds](juce::Label& label, juce::Slider& slider)
+
+    // Beside its slider while there is room for both, above it once there is
+    // not. See stackedAdvancedRowsBelowWidth for why the inline form stops
+    // working -- the slider is left with a track too short to drag and a value
+    // box too narrow to read.
+    const auto stacked = advancedRowsStack();
+    const auto placeSliderRow = [&bounds, stacked](juce::Label& label, juce::Slider& slider)
     {
-        auto row = bounds.removeFromTop(30);
+        if (stacked)
+        {
+            auto row = bounds.removeFromTop(stackedAdvancedRowHeight);
+            label.setBounds(row.removeFromTop(stackedAdvancedLabelHeight));
+            slider.setBounds(row);
+
+            return;
+        }
+
+        auto row = bounds.removeFromTop(advancedRowHeight);
         label.setBounds(row.removeFromLeft(120));
         slider.setBounds(row);
     };
@@ -807,5 +822,9 @@ void TunerComponent::resized()
     placeSliderRow(durationLabel, durationSlider);
 
     bounds.removeFromTop(8);
-    clearGraphButton.setBounds(bounds.removeFromTop(36).removeFromRight(120));
+
+    // Full width when stacked: a 120px button hugging the right edge of a
+    // 200px pane reads as something that did not fit rather than as a choice.
+    auto buttonRow = bounds.removeFromTop(36);
+    clearGraphButton.setBounds(stacked ? buttonRow : buttonRow.removeFromRight(120));
 }

@@ -301,7 +301,11 @@ void TunerComponent::updateGraphControlAvailability()
 
 int TunerComponent::controlAreaHeight() const
 {
-    constexpr int expandedRowsHeight = 5 * 30 + 8 + 36;
+    // A stacked row is taller than an inline one, so the room reserved here has
+    // to be asked the same question resized() asks -- otherwise the display is
+    // sized for five short rows and five tall ones are drawn under it.
+    const auto rowHeight = advancedRowsStack() ? stackedAdvancedRowHeight : advancedRowHeight;
+    const auto expandedRowsHeight = 5 * rowHeight + 8 + 36;
 
     // Nothing but the advanced rows, and only while they are open. The mode
     // chooser is on the header line when the tuner is docked, and the tuner
@@ -309,6 +313,11 @@ int TunerComponent::controlAreaHeight() const
     // out, since it is the only place that knows.
     return (areAdvancedSettingsExpanded ? expandedRowsHeight + 8 : 0) +
            (isModeChooserAdopted() ? 0 : modeChooserHeight + 8);
+}
+
+bool TunerComponent::advancedRowsStack() const
+{
+    return getWidth() < stackedAdvancedRowsBelowWidth;
 }
 
 bool TunerComponent::isModeChooserAdopted() const

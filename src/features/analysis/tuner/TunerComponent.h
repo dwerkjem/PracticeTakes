@@ -71,6 +71,19 @@ class TunerComponent final
     static constexpr int statusGap = 6;
     static constexpr int modeChooserHeight = 32;
 
+    // An advanced-settings row is a label beside its slider until there is not
+    // room for both, and a label above its slider after that.
+    //
+    // The label takes a fixed 120 and the slider's value box another 82, so a
+    // pane narrower than this leaves the track a few dozen pixels: too little
+    // to drag meaningfully, and narrow enough that the value box itself
+    // truncates ("1 s...", "0.4..."), which loses the reading as well as the
+    // control. Stacked, the slider gets the pane's whole width.
+    static constexpr int stackedAdvancedRowsBelowWidth = 320;
+    static constexpr int advancedRowHeight = 30;
+    static constexpr int stackedAdvancedLabelHeight = 16;
+    static constexpr int stackedAdvancedRowHeight = stackedAdvancedLabelHeight + 28;
+
     // Audio capture ---------------------------------------------------------
     void audioInputAboutToStart(double sampleRate, int inputChannels) override;
     void audioInputStopped() override;
@@ -100,6 +113,10 @@ class TunerComponent final
     void applyThemeToControls();
     [[nodiscard]] int controlAreaHeight() const;
     [[nodiscard]] bool isModeChooserAdopted() const;
+    // Asked by resized() to lay the rows out and by controlAreaHeight() to
+    // reserve room for them; they must agree or the display is sized against
+    // one layout and the controls drawn in the other.
+    [[nodiscard]] bool advancedRowsStack() const;
     // Defined beside ModeChooser, which is only complete in TunerComponent.cpp.
     void placeModeChooser(juce::Rectangle<int> area);
     [[nodiscard]] juce::String statusText() const;
