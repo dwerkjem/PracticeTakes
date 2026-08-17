@@ -18,19 +18,28 @@ class MainComponent::ToolWindow final : public juce::DocumentWindow
         std::function<void()> dockHandler,
         std::function<void()> feedbackHandler,
         std::function<void()> closeHandler,
-        std::function<void()> focusHandler)
+        std::function<void()> focusHandler,
+        ToolComponent* tool = nullptr)
         : DocumentWindow(title, juce::Colours::darkgrey, juce::DocumentWindow::allButtons),
           contentComponent(&content), onDrag(dragHandler), dragHandle(std::move(dragHandler)),
           optionsButton(
               "Dock in workspace",
               std::move(dockHandler),
               std::move(feedbackHandler),
-              closeHandler),
+              closeHandler,
+              tool == nullptr ? std::function<std::vector<ToolComponent::MenuEntry>()>{} : [tool]
+                  { return tool->optionsMenuEntries(); }),
           onClose(std::move(closeHandler)), onFocus(std::move(focusHandler))
     {
         setUsingNativeTitleBar(true);
         setContentNonOwned(&content, true);
-        content.addMouseListener(this, false);
+        // Nested children too (DockedToolPanel does the same, for the same
+        // reason): a right-click landing on a slider or the mode chooser
+        // inside the content should reach the options menu exactly as one on
+        // the content's own background does. Left-click drag detection is
+        // unaffected -- canStartDrag already requires the event's origin to
+        // be the content component itself, regardless of this flag.
+        content.addMouseListener(this, true);
         juce::Component::addAndMakeVisible(dragHandle);
         juce::Component::addAndMakeVisible(optionsButton);
         setResizable(true, true);
@@ -90,6 +99,17 @@ class MainComponent::ToolWindow final : public juce::DocumentWindow
 
     void mouseDown(const juce::MouseEvent& event) override
     {
+        // Reaches the same menu the "..." button does, as DockedToolPanel's
+        // right-click already does -- so a tuner floating with its advanced
+        // settings or its display mode is one right-click away regardless of
+        // which of the two ways it is being shown.
+        if (event.mods.isPopupMenu())
+        {
+            optionsButton.showOptions();
+
+            return;
+        }
+
         dragStarted = false;
         dragArmed = canStartDrag(event);
     }
