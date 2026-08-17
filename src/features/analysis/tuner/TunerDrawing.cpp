@@ -51,6 +51,17 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
             minimumValue = centre - 3.0;
             maximumValue = centre + 3.0;
         }
+
+        // Snapped to whole semitones, for the same reason the compact graph
+        // does it: the gridlines below are drawn at integer semitones within
+        // this range, so ends that move by a fraction of one every frame --
+        // which a data-driven min/max does continuously, both as the trace
+        // moves and as points scroll off the end -- slide the entire grid
+        // under the trace. A held note then appears to drift against lines
+        // that are themselves drifting, and neither can be read against the
+        // other.
+        minimumValue = std::floor(minimumValue);
+        maximumValue = std::ceil(maximumValue);
     }
 
     const auto firstNote = static_cast<int>(std::ceil(minimumValue));
@@ -310,10 +321,22 @@ void TunerComponent::drawCompactGraph(
         }
     }
 
-    // A little air, so a reading at the extreme is not drawn on the edge.
-    const auto margin = (highest - lowest) * 0.06;
-    lowest -= margin;
-    highest += margin;
+    // Air in whole semitones, and the ends snapped to them.
+    //
+    // The gridlines are drawn at integer semitones *inside* this range, so
+    // where the ends fall decides where every line lands. A proportional
+    // margin over a min/max that changes every frame -- as the trace moves and
+    // as old points scroll off the end -- moves those ends by a fraction of a
+    // semitone continuously, which slides the whole grid underneath a trace
+    // that ought to be sitting still against it. The pitch stops being
+    // readable against a line that will not hold still, and a note held dead
+    // steady still appears to drift.
+    //
+    // Quantised, the range is exactly the same from frame to frame for as long
+    // as the trace stays inside it, and steps by one whole line when it does
+    // not -- so a line means one fixed pitch for as long as it is on screen.
+    lowest = std::floor(lowest) - 1.0;
+    highest = std::ceil(highest) + 1.0;
 
     const auto plot = bounds.reduced(6);
 
@@ -607,12 +630,17 @@ void TunerComponent::drawCompactDisplay(
 
     juce::ignoreUnused(palette);
 
-    // Nothing inside the box without a signal. The status line above it already
-    // says to play or sing, and repeating that in a 180px pane produced two
-    // short wrapped lines that read as a rendering fault rather than as a
-    // prompt. The meter is the exception: its whole compact form is a note
-    // placeholder, which is legible empty.
-    if (!hasSignal &&
+    // Nothing inside the box without a signal *and* without history -- the
+    // graph and the bar both already draw correctly with hasSignal false
+    // (drawCompactGraph plots straight from graphHistory; drawCompactBar just
+    // skips the marker dot), so this was blanking a pane that had a perfectly
+    // good trace to show, every ordinary pause between notes. Blank only
+    // belongs to a graph that has nothing in it yet -- the prompt this stood
+    // in for before repeating "play or sing" in a 180px pane produced two
+    // short wrapped lines that read as a rendering fault. The meter is the
+    // exception either way: its whole compact form is a note placeholder,
+    // which is legible empty.
+    if (!hasSignal && !hasGraphHistory() &&
         static_cast<DisplayMode>(displayModeBox.getSelectedId()) != DisplayMode::meter)
     {
         return;

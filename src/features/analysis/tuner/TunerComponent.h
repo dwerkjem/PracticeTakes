@@ -104,6 +104,13 @@ class TunerComponent final
     void placeModeChooser(juce::Rectangle<int> area);
     [[nodiscard]] juce::String statusText() const;
 
+    // Whether the graph has ever shown a real reading this session -- as
+    // opposed to `hasSignal`, which also goes false during an ordinary pause
+    // between notes. graphHistory carries NaN gaps for silence (the graph
+    // draws a break rather than a line across them), so this is "any finite
+    // value", not "any value at all".
+    [[nodiscard]] bool hasGraphHistory() const;
+
     // Drawing ---------------------------------------------------------------
     void drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
