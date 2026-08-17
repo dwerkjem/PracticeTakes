@@ -300,25 +300,47 @@ void TunerComponent::drawCompactGraph(
 
     // Two semitones when there is almost no room, up to six when there is.
     const auto span = 2.0 + 4.0 * static_cast<double>(detail);
-    const auto centreNote = hasLockedMidiNote ? static_cast<double>(lockedMidiNote) : 69.0;
 
-    // Widened to hold the trace, never merely centred on the current note.
+    // The trace decides the range whenever there is a trace. The locked note
+    // is only a fallback, for a graph with nothing in it yet.
     //
-    // A fixed window around the locked note is what the compact graph had, and
-    // any reading outside it mapped outside the plot: the trace left the panel
-    // and drew over the tool's own border. The full graph has always taken its
-    // range from the data; this does the same, with `span` as a floor so a
-    // dead-steady note does not get an axis zoomed to its own jitter.
-    auto lowest = centreNote - span * 0.5;
-    auto highest = centreNote + span * 0.5;
+    // These used to be unioned -- a window around the locked note, widened by
+    // the data -- which tied the axis to a value that disappears. Losing the
+    // lock during a pause dropped `centreNote` to its A4 default while the
+    // history still held, say, an E3 an octave and a half below, so the range
+    // stretched to cover both and the graph went from eight semitones to
+    // twenty at the moment the singing stopped. Nothing about the trace had
+    // changed; only its anchor had gone.
+    auto hasData = false;
+    auto lowest = 0.0;
+    auto highest = 0.0;
 
     for (const auto value : graphHistory)
     {
-        if (std::isfinite(value))
+        if (!std::isfinite(value))
         {
-            lowest = std::min(lowest, value);
-            highest = std::max(highest, value);
+            continue;
         }
+
+        lowest = hasData ? std::min(lowest, value) : value;
+        highest = hasData ? std::max(highest, value) : value;
+        hasData = true;
+    }
+
+    if (!hasData)
+    {
+        const auto centreNote = hasLockedMidiNote ? static_cast<double>(lockedMidiNote) : 69.0;
+        lowest = centreNote - span * 0.5;
+        highest = centreNote + span * 0.5;
+    }
+    else if (highest - lowest < span)
+    {
+        // `span` as a floor, so a dead-steady note does not get an axis zoomed
+        // to its own jitter -- centred on the trace, not on the locked note,
+        // so this cannot move the window either.
+        const auto centre = (lowest + highest) * 0.5;
+        lowest = centre - span * 0.5;
+        highest = centre + span * 0.5;
     }
 
     // Air in whole semitones, and the ends snapped to them.

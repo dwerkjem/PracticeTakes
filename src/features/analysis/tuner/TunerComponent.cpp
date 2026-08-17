@@ -4,9 +4,6 @@
 
 #include "application/theme/AppLookAndFeel.h"
 
-#include <algorithm>
-#include <cmath>
-
 // The display-mode label and chooser as one component, so a docked panel adopts
 // the pair with a single reparent and lays out one thing.
 class TunerComponent::ModeChooser final : public juce::Component
