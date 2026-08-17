@@ -55,8 +55,12 @@ class SpectrogramComponent final
 
     // Drawing and appearance ------------------------------------------------
     [[nodiscard]] float yForFrequency(double frequency) const;
+    [[nodiscard]] float xForRotatedFrequency(double frequency) const;
     [[nodiscard]] juce::String frequencyLabel(double frequency) const;
-    void drawFrequencyGrid(juce::Graphics& graphics) const;
+    void drawFrequencyGrid(
+        juce::Graphics& graphics,
+        compact::Shape shape,
+        juce::Colour accentColour) const;
     void drawRotatedSpectrogram(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     [[nodiscard]] juce::Colour backgroundColour() const;
     [[nodiscard]] juce::Colour panelColour() const;
@@ -75,7 +79,14 @@ class SpectrogramComponent final
 
     std::atomic<double> currentSampleRate{44100.0};
     Theme currentTheme = Theme::light;
+
+    // Set for a state with no signal behind it at all -- disconnected, opening,
+    // muted -- where the plot has nothing to show and the message replaces it.
+    // Clipping is deliberately not one of these: there is a real, strong signal
+    // to see, just a distorted one, and hiding the plot behind a sentence would
+    // throw away the one thing worth looking at during a clip.
     juce::String audioErrorMessage;
+    bool clipping = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SpectrogramComponent)
 };
