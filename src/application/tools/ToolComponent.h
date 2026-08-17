@@ -92,6 +92,11 @@ class ToolComponent : public juce::Component
     {
         juce::String label;
         std::function<void()> action;
+
+        // For a choice among several entries -- which display mode is active,
+        // say -- so a reader of the menu can tell which one that is without
+        // having to already know before opening it.
+        bool ticked = false;
     };
 
     [[nodiscard]] virtual std::vector<MenuEntry> optionsMenuEntries()

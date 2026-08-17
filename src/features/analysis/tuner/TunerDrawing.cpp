@@ -51,6 +51,17 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
             minimumValue = centre - 3.0;
             maximumValue = centre + 3.0;
         }
+
+        // Snapped to whole semitones, for the same reason the compact graph
+        // does it: the gridlines below are drawn at integer semitones within
+        // this range, so ends that move by a fraction of one every frame --
+        // which a data-driven min/max does continuously, both as the trace
+        // moves and as points scroll off the end -- slide the entire grid
+        // under the trace. A held note then appears to drift against lines
+        // that are themselves drifting, and neither can be read against the
+        // other.
+        minimumValue = std::floor(minimumValue);
+        maximumValue = std::ceil(maximumValue);
     }
 
     const auto firstNote = static_cast<int>(std::ceil(minimumValue));
@@ -289,31 +300,65 @@ void TunerComponent::drawCompactGraph(
 
     // Two semitones when there is almost no room, up to six when there is.
     const auto span = 2.0 + 4.0 * static_cast<double>(detail);
-    const auto centreNote = hasLockedMidiNote ? static_cast<double>(lockedMidiNote) : 69.0;
 
-    // Widened to hold the trace, never merely centred on the current note.
+    // The trace decides the range whenever there is a trace. The locked note
+    // is only a fallback, for a graph with nothing in it yet.
     //
-    // A fixed window around the locked note is what the compact graph had, and
-    // any reading outside it mapped outside the plot: the trace left the panel
-    // and drew over the tool's own border. The full graph has always taken its
-    // range from the data; this does the same, with `span` as a floor so a
-    // dead-steady note does not get an axis zoomed to its own jitter.
-    auto lowest = centreNote - span * 0.5;
-    auto highest = centreNote + span * 0.5;
+    // These used to be unioned -- a window around the locked note, widened by
+    // the data -- which tied the axis to a value that disappears. Losing the
+    // lock during a pause dropped `centreNote` to its A4 default while the
+    // history still held, say, an E3 an octave and a half below, so the range
+    // stretched to cover both and the graph went from eight semitones to
+    // twenty at the moment the singing stopped. Nothing about the trace had
+    // changed; only its anchor had gone.
+    auto hasData = false;
+    auto lowest = 0.0;
+    auto highest = 0.0;
 
     for (const auto value : graphHistory)
     {
-        if (std::isfinite(value))
+        if (!std::isfinite(value))
         {
-            lowest = std::min(lowest, value);
-            highest = std::max(highest, value);
+            continue;
         }
+
+        lowest = hasData ? std::min(lowest, value) : value;
+        highest = hasData ? std::max(highest, value) : value;
+        hasData = true;
     }
 
-    // A little air, so a reading at the extreme is not drawn on the edge.
-    const auto margin = (highest - lowest) * 0.06;
-    lowest -= margin;
-    highest += margin;
+    if (!hasData)
+    {
+        const auto centreNote = hasLockedMidiNote ? static_cast<double>(lockedMidiNote) : 69.0;
+        lowest = centreNote - span * 0.5;
+        highest = centreNote + span * 0.5;
+    }
+    else if (highest - lowest < span)
+    {
+        // `span` as a floor, so a dead-steady note does not get an axis zoomed
+        // to its own jitter -- centred on the trace, not on the locked note,
+        // so this cannot move the window either.
+        const auto centre = (lowest + highest) * 0.5;
+        lowest = centre - span * 0.5;
+        highest = centre + span * 0.5;
+    }
+
+    // Air in whole semitones, and the ends snapped to them.
+    //
+    // The gridlines are drawn at integer semitones *inside* this range, so
+    // where the ends fall decides where every line lands. A proportional
+    // margin over a min/max that changes every frame -- as the trace moves and
+    // as old points scroll off the end -- moves those ends by a fraction of a
+    // semitone continuously, which slides the whole grid underneath a trace
+    // that ought to be sitting still against it. The pitch stops being
+    // readable against a line that will not hold still, and a note held dead
+    // steady still appears to drift.
+    //
+    // Quantised, the range is exactly the same from frame to frame for as long
+    // as the trace stays inside it, and steps by one whole line when it does
+    // not -- so a line means one fixed pitch for as long as it is on screen.
+    lowest = std::floor(lowest) - 1.0;
+    highest = std::ceil(highest) + 1.0;
 
     const auto plot = bounds.reduced(6);
 
@@ -607,12 +652,17 @@ void TunerComponent::drawCompactDisplay(
 
     juce::ignoreUnused(palette);
 
-    // Nothing inside the box without a signal. The status line above it already
-    // says to play or sing, and repeating that in a 180px pane produced two
-    // short wrapped lines that read as a rendering fault rather than as a
-    // prompt. The meter is the exception: its whole compact form is a note
-    // placeholder, which is legible empty.
-    if (!hasSignal &&
+    // Nothing inside the box without a signal *and* without history -- the
+    // graph and the bar both already draw correctly with hasSignal false
+    // (drawCompactGraph plots straight from graphHistory; drawCompactBar just
+    // skips the marker dot), so this was blanking a pane that had a perfectly
+    // good trace to show, every ordinary pause between notes. Blank only
+    // belongs to a graph that has nothing in it yet -- the prompt this stood
+    // in for before repeating "play or sing" in a 180px pane produced two
+    // short wrapped lines that read as a rendering fault. The meter is the
+    // exception either way: its whole compact form is a note placeholder,
+    // which is legible empty.
+    if (!hasSignal && !hasGraphHistory() &&
         static_cast<DisplayMode>(displayModeBox.getSelectedId()) != DisplayMode::meter)
     {
         return;
@@ -743,9 +793,24 @@ void TunerComponent::resized()
     }
 
     bounds.removeFromTop(8);
-    const auto placeSliderRow = [&bounds](juce::Label& label, juce::Slider& slider)
+
+    // Beside its slider while there is room for both, above it once there is
+    // not. See stackedAdvancedRowsBelowWidth for why the inline form stops
+    // working -- the slider is left with a track too short to drag and a value
+    // box too narrow to read.
+    const auto stacked = advancedRowsStack();
+    const auto placeSliderRow = [&bounds, stacked](juce::Label& label, juce::Slider& slider)
     {
-        auto row = bounds.removeFromTop(30);
+        if (stacked)
+        {
+            auto row = bounds.removeFromTop(stackedAdvancedRowHeight);
+            label.setBounds(row.removeFromTop(stackedAdvancedLabelHeight));
+            slider.setBounds(row);
+
+            return;
+        }
+
+        auto row = bounds.removeFromTop(advancedRowHeight);
         label.setBounds(row.removeFromLeft(120));
         slider.setBounds(row);
     };
@@ -757,5 +822,9 @@ void TunerComponent::resized()
     placeSliderRow(durationLabel, durationSlider);
 
     bounds.removeFromTop(8);
-    clearGraphButton.setBounds(bounds.removeFromTop(36).removeFromRight(120));
+
+    // Full width when stacked: a 120px button hugging the right edge of a
+    // 200px pane reads as something that did not fit rather than as a choice.
+    auto buttonRow = bounds.removeFromTop(36);
+    clearGraphButton.setBounds(stacked ? buttonRow : buttonRow.removeFromRight(120));
 }
