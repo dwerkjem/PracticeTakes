@@ -4,6 +4,8 @@
 
 #include "application/theme/AppLookAndFeel.h"
 
+#include <array>
+
 // The display-mode label and chooser as one component, so a docked panel adopts
 // the pair with a single reparent and lays out one thing.
 class TunerComponent::ModeChooser final : public juce::Component
@@ -41,8 +43,10 @@ class TunerComponent::ModeChooser final : public juce::Component
 // of a note -- they held separate identical copies before.
 
 //==============================================================================
-TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService)
-    : audioInputService(sharedAudioInputService)
+TunerComponent::TunerComponent(
+    AudioInputService& sharedAudioInputService,
+    SharedPitchAnalysis& sharedPitchAnalysis)
+    : audioInputService(sharedAudioInputService), pitchAnalysis(sharedPitchAnalysis)
 {
     setOpaque(true);
 
@@ -418,10 +422,8 @@ bool TunerComponent::hasGraphHistory() const
 
 void TunerComponent::audioInputAboutToStart(double sampleRate, int inputChannels)
 {
-    juce::ignoreUnused(inputChannels);
-    currentSampleRate.store(sampleRate);
+    juce::ignoreUnused(sampleRate, inputChannels);
     audioInputService.discardPendingSamples(this);
-    analysisBuffer.fill(0.0f);
 }
 
 void TunerComponent::audioInputStopped()
@@ -456,49 +458,18 @@ void TunerComponent::audioInputStateChanged(AudioInputService::InputState state)
     repaint();
 }
 
-bool TunerComponent::drainAudioFifo()
-{
-    const auto availableSamples =
-        std::min(audioInputService.availableSamples(this), drainBuffer.size());
-    if (availableSamples == 0)
-    {
-        return false;
-    }
-
-    const auto samplesRead =
-        audioInputService.readSamples(this, drainBuffer.data(), availableSamples);
-    if (samplesRead == 0)
-    {
-        return false;
-    }
-
-    if (samplesRead >= analysisWindowSize)
-    {
-        // Keep only the newest complete analysis window.
-        std::copy_n(
-            drainBuffer.begin() + static_cast<std::ptrdiff_t>(samplesRead - analysisWindowSize),
-            analysisWindowSize, analysisBuffer.begin());
-        return true;
-    }
-
-    // Shift older samples left and append the newly captured samples.
-    const auto sampleCount = static_cast<std::ptrdiff_t>(samplesRead);
-    std::move(analysisBuffer.begin() + sampleCount, analysisBuffer.end(), analysisBuffer.begin());
-    std::copy_n(drainBuffer.begin(), sampleCount, analysisBuffer.end() - sampleCount);
-    return true;
-}
-
 //==============================================================================
 // Pitch analysis
 
 void TunerComponent::timerCallback()
 {
-    if (!drainAudioFifo())
-    {
-        return;
-    }
+    // No longer this tool's own FIFO to drain: SharedPitchAnalysis is the one
+    // registered consumer for pitch detection. Discarding here keeps this
+    // tool's otherwise-idle consumer slot from silently overflowing and
+    // inflating AudioInputService's dropped-sample diagnostics.
+    audioInputService.discardPendingSamples(this);
 
-    const auto analysis = pitchDetector.detect(analysisBuffer, currentSampleRate.load());
+    const auto analysis = pitchAnalysis.latestResult();
     inputLevel = analysis.inputLevel;
 
     const auto update =

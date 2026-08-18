@@ -3,11 +3,13 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "features/analysis/harmonics/HarmonicAnalyzer.h"
+#include "platform/audio/PitchDetector.h"
 
 #include <array>
 #include <cmath>
 #include <numbers>
 #include <random>
+#include <span>
 
 namespace
 {
@@ -30,12 +32,23 @@ harmonicSignal(const std::array<float, 4>& amplitudes)
     }
     return samples;
 }
+
+// HarmonicAnalyzer::analyze() takes an already-detected pitch rather than
+// detecting it itself (that now happens once, shared, in SharedPitchAnalysis);
+// tests stand in for that shared step with their own detector instance.
+[[nodiscard]] PitchDetector::Result
+detectPitch(std::span<const float, HarmonicAnalyzer::windowSize> samples, double rate)
+{
+    PitchDetector detector;
+    return detector.detect(samples, rate);
+}
 } // namespace
 
 TEST_CASE("harmonics are measured relative to the strongest partial", "[harmonics]")
 {
     HarmonicAnalyzer analyzer;
-    const auto result = analyzer.analyze(harmonicSignal({0.8f, 0.4f, 0.2f, 0.1f}), sampleRate);
+    const auto samples = harmonicSignal({0.8f, 0.4f, 0.2f, 0.1f});
+    const auto result = analyzer.analyze(samples, sampleRate, detectPitch(samples, sampleRate));
 
     REQUIRE(result.isPitched);
     CHECK(result.fundamentalHz == Catch::Approx(fundamental).margin(0.5));
@@ -47,7 +60,8 @@ TEST_CASE("harmonics are measured relative to the strongest partial", "[harmonic
 TEST_CASE("weak fundamentals retain a useful harmonic profile", "[harmonics]")
 {
     HarmonicAnalyzer analyzer;
-    const auto result = analyzer.analyze(harmonicSignal({0.05f, 0.8f, 0.4f, 0.2f}), sampleRate);
+    const auto samples = harmonicSignal({0.05f, 0.8f, 0.4f, 0.2f});
+    const auto result = analyzer.analyze(samples, sampleRate, detectPitch(samples, sampleRate));
 
     REQUIRE(result.isPitched);
     CHECK(result.fundamentalHz == Catch::Approx(fundamental).margin(0.5));
@@ -58,8 +72,12 @@ TEST_CASE("weak fundamentals retain a useful harmonic profile", "[harmonics]")
 TEST_CASE("spectral centroid tracks brighter harmonic balances", "[harmonics]")
 {
     HarmonicAnalyzer analyzer;
-    const auto dark = analyzer.analyze(harmonicSignal({0.8f, 0.3f, 0.1f, 0.03f}), sampleRate);
-    const auto bright = analyzer.analyze(harmonicSignal({0.1f, 0.2f, 0.5f, 0.8f}), sampleRate);
+    const auto darkSamples = harmonicSignal({0.8f, 0.3f, 0.1f, 0.03f});
+    const auto brightSamples = harmonicSignal({0.1f, 0.2f, 0.5f, 0.8f});
+    const auto dark =
+        analyzer.analyze(darkSamples, sampleRate, detectPitch(darkSamples, sampleRate));
+    const auto bright =
+        analyzer.analyze(brightSamples, sampleRate, detectPitch(brightSamples, sampleRate));
 
     CHECK(bright.spectralCentroidHz > dark.spectralCentroidHz);
 }
@@ -73,7 +91,7 @@ TEST_CASE("noise is marked as uncertain", "[harmonics]")
         sample = distribution(generator);
 
     HarmonicAnalyzer analyzer;
-    const auto result = analyzer.analyze(noise, sampleRate);
+    const auto result = analyzer.analyze(noise, sampleRate, detectPitch(noise, sampleRate));
 
     CHECK_FALSE(result.isPitched);
     CHECK(result.confidence < 0.35f);
@@ -97,13 +115,20 @@ TEST_CASE("harmonic analyzer per-frame throughput", "[.benchmark][harmonics][per
     HarmonicAnalyzer analyzer48k;
     HarmonicAnalyzer analyzer441k;
 
+    // Pitch detection is no longer part of what analyze() does -- it is
+    // computed once, upstream, by SharedPitchAnalysis -- so it is computed
+    // once here too rather than inside the benchmarked closure, to keep this
+    // benchmark measuring the branch it names.
+    const auto pitch48k = detectPitch(signal48k, sr48k);
+    const auto pitch441k = detectPitch(signal441k, sr441k);
+
     BENCHMARK("analyze @ 48 kHz")
     {
-        return analyzer48k.analyze(signal48k, sr48k);
+        return analyzer48k.analyze(signal48k, sr48k, pitch48k);
     };
 
     BENCHMARK("analyze @ 44.1 kHz")
     {
-        return analyzer441k.analyze(signal441k, sr441k);
+        return analyzer441k.analyze(signal441k, sr441k, pitch441k);
     };
 }

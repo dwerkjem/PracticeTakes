@@ -286,8 +286,6 @@ target_sources(PracticeTakes
         src/features/analysis/harmonics/HarmonicAnalyzer.h
         src/features/analysis/harmonics/HarmonicAnalyzerComponent.cpp
         src/features/analysis/harmonics/HarmonicAnalyzerComponent.h
-        src/features/analysis/tuner/PitchDetector.cpp
-        src/features/analysis/tuner/PitchDetector.h
         src/features/analysis/tuner/PitchTracker.cpp
         src/features/analysis/tuner/PitchTracker.h
         src/features/analysis/tuner/TunerComponent.cpp
@@ -304,6 +302,10 @@ target_sources(PracticeTakes
         src/platform/audio/AudioInputService.h
         src/platform/audio/AudioRecoveryPolicy.h
         src/platform/audio/AudioSampleFifo.h
+        src/platform/audio/PitchDetector.cpp
+        src/platform/audio/PitchDetector.h
+        src/platform/audio/SharedPitchAnalysis.cpp
+        src/platform/audio/SharedPitchAnalysis.h
         src/platform/audio/SyntheticTone.h
         src/platform/score/Diagnostic.h
         src/platform/score/LyricSyllable.h
@@ -413,7 +415,6 @@ if(BUILD_TESTING)
         src/tests/application/testcontrol/TestControlSessionTests.cpp
         src/tests/application/theme/ThemeContrastTests.cpp
         src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
-        src/tests/features/analysis/tuner/PitchDetectorTests.cpp
         src/tests/features/analysis/tuner/PitchTrackerTests.cpp
         src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
         src/tests/features/performance/ApplicationLaunchTimerTests.cpp
@@ -422,6 +423,8 @@ if(BUILD_TESTING)
         src/tests/platform/audio/AudioSampleFifoLoadTests.cpp
         src/tests/platform/audio/AudioSampleFifoTests.cpp
         src/tests/platform/audio/SyntheticToneTests.cpp
+        src/tests/platform/audio/PitchDetectorTests.cpp
+        src/tests/platform/audio/SharedPitchAnalysisTests.cpp
         src/tests/platform/score/MusicalTimeTests.cpp
         src/tests/platform/score/PitchTests.cpp
         src/tests/platform/score/ScoreInvariantsTests.cpp
@@ -447,9 +450,10 @@ if(BUILD_TESTING)
         src/application/theme/AppLookAndFeel.cpp
         src/application/theme/Theme.cpp
         src/features/analysis/harmonics/HarmonicAnalyzer.cpp
-        src/features/analysis/tuner/PitchDetector.cpp
         src/features/analysis/tuner/PitchTracker.cpp
         src/features/performance/ApplicationLaunchTimer.cpp
+        src/platform/audio/PitchDetector.cpp
+        src/platform/audio/SharedPitchAnalysis.cpp
         src/platform/score/ScoreBuilder.cpp
         src/platform/score/ScoreInvariants.cpp
         src/platform/score/TempoMap.cpp

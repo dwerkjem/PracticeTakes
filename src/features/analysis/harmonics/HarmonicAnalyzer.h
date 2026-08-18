@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../tuner/PitchDetector.h"
+#include "../../../platform/audio/PitchDetector.h"
 
 #include <juce_dsp/juce_dsp.h>
 
@@ -24,13 +24,15 @@ class HarmonicAnalyzer final
         std::array<float, harmonicCount> relativeAmplitudes{};
     };
 
-    [[nodiscard]] Result analyze(std::span<const float, windowSize> samples, double sampleRate);
+    [[nodiscard]] Result analyze(
+        std::span<const float, windowSize> samples,
+        double sampleRate,
+        PitchDetector::Result pitch);
 
   private:
     static constexpr int fftOrder = 12;
     static constexpr int fftSize = 1 << fftOrder;
 
-    PitchDetector pitchDetector;
     juce::dsp::FFT fft{fftOrder};
     juce::dsp::WindowingFunction<float> window{fftSize, juce::dsp::WindowingFunction<float>::hann};
     std::array<float, fftSize * 2> fftData{};

@@ -130,7 +130,7 @@ void MainComponent::presentTool(
     {
         static_cast<void>(entry->state.present(presentation));
 
-        const ToolServices services{audioInputService, currentTheme};
+        const ToolServices services{audioInputService, pitchAnalysis, currentTheme};
         entry->component = builtInToolRegistry().create(instance.toolId(), services);
         if (entry->component == nullptr)
         {
