@@ -7,11 +7,9 @@
 #include "../../../application/tools/CompactPresentation.h"
 #include "../../../application/tools/ToolComponent.h"
 #include "../../../platform/audio/AudioInputService.h"
-#include "PitchDetector.h"
+#include "../../../platform/audio/SharedPitchAnalysis.h"
 #include "PitchTracker.h"
 
-#include <array>
-#include <atomic>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -24,7 +22,9 @@ class TunerComponent final
       private juce::Timer
 {
   public:
-    explicit TunerComponent(AudioInputService& sharedAudioInputService);
+    TunerComponent(
+        AudioInputService& sharedAudioInputService,
+        SharedPitchAnalysis& sharedPitchAnalysis);
     ~TunerComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -58,8 +58,6 @@ class TunerComponent final
         meter
     };
 
-    static constexpr int fifoCapacity = 65536;
-    static constexpr int analysisWindowSize = PitchDetector::windowSize;
     static constexpr int maximumGraphPoints = 1200;
     static constexpr int analysisRefreshRateHz = 20;
 
@@ -88,7 +86,6 @@ class TunerComponent final
     void audioInputAboutToStart(double sampleRate, int inputChannels) override;
     void audioInputStopped() override;
     void audioInputStateChanged(AudioInputService::InputState state) override;
-    [[nodiscard]] bool drainAudioFifo();
 
     // Pitch analysis --------------------------------------------------------
     // The tracking itself lives in PitchTracker, which is JUCE-free and tested
@@ -152,6 +149,7 @@ class TunerComponent final
     void drawSelectedDisplay(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
 
     AudioInputService& audioInputService;
+    SharedPitchAnalysis& pitchAnalysis;
 
     juce::Label displayModeLabel;
     juce::ComboBox displayModeBox;
@@ -173,15 +171,9 @@ class TunerComponent final
     juce::Slider durationSlider;
     juce::TextButton clearGraphButton{"Clear graph"};
 
-    // The shared service fills this tool's bounded FIFO. The timer drains it
-    // into preallocated storage before analysis.
-    std::array<float, fifoCapacity> drainBuffer{};
-    std::array<float, analysisWindowSize> analysisBuffer{};
-    PitchDetector pitchDetector;
     PitchTracker pitchTracker;
 
     std::vector<double> graphHistory;
-    std::atomic<double> currentSampleRate{44100.0};
 
     // Mirrors of the tracker's latest update. They are members because the
     // drawing code in TunerDrawing.cpp reads them directly; nothing here

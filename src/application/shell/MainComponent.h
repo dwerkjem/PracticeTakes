@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include "../../platform/audio/AudioInputService.h"
+#include "../../platform/audio/SharedPitchAnalysis.h"
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
 #include "../theme/AppLookAndFeel.h"
@@ -245,6 +246,12 @@ class MainComponent final
 
     // One audio device manager is shared by every open analysis tool.
     AudioInputService audioInputService;
+    // The one place pitch detection runs, shared by the tuner and the
+    // harmonic analyzer instead of each duplicating it. Declared after
+    // audioInputService, which its constructor registers a listener on -- see
+    // the note on liveTools below for why declaration order here matters at
+    // all.
+    SharedPitchAnalysis pitchAnalysis{audioInputService};
     juce::ApplicationProperties applicationProperties;
     // Declared here, before liveTools, on purpose -- see the note on liveTools
     // below. AppLookAndFeel differs from LookAndFeel_V4 only in carrying the
@@ -259,11 +266,12 @@ class MainComponent final
 
     // Every tool instance the session knows about, live or closed.
     //
-    // Declared after audioInputService and appLookAndFeel on purpose: members
-    // are destroyed in reverse declaration order, so this dies first and every
-    // tool is torn down before the services it borrowed. That ordering is the
-    // whole of how "a tool cannot outlive its shared services" is enforced --
-    // there is no runtime check, so do not move this declaration above them.
+    // Declared after audioInputService, pitchAnalysis, and appLookAndFeel on
+    // purpose: members are destroyed in reverse declaration order, so this
+    // dies first and every tool is torn down before the services it
+    // borrowed. That ordering is the whole of how "a tool cannot outlive its
+    // shared services" is enforced -- there is no runtime check, so do not
+    // move this declaration above them.
     std::vector<LiveTool> liveTools;
 
     // Source of handle values for LiveTool::handle. Monotonic and never reset,

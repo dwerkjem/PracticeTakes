@@ -4,6 +4,7 @@
 #include "../../../application/tools/CompactPresentation.h"
 #include "../../../application/tools/ToolComponent.h"
 #include "../../../platform/audio/AudioInputService.h"
+#include "../../../platform/audio/SharedPitchAnalysis.h"
 #include "HarmonicAnalyzer.h"
 
 #include <JuceHeader.h>
@@ -17,7 +18,9 @@ class HarmonicAnalyzerComponent final
       private juce::Timer
 {
   public:
-    explicit HarmonicAnalyzerComponent(AudioInputService& sharedAudioInputService);
+    HarmonicAnalyzerComponent(
+        AudioInputService& sharedAudioInputService,
+        SharedPitchAnalysis& sharedPitchAnalysis);
     ~HarmonicAnalyzerComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -39,6 +42,7 @@ class HarmonicAnalyzerComponent final
     void drawCompactHarmonics(juce::Graphics& graphics, compact::Shape shape) const;
 
     AudioInputService& audioInputService;
+    SharedPitchAnalysis& pitchAnalysis;
     HarmonicAnalyzer analyzer;
     std::array<float, HarmonicAnalyzer::windowSize> samples{};
     std::array<std::array<float, HarmonicAnalyzer::harmonicCount>, historyCapacity>

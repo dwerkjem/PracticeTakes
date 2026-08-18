@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <cmath>
 
-HarmonicAnalyzerComponent::HarmonicAnalyzerComponent(AudioInputService& sharedAudioInputService)
-    : audioInputService(sharedAudioInputService)
+HarmonicAnalyzerComponent::HarmonicAnalyzerComponent(
+    AudioInputService& sharedAudioInputService,
+    SharedPitchAnalysis& sharedPitchAnalysis)
+    : audioInputService(sharedAudioInputService), pitchAnalysis(sharedPitchAnalysis)
 {
     setOpaque(true);
     audioInputService.addListener(this);
@@ -79,7 +81,8 @@ void HarmonicAnalyzerComponent::timerCallback()
         {
             break;
         }
-        currentResult = analyzer.analyze(samples, currentSampleRate.load());
+        currentResult =
+            analyzer.analyze(samples, currentSampleRate.load(), pitchAnalysis.latestResult());
         appendHistory(currentResult);
         analyzedFrame = true;
     }

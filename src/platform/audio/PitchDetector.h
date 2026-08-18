@@ -6,9 +6,11 @@
 #include <complex>
 #include <span>
 
-// Computes the same normalized autocorrelation used by the tuner in O(N log N)
-// time. Scratch storage is owned by the detector so each analysis frame is
-// allocation-free.
+// Normalized autocorrelation pitch detection in O(N log N) time, via FFT.
+// Scratch storage is owned by the detector so each analysis frame is
+// allocation-free. Stateless across calls otherwise: one instance is shared
+// by SharedPitchAnalysis on behalf of every consumer rather than each owning
+// its own.
 class PitchDetector final
 {
   public:
