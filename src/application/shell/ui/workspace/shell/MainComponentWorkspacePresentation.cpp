@@ -130,7 +130,7 @@ void MainComponent::presentTool(
     {
         static_cast<void>(entry->state.present(presentation));
 
-        const ToolServices services{audioInputService, currentTheme};
+        const ToolServices services{audioInputService, pitchAnalysis, currentTheme};
         entry->component = builtInToolRegistry().create(instance.toolId(), services);
         if (entry->component == nullptr)
         {
@@ -245,7 +245,7 @@ void MainComponent::constructToolPresentation(
                 : juce::Point<int>{900, 700};
         entry->window = std::make_unique<ToolWindow>(
             toolName(instance), *entry->component, preferredSize, dragHandler, dockHandler,
-            feedbackHandler, closeHandler, focusHandler);
+            feedbackHandler, closeHandler, focusHandler, entry->component.get());
         if (!entry->savedBounds.isEmpty())
         {
             entry->window->setBounds(entry->savedBounds);

@@ -7,11 +7,9 @@
 #include "../../../application/tools/CompactPresentation.h"
 #include "../../../application/tools/ToolComponent.h"
 #include "../../../platform/audio/AudioInputService.h"
-#include "PitchDetector.h"
+#include "../../../platform/audio/SharedPitchAnalysis.h"
 #include "PitchTracker.h"
 
-#include <array>
-#include <atomic>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -24,7 +22,9 @@ class TunerComponent final
       private juce::Timer
 {
   public:
-    explicit TunerComponent(AudioInputService& sharedAudioInputService);
+    TunerComponent(
+        AudioInputService& sharedAudioInputService,
+        SharedPitchAnalysis& sharedPitchAnalysis);
     ~TunerComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -58,8 +58,6 @@ class TunerComponent final
         meter
     };
 
-    static constexpr int fifoCapacity = 65536;
-    static constexpr int analysisWindowSize = PitchDetector::windowSize;
     static constexpr int maximumGraphPoints = 1200;
     static constexpr int analysisRefreshRateHz = 20;
 
@@ -71,11 +69,23 @@ class TunerComponent final
     static constexpr int statusGap = 6;
     static constexpr int modeChooserHeight = 32;
 
+    // An advanced-settings row is a label beside its slider until there is not
+    // room for both, and a label above its slider after that.
+    //
+    // The label takes a fixed 120 and the slider's value box another 82, so a
+    // pane narrower than this leaves the track a few dozen pixels: too little
+    // to drag meaningfully, and narrow enough that the value box itself
+    // truncates ("1 s...", "0.4..."), which loses the reading as well as the
+    // control. Stacked, the slider gets the pane's whole width.
+    static constexpr int stackedAdvancedRowsBelowWidth = 320;
+    static constexpr int advancedRowHeight = 30;
+    static constexpr int stackedAdvancedLabelHeight = 16;
+    static constexpr int stackedAdvancedRowHeight = stackedAdvancedLabelHeight + 28;
+
     // Audio capture ---------------------------------------------------------
     void audioInputAboutToStart(double sampleRate, int inputChannels) override;
     void audioInputStopped() override;
     void audioInputStateChanged(AudioInputService::InputState state) override;
-    [[nodiscard]] bool drainAudioFifo();
 
     // Pitch analysis --------------------------------------------------------
     // The tracking itself lives in PitchTracker, which is JUCE-free and tested
@@ -100,9 +110,20 @@ class TunerComponent final
     void applyThemeToControls();
     [[nodiscard]] int controlAreaHeight() const;
     [[nodiscard]] bool isModeChooserAdopted() const;
+    // Asked by resized() to lay the rows out and by controlAreaHeight() to
+    // reserve room for them; they must agree or the display is sized against
+    // one layout and the controls drawn in the other.
+    [[nodiscard]] bool advancedRowsStack() const;
     // Defined beside ModeChooser, which is only complete in TunerComponent.cpp.
     void placeModeChooser(juce::Rectangle<int> area);
     [[nodiscard]] juce::String statusText() const;
+
+    // Whether the graph has ever shown a real reading this session -- as
+    // opposed to `hasSignal`, which also goes false during an ordinary pause
+    // between notes. graphHistory carries NaN gaps for silence (the graph
+    // draws a break rather than a line across them), so this is "any finite
+    // value", not "any value at all".
+    [[nodiscard]] bool hasGraphHistory() const;
 
     // Drawing ---------------------------------------------------------------
     void drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
@@ -128,6 +149,7 @@ class TunerComponent final
     void drawSelectedDisplay(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
 
     AudioInputService& audioInputService;
+    SharedPitchAnalysis& pitchAnalysis;
 
     juce::Label displayModeLabel;
     juce::ComboBox displayModeBox;
@@ -149,15 +171,9 @@ class TunerComponent final
     juce::Slider durationSlider;
     juce::TextButton clearGraphButton{"Clear graph"};
 
-    // The shared service fills this tool's bounded FIFO. The timer drains it
-    // into preallocated storage before analysis.
-    std::array<float, fifoCapacity> drainBuffer{};
-    std::array<float, analysisWindowSize> analysisBuffer{};
-    PitchDetector pitchDetector;
     PitchTracker pitchTracker;
 
     std::vector<double> graphHistory;
-    std::atomic<double> currentSampleRate{44100.0};
 
     // Mirrors of the tracker's latest update. They are members because the
     // drawing code in TunerDrawing.cpp reads them directly; nothing here

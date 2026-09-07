@@ -4,6 +4,8 @@
 
 #include "application/theme/AppLookAndFeel.h"
 
+#include <array>
+
 // The display-mode label and chooser as one component, so a docked panel adopts
 // the pair with a single reparent and lays out one thing.
 class TunerComponent::ModeChooser final : public juce::Component
@@ -41,8 +43,10 @@ class TunerComponent::ModeChooser final : public juce::Component
 // of a note -- they held separate identical copies before.
 
 //==============================================================================
-TunerComponent::TunerComponent(AudioInputService& sharedAudioInputService)
-    : audioInputService(sharedAudioInputService)
+TunerComponent::TunerComponent(
+    AudioInputService& sharedAudioInputService,
+    SharedPitchAnalysis& sharedPitchAnalysis)
+    : audioInputService(sharedAudioInputService), pitchAnalysis(sharedPitchAnalysis)
 {
     setOpaque(true);
 
@@ -301,7 +305,11 @@ void TunerComponent::updateGraphControlAvailability()
 
 int TunerComponent::controlAreaHeight() const
 {
-    constexpr int expandedRowsHeight = 5 * 30 + 8 + 36;
+    // A stacked row is taller than an inline one, so the room reserved here has
+    // to be asked the same question resized() asks -- otherwise the display is
+    // sized for five short rows and five tall ones are drawn under it.
+    const auto rowHeight = advancedRowsStack() ? stackedAdvancedRowHeight : advancedRowHeight;
+    const auto expandedRowsHeight = 5 * rowHeight + 8 + 36;
 
     // Nothing but the advanced rows, and only while they are open. The mode
     // chooser is on the header line when the tuner is docked, and the tuner
@@ -309,6 +317,11 @@ int TunerComponent::controlAreaHeight() const
     // out, since it is the only place that knows.
     return (areAdvancedSettingsExpanded ? expandedRowsHeight + 8 : 0) +
            (isModeChooserAdopted() ? 0 : modeChooserHeight + 8);
+}
+
+bool TunerComponent::advancedRowsStack() const
+{
+    return getWidth() < stackedAdvancedRowsBelowWidth;
 }
 
 bool TunerComponent::isModeChooserAdopted() const
@@ -337,7 +350,22 @@ juce::Component* TunerComponent::headerControl()
 
 std::vector<ToolComponent::MenuEntry> TunerComponent::optionsMenuEntries()
 {
+    // The mode chooser lives on the header line -- which a pane too small to
+    // show a header line does not have (DockedToolPanel hides it below the
+    // compact threshold), and a floating window's own title bar has no room
+    // for it either. Right-click already reaches this menu at every size and
+    // presentation; without these three, that reach did not include switching
+    // the one thing a tuner offers more than one view of.
+    const auto currentMode = static_cast<DisplayMode>(displayModeBox.getSelectedId());
+    const auto selectMode = [this](DisplayMode mode)
+    { displayModeBox.setSelectedId(static_cast<int>(mode), juce::sendNotificationSync); };
+
     return {
+        {"Graph", [selectMode] { selectMode(DisplayMode::graph); },
+         currentMode == DisplayMode::graph},
+        {"Bar", [selectMode] { selectMode(DisplayMode::bar); }, currentMode == DisplayMode::bar},
+        {"Meter", [selectMode] { selectMode(DisplayMode::meter); },
+         currentMode == DisplayMode::meter},
         {areAdvancedSettingsExpanded ? "Hide advanced settings" : "Advanced settings", [this]
          {
              areAdvancedSettingsExpanded = !areAdvancedSettingsExpanded;
@@ -354,9 +382,24 @@ juce::String TunerComponent::statusText() const
         return audioErrorMessage;
     }
 
-    if (!hasSignal)
+    // Not "whenever there is no signal right now" -- a brief silent gap
+    // between two notes clears `hasSignal` too, and mid-practice that is not
+    // an invitation to start, it is the ordinary shape of playing something.
+    // The prompt belongs to a graph that has nothing in it yet; once there is
+    // a real reading in the history, a pause reads as a pause, not as an
+    // empty tool asking to be used.
+    if (!hasSignal && !hasGraphHistory())
     {
         return "Play or sing a sustained note";
+    }
+
+    // Blank rather than a placeholder: the status line still holds its row
+    // either way (statusHeight is reserved unconditionally), and a brief gap
+    // between notes has nothing worth reporting -- not silence to name, not
+    // an error, just a moment where the reading is not current.
+    if (!hasSignal)
+    {
+        return {};
     }
 
     // One space, not the three the design's HTML carries -- a browser collapses
@@ -367,15 +410,20 @@ juce::String TunerComponent::statusText() const
            juce::String(displayedCents, 1) + " cents";
 }
 
+bool TunerComponent::hasGraphHistory() const
+{
+    return std::any_of(
+        graphHistory.begin(), graphHistory.end(),
+        [](double value) { return std::isfinite(value); });
+}
+
 //==============================================================================
 // Audio capture
 
 void TunerComponent::audioInputAboutToStart(double sampleRate, int inputChannels)
 {
-    juce::ignoreUnused(inputChannels);
-    currentSampleRate.store(sampleRate);
+    juce::ignoreUnused(sampleRate, inputChannels);
     audioInputService.discardPendingSamples(this);
-    analysisBuffer.fill(0.0f);
 }
 
 void TunerComponent::audioInputStopped()
@@ -410,49 +458,18 @@ void TunerComponent::audioInputStateChanged(AudioInputService::InputState state)
     repaint();
 }
 
-bool TunerComponent::drainAudioFifo()
-{
-    const auto availableSamples =
-        std::min(audioInputService.availableSamples(this), drainBuffer.size());
-    if (availableSamples == 0)
-    {
-        return false;
-    }
-
-    const auto samplesRead =
-        audioInputService.readSamples(this, drainBuffer.data(), availableSamples);
-    if (samplesRead == 0)
-    {
-        return false;
-    }
-
-    if (samplesRead >= analysisWindowSize)
-    {
-        // Keep only the newest complete analysis window.
-        std::copy_n(
-            drainBuffer.begin() + static_cast<std::ptrdiff_t>(samplesRead - analysisWindowSize),
-            analysisWindowSize, analysisBuffer.begin());
-        return true;
-    }
-
-    // Shift older samples left and append the newly captured samples.
-    const auto sampleCount = static_cast<std::ptrdiff_t>(samplesRead);
-    std::move(analysisBuffer.begin() + sampleCount, analysisBuffer.end(), analysisBuffer.begin());
-    std::copy_n(drainBuffer.begin(), sampleCount, analysisBuffer.end() - sampleCount);
-    return true;
-}
-
 //==============================================================================
 // Pitch analysis
 
 void TunerComponent::timerCallback()
 {
-    if (!drainAudioFifo())
-    {
-        return;
-    }
+    // No longer this tool's own FIFO to drain: SharedPitchAnalysis is the one
+    // registered consumer for pitch detection. Discarding here keeps this
+    // tool's otherwise-idle consumer slot from silently overflowing and
+    // inflating AudioInputService's dropped-sample diagnostics.
+    audioInputService.discardPendingSamples(this);
 
-    const auto analysis = pitchDetector.detect(analysisBuffer, currentSampleRate.load());
+    const auto analysis = pitchAnalysis.latestResult();
     inputLevel = analysis.inputLevel;
 
     const auto update =

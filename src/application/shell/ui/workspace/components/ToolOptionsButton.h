@@ -52,7 +52,9 @@ class ToolOptionsButton final : public juce::TextButton
 
         for (std::size_t index = 0; index < entries.size(); ++index)
         {
-            menu.addItem(firstToolEntry + static_cast<int>(index), entries[index].label);
+            menu.addItem(
+                firstToolEntry + static_cast<int>(index), entries[index].label, true,
+                entries[index].ticked);
         }
 
         if (!entries.empty())

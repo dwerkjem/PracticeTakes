@@ -169,6 +169,27 @@ where the run lives, and there is nothing in a fresh scratch store to resume.
 built. Nothing warns you, and a capture of a stale binary looks exactly like a
 capture of a current one.
 
+### Reviewing a tool's compact form
+
+`slim` (340x780) and `squat` (1100x300) are in `SWEEP_GEOMETRIES` but not in
+`DEFAULT_RESOLUTIONS` — a sweep never captures them unless asked, on purpose,
+so that two extra images per surface do not land on every full run. They exist
+for one thing: a window shaped like this makes a *single* docked tool's pane
+narrow or short, which the ordinary geometries cannot do (a small window still
+gives one tool a roomy pane — see `workspace-pane-sizing`).
+
+Ask for them explicitly, against the single-tool docked states, when a tool's
+compact form (`CompactPresentation.h`) is what changed:
+
+```bash
+uv run test-suite capture --scratch --resolutions slim squat --themes dark \
+    --surfaces tuner-in-tune tuner-bar tuner-meter spectrogram-tone harmonics-tone
+```
+
+That is every tool's compact display, both shapes, one theme, nothing kept —
+the "let me look at this" capture for exactly this question. Drop `--scratch`
+and add the light theme for a pass meant to be judged and recorded.
+
 A capture is a surface, at a resolution, **in a palette**. Themes are a
 dimension rather than a property of a surface, for the same reason resolutions
 are: every surface exists in both, and folding the palette into the surface list

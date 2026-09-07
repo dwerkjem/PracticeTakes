@@ -4,11 +4,12 @@
 #include <cmath>
 #include <numeric>
 
-HarmonicAnalyzer::Result
-HarmonicAnalyzer::analyze(std::span<const float, windowSize> samples, double sampleRate)
+HarmonicAnalyzer::Result HarmonicAnalyzer::analyze(
+    std::span<const float, windowSize> samples,
+    double sampleRate,
+    PitchDetector::Result pitch)
 {
     Result result;
-    const auto pitch = pitchDetector.detect(samples, sampleRate);
     result.fundamentalHz = pitch.frequency;
     result.inputLevel = pitch.inputLevel;
     if (pitch.frequency <= 0.0 || sampleRate <= 0.0)

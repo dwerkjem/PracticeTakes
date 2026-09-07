@@ -14,11 +14,14 @@ const ToolRegistry& builtInToolRegistry()
         builtInToolCatalog(),
         {
             {"tuner", [](const ToolServices& services)
-             { return std::make_unique<TunerComponent>(services.audio); }},
+             { return std::make_unique<TunerComponent>(services.audio, services.pitchAnalysis); }},
             {"spectrogram", [](const ToolServices& services)
              { return std::make_unique<SpectrogramComponent>(services.audio); }},
-            {"harmonic-analyzer", [](const ToolServices& services)
-             { return std::make_unique<HarmonicAnalyzerComponent>(services.audio); }},
+            {"harmonic-analyzer",
+             [](const ToolServices& services) {
+                 return std::make_unique<HarmonicAnalyzerComponent>(
+                     services.audio, services.pitchAnalysis);
+             }},
         });
 
     // The catalog and the factory table are edited together; if they drift, a

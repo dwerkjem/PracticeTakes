@@ -5,7 +5,7 @@
 #include <span>
 #include <vector>
 
-#include "features/analysis/tuner/PitchDetector.h"
+#include "platform/audio/PitchDetector.h"
 #include "platform/audio/SyntheticTone.h"
 
 namespace
