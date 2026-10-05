@@ -228,6 +228,8 @@ target_sources(PracticeTakes
         src/application/shell/ui/main_window/MicrophoneWarning.h
         src/application/shell/ui/feedback/FeedbackWindow.h
         src/application/shell/ui/feedback/MainComponentFeedback.cpp
+        src/application/shell/ui/score/ScoreImportSummary.cpp
+        src/application/shell/ui/score/ScoreImportSummary.h
         src/application/shell/ui/settings/MainComponentSettings.cpp
         src/application/shell/ui/settings/SettingsWindow.h
         src/application/shell/ui/workspace/components/DockedToolPanel.h
@@ -391,6 +393,7 @@ if(BUILD_TESTING)
         src/tests/application/configuration/SettingsPersistenceTests.cpp
         src/tests/application/configuration/SettingsTransferCodecTests.cpp
         src/tests/application/shell/WorkspaceStartupSequenceTests.cpp
+        src/tests/application/shell/ui/score/ScoreImportSummaryTests.cpp
         src/tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp
         src/tests/application/shell/ui/workspace/model/NamedWorkspaceServiceTests.cpp
         src/tests/application/shell/ui/workspace/model/WorkspaceBuiltInsTests.cpp
@@ -442,6 +445,7 @@ if(BUILD_TESTING)
         src/application/configuration/SettingsPersistence.cpp
         src/application/configuration/SettingsTransferCodec.cpp
         src/features/analysis/tuner/TunerSettingsCodec.cpp
+        src/application/shell/ui/score/ScoreImportSummary.cpp
         src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
         src/application/testcontrol/ApprovedWindowStates.cpp
         src/application/testcontrol/TestControlClicker.cpp
