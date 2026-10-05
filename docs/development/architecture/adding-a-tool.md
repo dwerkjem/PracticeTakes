@@ -71,8 +71,9 @@ keeping the format with the tool that understands it.
 Reach shared services only through `ToolServices`. A `src/features/*` tool must
 never reach into the shell or into another tool.
 
-Finally, add the sources to `target_sources(PracticeTakes ...)` in
-`CMakeLists.txt`, and any tests to `add_executable(PracticeTakesTests ...)`.
+Finally, add the sources to `PRACTICE_TAKES_SOURCES` in
+`tools/cmake/Sources.cmake`, and any tests to `PRACTICE_TAKES_TEST_SOURCES`
+beside it.
 
 ## Instance policy
 
@@ -124,7 +125,7 @@ first. Do not move that declaration.
 - [ ] Component derives from `ToolComponent`.
 - [ ] `settingsVersion` declared if — and only if — the component overrides the
       settings pair.
-- [ ] Sources added to `CMakeLists.txt`.
+- [ ] Sources added to `tools/cmake/Sources.cmake`.
 - [ ] Analysis runs on a message-thread timer draining its own FIFO, never on
       the audio callback — see
       [`audio-thread-safety.md`](../performance/audio-thread-safety.md).

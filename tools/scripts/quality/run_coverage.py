@@ -145,7 +145,9 @@ def main(argv: list[str] | None = None) -> int:
 
     # The half no coverage tool can produce, written whether or not gcovr is
     # present -- it is the more important half.
-    classified = classify(REPOSITORY_ROOT / "src", REPOSITORY_ROOT / "CMakeLists.txt")
+    classified = classify(
+        REPOSITORY_ROOT / "src", REPOSITORY_ROOT / "tools" / "cmake" / "Sources.cmake"
+    )
     (arguments.output_dir / "test-build-membership.json").write_text(
         json.dumps(classified, indent=2), encoding="utf-8"
     )

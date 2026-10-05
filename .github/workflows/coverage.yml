@@ -17,6 +17,7 @@ on:
       - "src/**"
       - "src/tests/**"
       - "tools/scripts/**"
+      - "tools/cmake/**"
       - "src/services/**"
       - "CMakeLists.txt"
       - ".github/workflows/coverage.yml"
@@ -27,6 +28,7 @@ on:
       - "src/**"
       - "src/tests/**"
       - "tools/scripts/**"
+      - "tools/cmake/**"
       - "src/services/**"
       - "CMakeLists.txt"
       - ".github/workflows/coverage.yml"
@@ -93,7 +95,8 @@ jobs:
             echo '### Sources not built into the test binary'
             echo
             echo 'These cannot be measured by any coverage tool until they are'
-            echo 'added to `add_executable(PracticeTakesTests ...)`. This is a'
+            echo 'added to `PRACTICE_TAKES_TEST_SOURCES` in'
+            echo '`tools/cmake/Sources.cmake`. This is a'
             echo 'more serious category than 0% covered, and it is reported'
             echo 'separately so the headline figure cannot hide it.'
             echo

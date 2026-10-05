@@ -23,14 +23,13 @@ from coverage_sources import (  # noqa: E402
 )
 
 CMAKE_TEMPLATE = """\
-add_executable(PracticeTakesTests
+set(PRACTICE_TAKES_TEST_SOURCES
 {entries}
-    )
+)
 
-    target_link_libraries(PracticeTakesTests
-        PRIVATE
-            Catch2::Catch2WithMain
-    )
+set(PRACTICE_TAKES_SOURCES
+    src/bootstrap/main.cpp
+)
 """
 
 
@@ -49,8 +48,8 @@ class CoverageSourcesTests(unittest.TestCase):
         path.write_text("// source\n", encoding="utf-8")
 
     def write_cmake(self, entries: list[str]) -> Path:
-        path = self.root / "CMakeLists.txt"
-        body = "\n".join(f"        {entry}" for entry in entries)
+        path = self.root / "Sources.cmake"
+        body = "\n".join(f"    {entry}" for entry in entries)
         path.write_text(CMAKE_TEMPLATE.format(entries=body), encoding="utf-8")
 
         return path
@@ -77,8 +76,8 @@ class CoverageSourcesTests(unittest.TestCase):
         That looks like a catastrophic finding rather than a parsing failure,
         so it must be loud.
         """
-        path = self.root / "CMakeLists.txt"
-        path.write_text("project(Whatever)\n", encoding="utf-8")
+        path = self.root / "Sources.cmake"
+        path.write_text("set(SOMETHING_ELSE other)\n", encoding="utf-8")
 
         with self.assertRaises(ValueError):
             read_test_target_sources(path)
@@ -150,7 +149,7 @@ class CoverageSourcesTests(unittest.TestCase):
         """
         repository_root = Path(__file__).resolve().parents[3]
         classified = classify(
-            repository_root / "src", repository_root / "CMakeLists.txt"
+            repository_root / "src", repository_root / "tools" / "cmake" / "Sources.cmake"
         )
         outside = set(classified["not_in_test_build"])
 
@@ -165,7 +164,7 @@ class CoverageSourcesTests(unittest.TestCase):
         """Guards against a parse failure quietly classifying everything one way."""
         repository_root = Path(__file__).resolve().parents[3]
         classified = classify(
-            repository_root / "src", repository_root / "CMakeLists.txt"
+            repository_root / "src", repository_root / "tools" / "cmake" / "Sources.cmake"
         )
 
         self.assertTrue(classified["in_test_build"])

@@ -274,7 +274,9 @@ covered.
 covers: `src/platform/score/TempoMap.h` is tested by
 `src/tests/platform/score/TempoMapTests.cpp`. Put a new test beside the mirror
 of the file it exercises rather than at the top level, and add its path to
-`add_executable(PracticeTakesTests ...)` in `CMakeLists.txt`.
+`PRACTICE_TAKES_TEST_SOURCES` in `tools/cmake/Sources.cmake`. Both source
+lists live there rather than in the root `CMakeLists.txt`, which includes the
+file and passes the variables to its targets.
 
 Both `src/` and `src/tests/` are on the test target's include path, so a test
 includes its subject as `"platform/score/TempoMap.h"` and a shared fixture as
@@ -312,8 +314,8 @@ against it — they can drift (`docs/development/quality/QA_STRATEGY.md` area 12
   generated, browsable graph of the whole repo — useful for finding where a
   change belongs before starting.
 - This repository configures Git merge drivers and `rerere`; `pre-commit
-  install` sets them up. `CMakeLists.txt` source lists union automatically,
-  and generated files under `.ua/` keep ours rather than merging. See
+  install` sets them up. The `tools/cmake/Sources.cmake` source lists union
+  automatically, and generated files under `.ua/` keep ours rather than merging. See
   `docs/development/operations/MERGING.md` before hand-resolving a conflict
   in either.
 - Run the relevant test suite before requesting review: `PracticeTakesTests`
