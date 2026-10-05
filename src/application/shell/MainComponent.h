@@ -10,6 +10,8 @@
 #include "../theme/Theme.h"
 #include "../tools/BuiltInTools.h"
 #include "../tools/ToolInstanceId.h"
+#include "ui/score/ScoreImportJob.h"
+#include "ui/score/ScoreImportState.h"
 #include "ui/workspace/model/NamedWorkspaceService.h"
 #include "ui/workspace/model/WorkspaceDocuments.h"
 #include "ui/workspace/model/WorkspaceLayoutState.h"
@@ -168,6 +170,15 @@ class MainComponent final
     [[nodiscard]] bool applyTransferredSettings(const SettingsTransferModel& model);
     void closeSettings();
     void showHelpMenu();
+
+    // Start reading `file` on the import thread. Does nothing but report when
+    // an import is already running -- see ScoreImportJob::start.
+    void startScoreImport(const juce::File& file);
+
+    // Deliver a finished import: the summary is shown, and a successful score
+    // becomes the current one. Runs on the message thread.
+    void finishScoreImport(const score::musicxml::MusicXmlImportResult& result);
+
     void showFeedback(const juce::String& context = {});
     void recordSuccessfulToolUse();
     void maybeOfferFeedbackInvitation();
@@ -258,6 +269,16 @@ class MainComponent final
     // embedded UI typeface.
     AppLookAndFeel appLookAndFeel;
 
+    // The current score, and the summary of the import that produced it. The
+    // shell stands in for #39's session file until it exists.
+    //
+    // Declared here, before liveTools, for the same reason audioInputService
+    // and appLookAndFeel are: #33's score tool will read the current score, and
+    // a member declared after liveTools would be destroyed while tools still
+    // hold it. Nothing borrows it yet, so this costs nothing today and removes
+    // a landmine that would otherwise be found by a crash on quit.
+    ScoreImportState scoreImport;
+
     juce::TextButton fileButton{"File"};
     juce::TextButton settingsButton{"Settings"};
     juce::TextButton toolsButton{"Tools"};
@@ -290,6 +311,13 @@ class MainComponent final
     std::unique_ptr<juce::FileChooser> settingsTransferChooser;
     std::unique_ptr<FeedbackWindow> feedbackWindow;
     std::unique_ptr<MicrophoneWarning> microphoneWarning;
+
+    // Constructed on first use rather than at startup: a session that never
+    // opens a score never creates an import thread. Declared after
+    // scoreImport (far above, before liveTools), so the job -- whose
+    // destructor stops the import thread -- is destroyed before both the
+    // tools and the state its callback writes into.
+    std::unique_ptr<ScoreImportJob> scoreImportJob;
 
     Theme currentTheme = Theme::light;
     ToolInstanceId currentTool;

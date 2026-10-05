@@ -43,23 +43,23 @@ unit test can reach, so it is where the behaviour worth asserting should live.
 
 ## 2. The background import job
 
-- [ ] 2.1 Add the import job as a `juce::Thread` subclass whose `run()` calls
+- [x] 2.1 Add the import job as a `juce::Thread` subclass whose `run()` calls
       `importMusicXmlFile` and whose result is delivered with
       `juce::MessageManager::callAsync`. Follow `FeedbackComponent` deliberately
       and say so in the comment, so the shell ends up with two consistent
       examples of a background job rather than two different ones.
-- [ ] 2.2 Capture a `juce::Component::SafePointer` in the delivery lambda, so a
+- [x] 2.2 Capture a `juce::Component::SafePointer` in the delivery lambda, so a
       finished import cannot call into a destroyed component.
-- [ ] 2.3 Call `signalThreadShouldExit()` and `stopThread(timeout)` in the
+- [x] 2.3 Call `signalThreadShouldExit()` and `stopThread(timeout)` in the
       destructor. **This is the failure mode most likely to survive review and
       reappear as an intermittent crash on quit**, so it gets its own task
       rather than being folded into 2.1.
-- [ ] 2.4 Refuse to start a second import while one is running, and tell the
+- [x] 2.4 Refuse to start a second import while one is running, and tell the
       user which file is being read rather than appearing to ignore the command.
-- [ ] 2.5 Add the `std::shared_ptr<const Score>` current-score member to
+- [x] 2.5 Add the `std::shared_ptr<const Score>` current-score member to
       `MainComponent`, empty until the first success, handed out by value so a
       reader's score survives a later import replacing it.
-- [ ] 2.6 Leave the current score untouched when an import fails. A failed
+- [x] 2.6 Leave the current score untouched when an import fails. A failed
       import must not close the score a user already has open.
 
 ## 3. The menu and the file chooser
