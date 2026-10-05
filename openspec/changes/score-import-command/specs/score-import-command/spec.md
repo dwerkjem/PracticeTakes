@@ -6,6 +6,12 @@ command SHALL present a file chooser offering the file types the importer
 accepts. Choosing a file SHALL import it; dismissing the chooser SHALL leave the
 application unchanged.
 
+> Implementation note, recorded rather than silently absorbed: this application
+> draws its own title bar, so the File menu is the existing File button's
+> `juce::PopupMenu` rather than a `juce::MenuBarModel`. The requirement is met
+> as written — a File menu is present and offers Open Score — but "menu bar" is
+> not the mechanism anywhere in this shell.
+
 #### Scenario: The command is available from a menu
 - **WHEN** the application is running
 - **THEN** a File menu is present and offers an Open Score command

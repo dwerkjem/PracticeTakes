@@ -110,25 +110,25 @@ unit test can reach, so it is where the behaviour worth asserting should live.
       diagnostics say what was dropped and where.
 - [ ] 5.5 Add the window to the manual GUI verification harness, since it is
       `Component` code outside `PracticeTakesTests`.
-- [ ] 5.6 Run `python3 tools/scripts/run_tests.py` and `PracticeTakesTests`, and
+- [x] 5.6 Run `python3 tools/scripts/run_tests.py` and `PracticeTakesTests`, and
       confirm both pass.
-- [ ] 5.7 Run `clang-format` and `clang-tidy` via pre-commit and confirm the new
+- [x] 5.7 Run `clang-format` and `clang-tidy` via pre-commit and confirm the new
       sources are clean. Note that pre-commit resolves `clang-format` from
       `PATH`, which may not be the pinned 18.1.8 that CI uses; set
       `CLANG_FORMAT` or run `uv sync --extra coverage` first.
-- [ ] 5.8 Re-read this change's spec deltas against the implemented behaviour and
+- [x] 5.8 Re-read this change's spec deltas against the implemented behaviour and
       correct any requirement the implementation had to deviate from, recording
       the deviation rather than quietly editing the spec to match.
 
 ## 6. Follow-through
 
-- [ ] 6.1 Update `docs/development/architecture/ARCHITECTURE.md` § Score model
+- [x] 6.1 Update `docs/development/architecture/ARCHITECTURE.md` § Score model
       to say who owns the current score and how it is loaded, now that something
       does.
-- [ ] 6.2 Note in `docs/development/formats/musicxml-subset.md` that the
+- [x] 6.2 Note in `docs/development/formats/musicxml-subset.md` that the
       diagnostics it describes are now shown to users, so the document's
       audience is no longer only contributors.
-- [ ] 6.3 Add a follow-up note to #32 and #33 that the shell now owns a current
+- [x] 6.3 Add a follow-up note to #32 and #33 that the shell now owns a current
       score they can read, and to #39 that it will take over that ownership.
-- [ ] 6.4 Answer, or re-record as still open, the four questions in `design.md`
+- [x] 6.4 Answer, or re-record as still open, the four questions in `design.md`
       § Open Questions.
