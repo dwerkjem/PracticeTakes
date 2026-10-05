@@ -455,3 +455,67 @@ TEST_CASE(
     // the file used, so still findable.
     CHECK(summary.diagnostics.front().lines.front().location == "P7, bar 1");
 }
+
+TEST_CASE("the report lists the fields and the parts", "[score][import][summary]")
+{
+    const std::string report = scoreImportReport(
+        summariseScoreImport(resultOf(makeVocalScore(), MusicXmlImportStatus::imported)));
+
+    CHECK(report.find("Work: Requiem") != std::string::npos);
+    CHECK(report.find("Written by: MuseScore 4.4.2") != std::string::npos);
+    CHECK(report.find("Measures: 4") != std::string::npos);
+    CHECK(report.find("Soprano") != std::string::npos);
+
+    // A multi-staff part says so; a single-staff part does not say "1 staff",
+    // which would be noise on every vocal line.
+    CHECK(report.find("Piano (2 staves)") != std::string::npos);
+    CHECK(report.find("Soprano (1") == std::string::npos);
+}
+
+TEST_CASE(
+    "the report states a clean import rather than showing nothing",
+    "[score][import][summary]")
+{
+    const std::string report = scoreImportReport(
+        summariseScoreImport(resultOf(makeVocalScore(), MusicXmlImportStatus::imported)));
+
+    CHECK(report.find("Nothing was dropped or repaired.") != std::string::npos);
+}
+
+TEST_CASE(
+    "the report groups diagnostics under headings that say what they mean",
+    "[score][import][summary]")
+{
+    Diagnostic dropped =
+        diagnosticOf(DiagnosticSeverity::unsupported, "Dropped <harmony>", "harmony");
+    dropped.location.partId = "P3";
+    dropped.location.measureNumber = "12a";
+
+    Diagnostic repeated = diagnosticOf(DiagnosticSeverity::info, "Unrecognised <print>", "print");
+    repeated.occurrences = 2114;
+
+    const std::string report = scoreImportReport(summariseScoreImport(resultOf(
+        makeVocalScore(), MusicXmlImportStatus::importedWithDiagnostics, {dropped, repeated})));
+
+    CHECK(report.find("does not support") != std::string::npos);
+    CHECK(report.find("Notes about the file:") != std::string::npos);
+    CHECK(report.find("Dropped <harmony> [Piano, bar 12a]") != std::string::npos);
+    CHECK(report.find("(seen 2114 times)") != std::string::npos);
+
+    // The clean-import sentence must not appear when there are diagnostics.
+    CHECK(report.find("Nothing was dropped") == std::string::npos);
+}
+
+TEST_CASE("the report leads with the importer's message on a failure", "[score][import][summary]")
+{
+    MusicXmlImportResult result;
+    result.status = MusicXmlImportStatus::invalidContainer;
+    result.error = "META-INF/container.xml names score.xml, which the container does not hold";
+
+    const std::string report = scoreImportReport(summariseScoreImport(result));
+
+    CHECK(report.find("META-INF/container.xml names score.xml") == 0);
+
+    // Nothing structural to report, so nothing is invented.
+    CHECK(report.find("Measures:") == std::string::npos);
+}

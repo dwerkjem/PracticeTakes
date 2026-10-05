@@ -124,6 +124,7 @@ class MainComponent final
     };
     class SettingsWindow;
     class FeedbackWindow;
+    class ScoreImportWindow;
     class MicrophoneWarning;
 
     // Initial setup ---------------------------------------------------------
@@ -185,6 +186,11 @@ class MainComponent final
     // Deliver a finished import: the summary is shown, and a successful score
     // becomes the current one. Runs on the message thread.
     void finishScoreImport(const score::musicxml::MusicXmlImportResult& result);
+
+    // Show the import window, creating it if it is not open. Re-openable and
+    // non-modal: an import is not a question the user has to answer.
+    void showScoreImportWindow();
+    void closeScoreImportWindow();
 
     void showFeedback(const juce::String& context = {});
     void recordSuccessfulToolUse();
@@ -330,6 +336,10 @@ class MainComponent final
     // asynchronously launched FileChooser must outlive the call that launched
     // it.
     std::unique_ptr<juce::FileChooser> scoreChooser;
+
+    // Opened when an import starts and reused for its result, so "reading..."
+    // and "here is what was read" are the same surface.
+    std::unique_ptr<ScoreImportWindow> scoreImportWindow;
 
     Theme currentTheme = Theme::light;
     ToolInstanceId currentTool;

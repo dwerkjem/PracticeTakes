@@ -155,6 +155,27 @@ void appendIfPresent(
     return location;
 }
 
+// What each group of diagnostics is called on screen. Named for what the
+// severity means for the score in front of the user rather than with the enum's
+// own word: "repaired" alone does not say that the score is complete but no
+// longer faithful to the file.
+[[nodiscard]] const char* severityHeading(const DiagnosticSeverity severity)
+{
+    switch (severity)
+    {
+    case DiagnosticSeverity::unsupported:
+        return "Content this importer does not support, so the score differs from the file:";
+
+    case DiagnosticSeverity::repaired:
+        return "Structures repaired to make the score usable:";
+
+    case DiagnosticSeverity::info:
+        return "Notes about the file:";
+    }
+
+    return "Notes about the file:";
+}
+
 // Severities in the order `DiagnosticSeverity` declares them. Grouping needs
 // *an* order; taking the model's own avoids inventing a ranking between
 // "unsupported" and "repaired" that nothing in the model states.
@@ -300,4 +321,69 @@ ScoreImportSummary summariseScoreImport(const score::musicxml::MusicXmlImportRes
     summary.fields.push_back({"Tempo", formatBeatsPerMinute(summary.startingBeatsPerMinute)});
 
     return summary;
+}
+
+std::string scoreImportReport(const ScoreImportSummary& summary)
+{
+    std::ostringstream report;
+
+    // The importer's message leads, because on a failure it is the only thing
+    // that says anything specific about the file.
+    if (!summary.detail.empty())
+    {
+        report << summary.detail << "\n";
+    }
+
+    for (const ScoreImportField& field : summary.fields)
+    {
+        report << field.label << ": " << field.value << "\n";
+    }
+
+    if (!summary.parts.empty())
+    {
+        report << "\n";
+
+        for (const ScoreImportPartLine& part : summary.parts)
+        {
+            report << "  " << part.name;
+
+            // Only worth saying for a part that has more than one staff: "1
+            // staff" on every vocal line is noise.
+            if (part.staffCount > 1)
+            {
+                report << " (" << part.staffCount << " staves)";
+            }
+
+            report << "\n";
+        }
+    }
+
+    if (!summary.diagnosticsMessage.empty())
+    {
+        report << "\n" << summary.diagnosticsMessage << "\n";
+    }
+
+    for (const ScoreImportDiagnosticGroup& group : summary.diagnostics)
+    {
+        report << "\n" << severityHeading(group.severity) << "\n";
+
+        for (const ScoreImportDiagnosticLine& line : group.lines)
+        {
+            report << "  " << line.message;
+
+            if (!line.location.empty())
+            {
+                report << " [" << line.location << "]";
+            }
+
+            if (line.occurrences > 1)
+            {
+                report << " (seen " << line.occurrences << " times)";
+            }
+
+            report << "\n";
+        }
+    }
+
+    return report.str();
 }

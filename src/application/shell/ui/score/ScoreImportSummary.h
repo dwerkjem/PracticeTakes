@@ -142,3 +142,12 @@ struct ScoreImportSummary
 // Summarise an import result for display.
 [[nodiscard]] ScoreImportSummary
 summariseScoreImport(const score::musicxml::MusicXmlImportResult& result);
+
+// The summary as the lines of text the window shows, newline-separated and
+// without the headline, which the window renders separately.
+//
+// Here rather than in the window for the same reason as everything else in this
+// file: the arrangement -- which fields, in what order, how a diagnostic's
+// location and count read -- is behaviour a test can check, and a `Component`
+// is not.
+[[nodiscard]] std::string scoreImportReport(const ScoreImportSummary& summary);

@@ -1,5 +1,7 @@
 #include "../../MainComponent.h"
 
+#include "ScoreImportWindow.h"
+
 namespace
 {
 // The File menu holds one item. `design.md` § Open Questions records why it is
@@ -16,10 +18,8 @@ constexpr int fileMenuWidth = 220;
 constexpr const char* scoreFilePatterns = "*.musicxml;*.xml;*.mxl";
 } // namespace
 
-// The shell's half of the Open Score command: starting the import thread and
-// taking its result. The summary window that renders the result is task group
-// 4; until it exists the outcome is reported in an alert, which is the same
-// thing the workspace actions do for a result that has no window of its own.
+// The shell's half of the Open Score command: the File menu, the chooser,
+// starting the import thread, and taking its result into the summary window.
 //
 // Nothing here parses MusicXML. The importer lives in src/platform/score and
 // runs on ScoreImportJob's thread; this file only starts it and files the
@@ -95,18 +95,19 @@ void MainComponent::startScoreImport(const juce::File& file)
     {
         // One import at a time. Naming the file being read is the point --
         // refusing the second command silently would look like the click did
-        // nothing.
-        const juce::File running = scoreImportJob->fileBeingRead();
-
-        juce::AlertWindow::showMessageBoxAsync(
-            juce::MessageBoxIconType::InfoIcon, "Still reading a score",
-            running == juce::File()
-                ? "A score is already being read. Try again in a moment."
-                : "Still reading " + running.getFileName() + ". Try again once it has finished.",
-            "OK");
+        // nothing. The window is already open showing that file's progress, so
+        // bringing it forward is the whole answer.
+        showScoreImportWindow();
+        scoreImportWindow->showProgress(scoreImportJob->fileBeingRead().getFileName());
+        scoreImportWindow->toFront(true);
 
         return;
     }
+
+    // Shown before the import finishes, so a large file does not look like a
+    // command that did nothing.
+    showScoreImportWindow();
+    scoreImportWindow->showProgress(file.getFileName());
 }
 
 void MainComponent::finishScoreImport(const score::musicxml::MusicXmlImportResult& result)
@@ -116,46 +117,39 @@ void MainComponent::finishScoreImport(const score::musicxml::MusicXmlImportResul
     // is tested on it.
     const ScoreImportSummary& summary = scoreImport.apply(result);
 
-    juce::String message = summary.headline;
+    // The window may have been closed while the import ran -- the result is
+    // still worth showing, and reopening it is what the user asked for by
+    // opening the file.
+    showScoreImportWindow();
+    scoreImportWindow->showSummary(summary);
+}
 
-    if (!summary.detail.empty())
+void MainComponent::showScoreImportWindow()
+{
+    if (scoreImportWindow != nullptr)
     {
-        message += "\n\n" + juce::String(summary.detail);
+        scoreImportWindow->setVisible(true);
+
+        return;
     }
 
-    if (summary.succeeded)
-    {
-        for (const ScoreImportField& field : summary.fields)
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    scoreImportWindow = std::make_unique<ScoreImportWindow>(
+        [safeThis]
         {
-            message += "\n" + juce::String(field.label) + ": " + juce::String(field.value);
-        }
-
-        if (!summary.diagnosticsMessage.empty())
-        {
-            message += "\n\n" + juce::String(summary.diagnosticsMessage);
-        }
-
-        for (const ScoreImportDiagnosticGroup& group : summary.diagnostics)
-        {
-            for (const ScoreImportDiagnosticLine& line : group.lines)
+            if (safeThis != nullptr)
             {
-                message += "\n" + juce::String(line.message);
-
-                if (!line.location.empty())
-                {
-                    message += " (" + juce::String(line.location) + ")";
-                }
-
-                if (line.occurrences > 1)
-                {
-                    message += " x" + juce::String(line.occurrences);
-                }
+                safeThis->closeScoreImportWindow();
             }
-        }
-    }
+        });
 
-    juce::AlertWindow::showMessageBoxAsync(
-        summary.succeeded ? juce::MessageBoxIconType::InfoIcon
-                          : juce::MessageBoxIconType::WarningIcon,
-        summary.succeeded ? "Score opened" : "That score could not be opened", message, "OK");
+    // Both themes come from the one LookAndFeel the application owns, so the
+    // window follows a theme change without knowing a theme exists.
+    scoreImportWindow->setLookAndFeel(&appLookAndFeel);
+    scoreImportWindow->toFront(true);
+}
+
+void MainComponent::closeScoreImportWindow()
+{
+    scoreImportWindow.reset();
 }

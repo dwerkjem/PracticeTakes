@@ -3,6 +3,7 @@
 #include "ui/feedback/FeedbackWindow.h"
 #include "ui/main_window/MainTitleBar.h"
 #include "ui/main_window/MicrophoneWarning.h"
+#include "ui/score/ScoreImportWindow.h"
 #include "ui/settings/SettingsWindow.h"
 #include "ui/workspace/components/DockedToolPanel.h"
 #include "ui/workspace/components/ToolWindow.h"

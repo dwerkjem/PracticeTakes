@@ -48,6 +48,7 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/ui/score/ScoreImportState.h
     src/application/shell/ui/score/ScoreImportSummary.cpp
     src/application/shell/ui/score/ScoreImportSummary.h
+    src/application/shell/ui/score/ScoreImportWindow.h
     src/application/shell/ui/settings/MainComponentSettings.cpp
     src/application/shell/ui/settings/SettingsWindow.h
     src/application/shell/ui/workspace/components/DockedToolPanel.h

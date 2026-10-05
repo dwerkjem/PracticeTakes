@@ -78,21 +78,21 @@ unit test can reach, so it is where the behaviour worth asserting should live.
 
 ## 4. The summary window
 
-- [ ] 4.1 Add the window, non-modal and re-openable, alongside the existing
+- [x] 4.1 Add the window, non-modal and re-openable, alongside the existing
       settings and feedback windows. It renders what section 1 produced and
       contains no musical drawing of any kind — a summary that grows a staff
       preview undoes the reason `musicxml-import` landed the model before the
       renderer.
-- [ ] 4.2 Render the summary for a success and the failure text for a failure in
+- [x] 4.2 Render the summary for a success and the failure text for a failure in
       the same window, per the decision in `design.md` § Open Questions: the
       diagnostics on a successful import matter as much as the error on a failed
       one, and splitting them puts the two halves of "what happened to my file"
       in different places.
-- [ ] 4.3 Make the diagnostics list scrollable rather than truncated. A
+- [x] 4.3 Make the diagnostics list scrollable rather than truncated. A
       truncated list that does not say it is truncated is worse than a long one.
-- [ ] 4.4 Show that an import is in progress, so a large file does not look like
+- [x] 4.4 Show that an import is in progress, so a large file does not look like
       a command that did nothing.
-- [ ] 4.5 Apply the application `LookAndFeel` and confirm the window reads
+- [x] 4.5 Apply the application `LookAndFeel` and confirm the window reads
       correctly in both themes, following the existing settings and feedback
       windows.
 
