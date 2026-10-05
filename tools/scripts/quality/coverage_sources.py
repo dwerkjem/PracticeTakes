@@ -35,9 +35,11 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 # rather than listed as compiled units.
 COMPILED_SUFFIXES = (".cpp",)
 
-# The block whose contents name every translation unit in the test binary.
+# The block whose contents name every translation unit in the test binary. It
+# lives in tools/cmake/Sources.cmake rather than the root CMakeLists.txt, which
+# passes the variable straight to add_executable().
 TEST_TARGET_PATTERN = re.compile(
-    r"add_executable\(PracticeTakesTests\b(.*?)^\s*\)", re.DOTALL | re.MULTILINE
+    r"set\(PRACTICE_TAKES_TEST_SOURCES\b(.*?)^\s*\)", re.DOTALL | re.MULTILINE
 )
 
 SOURCE_ENTRY_PATTERN = re.compile(r"^\s*(src/[^\s)]+)\s*$", re.MULTILINE)
@@ -48,7 +50,7 @@ TEST_ROOT_PREFIX = "src/tests/"
 
 
 def read_test_target_sources(cmake_lists: Path) -> set[str]:
-    """Every ``src/`` path listed in ``add_executable(PracticeTakesTests ...)``.
+    """Every ``src/`` path listed in ``set(PRACTICE_TAKES_TEST_SOURCES ...)``.
 
     Raises when the block cannot be found, rather than returning an empty set —
     an empty set would silently report every source file as untested, which
@@ -59,8 +61,8 @@ def read_test_target_sources(cmake_lists: Path) -> set[str]:
 
     if match is None:
         raise ValueError(
-            f"Could not find add_executable(PracticeTakesTests ...) in {cmake_lists}. "
-            f"If the target was renamed, update TEST_TARGET_PATTERN."
+            f"Could not find set(PRACTICE_TAKES_TEST_SOURCES ...) in {cmake_lists}. "
+            f"If the variable was renamed or the list moved, update TEST_TARGET_PATTERN."
         )
 
     return {
@@ -141,7 +143,11 @@ def summarise(classified: dict[str, list[str]]) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-root", type=Path, default=REPOSITORY_ROOT / "src")
-    parser.add_argument("--cmake-lists", type=Path, default=REPOSITORY_ROOT / "CMakeLists.txt")
+    parser.add_argument(
+        "--cmake-lists",
+        type=Path,
+        default=REPOSITORY_ROOT / "tools" / "cmake" / "Sources.cmake",
+    )
     parser.add_argument(
         "--json",
         action="store_true",
