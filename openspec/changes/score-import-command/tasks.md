@@ -64,16 +64,16 @@ unit test can reach, so it is where the behaviour worth asserting should live.
 
 ## 3. The menu and the file chooser
 
-- [ ] 3.1 Add the application's first File menu, following the `juce::PopupMenu`
+- [x] 3.1 Add the application's first File menu, following the `juce::PopupMenu`
       idiom in `MainComponentWorkspaceMenu.cpp`. One item — see `design.md`
       § Open Questions before adding a second.
-- [ ] 3.2 Add the Open Score command, launching a `juce::FileChooser`
+- [x] 3.2 Add the Open Score command, launching a `juce::FileChooser`
       asynchronously with a `Component::SafePointer`, following
       `MainComponentSettings::importSettings`.
-- [ ] 3.3 Offer `.musicxml`, `.xml`, and `.mxl` together rather than forcing a
+- [x] 3.3 Offer `.musicxml`, `.xml`, and `.mxl` together rather than forcing a
       choice between them — the importer decides what a file is by its content,
       and the chooser should not be stricter than the importer.
-- [ ] 3.4 Do nothing at all when the chooser is dismissed, leaving any current
+- [x] 3.4 Do nothing at all when the chooser is dismissed, leaving any current
       score in place.
 
 ## 4. The summary window

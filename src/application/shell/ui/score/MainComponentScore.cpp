@@ -1,5 +1,21 @@
 #include "../../MainComponent.h"
 
+namespace
+{
+// The File menu holds one item. `design.md` § Open Questions records why it is
+// not being filled out speculatively: the menu's second item should be a
+// command someone needs, not a slot filled because a menu with one item looks
+// empty.
+constexpr int openScoreMenuItemId = 1;
+
+constexpr int fileMenuWidth = 220;
+
+// Offered together rather than as separate filters. The importer decides what a
+// file is by its content, not its extension, so a chooser stricter than the
+// importer would hide files the importer would happily read.
+constexpr const char* scoreFilePatterns = "*.musicxml;*.xml;*.mxl";
+} // namespace
+
 // The shell's half of the Open Score command: starting the import thread and
 // taking its result. The summary window that renders the result is task group
 // 4; until it exists the outcome is reported in an alert, which is the same
@@ -8,6 +24,59 @@
 // Nothing here parses MusicXML. The importer lives in src/platform/score and
 // runs on ScoreImportJob's thread; this file only starts it and files the
 // answer.
+
+void MainComponent::showFileMenu()
+{
+    juce::PopupMenu menu;
+    menu.setLookAndFeel(&appLookAndFeel);
+    menu.addItem(openScoreMenuItemId, "Open score...");
+
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    menu.showMenuAsync(
+        juce::PopupMenu::Options().withTargetComponent(&fileButton).withMinimumWidth(fileMenuWidth),
+        [safeThis](int selectedItemId)
+        {
+            if (safeThis == nullptr)
+            {
+                return;
+            }
+
+            if (selectedItemId == openScoreMenuItemId)
+            {
+                safeThis->openScore();
+            }
+        });
+}
+
+void MainComponent::openScore()
+{
+    scoreChooser = std::make_unique<juce::FileChooser>(
+        "Open score", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
+        scoreFilePatterns, true);
+
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    scoreChooser->launchAsync(
+        juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+        [safeThis](const juce::FileChooser& chooser)
+        {
+            if (safeThis == nullptr)
+            {
+                return;
+            }
+
+            const juce::File chosen = chooser.getResult();
+            safeThis->scoreChooser.reset();
+
+            // Dismissed. Not an error, not a message, and emphatically not a
+            // reason to disturb whatever score is already open.
+            if (chosen == juce::File())
+            {
+                return;
+            }
+
+            safeThis->startScoreImport(chosen);
+        });
+}
 
 void MainComponent::startScoreImport(const juce::File& file)
 {

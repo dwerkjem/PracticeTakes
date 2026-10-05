@@ -171,6 +171,13 @@ class MainComponent final
     void closeSettings();
     void showHelpMenu();
 
+    // The application's first File menu, hung off the File button that has
+    // existed unwired since the shell was built.
+    void showFileMenu();
+
+    // Ask for a file, then import it. Dismissing the chooser does nothing.
+    void openScore();
+
     // Start reading `file` on the import thread. Does nothing but report when
     // an import is already running -- see ScoreImportJob::start.
     void startScoreImport(const juce::File& file);
@@ -318,6 +325,11 @@ class MainComponent final
     // destructor stops the import thread -- is destroyed before both the
     // tools and the state its callback writes into.
     std::unique_ptr<ScoreImportJob> scoreImportJob;
+
+    // Held as a member for the same reason settingsTransferChooser is: an
+    // asynchronously launched FileChooser must outlive the call that launched
+    // it.
+    std::unique_ptr<juce::FileChooser> scoreChooser;
 
     Theme currentTheme = Theme::light;
     ToolInstanceId currentTool;

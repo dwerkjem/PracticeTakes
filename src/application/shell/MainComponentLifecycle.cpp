@@ -106,7 +106,8 @@ MainComponent::~MainComponent()
 
 void MainComponent::configureTopButtons()
 {
-    fileButton.setTooltip("File actions will be added later.");
+    fileButton.setTooltip("Open a score");
+    fileButton.onClick = [this] { showFileMenu(); };
     settingsButton.onClick = [this] { showSettingsMenu(); };
     toolsButton.onClick = [this] { showToolsMenu(); };
     helpButton.onClick = [this] { showHelpMenu(); };
@@ -119,6 +120,7 @@ void MainComponent::configureTopButtons()
     // targets in src/application/testcontrol/ApprovedWindowStates.cpp -- a
     // rename that misses one shows up as a click failing, not as a click
     // silently landing on nothing.
+    fileButton.setComponentID("file-button");
     settingsButton.setComponentID("settings-button");
     toolsButton.setComponentID("tools-button");
     helpButton.setComponentID("help-button");
