@@ -13,31 +13,31 @@ Settled inputs, from `design.md` § Decisions:
 The whole point of doing this first: it is the only part of the change that a
 unit test can reach, so it is where the behaviour worth asserting should live.
 
-- [ ] 1.1 Add the summary type that a `MusicXmlImportResult` converts into:
+- [x] 1.1 Add the summary type that a `MusicXmlImportResult` converts into:
       titles, composer, encoding software, per-part name and staff count,
       measure count, total length, and starting tempo. No JUCE `Component`
       dependency, so it compiles against the test target's module set.
-- [ ] 1.2 Convert total length into both bars and seconds. Bars because it is
+- [x] 1.2 Convert total length into both bars and seconds. Bars because it is
       what a musician counts; seconds because it is the one number that proves
       the tempo map was read rather than defaulted.
-- [ ] 1.3 Omit absent metadata rather than rendering empty labels. A score with
+- [x] 1.3 Omit absent metadata rather than rendering empty labels. A score with
       no composer should not show "Composer:" followed by nothing.
-- [ ] 1.4 Group diagnostics by severity, preserving the importer's order within
+- [x] 1.4 Group diagnostics by severity, preserving the importer's order within
       each group, and carry each one's occurrence count and musical location.
-- [ ] 1.5 Produce an explicit "nothing was dropped or repaired" result for a
+- [x] 1.5 Produce an explicit "nothing was dropped or repaired" result for a
       clean import. An empty list and a failure to report are indistinguishable
       on screen, which would make the `imported` versus `importedWithDiagnostics`
       distinction worthless.
-- [ ] 1.6 Map every `MusicXmlImportStatus` to the text shown for it, using the
+- [x] 1.6 Map every `MusicXmlImportStatus` to the text shown for it, using the
       importer's own error message rather than paraphrasing it. Collapsing the
       statuses would discard the work the previous change did to make failures
       specific.
-- [ ] 1.7 Add `src/tests/application/shell/ui/score/ScoreImportSummaryTests.cpp`
+- [x] 1.7 Add `src/tests/application/shell/ui/score/ScoreImportSummaryTests.cpp`
       covering: a multi-part score, a score with no metadata, bars-and-seconds
       at a non-default tempo and across a mid-score tempo change, diagnostic
       grouping, a repeated diagnostic's count, a clean import, and **every**
       failure status.
-- [ ] 1.8 Add the new sources to `target_sources(PracticeTakes ...)` and to
+- [x] 1.8 Add the new sources to `target_sources(PracticeTakes ...)` and to
       `add_executable(PracticeTakesTests ...)` in `CMakeLists.txt`, keeping the
       lists alphabetically grouped as they already are.
 
