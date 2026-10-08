@@ -343,6 +343,18 @@ TEST_CASE("click target ids are unique and described", "[testcontrol][approved]"
     }
 }
 
+TEST_CASE("the file button is a click target", "[testcontrol][approved]")
+{
+    // The File button carries the Open Score command. Approving it is what lets
+    // the capture harness drive an import without synthesising a pointer, and
+    // the id must match the one MainComponent::configureTopButtons sets -- a
+    // mismatch surfaces as a click landing on nothing rather than as an error.
+    const ApprovedClickTarget* target = findApprovedClickTarget("file-button");
+
+    REQUIRE(target != nullptr);
+    CHECK_FALSE(target->description.empty());
+}
+
 TEST_CASE("the hamburger target has a state that reveals it", "[testcontrol][approved]")
 {
     // The collapsed menu only exists below the title bar's width threshold, so

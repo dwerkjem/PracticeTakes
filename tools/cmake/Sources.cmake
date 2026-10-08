@@ -42,8 +42,13 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/ui/main_window/MicrophoneWarning.h
     src/application/shell/ui/feedback/FeedbackWindow.h
     src/application/shell/ui/feedback/MainComponentFeedback.cpp
+    src/application/shell/ui/score/MainComponentScore.cpp
+    src/application/shell/ui/score/ScoreImportJob.cpp
+    src/application/shell/ui/score/ScoreImportJob.h
+    src/application/shell/ui/score/ScoreImportState.h
     src/application/shell/ui/score/ScoreImportSummary.cpp
     src/application/shell/ui/score/ScoreImportSummary.h
+    src/application/shell/ui/score/ScoreImportWindow.h
     src/application/shell/ui/settings/MainComponentSettings.cpp
     src/application/shell/ui/settings/SettingsWindow.h
     src/application/shell/ui/workspace/components/DockedToolPanel.h
@@ -170,6 +175,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/configuration/SettingsPersistenceTests.cpp
     src/tests/application/configuration/SettingsTransferCodecTests.cpp
     src/tests/application/shell/WorkspaceStartupSequenceTests.cpp
+    src/tests/application/shell/ui/score/ScoreImportStateTests.cpp
     src/tests/application/shell/ui/score/ScoreImportSummaryTests.cpp
     src/tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp
     src/tests/application/shell/ui/workspace/model/NamedWorkspaceServiceTests.cpp

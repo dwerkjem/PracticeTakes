@@ -10,6 +10,8 @@
 #include "../theme/Theme.h"
 #include "../tools/BuiltInTools.h"
 #include "../tools/ToolInstanceId.h"
+#include "ui/score/ScoreImportJob.h"
+#include "ui/score/ScoreImportState.h"
 #include "ui/workspace/model/NamedWorkspaceService.h"
 #include "ui/workspace/model/WorkspaceDocuments.h"
 #include "ui/workspace/model/WorkspaceLayoutState.h"
@@ -122,6 +124,7 @@ class MainComponent final
     };
     class SettingsWindow;
     class FeedbackWindow;
+    class ScoreImportWindow;
     class MicrophoneWarning;
 
     // Initial setup ---------------------------------------------------------
@@ -168,6 +171,27 @@ class MainComponent final
     [[nodiscard]] bool applyTransferredSettings(const SettingsTransferModel& model);
     void closeSettings();
     void showHelpMenu();
+
+    // The application's first File menu, hung off the File button that has
+    // existed unwired since the shell was built.
+    void showFileMenu();
+
+    // Ask for a file, then import it. Dismissing the chooser does nothing.
+    void openScore();
+
+    // Start reading `file` on the import thread. Does nothing but report when
+    // an import is already running -- see ScoreImportJob::start.
+    void startScoreImport(const juce::File& file);
+
+    // Deliver a finished import: the summary is shown, and a successful score
+    // becomes the current one. Runs on the message thread.
+    void finishScoreImport(const score::musicxml::MusicXmlImportResult& result);
+
+    // Show the import window, creating it if it is not open. Re-openable and
+    // non-modal: an import is not a question the user has to answer.
+    void showScoreImportWindow();
+    void closeScoreImportWindow();
+
     void showFeedback(const juce::String& context = {});
     void recordSuccessfulToolUse();
     void maybeOfferFeedbackInvitation();
@@ -258,6 +282,16 @@ class MainComponent final
     // embedded UI typeface.
     AppLookAndFeel appLookAndFeel;
 
+    // The current score, and the summary of the import that produced it. The
+    // shell stands in for #39's session file until it exists.
+    //
+    // Declared here, before liveTools, for the same reason audioInputService
+    // and appLookAndFeel are: #33's score tool will read the current score, and
+    // a member declared after liveTools would be destroyed while tools still
+    // hold it. Nothing borrows it yet, so this costs nothing today and removes
+    // a landmine that would otherwise be found by a crash on quit.
+    ScoreImportState scoreImport;
+
     juce::TextButton fileButton{"File"};
     juce::TextButton settingsButton{"Settings"};
     juce::TextButton toolsButton{"Tools"};
@@ -290,6 +324,22 @@ class MainComponent final
     std::unique_ptr<juce::FileChooser> settingsTransferChooser;
     std::unique_ptr<FeedbackWindow> feedbackWindow;
     std::unique_ptr<MicrophoneWarning> microphoneWarning;
+
+    // Constructed on first use rather than at startup: a session that never
+    // opens a score never creates an import thread. Declared after
+    // scoreImport (far above, before liveTools), so the job -- whose
+    // destructor stops the import thread -- is destroyed before both the
+    // tools and the state its callback writes into.
+    std::unique_ptr<ScoreImportJob> scoreImportJob;
+
+    // Held as a member for the same reason settingsTransferChooser is: an
+    // asynchronously launched FileChooser must outlive the call that launched
+    // it.
+    std::unique_ptr<juce::FileChooser> scoreChooser;
+
+    // Opened when an import starts and reused for its result, so "reading..."
+    // and "here is what was read" are the same surface.
+    std::unique_ptr<ScoreImportWindow> scoreImportWindow;
 
     Theme currentTheme = Theme::light;
     ToolInstanceId currentTool;

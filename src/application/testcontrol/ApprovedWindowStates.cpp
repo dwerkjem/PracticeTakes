@@ -198,6 +198,7 @@ const std::vector<ApprovedWindowState>& states()
 const std::vector<ApprovedClickTarget>& targets()
 {
     static const std::vector<ApprovedClickTarget> approved{
+        {"file-button", "Opens the file menu"},
         {"tools-button", "Opens the tools menu"},
         {"settings-button", "Opens the settings menu"},
         {"help-button", "Opens the help menu"},

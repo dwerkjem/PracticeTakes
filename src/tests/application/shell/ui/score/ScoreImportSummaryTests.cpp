@@ -455,3 +455,118 @@ TEST_CASE(
     // the file used, so still findable.
     CHECK(summary.diagnostics.front().lines.front().location == "P7, bar 1");
 }
+
+TEST_CASE("the report lists the fields and the parts", "[score][import][summary]")
+{
+    const std::string report = scoreImportReport(
+        summariseScoreImport(resultOf(makeVocalScore(), MusicXmlImportStatus::imported)));
+
+    CHECK(report.find("Work: Requiem") != std::string::npos);
+    CHECK(report.find("Written by: MuseScore 4.4.2") != std::string::npos);
+    CHECK(report.find("Measures: 4") != std::string::npos);
+    CHECK(report.find("Soprano") != std::string::npos);
+
+    // A multi-staff part says so; a single-staff part does not say "1 staff",
+    // which would be noise on every vocal line.
+    CHECK(report.find("Piano (2 staves)") != std::string::npos);
+    CHECK(report.find("Soprano (1") == std::string::npos);
+}
+
+TEST_CASE(
+    "the report states a clean import rather than showing nothing",
+    "[score][import][summary]")
+{
+    const std::string report = scoreImportReport(
+        summariseScoreImport(resultOf(makeVocalScore(), MusicXmlImportStatus::imported)));
+
+    CHECK(report.find("Nothing was dropped or repaired.") != std::string::npos);
+}
+
+TEST_CASE(
+    "the report groups diagnostics under headings that say what they mean",
+    "[score][import][summary]")
+{
+    // The messages deliberately do not repeat the element name, because the
+    // real importer's do not either: it reports the element in the
+    // diagnostic's `elementName` and leaves the message to say what happened.
+    Diagnostic dropped =
+        diagnosticOf(DiagnosticSeverity::unsupported, "Chord symbols are not imported.", "harmony");
+    dropped.location.partId = "P3";
+    dropped.location.measureNumber = "12a";
+
+    Diagnostic repeated = diagnosticOf(
+        DiagnosticSeverity::info, "The importer does not read this element, so it was ignored.",
+        "print");
+    repeated.occurrences = 2114;
+
+    const std::string report = scoreImportReport(summariseScoreImport(resultOf(
+        makeVocalScore(), MusicXmlImportStatus::importedWithDiagnostics, {dropped, repeated})));
+
+    CHECK(report.find("does not support") != std::string::npos);
+    CHECK(report.find("Notes about the file:") != std::string::npos);
+    CHECK(
+        report.find("<harmony> Chord symbols are not imported. [Piano, bar 12a]") !=
+        std::string::npos);
+    CHECK(report.find("(seen 2114 times)") != std::string::npos);
+
+    // The clean-import sentence must not appear when there are diagnostics.
+    CHECK(report.find("Nothing was dropped") == std::string::npos);
+}
+
+TEST_CASE(
+    "unrecognised elements are told apart by name rather than repeating one message",
+    "[score][import][summary]")
+{
+    // The defect this covers, from a real MuseScore 4.7.3 export: every
+    // unrecognised element shares one generic message, so a report that omitted
+    // `elementName` showed seven identical rows of "The importer does not read
+    // this element, so it was ignored" -- naming nothing the user could act on.
+    //
+    // The earlier tests missed it because their fixtures wrote the element into
+    // the *message* ("Unrecognised <print>"), which the importer never does.
+    const std::string generic = "The importer does not read this element, so it was ignored.";
+
+    std::vector<Diagnostic> diagnostics;
+    for (const char* element : {"words", "metronome", "wedge", "pedal"})
+    {
+        diagnostics.push_back(diagnosticOf(DiagnosticSeverity::info, generic, element));
+    }
+
+    const std::string report = scoreImportReport(summariseScoreImport(
+        resultOf(makeVocalScore(), MusicXmlImportStatus::importedWithDiagnostics, diagnostics)));
+
+    for (const char* element : {"words", "metronome", "wedge", "pedal"})
+    {
+        CHECK(report.find(std::string("<") + element + "> " + generic) != std::string::npos);
+    }
+}
+
+TEST_CASE(
+    "a diagnostic about no particular element is not given an empty name",
+    "[score][import][summary]")
+{
+    // Document-level diagnostics carry no element, and "<> ..." would be worse
+    // than nothing.
+    const Diagnostic general =
+        diagnosticOf(DiagnosticSeverity::info, "The file declares no encoding software.", "");
+
+    const std::string report = scoreImportReport(summariseScoreImport(
+        resultOf(makeVocalScore(), MusicXmlImportStatus::importedWithDiagnostics, {general})));
+
+    CHECK(report.find("<>") == std::string::npos);
+    CHECK(report.find("  The file declares no encoding software.") != std::string::npos);
+}
+
+TEST_CASE("the report leads with the importer's message on a failure", "[score][import][summary]")
+{
+    MusicXmlImportResult result;
+    result.status = MusicXmlImportStatus::invalidContainer;
+    result.error = "META-INF/container.xml names score.xml, which the container does not hold";
+
+    const std::string report = scoreImportReport(summariseScoreImport(result));
+
+    CHECK(report.find("META-INF/container.xml names score.xml") == 0);
+
+    // Nothing structural to report, so nothing is invented.
+    CHECK(report.find("Measures:") == std::string::npos);
+}

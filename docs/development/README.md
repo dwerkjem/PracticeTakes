@@ -35,6 +35,7 @@ broader music-practice and digital-audio workstation application.
 - [QA strategy](quality/QA_STRATEGY.md) — the current CI/testing gap analysis and plan for closing it
 - [Test layout](quality/TEST_LAYOUT.md) — how `src/tests/` mirrors `src/`, where a new test goes, and what sits outside the mirror
 - [The testing suite](quality/TESTING_SUITE.md) — the standalone suite: unattended capture, the grid review, the run store, and the release record
+- [Verifying score import by hand](quality/score-import-manual-verification.md) — the generated fixture corpus and the four checks the native file chooser keeps out of reach
 
 ### `performance/`
 
