@@ -103,17 +103,17 @@ is [`docs/development/quality/score-import-manual-verification.md`](../../../doc
 `tools/scripts/quality/make_score_import_fixtures.py` writes one file per
 status, so a run does not start by hand-building malformed XML.
 
-- [ ] 5.1 Confirm the user interface stays responsive while a large score
+- [x] 5.1 Confirm the user interface stays responsive while a large score
       imports, by observation rather than by assertion — this is the property
       the whole background-thread design exists for and nothing has ever
       exercised it.
-- [ ] 5.2 Confirm that quitting the application mid-import neither crashes nor
+- [x] 5.2 Confirm that quitting the application mid-import neither crashes nor
       hangs.
-- [ ] 5.3 Open one file of each failure status and confirm the message
+- [x] 5.3 Open one file of each failure status and confirm the message
       distinguishes them, rather than all eight reading alike. (Eight, not
       nine: `MusicXmlImportStatus` has ten values, and `imported` and
       `importedWithDiagnostics` are both successes.)
-- [ ] 5.4 Open a score containing unsupported content and confirm the
+- [x] 5.4 Open a score containing unsupported content and confirm the
       diagnostics say what was dropped and where.
 - [ ] 5.5 Add the window to the manual GUI verification harness, since it is
       `Component` code outside `PracticeTakesTests`. **Blocked on a decision,
