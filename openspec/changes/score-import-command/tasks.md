@@ -98,6 +98,11 @@ unit test can reach, so it is where the behaviour worth asserting should live.
 
 ## 5. Verification
 
+The procedure for 5.1-5.4, and the generated fixture corpus they run against,
+is [`docs/development/quality/score-import-manual-verification.md`](../../../docs/development/quality/score-import-manual-verification.md).
+`tools/scripts/quality/make_score_import_fixtures.py` writes one file per
+status, so a run does not start by hand-building malformed XML.
+
 - [ ] 5.1 Confirm the user interface stays responsive while a large score
       imports, by observation rather than by assertion — this is the property
       the whole background-thread design exists for and nothing has ever
@@ -105,11 +110,19 @@ unit test can reach, so it is where the behaviour worth asserting should live.
 - [ ] 5.2 Confirm that quitting the application mid-import neither crashes nor
       hangs.
 - [ ] 5.3 Open one file of each failure status and confirm the message
-      distinguishes them, rather than all nine reading alike.
+      distinguishes them, rather than all eight reading alike. (Eight, not
+      nine: `MusicXmlImportStatus` has ten values, and `imported` and
+      `importedWithDiagnostics` are both successes.)
 - [ ] 5.4 Open a score containing unsupported content and confirm the
       diagnostics say what was dropped and where.
 - [ ] 5.5 Add the window to the manual GUI verification harness, since it is
-      `Component` code outside `PracticeTakesTests`.
+      `Component` code outside `PracticeTakesTests`. **Blocked on a decision,
+      not on a tester**: a surface names an approved state, and no approved
+      state can open this window, because reaching it means importing a file
+      and that means a path the test-control channel cannot supply. The two
+      options, and what each costs, are in
+      [the manual verification doc](../../../docs/development/quality/score-import-manual-verification.md)
+      § 5.5.
 - [x] 5.6 Run `python3 tools/scripts/run_tests.py` and `PracticeTakesTests`, and
       confirm both pass.
 - [x] 5.7 Run `clang-format` and `clang-tidy` via pre-commit and confirm the new
