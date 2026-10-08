@@ -369,7 +369,24 @@ std::string scoreImportReport(const ScoreImportSummary& summary)
 
         for (const ScoreImportDiagnosticLine& line : group.lines)
         {
-            report << "  " << line.message;
+            report << "  ";
+
+            // The element the diagnostic is about, when it names one.
+            //
+            // Not decoration. A recognised-but-dropped element describes
+            // itself in prose ("Slurs are phrasing marks..."), but an
+            // *unrecognised* one shares a single generic message with every
+            // other unrecognised element, and `elementName` is then the only
+            // thing telling two lines apart. Without this a MuseScore export
+            // renders as seven identical rows of "The importer does not read
+            // this element, so it was ignored" -- which names nothing the user
+            // could go and look at.
+            if (!line.elementName.empty())
+            {
+                report << "<" << line.elementName << "> ";
+            }
+
+            report << line.message;
 
             if (!line.location.empty())
             {
