@@ -161,6 +161,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/score/ScoreTraversal.h
     src/platform/score/engraving/Accidentals.cpp
     src/platform/score/engraving/Accidentals.h
+    src/platform/score/engraving/Beams.cpp
+    src/platform/score/engraving/Beams.h
     src/platform/score/engraving/GlyphMetrics.h
     src/platform/score/engraving/LayoutTypes.h
     src/platform/score/engraving/NoteValue.cpp
@@ -261,6 +263,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/score/ScoreModelTests.cpp
     src/tests/platform/score/ScoreTraversalTests.cpp
     src/tests/platform/score/engraving/AccidentalsTests.cpp
+    src/tests/platform/score/engraving/BeamsTests.cpp
     src/tests/platform/score/engraving/GrandStaffFixtureTests.cpp
     src/tests/platform/score/engraving/NoteValueTests.cpp
     src/tests/platform/score/engraving/ScoreLayoutTests.cpp
@@ -300,6 +303,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/score/ScoreTraversal.cpp
     src/platform/score/TempoMap.cpp
     src/platform/score/engraving/Accidentals.cpp
+    src/platform/score/engraving/Beams.cpp
     src/platform/score/engraving/NoteValue.cpp
     src/platform/score/engraving/ScoreLayout.cpp
     src/platform/score/engraving/Stems.cpp

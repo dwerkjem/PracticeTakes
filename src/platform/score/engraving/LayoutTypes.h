@@ -56,6 +56,30 @@ struct PlacedStem
     double toStep = 0.0;
 };
 
+// A beam: the thick stroke joining a group of stems, which is how a reader
+// gets both the duration of the notes and the shape of the beat.
+//
+// Four corners, already computed. The sides are vertical, so two x values and
+// four steps name all four: the painter fills the quadrilateral and works out
+// no slope, no thickness and no corner of its own. A painter that had to
+// compute a slope would mean the split between layout and painting had been
+// broken, and the layout would no longer be assertable without a display.
+struct PlacedBeam
+{
+    double leftX = 0.0;
+    double rightX = 0.0;
+
+    // "Outer" is the side the stems end on, away from the noteheads.
+    double leftOuterStep = 0.0;
+    double rightOuterStep = 0.0;
+    double leftInnerStep = 0.0;
+    double rightInnerStep = 0.0;
+
+    // Zero is the primary beam, one the first secondary, and so on. Carried so
+    // a test can ask for the sixteenth beams without measuring positions.
+    int index = 0;
+};
+
 // A ledger line: a short horizontal rule through or beside a notehead.
 struct PlacedLedgerLine
 {
@@ -78,6 +102,7 @@ struct StaffLayout
     std::vector<PlacedGlyph> glyphs;
     std::vector<PlacedLedgerLine> ledgerLines;
     std::vector<PlacedStem> stems;
+    std::vector<PlacedBeam> beams;
 };
 
 // One part's staves within one system, and whether they are braced together.

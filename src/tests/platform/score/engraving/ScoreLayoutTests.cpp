@@ -712,10 +712,45 @@ TEST_CASE("a short note gets a flag and a long one does not", "[engraving][layou
 
     const StaffLayout& staff = layout.systems[0].parts[0].staves[0];
 
-    // Four events, four stems, and a flag on each of the two eighths.
+    // Four events, four stems. The two eighths fall in one beat group, so they
+    // are beamed and neither keeps a flag -- a beamed note carrying a flag as
+    // well would read as twice as short.
     CHECK(staff.stems.size() == 4);
+    CHECK(countGlyph(staff, Glyph::flag8thUp) + countGlyph(staff, Glyph::flag8thDown) == 0);
+    CHECK(staff.beams.size() == 1);
+}
+
+TEST_CASE("an eighth with no neighbour keeps its flag", "[engraving][layout][beam]")
+{
+    // The same two eighths, moved either side of a beat boundary. Neither has
+    // anything to beam to now, so both keep the flag the test above checks is
+    // gone.
+    Voice voice;
+    voice.number = 1;
+    voice.events = {
+        noteAt(0, ticksPerQuarterNote / 2, Step::g, 4),
+        noteAt(ticksPerQuarterNote / 2, ticksPerQuarterNote, Step::a, 4),
+        noteAt(
+            ticksPerQuarterNote + (ticksPerQuarterNote / 2), ticksPerQuarterNote / 2, Step::b, 4),
+        noteAt(2 * ticksPerQuarterNote, 2 * ticksPerQuarterNote, Step::c, 5)};
+
+    Measure measure = emptyMeasure(0);
+    measure.voices = {voice};
+
+    Part part;
+    part.id = "P1";
+    part.staffCount = 1;
+    part.measures = {measure};
+
+    Score score;
+    score.parts = {part};
+
+    const ScoreLayout layout = layOutScore(score, LayoutOptions{});
+
+    const StaffLayout& staff = layout.systems[0].parts[0].staves[0];
+
+    CHECK(staff.beams.empty());
     CHECK(countGlyph(staff, Glyph::flag8thUp) + countGlyph(staff, Glyph::flag8thDown) == 2);
-    CHECK(countGlyph(staff, Glyph::flag16thUp) + countGlyph(staff, Glyph::flag16thDown) == 0);
 }
 
 TEST_CASE("a dotted note is drawn with its dot", "[engraving][layout][stem]")
@@ -786,4 +821,265 @@ TEST_CASE("a length no notehead can write is reported", "[engraving][layout][dia
     REQUIRE(layout.diagnostics.size() == 1);
     CHECK(layout.diagnostics.front().elementName == "note");
     CHECK(layout.diagnostics.front().location.measureNumber == "1");
+}
+
+namespace
+{
+// A one-measure score of eighth notes in some time signature, for the beaming
+// cases. The pitches rise so that every stem wants a different length, which is
+// what makes "every stem lands on its beam" worth asserting.
+[[nodiscard]] Score makeEighthsScore(int beats, int beatType, std::size_t count)
+{
+    const Tick eighth = ticksPerQuarterNote / 2;
+
+    Voice voice;
+    voice.number = 1;
+
+    for (std::size_t index = 0; index < count; ++index)
+    {
+        voice.events.push_back(noteAt(
+            static_cast<Tick>(index) * eighth, eighth, static_cast<Step>(index % 7),
+            4 + static_cast<int>(index / 7)));
+    }
+
+    Measure measure;
+    measure.printedNumber = "1";
+    measure.index = 0;
+    measure.nominalDuration = nominalMeasureTicks(beats, beatType);
+    measure.start = 0;
+    measure.attributes.time = TimeSignature{beats, beatType};
+    measure.voices = {voice};
+
+    Part part;
+    part.id = "P1";
+    part.staffCount = 1;
+    part.measures = {measure};
+
+    Score score;
+    score.parts = {part};
+
+    return score;
+}
+
+[[nodiscard]] const StaffLayout& onlyStaff(const ScoreLayout& layout)
+{
+    return layout.systems.at(0).parts.at(0).staves.at(0);
+}
+
+// How many events each primary beam spans, by counting the stems whose x falls
+// within it.
+[[nodiscard]] std::vector<int> primaryBeamSpans(const StaffLayout& staff)
+{
+    std::vector<int> spans;
+
+    for (const PlacedBeam& beam : staff.beams)
+    {
+        if (beam.index != 0)
+        {
+            continue;
+        }
+
+        int covered = 0;
+
+        for (const PlacedStem& stem : staff.stems)
+        {
+            if (stem.x >= beam.leftX - 0.001 && stem.x <= beam.rightX + 0.001)
+            {
+                ++covered;
+            }
+        }
+
+        spans.push_back(covered);
+    }
+
+    return spans;
+}
+} // namespace
+
+TEST_CASE("six-eight beams as two groups of three", "[engraving][layout][beam]")
+{
+    // The case a beaming rule that ignored the time signature gets wrong, and
+    // the reason the rule reads the signature at all: three groups of two here
+    // would tell a reader the bar is in 3/4.
+    const ScoreLayout layout = layOutScore(makeEighthsScore(6, 8, 6), LayoutOptions{});
+
+    const StaffLayout& staff = onlyStaff(layout);
+
+    CHECK(staff.stems.size() == 6);
+    CHECK(primaryBeamSpans(staff) == std::vector<int>{3, 3});
+}
+
+TEST_CASE("three-four beams as three groups of two", "[engraving][layout][beam]")
+{
+    // The same six eighth notes, in a signature whose beat is a quarter.
+    const ScoreLayout layout = layOutScore(makeEighthsScore(3, 4, 6), LayoutOptions{});
+
+    CHECK(primaryBeamSpans(onlyStaff(layout)) == std::vector<int>{2, 2, 2});
+}
+
+TEST_CASE("cut time beams in halves", "[engraving][layout][beam]")
+{
+    const ScoreLayout layout = layOutScore(makeEighthsScore(2, 2, 8), LayoutOptions{});
+
+    CHECK(primaryBeamSpans(onlyStaff(layout)) == std::vector<int>{4, 4});
+}
+
+TEST_CASE("four-four beams by the beat", "[engraving][layout][beam]")
+{
+    const ScoreLayout layout = layOutScore(makeEighthsScore(4, 4, 8), LayoutOptions{});
+
+    CHECK(primaryBeamSpans(onlyStaff(layout)) == std::vector<int>{2, 2, 2, 2});
+}
+
+TEST_CASE("a rest breaks a beam", "[engraving][layout][beam]")
+{
+    const Tick eighth = ticksPerQuarterNote / 2;
+
+    Score score = makeEighthsScore(3, 4, 6);
+
+    // Replace the middle note of the second group with a rest. Without the
+    // break, the beam would run across it and say the two notes either side
+    // are one figure.
+    ScoreEvent rest;
+    rest.kind = EventKind::rest;
+    rest.onset = 2 * eighth;
+    rest.duration = eighth;
+    rest.staff = 1;
+
+    score.parts[0].measures[0].voices[0].events[2] = rest;
+
+    const ScoreLayout layout = layOutScore(score, LayoutOptions{});
+
+    const StaffLayout& staff = onlyStaff(layout);
+
+    // The first group is untouched, the second has one note left and so keeps
+    // a flag, and the third is untouched.
+    const std::vector<int> spans = primaryBeamSpans(staff);
+
+    CHECK(spans.size() == 2);
+    CHECK(countGlyph(staff, Glyph::flag8thUp) + countGlyph(staff, Glyph::flag8thDown) == 1);
+}
+
+TEST_CASE("every stem in a beamed group ends on its beam", "[engraving][layout][beam]")
+{
+    // The property the whole of the beam arithmetic is for, and the one a
+    // picture is bad at checking.
+    const ScoreLayout layout = layOutScore(makeEighthsScore(4, 4, 8), LayoutOptions{});
+
+    const StaffLayout& staff = onlyStaff(layout);
+
+    REQUIRE_FALSE(staff.beams.empty());
+
+    for (const PlacedBeam& beam : staff.beams)
+    {
+        if (beam.index != 0)
+        {
+            continue;
+        }
+
+        const double span = beam.rightX - beam.leftX;
+
+        REQUIRE(span > 0.0);
+
+        for (const PlacedStem& stem : staff.stems)
+        {
+            if (stem.x < beam.leftX - 0.001 || stem.x > beam.rightX + 0.001)
+            {
+                continue;
+            }
+
+            const double onBeam =
+                beam.leftOuterStep +
+                ((stem.x - beam.leftX) * (beam.rightOuterStep - beam.leftOuterStep) / span);
+
+            INFO("stem at " << stem.x << " ends at " << stem.toStep << ", beam at " << onBeam);
+            CHECK(std::abs(stem.toStep - onBeam) < 0.001);
+        }
+    }
+}
+
+TEST_CASE("sixteenths carry a second beam", "[engraving][layout][beam]")
+{
+    const Tick sixteenth = ticksPerQuarterNote / 4;
+
+    Voice voice;
+    voice.number = 1;
+    voice.events = {
+        noteAt(0, sixteenth, Step::g, 4), noteAt(sixteenth, sixteenth, Step::a, 4),
+        noteAt(2 * sixteenth, sixteenth, Step::b, 4), noteAt(3 * sixteenth, sixteenth, Step::c, 5),
+        noteAt(ticksPerQuarterNote, 3 * ticksPerQuarterNote, Step::d, 5)};
+
+    Measure measure = emptyMeasure(0);
+    measure.attributes.time = TimeSignature{4, 4};
+    measure.voices = {voice};
+
+    Part part;
+    part.id = "P1";
+    part.staffCount = 1;
+    part.measures = {measure};
+
+    Score score;
+    score.parts = {part};
+
+    const StaffLayout& staff = onlyStaff(layOutScore(score, LayoutOptions{}));
+
+    int primary = 0;
+    int secondary = 0;
+
+    for (const PlacedBeam& beam : staff.beams)
+    {
+        if (beam.index == 0)
+        {
+            ++primary;
+        }
+        else if (beam.index == 1)
+        {
+            ++secondary;
+        }
+    }
+
+    // One of each over the four sixteenths: the second beam is what makes them
+    // sixteenths rather than eighths.
+    CHECK(primary == 1);
+    CHECK(secondary == 1);
+}
+
+TEST_CASE("two voices' rests do not land on each other", "[engraving][layout][beam]")
+{
+    // Both voices rest on beat two. On one staff with no offset they would be
+    // drawn on the same spot and read as one rest belonging to neither.
+    const auto voiceWithRest = [](int number, Step step)
+    {
+        Voice voice;
+        voice.number = number;
+        voice.events = {noteAt(0, ticksPerQuarterNote, step, 4)};
+
+        ScoreEvent rest;
+        rest.kind = EventKind::rest;
+        rest.onset = ticksPerQuarterNote;
+        rest.duration = 3 * ticksPerQuarterNote;
+        rest.staff = 1;
+
+        voice.events.push_back(rest);
+
+        return voice;
+    };
+
+    Measure measure = emptyMeasure(0);
+    measure.voices = {voiceWithRest(1, Step::e), voiceWithRest(2, Step::c)};
+
+    Part part;
+    part.id = "P1";
+    part.staffCount = 1;
+    part.measures = {measure};
+
+    Score score;
+    score.parts = {part};
+
+    const StaffLayout& staff = onlyStaff(layOutScore(score, LayoutOptions{}));
+
+    const std::vector<int> restSteps = stepsOfGlyph(staff, Glyph::restHalf);
+
+    REQUIRE(restSteps.size() == 2);
+    CHECK(restSteps[0] != restSteps[1]);
 }

@@ -87,8 +87,10 @@ one per note.
 The layout SHALL beam consecutive beamable events — flagged, not rests, in one
 voice on one staff — that fall within one beat group, and SHALL break the beam
 at every group boundary. The group SHALL be three divisions of the beat type in
-a compound signature and one division in a simple one. A group of one event
-SHALL keep its flag rather than becoming a beam of one.
+a compound signature and one division in a simple one. A signature is compound
+when its beat count divides by three and either exceeds three or its beat type
+is an eighth or shorter — so 6/8, 9/8 and 3/8 are compound and 3/4 is not. A
+group of one event SHALL keep its flag rather than becoming a beam of one.
 
 #### Scenario: Six-eight reads as two groups of three
 - **WHEN** a 6/8 measure holds six eighth notes in one voice
@@ -98,6 +100,11 @@ SHALL keep its flag rather than becoming a beam of one.
 #### Scenario: Three-four reads as three groups
 - **WHEN** a 3/4 measure holds six eighth notes in one voice
 - **THEN** they are drawn as three beamed groups of two
+
+#### Scenario: Three-eight is one group, not three
+- **WHEN** a 3/8 measure holds three eighth notes in one voice
+- **THEN** they are drawn as one beamed group of three, where the same beat
+  count over a quarter-note beat — 3/4 — would group by the quarter
 
 #### Scenario: A lone short note keeps its flag
 - **WHEN** an eighth note is the only beamable event in its beat group

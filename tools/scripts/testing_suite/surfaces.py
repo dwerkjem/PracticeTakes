@@ -740,10 +740,32 @@ SURFACES: tuple[Surface, ...] = (
                 "staff?",
             ),
             Question(
-                "rhythm-not-yet-drawn",
-                "Known gap: notes have no stems, flags or beams, so an eighth note looks "
-                "like a quarter. Together with the undrawn mid-system signature changes, is "
-                "that everything missing from this page?",
+                "stems",
+                "Does every note shorter than a whole have one stem, with a chord taking one "
+                "stem rather than one per note, pointing down above the middle line and up "
+                "below it?",
+            ),
+            Question(
+                "beam-grouping",
+                "The piece is in 3/4, so beams group in quarters. In bar 3, are the two "
+                "eighths beamed as a pair and the four sixteenths beamed with a second beam "
+                "under the first?",
+            ),
+            Question(
+                "beam-stub",
+                "Still bar 3: the dotted eighth and sixteenth at the end. Does the sixteenth "
+                "carry a short stub of a second beam rather than a full one, and does the "
+                "dotted eighth carry only the first?",
+            ),
+            Question(
+                "dots",
+                "Does bar 11 show a dotted half, with the dot beside the notehead in a space "
+                "rather than sitting on the line through it?",
+            ),
+            Question(
+                "nothing-else-missing",
+                "Other than the mid-system key and clef changes above, is everything on this "
+                "page something a reader could play from?",
             ),
         ),
     ),

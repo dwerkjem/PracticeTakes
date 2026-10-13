@@ -6,8 +6,10 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <utility>
 
 #include "Accidentals.h"
+#include "Beams.h"
 #include "NoteValue.h"
 #include "Stems.h"
 #include "SystemHead.h"
@@ -27,6 +29,9 @@ constexpr double staffHeight = 4.0;
 
 // Gap between a notehead and its first augmentation dot, and between dots.
 constexpr double dotGap = 0.35;
+
+// How far apart two voices' rests move on a shared staff, in staff steps.
+constexpr int restVoiceOffsetSteps = 2;
 
 // How steeply width grows with duration. 1.0 would be strict proportionality,
 // which is the thing to avoid; 0.6 is the usual neighbourhood for a power-law
@@ -92,8 +97,31 @@ struct PreparedEvent
     int lowestStep = 0;
     int highestStep = 0;
 
+    // Which voice wrote it. Beams never join two voices, and stem direction
+    // already depends on it.
+    int voiceNumber = 1;
+
+    // Onset within its own measure, which is what beat grouping is measured
+    // against. The absolute onset would need the measure start subtracting
+    // back off at every use.
+    Tick onsetInMeasure = 0;
+
+    // True once a beam has claimed it, which is what suppresses its flag: a
+    // beamed note with a flag as well would read as twice as short.
+    bool beamed = false;
+
     // Horizontal room this event's glyphs need, accidentals included.
     double width = 0.0;
+};
+
+// One beam: the prepared events it joins, in order.
+//
+// Indices into the part's prepared list rather than pointers, because the list
+// is still being appended to while these are collected and a pointer into a
+// growing vector is a dangling pointer waiting for a reallocation.
+struct BeamGroup
+{
+    std::vector<std::size_t> events;
 };
 
 // What is in force at the start of a measure, per staff.
@@ -149,8 +177,9 @@ struct PartAttributeTrack
     }
 
     // A flag hangs to the right of an up stem and overhangs the notehead. Not
-    // counting it is how a flag ends up drawn across the next column.
-    if (event.hasStem && event.value.flags > 0 && event.stemUp)
+    // counting it is how a flag ends up drawn across the next column. A beamed
+    // event has no flag and so needs none of this.
+    if (event.hasStem && !event.beamed && event.value.flags > 0 && event.stemUp)
     {
         widest += advanceWidth(flagGlyphFor(event.value.flags, true));
     }
@@ -175,6 +204,89 @@ void applyClefChanges(const AttributeChanges& changes, std::vector<StaffState>& 
     }
 }
 
+// Beam the events of one measure, already prepared.
+//
+// Runs over each (staff, voice) separately, because a beam never joins two
+// voices and never crosses the brace. Within one of those, a run of beamable
+// events that share a beat group becomes a beam; anything else -- a rest, a
+// quarter note, a group boundary -- ends the run. A run of one keeps its flag,
+// which is what "two or more notes make a beam" means in practice.
+void collectBeamGroups(
+    std::vector<PreparedEvent>& prepared,
+    std::size_t measureFirst,
+    const TimeSignature& time,
+    std::vector<BeamGroup>& groups)
+{
+    const Tick groupTicks = beamGroupTicks(time);
+
+    if (groupTicks <= 0)
+    {
+        return;
+    }
+
+    // Keyed by staff and voice, in that order, so one part's two hands never
+    // beam to each other.
+    std::map<std::pair<int, int>, std::vector<std::size_t>> byVoice;
+
+    for (std::size_t index = measureFirst; index < prepared.size(); ++index)
+    {
+        const PreparedEvent& event = prepared[index];
+
+        byVoice[{event.staff, event.voiceNumber}].push_back(index);
+    }
+
+    for (auto& [key, indices] : byVoice)
+    {
+        std::sort(
+            indices.begin(), indices.end(), [&prepared](std::size_t lhs, std::size_t rhs)
+            { return prepared[lhs].onsetInMeasure < prepared[rhs].onsetInMeasure; });
+
+        std::vector<std::size_t> run;
+        Tick runGroup = 0;
+
+        const auto flush = [&prepared, &groups, &run]()
+        {
+            if (run.size() >= 2)
+            {
+                for (const std::size_t index : run)
+                {
+                    prepared[index].beamed = true;
+                }
+
+                groups.push_back(BeamGroup{run});
+            }
+
+            run.clear();
+        };
+
+        for (const std::size_t index : indices)
+        {
+            const PreparedEvent& event = prepared[index];
+
+            const bool beamable = !event.isRest && event.hasStem && event.value.flags > 0;
+
+            if (!beamable)
+            {
+                flush();
+
+                continue;
+            }
+
+            const Tick group = event.onsetInMeasure / groupTicks;
+
+            if (!run.empty() && group != runGroup)
+            {
+                flush();
+            }
+
+            runGroup = group;
+            run.push_back(index);
+        }
+
+        flush();
+    }
+}
+
 // Prepare one part: walk it once, in musical order, resolving clefs, keys and
 // accidentals as it goes.
 //
@@ -185,6 +297,7 @@ std::vector<PreparedEvent> prepare(
     const Part& part,
     std::size_t partIndex,
     PartAttributeTrack& attributes,
+    std::vector<BeamGroup>& beamGroups,
     std::vector<Diagnostic>& diagnostics)
 {
     const std::size_t staffCount = static_cast<std::size_t>(std::max(1, part.staffCount));
@@ -272,6 +385,8 @@ std::vector<PreparedEvent> prepare(
             }
         }
 
+        const std::size_t measureFirst = prepared.size();
+
         for (const MeasureEventIndex& position : measureEventOrder(measure))
         {
             const Voice& voice = measure.voices[position.voiceIndex];
@@ -312,6 +427,8 @@ std::vector<PreparedEvent> prepare(
             entry.measureIndex = measureIndex;
             entry.staff = static_cast<int>(staffIndex) + 1;
             entry.absoluteOnset = absoluteOnset(measure, event);
+            entry.voiceNumber = voice.number;
+            entry.onsetInMeasure = event.onset;
 
             // The written value, once, for notehead, flags and dots alike.
             // A rest with no duration of its own fills its bar, which is what
@@ -363,6 +480,18 @@ std::vector<PreparedEvent> prepare(
                 entry.isRest = true;
                 entry.restGlyph = entry.value.rest;
                 entry.restStaffStep = restStepFor(entry.restGlyph);
+
+                // On a staff carrying two voices, their rests would otherwise
+                // land on the same spot and read as one. They move apart the
+                // same way their stems do: the upper voice up, the lower down.
+                const auto sharing = voicesOnStaff.find(entry.staff);
+
+                if (sharing != voicesOnStaff.end() && sharing->second.size() > 1)
+                {
+                    entry.restStaffStep += voice.number == *sharing->second.begin()
+                                               ? restVoiceOffsetSteps
+                                               : -restVoiceOffsetSteps;
+                }
             }
             else
             {
@@ -411,9 +540,18 @@ std::vector<PreparedEvent> prepare(
                 }
             }
 
-            entry.width = widthOf(entry);
-
             prepared.push_back(entry);
+        }
+
+        // After the walk, not during it: whether an event is beamed depends on
+        // the events after it, and its width depends on whether it is beamed --
+        // a beamed note has no flag, and a flag is the widest thing an event
+        // carries.
+        collectBeamGroups(prepared, measureFirst, time.value_or(TimeSignature{}), beamGroups);
+
+        for (std::size_t index = measureFirst; index < prepared.size(); ++index)
+        {
+            prepared[index].width = widthOf(prepared[index]);
         }
     }
 
@@ -441,6 +579,198 @@ void placeDots(StaffLayout& staff, double afterX, int staffStep, int dots)
         staff.glyphs.push_back(PlacedGlyph{Glyph::augmentationDot, x, dotStep});
 
         x += advanceWidth(Glyph::augmentationDot) + dotGap;
+    }
+}
+
+// Where one event's stem ended up, so a beam can find it again.
+//
+// A beam has to *move* the stems it joins, and it is placed after they exist,
+// so it needs an index back into the staff that holds them.
+struct PlacedStemRef
+{
+    bool placed = false;
+    std::size_t staffIndex = 0;
+    std::size_t stemIndex = 0;
+
+    double x = 0.0;
+
+    // Where the stem would have ended on its own. A beam may lengthen a stem
+    // and must never shorten one below this.
+    double idealEnd = 0.0;
+};
+
+// Place one beam group: the beam itself, and the stems it moves.
+void placeBeam(
+    const std::vector<PreparedEvent>& prepared,
+    const std::vector<std::size_t>& events,
+    const std::vector<PlacedStemRef>& stems,
+    PartLayout& part)
+{
+    if (events.size() < 2)
+    {
+        return;
+    }
+
+    // Every event of the group must have been placed in this system. A group
+    // split by a system break is not drawn as two half beams -- the break
+    // happens at a barline and a beam never crosses one, so this is a guard
+    // rather than a case.
+    for (const std::size_t index : events)
+    {
+        if (index >= stems.size() || !stems[index].placed)
+        {
+            return;
+        }
+    }
+
+    const std::size_t staffIndex = stems[events.front()].staffIndex;
+
+    if (staffIndex >= part.staves.size())
+    {
+        return;
+    }
+
+    StaffLayout& staff = part.staves[staffIndex];
+
+    // One direction for the whole group, from its outermost note. Half the
+    // group stemming one way and half the other is not a beam.
+    int lowest = prepared[events.front()].lowestStep;
+    int highest = prepared[events.front()].highestStep;
+
+    for (const std::size_t index : events)
+    {
+        lowest = std::min(lowest, prepared[index].lowestStep);
+        highest = std::max(highest, prepared[index].highestStep);
+    }
+
+    const bool up = stemPointsUp(lowest, highest);
+
+    // The stem ends each event would have had alone, recomputed for the
+    // group's direction rather than its own: an event that would have stemmed
+    // the other way has a different end entirely.
+    std::vector<std::pair<double, double>> required;
+    required.reserve(events.size());
+
+    for (const std::size_t index : events)
+    {
+        const PreparedEvent& event = prepared[index];
+        const PlacedStemRef& stem = stems[index];
+
+        const double end =
+            up ? std::max(
+                     static_cast<double>(event.lowestStep + defaultStemSteps),
+                     static_cast<double>(event.highestStep + chordOvershootSteps))
+               : std::min(
+                     static_cast<double>(event.highestStep - defaultStemSteps),
+                     static_cast<double>(event.lowestStep - chordOvershootSteps));
+
+        required.emplace_back(stem.x, end);
+    }
+
+    const BeamLine line = shiftedToClear(
+        clampedBeamLine(
+            required.front().first, required.front().second, required.back().first,
+            required.back().second),
+        required, up);
+
+    // Every stem now ends on the beam at its own x, which is the property the
+    // whole of this is for.
+    for (std::size_t position = 0; position < events.size(); ++position)
+    {
+        const PlacedStemRef& stem = stems[events[position]];
+
+        // A stem whose event stems the other way on its own still has to take
+        // the group's direction, or the beam would join two ends that are not
+        // both there.
+        const PreparedEvent& event = prepared[events[position]];
+
+        staff.stems[stem.stemIndex].fromStep = up ? event.lowestStep : event.highestStep;
+        staff.stems[stem.stemIndex].toStep = line.stepAt(stem.x);
+    }
+
+    // The primary beam, spanning the whole group.
+    const double inner = up ? -beamThicknessSteps : beamThicknessSteps;
+
+    staff.beams.push_back(PlacedBeam{
+        line.startX, line.endX, line.startStep, line.endStep, line.startStep + inner,
+        line.endStep + inner, 0});
+
+    // Secondary beams, inward, each spanning only the events that carry it.
+    int level = 1;
+
+    const auto flagsAt = [&prepared, &events](std::size_t position)
+    { return prepared[events[position]].value.flags; };
+
+    while (true)
+    {
+        int deepest = 0;
+
+        for (std::size_t position = 0; position < events.size(); ++position)
+        {
+            deepest = std::max(deepest, flagsAt(position));
+        }
+
+        if (level >= deepest)
+        {
+            break;
+        }
+
+        const double offset = (up ? -1.0 : 1.0) * beamPitchSteps * level;
+
+        std::size_t runStart = 0;
+        bool inRun = false;
+
+        const auto emit = [&](std::size_t first, std::size_t last)
+        {
+            double leftX = stems[events[first]].x;
+            double rightX = stems[events[last]].x;
+
+            if (first == last)
+            {
+                // A lone sixteenth inside a beamed group -- the short half of a
+                // dotted rhythm. It has nothing to beam to, so it gets a stub
+                // pointing back toward its neighbour, which is what says it is
+                // a sixteenth rather than an eighth.
+                if (first > 0)
+                {
+                    leftX = rightX - beamStubWidth;
+                }
+                else
+                {
+                    rightX = leftX + beamStubWidth;
+                }
+            }
+
+            const double leftOuter = line.stepAt(leftX) + offset;
+            const double rightOuter = line.stepAt(rightX) + offset;
+
+            staff.beams.push_back(PlacedBeam{
+                leftX, rightX, leftOuter, rightOuter, leftOuter + inner, rightOuter + inner,
+                level});
+        };
+
+        for (std::size_t position = 0; position < events.size(); ++position)
+        {
+            const bool carries = flagsAt(position) > level;
+
+            if (carries && !inRun)
+            {
+                runStart = position;
+                inRun = true;
+            }
+            else if (!carries && inRun)
+            {
+                emit(runStart, position - 1);
+                inRun = false;
+            }
+        }
+
+        if (inRun)
+        {
+            emit(runStart, events.size() - 1);
+        }
+
+        ++level;
     }
 }
 
@@ -497,11 +827,13 @@ ScoreLayout layOutScore(const Score& score, const LayoutOptions& options)
     preparedByPart.reserve(score.parts.size());
 
     std::vector<PartAttributeTrack> attributesByPart(score.parts.size());
+    std::vector<std::vector<BeamGroup>> beamGroupsByPart(score.parts.size());
 
     for (std::size_t partIndex = 0; partIndex < score.parts.size(); ++partIndex)
     {
         preparedByPart.push_back(prepare(
-            score.parts[partIndex], partIndex, attributesByPart[partIndex], layout.diagnostics));
+            score.parts[partIndex], partIndex, attributesByPart[partIndex],
+            beamGroupsByPart[partIndex], layout.diagnostics));
     }
 
     // The head is as wide as the widest staff's head, so that music starts at
@@ -724,10 +1056,22 @@ ScoreLayout layOutScore(const Score& score, const LayoutOptions& options)
         }
 
         // Now the music itself, into the staff each event names.
-        for (const std::vector<PreparedEvent>& prepared : preparedByPart)
+        //
+        // Where each event's stem landed, so the beam pass can find it again.
+        // A beam is placed after every stem in its group exists, because it has
+        // to move them.
+        std::vector<std::vector<PlacedStemRef>> stemRefByPart(preparedByPart.size());
+
+        for (std::size_t sourcePart = 0; sourcePart < preparedByPart.size(); ++sourcePart)
         {
-            for (const PreparedEvent& event : prepared)
+            const std::vector<PreparedEvent>& prepared = preparedByPart[sourcePart];
+
+            stemRefByPart[sourcePart].assign(prepared.size(), PlacedStemRef{});
+
+            for (std::size_t eventIndex = 0; eventIndex < prepared.size(); ++eventIndex)
             {
+                const PreparedEvent& event = prepared[eventIndex];
+
                 if (event.measureIndex < range.first ||
                     event.measureIndex >= range.first + range.count)
                 {
@@ -816,9 +1160,12 @@ ScoreLayout layOutScore(const Score& score, const LayoutOptions& options)
                     staff.stems.push_back(
                         PlacedStem{geometry.x, geometry.fromStep, geometry.toStep});
 
-                    // A flag, until beams exist to replace it. The glyph sits
-                    // at the free end of the stem, on the stem's own x.
-                    if (event.value.flags > 0)
+                    stemRefByPart[sourcePart][eventIndex] = PlacedStemRef{
+                        true, staffIndex, staff.stems.size() - 1, geometry.x, geometry.toStep};
+
+                    // A flag only where no beam replaced it. The glyph sits at
+                    // the free end of the stem, on the stem's own x.
+                    if (event.value.flags > 0 && !event.beamed)
                     {
                         staff.glyphs.push_back(PlacedGlyph{
                             flagGlyphFor(event.value.flags, event.stemUp), geometry.x,
@@ -833,6 +1180,17 @@ ScoreLayout layOutScore(const Score& score, const LayoutOptions& options)
                         staff, noteheadX + advanceWidth(note.notehead), note.staffStep,
                         event.value.dots);
                 }
+            }
+        }
+
+        // Beams, last: every stem they move is now placed.
+        for (std::size_t sourcePart = 0; sourcePart < beamGroupsByPart.size(); ++sourcePart)
+        {
+            for (const BeamGroup& group : beamGroupsByPart[sourcePart])
+            {
+                placeBeam(
+                    preparedByPart[sourcePart], group.events, stemRefByPart[sourcePart],
+                    system.parts[sourcePart]);
             }
         }
 

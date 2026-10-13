@@ -25,26 +25,32 @@
       system that *starts* at or after bar 7 the new clef is drawn at the head
     - rests of three durations
     - the same onset at the same x on every staff
+    - a stem on every note shorter than a whole, one per chord and never one
+      per note, pointing down above the middle line and up below it
+    - bar 3: two eighths beamed as a pair, four sixteenths beamed with a second
+      beam under the first, and a dotted eighth and sixteenth whose sixteenth
+      carries a short stub rather than a full second beam
+    - a dotted half filling bar 11, with its dot in the space beside the
+      notehead rather than on the line through it
+    - 3/4, so the beams group in quarters: three pairs rather than one run of
+      six
 
   It deliberately contains nothing the renderer cannot draw yet: no dots, no
   ties, no slurs, no dynamics, no tempo mark, no lyrics, no repeats. When the
   renderer learns one of those, this fixture is where it should be added, and
   the list above is what the surface's questions are drawn from.
 
-  Two things it does contain that the renderer does not yet draw, kept on
-  purpose because they are what the fixture found:
+  One thing it does contain that the renderer does not yet draw, kept on
+  purpose because it is what the fixture found: the key change at bar 5 and the
+  clef change at bar 7 are drawn only when a system happens to start at or
+  after them. A signature change in the middle of a system is not drawn at all,
+  so on a wide enough window the staff keeps showing two sharps through music
+  written in three flats. That is a misreading rather than a missing
+  refinement, and it has no render diagnostic either, which the renderer's own
+  rule says it should. Finding 10.
 
-    - The key change at bar 5 and the clef change at bar 7 are drawn only when
-      a system happens to start at or after them. A signature change in the
-      middle of a system is not drawn at all, so on a wide enough window the
-      staff keeps showing two sharps through music written in three flats.
-      That is a misreading rather than a missing refinement, and it has no
-      render diagnostic either, which the renderer's own rule says it should.
-    - Stems, flags and beams, which nothing has yet, so the eighth notes in
-      bar 3 are indistinguishable from quarters.
-
-  Both are in the surface's questions, so a reviewer records them rather than
-  rediscovering them.
+  It is in the surface's questions, so a reviewer records it rather than
+  rediscovering it.
 
   Twelve bars, 3/4, divisions of 4: every measure is exactly 12 and no
   invariant has anything to repair.
@@ -90,8 +96,12 @@
     <measure number="3">
       <note><pitch><step>G</step><octave>5</octave></pitch><duration>2</duration><voice>1</voice><type>eighth</type></note>
       <note><pitch><step>F</step><alter>1</alter><octave>5</octave></pitch><duration>2</duration><voice>1</voice><type>eighth</type></note>
-      <note><pitch><step>E</step><octave>5</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
-      <note><pitch><step>D</step><octave>5</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
+      <note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><voice>1</voice><type>16th</type></note>
+      <note><pitch><step>F</step><alter>1</alter><octave>5</octave></pitch><duration>1</duration><voice>1</voice><type>16th</type></note>
+      <note><pitch><step>G</step><octave>5</octave></pitch><duration>1</duration><voice>1</voice><type>16th</type></note>
+      <note><pitch><step>A</step><octave>5</octave></pitch><duration>1</duration><voice>1</voice><type>16th</type></note>
+      <note><pitch><step>G</step><octave>5</octave></pitch><duration>3</duration><voice>1</voice><type>eighth</type><dot/></note>
+      <note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><voice>1</voice><type>16th</type></note>
     </measure>
     <measure number="4">
       <note><pitch><step>C</step><alter>1</alter><octave>6</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
@@ -129,9 +139,7 @@
       <note><pitch><step>G</step><octave>5</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
     </measure>
     <measure number="11">
-      <note><pitch><step>A</step><alter>-1</alter><octave>5</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
-      <note><pitch><step>G</step><octave>5</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
-      <note><pitch><step>F</step><octave>5</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type></note>
+      <note><pitch><step>A</step><alter>-1</alter><octave>5</octave></pitch><duration>12</duration><voice>1</voice><type>half</type><dot/></note>
     </measure>
     <measure number="12">
       <note><pitch><step>E</step><alter>-1</alter><octave>5</octave></pitch><duration>8</duration><voice>1</voice><type>half</type></note>

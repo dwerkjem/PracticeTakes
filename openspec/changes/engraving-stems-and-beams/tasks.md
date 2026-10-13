@@ -42,31 +42,31 @@ an event has, and the model does not say.
 
 ## 3. Beams
 
-- [ ] 3.1 Beat grouping from the prevailing `TimeSignature`: three divisions of
+- [x] 3.1 Beat grouping from the prevailing `TimeSignature`: three divisions of
       the beat type when compound (`beats % 3 == 0 && beats > 3`), one when
       simple. A pure function with its own tests.
-- [ ] 3.2 Collect beam groups: consecutive beamable events — flags ≥ 1, not a
+- [x] 3.2 Collect beam groups: consecutive beamable events — flags ≥ 1, not a
       rest, one voice, one staff — within one beat group. A group of one keeps
       its flag.
-- [ ] 3.3 Add a `PlacedBeam` to `LayoutTypes.h` as four corners plus the beam
+- [x] 3.3 Add a `PlacedBeam` to `LayoutTypes.h` as four corners plus the beam
       index, so the painter fills a path and computes nothing.
-- [ ] 3.4 Compute slope from the group's first and last notehead, clamped, and
+- [x] 3.4 Compute slope from the group's first and last notehead, clamped, and
       a single direction for the whole group from its outermost note.
-- [ ] 3.5 Re-length every stem in a group so its far end lies on the beam at its
+- [x] 3.5 Re-length every stem in a group so its far end lies on the beam at its
       own x.
-- [ ] 3.6 Secondary beams for sixteenths and shorter, offset inward, spanning
+- [x] 3.6 Secondary beams for sixteenths and shorter, offset inward, spanning
       only the events that carry them.
-- [ ] 3.7 Tests with **named cases**, as the proposal's long-term section
+- [x] 3.7 Tests with **named cases**, as the proposal's long-term section
       requires: 6/8 into two threes, 3/4 into three twos, 4/4, cut time, a rest
       breaking a group, a group of one keeping its flag, every stem landing on
       its beam, and a clamped slope over an octave leap.
 
 ## 4. Rests and voices
 
-- [ ] 4.1 Dot rests from the same note value derivation.
-- [ ] 4.2 Offset rests per voice on a staff carrying more than one, so two
+- [x] 4.1 Dot rests from the same note value derivation.
+- [x] 4.2 Offset rests per voice on a staff carrying more than one, so two
       voices' rests do not coincide.
-- [ ] 4.3 Tests for both.
+- [x] 4.3 Tests for both.
 
 ## 5. Spacing
 
@@ -85,13 +85,13 @@ an event has, and the model does not say.
 
 ## 7. Verification
 
-- [ ] 7.1 `PracticeTakesTests` green.
-- [ ] 7.2 `clang-format` via pre-commit and `clang-tidy` locally.
-- [ ] 7.3 Extend `engraved-page.musicxml` with a 6/8 passage and a dotted
+- [x] 7.1 `PracticeTakesTests` green.
+- [x] 7.2 `clang-format` via pre-commit and `clang-tidy` locally.
+- [x] 7.3 Extend `engraved-page.musicxml` with a 6/8 passage and a dotted
       rhythm, and update the `score-view-page` surface questions: the
       "rhythm-not-yet-drawn" known gap goes away and becomes questions about
       beam grouping.
-- [ ] 7.4 Capture the surface and look at it, rather than declaring it done from
+- [x] 7.4 Capture the surface and look at it, rather than declaring it done from
       a green test run.
-- [ ] 7.5 Update `docs/development/architecture/ARCHITECTURE.md` with the new
+- [x] 7.5 Update `docs/development/architecture/ARCHITECTURE.md` with the new
       engraving sources.

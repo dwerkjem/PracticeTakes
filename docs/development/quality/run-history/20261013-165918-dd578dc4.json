@@ -1,0 +1,84 @@
+{
+    "capture_failures": 0,
+    "captures": 0,
+    "commit": "63c169cbba94",
+    "complete": false,
+    "failed": 0,
+    "key": "dd578dc41161f931:2026-10-13T16:59:18:63c169cbba94",
+    "machine": "dd578dc41161f931",
+    "machine_description": "11th Gen Intel(R) Core(TM) i7-11700KF @ 3.60GHz \u00b7 3520x1080",
+    "measurements": [
+        {
+            "metric": "FFT normalized autocorrelation",
+            "scenario": "catch2-benchmark",
+            "unit": "ms",
+            "value": 3.61119
+        },
+        {
+            "metric": "analyze @ 44.1 kHz",
+            "scenario": "catch2-benchmark",
+            "unit": "us",
+            "value": 935.983
+        },
+        {
+            "metric": "analyze @ 48 kHz",
+            "scenario": "catch2-benchmark",
+            "unit": "ms",
+            "value": 1.02577
+        },
+        {
+            "metric": "pop 128-sample block",
+            "scenario": "catch2-benchmark",
+            "unit": "ns",
+            "value": 511.386
+        },
+        {
+            "metric": "pop 256-sample block",
+            "scenario": "catch2-benchmark",
+            "unit": "us",
+            "value": 1.01283
+        },
+        {
+            "metric": "pop 512-sample block",
+            "scenario": "catch2-benchmark",
+            "unit": "us",
+            "value": 2.13931
+        },
+        {
+            "metric": "push 128-sample block",
+            "scenario": "catch2-benchmark",
+            "unit": "ns",
+            "value": 498.728
+        },
+        {
+            "metric": "push 256-sample block",
+            "scenario": "catch2-benchmark",
+            "unit": "ns",
+            "value": 994.263
+        },
+        {
+            "metric": "push 512-sample block",
+            "scenario": "catch2-benchmark",
+            "unit": "us",
+            "value": 1.84515
+        },
+        {
+            "metric": "scalar normalized autocorrelation",
+            "scenario": "catch2-benchmark",
+            "unit": "ms",
+            "value": 26.2481
+        }
+    ],
+    "mode": "full",
+    "passed": 0,
+    "skipped": 0,
+    "started_at": "2026-10-13T16:59:18",
+    "suites": [
+        {
+            "cases": 10,
+            "duration_seconds": 16.398005,
+            "failures": 0,
+            "suite": "Benchmarks"
+        }
+    ]
+}

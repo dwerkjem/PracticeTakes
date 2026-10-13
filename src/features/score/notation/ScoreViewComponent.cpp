@@ -363,6 +363,27 @@ void ScoreViewComponent::paintPage(juce::Graphics& graphics) const
                         thickness, std::abs(toY - fromY));
                 }
 
+                // Beams. Four corners, in the order the layout listed them,
+                // filled as a path.
+                //
+                // No slope is computed here and no thickness is chosen: a beam
+                // arrives as a quadrilateral and leaves as one. That is the
+                // whole of why beam geometry is assertable without a display.
+                for (const PlacedBeam& beam : staff.beams)
+                {
+                    const float leftX = toPixels(beam.leftX + pageMargin);
+                    const float rightX = toPixels(beam.rightX + pageMargin);
+
+                    juce::Path quadrilateral;
+                    quadrilateral.startNewSubPath(leftX, yFor(system, staff, beam.leftOuterStep));
+                    quadrilateral.lineTo(rightX, yFor(system, staff, beam.rightOuterStep));
+                    quadrilateral.lineTo(rightX, yFor(system, staff, beam.rightInnerStep));
+                    quadrilateral.lineTo(leftX, yFor(system, staff, beam.leftInnerStep));
+                    quadrilateral.closeSubPath();
+
+                    graphics.fillPath(quadrilateral);
+                }
+
                 // One font size for every glyph: SMuFL states its metrics
                 // against a staff of four spaces, so the em size *is* the staff
                 // height and nothing needs a per-glyph scale.
