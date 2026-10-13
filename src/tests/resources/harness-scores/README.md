@@ -1,18 +1,28 @@
 # Harness scores
 
-Two MusicXML documents that exist to be photographed. An approved window state
+Three MusicXML documents that exist to be photographed. An approved window state
 in `src/application/testcontrol/ApprovedWindowStates.cpp` names one by file
 name, the shell imports it on the way into that state, and the capture pass
-takes a reference image of the score import summary window showing the result.
+takes a reference image of the result.
 
 | File | Imports to | The picture it is for |
 |---|---|---|
 | `clean-import.musicxml` | `imported`, no diagnostics | Every metadata field the summary can show, a part on two staves, and the explicit "Nothing was dropped or repaired." line |
 | `diagnostic-import.musicxml` | `importedWithDiagnostics` | All three severity groups at once, and six unrecognised elements sharing one message |
+| `notation-sample.musicxml` | `imported`, no diagnostics | A staff, in the Score View tool: key signature, accidentals in and out of the key, a rest, a grace note, dots, flags, a tie across a barline, a clef change, a chord, repeat barlines and lyrics |
 
-`src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp` pins both:
-that each file a state names exists, and that it still imports to the status
-and the shape of report its surface is about. Run
+The first two are pictures of the **import summary window**. The third is a
+picture of a **tool**, which the two before it could not be: the only way to get
+a score into the running application is `startScoreImport`, which also opens the
+summary window over whatever the surface is about. `score-view-notation` sets
+`showScoreImportSummary` to false to suppress it — see finding 7 in
+`docs/development/architecture/score-model-findings.md`.
+
+`src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp` pins all
+three: that each file a state names exists, and that it still imports to the
+status and the shape of result its surface is about — for `notation-sample`,
+through the layout, construct by construct, so a fixture quietly losing one
+fails a build rather than turning a reference image into one of less. Run
 
 ```bash
 build/PracticeTakesTests "[.harness-score-report]" --success
@@ -51,6 +61,21 @@ What that costs is covered elsewhere: the corpus next door is what imports real
 exporter output, and `diagnostic-import.musicxml` reproduces the *shape* of the
 MuseScore report — several unrecognised elements, one shared message, the
 element name as the only thing telling the rows apart — rather than its bytes.
+
+## Why `notation-sample.musicxml` has no dynamic in it
+
+It would be the obvious thing to include, and #32 asks for "basic dynamics".
+A `<dynamics><mf/></dynamics>` is read correctly by the importer and *also*
+reported by it as an element it does not read, because the marking names are in
+`isDynamicMarking` and not in `knownElements`. A dynamic here would make this
+file import with a diagnostic, and the surface would then say the file was not
+fully read — which is the one thing a picture of a renderer must not say.
+
+That is finding 10 in
+`docs/development/architecture/score-model-findings.md`, and it is an issue
+against the importer rather than something to work around here. The renderer's
+handling of a dynamic is covered by `ScoreLayoutEngineTests` instead, which
+builds a `score::Direction` directly and needs no file.
 
 ## Adding one
 

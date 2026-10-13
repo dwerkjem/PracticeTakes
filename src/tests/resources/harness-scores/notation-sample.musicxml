@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<!--
+  A score written to be a picture of engraved notation.
+
+  The two fixtures beside this one are whole notes: they photograph the import
+  summary's text, which is what they exist for, and they photograph nothing a
+  renderer does. This one is the input to a reference image of a staff, so every
+  construct the first engraving pass draws appears in it exactly once and
+  nothing else does:
+
+    bar 1  key signature of two sharps, 4/4, a forward repeat, a tempo mark,
+           lyrics, and a note inside the key needing no accidental
+    bar 2  an accidental outside the key, the same accidental not repeated, a
+           natural cancelling it, and a rest
+    bar 3  a grace note, a dotted quarter, flagged eighths and sixteenths, and a
+           backward repeat
+    bars 4-5  a tie across a barline, whose second note carries no accidental
+    bar 6  a clef change, and the notes after it on the new staff
+    bar 7  a chord, and a chord holding two notes a second apart
+    bar 8  a whole note and the final barline
+
+  Hand-written for this repository, like the two beside it, and made only of
+  constructs the importer fully supports -- so it imports with no diagnostics
+  and the picture is of the renderer rather than of a report.
+
+  **There is deliberately no dynamic marking in it**, even though the renderer
+  draws one and #32 asks for "basic dynamics". A <dynamics><mf/></dynamics> is
+  read correctly by the importer and *also* reported by it as an element it does
+  not read: the marking names live in `isDynamicMarking` and not in
+  `knownElements`, so the recursive unrecognised-element walk counts every one
+  of them. Putting a dynamic here would make this file import with a diagnostic
+  and make the picture say the file was not fully read. The renderer's handling
+  of dynamics is covered by ScoreLayoutEngineTests instead, which builds a
+  `score::Direction` directly. The importer defect is recorded in
+  docs/development/architecture/score-model-findings.md.
+
+  Divisions are 4, so a quarter note is 4 and a bar of 4/4 is 16.
+-->
+<score-partwise version="4.0">
+  <work>
+    <work-title>Notation Sample</work-title>
+  </work>
+  <identification>
+    <creator type="composer">Practice Takes</creator>
+    <creator type="lyricist">Practice Takes</creator>
+    <encoding>
+      <software>Hand-written fixture</software>
+      <encoding-date>2026-10-13</encoding-date>
+    </encoding>
+    <rights>BSD-3-Clause, with this repository</rights>
+  </identification>
+  <part-list>
+    <score-part id="P1">
+      <part-name>Melody</part-name>
+      <part-abbreviation>Mel.</part-abbreviation>
+    </score-part>
+  </part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes>
+        <divisions>4</divisions>
+        <key><fifths>2</fifths><mode>major</mode></key>
+        <time><beats>4</beats><beat-type>4</beat-type></time>
+        <clef><sign>G</sign><line>2</line></clef>
+      </attributes>
+      <barline location="left">
+        <bar-style>heavy-light</bar-style>
+        <repeat direction="forward"/>
+      </barline>
+      <direction placement="above">
+        <direction-type><words>Andante</words></direction-type>
+        <sound tempo="72"/>
+      </direction>
+      <note>
+        <pitch><step>D</step><octave>5</octave></pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <lyric number="1"><syllabic>single</syllabic><text>Read</text></lyric>
+      </note>
+      <note>
+        <pitch><step>E</step><octave>5</octave></pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <lyric number="1"><syllabic>single</syllabic><text>what</text></lyric>
+      </note>
+      <note>
+        <pitch><step>F</step><alter>1</alter><octave>5</octave></pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <lyric number="1"><syllabic>begin</syllabic><text>is</text></lyric>
+      </note>
+      <note>
+        <pitch><step>G</step><octave>5</octave></pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+      </note>
+      <note>
+        <pitch><step>A</step><octave>5</octave></pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <lyric number="1"><syllabic>end</syllabic><text>there</text></lyric>
+      </note>
+    </measure>
+    <measure number="2">
+      <note>
+        <pitch><step>B</step><alter>-1</alter><octave>5</octave></pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <accidental>flat</accidental>
+        <lyric number="1"><syllabic>single</syllabic><text>flat</text></lyric>
+      </note>
+      <note>
+        <pitch><step>B</step><alter>-1</alter><octave>5</octave></pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <lyric number="1"><syllabic>single</syllabic><text>twice</text></lyric>
+      </note>
+      <note>
+        <pitch><step>B</step><octave>5</octave></pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <accidental>natural</accidental>
+        <lyric number="1"><syllabic>single</syllabic><text>then</text></lyric>
+      </note>
+      <note>
+        <rest/>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+      </note>
+    </measure>
+    <measure number="3">
+      <note>
+        <grace/>
+        <pitch><step>B</step><octave>4</octave></pitch>
+        <voice>1</voice>
+      </note>
+      <note>
+        <pitch><step>A</step><octave>4</octave></pitch>
+        <duration>6</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <dot/>
+        <lyric number="1"><syllabic>single</syllabic><text>dots</text></lyric>
+      </note>
+      <note>
+        <pitch><step>G</step><octave>4</octave></pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+      </note>
+      <note>
+        <pitch><step>F</step><alter>1</alter><octave>4</octave></pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>16th</type>
+      </note>
+      <note>
+        <pitch><step>E</step><octave>4</octave></pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>16th</type>
+      </note>
+      <note>
+        <pitch><step>D</step><octave>4</octave></pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+        <lyric number="1"><syllabic>single</syllabic><text>and</text></lyric>
+      </note>
+      <note>
+        <pitch><step>C</step><alter>1</alter><octave>4</octave></pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+      </note>
+      <barline location="right">
+        <bar-style>light-heavy</bar-style>
+        <repeat direction="backward"/>
+      </barline>
+    </measure>
+    <measure number="4">
+      <note>
+        <pitch><step>G</step><octave>4</octave></pitch>
+        <duration>16</duration>
+        <tie type="start"/>
+        <voice>1</voice>
+        <type>whole</type>
+        <notations><tied type="start"/></notations>
+        <lyric number="1"><syllabic>single</syllabic><text>held</text></lyric>
+      </note>
+    </measure>
+    <measure number="5">
+      <note>
+        <pitch><step>G</step><octave>4</octave></pitch>
+        <duration>16</duration>
+        <tie type="stop"/>
+        <voice>1</voice>
+        <type>whole</type>
+        <notations><tied type="stop"/></notations>
+      </note>
+    </measure>
+    <measure number="6">
+      <attributes>
+        <clef><sign>F</sign><line>4</line></clef>
+      </attributes>
+      <note>
+        <pitch><step>B</step><octave>2</octave></pitch>
+        <duration>8</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <lyric number="1"><syllabic>single</syllabic><text>low</text></lyric>
+      </note>
+      <note>
+        <pitch><step>G</step><octave>2</octave></pitch>
+        <duration>8</duration>
+        <voice>1</voice>
+        <type>half</type>
+      </note>
+    </measure>
+    <measure number="7">
+      <note>
+        <pitch><step>A</step><octave>2</octave></pitch>
+        <duration>8</duration>
+        <voice>1</voice>
+        <type>half</type>
+        <lyric number="1"><syllabic>single</syllabic><text>chords</text></lyric>
+      </note>
+      <note>
+        <chord/>
+        <pitch><step>C</step><alter>1</alter><octave>3</octave></pitch>
+        <duration>8</duration>
+        <voice>1</voice>
+        <type>half</type>
+      </note>
+      <note>
+        <chord/>
+        <pitch><step>E</step><octave>3</octave></pitch>
+        <duration>8</duration>
+        <voice>1</voice>
+        <type>half</type>
+      </note>
+      <note>
+        <pitch><step>D</step><octave>3</octave></pitch>
+        <duration>8</duration>
+        <voice>1</voice>
+        <type>half</type>
+      </note>
+      <note>
+        <chord/>
+        <pitch><step>E</step><octave>3</octave></pitch>
+        <duration>8</duration>
+        <voice>1</voice>
+        <type>half</type>
+      </note>
+    </measure>
+    <measure number="8">
+      <note>
+        <pitch><step>G</step><octave>2</octave></pitch>
+        <duration>16</duration>
+        <voice>1</voice>
+        <type>whole</type>
+        <lyric number="1"><syllabic>single</syllabic><text>end</text></lyric>
+      </note>
+      <barline location="right">
+        <bar-style>light-heavy</bar-style>
+      </barline>
+    </measure>
+  </part>
+</score-partwise>
