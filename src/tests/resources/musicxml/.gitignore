@@ -1,0 +1,13 @@
+# Score files here are ignored by default, and the corpus is force-added.
+#
+# This directory is where someone drops a score to test the importer against,
+# and the repertoire that is most useful for that is usually under copyright.
+# This is a public repository, so the default has to be "not committed": the
+# README's "add it with git add -f" step is what makes committing a corpus file
+# a deliberate act, and this file is what makes it one.
+#
+# Already-tracked files are unaffected by this -- the thirty-six corpus scores
+# stay exactly as they are -- so the rule only governs what arrives next.
+*.mxl
+*.musicxml
+*.xml
