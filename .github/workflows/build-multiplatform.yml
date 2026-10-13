@@ -245,6 +245,7 @@ jobs:
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_VERSION: 4.13.6
+      NSIS_VERSION: 3.12.0
       # The Authenticode steps below stay dormant until both certificate
       # secrets exist. Secrets cannot be read from a step `if:`, so the
       # decision is resolved here where the secrets context is available.
@@ -266,6 +267,17 @@ jobs:
           key: ccache-${{ runner.os }}-${{ matrix.arch }}-${{ inputs.ref || github.sha }}
           restore-keys: |
             ccache-${{ runner.os }}-${{ matrix.arch }}-
+
+      # Installing NSIS is a Chocolatey download and an installer run, around
+      # thirty seconds, for a tool that is the same bytes every time. The
+      # directory it installs into is enough for CPack, which looks there by
+      # name, so the cache holds that and the install below is skipped when it
+      # is already present.
+      - name: Restore NSIS
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: C:\Program Files (x86)\NSIS
+          key: nsis-${{ runner.os }}-${{ matrix.arch }}-${{ env.NSIS_VERSION }}
 
       - name: Apply requested release version
         if: ${{ inputs.version != '' }}
@@ -345,12 +357,21 @@ jobs:
           & (Join-Path $ccache "ccache.exe") --max-size=1G
           & (Join-Path $ccache "ccache.exe") --zero-stats
 
-          # NSIS stays on Chocolatey. It generates the shipped installer, runs
-          # once at packaging time rather than once per translation unit, and
-          # is an installer rather than a zip. The pin is deliberate, and
-          # --allow-downgrade keeps it usable on a runner image that already
-          # carries a newer build of the same package.
-          choco install nsis --yes --no-progress --version 3.12.0 --allow-downgrade
+          # NSIS stays on Chocolatey when it has to be installed at all: it
+          # generates the shipped installer, runs once at packaging time rather
+          # than once per translation unit, and is an installer rather than a
+          # zip. The pin is deliberate, and --allow-downgrade keeps it usable on
+          # a runner image that already carries a newer build of the package.
+          #
+          # Tested by the file rather than by the cache step's hit output, so a
+          # partially restored directory still installs rather than failing at
+          # packaging time, twelve minutes later.
+          if (-not (Test-Path -LiteralPath "C:\Program Files (x86)\NSIS\makensis.exe")) {
+            choco install nsis --yes --no-progress --version ${env:NSIS_VERSION} --allow-downgrade
+          }
+          else {
+            Write-Host "NSIS ${env:NSIS_VERSION} restored from cache."
+          }
 
       - name: Configure
         shell: pwsh
