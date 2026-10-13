@@ -63,8 +63,30 @@ on:
 permissions:
   contents: read
 
+# Matching the other workflows. A release calls this one through
+# `workflow_call`, where the event is the caller's -- a push to main -- so a
+# release build is never cancelled by this.
+concurrency:
+  group: build-desktop-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   BUILD_TYPE: Release
+
+  # Compare the compiler by its contents, not by its size and modification
+  # time, which is what ccache does by default.
+  #
+  # A runner image is rebuilt about weekly, and a rebuild gives every binary in
+  # it a new modification time. The compiler is the same compiler -- the image
+  # that produced a 91% hit rate on 8 October and the one five days later both
+  # carry MSVC 19.51.36260.0 -- but ccache saw a different one and missed every
+  # single object: 286 of 286, a twenty-minute Windows arm64 build against
+  # seven. Every platform here caches the same way and so had the same hole.
+  #
+  # The cost is that neither mode notices a change confined to the files the
+  # driver loads -- cl.exe's backend DLLs, gcc's cc1plus -- so this is not a
+  # weaker check than the default, only a differently blind one.
+  CCACHE_COMPILERCHECK: content
 
 jobs:
   linux:
