@@ -106,7 +106,7 @@ void MainComponent::showSettings()
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     settingsWindow = std::make_unique<SettingsWindow>(
-        audioInputService, currentTheme,
+        audioInputService, midiInputService, currentTheme,
         [safeThis](Theme theme)
         {
             if (safeThis != nullptr)
@@ -119,6 +119,16 @@ void MainComponent::showSettings()
             if (safeThis != nullptr)
             {
                 safeThis->applyPreset(preset);
+            }
+        },
+        [safeThis]
+        {
+            // Persist the keyboard choice as soon as it is made, rather than
+            // waiting for an explicit save: a user who picks their piano and
+            // closes the application should find it chosen next time.
+            if (safeThis != nullptr)
+            {
+                safeThis->saveSettings(false);
             }
         },
         [safeThis]
@@ -475,6 +485,13 @@ bool MainComponent::applyTransferredSettings(const SettingsTransferModel& model)
     {
         audioInputService.resetToDefaultInput();
     }
+
+    // The MIDI selection is deliberately left alone. A transfer file moves
+    // settings between machines, and which MIDI keyboard is plugged into *this*
+    // one is not a setting that travels: importing someone else's would at best
+    // name a device that is not here, and would silently replace a working
+    // selection. The transfer codec therefore does not carry it, and this does
+    // not clear it.
     updateMicrophoneStateControl();
     updateMicrophoneWarning();
 
@@ -564,6 +581,9 @@ AppSettings::State MainComponent::captureSettingsState()
     state.fullscreenMode = selectedFullscreenMode;
     WorkspaceSessionLifecycle::captureActive(workspaceCatalog, activeWorkspaceSnapshot);
     state.workspaceCatalog = workspaceCatalog;
+    state.midiInputDeviceIdentifier = midiInputService.selectedDeviceIdentifier();
+    state.midiInputDeviceName = midiInputService.selectedDeviceName();
+
     if (pendingAudioDeviceState != nullptr)
     {
         state.audioDeviceState = pendingAudioDeviceState->toString();
@@ -620,6 +640,11 @@ void MainComponent::loadSettings()
     {
         pendingAudioDeviceState = std::move(xml);
     }
+
+    // The keyboard may not be plugged in yet, and that is not a failure: the
+    // service holds the selection and opens it when it appears.
+    midiInputService.selectDevice(
+        loaded.state.midiInputDeviceIdentifier, loaded.state.midiInputDeviceName);
 
     savedSettingsBounds = validWindowBounds(loaded.state.settingsBounds);
 

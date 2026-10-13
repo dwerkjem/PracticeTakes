@@ -4,6 +4,7 @@
 
 #include "../../platform/audio/AudioInputService.h"
 #include "../../platform/audio/SharedPitchAnalysis.h"
+#include "../../platform/midi/MidiInputService.h"
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
 #include "../theme/AppLookAndFeel.h"
@@ -282,6 +283,19 @@ class MainComponent final
     // the note on liveTools below for why declaration order here matters at
     // all.
     SharedPitchAnalysis pitchAnalysis{audioInputService};
+
+    // The MIDI keyboard. Independent of audioInputService on purpose -- it
+    // opens its own device rather than going through that service's
+    // AudioDeviceManager -- so a pianist with a keyboard and no microphone is
+    // unaffected by audio-device recovery, which is the one thing here that can
+    // block without limit.
+    //
+    // Declared before liveTools for the reason the services above are: a member
+    // declared after it would be destroyed while something still borrowed it,
+    // and reverse-order destruction is the whole of the enforcement. Nothing in
+    // src/features reads it yet; when one does, it arrives through ToolServices
+    // and not by reaching in here.
+    MidiInputService midiInputService;
     juce::ApplicationProperties applicationProperties;
     // Declared here, before liveTools, on purpose -- see the note on liveTools
     // below. AppLookAndFeel differs from LookAndFeel_V4 only in carrying the

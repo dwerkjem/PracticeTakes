@@ -11,6 +11,13 @@
 // The audio callback is the only producer and one analysis tool is the only
 // consumer. When a complete callback block does not fit, the newest block is
 // dropped and the already-buffered samples remain in order.
+//
+// **Note for anyone reading this next to midi::MidiEventFifo, which drops the
+// oldest.** The two are deliberately opposite. Dropping the newest is right
+// here because audio is a continuous flow: a gap in the middle of an analysis
+// window is worse than a late block missing from the end. It is wrong for
+// events, where losing a note off leaves a note held forever. See that header
+// for the rest of the argument.
 template <std::size_t Capacity> class AudioSampleFifo
 {
   public:

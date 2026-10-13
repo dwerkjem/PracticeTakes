@@ -226,6 +226,248 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::Viewport deviceViewport;
         };
 
+        // The one consumer of MidiInputService that exists.
+        //
+        // Deliberately small, and deliberately here rather than as a tool in
+        // the catalog: a user whose keyboard is not working looks in settings,
+        // and nothing else in the application can yet tell them anything. It is
+        // also the only thing that exercises the whole path -- open, driver
+        // callback, FIFO, drain -- and shipping the service without one is the
+        // mistake #187 documented the cost of.
+        class MidiPanel final
+            : public CategoryPanel,
+              private MidiInputService::Consumer,
+              private juce::Timer
+        {
+          public:
+            explicit MidiPanel(
+                MidiInputService& inputService,
+                std::function<void()> selectionHandler)
+                : midiInputService(inputService), onSelectionChanged(std::move(selectionHandler))
+            {
+                configureHeading(heading, "MIDI");
+                configureDescription(
+                    description,
+                    "Choose the MIDI keyboard to capture. Its notes, velocities and sustain "
+                    "pedal are read live.");
+
+                deviceLabel.setText("Keyboard", juce::dontSendNotification);
+                addAndMakeVisible(deviceLabel);
+
+                deviceBox.setTextWhenNothingSelected("Choose a MIDI input");
+                deviceBox.setTextWhenNoChoicesAvailable("No MIDI input detected");
+                deviceBox.onChange = [this] { applySelection(); };
+                addAndMakeVisible(deviceBox);
+
+                refreshButton.setButtonText("Rescan");
+                refreshButton.setTitle("Look for MIDI devices again");
+                refreshButton.onClick = [this] { rebuildDeviceList(); };
+                addAndMakeVisible(refreshButton);
+
+                statusLabel.setJustificationType(juce::Justification::topLeft);
+                addAndMakeVisible(statusLabel);
+
+                activityLabel.setJustificationType(juce::Justification::topLeft);
+                addAndMakeVisible(activityLabel);
+
+                midiInputService.addConsumer(this);
+                rebuildDeviceList();
+                startTimerHz(refreshRateHz);
+            }
+
+            ~MidiPanel() override
+            {
+                stopTimer();
+                midiInputService.removeConsumer(this);
+            }
+
+            void resized() override
+            {
+                auto bounds = getLocalBounds().reduced(26);
+                heading.setBounds(bounds.removeFromTop(34));
+                description.setBounds(bounds.removeFromTop(42));
+                bounds.removeFromTop(12);
+
+                auto deviceRow = bounds.removeFromTop(36);
+                deviceLabel.setBounds(deviceRow.removeFromLeft(130));
+                deviceBox.setBounds(deviceRow.removeFromLeft(320));
+                deviceRow.removeFromLeft(10);
+                refreshButton.setBounds(deviceRow.removeFromLeft(110));
+
+                bounds.removeFromTop(14);
+                statusLabel.setBounds(bounds.removeFromTop(30));
+                bounds.removeFromTop(6);
+                activityLabel.setBounds(bounds.removeFromTop(120));
+            }
+
+          private:
+            static constexpr int refreshRateHz = 10;
+            static constexpr int shownEventCount = 4;
+
+            void rebuildDeviceList()
+            {
+                devices = midiInputService.availableDevices();
+                const juce::String selected = midiInputService.selectedDeviceIdentifier();
+
+                deviceBox.clear(juce::dontSendNotification);
+
+                // Id 1 is "none", so that choosing nothing is an option rather
+                // than something only reachable by never having chosen.
+                deviceBox.addItem("No MIDI input", 1);
+
+                for (std::size_t index = 0; index < devices.size(); ++index)
+                {
+                    deviceBox.addItem(devices[index].name, static_cast<int>(index) + 2);
+                }
+
+                int selectedId = 1;
+
+                for (std::size_t index = 0; index < devices.size(); ++index)
+                {
+                    if (devices[index].identifier == selected)
+                    {
+                        selectedId = static_cast<int>(index) + 2;
+                    }
+                }
+
+                deviceBox.setSelectedId(selectedId, juce::dontSendNotification);
+                updateStatus();
+            }
+
+            void applySelection()
+            {
+                const int id = deviceBox.getSelectedId();
+                const auto index = static_cast<std::size_t>(id - 2);
+
+                if (id <= 1 || index >= devices.size())
+                {
+                    midiInputService.selectDevice({}, {});
+                }
+                else
+                {
+                    midiInputService.selectDevice(devices[index].identifier, devices[index].name);
+                }
+
+                recent.clear();
+                updateStatus();
+
+                if (onSelectionChanged)
+                {
+                    onSelectionChanged();
+                }
+            }
+
+            void updateStatus()
+            {
+                switch (midiInputService.connectionState())
+                {
+                case MidiInputService::ConnectionState::noDeviceSelected:
+                    statusLabel.setText(
+                        devices.empty()
+                            ? "No MIDI input detected. Connect a keyboard and choose Rescan."
+                            : "No MIDI input chosen.",
+                        juce::dontSendNotification);
+                    break;
+
+                case MidiInputService::ConnectionState::selectedDeviceUnavailable:
+                    // Named rather than described: the remembered name is kept
+                    // for exactly this sentence, so that a user who has not
+                    // switched their piano on yet reads which piano is meant.
+                    statusLabel.setText(
+                        midiInputService.selectedDeviceName() +
+                            " is not connected. It will be used as soon as it appears.",
+                        juce::dontSendNotification);
+                    break;
+
+                case MidiInputService::ConnectionState::open:
+                    statusLabel.setText(
+                        "Connected to " + midiInputService.selectedDeviceName() + ".",
+                        juce::dontSendNotification);
+                    break;
+                }
+            }
+
+            void timerCallback() override
+            {
+                std::array<midi::MidiEvent, 128> buffer{};
+                const std::size_t count =
+                    midiInputService.readEvents(this, buffer.data(), buffer.size());
+
+                for (std::size_t index = 0; index < count; ++index)
+                {
+                    recent.insert(recent.begin(), describe(buffer[index]));
+                }
+
+                if (recent.size() > shownEventCount)
+                {
+                    recent.resize(shownEventCount);
+                }
+
+                updateStatus();
+
+                if (midiInputService.receivedEventCount() == 0)
+                {
+                    activityLabel.setText(
+                        "Nothing received yet. Play a key to check the connection.",
+                        juce::dontSendNotification);
+
+                    return;
+                }
+
+                juce::StringArray lines;
+
+                for (const juce::String& line : recent)
+                {
+                    lines.add(line);
+                }
+
+                activityLabel.setText(lines.joinIntoString("\n"), juce::dontSendNotification);
+            }
+
+            // Note NUMBERS, not names.
+            //
+            // Naming a played note properly needs a spelling, and a MIDI number
+            // has none -- it cannot tell F sharp from G flat. The only
+            // note-naming function in the repository is private to the tuner and
+            // is MIDI-only for that same reason. Adding a third private copy
+            // here would deepen that rather than record it, so this shows the
+            // number and the next change to want a name can build the shared
+            // home that does not exist yet.
+            [[nodiscard]] static juce::String describe(const midi::MidiEvent& event)
+            {
+                switch (event.kind)
+                {
+                case midi::MidiEventKind::noteOn:
+                    return "Note on   " + juce::String(event.noteNumber) + "   velocity " +
+                           juce::String(event.velocity) + "   channel " +
+                           juce::String(event.channel);
+
+                case midi::MidiEventKind::noteOff:
+                    return "Note off  " + juce::String(event.noteNumber) + "   channel " +
+                           juce::String(event.channel);
+
+                case midi::MidiEventKind::sustainPedal:
+                    return juce::String(event.pedalDown ? "Pedal down" : "Pedal up") + "   value " +
+                           juce::String(event.velocity);
+                }
+
+                return {};
+            }
+
+            MidiInputService& midiInputService;
+            std::function<void()> onSelectionChanged;
+            std::vector<MidiInputService::DeviceDescription> devices;
+            std::vector<juce::String> recent;
+
+            juce::Label heading;
+            juce::Label description;
+            juce::Label deviceLabel;
+            juce::ComboBox deviceBox;
+            juce::TextButton refreshButton;
+            juce::Label statusLabel;
+            juce::Label activityLabel;
+        };
+
         class PracticePanel final : public CategoryPanel
         {
           public:
@@ -370,9 +612,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
       public:
         Content(
             AudioInputService& inputService,
+            MidiInputService& midiService,
             Theme initialTheme,
             std::function<void(Theme)> appearanceHandler,
             std::function<void(AppDefaults::Preset)> presetHandler,
+            std::function<void()> midiSelectionHandler,
             std::function<void()> saveHandler,
             std::function<void()> importHandler,
             std::function<void()> exportHandler,
@@ -382,6 +626,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             std::function<void()> resetLayoutHandler,
             std::function<void()> resetAllHandler)
             : appearancePanel(initialTheme, std::move(appearanceHandler)), audioPanel(inputService),
+              midiPanel(midiService, std::move(midiSelectionHandler)),
               practicePanel(std::move(presetHandler)),
               resetPanel(
                   std::move(feedbackHandler),
@@ -394,6 +639,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             categoryTabs.addTab(
                 "Appearance", juce::Colours::transparentBlack, &appearancePanel, false);
             categoryTabs.addTab("Audio", juce::Colours::transparentBlack, &audioPanel, false);
+            categoryTabs.addTab("MIDI", juce::Colours::transparentBlack, &midiPanel, false);
             categoryTabs.addTab("Practice", juce::Colours::transparentBlack, &practicePanel, false);
             categoryTabs.addTab(
                 "Reset & support", juce::Colours::transparentBlack, &resetPanel, false);
@@ -461,6 +707,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
       private:
         AppearancePanel appearancePanel;
         AudioPanel audioPanel;
+        MidiPanel midiPanel;
         PracticePanel practicePanel;
         ResetPanel resetPanel;
         juce::TextButton saveButton;
@@ -471,9 +718,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
     SettingsWindow(
         AudioInputService& audioInputService,
+        MidiInputService& midiInputService,
         Theme initialTheme,
         std::function<void(Theme)> appearanceHandler,
         std::function<void(AppDefaults::Preset)> presetHandler,
+        std::function<void()> midiSelectionHandler,
         std::function<void()> saveHandler,
         std::function<void()> importHandler,
         std::function<void()> exportHandler,
@@ -489,11 +738,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         setUsingNativeTitleBar(true);
         setContentOwned(
             new Content(
-                audioInputService, initialTheme, std::move(appearanceHandler),
-                std::move(presetHandler), std::move(saveHandler), std::move(importHandler),
-                std::move(exportHandler), std::move(feedbackHandler), std::move(resetToolHandler),
-                std::move(resetAudioHandler), std::move(resetLayoutHandler),
-                std::move(resetAllHandler)),
+                audioInputService, midiInputService, initialTheme, std::move(appearanceHandler),
+                std::move(presetHandler), std::move(midiSelectionHandler), std::move(saveHandler),
+                std::move(importHandler), std::move(exportHandler), std::move(feedbackHandler),
+                std::move(resetToolHandler), std::move(resetAudioHandler),
+                std::move(resetLayoutHandler), std::move(resetAllHandler)),
             true);
         setResizable(true, true);
         setResizeLimits(760, 620, 1600, 1200);

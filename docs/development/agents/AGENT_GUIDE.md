@@ -198,7 +198,12 @@ subdirectory is the right answer when a subject grows. Add it to the index in
 - `src/features` — user-facing tools: `analysis/{tuner,spectrogram,harmonics}`,
   `feedback`, `performance` (launch timing).
 - `src/platform` — shared infrastructure: `audio/` (`AudioInputService`,
-  `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`) and `score/` — a
+  `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`), `midi/`
+  (`MidiInputService`, `MidiEventFifo`, `MidiMessageTranslation`,
+  `MidiRecoveryPolicy`) — live keyboard capture, owning its own
+  `juce::MidiInput` rather than going through the audio device manager, with a
+  JUCE-free byte-level translation layer that is where every rule worth
+  asserting about the event stream lives — and `score/` — a
   JUCE-free score model (`Score`, `TempoMap`, `Pitch`, `MusicalTime`) plus a
   MusicXML importer under `score/musicxml/`. `score/` has **no application
   consumer yet**: it is reached only from `src/tests/platform/score/`, so it is
@@ -232,6 +237,14 @@ outlive its shared services" is enforced — there is no runtime check. Do not
 move the declaration.
 
 ### Audio-thread boundary (hard constraint)
+
+Two driver callbacks are under this contract, not one: the audio callback
+below, and `MidiInputService::handleIncomingMidiMessage`. The MIDI one is not
+the audio thread and cannot underrun a buffer, but the discipline is identical
+and it carries the same annotation. `docs/development/performance/audio-thread-safety.md`
+§ The MIDI callback has what differs — chiefly that `midi::MidiEventFifo` drops
+the **oldest** event on overflow where `AudioSampleFifo` drops the newest block,
+because no MIDI event is safe to lose.
 
 `AudioInputService::audioDeviceIOCallbackWithContext` runs on the real-time
 audio thread and must stay bounded: no heap allocation, locks, blocking waits,

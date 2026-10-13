@@ -210,6 +210,10 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
             {
                 panel = "Appearance";
             }
+            else if (state.settingsPanel == "midi")
+            {
+                panel = "MIDI";
+            }
             else if (state.settingsPanel == "practice")
             {
                 panel = "Practice";

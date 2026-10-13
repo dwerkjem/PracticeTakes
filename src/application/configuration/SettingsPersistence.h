@@ -36,6 +36,13 @@ struct State
     bool microphoneMuted = false;
     double inputGain = AppDefaults::Audio::inputGain;
     juce::String audioDeviceState;
+
+    // The chosen MIDI input, by the identifier that reopens it and the name
+    // that identifies it to a person. Both, because a keyboard that is not
+    // plugged in still has to be nameable in the interface -- "Casio PX-S1100
+    // (not connected)" rather than an opaque identifier or a blank.
+    juce::String midiInputDeviceIdentifier;
+    juce::String midiInputDeviceName;
     AppDefaults::TunerSettings tuner = AppDefaults::tunerDefaults();
     juce::String tunerBounds;
     juce::String spectrogramBounds;
