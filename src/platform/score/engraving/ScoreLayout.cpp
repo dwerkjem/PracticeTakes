@@ -7,6 +7,7 @@
 #include <string>
 
 #include "Accidentals.h"
+#include "SystemHead.h"
 
 #include "platform/score/ScoreTraversal.h"
 
@@ -14,9 +15,9 @@ namespace score::engraving
 {
 namespace
 {
-// Room reserved at the head of every system for clef, key and time signature,
-// plus the padding either side of a glyph group.
-constexpr double systemHeadWidth = 9.0;
+// Padding either side of a glyph group. The room at the head of a system is
+// not a constant -- it is whatever that system's clefs, key and time signature
+// actually need, which is `SystemHead.h`.
 constexpr double glyphPadding = 0.6;
 constexpr double barlinePadding = 0.8;
 constexpr double staffHeight = 4.0;
@@ -121,6 +122,24 @@ struct StaffState
     AccidentalState accidentals;
 };
 
+// What one part's head shows at the start of each of its measures, which is
+// what a system starting at that measure must draw.
+//
+// Recorded per measure rather than per system because system breaking has not
+// happened yet when this is built, and because the head's width is an input to
+// that decision -- a bar cannot be measured against the available width until
+// the room ahead of it is known.
+struct PartAttributeTrack
+{
+    // One entry per measure, each holding one clef per staff of the part.
+    std::vector<std::vector<Clef>> clefs;
+
+    // Key and time signature are per part, not per staff (ScoreAttributes.h),
+    // and are drawn on every staff of it.
+    std::vector<std::optional<KeySignature>> keys;
+    std::vector<std::optional<TimeSignature>> times;
+};
+
 [[nodiscard]] double widthOf(const PreparedEvent& event)
 {
     if (event.isRest)
@@ -171,7 +190,7 @@ void applyClefChanges(const AttributeChanges& changes, std::vector<StaffState>& 
 std::vector<PreparedEvent> prepare(
     const Part& part,
     std::size_t partIndex,
-    std::vector<std::vector<Clef>>& clefAtMeasureStart,
+    PartAttributeTrack& attributes,
     std::vector<Diagnostic>& diagnostics)
 {
     const std::size_t staffCount = static_cast<std::size_t>(std::max(1, part.staffCount));
@@ -192,7 +211,13 @@ std::vector<PreparedEvent> prepare(
     }
 
     std::vector<PreparedEvent> prepared;
-    clefAtMeasureStart.assign(part.measures.size(), {});
+
+    attributes.clefs.assign(part.measures.size(), {});
+    attributes.keys.assign(part.measures.size(), std::nullopt);
+    attributes.times.assign(part.measures.size(), std::nullopt);
+
+    std::optional<KeySignature> key;
+    std::optional<TimeSignature> time;
 
     for (std::size_t measureIndex = 0; measureIndex < part.measures.size(); ++measureIndex)
     {
@@ -202,10 +227,17 @@ std::vector<PreparedEvent> prepare(
 
         if (measure.attributes.key.has_value())
         {
+            key = measure.attributes.key;
+
             for (StaffState& staff : staves)
             {
                 staff.accidentals.setKey(*measure.attributes.key);
             }
+        }
+
+        if (measure.attributes.time.has_value())
+        {
+            time = measure.attributes.time;
         }
 
         for (StaffState& staff : staves)
@@ -213,12 +245,15 @@ std::vector<PreparedEvent> prepare(
             staff.accidentals.beginMeasure();
         }
 
-        clefAtMeasureStart[measureIndex].clear();
+        attributes.clefs[measureIndex].clear();
 
         for (const StaffState& staff : staves)
         {
-            clefAtMeasureStart[measureIndex].push_back(staff.clef);
+            attributes.clefs[measureIndex].push_back(staff.clef);
         }
+
+        attributes.keys[measureIndex] = key;
+        attributes.times[measureIndex] = time;
 
         // Which staff each voice has been seen on in this measure, so that a
         // voice moving between them is reported once rather than per note.
@@ -357,12 +392,39 @@ ScoreLayout layOutScore(const Score& score, const LayoutOptions& options)
     std::vector<std::vector<PreparedEvent>> preparedByPart;
     preparedByPart.reserve(score.parts.size());
 
-    std::vector<std::vector<std::vector<Clef>>> clefAtMeasureStart(score.parts.size());
+    std::vector<PartAttributeTrack> attributesByPart(score.parts.size());
 
     for (std::size_t partIndex = 0; partIndex < score.parts.size(); ++partIndex)
     {
         preparedByPart.push_back(prepare(
-            score.parts[partIndex], partIndex, clefAtMeasureStart[partIndex], layout.diagnostics));
+            score.parts[partIndex], partIndex, attributesByPart[partIndex], layout.diagnostics));
+    }
+
+    // The head is as wide as the widest staff's head, so that music starts at
+    // one x across the whole system -- a grand staff whose bass clef key
+    // signature is narrower than its treble one must still line up. Computed
+    // for every measure, because any measure may turn out to begin a system and
+    // the width is an input to deciding which ones do.
+    std::vector<double> headWidthAtMeasure(measures, 0.0);
+
+    for (std::size_t measureIndex = 0; measureIndex < measures; ++measureIndex)
+    {
+        for (const PartAttributeTrack& attributes : attributesByPart)
+        {
+            if (measureIndex >= attributes.clefs.size())
+            {
+                continue;
+            }
+
+            for (const Clef& clef : attributes.clefs[measureIndex])
+            {
+                const SystemHead head = systemHeadFor(
+                    clef, attributes.keys[measureIndex], attributes.times[measureIndex]);
+
+                headWidthAtMeasure[measureIndex] =
+                    std::max(headWidthAtMeasure[measureIndex], head.width);
+            }
+        }
     }
 
     // Pass two: columns per measure, shared by every staff of every part. This
@@ -436,7 +498,7 @@ ScoreLayout layOutScore(const Score& score, const LayoutOptions& options)
 
     {
         SystemRange current;
-        double used = systemHeadWidth;
+        double used = headWidthAtMeasure.front();
 
         for (std::size_t measureIndex = 0; measureIndex < measures; ++measureIndex)
         {
@@ -449,7 +511,7 @@ ScoreLayout layOutScore(const Score& score, const LayoutOptions& options)
                 ranges.push_back(current);
 
                 current = SystemRange{measureIndex, 0};
-                used = systemHeadWidth;
+                used = headWidthAtMeasure[measureIndex];
             }
 
             if (current.count == 0)
@@ -477,11 +539,13 @@ ScoreLayout layOutScore(const Score& score, const LayoutOptions& options)
         system.firstMeasureIndex = range.first;
         system.measureCount = range.count;
 
+        const double headWidth = headWidthAtMeasure[range.first];
+
         // Where each measure starts within this system.
         std::vector<double> measureX(range.count, 0.0);
 
         {
-            double x = systemHeadWidth;
+            double x = headWidth;
 
             for (std::size_t offset = 0; offset < range.count; ++offset)
             {
@@ -510,27 +574,21 @@ ScoreLayout layOutScore(const Score& score, const LayoutOptions& options)
                 staff.staffNumber = static_cast<int>(staffIndex) + 1;
                 staff.topOffset = staffTop;
 
-                // The clef at the head of the system, drawn on every system
-                // rather than only the first -- a reader who scrolls to the
-                // middle of a page needs it there.
-                const std::vector<Clef>& clefs = clefAtMeasureStart[partIndex][range.first];
+                // Clef, key and time signature at the head of the system, drawn
+                // on every system rather than only the first -- a reader who
+                // scrolls to the middle of a page needs them there.
+                const PartAttributeTrack& attributes = attributesByPart[partIndex];
 
-                if (staffIndex < clefs.size())
+                if (range.first < attributes.clefs.size() &&
+                    staffIndex < attributes.clefs[range.first].size())
                 {
-                    const Clef& clef = clefs[staffIndex];
+                    const std::vector<Clef>& clefs = attributes.clefs[range.first];
 
-                    Glyph glyph = Glyph::gClef;
+                    const SystemHead head = systemHeadFor(
+                        clefs[staffIndex], attributes.keys[range.first],
+                        attributes.times[range.first]);
 
-                    if (!clef.sign.empty() && clef.sign.front() == 'F')
-                    {
-                        glyph = Glyph::fClef;
-                    }
-                    else if (!clef.sign.empty() && clef.sign.front() == 'C')
-                    {
-                        glyph = Glyph::cClef;
-                    }
-
-                    staff.glyphs.push_back(PlacedGlyph{glyph, 1.0, (clef.line - 1) * 2});
+                    staff.glyphs.insert(staff.glyphs.end(), head.glyphs.begin(), head.glyphs.end());
                 }
 
                 partLayout.staves.push_back(staff);

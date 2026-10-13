@@ -13,7 +13,7 @@ as [#231](https://github.com/dwerkjem/PracticeTakes/issues/231).
 ## Order
 
 ```
-engraved-notation-renderer  (in progress, 44/47)
+engraved-notation-renderer  (in progress, 46/47)
         |
         +-- engraving-stems-and-beams
         |        |
@@ -80,9 +80,11 @@ to be proven in.
 
 [`openspec/changes/engraving-polish/`](../../../openspec/changes/engraving-polish/proposal.md)
 
-Key and time signatures first — not drawn at all today, and a correctness gap
-rather than a polish item — then collisions, ties and slurs, dynamics, lyrics,
-repeats, justification.
+Collisions first, then ties and slurs, dynamics, lyrics, repeats,
+justification, and a first-system indent. Key and time signatures were the
+original leading item here and have moved into `engraved-notation-renderer`
+instead: its spec delta already required them, and the fixed head width that
+would have had to change for them was in the way.
 
 Blocked by: `engraving-stems-and-beams`. The change most likely to sprawl, which
 is why its scope is a closed list.

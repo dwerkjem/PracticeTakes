@@ -196,8 +196,10 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   approved window state, clicks a named target, sets geometry/theme, and quits.
   See `docs/development/quality/TESTING_SUITE.md`.
 - `src/features` — user-facing tools: `analysis/{tuner,spectrogram,harmonics}`,
-  `score` (the Target Note tool, the first consumer of the score model),
-  `feedback`, `performance` (launch timing).
+  `score` (the Target Note tool, the first consumer of the score model) and
+  `score/notation/` (the `score-view` tool, which draws the engraved page and is
+  the only place a pixel appears — it paints what `score/engraving` placed and
+  computes no position of its own), `feedback`, `performance` (launch timing).
 - `src/platform` — shared infrastructure: `audio/` (`AudioInputService`,
   `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`), `midi/`
   (`MidiInputService`, `MidiEventFifo`, `MidiMessageTranslation`,
@@ -206,11 +208,17 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   JUCE-free byte-level translation layer that is where every rule worth
   asserting about the event stream lives — and `score/` — a JUCE-free score
   model (`Score`, `TempoMap`, `Pitch`, `MusicalTime`, `CurrentScore`) plus a
-  MusicXML importer under `score/musicxml/`. `score/` has two application
-  consumers: the shell's Open Score command, which imports a file and publishes
-  the result into the `CurrentScore` holder, and the Target Note tool, which
-  reads that holder through `ToolServices`. What the importer accepts, drops
-  with a diagnostic, or refuses is specified in
+  MusicXML importer under `score/musicxml/` and an engraving layer under
+  `score/engraving/`. The engraving layer turns a score and an available width
+  into positions — `ScoreLayout` (columns and system breaking), `StaffPosition`,
+  `Accidentals`, `SystemHead` (clef, key and time signature), `GlyphMetrics`
+  (generated Bravura metrics) — and is JUCE-free and font-free for the same
+  reason the model is: layout is then assertable without a display. Its unit is
+  the staff space and the staff step, never the pixel. `score/` has three
+  application consumers: the shell's Open Score command, which imports a file
+  and publishes the result into the `CurrentScore` holder, and the Target Note
+  and Score View tools, which read that holder through `ToolServices`. What the
+  importer accepts, drops with a diagnostic, or refuses is specified in
   `docs/development/formats/musicxml-subset.md`; what consuming the model from
   the application revealed about its shape is in
   `docs/development/architecture/score-model-findings.md`, and each entry there

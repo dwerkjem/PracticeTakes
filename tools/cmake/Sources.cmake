@@ -166,6 +166,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/score/engraving/ScoreLayout.cpp
     src/platform/score/engraving/ScoreLayout.h
     src/platform/score/engraving/StaffPosition.h
+    src/platform/score/engraving/SystemHead.cpp
+    src/platform/score/engraving/SystemHead.h
     src/platform/score/TempoMap.cpp
     src/platform/score/TempoMap.h
     src/platform/score/musicxml/MusicXmlDiagnosticSink.cpp
@@ -258,6 +260,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/score/engraving/GrandStaffFixtureTests.cpp
     src/tests/platform/score/engraving/ScoreLayoutTests.cpp
     src/tests/platform/score/engraving/StaffPositionTests.cpp
+    src/tests/platform/score/engraving/SystemHeadTests.cpp
     src/tests/platform/score/TempoMapTests.cpp
     src/tests/platform/score/musicxml/MusicXmlCorpusTests.cpp
     src/tests/platform/score/musicxml/container/MusicXmlContainerTests.cpp
@@ -292,6 +295,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/score/TempoMap.cpp
     src/platform/score/engraving/Accidentals.cpp
     src/platform/score/engraving/ScoreLayout.cpp
+    src/platform/score/engraving/SystemHead.cpp
     src/platform/score/musicxml/MusicXmlDiagnosticSink.cpp
     src/platform/score/musicxml/MusicXmlImporter.cpp
     src/platform/score/musicxml/XmlDocumentAdapter.cpp

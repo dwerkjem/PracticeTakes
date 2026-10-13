@@ -71,7 +71,13 @@ JUCE-free logic with no font and no window.
       equal absolute onsets align by construction.
 - [x] 4.4 Lay out the brace spanning the staves of a part with
       `staffCount > 1`, and the per-part vertical spacing around it.
-- [ ] 4.5 Draw key and time signature on every staff of a part; clef per staff.
+- [x] 4.5 Draw key and time signature on every staff of a part; clef per staff.
+      `SystemHead.h` lays the head out as clef, then key, then time, each at its
+      own width; the system head width is computed per measure rather than the
+      fixed 9 staff spaces it used to be, because seven accidentals plus a clef
+      plus a time signature do not fit in 9. Key signature accidental positions
+      are convention rather than arithmetic and are asserted directly, against
+      all three pitched clefs.
 - [x] 4.6 Tests covering #200's acceptance criteria as assertions on the layout:
       a two-staff part braced, contents on the staff the file assigned, a clef
       change on one staff leaving the other's placement untouched, and equal
@@ -137,7 +143,7 @@ verifiable` documents, three of which fail a test if skipped.
 - [x] 8.4 Confirm nothing added here is reachable from the audio or MIDI
       callbacks — the score model is already forbidden there, and this change
       must not introduce the first exception.
-- [ ] 8.5 Update `docs/development/architecture/ARCHITECTURE.md` and the
+- [x] 8.5 Update `docs/development/architecture/ARCHITECTURE.md` and the
       layering section of `docs/development/agents/AGENT_GUIDE.md` with
       `src/platform/score/engraving/` and `src/features/score/notation/`.
 - [ ] 8.6 A golden-image run over the new surfaces, with the result recorded

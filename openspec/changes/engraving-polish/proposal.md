@@ -3,7 +3,8 @@
 With stems and beams drawn, the page is readable. It is not yet *good*, and the
 difference matters more here than it would in most applications: a musician
 reads a score at speed and anything that makes them stop — a collision, a
-cramped bar, a missing key signature — costs more than it looks like it should.
+cramped bar, a tie that reads as two struck notes — costs more than it looks
+like it should.
 
 This change closes the gap between "readable" and "looks like a published
 score". It is deliberately last, because every item in it is a refinement of
@@ -11,14 +12,13 @@ something that must already exist.
 
 ## What Changes
 
-- **Key signatures**, which are not drawn at all today. Accidental placement
-  follows the clef, so a renderer that ignores them makes every transposed
-  piece wrong on sight. This is the single largest correctness gap left, not a
-  polish item, and it leads.
-- **Time signatures**, likewise undrawn.
-- **Proper system head layout**: clef, then key, then time, each at its own
-  width rather than inside today's fixed 9-staff-space allowance, with a
-  reserved indent on the first system.
+- **A reserved indent on the first system**, and the part name set against it.
+  Key signatures, time signatures, and a head laid out as clef-then-key-then-time
+  at its own computed width landed in `engraved-notation-renderer` (task 4.5)
+  rather than waiting for this change, because the spec delta there already
+  required them and the fixed nine-staff-space head could not hold seven
+  accidentals. What is left here is the *first* system's indent, which is a
+  page-level convention rather than a head-level one.
 - **Collision avoidance.** Accidentals in a chord stack into columns rather than
   overlapping; a notehead a second away from its neighbour offsets to the other
   side of the stem; ledger lines of adjacent notes merge rather than doubling.
@@ -43,9 +43,9 @@ something that must already exist.
 ## Capabilities
 
 ### Modified Capabilities
-- `score-notation-rendering`: adds key and time signatures, collision rules,
-  ties and slurs, directions, lyrics, repeat structures, justification, and a
-  stated spacing quality bar. Everything already required stays required.
+- `score-notation-rendering`: adds collision rules, ties and slurs, directions,
+  lyrics, repeat structures, justification, a first-system indent, and a stated
+  spacing quality bar. Everything already required stays required.
 
 ## Impact
 

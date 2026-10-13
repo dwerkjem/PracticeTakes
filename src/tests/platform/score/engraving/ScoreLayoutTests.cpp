@@ -120,6 +120,42 @@ namespace
         staff.glyphs.begin(), staff.glyphs.end(),
         [wanted](const PlacedGlyph& glyph) { return glyph.glyph == wanted; });
 }
+
+[[nodiscard]] std::size_t countGlyph(const StaffLayout& staff, Glyph wanted)
+{
+    return static_cast<std::size_t>(std::count_if(
+        staff.glyphs.begin(), staff.glyphs.end(),
+        [wanted](const PlacedGlyph& glyph) { return glyph.glyph == wanted; }));
+}
+
+// The steps one kind of glyph occupies on a staff, in the order they are
+// placed left to right.
+[[nodiscard]] std::vector<int> stepsOfGlyph(const StaffLayout& staff, Glyph wanted)
+{
+    std::vector<PlacedGlyph> matching;
+
+    for (const PlacedGlyph& glyph : staff.glyphs)
+    {
+        if (glyph.glyph == wanted)
+        {
+            matching.push_back(glyph);
+        }
+    }
+
+    std::sort(
+        matching.begin(), matching.end(),
+        [](const PlacedGlyph& lhs, const PlacedGlyph& rhs) { return lhs.x < rhs.x; });
+
+    std::vector<int> steps;
+    steps.reserve(matching.size());
+
+    for (const PlacedGlyph& glyph : matching)
+    {
+        steps.push_back(glyph.staffStep);
+    }
+
+    return steps;
+}
 } // namespace
 
 TEST_CASE("an empty score lays out to nothing", "[engraving][layout]")
@@ -419,5 +455,115 @@ TEST_CASE("a note outside the staff gets ledger lines", "[engraving][layout][led
     {
         CHECK(line.staffStep < bottomLineStep);
         CHECK(line.width > 0.0);
+    }
+}
+
+TEST_CASE(
+    "key and time signature are drawn on every staff of a part",
+    "[engraving][layout][grandstaff][head]")
+{
+    Score score = makePianoScore();
+    score.parts[0].measures[0].attributes.key = KeySignature{3, "major"};
+    score.parts[0].measures[0].attributes.time = TimeSignature{3, 4};
+
+    const ScoreLayout layout = layOutScore(score, LayoutOptions{});
+
+    REQUIRE(layout.systems.size() == 1);
+    REQUIRE(layout.systems[0].parts.size() == 1);
+
+    const PartLayout& piano = layout.systems[0].parts[0];
+
+    REQUIRE(piano.staves.size() == 2);
+
+    for (const StaffLayout& staff : piano.staves)
+    {
+        // Key and time are per part, not per staff, so both staves of the
+        // grand staff show them.
+        CHECK(countGlyph(staff, Glyph::accidentalSharp) == 3);
+        CHECK(countGlyph(staff, Glyph::timeSig3) == 1);
+        CHECK(countGlyph(staff, Glyph::timeSig4) == 1);
+    }
+
+    // Placed per clef, though: the same three sharps sit two steps lower on
+    // the bass staff than on the treble one.
+    const std::vector<int> treble = stepsOfGlyph(piano.staves[0], Glyph::accidentalSharp);
+    const std::vector<int> bass = stepsOfGlyph(piano.staves[1], Glyph::accidentalSharp);
+
+    REQUIRE(treble.size() == bass.size());
+
+    for (std::size_t index = 0; index < treble.size(); ++index)
+    {
+        CHECK(treble[index] - bass[index] == 2);
+    }
+}
+
+TEST_CASE("music starts to the right of the system head", "[engraving][layout][head]")
+{
+    Score score = makeSingleStaffScore(1);
+    score.parts[0].measures[0].attributes.key = KeySignature{-6, "major"};
+    score.parts[0].measures[0].attributes.time = TimeSignature{12, 8};
+
+    const ScoreLayout layout = layOutScore(score, LayoutOptions{});
+
+    REQUIRE(layout.systems.size() == 1);
+    REQUIRE(layout.systems[0].parts.size() == 1);
+    REQUIRE(layout.systems[0].parts[0].staves.size() == 1);
+
+    const StaffLayout& staff = layout.systems[0].parts[0].staves[0];
+
+    double headRight = 0.0;
+
+    for (const PlacedGlyph& glyph : staff.glyphs)
+    {
+        const bool isHead = glyph.glyph == Glyph::gClef || glyph.glyph == Glyph::accidentalFlat ||
+                            glyph.glyph == Glyph::timeSig1 || glyph.glyph == Glyph::timeSig2 ||
+                            glyph.glyph == Glyph::timeSig8;
+
+        if (isHead)
+        {
+            headRight = std::max(headRight, glyph.x + advanceWidth(glyph.glyph));
+        }
+    }
+
+    REQUIRE(headRight > 0.0);
+
+    const std::vector<double> noteheads = noteheadXs(staff);
+
+    REQUIRE_FALSE(noteheads.empty());
+
+    // Six flats and a two-digit time signature need more than the nine staff
+    // spaces this used to reserve, so a fixed head width would have put the
+    // first notehead on top of the time signature.
+    CHECK(noteheads.front() > headRight);
+}
+
+TEST_CASE(
+    "a later system repeats the clef, key and time in force",
+    "[engraving][layout][systems][head]")
+{
+    Score score = makeSingleStaffScore(8);
+    score.parts[0].measures[0].attributes.key = KeySignature{2, "major"};
+    score.parts[0].measures[0].attributes.time = TimeSignature{4, 4};
+
+    LayoutOptions narrow;
+    narrow.availableWidth = 30.0;
+
+    const ScoreLayout layout = layOutScore(score, narrow);
+
+    REQUIRE(layout.systems.size() > 1);
+
+    // A reader who scrolls to the last system has not seen the first bar, so
+    // it carries the attributes forward even though no measure there changes
+    // them.
+    for (const SystemLayout& system : layout.systems)
+    {
+        REQUIRE(system.parts.size() == 1);
+        REQUIRE(system.parts[0].staves.size() == 1);
+
+        const StaffLayout& staff = system.parts[0].staves[0];
+
+        CHECK(hasGlyph(staff, Glyph::gClef));
+        CHECK(countGlyph(staff, Glyph::accidentalSharp) == 2);
+        CHECK(countGlyph(staff, Glyph::timeSig4) == 2);
     }
 }
