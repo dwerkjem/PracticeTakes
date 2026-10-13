@@ -46,9 +46,9 @@ JUCE-free logic with no font and no window.
       `src/platform/score/engraving/`: a laid-out page of systems, each of
       staves, each of placed elements positioned in staff spaces. No JUCE types,
       no `JuceHeader.h`.
-- [ ] 3.2 Implement staff-degree placement: written spelling plus prevailing
+- [x] 3.2 Implement staff-degree placement: written spelling plus prevailing
       clef to a vertical staff position, including ledger lines above and below.
-- [ ] 3.3 Implement running key signature state and accidental decision — draw
+- [x] 3.3 Implement running key signature state and accidental decision — draw
       an accidental only where the spelling differs from what the key signature
       and earlier accidentals in the measure already supply.
 - [ ] 3.4 Implement the column model: collect distinct absolute onsets across
