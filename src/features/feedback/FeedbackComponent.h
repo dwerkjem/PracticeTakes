@@ -21,6 +21,15 @@ class FeedbackComponent final : public juce::Component, private juce::Thread
 
     void paint(juce::Graphics& graphics) override;
     void resized() override;
+
+    // A TextEditor colours each run of text as it is inserted and does not
+    // re-colour it when the look and feel changes, so everything already typed
+    // into this form keeps the palette it was typed under -- in the dark theme,
+    // dark grey on near-black. JUCE calls this for us when the shell tells the
+    // window its look and feel changed, so the form fixes itself and the shell
+    // needs to know nothing about what is in it.
+    void lookAndFeelChanged() override;
+
     void setContextTag(const juce::String& toolOrWorkflowName);
 
   private:

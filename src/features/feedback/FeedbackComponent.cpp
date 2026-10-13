@@ -243,6 +243,22 @@ void FeedbackComponent::paint(juce::Graphics& graphics)
     graphics.fillAll(findColour(juce::ResizableWindow::backgroundColourId));
 }
 
+void FeedbackComponent::lookAndFeelChanged()
+{
+    // Read from the look and feel rather than through the editor's own
+    // findColour, and applied without taking the colour as the editor's own: a
+    // Component's colour map wins over the look and feel, so pinning it here
+    // would freeze the form at today's palette and make the next theme change
+    // do nothing.
+    const juce::Colour text = getLookAndFeel().findColour(juce::TextEditor::textColourId);
+
+    for (juce::TextEditor* editor :
+         {&titleEditor, &descriptionEditor, &reproductionEditor, &emailEditor, &contextEditor})
+    {
+        editor->applyColourToAllText(text, false);
+    }
+}
+
 void FeedbackComponent::resized()
 {
     auto bounds = getLocalBounds().reduced(22);

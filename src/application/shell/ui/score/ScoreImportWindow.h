@@ -58,13 +58,8 @@ class MainComponent::ScoreImportWindow final : public juce::DocumentWindow
     {
         setLookAndFeel(appearance);
         setBackgroundColour(background);
+        // Reaches Content::lookAndFeelChanged, which re-colours the report.
         sendLookAndFeelChange();
-
-        if (auto* content = dynamic_cast<Content*>(getContentComponent()))
-        {
-            content->refreshTextColour();
-        }
-
         repaint();
     }
 
@@ -119,7 +114,10 @@ class MainComponent::ScoreImportWindow final : public juce::DocumentWindow
         // in the dark theme is dark grey on near-black, and unreadable. The
         // import is asynchronous, so whether the report or the theme arrived
         // first was a race: two captures of the same surface disagreed.
-        void refreshTextColour()
+        //
+        // JUCE calls this when the window is told its look and feel changed, so
+        // the content fixes itself rather than the window reaching into it.
+        void lookAndFeelChanged() override
         {
             // Read from the look and feel rather than through
             // `body.findColour`, and applied without pinning: a Component's own
