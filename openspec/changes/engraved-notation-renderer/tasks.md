@@ -42,7 +42,7 @@ JUCE-free logic with no font and no window.
 
 ## 3. The engraving layer — single staff
 
-- [ ] 3.1 Define the layout result types in
+- [x] 3.1 Define the layout result types in
       `src/platform/score/engraving/`: a laid-out page of systems, each of
       staves, each of placed elements positioned in staff spaces. No JUCE types,
       no `JuceHeader.h`.
@@ -51,23 +51,23 @@ JUCE-free logic with no font and no window.
 - [x] 3.3 Implement running key signature state and accidental decision — draw
       an accidental only where the spelling differs from what the key signature
       and earlier accidentals in the measure already supply.
-- [ ] 3.4 Implement the column model: collect distinct absolute onsets across
+- [x] 3.4 Implement the column model: collect distinct absolute onsets across
       the system, assign each event to its column, and width each column by the
       larger of the duration power law and the widest glyph group in it.
-- [ ] 3.5 Implement greedy system breaking against the available width, with
+- [x] 3.5 Implement greedy system breaking against the available width, with
       clef, key and time signature redrawn at the head of each system.
 - [ ] 3.6 Implement barlines, measure grouping, and rests.
-- [ ] 3.7 Tests in `src/tests/platform/score/engraving/` for 3.2–3.6:
+- [x] 3.7 Tests in `src/tests/platform/score/engraving/` for 3.2–3.6:
       staff degrees against each clef, accidental suppression within a measure,
       column widths ordering by duration, and system breaking at a known width.
 
 ## 4. The engraving layer — grand staff
 
-- [ ] 4.1 Emit `Part::staffCount` staves per part per system, each carrying its
+- [x] 4.1 Emit `Part::staffCount` staves per part per system, each carrying its
       own running clef state advanced only by `Clef` entries naming that staff.
-- [ ] 4.2 Place every event on `ScoreEvent::staff` within its part, with no
+- [x] 4.2 Place every event on `ScoreEvent::staff` within its part, with no
       inference from pitch or voice.
-- [ ] 4.3 Share one column list across every staff of every part in a system, so
+- [x] 4.3 Share one column list across every staff of every part in a system, so
       equal absolute onsets align by construction.
 - [ ] 4.4 Lay out the brace spanning the staves of a part with
       `staffCount > 1`, and the per-part vertical spacing around it.
@@ -82,13 +82,13 @@ JUCE-free logic with no font and no window.
 
 ## 5. Render diagnostics
 
-- [ ] 5.1 Produce a `score::Diagnostic` list alongside the layout, in the shape
+- [x] 5.1 Produce a `score::Diagnostic` list alongside the layout, in the shape
       the importer already uses.
-- [ ] 5.2 Detect a voice whose events change staff within a measure and record
+- [x] 5.2 Detect a voice whose events change staff within a measure and record
       "beam crosses staves, drawn unbeamed" naming the measure's printed number.
 - [ ] 5.3 Record any other construct this pass does not draw, rather than
       omitting it silently.
-- [ ] 5.4 Tests: a cross-staff fixture yields the diagnostic *and* places both
+- [x] 5.4 Tests: a cross-staff fixture yields the diagnostic *and* places both
       notes on the staves they name; a clean score yields none.
 
 ## 6. The score view tool
