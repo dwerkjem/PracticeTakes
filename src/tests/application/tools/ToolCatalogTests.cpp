@@ -8,7 +8,7 @@ TEST_CASE("the built-in catalog declares every shipped tool", "[tools][catalog]"
     const auto& catalog = builtInToolCatalog();
 
     REQUIRE(catalog.rejectedIds().empty());
-    REQUIRE(catalog.tools().size() == 3);
+    REQUIRE(catalog.tools().size() == 4);
 
     for (const auto& definition : catalog.tools())
     {
@@ -40,6 +40,8 @@ TEST_CASE("historical aliases still resolve to their tool", "[tools][catalog]")
     CHECK(catalog.resolve("spectrum") == "spectrogram");
     CHECK(catalog.resolve("harmonics") == "harmonic-analyzer");
     CHECK(catalog.resolve("harmonicAnalyzer") == "harmonic-analyzer");
+    CHECK(catalog.resolve("score-target") == "target-note");
+    CHECK(catalog.resolve("targetNote") == "target-note");
     CHECK_FALSE(catalog.resolve("no-such-tool").has_value());
 }
 

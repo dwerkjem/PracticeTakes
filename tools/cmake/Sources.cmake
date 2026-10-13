@@ -114,6 +114,10 @@ set(PRACTICE_TAKES_SOURCES
     src/features/analysis/tuner/TunerSettingsCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.h
     src/features/analysis/tuner/TunerDrawing.cpp
+    src/features/score/TargetNoteComponent.cpp
+    src/features/score/TargetNoteComponent.h
+    src/features/score/TargetNoteSelection.cpp
+    src/features/score/TargetNoteSelection.h
     src/features/performance/ApplicationLaunchTimer.cpp
     src/features/performance/ApplicationLaunchTimer.h
     src/features/feedback/FeedbackComponent.cpp
@@ -128,11 +132,13 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/audio/SharedPitchAnalysis.cpp
     src/platform/audio/SharedPitchAnalysis.h
     src/platform/audio/SyntheticTone.h
+    src/platform/score/CurrentScore.h
     src/platform/score/Diagnostic.h
     src/platform/score/LyricSyllable.h
     src/platform/score/Measure.h
     src/platform/score/MusicalTime.h
     src/platform/score/Pitch.h
+    src/platform/score/PitchNames.h
     src/platform/score/Score.h
     src/platform/score/ScoreAttributes.h
     src/platform/score/ScoreBuilder.cpp
@@ -204,6 +210,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
     src/tests/features/analysis/tuner/PitchTrackerTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
+    src/tests/features/score/TargetNoteSelectionTests.cpp
     src/tests/features/performance/ApplicationLaunchTimerTests.cpp
     src/tests/platform/audio/AudioRecoveryPolicyTests.cpp
     src/tests/platform/audio/AudioInputServiceTests.cpp
@@ -212,7 +219,9 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/audio/SyntheticToneTests.cpp
     src/tests/platform/audio/PitchDetectorTests.cpp
     src/tests/platform/audio/SharedPitchAnalysisTests.cpp
+    src/tests/platform/score/CurrentScoreTests.cpp
     src/tests/platform/score/MusicalTimeTests.cpp
+    src/tests/platform/score/PitchNamesTests.cpp
     src/tests/platform/score/PitchTests.cpp
     src/tests/platform/score/ScoreInvariantsTests.cpp
     src/tests/platform/score/ScoreModelTests.cpp
@@ -240,6 +249,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/features/analysis/harmonics/HarmonicAnalyzer.cpp
     src/features/analysis/tuner/PitchTracker.cpp
     src/features/performance/ApplicationLaunchTimer.cpp
+    src/features/score/TargetNoteSelection.cpp
     src/platform/audio/PitchDetector.cpp
     src/platform/audio/SharedPitchAnalysis.cpp
     src/platform/score/ScoreBuilder.cpp

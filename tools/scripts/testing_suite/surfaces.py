@@ -371,13 +371,15 @@ SURFACES: tuple[Surface, ...] = (
     ),
     Surface(
         state="all-tools-docked",
-        title="All three tools open at once",
-        tools=("tuner", "spectrogram", "harmonics"),
+        title="Every tool open at once",
+        tools=("tuner", "spectrogram", "harmonics", "target-note"),
         presentation="split",
         modes=frozenset({FULL}),
         extras=(
             Question(
-                "all-live", "Do all three respond to sound at the same time?", behavioural=True
+                "all-live",
+                "Do all three audio tools respond to sound at the same time?",
+                behavioural=True,
             ),
         ),
     ),
@@ -588,6 +590,27 @@ SURFACES: tuple[Surface, ...] = (
             Question(
                 "metadata-complete",
                 "Are the work, composer, parts, length, and tempo all shown?",
+            ),
+        ),
+    ),
+    # The target note tool's paint routine is Component code: selectTargetNote
+    # is unit tested, what it looks like is not. Only its empty state is here,
+    # and not because the populated one matters less -- there is no approved
+    # state that opens a score *into* a tool, because importing one also opens
+    # the summary window over whatever the surface is about. See
+    # docs/development/architecture/score-model-findings.md.
+    Surface(
+        state="target-note-empty",
+        title="The target note tool with no score open",
+        tools=("target-note",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        extras=(
+            Question(
+                "says-what-to-do",
+                "Does it name the command that opens a score, rather than showing an empty "
+                "panel?",
             ),
         ),
     ),

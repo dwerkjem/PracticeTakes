@@ -1,9 +1,14 @@
 # Adding a tool
 
-A tool is declared in two places and nowhere else. Nothing in the application
-shell needs to change: the Tools menu, docking, floating, tiling, tabs, drag and
-drop, theming, workspace capture, and workspace restore all discover tools
-through the registry.
+A tool is declared to the **shell** in two places and nowhere else. Nothing
+that coordinates the window needs to change: the Tools menu, docking, floating,
+tiling, tabs, drag and drop, theming, workspace capture, and workspace restore
+all discover tools through the registry.
+
+Three further things are not the shell and do have to be edited, because a tool
+nobody can verify is not finished — see step 4. Adding `target-note` found them
+by failing three tests after the tool already worked, which is later than anyone
+should learn it.
 
 ## 1. Declare it
 
@@ -75,6 +80,29 @@ Finally, add the sources to `PRACTICE_TAKES_SOURCES` in
 `tools/cmake/Sources.cmake`, and any tests to `PRACTICE_TAKES_TEST_SOURCES`
 beside it.
 
+## 4. Make it verifiable
+
+A tool's `Component` code is outside `PracticeTakesTests` by design, so the
+manual capture suite is the only thing that ever looks at it. Three edits, two
+of which fail a test if you skip them:
+
+1. **An approved state naming the tool**, in
+   `src/application/testcontrol/ApprovedWindowStates.cpp`. Without one the tool
+   cannot be put on screen by the harness at all, and
+   `every tool is reachable in at least one state` fails. A tool that shows
+   nothing until something else has happened wants a second state for its empty
+   case — that is what most sessions see.
+2. **`all-tools-docked` updated** to include the new tool, in the same file.
+   `every tool can be open at once` compares that state against the catalog, so
+   it fails otherwise.
+3. **A surface in `tools/scripts/testing_suite/surfaces.py`**, naming the state
+   and the questions a reviewer should answer about the picture. Nothing
+   enforces this one: skip it and the tool is simply never photographed.
+
+`the built-in catalog declares every shipped tool` also pins the number of
+tools. Bumping it is deliberate — it is what makes adding a tool to the roster
+something a reviewer sees — but it is a fourth edit, so expect it.
+
 ## Instance policy
 
 A **tool** is a kind of tool; an **instance** is one live copy. They are
@@ -131,3 +159,7 @@ first. Do not move that declaration.
       [`audio-thread-safety.md`](../performance/audio-thread-safety.md).
 - [ ] An approved state in `src/application/testcontrol/ApprovedWindowStates.cpp`
       names the tool, so it can be manually verified.
+- [ ] `all-tools-docked` includes the tool.
+- [ ] The tool count in `ToolCatalogTests` bumped.
+- [ ] A surface in `tools/scripts/testing_suite/surfaces.py` names the state, so
+      the tool is actually photographed.

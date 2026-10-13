@@ -5,6 +5,7 @@
 #include "../../features/analysis/harmonics/HarmonicAnalyzerComponent.h"
 #include "../../features/analysis/spectrogram/SpectrogramComponent.h"
 #include "../../features/analysis/tuner/TunerComponent.h"
+#include "../../features/score/TargetNoteComponent.h"
 
 #include <memory>
 
@@ -22,6 +23,8 @@ const ToolRegistry& builtInToolRegistry()
                  return std::make_unique<HarmonicAnalyzerComponent>(
                      services.audio, services.pitchAnalysis);
              }},
+            {"target-note", [](const ToolServices& services)
+             { return std::make_unique<TargetNoteComponent>(services.currentScore); }},
         });
 
     // The catalog and the factory table are edited together; if they drift, a
