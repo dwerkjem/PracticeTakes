@@ -193,10 +193,12 @@ TEST_CASE("the tabbed state shares one strip between two tools", "[testcontrol][
     CHECK(state.presentation == ToolPresentation::docked);
 }
 
-TEST_CASE("all three tools can be open at once", "[testcontrol][approved]")
+TEST_CASE("every tool can be open at once", "[testcontrol][approved]")
 {
-    // Also the only state that puts three live audio consumers on the shared
-    // capture path simultaneously.
+    // Also the only state that puts every live audio consumer on the shared
+    // capture path simultaneously. Compared against the catalog rather than
+    // against a number, so adding a tool and forgetting this state fails here
+    // rather than in a capture nobody notices is one short.
     const ApprovedWindowState& state = require("all-tools-docked");
 
     CHECK(state.tools.size() == builtInToolCatalog().tools().size());

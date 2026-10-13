@@ -292,10 +292,11 @@ class MainComponent final
     // shell stands in for #39's session file until it exists.
     //
     // Declared here, before liveTools, for the same reason audioInputService
-    // and appLookAndFeel are: #33's score tool will read the current score, and
-    // a member declared after liveTools would be destroyed while tools still
-    // hold it. Nothing borrows it yet, so this costs nothing today and removes
-    // a landmine that would otherwise be found by a crash on quit.
+    // and appLookAndFeel are: the Target Note tool borrows the CurrentScore
+    // holder inside this through ToolServices, and a member declared after
+    // liveTools would be destroyed while tools still held it. That ordering is
+    // the whole of the enforcement -- there is no runtime check -- so do not
+    // move this declaration below liveTools.
     ScoreImportState scoreImport;
 
     juce::TextButton fileButton{"File"};

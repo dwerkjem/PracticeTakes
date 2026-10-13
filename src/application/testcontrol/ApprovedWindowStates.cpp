@@ -59,7 +59,7 @@ const std::vector<ApprovedWindowState>& states()
          false, "", false, "The harmonic analyser reading a sustained pitch", 220.0, ""},
         {"all-tools-tone", Tools{"tuner", "spectrogram", "harmonics"}, ToolPresentation::docked,
          WorkspaceArrangement::split, WindowGeometry::normal, MicrophoneCondition::available, false,
-         "", false, "Every tool at once, all analysing the same tone", 440.0, ""},
+         "", false, "Every audio tool at once, all analysing the same tone", 440.0, ""},
         {"tuner-floating", Tools{"tuner"}, ToolPresentation::floating, WorkspaceArrangement::single,
          WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
          "The tuner, in its own floating window"},
@@ -75,6 +75,12 @@ const std::vector<ApprovedWindowState>& states()
         {"harmonics-floating", Tools{"harmonics"}, ToolPresentation::floating,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "The harmonic analyser, in its own floating window"},
+        // The one tool whose empty state is worth a picture: it is what a
+        // session that has not opened a file shows, which is most of them.
+        {"target-note-empty", Tools{"target-note"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The target note tool with no score open, which is what a new session shows"},
 
         // --- Several tools at once. Nothing else reaches the split tree with
         // more than one leaf, or the tab strip at all.
@@ -90,9 +96,10 @@ const std::vector<ApprovedWindowState>& states()
         {"three-tools-tabbed", Tools{"tuner", "spectrogram", "harmonics"}, ToolPresentation::docked,
          WorkspaceArrangement::tabbed, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "All three tools sharing one tab strip"},
-        {"all-tools-docked", Tools{"tuner", "spectrogram", "harmonics"}, ToolPresentation::docked,
-         WorkspaceArrangement::split, WindowGeometry::normal, MicrophoneCondition::available, false,
-         "", false, "All three tools tiled at once, each consuming live audio"},
+        {"all-tools-docked", Tools{"tuner", "spectrogram", "harmonics", "target-note"},
+         ToolPresentation::docked, WorkspaceArrangement::split, WindowGeometry::normal,
+         MicrophoneCondition::available, false, "", false,
+         "Every tool tiled at once -- the three live-audio tools and the one that reads a score"},
 
         // --- Window geometry ---
         {"narrow-window", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
@@ -111,7 +118,7 @@ const std::vector<ApprovedWindowState>& states()
          "The tuner with the global microphone mute engaged"},
         {"muted-all-tools", Tools{"tuner", "spectrogram", "harmonics"}, ToolPresentation::docked,
          WorkspaceArrangement::split, WindowGeometry::normal, MicrophoneCondition::muted, false, "",
-         false, "Every tool at once with the microphone muted"},
+         false, "Every audio tool at once with the microphone muted"},
         {"microphone-warning",
          {},
          ToolPresentation::none,
@@ -194,6 +201,13 @@ const std::vector<ApprovedWindowState>& states()
         // reachable with a flag; the score import summary has nothing to show
         // until a file has been read, so these are the only states that ask
         // the shell to open a document on the way in.
+        //
+        // The target note tool would want a third, and cannot have one: the
+        // only way in here to get a score into the running application is
+        // `startScoreImport`, which also opens the summary window over
+        // whatever the surface is about. The comment below on geometry records
+        // what an overlapping window does to a capture. See
+        // docs/development/architecture/score-model-findings.md.
         //
         // The trailing fields are positional: description, tone, tool view,
         // then the fixture. The two empty strings in the middle are the tone
