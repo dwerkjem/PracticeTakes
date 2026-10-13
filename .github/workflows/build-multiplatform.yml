@@ -291,13 +291,14 @@ jobs:
       - name: Exclude the build from Defender
         shell: pwsh
         run: |
+          # Two calls rather than seven. Each Add-MpPreference is a round trip
+          # through the Defender service and costs about five seconds on the
+          # arm64 runner, which made asking for the exclusions cost more there
+          # than some of what they save.
           try {
-            Add-MpPreference -ExclusionPath "${{ github.workspace }}"
-            Add-MpPreference -ExclusionPath "${env:RUNNER_TEMP}"
-
-            foreach ($process in @("ccache.exe", "cl.exe", "link.exe", "lib.exe", "ninja.exe")) {
-              Add-MpPreference -ExclusionProcess $process
-            }
+            Add-MpPreference -ExclusionPath @("${{ github.workspace }}", "${env:RUNNER_TEMP}")
+            Add-MpPreference -ExclusionProcess @(
+              "ccache.exe", "cl.exe", "link.exe", "lib.exe", "ninja.exe")
           }
           catch {
             Write-Warning "Could not add Defender exclusions: $($_.Exception.Message)"
