@@ -5,6 +5,7 @@
 
 #include "ScoreImportSummary.h"
 
+#include "platform/score/CurrentScore.h"
 #include "platform/score/Score.h"
 #include "platform/score/musicxml/MusicXmlImportResult.h"
 
@@ -24,6 +25,14 @@
 // number of readers on any number of threads need no lock, and a copy means a
 // reader's score stays alive and unchanged even after a different score is
 // opened. The shell stands in for #39's session here.
+//
+// It is held in a `score::CurrentScore`, which this owns and exposes, rather
+// than as a bare member: that is the holder `ToolServices` hands to every tool,
+// so a tool reads the current score without knowing this class exists. The
+// writer owning the holder is what keeps there being *one* current score --
+// a second holder beside this one would be two places that each believed they
+// knew which score was open. When #39's session file takes the current score
+// over, the holder moves there and this takes a reference to it instead.
 class ScoreImportState
 {
   public:
@@ -39,7 +48,7 @@ class ScoreImportState
         // score with nothing.
         if (result.score != nullptr)
         {
-            currentScore = result.score;
+            currentScore.publish(result.score);
         }
 
         return lastSummary;
@@ -49,12 +58,19 @@ class ScoreImportState
     // by value on purpose -- see the note on ownership above.
     [[nodiscard]] std::shared_ptr<const score::Score> score() const
     {
-        return currentScore;
+        return currentScore.score();
     }
 
     [[nodiscard]] bool hasScore() const noexcept
     {
-        return currentScore != nullptr;
+        return currentScore.hasScore();
+    }
+
+    // The holder itself, for `ToolServices`. Non-owning and `const`: a tool
+    // reads the current score and never decides what it is.
+    [[nodiscard]] const score::CurrentScore& currentScoreHolder() const noexcept
+    {
+        return currentScore;
     }
 
     // The summary of the most recent import, successful or not. Only meaningful
@@ -70,7 +86,7 @@ class ScoreImportState
     }
 
   private:
-    std::shared_ptr<const score::Score> currentScore;
+    score::CurrentScore currentScore;
     ScoreImportSummary lastSummary;
     bool hasSummary = false;
 };

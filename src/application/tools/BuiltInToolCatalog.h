@@ -29,6 +29,13 @@
             ToolInstancePolicy::single,
             std::nullopt,
             {980, 700}},
+        ToolDefinition{
+            "target-note",
+            "Target Note",
+            {"score-target", "targetNote"},
+            ToolInstancePolicy::single,
+            std::nullopt,
+            {560, 340}},
     });
     return catalog;
 }

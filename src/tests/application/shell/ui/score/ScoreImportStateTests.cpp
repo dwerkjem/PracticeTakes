@@ -128,3 +128,44 @@ TEST_CASE("a reader's score survives a later import", "[score][import][state]")
     CHECK(state.score()->metadata.workTitle == "Second");
     CHECK(held != state.score());
 }
+
+// The holder is what ToolServices hands to a tool, so it has to agree with
+// what the shell itself sees -- a tool reading one truth while the import
+// window shows another would be the exact bug that owning one holder here
+// prevents.
+TEST_CASE("the holder a tool reads agrees with the state", "[score][import][state]")
+{
+    ScoreImportState state;
+
+    SECTION("before any import")
+    {
+        CHECK_FALSE(state.currentScoreHolder().hasScore());
+        CHECK(state.currentScoreHolder().score() == nullptr);
+    }
+
+    SECTION("after a success")
+    {
+        state.apply(importOf("Gymnopédie"));
+
+        REQUIRE(state.currentScoreHolder().hasScore());
+        CHECK(state.currentScoreHolder().score() == state.score());
+        CHECK(state.currentScoreHolder().score()->metadata.workTitle == "Gymnopédie");
+    }
+
+    SECTION("after a failure following a success")
+    {
+        state.apply(importOf("Gymnopédie"));
+        state.apply(failureOf(MusicXmlImportStatus::malformedXml, "Unexpected end of document"));
+
+        REQUIRE(state.currentScoreHolder().hasScore());
+        CHECK(state.currentScoreHolder().score() == state.score());
+        CHECK(state.currentScoreHolder().score()->metadata.workTitle == "Gymnopédie");
+    }
+
+    SECTION("after a failed first import")
+    {
+        state.apply(failureOf(MusicXmlImportStatus::notMusicXml, "No <score-partwise> element"));
+
+        CHECK_FALSE(state.currentScoreHolder().hasScore());
+    }
+}

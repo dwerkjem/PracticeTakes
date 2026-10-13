@@ -426,13 +426,17 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
             // Note NUMBERS, not names.
             //
-            // Naming a played note properly needs a spelling, and a MIDI number
-            // has none -- it cannot tell F sharp from G flat. The only
-            // note-naming function in the repository is private to the tuner and
-            // is MIDI-only for that same reason. Adding a third private copy
-            // here would deepen that rather than record it, so this shows the
-            // number and the next change to want a name can build the shared
-            // home that does not exist yet.
+            // Naming a played note properly needs a *spelling*, and a MIDI
+            // number has none -- it cannot tell F sharp from G flat.
+            // `score::spelledName` exists and is the right function, and it
+            // cannot help here: it takes a `score::Pitch`, which is a spelling.
+            // The only thing that turns a bare number into one is the tuner's
+            // `noteNameForMidi`, which is private to that tool and picks a
+            // spelling arbitrarily for exactly this reason.
+            //
+            // So this shows the number. A played note gets a name once
+            // something knows what it was *meant* to be -- which is matching it
+            // against a score (#42), not naming it in isolation.
             [[nodiscard]] static juce::String describe(const midi::MidiEvent& event)
             {
                 switch (event.kind)

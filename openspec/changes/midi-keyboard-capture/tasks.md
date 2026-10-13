@@ -135,13 +135,15 @@ anything needs a keyboard.
 - [x] 6.3 Show a live readout of the most recent events with note names and
       velocities, drained on the panel's own timer. This is the proof the whole
       path works, and the place a user with a non-working keyboard will look.
-- [x] 6.4 Show the note **number** and velocity, not a note name. **Do not**
-      duplicate the tuner's `noteNameForMidi`, which is private to that tool and
-      which a MIDI number cannot be spelled through anyway: a number alone
-      cannot distinguish F-sharp from G-flat. Naming a played note properly
-      needs a shared pitch-naming home that does not exist yet, and a third
-      private copy would make that worse rather than record it. The panel says
-      so where someone would otherwise add one.
+- [x] 6.4 Show the note **number** and velocity, not a note name. A MIDI number
+      cannot be spelled: it cannot distinguish F-sharp from G-flat. Restated
+      after merging `main`, which landed `score::spelledName` from #187 — that
+      is the right function and it still does not apply here, because it takes a
+      `score::Pitch`, which is a spelling. Only the tuner's private
+      `noteNameForMidi` turns a bare number into a name, by picking a spelling
+      arbitrarily. A played note gets a name once something knows what it was
+      *meant* to be, which is #42's matching rather than naming in isolation.
+      The panel says so where someone would otherwise add a copy.
 
 ## 7. Verification
 
