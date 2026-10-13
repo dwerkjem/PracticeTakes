@@ -118,6 +118,8 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/TargetNoteComponent.h
     src/features/score/TargetNoteSelection.cpp
     src/features/score/TargetNoteSelection.h
+    src/features/score/notation/MusicFont.cpp
+    src/features/score/notation/MusicFont.h
     src/features/performance/ApplicationLaunchTimer.cpp
     src/features/performance/ApplicationLaunchTimer.h
     src/features/feedback/FeedbackComponent.cpp
@@ -155,6 +157,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/score/ScoreInvariants.h
     src/platform/score/ScoreTraversal.cpp
     src/platform/score/ScoreTraversal.h
+    src/platform/score/engraving/GlyphMetrics.h
     src/platform/score/TempoMap.cpp
     src/platform/score/TempoMap.h
     src/platform/score/musicxml/MusicXmlDiagnosticSink.cpp
@@ -223,6 +226,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/analysis/tuner/PitchTrackerTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
     src/tests/features/score/TargetNoteSelectionTests.cpp
+    src/tests/features/score/notation/MusicFontTests.cpp
     src/tests/features/performance/ApplicationLaunchTimerTests.cpp
     src/tests/platform/audio/AudioRecoveryPolicyTests.cpp
     src/tests/platform/audio/AudioInputServiceTests.cpp
@@ -267,6 +271,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/features/analysis/tuner/PitchTracker.cpp
     src/features/performance/ApplicationLaunchTimer.cpp
     src/features/score/TargetNoteSelection.cpp
+    src/features/score/notation/MusicFont.cpp
     src/platform/audio/PitchDetector.cpp
     src/platform/audio/SharedPitchAnalysis.cpp
     src/platform/score/ScoreBuilder.cpp

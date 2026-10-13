@@ -168,12 +168,20 @@ juce_add_binary_data(PracticeTakesIcon
 # for by name. See tools/packaging/fonts/README.md.
 set(PRACTICE_TAKES_FONT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/tools/packaging/fonts")
 
+# Bravura is the music font, embedded for the same reason and with more force:
+# there is no platform fallback for notation. A machine without it would draw a
+# page of tofu rather than a page in a different typeface. It is SMuFL's
+# reference font, so the codepoints in
+# src/platform/score/engraving/GlyphMetrics.h are the specification's and not
+# Bravura's own -- swapping it for another conforming font is a change here and
+# nowhere else. See tools/packaging/fonts/README.md.
 juce_add_binary_data(PracticeTakesFonts
     HEADER_NAME PracticeTakesFonts.h
     NAMESPACE PracticeTakesFonts
     SOURCES
         "${PRACTICE_TAKES_FONT_DIRECTORY}/IBMPlexSans-Regular.ttf"
         "${PRACTICE_TAKES_FONT_DIRECTORY}/IBMPlexSans-Bold.ttf"
+        "${PRACTICE_TAKES_FONT_DIRECTORY}/Bravura.otf"
 )
 
 # The space-free binary name is what the Debian package, the NSIS installer,

@@ -26,18 +26,18 @@ JUCE-free logic with no font and no window.
 
 ## 2. Glyph metrics and the font asset
 
-- [ ] 2.1 Fetch Bravura (OFL-1.1) and `bravura_metadata.json` from
+- [x] 2.1 Fetch Bravura (OFL-1.1) and `bravura_metadata.json` from
       `steinbergmedia/bravura`, commit the font under `tools/packaging/fonts/`,
       and record its licence and provenance in that directory's `README.md`
       alongside the IBM Plex entry.
-- [ ] 2.2 Add Bravura to the `juce_add_binary_data(PracticeTakesFonts ...)`
+- [x] 2.2 Add Bravura to the `juce_add_binary_data(PracticeTakesFonts ...)`
       target in `CMakeLists.txt`.
-- [ ] 2.3 Add a JUCE-free glyph metrics table under
+- [x] 2.3 Add a JUCE-free glyph metrics table under
       `src/platform/score/engraving/` — codepoint, advance width, and the SMuFL
       anchors needed for the glyphs this pass draws (clefs, accidentals, rests,
       noteheads, flags, brace). Layout depends on this table and never on the
       font, which is what keeps decision 1 achievable.
-- [ ] 2.4 Verify the embedded face loads and renders a known codepoint at
+- [x] 2.4 Verify the embedded face loads and renders a known codepoint at
       startup, rather than discovering a missing glyph as a blank page.
 
 ## 3. The engraving layer — single staff
