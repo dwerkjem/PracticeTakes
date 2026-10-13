@@ -88,6 +88,22 @@ env:
   # weaker check than the default, only a differently blind one.
   CCACHE_COMPILERCHECK: content
 
+  # Trust the hashes ccache stores for an included file rather than also
+  # requiring its timestamps to look old enough.
+  #
+  # Without this, a header written moments before it is compiled stops ccache
+  # recording the direct-mode manifest for that object, and the next build has
+  # to run the preprocessor to find its cache entry. This build generates
+  # headers -- JuceHeader.h and the binary-data headers are written by the
+  # build itself -- so every translation unit that includes one is affected:
+  # 166 of 283 hits come back preprocessed rather than direct, in both Windows
+  # jobs, identically across runs. The 117 that stay direct are the Catch2 and
+  # JUCE module sources, which include none of them.
+  #
+  # What is given up is the timestamp as a second opinion; the content hash
+  # still has to match.
+  CCACHE_SLOPPINESS: include_file_ctime,include_file_mtime
+
 jobs:
   linux:
     name: Linux ${{ matrix.arch }}
