@@ -207,14 +207,22 @@ jobs:
           - runner: windows-2022
             arch: x64
             msvc_arch: amd64
+            # The ccache release's own name for this architecture, and the
+            # hash of that asset. Both are part of the pin: a version alone
+            # says which ccache, and the hash says it is the one we checked.
+            ccache_arch: x86_64
+            ccache_sha256: 3d7cebb05850ad704e197b3f1d3f0f924ab6c9fdfc561578e146184fe9d89380
             run_tests: true
           - runner: windows-11-arm
             arch: arm64
             msvc_arch: arm64
+            ccache_arch: aarch64
+            ccache_sha256: bec01846b06d6d87bf35eda50544d7c8bf9b9a4859f218417a7081aa45d7fd47
             run_tests: true
     runs-on: ${{ matrix.runner }}
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_VERSION: 4.13.6
       # The Authenticode steps below stay dormant until both certificate
       # secrets exist. Secrets cannot be read from a step `if:`, so the
       # decision is resolved here where the secrets context is available.
@@ -251,18 +259,75 @@ jobs:
           $version = (python tools/scripts/release/version.py current).Trim()
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
+      # Real-time scanning reads back every object file a build writes, and
+      # this build writes a few hundred of them through a compiler cache that
+      # writes each one twice. The workspace holds the sources, the objects,
+      # and the cache; RUNNER_TEMP holds the toolchain unpacked below.
+      #
+      # Best effort on purpose: a slower build is a better outcome than a job
+      # that fails because a runner image did not let us ask.
+      - name: Exclude the build from Defender
+        shell: pwsh
+        run: |
+          try {
+            Add-MpPreference -ExclusionPath "${{ github.workspace }}"
+            Add-MpPreference -ExclusionPath "${env:RUNNER_TEMP}"
+
+            foreach ($process in @("ccache.exe", "cl.exe", "link.exe", "lib.exe", "ninja.exe")) {
+              Add-MpPreference -ExclusionProcess $process
+            }
+          }
+          catch {
+            Write-Warning "Could not add Defender exclusions: $($_.Exception.Message)"
+          }
+
       - name: Install Windows build tools
         shell: pwsh
         run: |
-          # NSIS generates the shipped installer, so both Chocolatey packages
-          # are pinned to explicit versions and bumped deliberately.
-          # --allow-downgrade keeps the pins usable on runner images that
-          # already carry a newer build of the same package, which Chocolatey
-          # otherwise refuses to replace.
-          choco install ccache --yes --no-progress --version 4.13.6 --allow-downgrade
+          $ErrorActionPreference = "Stop"
+
+          # Invoke-WebRequest renders a progress bar per chunk when one is
+          # attached, which costs more than the download.
+          $ProgressPreference = "SilentlyContinue"
+
+          # ccache comes from its own release rather than from Chocolatey,
+          # because the Chocolatey package ships the x86_64 build on every
+          # Windows host. On the arm64 runner that put an emulated process in
+          # front of every compiler invocation: a cache *hit* cost about a
+          # second, so a 91%-hit build still took three and a half minutes.
+          #
+          # Pinned the same way the Chocolatey version was, plus a hash --
+          # a version says which ccache, a hash says it is the one we checked.
+          $name = "ccache-${env:CCACHE_VERSION}-windows-${{ matrix.ccache_arch }}"
+          $zip = Join-Path ${env:RUNNER_TEMP} "$name.zip"
+
+          Invoke-WebRequest -Uri `
+            "https://github.com/ccache/ccache/releases/download/v${env:CCACHE_VERSION}/$name.zip" `
+            -OutFile $zip
+
+          $actual = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLower()
+
+          if ($actual -ne "${{ matrix.ccache_sha256 }}") {
+            throw "$name.zip hashed $actual, not the pinned ${{ matrix.ccache_sha256 }}."
+          }
+
+          Expand-Archive -Path $zip -DestinationPath ${env:RUNNER_TEMP} -Force
+          $ccache = Join-Path ${env:RUNNER_TEMP} $name
+
+          # On PATH for every later step, which is how Configure and Build find
+          # it: CMAKE_{C,CXX}_COMPILER_LAUNCHER=ccache is resolved by name.
+          $ccache | Out-File -FilePath ${env:GITHUB_PATH} -Encoding utf8 -Append
+
+          & (Join-Path $ccache "ccache.exe") --version
+          & (Join-Path $ccache "ccache.exe") --max-size=1G
+          & (Join-Path $ccache "ccache.exe") --zero-stats
+
+          # NSIS stays on Chocolatey. It generates the shipped installer, runs
+          # once at packaging time rather than once per translation unit, and
+          # is an installer rather than a zip. The pin is deliberate, and
+          # --allow-downgrade keeps it usable on a runner image that already
+          # carries a newer build of the same package.
           choco install nsis --yes --no-progress --version 3.12.0 --allow-downgrade
-          ccache --max-size=1G
-          ccache --zero-stats
 
       - name: Configure
         shell: pwsh
