@@ -3,6 +3,13 @@ import { dirname, resolve } from "node:path";
 
 import { defineConfig } from "vitest/config";
 
+// One config for every workspace under src/services, named explicitly by each
+// workspace's `test` script.
+//
+// The flag is not decoration. Vitest 4 found this file by walking up from the
+// workspace it ran in; vitest 5 looks in the project root and no further, so
+// the config silently stopped applying -- and the first thing to go was the
+// plugin below, leaving the tests to parse admin.html as JavaScript.
 export default defineConfig({
   test: {
     // Coverage is informational: reported and published, never gated. There is
