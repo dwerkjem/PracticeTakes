@@ -268,17 +268,6 @@ jobs:
           restore-keys: |
             ccache-${{ runner.os }}-${{ matrix.arch }}-
 
-      # Installing NSIS is a Chocolatey download and an installer run, around
-      # thirty seconds, for a tool that is the same bytes every time. The
-      # directory it installs into is enough for CPack, which looks there by
-      # name, so the cache holds that and the install below is skipped when it
-      # is already present.
-      - name: Restore NSIS
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: C:\Program Files (x86)\NSIS
-          key: nsis-${{ runner.os }}-${{ matrix.arch }}-${{ env.NSIS_VERSION }}
-
       - name: Apply requested release version
         if: ${{ inputs.version != '' }}
         shell: pwsh
@@ -298,9 +287,16 @@ jobs:
       # writes each one twice. The workspace holds the sources, the objects,
       # and the cache; RUNNER_TEMP holds the toolchain unpacked below.
       #
+      # x64 only. Asking costs about eight seconds there and about thirty-seven
+      # on the arm64 runner -- measured across three runs, and unchanged by
+      # batching seven calls into two, so it is the Defender service rather than
+      # the number of requests. Thirty-seven seconds is a sixth of that job,
+      # against a saving that did not show up in its step times.
+      #
       # Best effort on purpose: a slower build is a better outcome than a job
       # that fails because a runner image did not let us ask.
       - name: Exclude the build from Defender
+        if: ${{ matrix.arch == 'x64' }}
         shell: pwsh
         run: |
           # Two calls rather than seven. Each Add-MpPreference is a round trip
@@ -357,20 +353,21 @@ jobs:
           & (Join-Path $ccache "ccache.exe") --max-size=1G
           & (Join-Path $ccache "ccache.exe") --zero-stats
 
-          # NSIS stays on Chocolatey when it has to be installed at all: it
-          # generates the shipped installer, runs once at packaging time rather
-          # than once per translation unit, and is an installer rather than a
-          # zip. The pin is deliberate, and --allow-downgrade keeps it usable on
-          # a runner image that already carries a newer build of the package.
+          # Both Windows runner images already ship NSIS, which is how this was
+          # found: a run that cached the install directory reported a cache miss
+          # and still found makensis.exe. Installing it unconditionally was
+          # about thirty seconds of download per Windows job, for bytes already
+          # on the machine.
           #
-          # Tested by the file rather than by the cache step's hit output, so a
-          # partially restored directory still installs rather than failing at
-          # packaging time, twelve minutes later.
-          if (-not (Test-Path -LiteralPath "C:\Program Files (x86)\NSIS\makensis.exe")) {
-            choco install nsis --yes --no-progress --version ${env:NSIS_VERSION} --allow-downgrade
+          # The install stays as the fallback, because an image that stops
+          # shipping NSIS would otherwise fail at packaging time, twelve minutes
+          # in. Tested by the file rather than by an image version, so it needs
+          # no maintenance when that changes.
+          if (Test-Path -LiteralPath "C:\Program Files (x86)\NSIS\makensis.exe") {
+            Write-Host "NSIS is already installed on this image."
           }
           else {
-            Write-Host "NSIS ${env:NSIS_VERSION} restored from cache."
+            choco install nsis --yes --no-progress --version ${env:NSIS_VERSION} --allow-downgrade
           }
 
       - name: Configure
