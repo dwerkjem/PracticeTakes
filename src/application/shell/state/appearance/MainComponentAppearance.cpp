@@ -2,6 +2,7 @@
 
 #include "../../ui/feedback/FeedbackWindow.h"
 #include "../../ui/main_window/MicrophoneWarning.h"
+#include "../../ui/score/ScoreImportWindow.h"
 #include "../../ui/settings/SettingsWindow.h"
 
 void MainComponent::setTheme(Theme theme)
@@ -113,5 +114,16 @@ void MainComponent::applyAppearanceToOpenWindows()
         feedbackWindow->setLookAndFeel(&appLookAndFeel);
         feedbackWindow->sendLookAndFeelChange();
         feedbackWindow->repaint();
+    }
+    if (scoreImportWindow != nullptr)
+    {
+        // Missed when the window landed, and found by its own capture: the
+        // report is a TextEditor, which takes its colours from the look and
+        // feel when it is told the look and feel changed and not otherwise.
+        // Without this the text keeps the palette it was created under, which
+        // in the dark theme is near-invisible dark-on-dark -- and only when the
+        // window outlived a theme change, so two runs of the same surface
+        // disagreed.
+        scoreImportWindow->applyAppearance(&appLookAndFeel, palette.background);
     }
 }

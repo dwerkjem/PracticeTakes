@@ -50,6 +50,24 @@ class MainComponent::ScoreImportWindow final : public juce::DocumentWindow
         }
     }
 
+    // Follow a theme change. The look and feel is the application's one, so the
+    // palette is already in it; what this adds is telling the window and its
+    // contents to go and read it again, and giving the window chrome the
+    // background the rest of the application is using.
+    void applyAppearance(juce::LookAndFeel* appearance, juce::Colour background)
+    {
+        setLookAndFeel(appearance);
+        setBackgroundColour(background);
+        sendLookAndFeelChange();
+
+        if (auto* content = dynamic_cast<Content*>(getContentComponent()))
+        {
+            content->refreshTextColour();
+        }
+
+        repaint();
+    }
+
     void closeButtonPressed() override
     {
         setVisible(false);
@@ -93,6 +111,27 @@ class MainComponent::ScoreImportWindow final : public juce::DocumentWindow
             headline.setText(juce::String(summary.headline), juce::dontSendNotification);
             body.setText(juce::String::fromUTF8(scoreImportReport(summary).c_str()), false);
             body.moveCaretToTop(false);
+        }
+
+        // A TextEditor colours each run of text as it is inserted and does not
+        // re-colour it when the look and feel changes, so a report written
+        // before a theme change keeps the palette it was written under -- which
+        // in the dark theme is dark grey on near-black, and unreadable. The
+        // import is asynchronous, so whether the report or the theme arrived
+        // first was a race: two captures of the same surface disagreed.
+        void refreshTextColour()
+        {
+            // Read from the look and feel rather than through
+            // `body.findColour`, and applied without pinning: a Component's own
+            // colour map wins over the look and feel, so recolouring the text
+            // *and* setting the editor's current colour would freeze it at
+            // today's palette and make the next theme change a no-op. That is
+            // not hypothetical -- it is what the first attempt at this did, and
+            // the picture of it was the dark theme's report in the light
+            // theme's grey.
+            const juce::Colour colour =
+                body.getLookAndFeel().findColour(juce::TextEditor::textColourId);
+            body.applyColourToAllText(colour, false);
         }
 
         void resized() override

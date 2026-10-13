@@ -38,6 +38,7 @@ FULL = "full"
 # to name the window or it photographs the main one instead.
 SETTINGS_WINDOW = "Settings"
 FEEDBACK_WINDOW = "Send feedback"
+SCORE_IMPORT_WINDOW = "Score import"
 
 # The palettes a run captures each surface in. A capture dimension rather than a
 # property of a surface, for the same reason resolution is: every surface exists
@@ -530,6 +531,65 @@ SURFACES: tuple[Surface, ...] = (
         area="feedback",
         modes=frozenset({FULL}),
         window_title=FEEDBACK_WINDOW,
+    ),
+    # The score import summary. The only surfaces that depend on a *document*:
+    # the window has nothing to show until a file has been read, so the state
+    # imports a committed fixture on the way in, through the same job the File
+    # menu uses.
+    #
+    # `warmup_seconds` here waits for an import rather than for a tool's
+    # drawing history, which is what every other surface using it waits for.
+    # The import is deliberately asynchronous -- the result crosses back to the
+    # message thread -- so a capture taken the instant the state settles is a
+    # picture of "Reading ...", not of the report. The fixtures are small
+    # enough to read in milliseconds; the seconds here are slack for a loaded
+    # machine, and an in-progress capture is obviously wrong in the review grid
+    # rather than subtly wrong.
+    Surface(
+        state="score-import-diagnostics",
+        title="The score import summary, with diagnostics",
+        area="score",
+        modes=frozenset({FULL}),
+        window_title=SCORE_IMPORT_WINDOW,
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "diagnostics-name-their-element",
+                "Does every diagnostic say which element it is about?",
+            ),
+            Question(
+                "repeated-message-still-legible",
+                "Where several diagnostics share one message, can you still tell the rows apart?",
+            ),
+            Question(
+                "severities-separated",
+                "Are the dropped, repaired, and ignored groups each under their own heading?",
+            ),
+        ),
+    ),
+    # Kept alongside the diagnostic surface, which covers strictly more of the
+    # renderer, because "Nothing was dropped or repaired." is a branch of its
+    # own: an empty diagnostics list and a failure to report diagnostics look
+    # identical on screen, and that sentence is the only thing distinguishing
+    # them.
+    Surface(
+        state="score-import-clean",
+        title="The score import summary for a clean import",
+        area="score",
+        modes=frozenset({FULL}),
+        window_title=SCORE_IMPORT_WINDOW,
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "says-nothing-was-dropped",
+                "Does it say explicitly that nothing was dropped, rather than showing an "
+                "empty list?",
+            ),
+            Question(
+                "metadata-complete",
+                "Are the work, composer, parts, length, and tempo all shown?",
+            ),
+        ),
     ),
     Surface(
         state="tuner-docked",

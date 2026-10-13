@@ -100,6 +100,14 @@ void MainComponent::recordSuccessfulToolUse()
 
 void MainComponent::maybeOfferFeedbackInvitation()
 {
+#if PRACTICE_TAKES_ENABLE_TEST_CONTROL
+    // Never during a harness run. See `testControlDriving`.
+    if (testControlDriving)
+    {
+        return;
+    }
+#endif
+
     auto* settingsFile = applicationProperties.getUserSettings();
     if (settingsFile == nullptr)
     {

@@ -115,12 +115,12 @@ status, so a run does not start by hand-building malformed XML.
       `importedWithDiagnostics` are both successes.)
 - [x] 5.4 Open a score containing unsupported content and confirm the
       diagnostics say what was dropped and where.
-- [ ] 5.5 Add the window to the manual GUI verification harness, since it is
-      `Component` code outside `PracticeTakesTests`. **Blocked on a decision,
-      not on a tester**: a surface names an approved state, and no approved
-      state can open this window, because reaching it means importing a file
-      and that means a path the test-control channel cannot supply. The two
-      options, and what each costs, are in
+- [x] 5.5 Add the window to the manual GUI verification harness, since it is
+      `Component` code outside `PracticeTakesTests`. Done by the
+      `score-import-harness-surface` change, which took the decision this was
+      waiting on: `ApprovedWindowState` gained a `scoreFixture` field, and the
+      states `score-import-clean` and `score-import-diagnostics` reach the
+      window through the real `ScoreImportJob`. See
       [the manual verification doc](../../../docs/development/quality/score-import-manual-verification.md)
       § 5.5.
 - [x] 5.6 Run `python3 tools/scripts/run_tests.py` and `PracticeTakesTests`, and

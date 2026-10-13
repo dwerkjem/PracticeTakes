@@ -189,6 +189,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotApplyTests.cpp
     src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp
     src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
+    src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp
     src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp
     src/tests/application/theme/AppLookAndFeelTests.cpp
     src/tests/application/tools/CompactPresentationTests.cpp

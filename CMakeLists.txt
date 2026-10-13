@@ -276,9 +276,15 @@ if(BUILD_TESTING)
     # The corpus of real MuseScore exports lives on disk rather than in a string
     # literal, following the PRACTICE_TAKES_SOURCE_DIR precedent on the app
     # target. MusicXmlCorpusTests is the only test that reads it.
+    #
+    # PRACTICE_TAKES_SOURCE_DIR is the same value the app target gets, and is
+    # here so that ApprovedScoreFixturesTests resolves a state's score fixture
+    # through the one repository-root-relative path the shell uses rather than
+    # through a second expression that could drift from it.
     target_compile_definitions(PracticeTakesTests
         PRIVATE
             PRACTICE_TAKES_TEST_RESOURCES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/tests/resources"
+            PRACTICE_TAKES_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
     )
 
     target_link_libraries(PracticeTakesTests
