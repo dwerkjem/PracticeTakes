@@ -35,6 +35,21 @@ class MainComponent::FeedbackWindow final : public juce::DocumentWindow
         }
     }
 
+    // Follow a theme change. The palette is already in the application's one
+    // look and feel; what this adds is telling the window and the form inside
+    // it to read it again, and giving the window chrome the background the rest
+    // of the application is using.
+    void applyAppearance(juce::LookAndFeel* appearance, juce::Colour background)
+    {
+        setLookAndFeel(appearance);
+        setBackgroundColour(background);
+
+        // Reaches FeedbackComponent::lookAndFeelChanged, which re-colours what
+        // has already been typed into the form.
+        sendLookAndFeelChange();
+        repaint();
+    }
+
     void closeButtonPressed() override
     {
         setVisible(false);

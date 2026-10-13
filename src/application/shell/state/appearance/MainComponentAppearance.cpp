@@ -111,9 +111,7 @@ void MainComponent::applyAppearanceToOpenWindows()
     }
     if (feedbackWindow != nullptr)
     {
-        feedbackWindow->setLookAndFeel(&appLookAndFeel);
-        feedbackWindow->sendLookAndFeelChange();
-        feedbackWindow->repaint();
+        feedbackWindow->applyAppearance(&appLookAndFeel, palette.background);
     }
     if (scoreImportWindow != nullptr)
     {

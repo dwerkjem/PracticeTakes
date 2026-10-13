@@ -75,7 +75,7 @@ void MainComponent::showFeedback(const juce::String& context)
                 safeThis->closeFeedback();
             }
         });
-    feedbackWindow->setLookAndFeel(&appLookAndFeel);
+    feedbackWindow->applyAppearance(&appLookAndFeel, appPaletteFor(currentTheme).background);
     feedbackWindow->toFront(true);
 }
 
