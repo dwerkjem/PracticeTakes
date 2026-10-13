@@ -153,6 +153,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/score/ScoreEvent.h
     src/platform/score/ScoreInvariants.cpp
     src/platform/score/ScoreInvariants.h
+    src/platform/score/ScoreTraversal.cpp
+    src/platform/score/ScoreTraversal.h
     src/platform/score/TempoMap.cpp
     src/platform/score/TempoMap.h
     src/platform/score/musicxml/MusicXmlDiagnosticSink.cpp
@@ -239,6 +241,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/score/PitchTests.cpp
     src/tests/platform/score/ScoreInvariantsTests.cpp
     src/tests/platform/score/ScoreModelTests.cpp
+    src/tests/platform/score/ScoreTraversalTests.cpp
     src/tests/platform/score/TempoMapTests.cpp
     src/tests/platform/score/musicxml/MusicXmlCorpusTests.cpp
     src/tests/platform/score/musicxml/container/MusicXmlContainerTests.cpp
@@ -268,6 +271,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/audio/SharedPitchAnalysis.cpp
     src/platform/score/ScoreBuilder.cpp
     src/platform/score/ScoreInvariants.cpp
+    src/platform/score/ScoreTraversal.cpp
     src/platform/score/TempoMap.cpp
     src/platform/score/musicxml/MusicXmlDiagnosticSink.cpp
     src/platform/score/musicxml/MusicXmlImporter.cpp

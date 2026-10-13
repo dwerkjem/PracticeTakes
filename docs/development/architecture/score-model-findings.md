@@ -72,7 +72,7 @@ setting.
 to a tool, settable once. #27–#29 are built on pitch matching and this blocks
 all of them; it is the single most consequential thing on this list.
 
-### 3. Walking to a note is a hand-written nested loop
+### 3. Walking to a note is a hand-written nested loop — *fixed*
 
 Getting from a `Score` to its first pitched note is: parts → measures → voices →
 events, skipping rests, skipping grace notes, and comparing onsets *across*
@@ -83,12 +83,13 @@ each write again.
 The model offers `measureCount` and `totalLength` as free functions and nothing
 at all for events.
 
-**Should happen:** event iteration in `score::`, even if only
-`firstPitchedEvent` and a forward iterator. Each consumer writing its own is how
-four slightly different definitions of "the next note" end up in one
-application.
+**Done:** `score::forEachEvent` in `src/platform/score/ScoreTraversal.h`, which
+visits a part's events in ascending absolute onset across measures and across
+the voices within a measure, yielding each with its measure, voice and absolute
+position. The cross-voice tie-break — the lower `Voice::number` — is stated
+there rather than reinvented, and is the rule `selectTargetNote` already used.
 
-### 4. Absolute position is a sum the consumer has to remember
+### 4. Absolute position is a sum the consumer has to remember — *fixed*
 
 `ScoreEvent::onset` is measure-relative, by a deliberate decision the header
 explains well (a measure can be examined and repaired on its own). `Measure::start`
@@ -97,8 +98,9 @@ the caller, and a caller that forgets is wrong in a way that is correct in bar 1
 and silently wrong everywhere else — the worst possible failure shape for
 something a test fixture usually exercises in bar 1.
 
-**Should happen:** `absoluteOnset(measure, event)`, or an iteration API (3) that
-yields positions already absolute.
+**Done:** `score::absoluteOnset(measure, event)` in `Measure.h`, and
+`EventVisit::absoluteOnset` from the traversal in (3), which yields positions
+already absolute so the sum does not arise.
 
 ### 5. A duration in seconds is not a duration converted
 
@@ -130,9 +132,18 @@ nothing in the model to appeal to:
   first? Source order? A consumer picking "the chord's note" is picking
   arbitrarily and cannot tell that it is.
 
-**Should happen:** state the chord ordering in `ScoreEvent` (it is free — the
-importer already produces *some* order, and writing it down makes it a
-guarantee), and let #33 settle part and voice selection properly.
+**Partly done:** the chord ordering is now stated in `ScoreEvent.h`. The answer
+turned out to be **source order** — the importer appends each chord tone to the
+event on the cursor and sorts nothing — so the guarantee is the weak one, and it
+says explicitly that `notes.front()` is *not* the lowest note. That is the
+useful form: a consumer assuming ascending pitch would be right on most files
+and wrong on the rest, and `king-abbeville.mxl` bar 7 is a real file in the
+corpus that writes a chord top-down. A corpus test pins it.
+
+Cross-voice *ordering* is settled too, by the traversal in (3): ascending onset,
+ties to the lower `Voice::number`, stated in one place instead of decided
+per consumer. What remains open is *selection* — which part, and which voice is
+"the" voice — and that is still #33's.
 
 ## Findings outside the model
 

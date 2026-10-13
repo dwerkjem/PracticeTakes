@@ -96,4 +96,21 @@ struct Measure
 
     std::vector<Voice> voices;
 };
+
+// Where an event sits in the score, rather than in its measure.
+//
+// `ScoreEvent::onset` is measure-relative by a deliberate decision -- it is what
+// lets a measure be examined, tested and repaired on its own -- and
+// `Measure::start` is absolute, so the absolute position is the sum. Finding 4
+// of docs/development/architecture/score-model-findings.md is that leaving the
+// sum to the caller is a trap with the worst possible shape: a caller that
+// forgets is *correct in bar 1* and silently wrong everywhere after, and bar 1
+// is where test fixtures live.
+//
+// So the sum has a name. The event must belong to the measure passed; nothing
+// checks it, because nothing can.
+[[nodiscard]] constexpr Tick absoluteOnset(const Measure& measure, const ScoreEvent& event) noexcept
+{
+    return measure.start + event.onset;
+}
 } // namespace score

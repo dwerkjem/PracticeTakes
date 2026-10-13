@@ -148,6 +148,20 @@ struct ScoreEvent
 
     // Empty for a rest, one entry for a note, two or more for a chord. Each
     // carries its own tie linkage; see Note.
+    //
+    // **The order is the source file's order, and nothing more.** The importer
+    // appends each chord tone to the event already on the cursor, in document
+    // order, and sorts nothing (MusicXmlMeasureReader.cpp, the `isChordTone`
+    // branch). MusicXML files *usually* write a chord from the bottom up, which
+    // is exactly what makes this worth stating: a consumer that assumed
+    // ascending pitch would be right on most files and silently wrong on the
+    // ones whose exporter differs.
+    //
+    // So `notes.front()` is **not** the lowest note. A consumer that needs a
+    // pitch ordering -- stacking noteheads, picking a chord's bass -- sorts for
+    // itself. Finding 6 of
+    // docs/development/architecture/score-model-findings.md asked for this to be
+    // written down; writing down the weaker truth is the point.
     std::vector<Note> notes;
 
     // Lyrics attached to this event. Multiple entries mean multiple verses, not

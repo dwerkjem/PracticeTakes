@@ -2,10 +2,12 @@
 
 #include <juce_core/juce_core.h>
 
+#include <algorithm>
 #include <map>
 #include <string>
 #include <vector>
 
+#include "platform/score/ScoreTraversal.h"
 #include "platform/score/musicxml/MusicXmlImporter.h"
 
 // Real scores, imported end to end.
@@ -194,6 +196,59 @@ TEST_CASE(
                  << "\" is in the corpus directory but not in expectations.txt, so nothing is "
                     "pinned about it. Run \"[.corpus-report]\" to get its row.");
     }
+}
+
+TEST_CASE("a real score's chord keeps the order its file wrote it in", "[score][musicxml][corpus]")
+{
+    // ScoreEvent::notes promises source order and explicitly refuses to promise
+    // ascending pitch. A hand-written fixture can only show that the importer
+    // does not sort what it is given; this shows that real files exist whose
+    // chords are *not* written bottom-up, which is what makes the weaker
+    // guarantee the honest one.
+    //
+    // king-abbeville.mxl writes a descending chord in bar 7 and two more in bar
+    // 14. If that ever stops being true the pin is worthless, so this fails
+    // rather than passing quietly.
+    const juce::File file = corpusDirectory().getChildFile("king-abbeville.mxl");
+
+    REQUIRE(file.existsAsFile());
+
+    const MusicXmlImportResult result = importMusicXmlFile(file);
+
+    REQUIRE(succeeded(result.status));
+    REQUIRE(result.score != nullptr);
+
+    std::vector<std::string> barsWithADescendingChord;
+
+    for (const Part& part : result.score->parts)
+    {
+        forEachEvent(
+            part,
+            [&](const EventVisit& visited)
+            {
+                if (visited.event.kind != EventKind::chord || visited.event.notes.size() < 2)
+                {
+                    return;
+                }
+
+                const bool ascending = std::is_sorted(
+                    visited.event.notes.begin(), visited.event.notes.end(),
+                    [](const Note& lhs, const Note& rhs)
+                    { return lhs.sounding.midiNoteNumber < rhs.sounding.midiNoteNumber; });
+
+                if (!ascending)
+                {
+                    barsWithADescendingChord.push_back(visited.measure.printedNumber);
+                }
+            });
+    }
+
+    INFO("bars whose chord is not written bottom-up: " << barsWithADescendingChord.size());
+
+    CHECK_FALSE(barsWithADescendingChord.empty());
+    CHECK(
+        std::find(barsWithADescendingChord.begin(), barsWithADescendingChord.end(), "7") !=
+        barsWithADescendingChord.end());
 }
 
 TEST_CASE("report what every corpus file imports to", "[.corpus-report]")

@@ -5,22 +5,22 @@ These are findings 3, 4 and 6 of
 every later group uses them, and they are the parts of this change that are pure
 JUCE-free logic with no font and no window.
 
-- [ ] 1.1 Add `score::absoluteOnset(const Measure&, const ScoreEvent&)` to
+- [x] 1.1 Add `score::absoluteOnset(const Measure&, const ScoreEvent&)` to
       `src/platform/score/`, with a comment saying why the sum is not left to
       the caller (finding 4: correct in bar 1, silently wrong after).
-- [ ] 1.2 Add event traversal to `score::` — visiting a part's events in
+- [x] 1.2 Add event traversal to `score::` — visiting a part's events in
       ascending absolute onset, across measures and across the voices within a
       measure, yielding each event with its measure, voice, and absolute onset.
-- [ ] 1.3 State the cross-voice tie-break rule in the traversal's header and
+- [x] 1.3 State the cross-voice tie-break rule in the traversal's header and
       make it repeatable (the Target Note tool already picks the lower
       `Voice::number`; match it rather than inventing a second rule).
-- [ ] 1.4 Document the chord note ordering in `ScoreEvent.h` as **source
+- [x] 1.4 Document the chord note ordering in `ScoreEvent.h` as **source
       order**, citing the importer's `isChordTone` branch, and warn against
       assuming `notes.front()` is lowest.
-- [ ] 1.5 Tests in `src/tests/platform/score/` for 1.1–1.4, including a corpus
+- [x] 1.5 Tests in `src/tests/platform/score/` for 1.1–1.4, including a corpus
       test that pins chord source order against a real `.mxl` file whose chord
       is not written ascending.
-- [ ] 1.6 Add the new sources and tests to `tools/cmake/Sources.cmake`, and
+- [x] 1.6 Add the new sources and tests to `tools/cmake/Sources.cmake`, and
       update `docs/development/architecture/score-model-findings.md` to mark
       findings 3, 4 and 6 done.
 
