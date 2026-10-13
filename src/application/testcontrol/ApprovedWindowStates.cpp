@@ -187,6 +187,43 @@ const std::vector<ApprovedWindowState>& states()
          "",
          true,
          "The feedback form"},
+
+        // --- An imported score ---
+        //
+        // The two states that name a fixture. Everything before this point is
+        // reachable with a flag; the score import summary has nothing to show
+        // until a file has been read, so these are the only states that ask
+        // the shell to open a document on the way in.
+        //
+        // The trailing fields are positional: description, tone, tool view,
+        // then the fixture. The two empty strings in the middle are the tone
+        // and the view, neither of which means anything here.
+        {"score-import-clean",
+         {},
+         ToolPresentation::none,
+         WorkspaceArrangement::single,
+         WindowGeometry::normal,
+         MicrophoneCondition::available,
+         false,
+         "",
+         false,
+         "The score import summary for a file that imported with nothing dropped",
+         0.0,
+         "",
+         "clean-import.musicxml"},
+        {"score-import-diagnostics",
+         {},
+         ToolPresentation::none,
+         WorkspaceArrangement::single,
+         WindowGeometry::normal,
+         MicrophoneCondition::available,
+         false,
+         "",
+         false,
+         "The score import summary for a file the importer had something to say about",
+         0.0,
+         "",
+         "diagnostic-import.musicxml"},
     };
 
     return approved;
@@ -238,6 +275,21 @@ const ApprovedWindowState* findApprovedWindowState(const std::string& id)
 const ApprovedClickTarget* findApprovedClickTarget(const std::string& id)
 {
     return findById(targets(), id);
+}
+
+const std::string& approvedScoreFixtureDirectory()
+{
+    // Committed, and deliberately not the generated corpus under
+    // build/manual-score-import/: a reference image whose input is untracked
+    // is not a reference image, and a capture that differs because someone
+    // regenerated a fixture is a false failure.
+    //
+    // Its own directory rather than the real-score corpus beside it. That
+    // corpus is real exporter output, pinned row by row in its own manifest
+    // and licence-checked per file; these two are hand-written for a camera.
+    static const std::string directory{"src/tests/resources/harness-scores"};
+
+    return directory;
 }
 
 const std::vector<std::string>& approvedThemeNames()

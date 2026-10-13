@@ -72,6 +72,12 @@ class MainComponent final
     [[nodiscard]] bool applyTestControlGeometry(const std::string& geometry);
     [[nodiscard]] bool applyTestControlTheme(const std::string& theme);
     [[nodiscard]] std::string currentTestControlStateId() const;
+
+    // This process is being driven by the harness rather than used by a person.
+    // Called before the workspace restore lands, because that is early enough
+    // for a tool to close and the feedback invitation to be raised over the
+    // first surface -- see `testControlDriving`.
+    void beginTestControlSession();
 #endif
 
   private:
@@ -364,6 +370,17 @@ class MainComponent final
     // hasUsableInput there also drives device recovery, so forcing it false
     // would have the service continuously trying to reopen the device.
     bool testControlNoMicrophone = false;
+
+    // Set the first time a state is applied, and never cleared: this process is
+    // being driven by the harness rather than used by a person.
+    //
+    // Read by maybeOfferFeedbackInvitation, which must not raise its AlertWindow
+    // during a run. The invitation is triggered by closing a tool, which is the
+    // first thing establishing a state does, and a modal window over a surface
+    // is photographed as a black rectangle -- an obscured window has no pixels
+    // to capture. Cancelling the modal instead does not work: the alert is
+    // raised asynchronously, so it appears after the state is established.
+    bool testControlDriving = false;
 #endif
     bool automaticSettingsSaveEnabled = true;
     bool feedbackInvitationsDisabledState = false;

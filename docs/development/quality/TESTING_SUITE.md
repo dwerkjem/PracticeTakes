@@ -275,8 +275,8 @@ browser loses nothing.
 
 ### Filtering
 
-A full run is around a hundred captures — 27 surfaces, three resolutions, two
-palettes — which is only reviewable if you can ask it a question. Each facet is a
+A full run is a little over two hundred captures — 38 surfaces, four
+resolutions, two palettes, less the surfaces that are captured once — which is only reviewable if you can ask it a question. Each facet is a
 dropdown above the grid, offering every value actually present in the run with
 its count:
 
@@ -287,7 +287,7 @@ its count:
 | `tag` | whatever you have applied, plus `untagged` |
 | `capture` | ok · flagged · failed |
 | `theme`, `resolution` | the palettes and sizes the run covered |
-| `area` | workspace · settings · audio · feedback · shell |
+| `area` | workspace · settings · audio · feedback · shell · score |
 | `presentation`, `tools`, `tool_count`, `state` | what the surface opens and how |
 
 `verdict` reports the worst thing said about a capture: a failure anywhere makes

@@ -163,6 +163,8 @@ reverts cleanly by removing the two states, the two surfaces, and the field.
 
 ## Open Questions
 
+All three are answered below, in place, by the implementation.
+
 1. **Should the diagnostic fixture be a real MuseScore export or a hand-written
    document?** A real export is what found the defect that motivated this, and
    carries idioms nobody thought to write by hand. A hand-written one contains
@@ -171,13 +173,43 @@ reverts cleanly by removing the two states, the two surfaces, and the field.
    since a reference image wants a short, stable report rather than a
    representative one — but the MuseScore export's seven-identical-rows report
    is the better regression picture.
+
+   **Answered: hand-written.** Both fixtures are hand-written, and
+   `src/tests/resources/harness-scores/README.md` records the provenance and
+   the reasoning. The deciding factor was the one the question names on the
+   leaning side: a reference image wants a short, stable report, and a real
+   export brings a page of engraving data with it. A real export would also
+   need provenance clearing all three layers the corpus README lists, which is
+   why the percussion fixture is hand-written too. What is kept from the
+   MuseScore report is its *shape* rather than its bytes:
+   `diagnostic-import.musicxml` produces six unrecognised elements sharing one
+   message, so the element name is still the only thing telling the rows apart.
+
 2. **Does the clean-import surface earn its place?** The diagnostic one covers
    strictly more of the renderer. The argument for both is that "Nothing was
    dropped or repaired." is a distinct branch that exists precisely because an
    empty list and a failure to report are indistinguishable on screen — which is
    worth a picture of its own.
+
+   **Answered: yes, it stays.** Both surfaces exist. The argument in the
+   question is the one that held: "Nothing was dropped or repaired." is a
+   branch that exists precisely because an empty list and a failure to report
+   are indistinguishable on screen, and the clean fixture is also the only one
+   covering the metadata lines — work, composer, lyricist, encoding software, a
+   part on two staves — a diagnostic-heavy report pushes out of frame.
+
 3. **Should a failed import get a surface too?** The failure path renders a
    different layout, and `notFound` is trivially reachable by naming a fixture
    that does not exist — except that decision 5 makes a missing fixture a test
    failure. Reaching it would need an explicit "expect this to fail" marker on
    the state, which is more vocabulary again.
+
+   **Answered: no, not yet.** The failure layout gets no surface. Decision 5
+   makes a missing fixture a test failure, so `notFound` is not reachable by
+   naming a file that is not there, and reaching any failure status would need
+   an "expect this to fail" marker on the state — more vocabulary than the
+   layout is worth while § 5.3 of
+   `docs/development/quality/score-import-manual-verification.md` covers it by
+   hand against nine generated fixtures. That page now says so explicitly, so
+   the gap is recorded where someone looks for it rather than left in a
+   design's open questions.

@@ -6,7 +6,24 @@
 
 #include "../../../testcontrol/TestControlClicker.h"
 #include "../../ui/feedback/FeedbackWindow.h"
+#include "../../ui/score/ScoreImportWindow.h"
 #include "../../ui/settings/SettingsWindow.h"
+
+namespace
+{
+// The file a state's `scoreFixture` names.
+//
+// Resolved against the source tree the application was built from, which is
+// what PRACTICE_TAKES_SOURCE_DIR carries. That is a development-only
+// assumption, and so is everything else in this file: the whole of it is
+// compiled away without PRACTICE_TAKES_ENABLE_TEST_CONTROL.
+[[nodiscard]] juce::File scoreFixtureFile(const std::string& fixture)
+{
+    return juce::File(PRACTICE_TAKES_SOURCE_DIR)
+        .getChildFile(juce::String(testcontrol::approvedScoreFixtureDirectory()))
+        .getChildFile(juce::String(fixture));
+}
+} // namespace
 
 // Establishing an approved window state, and running an approved object's
 // action. Development-only: the whole file is compiled away without
@@ -14,6 +31,11 @@
 //
 // Everything here runs on the message thread; the channel marshals to it before
 // calling, so none of this locks.
+
+void MainComponent::beginTestControlSession()
+{
+    testControlDriving = true;
+}
 
 bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState& state)
 {
@@ -26,6 +48,18 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     // application is left in some intermediate arrangement, and reporting a
     // state id for it would be a lie the harness then records as verified.
     testControlStateId.clear();
+
+    // Before anything else, and before the first tool is closed: closing a tool
+    // is what records a successful use, and that is what raises the feedback
+    // invitation. A state is what is on screen, so nothing may be on top of it
+    // -- a modal over a surface is photographed as a black rectangle, which is
+    // how this was found.
+    testControlDriving = true;
+
+    // Anything already on screen that this did not ask for. The invitation is
+    // the one that got here first, but a menu left open by a `click` would do
+    // the same.
+    juce::ModalComponentManager::getInstance()->cancelAllModalComponents();
 
     // Reset first, so states do not accumulate across a run and each one is
     // reached the same way regardless of what preceded it.
@@ -46,6 +80,15 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     if (feedbackWindow != nullptr)
     {
         feedbackWindow->setVisible(false);
+    }
+
+    // Hidden rather than destroyed, matching the two windows above. A state
+    // that names no fixture must not inherit the previous state's summary --
+    // which is the same accumulation problem the tool reset at the top of this
+    // function exists for.
+    if (scoreImportWindow != nullptr)
+    {
+        scoreImportWindow->setVisible(false);
     }
 
     testControlNoMicrophone = state.microphone == MicrophoneCondition::unavailable;
@@ -208,6 +251,32 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
             window->setSize(1280, 800);
             break;
         }
+    }
+
+    // After the geometry, deliberately. Resizing the main window raises it,
+    // and a summary window opened before that is then behind it -- which the
+    // capture records as a black rectangle over the report, differently in
+    // every run.
+    if (!state.scoreFixture.empty())
+    {
+        const juce::File fixture = scoreFixtureFile(state.scoreFixture);
+
+        // A state naming a fixture that is not there is a drifted state, and
+        // the capture pass must record a failure rather than photograph an
+        // empty window a reviewer could approve. The approved-state test
+        // catches this long before a run does; this is the second line.
+        if (!fixture.existsAsFile())
+        {
+            return false;
+        }
+
+        // Through the same path the File menu takes, deliberately. Importing
+        // synchronously here would be simpler and would verify a load path no
+        // user takes: the one property most worth a picture is that the window
+        // renders a *finished* asynchronous result. So this returns with the
+        // import still running, and the surface's `warmup_seconds` is what
+        // waits for it.
+        startScoreImport(fixture);
     }
 
     testControlStateId = state.id;

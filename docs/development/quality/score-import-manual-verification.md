@@ -116,32 +116,47 @@ Confirm:
   empty list and a failure to report are indistinguishable on screen, which is
   the whole reason that line exists.
 
-## 5.5 — Add the window to the manual GUI harness
+## 5.5 — The window in the manual GUI harness
 
-Still open, and it needs a decision rather than a tester. A surface in
-`tools/scripts/testing_suite/surfaces.py` names an approved state from
-`src/application/testcontrol/ApprovedWindowStates.cpp`, and there is deliberately
-no way for the harness to compose a state of its own. No approved state can open
-the summary window today, because reaching it means importing a file, and
-importing a file means a path the channel has no way to supply.
+Done, by the `score-import-harness-surface` change, and the decision it needed
+was the second of the two options this section used to list.
 
-The two honest options:
+`ApprovedWindowState` carries a `scoreFixture` field, appended after `toolView`
+because the list is initialised positionally. Two states name one:
 
-- **An attended-only surface.** State `empty`, an `instruction` telling the
-  tester to open a named fixture by hand, and every question `behavioural`.
-  Needs no C++ change. But the unattended capture pass does not read
-  `instruction` — only `attend.py` does — so the surface would still be
-  captured, photographing the main window and adding a meaningless image to
-  every review grid.
-- **A `scoreImportPath` field on `ApprovedWindowState`.** The same shape as the
-  existing `settingsOpen` and `feedbackOpen` flags, appended after `toolView`
-  because the list is initialised positionally. This makes the window capturable
-  like the settings and feedback windows, and in exchange widens the channel's
-  vocabulary — which is what the `score-import-command` change explicitly
-  declined to do, and what makes it arguably its own proposal.
+| State | Fixture | What it shows |
+|---|---|---|
+| `score-import-clean` | `clean-import.musicxml` | A clean import, including the explicit "Nothing was dropped or repaired." line |
+| `score-import-diagnostics` | `diagnostic-import.musicxml` | All three severity groups, and six unrecognised elements sharing one message |
 
-The second is the one that actually gets the window into the harness. It is not
-in #206.
+Both fixtures live in `src/tests/resources/harness-scores/`, committed rather
+than generated: the corpus above is rebuilt under `build/` per run, and a
+reference image whose input is untracked is not a reference image. The field
+names a *fixture*, never a path — the channel's vocabulary still has no way to
+ask the application to open a file of the harness's choosing.
+
+The matching surfaces in `tools/scripts/testing_suite/surfaces.py` name the
+summary window as the window to capture, are captured once rather than across
+the resolution sweep, and carry a `warmup_seconds`: the import runs on
+`ScoreImportJob` exactly as it does for a file a user chose, so a capture taken
+the instant the state settles would be a picture of "Reading ..." rather than of
+the report.
+
+What the harness does **not** cover, and so stays manual on this page:
+
+- the file chooser itself, which is a native dialog (5.1–5.4 above);
+- the failure statuses. A missing fixture is a *test* failure by design — see
+  `ApprovedScoreFixturesTests` — so the failure layout is not reachable by
+  naming a file that is not there, and giving it a surface would need an
+  "expect this to fail" marker on the state. That is more vocabulary than the
+  failure layout is worth today; 5.3 covers it by hand.
+
+To see the exact text either capture should contain, without building the
+application:
+
+```bash
+build/PracticeTakesTests "[.harness-score-report]" --success
+```
 
 ## Related
 

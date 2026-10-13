@@ -346,6 +346,17 @@ class PracticeTakesApplication final : public juce::JUCEApplication
                 return;
             }
 
+            if (content != nullptr)
+            {
+                // Before the 500 ms delay below, not inside it: the workspace
+                // restore lands in that window, closing a tool is what records
+                // a successful use, and the feedback invitation is an
+                // AlertWindow raised the moment that count crosses its
+                // threshold. One landed over a capture and was photographed as
+                // a black rectangle over the surface.
+                content->beginTestControlSession();
+            }
+
             juce::Timer::callAfterDelay(
                 500,
                 [this, state, channelRequested]

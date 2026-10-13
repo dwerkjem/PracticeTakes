@@ -113,6 +113,22 @@ struct ApprovedWindowState
     // "bar", "meter", or "advanced". The names belong to the tool; the shell
     // passes them through without knowing which tool it is.
     std::string toolView;
+
+    // A score to import on the way into this state, named as a file in
+    // `approvedScoreFixtureDirectory()`. Empty for every state that is not
+    // about an imported document, which is all but two of them.
+    //
+    // Appended after `toolView` for the reason the comment above `toneHz`
+    // gives: the list is initialised positionally, so this field has to be
+    // last and a later one has to go after it. Putting it beside the logically
+    // related `settingsOpen` would compile and would silently shift every
+    // value after it in all forty entries.
+    //
+    // A *name*, never a path. The harness cannot ask the application to open a
+    // file of its choosing -- it can only name a state, and a state names a
+    // committed fixture -- which is what keeps the set of surfaces under
+    // verification a reviewable list in this one file.
+    std::string scoreFixture;
 };
 
 // An object that can be asked to act, as though clicked.
@@ -127,6 +143,11 @@ struct ApprovedClickTarget
 
     std::string description;
 };
+
+// Where a state's `scoreFixture` is looked for, relative to the repository
+// root. Here rather than in the shell so the test that checks every named
+// fixture exists resolves it exactly as the application does.
+[[nodiscard]] const std::string& approvedScoreFixtureDirectory();
 
 // Every state the application will enter on request.
 [[nodiscard]] const std::vector<ApprovedWindowState>& approvedWindowStates();

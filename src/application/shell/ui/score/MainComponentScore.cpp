@@ -144,8 +144,10 @@ void MainComponent::showScoreImportWindow()
         });
 
     // Both themes come from the one LookAndFeel the application owns, so the
-    // window follows a theme change without knowing a theme exists.
-    scoreImportWindow->setLookAndFeel(&appLookAndFeel);
+    // window follows a theme change without knowing a theme exists --
+    // applyAppearanceToOpenWindows is what tells it one happened, and this is
+    // the same call for the palette in force when it opens.
+    scoreImportWindow->applyAppearance(&appLookAndFeel, appPaletteFor(currentTheme).background);
     scoreImportWindow->toFront(true);
 }
 
