@@ -38,6 +38,24 @@ struct PlacedGlyph
     int staffStep = 0;
 };
 
+// A stem: the vertical line beside a notehead that, with its flag or beam, is
+// the whole of how a reader gets duration off the page.
+//
+// Positions only, like everything here. Thickness is not carried because it is
+// the same for every stem and is already in `engravingDefaults`; a painter that
+// needed a per-stem thickness would mean the font had stopped being the source
+// of it.
+struct PlacedStem
+{
+    // Centre of the stem, in staff spaces from the left edge of the system.
+    double x = 0.0;
+
+    // The notehead end and the free end, in staff steps. Doubles because a stem
+    // in a beamed group ends on the beam, which is not generally a whole step.
+    double fromStep = 0.0;
+    double toStep = 0.0;
+};
+
 // A ledger line: a short horizontal rule through or beside a notehead.
 struct PlacedLedgerLine
 {
@@ -59,6 +77,7 @@ struct StaffLayout
 
     std::vector<PlacedGlyph> glyphs;
     std::vector<PlacedLedgerLine> ledgerLines;
+    std::vector<PlacedStem> stems;
 };
 
 // One part's staves within one system, and whether they are braced together.

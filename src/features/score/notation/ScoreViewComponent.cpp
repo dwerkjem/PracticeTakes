@@ -189,8 +189,10 @@ float ScoreViewComponent::toPixels(double staffSpaces) const noexcept
     return static_cast<float>(staffSpaces) * staffSpacePixels;
 }
 
-float ScoreViewComponent::yFor(const SystemLayout& system, const StaffLayout& staff, int staffStep)
-    const noexcept
+float ScoreViewComponent::yFor(
+    const SystemLayout& system,
+    const StaffLayout& staff,
+    double staffStep) const noexcept
 {
     // A staff step is half a staff space, counted upward from the bottom line,
     // and `topOffset` is measured to the staff's *top* line -- so the bottom
@@ -340,6 +342,25 @@ void ScoreViewComponent::paintPage(juce::Graphics& graphics) const
                     graphics.fillRect(
                         toPixels(ledger.x + pageMargin), y - (thickness * 0.5f),
                         toPixels(ledger.width), thickness);
+                }
+
+                // Stems, before the glyphs so a notehead sits over the end of
+                // its own stem rather than under it.
+                //
+                // Every number here came from the layout: the two ends, and the
+                // one x. Working out where a stem should stop is exactly the
+                // kind of decision this surface must not make.
+                for (const PlacedStem& stem : staff.stems)
+                {
+                    const float thickness =
+                        std::max(1.0f, toPixels(score::engraving::engravingDefaults.stemThickness));
+
+                    const float fromY = yFor(system, staff, stem.fromStep);
+                    const float toY = yFor(system, staff, stem.toStep);
+
+                    graphics.fillRect(
+                        toPixels(stem.x + pageMargin) - (thickness * 0.5f), std::min(fromY, toY),
+                        thickness, std::abs(toY - fromY));
                 }
 
                 // One font size for every glyph: SMuFL states its metrics

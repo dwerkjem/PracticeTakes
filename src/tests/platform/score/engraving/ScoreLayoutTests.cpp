@@ -567,3 +567,223 @@ TEST_CASE(
         CHECK(countGlyph(staff, Glyph::timeSig4) == 2);
     }
 }
+
+TEST_CASE("a chord takes one stem, not one per note", "[engraving][layout][stem]")
+{
+    ScoreEvent chord;
+    chord.kind = EventKind::note;
+    chord.onset = 0;
+    chord.duration = 4 * ticksPerQuarterNote;
+    chord.staff = 1;
+    chord.notes = notesOf(
+        {pitchFromSpelling(Step::c, 0, 4), pitchFromSpelling(Step::e, 0, 4),
+         pitchFromSpelling(Step::g, 0, 4)});
+
+    // A whole note, which has no stem at all -- the one duration where its
+    // absence means something.
+    Voice voice;
+    voice.number = 1;
+    voice.events = {chord};
+
+    Measure measure = emptyMeasure(0);
+    measure.voices = {voice};
+
+    Part part;
+    part.id = "P1";
+    part.staffCount = 1;
+    part.measures = {measure};
+
+    Score whole;
+    whole.parts = {part};
+
+    const ScoreLayout wholeLayout = layOutScore(whole, LayoutOptions{});
+
+    REQUIRE(wholeLayout.systems.size() == 1);
+    CHECK(wholeLayout.systems[0].parts[0].staves[0].stems.empty());
+
+    // The same chord as a half note has exactly one.
+    chord.duration = 2 * ticksPerQuarterNote;
+    voice.events = {chord, noteAt(2 * ticksPerQuarterNote, 2 * ticksPerQuarterNote, Step::c, 4)};
+    measure.voices = {voice};
+    part.measures = {measure};
+
+    Score half;
+    half.parts = {part};
+
+    const ScoreLayout halfLayout = layOutScore(half, LayoutOptions{});
+
+    REQUIRE(halfLayout.systems.size() == 1);
+
+    const StaffLayout& staff = halfLayout.systems[0].parts[0].staves[0];
+
+    // Two events, two stems -- three noteheads in the chord and one in the
+    // note after it.
+    CHECK(staff.stems.size() == 2);
+    CHECK(countGlyph(staff, Glyph::noteheadHalf) == 4);
+}
+
+TEST_CASE("stem direction follows the staff position", "[engraving][layout][stem]")
+{
+    // The fixture is G4, A4, B4 in treble: steps 2, 3 and 4. The first two are
+    // below the middle line and the third is *on* it, which is the tie -- so
+    // this one score covers the rule and its exception.
+    const ScoreLayout layout = layOutScore(makeSingleStaffScore(1), LayoutOptions{});
+
+    const StaffLayout& staff = layout.systems[0].parts[0].staves[0];
+
+    REQUIRE(staff.stems.size() == 3);
+
+    CHECK(staff.stems[0].toStep > staff.stems[0].fromStep);
+    CHECK(staff.stems[1].toStep > staff.stems[1].fromStep);
+
+    // B4 sits on the middle line, and a note on the line stems down.
+    CHECK(staff.stems[2].fromStep == 4.0);
+    CHECK(staff.stems[2].toStep < staff.stems[2].fromStep);
+}
+
+TEST_CASE("two voices on one staff take opposed stems", "[engraving][layout][stem]")
+{
+    // Both notes are below the middle line, so position alone would stem both
+    // up. The voice rule overrides it, which is the whole point: stem
+    // direction is the only thing telling two voices apart.
+    Voice upper;
+    upper.number = 1;
+    upper.events = {noteAt(0, 4 * ticksPerQuarterNote, Step::e, 4)};
+
+    Voice lower;
+    lower.number = 2;
+    lower.events = {noteAt(0, 4 * ticksPerQuarterNote, Step::c, 4)};
+
+    Measure measure = emptyMeasure(0);
+    measure.voices = {upper, lower};
+
+    Part part;
+    part.id = "P1";
+    part.staffCount = 1;
+    part.measures = {measure};
+
+    Score score;
+    score.parts = {part};
+
+    // Half notes rather than whole ones, so there are stems to oppose.
+    for (Voice& voice : score.parts[0].measures[0].voices)
+    {
+        for (ScoreEvent& event : voice.events)
+        {
+            event.duration = 2 * ticksPerQuarterNote;
+        }
+    }
+
+    const ScoreLayout layout = layOutScore(score, LayoutOptions{});
+
+    const StaffLayout& staff = layout.systems[0].parts[0].staves[0];
+
+    REQUIRE(staff.stems.size() == 2);
+
+    const bool firstUp = staff.stems[0].toStep > staff.stems[0].fromStep;
+    const bool secondUp = staff.stems[1].toStep > staff.stems[1].fromStep;
+
+    CHECK(firstUp != secondUp);
+}
+
+TEST_CASE("a short note gets a flag and a long one does not", "[engraving][layout][stem]")
+{
+    Voice voice;
+    voice.number = 1;
+    voice.events = {
+        noteAt(0, ticksPerQuarterNote, Step::g, 4),
+        noteAt(ticksPerQuarterNote, ticksPerQuarterNote / 2, Step::a, 4),
+        noteAt(
+            ticksPerQuarterNote + (ticksPerQuarterNote / 2), ticksPerQuarterNote / 2, Step::b, 4),
+        noteAt(2 * ticksPerQuarterNote, 2 * ticksPerQuarterNote, Step::c, 5)};
+
+    Measure measure = emptyMeasure(0);
+    measure.voices = {voice};
+
+    Part part;
+    part.id = "P1";
+    part.staffCount = 1;
+    part.measures = {measure};
+
+    Score score;
+    score.parts = {part};
+
+    const ScoreLayout layout = layOutScore(score, LayoutOptions{});
+
+    const StaffLayout& staff = layout.systems[0].parts[0].staves[0];
+
+    // Four events, four stems, and a flag on each of the two eighths.
+    CHECK(staff.stems.size() == 4);
+    CHECK(countGlyph(staff, Glyph::flag8thUp) + countGlyph(staff, Glyph::flag8thDown) == 2);
+    CHECK(countGlyph(staff, Glyph::flag16thUp) + countGlyph(staff, Glyph::flag16thDown) == 0);
+}
+
+TEST_CASE("a dotted note is drawn with its dot", "[engraving][layout][stem]")
+{
+    Voice voice;
+    voice.number = 1;
+    voice.events = {
+        noteAt(0, 3 * ticksPerQuarterNote, Step::g, 4),
+        noteAt(3 * ticksPerQuarterNote, ticksPerQuarterNote, Step::a, 4)};
+
+    Measure measure = emptyMeasure(0);
+    measure.voices = {voice};
+
+    Part part;
+    part.id = "P1";
+    part.staffCount = 1;
+    part.measures = {measure};
+
+    Score score;
+    score.parts = {part};
+
+    const ScoreLayout layout = layOutScore(score, LayoutOptions{});
+
+    const StaffLayout& staff = layout.systems[0].parts[0].staves[0];
+
+    // A dotted half: a half notehead and one dot, rather than a half note
+    // drawn as if it lasted two beats.
+    CHECK(countGlyph(staff, Glyph::noteheadHalf) == 1);
+    CHECK(countGlyph(staff, Glyph::augmentationDot) == 1);
+
+    // And the dot is off the staff line the note sits on. G4 in treble is step
+    // 2, a line, so its dot sits in the space above.
+    const std::vector<int> dotSteps = stepsOfGlyph(staff, Glyph::augmentationDot);
+
+    REQUIRE(dotSteps.size() == 1);
+    CHECK(dotSteps.front() == 3);
+
+    // Nothing reported: a dotted half is a value a notehead and a dot can
+    // write.
+    CHECK(layout.diagnostics.empty());
+}
+
+TEST_CASE("a length no notehead can write is reported", "[engraving][layout][diagnostics]")
+{
+    Voice voice;
+    voice.number = 1;
+    voice.events = {noteAt(0, 4 * ticksPerQuarterNote, Step::g, 4)};
+
+    // Five quarters in a four-quarter bar is a repaired score's shape, and is
+    // not any dotted power of two.
+    voice.events[0].duration = 5 * ticksPerQuarterNote;
+
+    Measure measure = emptyMeasure(0);
+    measure.voices = {voice};
+
+    Part part;
+    part.id = "P1";
+    part.staffCount = 1;
+    part.measures = {measure};
+
+    Score score;
+    score.parts = {part};
+
+    const ScoreLayout layout = layOutScore(score, LayoutOptions{});
+
+    // Drawn as the longest value that fits, and *said* -- a note drawn shorter
+    // than it lasts, silently, is the failure this renderer rules out.
+    REQUIRE(layout.diagnostics.size() == 1);
+    CHECK(layout.diagnostics.front().elementName == "note");
+    CHECK(layout.diagnostics.front().location.measureNumber == "1");
+}

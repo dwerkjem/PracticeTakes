@@ -4,9 +4,12 @@
 #include <cmath>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 
 #include "Accidentals.h"
+#include "NoteValue.h"
+#include "Stems.h"
 #include "SystemHead.h"
 
 #include "platform/score/ScoreTraversal.h"
@@ -22,50 +25,13 @@ constexpr double glyphPadding = 0.6;
 constexpr double barlinePadding = 0.8;
 constexpr double staffHeight = 4.0;
 
+// Gap between a notehead and its first augmentation dot, and between dots.
+constexpr double dotGap = 0.35;
+
 // How steeply width grows with duration. 1.0 would be strict proportionality,
 // which is the thing to avoid; 0.6 is the usual neighbourhood for a power-law
 // spacing rule.
 constexpr double spacingExponent = 0.6;
-
-[[nodiscard]] Glyph noteheadFor(Tick duration) noexcept
-{
-    if (duration >= 4 * ticksPerQuarterNote)
-    {
-        return Glyph::noteheadWhole;
-    }
-
-    if (duration >= 2 * ticksPerQuarterNote)
-    {
-        return Glyph::noteheadHalf;
-    }
-
-    return Glyph::noteheadBlack;
-}
-
-[[nodiscard]] Glyph restGlyphFor(Tick duration) noexcept
-{
-    if (duration >= 4 * ticksPerQuarterNote)
-    {
-        return Glyph::restWhole;
-    }
-
-    if (duration >= 2 * ticksPerQuarterNote)
-    {
-        return Glyph::restHalf;
-    }
-
-    if (duration >= ticksPerQuarterNote)
-    {
-        return Glyph::restQuarter;
-    }
-
-    if (duration >= ticksPerQuarterNote / 2)
-    {
-        return Glyph::rest8th;
-    }
-
-    return Glyph::rest16th;
-}
 
 // A whole rest hangs below the fourth line and a half rest sits on the third;
 // everything shorter is centred. Engraving convention, not arithmetic, so it is
@@ -111,6 +77,21 @@ struct PreparedEvent
     int restStaffStep = 4;
     std::vector<PreparedNote> notes;
 
+    // What this duration is *written* as: notehead, flags, dots. The model
+    // carries no notated type, so this is derived, once, here.
+    NoteValue value;
+
+    // Whether a stem is drawn at all, and which way. Decided in this pass
+    // rather than at placement because the first rule needs the voice, and the
+    // voice is only in hand here.
+    bool hasStem = false;
+    bool stemUp = true;
+
+    // The outermost noteheads of the chord, which are what a stem attaches to.
+    // Equal for a single note; meaningless for a rest.
+    int lowestStep = 0;
+    int highestStep = 0;
+
     // Horizontal room this event's glyphs need, accidentals included.
     double width = 0.0;
 };
@@ -140,11 +121,17 @@ struct PartAttributeTrack
     std::vector<std::optional<TimeSignature>> times;
 };
 
+// Room an event's dots take, after the notehead.
+[[nodiscard]] double dotsWidth(int dots)
+{
+    return dots <= 0 ? 0.0 : dots * (dotGap + advanceWidth(Glyph::augmentationDot));
+}
+
 [[nodiscard]] double widthOf(const PreparedEvent& event)
 {
     if (event.isRest)
     {
-        return advanceWidth(event.restGlyph);
+        return advanceWidth(event.restGlyph) + dotsWidth(event.value.dots);
     }
 
     double widest = 0.0;
@@ -161,7 +148,14 @@ struct PartAttributeTrack
         widest = std::max(widest, width);
     }
 
-    return widest;
+    // A flag hangs to the right of an up stem and overhangs the notehead. Not
+    // counting it is how a flag ends up drawn across the next column.
+    if (event.hasStem && event.value.flags > 0 && event.stemUp)
+    {
+        widest += advanceWidth(flagGlyphFor(event.value.flags, true));
+    }
+
+    return widest + dotsWidth(event.value.dots);
 }
 
 // The clef governing a staff after applying a measure's changes.
@@ -260,6 +254,24 @@ std::vector<PreparedEvent> prepare(
         std::map<int, int> staffOfVoice;
         bool reportedCrossStaff = false;
 
+        // Which voices each staff carries in this measure. Built before the
+        // walk rather than during it because stem direction for the *first*
+        // event already depends on whether a second voice turns up later in
+        // the bar, and a rule that changed halfway through a measure would be
+        // worse than either answer.
+        std::map<int, std::set<int>> voicesOnStaff;
+
+        for (const Voice& voice : measure.voices)
+        {
+            for (const ScoreEvent& event : voice.events)
+            {
+                if (isPitched(event))
+                {
+                    voicesOnStaff[std::max(1, event.staff)].insert(voice.number);
+                }
+            }
+        }
+
         for (const MeasureEventIndex& position : measureEventOrder(measure))
         {
             const Voice& voice = measure.voices[position.voiceIndex];
@@ -301,11 +313,55 @@ std::vector<PreparedEvent> prepare(
             entry.staff = static_cast<int>(staffIndex) + 1;
             entry.absoluteOnset = absoluteOnset(measure, event);
 
+            // The written value, once, for notehead, flags and dots alike.
+            // A rest with no duration of its own fills its bar, which is what
+            // an exporter means by omitting one.
+            const Tick writtenDuration =
+                (!isPitched(event) && event.duration == 0)
+                    ? measure.nominalDuration
+                    : event.duration;
+
+            entry.value = noteValueFor(writtenDuration, event.tuplet);
+
+            // Nothing shorter than a sixteenth has a flag glyph in the
+            // metrics table, so a thirty-second is drawn with a sixteenth's
+            // flag. That is a smaller lie than the one above and still a lie,
+            // so it is still said.
+            if (entry.value.flags > 2)
+            {
+                Diagnostic diagnostic;
+                diagnostic.severity = DiagnosticSeverity::unsupported;
+                diagnostic.location.partId = part.id;
+                diagnostic.location.measureNumber = measure.printedNumber;
+                diagnostic.location.voice = voice.number;
+                diagnostic.elementName = "beam";
+                diagnostic.message =
+                    "This note is shorter than a sixteenth. It is drawn with a sixteenth's "
+                    "flag, so it reads longer than it lasts.";
+
+                diagnostics.push_back(diagnostic);
+            }
+
+            if (!entry.value.exact)
+            {
+                Diagnostic diagnostic;
+                diagnostic.severity = DiagnosticSeverity::unsupported;
+                diagnostic.location.partId = part.id;
+                diagnostic.location.measureNumber = measure.printedNumber;
+                diagnostic.location.voice = voice.number;
+                diagnostic.elementName = "note";
+                diagnostic.message =
+                    "This note's length is not one a notehead and dots can write. It is "
+                    "drawn as the longest value that fits, so it reads shorter than it "
+                    "lasts.";
+
+                diagnostics.push_back(diagnostic);
+            }
+
             if (!isPitched(event))
             {
                 entry.isRest = true;
-                entry.restGlyph =
-                    restGlyphFor(event.duration == 0 ? measure.nominalDuration : event.duration);
+                entry.restGlyph = entry.value.rest;
                 entry.restStaffStep = restStepFor(entry.restGlyph);
             }
             else
@@ -323,11 +379,35 @@ std::vector<PreparedEvent> prepare(
                 for (const Note& note : ordered)
                 {
                     PreparedNote placed;
-                    placed.notehead = noteheadFor(event.duration);
+                    placed.notehead = entry.value.notehead;
                     placed.staffStep = staffStepFor(note.written, staff.clef);
                     placed.accidental = staff.accidentals.accidentalFor(note.written);
 
                     entry.notes.push_back(placed);
+                }
+
+                entry.lowestStep = entry.notes.front().staffStep;
+                entry.highestStep = entry.notes.back().staffStep;
+
+                // Everything shorter than a whole note has a stem. A whole note
+                // has none, which is the one case where its absence means
+                // something.
+                entry.hasStem = entry.value.notehead != Glyph::noteheadWhole;
+
+                // Direction, in the order decision 2 of design.md sets out.
+                // The voice rule comes first and beats the others outright: two
+                // voices on a staff with direction chosen note by note is
+                // unreadable, because stem direction is the only thing telling
+                // them apart.
+                const auto onThisStaff = voicesOnStaff.find(entry.staff);
+
+                if (onThisStaff != voicesOnStaff.end() && onThisStaff->second.size() > 1)
+                {
+                    entry.stemUp = voice.number == *onThisStaff->second.begin();
+                }
+                else
+                {
+                    entry.stemUp = stemPointsUp(entry.lowestStep, entry.highestStep);
                 }
             }
 
@@ -338,6 +418,30 @@ std::vector<PreparedEvent> prepare(
     }
 
     return prepared;
+}
+
+// Augmentation dots after a notehead or rest.
+//
+// A dot never sits on a staff line: on a line it moves up into the space above,
+// which is convention rather than arithmetic and is the only thing here worth
+// stating.
+void placeDots(StaffLayout& staff, double afterX, int staffStep, int dots)
+{
+    if (dots <= 0)
+    {
+        return;
+    }
+
+    const int dotStep = isOnLine(staffStep) ? staffStep + 1 : staffStep;
+
+    double x = afterX + dotGap;
+
+    for (int index = 0; index < dots; ++index)
+    {
+        staff.glyphs.push_back(PlacedGlyph{Glyph::augmentationDot, x, dotStep});
+
+        x += advanceWidth(Glyph::augmentationDot) + dotGap;
+    }
 }
 
 // One column: a distinct absolute onset, and what it needs.
@@ -657,18 +761,32 @@ ScoreLayout layOutScore(const Score& score, const LayoutOptions& options)
                 {
                     staff.glyphs.push_back(PlacedGlyph{event.restGlyph, x, event.restStaffStep});
 
+                    placeDots(
+                        staff, x + advanceWidth(event.restGlyph), event.restStaffStep,
+                        event.value.dots);
+
                     continue;
+                }
+
+                // One x for every notehead of the chord, so that the stem has
+                // one line to attach to. The accidental shifts the notehead
+                // right, and every note of the chord shifts with it.
+                double noteheadX = x;
+
+                for (const PreparedNote& note : event.notes)
+                {
+                    if (note.accidental.has_value())
+                    {
+                        noteheadX =
+                            std::max(noteheadX, x + advanceWidth(*note.accidental) + glyphPadding);
+                    }
                 }
 
                 for (const PreparedNote& note : event.notes)
                 {
-                    double noteheadX = x;
-
                     if (note.accidental.has_value())
                     {
                         staff.glyphs.push_back(PlacedGlyph{*note.accidental, x, note.staffStep});
-
-                        noteheadX += advanceWidth(*note.accidental) + glyphPadding;
                     }
 
                     staff.glyphs.push_back(PlacedGlyph{note.notehead, noteheadX, note.staffStep});
@@ -684,6 +802,36 @@ ScoreLayout layOutScore(const Score& score, const LayoutOptions& options)
                                 (2 * engravingDefaults.legerLineExtension),
                             step});
                     }
+                }
+
+                const Glyph notehead = event.notes.front().notehead;
+
+                // One stem for the whole chord, from its outermost notehead --
+                // never one per note.
+                if (event.hasStem)
+                {
+                    const StemGeometry geometry = stemFor(
+                        noteheadX, notehead, event.lowestStep, event.highestStep, event.stemUp);
+
+                    staff.stems.push_back(
+                        PlacedStem{geometry.x, geometry.fromStep, geometry.toStep});
+
+                    // A flag, until beams exist to replace it. The glyph sits
+                    // at the free end of the stem, on the stem's own x.
+                    if (event.value.flags > 0)
+                    {
+                        staff.glyphs.push_back(PlacedGlyph{
+                            flagGlyphFor(event.value.flags, event.stemUp), geometry.x,
+                            static_cast<int>(geometry.toStep)});
+                    }
+                }
+
+                // Dots go after the chord, at each notehead's own step.
+                for (const PreparedNote& note : event.notes)
+                {
+                    placeDots(
+                        staff, noteheadX + advanceWidth(note.notehead), note.staffStep,
+                        event.value.dots);
                 }
             }
         }

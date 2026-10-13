@@ -77,10 +77,13 @@ class ScoreViewComponent final : public ToolComponent, private juce::Timer
     [[nodiscard]] float toPixels(double staffSpaces) const noexcept;
 
     // Vertical pixel position of a staff step within a staff of a system.
+    //
+    // A double rather than an int because a stem does not have to end on a
+    // whole step -- in a beamed group it ends wherever the beam is.
     [[nodiscard]] float yFor(
         const score::engraving::SystemLayout& system,
         const score::engraving::StaffLayout& staff,
-        int staffStep) const noexcept;
+        double staffStep) const noexcept;
 
     [[nodiscard]] AppPalette palette() const;
 
