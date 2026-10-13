@@ -132,6 +132,13 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/audio/SharedPitchAnalysis.cpp
     src/platform/audio/SharedPitchAnalysis.h
     src/platform/audio/SyntheticTone.h
+    src/platform/midi/MidiEvent.h
+    src/platform/midi/MidiEventFifo.h
+    src/platform/midi/MidiInputService.cpp
+    src/platform/midi/MidiInputService.h
+    src/platform/midi/MidiMessageTranslation.cpp
+    src/platform/midi/MidiMessageTranslation.h
+    src/platform/midi/MidiRecoveryPolicy.h
     src/platform/score/CurrentScore.h
     src/platform/score/Diagnostic.h
     src/platform/score/LyricSyllable.h
@@ -177,6 +184,9 @@ set(PRACTICE_TAKES_SOURCES
 set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/audio/AudioInputService.cpp
     src/platform/audio/AudioInputService.h
+    src/platform/midi/MidiInputService.cpp
+    src/platform/midi/MidiInputService.h
+    src/platform/midi/MidiMessageTranslation.cpp
     src/tests/application/configuration/AppDefaultsTests.cpp
     src/tests/application/configuration/SettingsPersistenceTests.cpp
     src/tests/application/configuration/SettingsTransferCodecTests.cpp
@@ -219,6 +229,10 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/audio/SyntheticToneTests.cpp
     src/tests/platform/audio/PitchDetectorTests.cpp
     src/tests/platform/audio/SharedPitchAnalysisTests.cpp
+    src/tests/platform/midi/MidiEventFifoTests.cpp
+    src/tests/platform/midi/MidiInputServiceTests.cpp
+    src/tests/platform/midi/MidiMessageTranslationTests.cpp
+    src/tests/platform/midi/MidiRecoveryPolicyTests.cpp
     src/tests/platform/score/CurrentScoreTests.cpp
     src/tests/platform/score/MusicalTimeTests.cpp
     src/tests/platform/score/PitchNamesTests.cpp

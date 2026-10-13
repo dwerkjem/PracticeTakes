@@ -199,13 +199,18 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   `score` (the Target Note tool, the first consumer of the score model),
   `feedback`, `performance` (launch timing).
 - `src/platform` — shared infrastructure: `audio/` (`AudioInputService`,
-  `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`) and `score/` — a
-  JUCE-free score model (`Score`, `TempoMap`, `Pitch`, `MusicalTime`,
-  `CurrentScore`) plus a MusicXML importer under `score/musicxml/`. It has two
-  application consumers: the shell's Open Score command, which imports a file
-  and publishes the result into the `CurrentScore` holder, and the Target Note
-  tool, which reads that holder through `ToolServices`. What the importer
-  accepts, drops with a diagnostic, or refuses is specified in
+  `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`), `midi/`
+  (`MidiInputService`, `MidiEventFifo`, `MidiMessageTranslation`,
+  `MidiRecoveryPolicy`) — live keyboard capture, owning its own
+  `juce::MidiInput` rather than going through the audio device manager, with a
+  JUCE-free byte-level translation layer that is where every rule worth
+  asserting about the event stream lives — and `score/` — a JUCE-free score
+  model (`Score`, `TempoMap`, `Pitch`, `MusicalTime`, `CurrentScore`) plus a
+  MusicXML importer under `score/musicxml/`. `score/` has two application
+  consumers: the shell's Open Score command, which imports a file and publishes
+  the result into the `CurrentScore` holder, and the Target Note tool, which
+  reads that holder through `ToolServices`. What the importer accepts, drops
+  with a diagnostic, or refuses is specified in
   `docs/development/formats/musicxml-subset.md`; what consuming the model from
   the application revealed about its shape is in
   `docs/development/architecture/score-model-findings.md`, and each entry there
@@ -237,6 +242,14 @@ outlive its shared services" is enforced — there is no runtime check. Do not
 move the declaration.
 
 ### Audio-thread boundary (hard constraint)
+
+Two driver callbacks are under this contract, not one: the audio callback
+below, and `MidiInputService::handleIncomingMidiMessage`. The MIDI one is not
+the audio thread and cannot underrun a buffer, but the discipline is identical
+and it carries the same annotation. `docs/development/performance/audio-thread-safety.md`
+§ The MIDI callback has what differs — chiefly that `midi::MidiEventFifo` drops
+the **oldest** event on overflow where `AudioSampleFifo` drops the newest block,
+because no MIDI event is safe to lose.
 
 `AudioInputService::audioDeviceIOCallbackWithContext` runs on the real-time
 audio thread and must stay bounded: no heap allocation, locks, blocking waits,

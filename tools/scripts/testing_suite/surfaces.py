@@ -472,6 +472,40 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The only surface that looks at the MIDI capture path at all. What it can
+    # show without hardware is the empty case -- no keyboard connected -- which
+    # is worth a picture in its own right, because it is what a user sees before
+    # they switch their piano on and it has to tell them what to do. The
+    # connected case needs a keyboard and is task 7.5 in the change, not a
+    # capture.
+    Surface(
+        state="settings-midi",
+        title="Settings: MIDI keyboard selection",
+        area="settings",
+        modes=frozenset({FULL}),
+        window_title=SETTINGS_WINDOW,
+        instruction=(
+            "If you have a MIDI keyboard, connect it, choose it, and play a few notes "
+            "with and without the sustain pedal. If you do not, answer for the "
+            "disconnected state only and say so."
+        ),
+        extras=(
+            Question(
+                "empty-state-helpful",
+                "With no keyboard connected, does it say so and say what to do about it?",
+            ),
+            Question(
+                "notes-appear",
+                "With a keyboard connected, do played notes appear with their velocities?",
+                behavioural=True,
+            ),
+            Question(
+                "pedal-appears",
+                "Does the sustain pedal show as going down and up?",
+                behavioural=True,
+            ),
+        ),
+    ),
     Surface(
         state="settings-appearance",
         title="Settings: appearance and theme",

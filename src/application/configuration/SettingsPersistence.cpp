@@ -14,6 +14,8 @@ constexpr auto themeKey = "global.theme";
 constexpr auto microphoneMutedKey = "audio.muted";
 constexpr auto audioStateKey = "audio.deviceState";
 constexpr auto audioInputGainKey = "audio.inputGain";
+constexpr auto midiInputDeviceIdentifierKey = "midi.inputDeviceIdentifier";
+constexpr auto midiInputDeviceNameKey = "midi.inputDeviceName";
 constexpr auto tunerDisplayModeKey = "tuner.displayMode";
 constexpr auto tunerEasingKey = "tuner.easing";
 constexpr auto tunerAveragingKey = "tuner.averaging";
@@ -45,6 +47,8 @@ constexpr const char* ownedKeys[] = {
     microphoneMutedKey,
     audioStateKey,
     audioInputGainKey,
+    midiInputDeviceIdentifierKey,
+    midiInputDeviceNameKey,
     tunerDisplayModeKey,
     tunerEasingKey,
     tunerAveragingKey,
@@ -201,6 +205,8 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
     result.state.inputGain =
         boundedValue(properties, audioInputGainKey, AppDefaults::Audio::inputGain, 0.0, 2.0);
     result.state.audioDeviceState = properties.getValue(audioStateKey);
+    result.state.midiInputDeviceIdentifier = properties.getValue(midiInputDeviceIdentifierKey);
+    result.state.midiInputDeviceName = properties.getValue(midiInputDeviceNameKey);
     result.state.tuner = {
         loadDisplayMode(properties),
         boundedValue(properties, tunerEasingKey, AppDefaults::Tuner::easing, 0.02, 1.0),
@@ -258,6 +264,8 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(microphoneMutedKey, state.microphoneMuted);
     properties.setValue(audioInputGainKey, state.inputGain);
     properties.setValue(audioStateKey, state.audioDeviceState);
+    properties.setValue(midiInputDeviceIdentifierKey, state.midiInputDeviceIdentifier);
+    properties.setValue(midiInputDeviceNameKey, state.midiInputDeviceName);
     properties.setValue(tunerDisplayModeKey, state.tuner.displayMode);
     properties.setValue(tunerEasingKey, state.tuner.easing);
     properties.setValue(tunerAveragingKey, state.tuner.averaging);

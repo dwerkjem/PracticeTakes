@@ -5,6 +5,14 @@ audio thread. Everything below is a hard constraint: a violation does not
 produce a test failure or a wrong number, it produces an audible dropout in
 someone's practice session.
 
+**There are now two driver callbacks under this contract**, not one. The second
+is `MidiInputService::handleIncomingMidiMessage`, which JUCE calls on a
+high-priority thread it owns per MIDI input device. It is not the audio thread
+and cannot underrun an audio buffer, so its failure mode is a stuck or late
+note rather than a dropout — but it is a driver callback, the discipline is the
+same, and it carries the same annotation. See
+[The MIDI callback](#the-midi-callback) below for what differs.
+
 ## The contract
 
 The callback may:
@@ -84,6 +92,45 @@ not as "the contract holds".
   does not by itself get that call checked.
 - **Not the whole audio thread.** Only this one function carries the
   annotation.
+
+## The MIDI callback
+
+`MidiInputService::handleIncomingMidiMessage` is bound by the same rules. What
+it may do:
+
+- read the incoming message's raw bytes through `getRawData()` and
+  `getRawDataSize()`;
+- translate them into a `midi::MidiEvent`, which is a trivially copyable POD
+  with no owning members — `static_assert`ed, so that stops being true at
+  compile time rather than quietly;
+- increment one atomic counter;
+- push one event into each active consumer's preallocated 1,024-event SPSC
+  FIFO.
+
+What it must not do is the same list as above, plus one specific to MIDI:
+
+- **never copy the `juce::MidiMessage`.** It owns a heap allocation for any
+  payload over four bytes, so a copy is an allocation on a driver callback. The
+  callback reads the message and lets it go.
+
+Two differences from the audio FIFO, both deliberate:
+
+- **`midi::MidiEventFifo` drops the oldest event on overflow**, where
+  `AudioSampleFifo` drops the newest block. No MIDI event is safe to lose —
+  losing a note off leaves a note held forever, losing a note on leaves a note
+  off for a note nobody started — so it drops the past rather than the future,
+  because that at least re-converges within one key or pedal release.
+- **It counts what it dropped, per consumer.** A consumer tracking which notes
+  are held compares that count against what it last saw and resets its state
+  when it has moved, rather than believing a picture it cannot tell is corrupt.
+
+Enforcement is the same mechanism and has the same hole: the annotation is
+checked by RealtimeSanitizer only where a test drives the callback. For MIDI
+that is `src/tests/platform/midi/MidiInputServiceTests.cpp`, through
+`MidiInputServiceCallbackAccess`, which covers translation, the fan-out to one
+and to several consumers, a consumer overflowing, and the messages that
+translate to nothing. **Not covered:** opening, closing, or enumerating a
+device, and anything a real driver does that a synthetic byte array does not.
 
 ## The other runtime legs
 
