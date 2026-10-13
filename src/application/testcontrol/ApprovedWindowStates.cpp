@@ -81,6 +81,19 @@ const std::vector<ApprovedWindowState>& states()
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false,
          "The target note tool with no score open, which is what a new session shows"},
+        // The score view, same reasoning: without a file open this is what a
+        // session sees, and it is the state the harness can reach today.
+        // Photographing it with a score in it is blocked by finding 7 of
+        // docs/development/architecture/score-model-findings.md -- importing a
+        // fixture leaves the import summary window over the capture -- so an
+        // empty staff area is the honest extent of this coverage until that is
+        // fixed, and it is not a picture of the grand staff.
+        {"score-view-empty", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false, "The score view with no score open, which is what a new session shows"},
+        {"score-view-floating", Tools{"score-view"}, ToolPresentation::floating,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false, "The score view in its own floating window"},
 
         // --- Several tools at once. Nothing else reaches the split tree with
         // more than one leaf, or the tab strip at all.
@@ -96,10 +109,11 @@ const std::vector<ApprovedWindowState>& states()
         {"three-tools-tabbed", Tools{"tuner", "spectrogram", "harmonics"}, ToolPresentation::docked,
          WorkspaceArrangement::tabbed, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "All three tools sharing one tab strip"},
-        {"all-tools-docked", Tools{"tuner", "spectrogram", "harmonics", "target-note"},
+        {"all-tools-docked",
+         Tools{"tuner", "spectrogram", "harmonics", "target-note", "score-view"},
          ToolPresentation::docked, WorkspaceArrangement::split, WindowGeometry::normal,
          MicrophoneCondition::available, false, "", false,
-         "Every tool tiled at once -- the three live-audio tools and the one that reads a score"},
+         "Every tool tiled at once -- the three live-audio tools and the two that read a score"},
 
         // --- Window geometry ---
         {"narrow-window", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,

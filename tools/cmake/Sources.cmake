@@ -120,6 +120,8 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/TargetNoteSelection.h
     src/features/score/notation/MusicFont.cpp
     src/features/score/notation/MusicFont.h
+    src/features/score/notation/ScoreViewComponent.cpp
+    src/features/score/notation/ScoreViewComponent.h
     src/features/performance/ApplicationLaunchTimer.cpp
     src/features/performance/ApplicationLaunchTimer.h
     src/features/feedback/FeedbackComponent.cpp
@@ -253,6 +255,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/score/ScoreModelTests.cpp
     src/tests/platform/score/ScoreTraversalTests.cpp
     src/tests/platform/score/engraving/AccidentalsTests.cpp
+    src/tests/platform/score/engraving/GrandStaffFixtureTests.cpp
     src/tests/platform/score/engraving/ScoreLayoutTests.cpp
     src/tests/platform/score/engraving/StaffPositionTests.cpp
     src/tests/platform/score/TempoMapTests.cpp

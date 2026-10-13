@@ -56,7 +56,7 @@ JUCE-free logic with no font and no window.
       larger of the duration power law and the widest glyph group in it.
 - [x] 3.5 Implement greedy system breaking against the available width, with
       clef, key and time signature redrawn at the head of each system.
-- [ ] 3.6 Implement barlines, measure grouping, and rests.
+- [x] 3.6 Implement barlines, measure grouping, and rests.
 - [x] 3.7 Tests in `src/tests/platform/score/engraving/` for 3.2–3.6:
       staff degrees against each clef, accidental suppression within a measure,
       column widths ordering by duration, and system breaking at a known width.
@@ -69,14 +69,14 @@ JUCE-free logic with no font and no window.
       inference from pitch or voice.
 - [x] 4.3 Share one column list across every staff of every part in a system, so
       equal absolute onsets align by construction.
-- [ ] 4.4 Lay out the brace spanning the staves of a part with
+- [x] 4.4 Lay out the brace spanning the staves of a part with
       `staffCount > 1`, and the per-part vertical spacing around it.
 - [ ] 4.5 Draw key and time signature on every staff of a part; clef per staff.
-- [ ] 4.6 Tests covering #200's acceptance criteria as assertions on the layout:
+- [x] 4.6 Tests covering #200's acceptance criteria as assertions on the layout:
       a two-staff part braced, contents on the staff the file assigned, a clef
       change on one staff leaving the other's placement untouched, and equal
       onsets at equal x across both staves.
-- [ ] 4.7 Confirm `src/tests/resources/` holds a two-staff fixture with a
+- [x] 4.7 Confirm `src/tests/resources/` holds a two-staff fixture with a
       mid-score clef change; author a minimal one if the corpus has none
       (`clean-import.musicxml` covers the basic two-staff case already).
 
@@ -86,28 +86,28 @@ JUCE-free logic with no font and no window.
       the importer already uses.
 - [x] 5.2 Detect a voice whose events change staff within a measure and record
       "beam crosses staves, drawn unbeamed" naming the measure's printed number.
-- [ ] 5.3 Record any other construct this pass does not draw, rather than
+- [x] 5.3 Record any other construct this pass does not draw, rather than
       omitting it silently.
 - [x] 5.4 Tests: a cross-staff fixture yields the diagnostic *and* places both
       notes on the staves they name; a clean score yields none.
 
 ## 6. The score view tool
 
-- [ ] 6.1 Add the `score-view` entry to `builtInToolCatalog()` in
+- [x] 6.1 Add the `score-view` entry to `builtInToolCatalog()` in
       `src/application/tools/BuiltInToolCatalog.h`.
-- [ ] 6.2 Add its factory to `builtInToolRegistry()` in
+- [x] 6.2 Add its factory to `builtInToolRegistry()` in
       `src/application/tools/BuiltInTools.cpp`.
-- [ ] 6.3 Write the `ToolComponent` under `src/features/score/notation/`:
+- [x] 6.3 Write the `ToolComponent` under `src/features/score/notation/`:
       `setTheme`, `resetToDefaults`, no persisted settings, reading the score
       only through `ToolServices::currentScore`.
-- [ ] 6.4 Poll on a timer and compare the score `shared_ptr` against the one
+- [x] 6.4 Poll on a timer and compare the score `shared_ptr` against the one
       last laid out; re-lay out on a change and on a width change, cache
       otherwise.
-- [ ] 6.5 Paint the layout and nothing else — no position computed in `paint()`.
-- [ ] 6.6 Vertical scrolling for a score taller than the panel.
-- [ ] 6.7 An empty state for "no score open", and a way to read the render
+- [x] 6.5 Paint the layout and nothing else — no position computed in `paint()`.
+- [x] 6.6 Vertical scrolling for a score taller than the panel.
+- [x] 6.7 An empty state for "no score open", and a way to read the render
       diagnostics when there are any.
-- [ ] 6.8 Add all sources to `PRACTICE_TAKES_SOURCES` in
+- [x] 6.8 Add all sources to `PRACTICE_TAKES_SOURCES` in
       `tools/cmake/Sources.cmake`.
 
 ## 7. Make it verifiable
@@ -115,26 +115,26 @@ JUCE-free logic with no font and no window.
 The four edits `docs/development/architecture/adding-a-tool.md § Make it
 verifiable` documents, three of which fail a test if skipped.
 
-- [ ] 7.1 Add approved window states naming `score-view` in
+- [x] 7.1 Add approved window states naming `score-view` in
       `src/application/testcontrol/ApprovedWindowStates.cpp` — one showing a
       score, one for the empty state.
-- [ ] 7.2 Add `score-view` to `all-tools-docked`.
-- [ ] 7.3 Bump the pinned tool count in the catalog test.
-- [ ] 7.4 Add a surface in `tools/scripts/testing_suite/surfaces.py` naming the
+- [x] 7.2 Add `score-view` to `all-tools-docked`.
+- [x] 7.3 Bump the pinned tool count in the catalog test.
+- [x] 7.4 Add a surface in `tools/scripts/testing_suite/surfaces.py` naming the
       states and the questions a reviewer should answer about the picture.
-- [ ] 7.5 Check whether finding 7 of the findings document still blocks
+- [x] 7.5 Check whether finding 7 of the findings document still blocks
       photographing a populated score surface (the import summary window
       overlapping the capture); if it does, say so rather than approving a
       picture of the empty state as coverage.
 
 ## 8. Quality gates
 
-- [ ] 8.1 `PracticeTakesTests` green, including the new engraving tests.
-- [ ] 8.2 `check_test_layout.py` — `src/tests/platform/score/engraving/` mirrors
+- [x] 8.1 `PracticeTakesTests` green, including the new engraving tests.
+- [x] 8.2 `check_test_layout.py` — `src/tests/platform/score/engraving/` mirrors
       `src/platform/score/engraving/`, so no exemption is needed.
-- [ ] 8.3 `clang-format` via pre-commit, and `clang-tidy` locally before pushing
+- [x] 8.3 `clang-format` via pre-commit, and `clang-tidy` locally before pushing
       (it only runs in CI otherwise).
-- [ ] 8.4 Confirm nothing added here is reachable from the audio or MIDI
+- [x] 8.4 Confirm nothing added here is reachable from the audio or MIDI
       callbacks — the score model is already forbidden there, and this change
       must not introduce the first exception.
 - [ ] 8.5 Update `docs/development/architecture/ARCHITECTURE.md` and the

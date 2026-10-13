@@ -30,6 +30,13 @@
             std::nullopt,
             {980, 700}},
         ToolDefinition{
+            "score-view",
+            "Score",
+            {"notation", "scoreView"},
+            ToolInstancePolicy::single,
+            std::nullopt,
+            {1100, 760}},
+        ToolDefinition{
             "target-note",
             "Target Note",
             {"score-target", "targetNote"},

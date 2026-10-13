@@ -372,7 +372,7 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="all-tools-docked",
         title="Every tool open at once",
-        tools=("tuner", "spectrogram", "harmonics", "target-note"),
+        tools=("tuner", "spectrogram", "harmonics", "target-note", "score-view"),
         presentation="split",
         modes=frozenset({FULL}),
         extras=(
@@ -647,6 +647,35 @@ SURFACES: tuple[Surface, ...] = (
                 "panel?",
             ),
         ),
+    ),
+    # The score view. Same limitation as the target note tool, and worse here:
+    # the whole point of this tool is the engraved page, and the harness cannot
+    # open a score into it (finding 7). So what is photographed is an empty
+    # staff area, which proves the tool opens, themes and docks -- and proves
+    # nothing at all about engraving. The layout underneath is unit tested
+    # instead, which is why that split was built.
+    Surface(
+        state="score-view-empty",
+        title="The score view with no score open",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        extras=(
+            Question(
+                "says-what-to-do",
+                "Does it name the command that opens a score, rather than showing a blank "
+                "panel?",
+            ),
+        ),
+    ),
+    Surface(
+        state="score-view-floating",
+        title="The score view in its own window",
+        tools=("score-view",),
+        presentation="floating",
+        area="score",
+        modes=frozenset({FULL}),
     ),
     Surface(
         state="tuner-docked",

@@ -546,6 +546,16 @@ ScoreLayout layOutScore(const Score& score, const LayoutOptions& options)
                 }
             }
 
+            // The brace spans from the top line of the first staff to the
+            // bottom line of the last -- the whole part, which is what makes
+            // two staves read as one instrument rather than as two.
+            if (partLayout.braced && !partLayout.staves.empty())
+            {
+                partLayout.braceX = 0.0;
+                partLayout.braceTop = partLayout.staves.front().topOffset;
+                partLayout.braceBottom = partLayout.staves.back().topOffset + staffHeight;
+            }
+
             system.parts.push_back(partLayout);
 
             staffTop += options.gapBetweenParts;

@@ -67,9 +67,16 @@ struct PartLayout
     std::size_t partIndex = 0;
 
     // True when the part has more than one staff -- a piano, drawn as a grand
-    // staff. The brace glyph itself is in `braceGlyph`; this says whether to
-    // draw it, so a caller never has to re-derive the rule.
+    // staff. Stated here so a painter never re-derives the rule, and so a test
+    // can assert it without reading the score back.
     bool braced = false;
+
+    // Where the brace goes, when there is one: a vertical span at a fixed x,
+    // from the top line of the part's first staff to the bottom line of its
+    // last. Zero-height when `braced` is false.
+    double braceX = 0.0;
+    double braceTop = 0.0;
+    double braceBottom = 0.0;
 
     std::vector<StaffLayout> staves;
 };
