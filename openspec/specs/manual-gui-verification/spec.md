@@ -1,9 +1,7 @@
 ## Purpose
 
 Defines what a manual verification run must ask, what its record must say, and how releases are gated on a current full run. How the run is produced — unattended capture, attended pass, grid review — is `ui-capture-and-review`; where it accumulates is `verification-run-store`.
-
 ## Requirements
-
 ### Requirement: Every surface is scored on three fixed axes
 For every surface, the harness SHALL ask the same three questions — whether it
 looks correct, whether it looks well-presented, and whether it functions — each
@@ -96,8 +94,9 @@ then state that only the default geometry was covered.
 A full run SHALL include, at minimum: microphone device selection and switching,
 the global mute and gain controls, each analysis tool opening and displaying
 live input, moving a tool between docked, floating, and tabbed presentation,
-workspace layout persisting across a restart, and the settings import and export
-round trip. Those of these that are questions about behaviour rather than
+workspace layout persisting across a restart, the settings import and export
+round trip, and the score import summary window in both its clean and its
+diagnostic form. Those of these that are questions about behaviour rather than
 appearance SHALL be covered by the attended pass, and a full run SHALL NOT be
 complete until that pass has answered them.
 
@@ -110,6 +109,12 @@ complete until that pass has answered them.
 - **WHEN** a full run's captures are all scored but its attended questions are
   unanswered
 - **THEN** the run is incomplete and the release gate treats it as such
+
+#### Scenario: The summary window reports diagnostics
+- **WHEN** a full run captures the score import summary window on a score whose
+  import produced diagnostics
+- **THEN** the capture shows each diagnostic naming the element it is about, so
+  a group of diagnostics sharing one message is still legible as distinct rows
 
 ### Requirement: The harness writes the run record itself
 On completion the suite SHALL export a record containing the date, the commit
@@ -299,3 +304,21 @@ audio device, and a human. CI reads the records it exports; it never runs it.
 #### Scenario: An ordinary pull request
 - **WHEN** a pull request that is not a release runs CI
 - **THEN** no check fails for the absence of a manual run record
+
+### Requirement: The summary window is verified without the file chooser
+The surfaces covering the score import summary window SHALL be reached through
+an approved state rather than by driving the file chooser, which is a native
+dialog outside the harness's reach. The properties that genuinely require the
+chooser SHALL remain a documented manual procedure rather than being claimed as
+covered.
+
+#### Scenario: The window is captured
+- **WHEN** the capture pass reaches a score import surface
+- **THEN** it names an approved state that imports a committed fixture, and no
+  file dialog is involved
+
+#### Scenario: What the harness does not cover
+- **WHEN** a release asks what verifies opening a score a user chose
+- **THEN** the answer is the documented manual procedure, because the chooser is
+  not in the harness
+
