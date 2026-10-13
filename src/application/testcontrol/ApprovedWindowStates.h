@@ -129,6 +129,23 @@ struct ApprovedWindowState
     // committed fixture -- which is what keeps the set of surfaces under
     // verification a reviewable list in this one file.
     std::string scoreFixture;
+
+    // Import the fixture without leaving the import summary window up.
+    //
+    // After `scoreFixture` for the positional reason that field is last, and
+    // the two go together: this is only meaningful alongside one.
+    //
+    // A surface about a score *consumer* -- the score view's engraved page --
+    // is a surface about the main window, and the summary is a separate
+    // top-level window that the import opens over it. An overlapping window
+    // corrupts a capture, so before this existed no such surface could be
+    // photographed at all: finding 7 of
+    // docs/development/architecture/score-model-findings.md is exactly this,
+    // and the score view is the tool it cost the most.
+    //
+    // The summary's *own* two surfaces leave this false, because for them the
+    // window is the subject.
+    bool scoreSummaryHidden = false;
 };
 
 // An object that can be asked to act, as though clicked.

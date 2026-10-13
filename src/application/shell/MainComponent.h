@@ -196,6 +196,11 @@ class MainComponent final
 
     // Show the import window, creating it if it is not open. Re-openable and
     // non-modal: an import is not a question the user has to answer.
+    // Whether the import summary window must stay down for this import. False
+    // for every import a person starts; true only for a capture-harness state
+    // whose subject is what the import produced.
+    [[nodiscard]] bool hidingScoreImportWindow() const;
+
     void showScoreImportWindow();
     void closeScoreImportWindow();
 
@@ -385,6 +390,15 @@ class MainComponent final
     // hasUsableInput there also drives device recovery, so forcing it false
     // would have the service continuously trying to reopen the device.
     bool testControlNoMicrophone = false;
+
+    // Keeps the score import summary window off a capture that is about what
+    // the import *produced* rather than about the import.
+    //
+    // Carried as state rather than passed to startScoreImport because the
+    // import is asynchronous: the summary is shown from finishScoreImport,
+    // which runs after applyTestControlState has returned. Set from every
+    // state, so it cannot leak from the state before.
+    bool testControlHideScoreSummary = false;
 
     // Set the first time a state is applied, and never cleared: this process is
     // being driven by the harness rather than used by a person.

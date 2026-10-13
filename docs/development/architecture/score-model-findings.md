@@ -1,4 +1,4 @@
-# What the score model got wrong
+#What the score model got wrong
 
 `src/platform/score/` was built by `musicxml-import` and tested only by an
 importer. Issue #187 asked for the cheapest possible test of its assumptions: a
@@ -62,15 +62,14 @@ reference pitch, and the only one in the codebase is:
 constexpr double referenceFrequencyHz = 440.0;
 ```
 
-Private to the tuner. The Target Note tool is handed `SharedPitchAnalysis` like
-every other tool and still cannot say whether what it is hearing is the note it
-is showing, because duplicating that constant would put two reference pitches in
-one application and guarantee they disagree the first time one of them becomes a
-setting.
+    Private to the tuner.The Target Note tool is handed `SharedPitchAnalysis` like every
+        other tool and still cannot say whether what it is hearing is the note it is showing,
+    because duplicating that constant would put two reference pitches in
+        one application and guarantee they disagree the first time one of them becomes a setting.
 
-**Should happen:** a reference pitch that belongs to the application rather than
-to a tool, settable once. #27–#29 are built on pitch matching and this blocks
-all of them; it is the single most consequential thing on this list.
+            **Should happen
+    : **a reference pitch that belongs to the application rather than to a tool,
+    settable once.#27– #29 are built on pitch matching and this blocks all of them; it is the single most consequential thing on this list.
 
 ### 3. Walking to a note is a hand-written nested loop — *fixed*
 
@@ -147,23 +146,32 @@ per consumer. What remains open is *selection* — which part, and which voice i
 
 ## Findings outside the model
 
-### 7. A score cannot be got into a tool under the capture harness
+### 7. A score cannot be got into a tool under the capture harness — *fixed*
 
 `src/application/testcontrol` can put the application into a state that imports a
-fixture, and the only route it has is `startScoreImport`, which also opens the
+fixture, and the only route it had was `startScoreImport`, which also opens the
 import summary window. An overlapping top-level window corrupts a capture — the
 harness's own comment records this happening — so **no surface about a score
-consumer other than the summary window can be photographed.**
+consumer other than the summary window could be photographed.**
 
-The Target Note tool's populated state is the first casualty: it has an approved
-state and a surface for its *empty* state only, and the one picture actually
-worth taking cannot be taken. Its paint routine is `Component` code and so sits
-outside `PracticeTakesTests`, which leaves it with no automated verification at
-all.
+The Target Note tool's populated state was the first casualty, and the score
+view was the expensive one: the whole point of that tool is the engraved page,
+and the page had no picture at all.
 
-**Should happen:** a way for a state to import a fixture without leaving the
-summary window up — a flag on the state, or a `close-score-summary` command on
-the test-control channel.
+**Done:** `ApprovedWindowState::scoreSummaryHidden`. A state with it imports its
+fixture and the summary window never comes up — `MainComponent::finishScoreImport`
+applies the result and then returns before showing anything, so the score is
+published and the main window is clear. The flag was chosen over a
+`close-score-summary` command because it is declarative: the state says what is
+on screen, and there is no ordering for a harness to get wrong between the
+import finishing and the window being dismissed.
+
+`score-view-page` is the first state to use it, against a twelve-bar fixture
+written for the purpose (`src/tests/resources/harness-scores/engraved-page.musicxml`).
+It earned its keep on the first capture: see finding 10.
+The Target Note tool is unblocked by the same change and does not have a
+populated state yet — what is missing there is the list of questions a reviewer
+should answer about the picture, not a mechanism.
 
 ### 8. Adding a tool costs more than the two entries it is documented to cost
 
@@ -195,6 +203,35 @@ fourth panels clipped off the right edge. That is #150 exactly, one tool worse.
 Nothing here caused it and nothing here should fix it, but the reference image
 for that state is now a picture of the bug, which is worth knowing before
 someone approves it.
+
+### 10. A signature change in the middle of a system is not drawn
+
+Found by the first capture of `score-view-page`, which is the point of having
+one.
+
+The renderer draws clef, key and time at the **head of a system** and nowhere
+else. `engraved-page.musicxml` changes key at bar 5 and changes the piano's
+lower clef at bar 7. In a window wide enough to hold all twelve bars on one
+system, neither is drawn: the staff goes on showing two sharps through music
+written in three flats, and the bass staff goes on showing an F clef through
+music written for a G clef. Every note after the change reads as the wrong
+pitch.
+
+That is a misreading rather than a missing refinement, and it is worse than the
+undrawn stems: a reader can see that rhythm is missing, and cannot see that a
+key signature is stale.
+
+It also breaks the renderer's own rule. `score-notation-rendering` requires
+that anything this pass cannot draw becomes a diagnostic, and this is drawn
+silently — `layOutScore` returns no diagnostics at all for this fixture.
+
+**Should happen:** draw the change at the barline it happens on, which is what
+every published score does, and widen that measure to make room. It is the same
+`SystemHead` layout applied at a measure rather than at a system, so the
+placement code already exists. Until then, a diagnostic at minimum.
+
+Belongs to `engraving-polish`, which already owns the system head, or to
+whoever gets there first.
 
 ## Where these go
 

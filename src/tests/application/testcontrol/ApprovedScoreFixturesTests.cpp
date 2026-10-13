@@ -9,10 +9,12 @@
 
 #include "application/shell/ui/score/ScoreImportSummary.h"
 #include "application/testcontrol/ApprovedWindowStates.h"
+#include "platform/score/engraving/ScoreLayout.h"
 #include "platform/score/musicxml/MusicXmlImporter.h"
 
-// The scores two approved states name, checked on disk and through the
-// importer.
+// The scores the approved states name, checked on disk and through the
+// importer -- and, for the one that is about a page rather than a report,
+// through the engraving layer as well.
 //
 // Separate from ApprovedWindowStatesTests because this one touches the
 // filesystem: that file asserts on the vocabulary alone and has no JUCE
@@ -74,7 +76,7 @@ TEST_CASE("every state's score fixture is on disk", "[testcontrol][approved][sco
 }
 
 TEST_CASE(
-    "the two score import states are the ones naming a fixture",
+    "the states naming a fixture are the three that want one",
     "[testcontrol][approved][score]")
 {
     std::set<std::string> naming;
@@ -87,21 +89,61 @@ TEST_CASE(
         }
     }
 
-    // Both halves matter. The first is that the two surfaces exist; the second
-    // is that the field stayed empty everywhere else, which is what makes
-    // "every other state behaves exactly as before" a checked claim rather
-    // than an assumption.
-    CHECK(naming == std::set<std::string>{"score-import-clean", "score-import-diagnostics"});
+    // Both halves matter. The first is that the three surfaces exist; the
+    // second is that the field stayed empty everywhere else, which is what
+    // makes "every other state behaves exactly as before" a checked claim
+    // rather than an assumption.
+    CHECK(
+        naming ==
+        std::set<std::string>{"score-import-clean", "score-import-diagnostics", "score-view-page"});
 }
 
-TEST_CASE("a state naming a score opens nothing else", "[testcontrol][approved][score]")
+TEST_CASE("only a state naming a fixture hides the summary", "[testcontrol][approved][score]")
+{
+    // `scoreSummaryHidden` on a state that imports nothing would be a field
+    // with no effect, which is the shape a positional-initialiser mistake
+    // takes: a value landing one slot off reads as a plausible flag on the
+    // wrong state.
+    for (const ApprovedWindowState& state : approvedWindowStates())
+    {
+        if (state.scoreSummaryHidden)
+        {
+            INFO("state " << state.id << " hides the summary but names no fixture");
+            CHECK_FALSE(state.scoreFixture.empty());
+        }
+    }
+
+    const ApprovedWindowState* page = findApprovedWindowState("score-view-page");
+
+    REQUIRE(page != nullptr);
+
+    // The one state whose subject is the page rather than the report, stated
+    // positively so that losing the flag fails here rather than in a capture
+    // nobody can explain.
+    CHECK(page->scoreSummaryHidden);
+    CHECK(page->scoreFixture == "engraved-page.musicxml");
+
+    for (const std::string& id : {"score-import-clean", "score-import-diagnostics"})
+    {
+        const ApprovedWindowState* summary = findApprovedWindowState(id);
+
+        REQUIRE(summary != nullptr);
+        INFO("state " << id);
+        CHECK_FALSE(summary->scoreSummaryHidden);
+    }
+}
+
+TEST_CASE("a state about the summary window opens nothing else", "[testcontrol][approved][score]")
 {
     // The summary is its own window. A tool, the settings window, or the
     // feedback form open behind it would put a second subject in the picture
     // and make the prompt ambiguous.
+    //
+    // A state that hides the summary is exempt by construction: its whole
+    // point is a tool with the score in it, so it must open one.
     for (const ApprovedWindowState& state : approvedWindowStates())
     {
-        if (state.scoreFixture.empty())
+        if (state.scoreFixture.empty() || state.scoreSummaryHidden)
         {
             continue;
         }
@@ -188,6 +230,149 @@ TEST_CASE("the diagnostic fixture carries the regression picture", "[testcontrol
     CHECK(elements.count("") == 0);
 }
 
+TEST_CASE(
+    "the engraved page fixture imports with nothing to report",
+    "[testcontrol][approved][score]")
+{
+    const MusicXmlImportResult result = importFixture("engraved-page.musicxml");
+
+    // A diagnostic would change the picture: the score view shows a count of
+    // them, so a fixture that starts importing with something to say turns the
+    // reference image into one with a notice on it.
+    CHECK(result.status == MusicXmlImportStatus::imported);
+    CHECK(result.diagnostics.empty());
+
+    REQUIRE(result.score != nullptr);
+
+    const Score& score = *result.score;
+
+    REQUIRE(score.parts.size() == 2);
+
+    // A single-staff part above a braced two-staff one, which is the shape the
+    // surface is about.
+    CHECK(score.parts[0].staffCount == 1);
+    CHECK(score.parts[1].staffCount == 2);
+
+    REQUIRE(score.parts[0].measures.size() == 12);
+    REQUIRE(score.parts[1].measures.size() == 12);
+
+    // The two key signatures and the mid-score clef change, pinned at the bars
+    // the fixture's comment names. Each is a thing a reviewer is asked to find
+    // in the picture, so each has to survive a change to the importer.
+    REQUIRE(score.parts[0].measures[0].attributes.key.has_value());
+    CHECK(score.parts[0].measures[0].attributes.key->fifths == 2);
+
+    REQUIRE(score.parts[0].measures[4].attributes.key.has_value());
+    CHECK(score.parts[0].measures[4].attributes.key->fifths == -3);
+
+    REQUIRE(score.parts[0].measures[0].attributes.time.has_value());
+    CHECK(score.parts[0].measures[0].attributes.time->beats == 3);
+    CHECK(score.parts[0].measures[0].attributes.time->beatType == 4);
+
+    const AttributeChanges& barSeven = score.parts[1].measures[6].attributes;
+
+    REQUIRE(barSeven.clefs.size() == 1);
+    CHECK(barSeven.clefs.front().staff == 2);
+    CHECK(barSeven.clefs.front().sign == "G");
+}
+
+TEST_CASE(
+    "the engraved page fixture lays out to a page worth photographing",
+    "[testcontrol][approved][score]")
+{
+    // The other half of the pin. The test above says the *model* still carries
+    // what the surface claims; this one says the renderer still turns it into
+    // the page a reviewer is asked about. Between them, a change that would
+    // have silently emptied the reference image fails a build instead.
+    const MusicXmlImportResult result = importFixture("engraved-page.musicxml");
+
+    REQUIRE(result.score != nullptr);
+
+    using namespace score::engraving;
+
+    // The width the score view hands the layout for a docked panel in a
+    // 1280x800 window, near enough: what matters is that it is narrow enough
+    // to break.
+    LayoutOptions options;
+    options.availableWidth = 110.0;
+
+    const ScoreLayout layout = layOutScore(*result.score, options);
+
+    // Nothing the renderer had to refuse to draw. Same reasoning as the
+    // import: the tool shows a count.
+    CHECK(layout.diagnostics.empty());
+
+    // More than one system, so a later system's head is in the picture.
+    REQUIRE(layout.systems.size() > 1);
+
+    bool sawBrace = false;
+    bool sawChordOfThree = false;
+    bool sawLedgerLine = false;
+    bool sawSharpKey = false;
+    bool sawFlatKey = false;
+
+    for (const SystemLayout& system : layout.systems)
+    {
+        REQUIRE(system.parts.size() == 2);
+
+        // One staff above two, every system.
+        CHECK(system.parts[0].staves.size() == 1);
+        CHECK(system.parts[1].staves.size() == 2);
+
+        sawBrace = sawBrace || system.parts[1].braced;
+
+        for (const PartLayout& part : system.parts)
+        {
+            for (const StaffLayout& staff : part.staves)
+            {
+                // A head on every staff of every system: the clef, and a key
+                // signature in whichever direction is in force there.
+                std::size_t sharps = 0;
+                std::size_t flats = 0;
+                std::size_t noteheadsAtFirstX = 0;
+                double firstNoteheadX = 0.0;
+                bool haveFirst = false;
+
+                for (const PlacedGlyph& glyph : staff.glyphs)
+                {
+                    if (glyph.glyph == Glyph::accidentalSharp)
+                    {
+                        ++sharps;
+                    }
+                    else if (glyph.glyph == Glyph::accidentalFlat)
+                    {
+                        ++flats;
+                    }
+                    else if (glyph.glyph == Glyph::noteheadHalf)
+                    {
+                        if (!haveFirst)
+                        {
+                            firstNoteheadX = glyph.x;
+                            haveFirst = true;
+                        }
+
+                        if (glyph.x == firstNoteheadX)
+                        {
+                            ++noteheadsAtFirstX;
+                        }
+                    }
+                }
+
+                sawSharpKey = sawSharpKey || sharps >= 2;
+                sawFlatKey = sawFlatKey || flats >= 3;
+                sawChordOfThree = sawChordOfThree || noteheadsAtFirstX >= 3;
+                sawLedgerLine = sawLedgerLine || !staff.ledgerLines.empty();
+            }
+        }
+    }
+
+    CHECK(sawBrace);
+    CHECK(sawSharpKey);
+    CHECK(sawFlatKey);
+    CHECK(sawChordOfThree);
+    CHECK(sawLedgerLine);
+}
+
 TEST_CASE("report what the summary window will show for each fixture", "[.harness-score-report]")
 {
     // Hidden and opt-in, following [.corpus-report]:
@@ -199,7 +384,10 @@ TEST_CASE("report what the summary window will show for each fixture", "[.harnes
     // without building the application or taking a screenshot.
     for (const ApprovedWindowState& state : approvedWindowStates())
     {
-        if (state.scoreFixture.empty())
+        // Skipping the state that hides the summary: there is no summary
+        // window in that capture, so a report of its text would describe
+        // nothing in the picture.
+        if (state.scoreFixture.empty() || state.scoreSummaryHidden)
         {
             continue;
         }

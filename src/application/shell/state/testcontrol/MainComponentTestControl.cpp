@@ -257,10 +257,16 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
         }
     }
 
+    // Set from every state rather than only the ones naming a fixture, so it
+    // cannot survive into the next state -- the same accumulation rule the
+    // tool and window resets at the top of this function follow.
+    testControlHideScoreSummary = state.scoreSummaryHidden;
+
     // After the geometry, deliberately. Resizing the main window raises it,
     // and a summary window opened before that is then behind it -- which the
     // capture records as a black rectangle over the report, differently in
-    // every run.
+    // every run. A state with `scoreSummaryHidden` has no such window, and the
+    // ordering is harmless there.
     if (!state.scoreFixture.empty())
     {
         const juce::File fixture = scoreFixtureFile(state.scoreFixture);

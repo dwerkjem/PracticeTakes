@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/ usr / bin / env python3
 """What the testing suite verifies, as data.
 
 A surface is one approved application state plus the questions to ask about it.
@@ -27,45 +27,45 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-# The three fixed axes, asked for every surface in this order.
+#The three fixed axes, asked for every surface in this order.
 FIXED_AXES: tuple[Question, ...]  # forward reference, defined below
 
 QUICK = "quick"
 FULL = "full"
 
-# Titles the application gives its other top-level windows, from
-# SettingsWindow.h and FeedbackWindow.h. A capture of one of those surfaces has
-# to name the window or it photographs the main one instead.
+#Titles the application gives its other top - level windows, from
+#SettingsWindow.h and FeedbackWindow.h.A capture of one of those surfaces has
+#to name the window or it photographs the main one instead.
 SETTINGS_WINDOW = "Settings"
 FEEDBACK_WINDOW = "Send feedback"
 SCORE_IMPORT_WINDOW = "Score import"
 
-# The palettes a run captures each surface in. A capture dimension rather than a
-# property of a surface, for the same reason resolution is: every surface exists
-# in both palettes, and folding the theme into the surface list would double it.
+#The palettes a run captures each surface in.A capture dimension rather than a
+#property of a surface, for the same reason resolution is : every surface exists
+#in both palettes, and folding the theme into the surface list would double it.
 DARK = "dark"
 LIGHT = "light"
 THEMES = (DARK, LIGHT)
 DEFAULT_THEMES = THEMES
 
-# The resolutions a run captures each surface at. Configuration rather than a
-# fixed list: `--resolutions` overrides it, and the set a run covered is
-# recorded with the run so two runs covering different sets are comparable on
-# purpose rather than by accident.
+#The resolutions a run captures each surface at.Configuration rather than a
+#fixed list : `--resolutions` overrides it, and the set a run covered is
+#recorded with the run so two runs covering different sets are comparable on
+#purpose rather than by accident.
 DEFAULT_GEOMETRY = "default"
 
-# "tiny" is 640x480 -- smaller than a window manager would let a user drag it,
-# and deliberately so. Most of what a run finds is a layout out of room, and
-# this is the size at which a docked tool has to choose what to drop.
-# Every geometry a run may be asked for. "slim" and "squat" put a *pane* below
-# the size its tool draws at, which the others cannot: they shrink the window,
-# and a single docked tool in a small window still has a roomy pane.
+#"tiny" is 640x480 -- smaller than a window manager would let a user drag it,
+#and deliberately so.Most of what a run finds is a layout out of room, and
+#this is the size at which a docked tool has to choose what to drop.
+#Every geometry a run may be asked for."slim" and "squat" put a* pane* below
+#the size its tool draws at, which the others cannot : they shrink the window,
+#and a single docked tool in a small window still has a roomy pane.
 SWEEP_GEOMETRIES = (DEFAULT_GEOMETRY, "constrained", "tiny", "maximised", "slim", "squat")
 
-# What a run covers when nobody says otherwise. Deliberately not all of them --
-# the two compact shapes are asked for when the compact displays are what is
-# being looked at, and would otherwise add two more images per surface to every
-# full sweep.
+#What a run covers when nobody says otherwise.Deliberately not all of them--
+#the two compact shapes are asked for when the compact displays are what is
+#being looked at, and would otherwise add two more images per surface to every
+#full sweep.
 DEFAULT_RESOLUTIONS = (DEFAULT_GEOMETRY, "constrained", "tiny", "maximised")
 
 
@@ -74,8 +74,8 @@ class Question:
     id: str
     prompt: str
 
-    # True when only a live application can answer it. Asked by the attended
-    # pass; never inferred from an image.
+#True when only a live application can answer it.Asked by the attended
+#pass; never inferred from an image.
     behavioural: bool = False
 
 
@@ -90,75 +90,74 @@ FIXED_AXES = (
 class Surface:
     """One thing a tester is asked to look at."""
 
-    # The approved state the application is put into. Must exist in
-    # src/application/testcontrol/ApprovedWindowStates.cpp; the harness checks
-    # this against `list-states` before a run rather than discovering it
-    # halfway through.
+#The approved state the application is put into.Must exist in
+#src / application / testcontrol / ApprovedWindowStates.cpp; the harness checks
+#this against `list - states` before a run rather than discovering it
+#halfway through.
     state: str
 
     title: str
 
-    # Which run modes include this surface. Quick mode is a strict subset of
-    # full, which `validate` enforces.
+#Which run modes include this surface.Quick mode is a strict subset of
+#full, which `validate` enforces.
     modes: frozenset[str]
 
-    # Questions specific to this surface, asked after the three fixed axes.
+#Questions specific to this surface, asked after the three fixed axes.
     extras: tuple[Question, ...] = ()
 
-    # Restart the application before this surface. Needed for anything that
-    # verifies state surviving a relaunch, which cannot be checked inside one
-    # process.
+#Restart the application before this surface.Needed for anything that
+#verifies state surviving a relaunch, which cannot be checked inside one
+#process.
     restart_before: bool = False
 
-    # Something the tester must do by hand before answering, because it is an
-    # interaction rather than a state. The harness prompts and waits; it does
-    # not simulate it.
+#Something the tester must do by hand before answering, because it is an
+#interaction rather than a state.The harness prompts and waits; it does
+#not simulate it.
     instruction: str = ""
 
-    # This surface *is about* its window size, so the geometry sweep must leave
-    # it alone. Sweeping it would resize the window to each geometry in turn and
-    # so destroy the very thing under test -- which is exactly what happened:
-    # narrow-window was reported "not narrow" and fullscreen "not fullscreen",
-    # because the sweep set them both back to the default size.
+#This surface* is about* its window size, so the geometry sweep must leave
+#it alone.Sweeping it would resize the window to each geometry in turn and
+#so destroy the very thing under test-- which is exactly what happened:
+#narrow - window was reported "not narrow" and fullscreen "not fullscreen",
+#because the sweep set them both back to the default size.
     fixed_geometry: bool = False
 
-    # What this surface is, for filtering a review by it. A grid of a hundred
-    # captures is only reviewable if you can ask it for "every settings window
-    # in the light palette" or "everything with three tools open" and approve
-    # those together, so these are data rather than something inferred from the
-    # title by eye.
-    #
-    # `tools` names what the state opens, `presentation` how they are shown, and
-    # `area` what part of the application the surface belongs to.
+#What this surface is, for filtering a review by it.A grid of a hundred
+#captures is only reviewable if you can ask it for "every settings window
+#in the light palette " or " everything with three tools open " and approve
+#those together, so these are data rather than something inferred from the
+#title by eye.
+#
+# `tools` names what the state opens, `presentation` how they are shown, and
+# `area` what part of the application the surface belongs to.
     tools: tuple[str, ...] = ()
     presentation: str = ""
     area: str = "workspace"
 
-    # Seconds to let the application run before capturing it.
-    #
-    # A tool drawing a history -- the tuner's graph, the spectrogram's
-    # waterfall -- has only as much to draw as the time it has been open, so a
-    # capture taken the instant a state settles shows a sliver. Surfaces fed a
-    # tone wait, so the picture is of a tool that has been listening rather than
-    # one that just started.
+#Seconds to let the application run before capturing it.
+#
+#A tool drawing a history-- the tuner 's graph, the spectrogram' s
+#waterfall-- has only as much to draw as the time it has been open, so a
+#capture taken the instant a state settles shows a sliver.Surfaces fed a
+#tone wait, so the picture is of a tool that has been listening rather than
+#one that just started.
     warmup_seconds: float = 0.0
 
-    # The title of the top-level window this surface is about, when that is not
-    # the main window. Settings, feedback, and a floating tool are each their
-    # own X window, and a capture that does not name one photographs whichever
-    # window the window manager lists first -- which is the main one. A real run
-    # caught this: the settings surface came back byte-identical to the empty
-    # shell, at both resolutions.
-    #
-    # These surfaces are also captured once rather than at every resolution: the
-    # geometry command resizes the *main* window, so sweeping would produce the
-    # same image under three different labels.
+#The title of the top - level window this surface is about, when that is not
+#the main window.Settings, feedback, and a floating tool are each their
+#own X window, and a capture that does not name one photographs whichever
+#window the window manager lists first-- which is the main one.A real run
+#caught this : the settings surface came back byte - identical to the empty
+#shell, at both resolutions.
+#
+#These surfaces are also captured once rather than at every resolution : the
+#geometry command resizes the* main* window, so sweeping would produce the
+#same image under three different labels.
     window_title: str = ""
 
-
-# The surface set. Ordered as a run presents them: cheapest and most
-# fundamental first, so a broken build fails early rather than after a tester
-# has answered twenty questions.
+#The surface set.Ordered as a run presents them : cheapest and most
+#fundamental first, so a broken build fails early rather than after a tester
+#has answered twenty questions.
 SURFACES: tuple[Surface, ...] = (
     Surface(
         state="empty",
@@ -187,11 +186,11 @@ SURFACES: tuple[Surface, ...] = (
         modes=frozenset({QUICK, FULL}),
         window_title=SETTINGS_WINDOW,
     ),
-    # The tuner is not one surface. It has three ways of drawing the same
-    # analysis, an expandable settings panel, and it looks different depending
-    # on what it hears -- and a screenshot of one of those says nothing about
-    # the others. Each of these feeds a synthetic tone, so the capture shows the
-    # tool working rather than the tool waiting.
+#The tuner is not one surface.It has three ways of drawing the same
+#analysis, an expandable settings panel, and it looks different depending
+#on what it hears--and a screenshot of one of those says nothing about
+#the others.Each of these feeds a synthetic tone, so the capture shows the
+#tool working rather than the tool waiting.
     Surface(
         state="tuner-in-tune",
         warmup_seconds=2.5,
@@ -472,12 +471,12 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
-    # The only surface that looks at the MIDI capture path at all. What it can
-    # show without hardware is the empty case -- no keyboard connected -- which
-    # is worth a picture in its own right, because it is what a user sees before
-    # they switch their piano on and it has to tell them what to do. The
-    # connected case needs a keyboard and is task 7.5 in the change, not a
-    # capture.
+#The only surface that looks at the MIDI capture path at all.What it can
+#show without hardware is the empty case --no keyboard connected-- which
+#is worth a picture in its own right, because it is what a user sees before
+#they switch their piano on and it has to tell them what to do.The
+#connected case needs a keyboard and is task 7.5 in the change, not a
+#capture.
     Surface(
         state="settings-midi",
         title="Settings: MIDI keyboard selection",
@@ -568,19 +567,19 @@ SURFACES: tuple[Surface, ...] = (
         modes=frozenset({FULL}),
         window_title=FEEDBACK_WINDOW,
     ),
-    # The score import summary. The only surfaces that depend on a *document*:
-    # the window has nothing to show until a file has been read, so the state
-    # imports a committed fixture on the way in, through the same job the File
-    # menu uses.
-    #
-    # `warmup_seconds` here waits for an import rather than for a tool's
-    # drawing history, which is what every other surface using it waits for.
-    # The import is deliberately asynchronous -- the result crosses back to the
-    # message thread -- so a capture taken the instant the state settles is a
-    # picture of "Reading ...", not of the report. The fixtures are small
-    # enough to read in milliseconds; the seconds here are slack for a loaded
-    # machine, and an in-progress capture is obviously wrong in the review grid
-    # rather than subtly wrong.
+#The score import summary.The only surfaces that depend on a* document*:
+#the window has nothing to show until a file has been read, so the state
+#imports a committed fixture on the way in, through the same job the File
+#menu uses.
+#
+# `warmup_seconds` here waits for an import rather than for a tool's
+#drawing history, which is what every other surface using it waits for.
+#The import is deliberately asynchronous-- the result crosses back to the
+#message thread-- so a capture taken the instant the state settles is a
+#picture of "Reading ...", not of the report.The fixtures are small
+#enough to read in milliseconds; the seconds here are slack for a loaded
+#machine, and an in - progress capture is obviously wrong in the review grid
+#rather than subtly wrong.
     Surface(
         state="score-import-diagnostics",
         title="The score import summary, with diagnostics",
@@ -603,11 +602,11 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
-    # Kept alongside the diagnostic surface, which covers strictly more of the
-    # renderer, because "Nothing was dropped or repaired." is a branch of its
-    # own: an empty diagnostics list and a failure to report diagnostics look
-    # identical on screen, and that sentence is the only thing distinguishing
-    # them.
+#Kept alongside the diagnostic surface, which covers strictly more of the
+#renderer, because "Nothing was dropped or repaired." is a branch of its
+#own : an empty diagnostics list and a failure to report diagnostics look
+#identical on screen, and that sentence is the only thing distinguishing
+#them.
     Surface(
         state="score-import-clean",
         title="The score import summary for a clean import",
@@ -627,12 +626,12 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
-    # The target note tool's paint routine is Component code: selectTargetNote
-    # is unit tested, what it looks like is not. Only its empty state is here,
-    # and not because the populated one matters less -- there is no approved
-    # state that opens a score *into* a tool, because importing one also opens
-    # the summary window over whatever the surface is about. See
-    # docs/development/architecture/score-model-findings.md.
+#The target note tool's paint routine is Component code: selectTargetNote
+#is unit tested, what it looks like is not .Only its empty state is here,
+# and not because the populated one matters less-- it could have one now
+#that a state can import a fixture without the summary window over it, and
+#nobody has written the questions a reviewer should answer about that
+#picture yet.See docs / development / architecture / score - model - findings.md.
     Surface(
         state="target-note-empty",
         title="The target note tool with no score open",
@@ -648,12 +647,8 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
-    # The score view. Same limitation as the target note tool, and worse here:
-    # the whole point of this tool is the engraved page, and the harness cannot
-    # open a score into it (finding 7). So what is photographed is an empty
-    # staff area, which proves the tool opens, themes and docks -- and proves
-    # nothing at all about engraving. The layout underneath is unit tested
-    # instead, which is why that split was built.
+#The score view, empty.Proves the tool opens, themes and docks; the
+#surface below it is the one about engraving.
     Surface(
         state="score-view-empty",
         title="The score view with no score open",
@@ -676,6 +671,81 @@ SURFACES: tuple[Surface, ...] = (
         presentation="floating",
         area="score",
         modes=frozenset({FULL}),
+    ),
+#The engraved page, and the only surface in the suite that is about
+#notation rather than about a panel.
+#
+#It did not exist until a state could import a fixture without the
+#summary window landing over the capture, which is finding 7. Before
+#that, the whole point of this tool-- the page-- had no picture at all
+#and the layout underneath was covered only by unit tests.
+#
+#The questions are the fixture's own list, one per thing it was written to
+#put on the page.They are deliberately specific : "does the score look
+#right " is not a question a reviewer can answer the same way twice, and a
+#reference image of a page is worth little if nobody wrote down what to
+#look for in it.
+#
+# `warmup_seconds` matches the import surfaces : the import is asynchronous
+#and the page cannot be drawn until it finishes.
+    Surface(
+        state="score-view-page",
+        title="The score view showing an imported score",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "key-signature",
+                "Does each staff show two sharps at its left edge, after the clef and before "
+                "the 3/4?",
+            ),
+            Question(
+                "key-change-not-drawn",
+                "Known gap: the score changes to three flats at bar 5 and the lower piano "
+                "staff to treble clef at bar 7. Neither is drawn mid-system. Is the only "
+                "place a new signature appears the head of a system that starts at or after "
+                "it?",
+            ),
+            Question(
+                "grand-staff",
+                "Is the lower part's pair of staves joined by a brace, with the single-staff "
+                "part above it unbraced?",
+            ),
+            Question(
+                "chords-stack",
+                "Are the piano chords stacked vertically on one spot, lowest note at the "
+                "bottom, rather than spread sideways?",
+            ),
+            Question(
+                "accidentals-only-where-needed",
+                "Are accidentals printed only where the key signature does not already "
+                "supply them, rather than on every altered note?",
+            ),
+            Question(
+                "ledger-lines",
+                "Do notes above the top part's staff and below the bass staff get short "
+                "ledger lines through them?",
+            ),
+            Question(
+                "clef-change",
+                "Where the piano's lower staff does show a treble clef, has its upper staff "
+                "kept its own rather than changing with it?",
+            ),
+            Question(
+                "onsets-align",
+                "Do notes that sound together sit at the same horizontal position on every "
+                "staff?",
+            ),
+            Question(
+                "rhythm-not-yet-drawn",
+                "Known gap: notes have no stems, flags or beams, so an eighth note looks "
+                "like a quarter. Together with the undrawn mid-system signature changes, is "
+                "that everything missing from this page?",
+            ),
+        ),
     ),
     Surface(
         state="tuner-docked",
@@ -764,17 +834,16 @@ def resolutions_for_surface(surface: Surface, resolutions: tuple[str, ...]) -> t
 
     return resolutions
 
-
-# What one capture costs, near enough to weight a progress bar by.
+#What one capture costs, near enough to weight a progress bar by.
 #
-# Counting surfaces makes the bar lie: a surface carrying a tone waits its
-# warmup and then settles, and a plain one is photographed almost immediately.
-# A run of the quick plan is half over by count long before it is half over by
-# time, which is the opposite of what a bar is for.
+#Counting surfaces makes the bar lie : a surface carrying a tone waits its
+#warmup and then settles, and a plain one is photographed almost immediately.
+#A run of the quick plan is half over by count long before it is half over by
+#time, which is the opposite of what a bar is for.
 #
-# These are relative, not a promise about seconds. Whatever they get wrong about
-# scale, the caller's own measured rate corrects; what they have to get right is
-# which surfaces are the expensive ones.
+#These are relative, not a promise about seconds.Whatever they get wrong about
+#scale, the caller's own measured rate corrects; what they have to get right is
+#which surfaces are the expensive ones.
 CAPTURE_COST = 1.0
 STATE_CHANGE_COST = 0.5
 RESTART_COST = 3.0
@@ -785,8 +854,8 @@ def capture_cost(surface: "Surface", *, first_of_group: bool = False) -> float:
     cost = CAPTURE_COST
 
     if first_of_group:
-        # Opening the state and filling the tool's history, both of which the
-        # rest of this surface's resolutions inherit rather than repeat.
+#Opening the state and filling the tool's history, both of which the
+#rest of this surface's resolutions inherit rather than repeat.
         cost += STATE_CHANGE_COST + surface.warmup_seconds
 
         if surface.restart_before:
@@ -871,8 +940,8 @@ def validate() -> list[str]:
     quick = {surface.title for surface in surfaces_for_mode(QUICK)}
     full = {surface.title for surface in surfaces_for_mode(FULL)}
 
-    # A quick run must be a strict subset of a full one, or "quick" stops
-    # meaning "less than full" and the two become incomparable.
+#A quick run must be a strict subset of a full one, or "quick" stops
+#meaning "less than full" and the two become incomparable.
     for title in sorted(quick - full):
         problems.append(f"'{title}' is in quick mode but not in full mode.")
 

@@ -82,18 +82,38 @@ const std::vector<ApprovedWindowState>& states()
          false, "", false,
          "The target note tool with no score open, which is what a new session shows"},
         // The score view, same reasoning: without a file open this is what a
-        // session sees, and it is the state the harness can reach today.
-        // Photographing it with a score in it is blocked by finding 7 of
-        // docs/development/architecture/score-model-findings.md -- importing a
-        // fixture leaves the import summary window over the capture -- so an
-        // empty staff area is the honest extent of this coverage until that is
-        // fixed, and it is not a picture of the grand staff.
+        // session sees.
         {"score-view-empty", Tools{"score-view"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "The score view with no score open, which is what a new session shows"},
         {"score-view-floating", Tools{"score-view"}, ToolPresentation::floating,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "The score view in its own floating window"},
+        // And the one that is actually about engraving.
+        //
+        // This is the first state to open a document *into a tool*. It was
+        // impossible until `scoreSummaryHidden` existed: the only route to a
+        // score in the running application is `startScoreImport`, which also
+        // opens the summary window over whatever the surface is about, and an
+        // overlapping top-level window corrupts a capture. Finding 7 of
+        // docs/development/architecture/score-model-findings.md is that
+        // problem, and this state is what it cost.
+        //
+        // The fixture is twelve bars rather than four. An engraved page is
+        // only verifiable against a score with something on it: a key
+        // signature, a key change, chords, ledger lines, a clef change on one
+        // staff of a braced pair, and enough bars to break into more than one
+        // system so a later system's head can be checked for repeating the
+        // clef and key. engraved-page.musicxml's own comment lists what a
+        // reviewer should be able to find, and the surface's questions are
+        // drawn from it.
+        //
+        // The trailing fields are positional: description, tone, tool view,
+        // the fixture, then whether the summary stays down.
+        {"score-view-page", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false, "The score view showing an imported score: the engraved page itself",
+         0.0, "", "engraved-page.musicxml", true},
 
         // --- Several tools at once. Nothing else reaches the split tree with
         // more than one leaf, or the tab strip at all.
@@ -226,12 +246,15 @@ const std::vector<ApprovedWindowState>& states()
         // until a file has been read, so these are the only states that ask
         // the shell to open a document on the way in.
         //
-        // The target note tool would want a third, and cannot have one: the
-        // only way in here to get a score into the running application is
-        // `startScoreImport`, which also opens the summary window over
-        // whatever the surface is about. The comment below on geometry records
-        // what an overlapping window does to a capture. See
-        // docs/development/architecture/score-model-findings.md.
+        // These two leave `scoreSummaryHidden` false, because for them the
+        // summary window *is* the subject. `score-view-page` above is the
+        // other case: it names a fixture and wants the window down.
+        //
+        // The target note tool would want one of these too, and could have one
+        // now -- its populated state was the first thing finding 7 cost, and
+        // the mechanism that unblocked `score-view-page` unblocks it. It is
+        // not here yet because nobody has written the questions a reviewer
+        // should answer about the picture.
         //
         // The trailing fields are positional: description, tone, tool view,
         // then the fixture. The two empty strings in the middle are the tone

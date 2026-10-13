@@ -71,31 +71,37 @@ JUCE-free logic with no font and no window.
       equal absolute onsets align by construction.
 - [x] 4.4 Lay out the brace spanning the staves of a part with
       `staffCount > 1`, and the per-part vertical spacing around it.
-- [x] 4.5 Draw key and time signature on every staff of a part; clef per staff.
-      `SystemHead.h` lays the head out as clef, then key, then time, each at its
-      own width; the system head width is computed per measure rather than the
-      fixed 9 staff spaces it used to be, because seven accidentals plus a clef
-      plus a time signature do not fit in 9. Key signature accidental positions
-      are convention rather than arithmetic and are asserted directly, against
-      all three pitched clefs.
-- [x] 4.6 Tests covering #200's acceptance criteria as assertions on the layout:
-      a two-staff part braced, contents on the staff the file assigned, a clef
-      change on one staff leaving the other's placement untouched, and equal
-      onsets at equal x across both staves.
-- [x] 4.7 Confirm `src/tests/resources/` holds a two-staff fixture with a
-      mid-score clef change; author a minimal one if the corpus has none
-      (`clean-import.musicxml` covers the basic two-staff case already).
+- [x] 4.5 Draw key and time signature on every staff of a part;
+clef per staff.
+      `SystemHead.h` lays the head out as clef, then key, then time, each at its own width;
+the system head width is computed per measure rather than the fixed 9 staff spaces it used to be,
+    because seven accidentals plus a clef plus a time signature do not fit in 9. Key signature
+            accidental positions are convention rather than arithmetic and
+        are asserted directly,
+    against all three pitched clefs.-
+        [x] 4.6 Tests covering #200's acceptance criteria as assertions on the layout
+    : a two -
+      staff part braced,
+    contents on the staff the file assigned,
+    a clef change on one staff leaving the other's placement untouched, and equal onsets at equal x
+            across both staves.-
+        [x] 4.7 Confirm `src / tests / resources /` holds a two - staff fixture with a mid -
+        score clef change;
+author a minimal one if the corpus has none(`clean - import.musicxml` covers the basic two -
+                                            staff case already)
+        .
 
-## 5. Render diagnostics
+    ##5. Render diagnostics
 
-- [x] 5.1 Produce a `score::Diagnostic` list alongside the layout, in the shape
-      the importer already uses.
-- [x] 5.2 Detect a voice whose events change staff within a measure and record
-      "beam crosses staves, drawn unbeamed" naming the measure's printed number.
-- [x] 5.3 Record any other construct this pass does not draw, rather than
-      omitting it silently.
-- [x] 5.4 Tests: a cross-staff fixture yields the diagnostic *and* places both
-      notes on the staves they name; a clean score yields none.
+    - [x] 5.1 Produce a `score::Diagnostic` list alongside the layout,
+    in the shape the importer already uses.-
+        [x] 5.2 Detect a voice whose events change staff within a measure and record
+        "beam crosses staves, drawn unbeamed" naming the measure's printed number. -
+        [x] 5.3 Record any other construct this pass does not draw,
+    rather than omitting it silently.- [x] 5.4 Tests : a cross -
+                                                       staff fixture yields the diagnostic * and
+        *places both notes on the staves they name;
+a clean score yields none.
 
 ## 6. The score view tool
 
@@ -130,8 +136,13 @@ verifiable` documents, three of which fail a test if skipped.
       states and the questions a reviewer should answer about the picture.
 - [x] 7.5 Check whether finding 7 of the findings document still blocks
       photographing a populated score surface (the import summary window
-      overlapping the capture); if it does, say so rather than approving a
+      overlapping the capture);
+if it does, say so rather than approving a
       picture of the empty state as coverage.
+      It did, and rather than approve the empty state it is now fixed:
+      `ApprovedWindowState::scoreSummaryHidden` imports a fixture without
+      raising the summary window, and `score-view-page` photographs the
+      engraved page against a twelve-bar fixture written for it.
 
 ## 8. Quality gates
 
@@ -147,4 +158,8 @@ verifiable` documents, three of which fail a test if skipped.
       layering section of `docs/development/agents/AGENT_GUIDE.md` with
       `src/platform/score/engraving/` and `src/features/score/notation/`.
 - [ ] 8.6 A golden-image run over the new surfaces, with the result recorded
-      through the testing suite.
+      through the testing suite. Three surfaces now, not two:
+      `score-view-empty`, `score-view-floating`, and `score-view-page` — the
+      last being the one that is actually about engraving. Needs a display and
+      a human verdict, so it is the one task here that cannot be finished from
+      a terminal.

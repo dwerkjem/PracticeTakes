@@ -97,17 +97,36 @@ void MainComponent::startScoreImport(const juce::File& file)
         // refusing the second command silently would look like the click did
         // nothing. The window is already open showing that file's progress, so
         // bringing it forward is the whole answer.
-        showScoreImportWindow();
-        scoreImportWindow->showProgress(scoreImportJob->fileBeingRead().getFileName());
-        scoreImportWindow->toFront(true);
+        if (!hidingScoreImportWindow())
+        {
+            showScoreImportWindow();
+            scoreImportWindow->showProgress(scoreImportJob->fileBeingRead().getFileName());
+            scoreImportWindow->toFront(true);
+        }
 
         return;
     }
 
     // Shown before the import finishes, so a large file does not look like a
     // command that did nothing.
-    showScoreImportWindow();
-    scoreImportWindow->showProgress(file.getFileName());
+    if (!hidingScoreImportWindow())
+    {
+        showScoreImportWindow();
+        scoreImportWindow->showProgress(file.getFileName());
+    }
+}
+
+bool MainComponent::hidingScoreImportWindow() const
+{
+#if PRACTICE_TAKES_ENABLE_TEST_CONTROL
+    return testControlHideScoreSummary;
+#else
+    // Nothing else may suppress it. A user who opened a file is owed the
+    // report on what came back, including a failure, and the only reason this
+    // function exists is a capture whose subject is the page rather than the
+    // report.
+    return false;
+#endif
 }
 
 void MainComponent::finishScoreImport(const score::musicxml::MusicXmlImportResult& result)
@@ -116,6 +135,15 @@ void MainComponent::finishScoreImport(const score::musicxml::MusicXmlImportResul
     // score already open exactly as it was. ScoreImportState owns that rule and
     // is tested on it.
     const ScoreImportSummary& summary = scoreImport.apply(result);
+
+    // Applied first, suppressed second: a harness state that wants the page
+    // without the report still wants the score. Skipping the apply would leave
+    // the capture showing the empty state, which is the bug this is here to
+    // avoid rather than a smaller version of it.
+    if (hidingScoreImportWindow())
+    {
+        return;
+    }
 
     // The window may have been closed while the import ran -- the result is
     // still worth showing, and reopening it is what the user asked for by

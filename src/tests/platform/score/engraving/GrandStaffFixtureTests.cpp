@@ -17,11 +17,11 @@
 // G clef on staff 1 and an F clef on staff 2, and check what comes out the far
 // end.
 //
-// It is also the only automated thing that looks at the grand staff end to end.
-// The tool's paint routine is outside this target by design, and the capture
-// harness cannot photograph a score *inside* a tool (finding 7 of
-// docs/development/architecture/score-model-findings.md), so without this the
-// feature's headline claim would rest on a hand-built fixture alone.
+// It is also the only *automated* thing that looks at the grand staff end to
+// end. The tool's paint routine is outside this target by design, and what the
+// page looks like is now verified by a human against the `score-view-page`
+// capture -- which is a reference image and a review question, not a test that
+// fails on its own. So this stays the thing that fails a build.
 using namespace score;
 using namespace score::engraving;
 using namespace score::musicxml;
