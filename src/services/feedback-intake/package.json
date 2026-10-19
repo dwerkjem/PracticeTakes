@@ -19,7 +19,7 @@
     "@vitest/coverage-v8": "5.0.4",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
-    "vitest": "5.0.4",
+    "vitest": "5.0.5",
     "wrangler": "4.149.0"
   },
   "dependencies": {
