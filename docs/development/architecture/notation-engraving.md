@@ -12,7 +12,8 @@ all of it is this layer's job.
 | | |
 |---|---|
 | `src/features/score/engraving/` | **JUCE-free.** Decides *where* every glyph goes. Unit tested without a display. |
-| `src/features/score/ScoreGlyphPainter.{h,cpp}` | Decides what each glyph *looks like*. `juce::Path` primitives. |
+| `src/features/score/ScoreGlyphPainter.{h,cpp}` | Decides what each glyph *looks like*: Bravura glyphs, and lines at Bravura's weights. |
+| `src/features/score/MusicFont.{h,cpp}`, `SmuflGlyphs.{h,cpp}` | The embedded music font, as outlines in staff spaces, and which SMuFL glyph draws what. |
 | `src/features/score/ScoreViewComponent.{h,cpp}` | The tool: polls the current score, scrolls, zooms. |
 
 The split is the same one `WorkspaceLayoutState` and `TargetNoteSelection`
@@ -226,7 +227,34 @@ shows. That list is the reason a first pass is an acceptable thing to ship:
 | **A tie across a system break** | Both ends are placed before either is drawn; when they land on different systems the tie is reported. |
 | **Cancelling naturals at a key change** | A key change to no accidentals draws an empty signature. |
 | **Slurs, articulations, ornaments, hairpins, fingering** | Mostly not in the model, by invariant 10 or by the supported subset. |
-| **A SMuFL music font** | Bravura would look far better and brings a licence, a binary asset and a packaging question. The glyphs are primitives, behind one file, and the layout already works in the unit a music font is designed in. |
+
+## The music font
+
+Notation is drawn in **Bravura**, the SMuFL reference font, embedded as
+described in [`tools/packaging/fonts/README.md`](../../../tools/packaging/fonts/README.md).
+
+SMuFL fixes one em at four staff spaces. `MusicFont` converts every outline it
+uses into staff spaces once, at load, so the painter never sees a font size and
+zoom is still one number. Each glyph keeps SMuFL's origin, which is the layout's
+own anchor: a notehead's on its staff position at its left edge, a clef's on the
+line it names, a rest's on the line it is placed against. Placing a glyph is one
+translation.
+
+What SMuFL draws as **lines rather than glyphs** stays that way: staff lines,
+ledger lines, stems, beams and barlines. Each is as long as the layout says,
+which no fixed glyph can be, and each is drawn at Bravura's published thickness.
+
+Two layout numbers moved to match the font: `noteheadWidth` is Bravura's 1.18,
+and `stemThickness` is a layout option, so a stem's centre line is set in by
+half its thickness and its outer edge sits flush with the notehead. Beam ends
+reach the outer edges of their stems in the layout rather than in the painter.
+`MusicFontTests` checks the notehead width against the font.
+
+Some placement rules are the painter's, not the font's. An accidental is
+right-aligned before its notehead, and a ledger line is shortened on that side,
+as Gould prescribes, so the sign does not sit on the line's end. A rest is
+centred on the layout's x. A time signature's two numbers are centred on each
+other.
 
 ## Verifying it
 

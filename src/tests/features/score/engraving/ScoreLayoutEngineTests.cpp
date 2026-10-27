@@ -998,9 +998,13 @@ TEST_CASE(
     CHECK(beam.level == 1);
     CHECK_FALSE(beam.partial);
 
-    // The bar reaches from the first stem to the last.
-    CHECK(beam.startX == Catch::Approx(system.stems.at(0).x));
-    CHECK(beam.endX == Catch::Approx(system.stems.at(1).x));
+    // The bar reaches from the first stem to the last, out to their outer
+    // edges so it covers them rather than stopping at their centre lines.
+    const StemGlyph& first = system.stems.at(0);
+    const StemGlyph& last = system.stems.at(1);
+
+    CHECK(beam.startX == Catch::Approx(first.x - (first.thickness * 0.5)));
+    CHECK(beam.endX == Catch::Approx(last.x + (last.thickness * 0.5)));
 }
 
 TEST_CASE("an eighth alone in its beat keeps its flag", "[score][engraving][layout][beams]")
@@ -1138,9 +1142,11 @@ TEST_CASE(
     CHECK(system.beams.at(1).level == 2);
     CHECK(system.beams.at(1).partial);
 
-    // The stub ends on the sixteenth's own stem and reaches back towards the
-    // note before it.
-    CHECK(system.beams.at(1).endX == Catch::Approx(system.stems.at(1).x));
+    // The stub ends at the sixteenth's own stem's outer edge and reaches back
+    // towards the note before it.
+    CHECK(
+        system.beams.at(1).endX ==
+        Catch::Approx(system.stems.at(1).x + (system.stems.at(1).thickness * 0.5)));
     CHECK(system.beams.at(1).startX < system.stems.at(1).x);
     CHECK(system.beams.at(1).startX > system.stems.at(0).x);
 }
@@ -1261,4 +1267,46 @@ TEST_CASE(
     REQUIRE(heads.size() == 2);
 
     CHECK(heads.at(1).x - heads.at(0).x >= options.noteheadWidth + options.flagWidth);
+}
+
+TEST_CASE("a stem's outer edge is flush with its notehead's", "[score][engraving][layout]")
+{
+    // Where an engraver puts a stem, and what makes it read as attached to the
+    // note rather than drawn beside it. The stem's x is its centre line, so it
+    // is set in from the notehead's edge by half its own thickness.
+    const LayoutOptions options = wideOptions();
+
+    const ScoreLayout layout = layOutScore(
+        scoreOf({measureOf(
+            0,
+            {voiceOf(
+                1, {noteAt(0, ticksPerQuarterNote * 2, pitch(score::Step::g, 0, 4)),
+                    noteAt(
+                        ticksPerQuarterNote * 2, ticksPerQuarterNote * 2,
+                        pitch(score::Step::g, 0, 5))})},
+            true)}),
+        options);
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.stems.size() == 2);
+    REQUIRE(system.noteheads.size() == 2);
+
+    const StemGlyph& up = system.stems.at(0);
+    const StemGlyph& down = system.stems.at(1);
+
+    REQUIRE(up.up);
+    REQUIRE_FALSE(down.up);
+
+    CHECK(up.thickness == Catch::Approx(options.stemThickness));
+
+    // Right edge on the notehead's right edge for an up stem...
+    CHECK(
+        up.x + (up.thickness * 0.5) ==
+        Catch::Approx(system.noteheads.at(0).x + options.noteheadWidth));
+
+    // ...and left edge on its left edge for a down one.
+    CHECK(down.x - (down.thickness * 0.5) == Catch::Approx(system.noteheads.at(1).x));
 }

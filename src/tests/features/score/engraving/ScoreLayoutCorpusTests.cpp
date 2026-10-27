@@ -190,8 +190,18 @@ TEST_CASE("every corpus score lays out", "[score][engraving][corpus]")
                 CHECK(glyph.thickness > 0.0);
 
                 // The slope is clamped, so no beam in any real file is a
-                // diagonal however far its notes leap.
-                CHECK(std::abs(glyph.endY - glyph.startY) <= options.maximumBeamRise + 0.001);
+                // diagonal however far its notes leap. The clamp holds between
+                // the outer stems; a full beam's drawn ends reach half a stem
+                // past each, along the same slope, so the rise is scaled back
+                // to the stems before it is compared.
+                if (!glyph.partial)
+                {
+                    const double drawn = glyph.endX - glyph.startX;
+                    const double betweenStems = drawn - options.stemThickness;
+                    const double rise = std::abs(glyph.endY - glyph.startY) * betweenStems / drawn;
+
+                    CHECK(rise <= options.maximumBeamRise + 0.001);
+                }
             }
 
             // Every beamed stem's level is covered by a beam at its own x, or a

@@ -1,203 +1,88 @@
 #include "ScoreGlyphPainter.h"
 
+#include <algorithm>
+#include <array>
 #include <cmath>
+#include <optional>
+#include <vector>
 
 namespace
 {
-using engraving::AccidentalKind;
 using engraving::StaffSteps;
 
-// Stroke weights, in staff spaces. A staff line is thin, a stem heavier, a
-// final barline heavier again -- the proportions a reader expects even when the
-// glyph shapes are approximations.
-constexpr double staffLineThickness = 0.09;
-constexpr double stemThickness = 0.13;
-constexpr double barlineThickness = 0.12;
-constexpr double heavyBarlineThickness = 0.42;
-constexpr double ledgerThickness = 0.11;
+// Line weights, in staff spaces: Bravura's published engraving defaults. SMuFL
+// draws these things as lines rather than glyphs -- a staff line, a stem or a
+// barline is as long as the layout says, which no fixed glyph can be -- and
+// publishes the thickness each should be drawn at so that the lines match the
+// weight of the glyphs beside them.
+constexpr double staffLineThickness = 0.13;
+constexpr double ledgerLineThickness = 0.16;
+constexpr double thinBarlineThickness = 0.16;
+constexpr double thickBarlineThickness = 0.5;
 
-constexpr double noteheadWidthInSpaces = 1.28;
-constexpr double noteheadHeightInSpaces = 0.92;
+// How far a ledger line reaches past each side of its notehead, and how far on
+// the side an accidental stands: shortened there, as Gould prescribes, so the
+// sign does not sit on the end of the line.
+constexpr double ledgerLineExtension = 0.4;
+constexpr double ledgerLineExtensionBesideAccidental = 0.1;
 
-// Noteheads are ellipses tilted anticlockwise, which is what makes a chord of
-// seconds readable and what every engraved notehead does.
-constexpr float noteheadTiltRadians = -0.35f;
+// The gap between the thin and thick lines of a final or repeat barline, and
+// between a repeat's dots and its thin line.
+constexpr double thinThickBarlineSeparation = 0.4;
+constexpr double repeatDotSeparation = 0.16;
 
-constexpr double ledgerHalfWidth = 0.92;
+// A tie is drawn thick in the middle and thin at the ends, which is what makes
+// it read as a tie rather than as a stroked arc.
+constexpr double tieEndpointThickness = 0.1;
+constexpr double tieMidpointThickness = 0.22;
+
+// Room between an accidental and the notehead it modifies.
+constexpr double accidentalGap = 0.2;
+
+// Room between a notehead and its first augmentation dot, and from one dot to
+// the next.
+constexpr double dotGap = 0.24;
+constexpr double dotPitch = 0.56;
+
+// Grace notes are drawn at this fraction of full size: the convention for cue
+// and grace notation, small enough to read as not taking time and large
+// enough to read at all.
+constexpr double graceScale = 0.66;
+
+// Where a clef's sign begins inside the room the layout reserved for it.
+constexpr double clefLeadIn = 0.4;
+
+// Where a time signature's numbers begin inside their reserved room. Half a
+// space, so the first digit stands clear of a key signature's last accidental
+// rather than reading as part of it.
+constexpr double timeSignatureLeadIn = 0.5;
+
+// A time signature's numbers each fill half the staff, centred on the second
+// line from the top and the second from the bottom.
+constexpr StaffSteps upperTimeSignatureNumber = 2;
+constexpr StaffSteps lowerTimeSignatureNumber = 6;
+
+// The two dots of a repeat sit in the spaces either side of the middle line.
+constexpr std::array<StaffSteps, 2> repeatDotPositions{3, 5};
 
 [[nodiscard]] double yForSteps(StaffSteps steps)
 {
     return engraving::spacesBelowTopLine(steps);
 }
 
-// An ellipse notehead, centred on the origin, tilted.
-[[nodiscard]] juce::Path noteheadPath()
+// The width of a run of glyphs set side by side, each advancing by its own
+// right edge. Time signature digits are the only run drawn, and their outlines
+// begin at x 0.08, so the right edge is the advance plus nothing worth adding.
+[[nodiscard]] double runWidth(const MusicFont& font, const std::vector<smufl::Glyph>& glyphs)
 {
-    juce::Path head;
-    head.addEllipse(
-        static_cast<float>(-noteheadWidthInSpaces * 0.5),
-        static_cast<float>(-noteheadHeightInSpaces * 0.5),
-        static_cast<float>(noteheadWidthInSpaces), static_cast<float>(noteheadHeightInSpaces));
-    head.applyTransform(juce::AffineTransform::rotation(noteheadTiltRadians));
+    double width = 0.0;
 
-    return head;
-}
-
-// The accidental signs. Each is built around its own origin, which sits where
-// the sign centres on the staff -- the middle of a sharp or a natural, and the
-// *bowl* of a flat rather than the top of its upright.
-[[nodiscard]] juce::Path sharpPath()
-{
-    juce::Path sign;
-
-    // Two uprights and two thicker crossbars, slanted upwards to the right.
-    sign.addRectangle(-0.24f, -0.78f, 0.1f, 1.56f);
-    sign.addRectangle(0.16f, -0.92f, 0.1f, 1.56f);
-
-    for (const float offset : {-0.26f, 0.22f})
+    for (const smufl::Glyph glyph : glyphs)
     {
-        juce::Path bar;
-        bar.addRectangle(-0.46f, offset, 0.92f, 0.2f);
-        bar.applyTransform(juce::AffineTransform::shear(0.0f, -0.22f));
-        sign.addPath(bar);
+        width += static_cast<double>(font.bounds(glyph).getRight());
     }
 
-    return sign;
-}
-
-[[nodiscard]] juce::Path flatPath()
-{
-    juce::Path sign;
-    sign.addRectangle(-0.26f, -1.25f, 0.11f, 1.9f);
-
-    juce::Path bowl;
-    bowl.startNewSubPath(-0.15f, -0.2f);
-    bowl.cubicTo(0.62f, -0.44f, 0.68f, 0.5f, -0.15f, 0.65f);
-    sign.addPath(bowl);
-
-    return sign;
-}
-
-[[nodiscard]] juce::Path naturalPath()
-{
-    juce::Path sign;
-    sign.addRectangle(-0.24f, -1.0f, 0.1f, 1.6f);
-    sign.addRectangle(0.14f, -0.6f, 0.1f, 1.6f);
-
-    for (const float offset : {-0.3f, 0.18f})
-    {
-        juce::Path bar;
-        bar.addRectangle(-0.24f, offset, 0.48f, 0.19f);
-        bar.applyTransform(juce::AffineTransform::shear(0.0f, -0.26f));
-        sign.addPath(bar);
-    }
-
-    return sign;
-}
-
-[[nodiscard]] juce::Path doubleSharpPath()
-{
-    // The conventional glyph is a saltire -- two crossed strokes -- not two
-    // sharps side by side.
-    juce::Path sign;
-
-    for (const float rotation : {0.78f, -0.78f})
-    {
-        juce::Path stroke;
-        stroke.addRectangle(-0.5f, -0.11f, 1.0f, 0.22f);
-        stroke.applyTransform(juce::AffineTransform::rotation(rotation));
-        sign.addPath(stroke);
-    }
-
-    return sign;
-}
-
-[[nodiscard]] juce::Path accidentalPath(AccidentalKind kind)
-{
-    switch (kind)
-    {
-    case AccidentalKind::sharp:
-        return sharpPath();
-    case AccidentalKind::flat:
-        return flatPath();
-    case AccidentalKind::natural:
-        return naturalPath();
-    case AccidentalKind::doubleSharp:
-        return doubleSharpPath();
-    case AccidentalKind::doubleFlat:
-    {
-        juce::Path sign = flatPath();
-        juce::Path second = flatPath();
-        second.applyTransform(juce::AffineTransform::translation(0.62f, 0.0f));
-        sign.addPath(second);
-
-        return sign;
-    }
-    case AccidentalKind::none:
-        break;
-    }
-
-    return {};
-}
-
-// A treble clef, as a stroked outline centred on the line the sign names.
-[[nodiscard]] juce::Path gClefPath()
-{
-    juce::Path clef;
-
-    clef.startNewSubPath(0.72f, -2.75f);
-    clef.cubicTo(-0.55f, -2.15f, -0.78f, -0.6f, 0.42f, 0.0f);
-    clef.cubicTo(1.6f, 0.6f, 1.3f, 2.05f, 0.0f, 2.05f);
-    clef.cubicTo(-0.98f, 2.05f, -1.08f, 1.0f, -0.32f, 0.76f);
-
-    clef.startNewSubPath(0.6f, -2.6f);
-    clef.lineTo(0.16f, 3.3f);
-    clef.cubicTo(0.12f, 4.1f, -0.6f, 4.2f, -0.92f, 3.72f);
-
-    return clef;
-}
-
-[[nodiscard]] juce::Path fClefStrokePath()
-{
-    juce::Path clef;
-
-    clef.startNewSubPath(-0.85f, -0.85f);
-    clef.cubicTo(0.25f, -1.65f, 1.35f, -0.95f, 1.28f, 0.15f);
-    clef.cubicTo(1.2f, 1.6f, 0.0f, 2.55f, -1.1f, 2.95f);
-
-    return clef;
-}
-
-[[nodiscard]] juce::Path cClefPath()
-{
-    juce::Path clef;
-
-    // Upper and lower bowls meeting at the line the sign names.
-    clef.startNewSubPath(-0.35f, -2.0f);
-    clef.cubicTo(1.35f, -1.95f, 1.3f, -0.2f, 0.0f, -0.05f);
-
-    clef.startNewSubPath(-0.35f, 2.0f);
-    clef.cubicTo(1.35f, 1.95f, 1.3f, 0.2f, 0.0f, 0.05f);
-
-    return clef;
-}
-
-[[nodiscard]] juce::Path quarterRestPath()
-{
-    juce::Path rest;
-
-    rest.startNewSubPath(-0.28f, -1.5f);
-    rest.lineTo(0.34f, -0.52f);
-    rest.lineTo(-0.22f, 0.12f);
-    rest.lineTo(0.4f, 0.98f);
-    rest.cubicTo(-0.08f, 0.62f, -0.46f, 1.02f, 0.06f, 1.5f);
-
-    return rest;
-}
-
-[[nodiscard]] juce::String timeSignatureDigits(int value)
-{
-    return juce::String(value);
+    return width;
 }
 } // namespace
 
@@ -213,34 +98,16 @@ ScoreGlyphPainter::Palette scoreNotationPaletteFor(Theme theme)
 
 ScoreGlyphPainter::ScoreGlyphPainter(
     juce::Graphics& graphicsToUse,
+    const MusicFont& fontToUse,
     double pixelsPerSpace,
     Palette colours)
-    : graphics(graphicsToUse), spaceInPixels(pixelsPerSpace), palette(colours)
+    : graphics(graphicsToUse), font(fontToUse), spaceInPixels(pixelsPerSpace), palette(colours)
 {
 }
 
 float ScoreGlyphPainter::px(double spaces) const
 {
     return static_cast<float>(spaces * spaceInPixels);
-}
-
-void ScoreGlyphPainter::strokeInSpaces(
-    const juce::Path& pathInSpaces,
-    double originX,
-    double originY,
-    double thicknessInSpaces,
-    juce::Colour colour) const
-{
-    juce::Path scaled = pathInSpaces;
-    scaled.applyTransform(
-        juce::AffineTransform::scale(static_cast<float>(spaceInPixels))
-            .translated(static_cast<float>(originX), static_cast<float>(originY)));
-
-    graphics.setColour(colour);
-    graphics.strokePath(
-        scaled,
-        juce::PathStrokeType(
-            px(thicknessInSpaces), juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
 void ScoreGlyphPainter::fillInSpaces(
@@ -256,6 +123,32 @@ void ScoreGlyphPainter::fillInSpaces(
 
     graphics.setColour(colour);
     graphics.fillPath(scaled);
+}
+
+void ScoreGlyphPainter::drawGlyph(
+    smufl::Glyph glyph,
+    double xInSpaces,
+    double yInSpaces,
+    double originX,
+    double originY,
+    juce::Colour colour,
+    double scale) const
+{
+    const juce::Path& outline = font.outline(glyph);
+
+    if (outline.isEmpty())
+    {
+        return;
+    }
+
+    // Scaled about the glyph's own origin first, so a grace notehead shrinks
+    // towards the point it is anchored at rather than drifting off it.
+    juce::Path placed = outline;
+    placed.applyTransform(
+        juce::AffineTransform::scale(static_cast<float>(scale))
+            .translated(static_cast<float>(xInSpaces), static_cast<float>(yInSpaces)));
+
+    fillInSpaces(placed, originX, originY, colour);
 }
 
 void ScoreGlyphPainter::drawStaffLines(
@@ -280,10 +173,15 @@ void ScoreGlyphPainter::drawNotehead(
     double originX,
     double originY) const
 {
-    const double scale = glyph.isGrace ? 0.66 : 1.0;
+    const double scale = glyph.isGrace ? graceScale : 1.0;
+    const juce::Colour colour = glyph.isGrace ? palette.muted : palette.notation;
 
-    const double centreX = originX + px(glyph.x) + (px(noteheadWidthInSpaces * scale) * 0.5);
-    const double centreY = originY + px(yForSteps(glyph.position));
+    const smufl::Glyph head = smufl::noteheadFor(glyph.head);
+    const juce::Rectangle<float> headBounds = font.bounds(head);
+
+    const double headWidth = static_cast<double>(headBounds.getWidth()) * scale;
+    const double centreX = glyph.x + (static_cast<double>(headBounds.getCentreX()) * scale);
+    const double y = yForSteps(glyph.position);
 
     // Ledger lines first, so a notehead sits on top of them rather than being
     // cut by one.
@@ -292,17 +190,25 @@ void ScoreGlyphPainter::drawNotehead(
     // ledger line continues the staff's own lines, so they are at -2, -4, ...
     // above and 10, 12, ... below, whatever the note sits on. A note on the
     // first one is *on* it; a note in the space beyond it is a half space past
-    // it and still needs only that one.
-    graphics.setColour(palette.notation);
+    // it and still needs only that one. Centred on the notehead actually drawn,
+    // because a whole note is wider than a black one and its ledger lines are
+    // too.
+    graphics.setColour(colour);
 
-    const auto ledgerAt = [&](engraving::StaffSteps steps)
+    const double leftExtension =
+        (glyph.accidental == engraving::AccidentalKind::none
+             ? ledgerLineExtension
+             : ledgerLineExtensionBesideAccidental) *
+        scale;
+    const double ledgerLeft = centreX - (headWidth * 0.5) - leftExtension;
+    const double ledgerRight = centreX + (headWidth * 0.5) + (ledgerLineExtension * scale);
+
+    const auto ledgerAt = [&](StaffSteps steps)
     {
-        const double y = originY + px(yForSteps(steps));
-
         graphics.fillRect(juce::Rectangle<float>(
-            static_cast<float>(centreX) - px(ledgerHalfWidth * scale),
-            static_cast<float>(y) - (px(ledgerThickness) * 0.5f), px(ledgerHalfWidth * 2.0 * scale),
-            px(ledgerThickness)));
+            static_cast<float>(originX) + px(ledgerLeft),
+            static_cast<float>(originY) + px(yForSteps(steps)) - (px(ledgerLineThickness) * 0.5f),
+            px(ledgerRight - ledgerLeft), px(ledgerLineThickness)));
     };
 
     for (int above = 1; above <= glyph.ledger.above; ++above)
@@ -315,104 +221,61 @@ void ScoreGlyphPainter::drawNotehead(
         ledgerAt(engraving::bottomLineSteps + (below * 2));
     }
 
-    juce::Path head = noteheadPath();
-    head.applyTransform(juce::AffineTransform::scale(static_cast<float>(scale)));
+    // SMuFL puts a notehead's origin at its left edge, on the line or space it
+    // sits on -- which is exactly what the layout's x and staff position are.
+    drawGlyph(head, glyph.x, y, originX, originY, colour, scale);
 
-    juce::Path placed = head;
-    placed.applyTransform(
-        juce::AffineTransform::scale(static_cast<float>(spaceInPixels))
-            .translated(static_cast<float>(centreX), static_cast<float>(centreY)));
-
-    const juce::Colour colour = glyph.isGrace ? palette.muted : palette.notation;
-
-    graphics.setColour(colour);
-
-    switch (glyph.head)
+    if (const std::optional<smufl::Glyph> sign = smufl::accidentalFor(glyph.accidental))
     {
-    case engraving::NoteheadKind::filled:
-        graphics.fillPath(placed);
-        break;
+        // Right-aligned a small gap before the notehead. The signs differ in
+        // width -- a double flat is nearly twice a natural -- so it is their
+        // right edges that line up, not their origins.
+        const double right = glyph.x - (accidentalGap * scale);
+        const double left = right - (static_cast<double>(font.bounds(*sign).getRight()) * scale);
 
-    case engraving::NoteheadKind::half:
-    case engraving::NoteheadKind::whole:
-        graphics.strokePath(placed, juce::PathStrokeType(px(0.17 * scale)));
-        break;
-
-    case engraving::NoteheadKind::breve:
-        graphics.strokePath(placed, juce::PathStrokeType(px(0.17 * scale)));
-
-        // The two vertical strokes that distinguish a breve from a whole note.
-        for (const double side : {-1.0, 1.0})
-        {
-            graphics.fillRect(juce::Rectangle<float>(
-                static_cast<float>(centreX + (side * px(noteheadWidthInSpaces * 0.62))) -
-                    (px(0.12) * 0.5f),
-                static_cast<float>(centreY) - px(0.62), px(0.12), px(1.24)));
-        }
-
-        break;
-    }
-
-    if (glyph.accidental != engraving::AccidentalKind::none)
-    {
-        drawAccidental(glyph.accidental, glyph.x - 0.75, glyph.position, originX, originY);
+        drawGlyph(*sign, left, y, originX, originY, colour, scale);
     }
 
     // Augmentation dots go in a space, never on a line, so a dot on a
     // line-sitting note moves to the space above it.
-    const engraving::StaffSteps dotPosition =
+    const StaffSteps dotPosition =
         engraving::isOnLine(glyph.position) ? glyph.position - 1 : glyph.position;
 
     for (int dot = 0; dot < glyph.dots; ++dot)
     {
-        const double dotX = centreX + px(0.85 + (static_cast<double>(dot) * 0.48));
+        const double dotX =
+            glyph.x + headWidth + ((dotGap + (static_cast<double>(dot) * dotPitch)) * scale);
 
-        graphics.fillEllipse(
-            static_cast<float>(dotX) - px(0.15),
-            static_cast<float>(originY + px(yForSteps(dotPosition))) - px(0.15), px(0.3), px(0.3));
+        drawGlyph(
+            smufl::Glyph::augmentationDot, dotX, yForSteps(dotPosition), originX, originY, colour,
+            scale);
     }
 }
 
 void ScoreGlyphPainter::drawStem(const engraving::StemGlyph& glyph, double originX, double originY)
     const
 {
-    const double scale = glyph.isGrace ? 0.66 : 1.0;
+    const double scale = glyph.isGrace ? graceScale : 1.0;
+    const juce::Colour colour = glyph.isGrace ? palette.muted : palette.notation;
 
-    const double x = originX + px(glyph.x);
-    const double attachY = originY + px(yForSteps(glyph.attachPosition));
-    const double tipY = originY + px(glyph.tipSpaces);
+    const double attachY = yForSteps(glyph.attachPosition);
+    const double thickness = glyph.thickness * scale;
+    const double left = glyph.x - (thickness * 0.5);
 
-    graphics.setColour(glyph.isGrace ? palette.muted : palette.notation);
+    graphics.setColour(colour);
     graphics.fillRect(juce::Rectangle<float>(
-        static_cast<float>(x) - (px(stemThickness * scale) * 0.5f),
-        static_cast<float>(std::min(attachY, tipY)), px(stemThickness * scale),
-        static_cast<float>(std::abs(attachY - tipY))));
+        static_cast<float>(originX) + px(left),
+        static_cast<float>(originY) + px(std::min(attachY, glyph.tipSpaces)), px(thickness),
+        px(std::abs(attachY - glyph.tipSpaces))));
 
-    // One hook per flag, stacked back along the stem from the tip, curling away
-    // from the notehead. A beamed stem has no flags: `drawBeam` draws what
+    // One glyph for every flag the stem carries: SMuFL draws a sixteenth's two
+    // hooks as a single shape, not one hook twice. Its origin goes at the
+    // stem's tip, on the stem's left edge, from where an up flag hangs down the
+    // stem and a down flag rises up it. A beamed stem has no flags: the beam
     // stands in for them.
-    for (int flag = 0; flag < glyph.flags; ++flag)
+    if (const std::optional<smufl::Glyph> flag = smufl::flagFor(glyph.flags, glyph.up))
     {
-        const double along = static_cast<double>(flag) * 0.78 * scale;
-
-        juce::Path hook;
-        const float startY = static_cast<float>(glyph.up ? along : -along);
-        const float sweep = static_cast<float>(glyph.up ? 1.15 : -1.15);
-
-        hook.startNewSubPath(0.0f, startY);
-        hook.cubicTo(
-            static_cast<float>(0.72 * scale), startY + (sweep * 0.25f),
-            static_cast<float>(0.78 * scale), startY + (sweep * 0.62f),
-            static_cast<float>(0.2 * scale), startY + sweep);
-
-        juce::Path placed = hook;
-        placed.applyTransform(juce::AffineTransform::scale(static_cast<float>(spaceInPixels))
-                                  .translated(static_cast<float>(x), static_cast<float>(tipY)));
-
-        graphics.strokePath(
-            placed,
-            juce::PathStrokeType(
-                px(0.17 * scale), juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        drawGlyph(*flag, left, glyph.tipSpaces, originX, originY, colour, scale);
     }
 }
 
@@ -422,29 +285,15 @@ void ScoreGlyphPainter::drawBeam(const engraving::BeamGlyph& glyph, double origi
     // A beam is a parallelogram, not a rectangle: its two ends are vertical, so
     // that the stems meeting it do so flush. Sloping the ends with the bar --
     // which is what stroking a line would do -- leaves a wedge of white between
-    // the beam and the stem at every joint.
+    // the beam and the stem at every joint. The layout has already reached the
+    // ends out to the stems' outer edges along the slope.
     const double depth = glyph.up ? -glyph.thickness : glyph.thickness;
 
-    // Half the stem's width at each end, so the bar covers the stems it joins
-    // rather than stopping at their centre lines. The ends move **along** the
-    // beam rather than straight out from it: extending x alone would slide a
-    // sloped bar sideways off the line it was laid out on, and leave each stem
-    // poking past it by the slope times the overhang.
-    const double overhang = stemThickness * 0.5;
-
-    const double span = glyph.endX - glyph.startX;
-    const double rise = span > 0.0 ? ((glyph.endY - glyph.startY) / span) * overhang : 0.0;
-
-    const double leftX = glyph.startX - overhang;
-    const double rightX = glyph.endX + overhang;
-    const double leftY = glyph.startY - rise;
-    const double rightY = glyph.endY + rise;
-
     juce::Path bar;
-    bar.startNewSubPath(static_cast<float>(leftX), static_cast<float>(leftY));
-    bar.lineTo(static_cast<float>(rightX), static_cast<float>(rightY));
-    bar.lineTo(static_cast<float>(rightX), static_cast<float>(rightY + depth));
-    bar.lineTo(static_cast<float>(leftX), static_cast<float>(leftY + depth));
+    bar.startNewSubPath(static_cast<float>(glyph.startX), static_cast<float>(glyph.startY));
+    bar.lineTo(static_cast<float>(glyph.endX), static_cast<float>(glyph.endY));
+    bar.lineTo(static_cast<float>(glyph.endX), static_cast<float>(glyph.endY + depth));
+    bar.lineTo(static_cast<float>(glyph.startX), static_cast<float>(glyph.startY + depth));
     bar.closeSubPath();
 
     fillInSpaces(bar, originX, originY, palette.notation);
@@ -453,89 +302,36 @@ void ScoreGlyphPainter::drawBeam(const engraving::BeamGlyph& glyph, double origi
 void ScoreGlyphPainter::drawRest(const engraving::RestGlyph& glyph, double originX, double originY)
     const
 {
-    const double x = originX + px(glyph.x);
-    const double y = originY + px(yForSteps(glyph.position));
+    // A rest's x is its centre -- the layout centres a bar-long rest in its
+    // bar -- while a SMuFL rest's origin is its left edge, so the glyph is
+    // moved left by half its own width.
+    const smufl::Glyph rest = smufl::restFor(glyph.value);
+    const double width = static_cast<double>(font.bounds(rest).getWidth());
+    const double left = glyph.x - (width * 0.5);
 
-    graphics.setColour(palette.notation);
-
-    switch (glyph.value)
-    {
-    case engraving::WrittenValue::breve:
-    case engraving::WrittenValue::whole:
-        // Hangs below the fourth line.
-        graphics.fillRect(juce::Rectangle<float>(
-            static_cast<float>(x) - px(0.62), static_cast<float>(y), px(1.24), px(0.5)));
-        break;
-
-    case engraving::WrittenValue::half:
-        // Sits on the middle line.
-        graphics.fillRect(juce::Rectangle<float>(
-            static_cast<float>(x) - px(0.62), static_cast<float>(y) - px(0.5), px(1.24), px(0.5)));
-        break;
-
-    case engraving::WrittenValue::quarter:
-        strokeInSpaces(quarterRestPath(), x, y, 0.21, palette.notation);
-        break;
-
-    default:
-    {
-        // An eighth rest and shorter: a slanting stem with one hook per flag.
-        const int flags = engraving::flagCountFor(glyph.value);
-        const double top = -0.55 - (static_cast<double>(flags - 1) * 0.72);
-
-        juce::Path rest;
-        rest.startNewSubPath(0.3f, static_cast<float>(top));
-        rest.lineTo(-0.12f, 1.1f);
-
-        strokeInSpaces(rest, x, y, 0.16, palette.notation);
-
-        for (int flag = 0; flag < flags; ++flag)
-        {
-            const double hookY = top + (static_cast<double>(flag) * 0.72);
-
-            graphics.fillEllipse(
-                static_cast<float>(x) + px(0.14), static_cast<float>(y + px(hookY)) - px(0.17),
-                px(0.36), px(0.36));
-
-            juce::Path tail;
-            tail.startNewSubPath(0.3f, static_cast<float>(hookY));
-            tail.cubicTo(
-                0.05f, static_cast<float>(hookY - 0.3), -0.32f, static_cast<float>(hookY - 0.28),
-                -0.52f, static_cast<float>(hookY - 0.08));
-
-            strokeInSpaces(tail, x, y, 0.13, palette.notation);
-        }
-
-        break;
-    }
-    }
+    // SMuFL anchors each rest against a staff line the same way the layout
+    // names one: a whole rest hangs from it, a half rest sits on it, and the
+    // rest centre on it.
+    drawGlyph(rest, left, yForSteps(glyph.position), originX, originY, palette.notation);
 
     for (int dot = 0; dot < glyph.dots; ++dot)
     {
-        graphics.setColour(palette.notation);
-        graphics.fillEllipse(
-            static_cast<float>(x) + px(0.78 + (static_cast<double>(dot) * 0.48)),
-            static_cast<float>(originY) + px(yForSteps(engraving::middleLineSteps - 1)) - px(0.15),
-            px(0.3), px(0.3));
+        drawGlyph(
+            smufl::Glyph::augmentationDot,
+            left + width + dotGap + (static_cast<double>(dot) * dotPitch),
+            yForSteps(engraving::middleLineSteps - 1), originX, originY, palette.notation);
     }
 }
 
-void ScoreGlyphPainter::drawAccidental(
-    engraving::AccidentalKind kind,
-    double centreXInSpaces,
-    engraving::StaffSteps position,
+void ScoreGlyphPainter::drawKeyAccidental(
+    const engraving::KeyAccidentalGlyph& glyph,
     double originX,
     double originY) const
 {
-    const juce::Path sign = accidentalPath(kind);
-
-    if (sign.isEmpty())
+    if (const std::optional<smufl::Glyph> sign = smufl::accidentalFor(glyph.kind))
     {
-        return;
+        drawGlyph(*sign, glyph.x, yForSteps(glyph.position), originX, originY, palette.notation);
     }
-
-    fillInSpaces(
-        sign, originX + px(centreXInSpaces), originY + px(yForSteps(position)), palette.notation);
 }
 
 void ScoreGlyphPainter::drawBarline(
@@ -543,132 +339,149 @@ void ScoreGlyphPainter::drawBarline(
     double originX,
     double originY) const
 {
-    const double x = originX + px(glyph.x);
-    const double top = originY;
-    const float height = px(engraving::staffHeightInSpaces);
-
     graphics.setColour(palette.notation);
 
-    const auto verticalAt = [&](double offsetInSpaces, double thickness)
+    // A barline is drawn by its edges rather than its centre, so that a final
+    // barline's thick line ends where the staff does instead of overhanging it
+    // by half its own width.
+    const auto lineFrom = [&](double left, double thickness)
     {
         graphics.fillRect(juce::Rectangle<float>(
-            static_cast<float>(x + px(offsetInSpaces)) - (px(thickness) * 0.5f),
-            static_cast<float>(top), px(thickness), height));
+            static_cast<float>(originX) + px(left), static_cast<float>(originY), px(thickness),
+            px(engraving::staffHeightInSpaces)));
     };
 
-    const auto dotsAt = [&](double offsetInSpaces)
+    const auto dotsFrom = [&](double left)
     {
-        for (const engraving::StaffSteps steps : {3, 5})
+        for (const StaffSteps steps : repeatDotPositions)
         {
-            graphics.fillEllipse(
-                static_cast<float>(x + px(offsetInSpaces)) - px(0.17),
-                static_cast<float>(originY + px(yForSteps(steps))) - px(0.17), px(0.34), px(0.34));
+            drawGlyph(
+                smufl::Glyph::repeatDot, left, yForSteps(steps), originX, originY,
+                palette.notation);
         }
     };
+
+    const double dotWidth = static_cast<double>(font.bounds(smufl::Glyph::repeatDot).getWidth());
+
+    // The thin line of a heavy barline, measured from the thick one's edge.
+    const double thinOffset = thickBarlineThickness + thinThickBarlineSeparation;
 
     switch (glyph.kind)
     {
     case engraving::BarlineKind::single:
-        verticalAt(0.0, barlineThickness);
+        lineFrom(glyph.x - (thinBarlineThickness * 0.5), thinBarlineThickness);
         break;
 
     case engraving::BarlineKind::final:
-        verticalAt(-0.42, barlineThickness);
-        verticalAt(0.0, heavyBarlineThickness);
-        break;
-
     case engraving::BarlineKind::repeatEnd:
-        verticalAt(-0.42, barlineThickness);
-        verticalAt(0.0, heavyBarlineThickness);
-        dotsAt(-0.85);
+    {
+        // Thick line flush against the barline's x, thin line before it.
+        const double thickLeft = glyph.x - thickBarlineThickness;
+        const double thinLeft = glyph.x - thinOffset - thinBarlineThickness;
+
+        lineFrom(thickLeft, thickBarlineThickness);
+        lineFrom(thinLeft, thinBarlineThickness);
+
+        if (glyph.kind == engraving::BarlineKind::repeatEnd)
+        {
+            dotsFrom(thinLeft - repeatDotSeparation - dotWidth);
+        }
+
         break;
+    }
 
     case engraving::BarlineKind::repeatStart:
-        verticalAt(0.0, heavyBarlineThickness);
-        verticalAt(0.42, barlineThickness);
-        dotsAt(0.85);
+    {
+        // The mirror image, facing into the music that follows.
+        const double thinLeft = glyph.x + thinOffset;
+
+        lineFrom(glyph.x, thickBarlineThickness);
+        lineFrom(thinLeft, thinBarlineThickness);
+        dotsFrom(thinLeft + thinBarlineThickness + repeatDotSeparation);
         break;
+    }
     }
 }
 
 void ScoreGlyphPainter::drawClef(const engraving::ClefGlyph& glyph, double originX, double originY)
     const
 {
-    const double x = originX + px(glyph.x) + px(1.2);
-    const double y = originY + px(yForSteps(glyph.position));
+    const std::optional<smufl::ClefGlyphChoice> choice = smufl::clefFor(glyph.clef);
 
-    if (glyph.clef.sign == "G")
+    if (!choice.has_value())
     {
-        strokeInSpaces(gClefPath(), x, y, 0.19, palette.notation);
-    }
-    else if (glyph.clef.sign == "F")
-    {
-        strokeInSpaces(fClefStrokePath(), x, y, 0.3, palette.notation);
-
-        graphics.setColour(palette.notation);
-        graphics.fillEllipse(
-            static_cast<float>(x) - px(1.06), static_cast<float>(y) - px(1.06), px(0.56), px(0.56));
-
-        for (const double offset : {-0.5, 0.5})
-        {
-            graphics.fillEllipse(
-                static_cast<float>(x) + px(1.58), static_cast<float>(y + px(offset)) - px(0.17),
-                px(0.34), px(0.34));
-        }
-    }
-    else if (glyph.clef.sign == "C")
-    {
-        strokeInSpaces(cClefPath(), x, y, 0.26, palette.notation);
-
-        graphics.setColour(palette.notation);
-        graphics.fillRect(juce::Rectangle<float>(
-            static_cast<float>(x) - px(1.15), static_cast<float>(y) - px(2.0), px(0.3), px(4.0)));
-        graphics.fillRect(juce::Rectangle<float>(
-            static_cast<float>(x) - px(0.72), static_cast<float>(y) - px(2.0), px(0.14), px(4.0)));
+        return;
     }
 
-    // The octave number a transposing clef carries. Drawn because a vocal tenor
-    // clef and a treble clef are otherwise the same picture of two different
-    // sounding registers.
-    if (glyph.clef.octaveChange != 0)
+    // SMuFL puts a clef's baseline on the line the clef names -- the G line
+    // for a treble clef, the F line for a bass clef -- which is the position
+    // the layout already computed from `clef.line`.
+    const double left = glyph.x + clefLeadIn;
+    const double y = yForSteps(glyph.position);
+
+    drawGlyph(choice->glyph, left, y, originX, originY, palette.notation);
+
+    if (choice->octaveDrawn || glyph.clef.octaveChange == 0)
     {
-        graphics.setColour(palette.muted);
-        graphics.setFont(juce::FontOptions(px(1.1)));
-        graphics.drawText(
-            "8",
-            juce::Rectangle<float>(
-                static_cast<float>(x) - px(0.8),
-                static_cast<float>(y) + px(glyph.clef.octaveChange < 0 ? 2.1 : -3.4), px(1.6),
-                px(1.3)),
-            juce::Justification::centred);
+        return;
     }
+
+    // An octave change SMuFL has no glyph for. Marked with its number in text
+    // rather than dropped: a clef that claims a register the part does not
+    // sound in is worse than an unidiomatic mark.
+    const juce::Rectangle<float> bounds = font.bounds(choice->glyph);
+    const double centreX = left + static_cast<double>(bounds.getCentreX());
+    const bool below = glyph.clef.octaveChange < 0;
+    const double markY = below ? y + static_cast<double>(bounds.getBottom())
+                               : y + static_cast<double>(bounds.getY()) - 1.3;
+
+    graphics.setColour(palette.muted);
+    graphics.setFont(juce::FontOptions(px(1.1)));
+    graphics.drawText(
+        juce::String(std::abs(glyph.clef.octaveChange) * 7 + 1),
+        juce::Rectangle<float>(
+            static_cast<float>(originX) + px(centreX - 1.0),
+            static_cast<float>(originY) + px(markY), px(2.0), px(1.3)),
+        juce::Justification::centred);
 }
 
 void ScoreGlyphPainter::drawTie(const engraving::TieGlyph& glyph, double originX, double originY)
     const
 {
-    const double startX = originX + px(glyph.startX) + px(noteheadWidthInSpaces);
-    const double endX = originX + px(glyph.endX);
+    const double noteheadWidth =
+        static_cast<double>(font.bounds(smufl::Glyph::noteheadBlack).getRight());
+
+    const double startX = glyph.startX + noteheadWidth;
+    const double endX = glyph.endX;
 
     if (endX <= startX)
     {
         return;
     }
 
-    const double y = originY + px(yForSteps(glyph.position)) + (glyph.above ? -px(0.62) : px(0.62));
+    const double y = yForSteps(glyph.position) + (glyph.above ? -0.62 : 0.62);
+    const double sign = glyph.above ? -1.0 : 1.0;
+    const double midX = (startX + endX) * 0.5;
 
-    const double bow = glyph.above ? -px(0.85) : px(0.85);
+    // A crescent rather than a stroked arc: two curves with a common end
+    // point, the outer bowing further than the inner, so the tie is thickest
+    // in the middle and tapers to its ends.
+    const double outerBow = sign * (0.85 + (tieMidpointThickness * 0.5));
+    const double innerBow = sign * (0.85 - (tieMidpointThickness * 0.5));
+    const double endHalf = tieEndpointThickness * 0.5;
 
-    juce::Path curve;
-    curve.startNewSubPath(static_cast<float>(startX), static_cast<float>(y));
-    curve.quadraticTo(
-        static_cast<float>((startX + endX) * 0.5), static_cast<float>(y + bow),
-        static_cast<float>(endX), static_cast<float>(y));
+    juce::Path tie;
+    tie.startNewSubPath(static_cast<float>(startX), static_cast<float>(y - endHalf));
+    tie.quadraticTo(
+        static_cast<float>(midX), static_cast<float>(y + (outerBow * 2.0) - endHalf),
+        static_cast<float>(endX), static_cast<float>(y - endHalf));
+    tie.lineTo(static_cast<float>(endX), static_cast<float>(y + endHalf));
+    tie.quadraticTo(
+        static_cast<float>(midX), static_cast<float>(y + (innerBow * 2.0) + endHalf),
+        static_cast<float>(startX), static_cast<float>(y + endHalf));
+    tie.closeSubPath();
 
-    graphics.setColour(palette.notation);
-    graphics.strokePath(
-        curve, juce::PathStrokeType(
-                   px(0.11), juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    fillInSpaces(tie, originX, originY, palette.notation);
 }
 
 void ScoreGlyphPainter::drawTimeSignature(
@@ -676,22 +489,32 @@ void ScoreGlyphPainter::drawTimeSignature(
     double originX,
     double originY) const
 {
-    const double x = originX + px(glyph.x);
+    const std::vector<smufl::Glyph> upper = smufl::timeSignatureDigits(glyph.beats);
+    const std::vector<smufl::Glyph> lower = smufl::timeSignatureDigits(glyph.beatType);
 
-    graphics.setColour(palette.notation);
-    graphics.setFont(juce::FontOptions(px(2.15), juce::Font::bold));
+    const double upperWidth = runWidth(font, upper);
+    const double lowerWidth = runWidth(font, lower);
+    const double widest = std::max(upperWidth, lowerWidth);
 
-    graphics.drawText(
-        timeSignatureDigits(glyph.beats),
-        juce::Rectangle<float>(
-            static_cast<float>(x), static_cast<float>(originY) - px(0.25), px(2.4), px(2.3)),
-        juce::Justification::centred);
+    // The two numbers are centred on each other, and the pair starts at the
+    // left of the room the layout reserved. A 12 over an 8 is centred as a
+    // column, not left-aligned as two lines of text.
+    const double centreX = glyph.x + timeSignatureLeadIn + (widest * 0.5);
 
-    graphics.drawText(
-        timeSignatureDigits(glyph.beatType),
-        juce::Rectangle<float>(
-            static_cast<float>(x), static_cast<float>(originY) + px(1.95), px(2.4), px(2.3)),
-        juce::Justification::centred);
+    const auto drawNumber =
+        [&](const std::vector<smufl::Glyph>& digits, double width, StaffSteps position)
+    {
+        double x = centreX - (width * 0.5);
+
+        for (const smufl::Glyph digit : digits)
+        {
+            drawGlyph(digit, x, yForSteps(position), originX, originY, palette.notation);
+            x += static_cast<double>(font.bounds(digit).getRight());
+        }
+    };
+
+    drawNumber(upper, upperWidth, upperTimeSignatureNumber);
+    drawNumber(lower, lowerWidth, lowerTimeSignatureNumber);
 }
 
 void ScoreGlyphPainter::drawLyric(
@@ -789,7 +612,7 @@ void ScoreGlyphPainter::drawSystem(
 
     for (const engraving::KeyAccidentalGlyph& glyph : system.keyAccidentals)
     {
-        drawAccidental(glyph.kind, glyph.x + 0.4, glyph.position, originX, originY);
+        drawKeyAccidental(glyph, originX, originY);
     }
 
     for (const engraving::TimeSignatureGlyph& glyph : system.timeSignatures)

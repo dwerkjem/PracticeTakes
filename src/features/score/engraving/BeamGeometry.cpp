@@ -130,6 +130,10 @@ layOutBeamGroup(const std::vector<BeamStem>& stems, bool up, const LayoutOptions
     // stem, by construction below.
     const double beamPitch = options.beamThickness + options.beamSeparation;
 
+    // Half a stem: how far a beam reaches past the centre line of a stem at
+    // its end, to that stem's outer edge.
+    const double overhang = options.stemThickness * 0.5;
+
     geometry.stemTips.reserve(stems.size());
 
     for (const BeamStem& stem : stems)
@@ -157,8 +161,15 @@ layOutBeamGroup(const std::vector<BeamStem>& stems, bool up, const LayoutOptions
 
             if (run.first != run.second)
             {
+                // Out to the stems' outer edges. Through `line.at` rather than
+                // by extending x alone: a sloped bar extended sideways without
+                // following its slope slides off the line it was laid out on,
+                // and every stem pokes past it by the slope times the overhang.
+                const double startX = first.x - overhang;
+                const double endX = last.x + overhang;
+
                 geometry.beams.push_back(BeamGlyph{
-                    first.x, last.x, line.at(first.x) + offset, line.at(last.x) + offset,
+                    startX, endX, line.at(startX) + offset, line.at(endX) + offset,
                     options.beamThickness, level, false, up});
 
                 continue;
@@ -178,10 +189,10 @@ layOutBeamGroup(const std::vector<BeamStem>& stems, bool up, const LayoutOptions
             const double reach =
                 std::min(options.partialBeamLength, std::abs(neighbourX - first.x) * 0.5);
 
-            const double otherX = pointsBack ? first.x - reach : first.x + reach;
-
-            const double startX = std::min(first.x, otherX);
-            const double endX = std::max(first.x, otherX);
+            // The stub's own end reaches its stem's outer edge, like a full
+            // beam's; its free end stops at `reach`.
+            const double startX = pointsBack ? first.x - reach : first.x - overhang;
+            const double endX = pointsBack ? first.x + overhang : first.x + reach;
 
             geometry.beams.push_back(BeamGlyph{
                 startX, endX, line.at(startX) + offset, line.at(endX) + offset,

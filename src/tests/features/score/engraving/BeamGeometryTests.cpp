@@ -44,6 +44,13 @@ namespace
 {
     return beam.startY == Approx(beam.endY);
 }
+
+// How far a full beam reaches past the centre line of the stem at each end:
+// to that stem's outer edge.
+[[nodiscard]] double overhang()
+{
+    return options().stemThickness * 0.5;
+}
 } // namespace
 
 TEST_CASE("fewer than two stems is not a group", "[score][engraving][beams]")
@@ -75,8 +82,11 @@ TEST_CASE("two notes at one pitch take a flat beam", "[score][engraving][beams]"
     // half long, so the beam's near edge sits one and a half spaces above the
     // top line.
     CHECK(beam.startY == Approx(-1.5));
-    CHECK(beam.startX == Approx(0.0));
-    CHECK(beam.endX == Approx(4.0));
+
+    // Out to the outer edges of the end stems, so the bar covers them rather
+    // than stopping at their centre lines.
+    CHECK(beam.startX == Approx(0.0 - overhang()));
+    CHECK(beam.endX == Approx(4.0 + overhang()));
 
     REQUIRE(geometry.stemTips.size() == 2);
 
@@ -98,12 +108,14 @@ TEST_CASE("a beam slopes with its notes", "[score][engraving][beams]")
 
     const engraving::BeamGlyph& beam = geometry.beams.front();
 
-    // A rising line in pitch is a falling one in y, and both ends keep the
-    // conventional stem length because nothing had to be shifted.
+    // A rising line in pitch is a falling one in y, and both stems keep the
+    // conventional length because nothing had to be shifted. Read at the stems
+    // rather than at the bar's drawn ends, which reach half a stem further
+    // along the same slope: each tip is the beam's line plus its thickness.
     CHECK(beam.endY < beam.startY);
-    CHECK(beam.startY == Approx(0.5));
-    CHECK(beam.endY == Approx(-0.5));
-    CHECK(std::abs(beam.endY - beam.startY) < options().maximumBeamRise);
+    CHECK(geometry.stemTips.at(0) == Approx(0.5 - options().beamThickness));
+    CHECK(geometry.stemTips.at(1) == Approx(-0.5 - options().beamThickness));
+    CHECK(std::abs(geometry.stemTips.at(1) - geometry.stemTips.at(0)) < options().maximumBeamRise);
 
     CHECK(lengthOf(stems.at(0), geometry.stemTips.at(0)) >= options().minimumStemLength);
     CHECK(lengthOf(stems.at(1), geometry.stemTips.at(1)) >= options().minimumStemLength);
@@ -121,7 +133,13 @@ TEST_CASE("a beam's slope is clamped, so a leap is not a diagonal", "[score][eng
 
     const engraving::BeamGlyph& beam = geometry.beams.front();
 
-    CHECK(std::abs(beam.endY - beam.startY) == Approx(options().maximumBeamRise));
+    // The clamp is a rule about the beam between its outer stems, so it is
+    // read there -- the drawn bar's own ends are half a stem further out along
+    // the same slope and rise a few percent more.
+    CHECK(
+        std::abs(geometry.stemTips.at(1) - geometry.stemTips.at(0)) ==
+        Approx(options().maximumBeamRise));
+    CHECK(beam.endY < beam.startY);
 
     // And the clamp does not get to shorten a stem below the minimum: the whole
     // line moves instead.
@@ -250,12 +268,15 @@ TEST_CASE("a beam level with no neighbour is a stub", "[score][engraving][beams]
 
         CHECK(full.level == 1);
         CHECK_FALSE(full.partial);
-        CHECK(full.startX == Approx(0.0));
-        CHECK(full.endX == Approx(4.0));
+        CHECK(full.startX == Approx(0.0 - overhang()));
+        CHECK(full.endX == Approx(4.0 + overhang()));
 
         CHECK(stub.level == 2);
         CHECK(stub.partial);
-        CHECK(stub.endX == Approx(4.0));
+
+        // Its own end reaches its stem's outer edge like a full beam's; its
+        // free end stops a partial-beam length back.
+        CHECK(stub.endX == Approx(4.0 + overhang()));
         CHECK(stub.startX == Approx(3.0));
     }
 
@@ -270,7 +291,7 @@ TEST_CASE("a beam level with no neighbour is a stub", "[score][engraving][beams]
         const engraving::BeamGlyph& stub = geometry.beams.at(1);
 
         CHECK(stub.partial);
-        CHECK(stub.startX == Approx(0.0));
+        CHECK(stub.startX == Approx(0.0 - overhang()));
         CHECK(stub.endX == Approx(1.0));
     }
 
@@ -288,7 +309,7 @@ TEST_CASE("a beam level with no neighbour is a stub", "[score][engraving][beams]
 
         CHECK(stub.partial);
         CHECK(stub.startX == Approx(0.5));
-        CHECK(stub.endX == Approx(1.0));
+        CHECK(stub.endX == Approx(1.0 + overhang()));
     }
 }
 
@@ -308,8 +329,8 @@ TEST_CASE(
 
     CHECK(second.level == 2);
     CHECK_FALSE(second.partial);
-    CHECK(second.startX == Approx(3.0));
-    CHECK(second.endX == Approx(4.5));
+    CHECK(second.startX == Approx(3.0 - overhang()));
+    CHECK(second.endX == Approx(4.5 + overhang()));
 
     // The eighth's stem stops at the first beam; the sixteenths' reach the
     // second.

@@ -35,7 +35,8 @@ ScoreViewComponent::Canvas::Canvas(ScoreViewComponent& ownerToUse) : owner(owner
 void ScoreViewComponent::Canvas::paint(juce::Graphics& graphics)
 {
     const ScoreGlyphPainter painter(
-        graphics, owner.pixelsPerSpace(), scoreNotationPaletteFor(owner.currentTheme));
+        graphics, owner.musicFont, owner.pixelsPerSpace(),
+        scoreNotationPaletteFor(owner.currentTheme));
 
     for (const engraving::System& system : owner.layout.systems)
     {
@@ -212,6 +213,15 @@ juce::String ScoreViewComponent::noticeText() const
 {
     juce::StringArray lines;
 
+    // First, because it explains everything else on the page. Without the
+    // font the staff, stems and beams still draw and every symbol is missing,
+    // which would otherwise look like a score with no notes in it.
+    if (!musicFont.isLoaded())
+    {
+        lines.add("The music font did not load, so noteheads, clefs, accidentals and rests are "
+                  "not drawn.");
+    }
+
     for (const std::string& notice : layout.notices)
     {
         lines.add(juce::String(notice));
@@ -290,7 +300,7 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
             title, juce::Justification::centredRight);
     }
 
-    if (layout.notices.empty())
+    if (layout.notices.empty() && musicFont.isLoaded())
     {
         return;
     }

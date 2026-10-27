@@ -71,7 +71,13 @@ struct NoteheadGlyph
 // a stem, which is why this is not a field on the notehead.
 struct StemGlyph
 {
+    // The stem's centre line. Set in from the notehead's edge by half the
+    // stem's thickness, so that the stem's outer edge and the notehead's are
+    // flush -- which is where an engraver puts it, and what makes a stem read
+    // as attached rather than as a line drawn next to a note.
     double x = 0.0;
+
+    double thickness = 0.12;
 
     // The notehead the stem attaches to: the lowest of a chord for an upward
     // stem, the highest for a downward one. A staff position, because this end
@@ -107,6 +113,9 @@ struct StemGlyph
 // do not.
 struct BeamGlyph
 {
+    // Already reaching the outer edges of the stems at each end of a full
+    // beam, so the bar covers those stems rather than stopping at their centre
+    // lines. A partial beam reaches its own stem's outer edge on that side.
     double startX = 0.0;
     double endX = 0.0;
 
@@ -285,7 +294,11 @@ struct LayoutOptions
     // sixteenths still has space for a notehead.
     double minimumSlotWidth = 2.6;
 
-    double noteheadWidth = 1.2;
+    // The music font's black notehead, which every stemmed notehead matches:
+    // Bravura's is 1.18 spaces wide. MusicFontTests checks this number against
+    // the font, because a stem placed by one width against a notehead drawn at
+    // another stands off it or cuts into it.
+    double noteheadWidth = 1.18;
     double accidentalWidth = 1.4;
     double graceNoteWidth = 1.7;
     double clefWidth = 3.6;
@@ -301,6 +314,11 @@ struct LayoutOptions
     // when it falls short, rather than the two numbers being kept in step by
     // hand.
     double flagWidth = 1.0;
+
+    // A stem's thickness, from the music font's engraving defaults. A layout
+    // number rather than a painter one, because it decides where the stem's
+    // centre line goes and how far a beam reaches past it.
+    double stemThickness = 0.12;
 
     // How long a stem is, in half spaces, measured from the notehead it
     // attaches to. Seven half spaces is three and a half staff spaces, which is

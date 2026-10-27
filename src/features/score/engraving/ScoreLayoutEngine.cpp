@@ -862,13 +862,18 @@ double emitMeasure(
 
         const int beamLevels = placed.beamed ? flagCountFor(value.value) : 0;
 
-        const double stemX = x + (placed.stemUp ? options.noteheadWidth : 0.0);
+        // Set in by half the stem's thickness, so its outer edge is flush with
+        // the notehead's: right edge on the right for an up stem, left on the
+        // left for a down one.
+        const double inset = options.stemThickness * 0.5;
+        const double stemX = placed.stemUp ? x + options.noteheadWidth - inset : x + inset;
 
         // A beam stands in for the flags it replaces, so a beamed stem draws
         // none. Its tip is overwritten below, once the group's slope is known.
         system.stems.push_back(StemGlyph{
-            stemX, attach, spacesBelowTopLine(tip), placed.beamed ? 0 : flagCountFor(value.value),
-            beamLevels, placed.stemUp, placed.event->isGrace});
+            stemX, options.stemThickness, attach, spacesBelowTopLine(tip),
+            placed.beamed ? 0 : flagCountFor(value.value), beamLevels, placed.stemUp,
+            placed.event->isGrace});
 
         if (placed.beamed)
         {
