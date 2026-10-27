@@ -153,9 +153,9 @@ void ScoreViewComponent::resized()
     bounds.removeFromTop(titleStripHeight);
 
     // Reserved whether or not there is anything in it, so that opening a score
-    // does not move the staff: a laid-out score always has at least one notice
-    // -- this pass does not beam -- and a strip that appeared later would
-    // reflow everything the moment a file finished loading.
+    // does not move the staff. A strip that appeared only when a notice did
+    // would reflow everything the moment a file finished loading, and which
+    // files have notices is a property of the files rather than of the tool.
     bounds.removeFromBottom(noticeStripHeight);
 
     viewport.setBounds(bounds);

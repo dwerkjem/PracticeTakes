@@ -48,6 +48,7 @@ class ScoreGlyphPainter
 
     void drawNotehead(const engraving::NoteheadGlyph& glyph, double originX, double originY) const;
     void drawStem(const engraving::StemGlyph& glyph, double originX, double originY) const;
+    void drawBeam(const engraving::BeamGlyph& glyph, double originX, double originY) const;
     void drawRest(const engraving::RestGlyph& glyph, double originX, double originY) const;
     void drawBarline(const engraving::BarlineGlyph& glyph, double originX, double originY) const;
     void drawClef(const engraving::ClefGlyph& glyph, double originX, double originY) const;

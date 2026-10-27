@@ -380,7 +380,7 @@ void ScoreGlyphPainter::drawStem(const engraving::StemGlyph& glyph, double origi
 
     const double x = originX + px(glyph.x);
     const double attachY = originY + px(yForSteps(glyph.attachPosition));
-    const double tipY = originY + px(yForSteps(glyph.tipPosition));
+    const double tipY = originY + px(glyph.tipSpaces);
 
     graphics.setColour(glyph.isGrace ? palette.muted : palette.notation);
     graphics.fillRect(juce::Rectangle<float>(
@@ -388,8 +388,9 @@ void ScoreGlyphPainter::drawStem(const engraving::StemGlyph& glyph, double origi
         static_cast<float>(std::min(attachY, tipY)), px(stemThickness * scale),
         static_cast<float>(std::abs(attachY - tipY))));
 
-    // Flags, not beams. One hook per flag, stacked back along the stem from the
-    // tip, curling away from the notehead.
+    // One hook per flag, stacked back along the stem from the tip, curling away
+    // from the notehead. A beamed stem has no flags: `drawBeam` draws what
+    // stands in for them.
     for (int flag = 0; flag < glyph.flags; ++flag)
     {
         const double along = static_cast<double>(flag) * 0.78 * scale;
@@ -413,6 +414,40 @@ void ScoreGlyphPainter::drawStem(const engraving::StemGlyph& glyph, double origi
             juce::PathStrokeType(
                 px(0.17 * scale), juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
+}
+
+void ScoreGlyphPainter::drawBeam(const engraving::BeamGlyph& glyph, double originX, double originY)
+    const
+{
+    // A beam is a parallelogram, not a rectangle: its two ends are vertical, so
+    // that the stems meeting it do so flush. Sloping the ends with the bar --
+    // which is what stroking a line would do -- leaves a wedge of white between
+    // the beam and the stem at every joint.
+    const double depth = glyph.up ? -glyph.thickness : glyph.thickness;
+
+    // Half the stem's width at each end, so the bar covers the stems it joins
+    // rather than stopping at their centre lines. The ends move **along** the
+    // beam rather than straight out from it: extending x alone would slide a
+    // sloped bar sideways off the line it was laid out on, and leave each stem
+    // poking past it by the slope times the overhang.
+    const double overhang = stemThickness * 0.5;
+
+    const double span = glyph.endX - glyph.startX;
+    const double rise = span > 0.0 ? ((glyph.endY - glyph.startY) / span) * overhang : 0.0;
+
+    const double leftX = glyph.startX - overhang;
+    const double rightX = glyph.endX + overhang;
+    const double leftY = glyph.startY - rise;
+    const double rightY = glyph.endY + rise;
+
+    juce::Path bar;
+    bar.startNewSubPath(static_cast<float>(leftX), static_cast<float>(leftY));
+    bar.lineTo(static_cast<float>(rightX), static_cast<float>(rightY));
+    bar.lineTo(static_cast<float>(rightX), static_cast<float>(rightY + depth));
+    bar.lineTo(static_cast<float>(leftX), static_cast<float>(leftY + depth));
+    bar.closeSubPath();
+
+    fillInSpaces(bar, originX, originY, palette.notation);
 }
 
 void ScoreGlyphPainter::drawRest(const engraving::RestGlyph& glyph, double originX, double originY)
@@ -772,6 +807,11 @@ void ScoreGlyphPainter::drawSystem(
     for (const engraving::StemGlyph& glyph : system.stems)
     {
         drawStem(glyph, originX, originY);
+    }
+
+    for (const engraving::BeamGlyph& glyph : system.beams)
+    {
+        drawBeam(glyph, originX, originY);
     }
 
     for (const engraving::NoteheadGlyph& glyph : system.noteheads)

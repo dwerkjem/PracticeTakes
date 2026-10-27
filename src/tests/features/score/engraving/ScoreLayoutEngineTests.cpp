@@ -72,6 +72,49 @@ measureOf(std::size_t index, std::vector<score::Voice> voices, bool declareAttri
     return measure;
 }
 
+// One measure in a metre of its own, which is what a beaming case is about.
+[[nodiscard]] score::Measure
+measureInTime(int beats, int beatType, std::vector<score::Voice> voices)
+{
+    score::Measure measure;
+    measure.index = 0;
+    measure.printedNumber = "1";
+    measure.nominalDuration = score::nominalMeasureTicks(beats, beatType);
+    measure.start = 0;
+    measure.voices = std::move(voices);
+
+    measure.attributes.clefs = {score::Clef{"G", 2, 0, 1}};
+    measure.attributes.key = score::KeySignature{0, "major"};
+    measure.attributes.time = score::TimeSignature{beats, beatType};
+
+    return measure;
+}
+
+// A run of equal notes from tick zero on one pitch, so a case about grouping is
+// not also a case about stem direction.
+[[nodiscard]] std::vector<score::ScoreEvent>
+runOf(std::size_t count, Tick duration, score::Pitch onPitch)
+{
+    std::vector<score::ScoreEvent> events;
+    events.reserve(count);
+
+    for (std::size_t index = 0; index < count; ++index)
+    {
+        events.push_back(noteAt(static_cast<Tick>(index) * duration, duration, onPitch));
+    }
+
+    return events;
+}
+
+// How many distinct beam groups a system holds, counted by its level-1 beams:
+// every group has exactly one, whatever else is stacked above it.
+[[nodiscard]] std::size_t beamGroupCount(const System& system)
+{
+    return static_cast<std::size_t>(std::count_if(
+        system.beams.begin(), system.beams.end(),
+        [](const BeamGlyph& beam) { return beam.level == 1 && !beam.partial; }));
+}
+
 // One treble part, declaring its attributes in the first measure the way a
 // MusicXML file does.
 [[nodiscard]] std::shared_ptr<const score::Score>
@@ -244,7 +287,7 @@ TEST_CASE("a chord is one stem and several noteheads", "[score][engraving][layou
 
     CHECK(stem.up);
     CHECK(stem.attachPosition == 10);
-    CHECK(stem.tipPosition < 6);
+    CHECK(stem.tipSpaces < spacesBelowTopLine(6));
 }
 
 TEST_CASE("two noteheads a second apart do not share an x", "[score][engraving][layout]")
@@ -757,7 +800,23 @@ TEST_CASE("every notehead names the note it came from", "[score][engraving][layo
 
 TEST_CASE("what is not drawn is named", "[score][engraving][layout]")
 {
-    SECTION("beams, always, because this pass has none")
+    SECTION("that beam grouping came from the metre and not from the file")
+    {
+        const ScoreLayout layout = layOutScore(
+            scoreOf({measureOf(
+                0,
+                {voiceOf(
+                    1, {noteAt(0, ticksPerQuarterNote / 2, pitch(score::Step::g, 0, 4)),
+                        noteAt(
+                            ticksPerQuarterNote / 2, ticksPerQuarterNote / 2,
+                            pitch(score::Step::a, 0, 4))})},
+                true)}),
+            wideOptions());
+
+        CHECK(anyNoticeContains(layout, "chosen from the time signature"));
+    }
+
+    SECTION("nothing about beams when a part holds no beamable note")
     {
         const ScoreLayout layout = layOutScore(
             scoreOf({measureOf(
@@ -765,7 +824,7 @@ TEST_CASE("what is not drawn is named", "[score][engraving][layout]")
                 true)}),
             wideOptions());
 
-        CHECK(anyNoticeContains(layout, "flags rather than beamed"));
+        CHECK_FALSE(anyNoticeContains(layout, "time signature"));
     }
 
     SECTION("further parts, by name")
@@ -906,4 +965,300 @@ TEST_CASE("a bar that cannot fit anywhere is still laid out", "[score][engraving
     REQUIRE(layout.systems.size() == 1);
     CHECK(layout.systems.front().noteheads.size() == 3);
     CHECK(layout.systems.front().width > tiny.availableWidth);
+}
+
+TEST_CASE(
+    "eighths sharing a beat are beamed, and lose their flags",
+    "[score][engraving][layout][beams]")
+{
+    const Tick eighth = ticksPerQuarterNote / 2;
+
+    const ScoreLayout layout = layOutScore(
+        scoreOf({measureInTime(4, 4, {voiceOf(1, runOf(2, eighth, pitch(score::Step::g, 0, 4)))})}),
+        wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.stems.size() == 2);
+
+    for (const StemGlyph& stem : system.stems)
+    {
+        // A beam stands in for the flags; drawing both would state the
+        // duration twice.
+        CHECK(stem.flags == 0);
+        CHECK(stem.beamLevels == 1);
+    }
+
+    REQUIRE(system.beams.size() == 1);
+
+    const BeamGlyph& beam = system.beams.front();
+
+    CHECK(beam.level == 1);
+    CHECK_FALSE(beam.partial);
+
+    // The bar reaches from the first stem to the last.
+    CHECK(beam.startX == Catch::Approx(system.stems.at(0).x));
+    CHECK(beam.endX == Catch::Approx(system.stems.at(1).x));
+}
+
+TEST_CASE("an eighth alone in its beat keeps its flag", "[score][engraving][layout][beams]")
+{
+    // Which is the whole of how a reader tells an eighth from a quarter when
+    // there is nothing to beam it to.
+    const Tick eighth = ticksPerQuarterNote / 2;
+
+    const ScoreLayout layout = layOutScore(
+        scoreOf({measureInTime(
+            4, 4,
+            {voiceOf(
+                1, {noteAt(0, eighth, pitch(score::Step::g, 0, 4)),
+                    noteAt(ticksPerQuarterNote, eighth, pitch(score::Step::g, 0, 4))})})}),
+        wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    CHECK(system.beams.empty());
+
+    REQUIRE(system.stems.size() == 2);
+
+    for (const StemGlyph& stem : system.stems)
+    {
+        CHECK(stem.flags == 1);
+        CHECK(stem.beamLevels == 0);
+    }
+}
+
+TEST_CASE("beam groups follow the time signature", "[score][engraving][layout][beams]")
+{
+    const Tick eighth = ticksPerQuarterNote / 2;
+
+    const std::vector<score::ScoreEvent> six = runOf(6, eighth, pitch(score::Step::g, 0, 4));
+
+    SECTION("6/8 beams as three and three")
+    {
+        const ScoreLayout layout =
+            layOutScore(scoreOf({measureInTime(6, 8, {voiceOf(1, six)})}), wideOptions());
+
+        REQUIRE(layout.systems.size() == 1);
+
+        CHECK(beamGroupCount(layout.systems.front()) == 2);
+    }
+
+    SECTION("3/4 beams the same six notes as one, one and one")
+    {
+        // Beamed as 3+3 these notes would read as 6/8 -- the same sound, a
+        // different metre on the page.
+        const ScoreLayout layout =
+            layOutScore(scoreOf({measureInTime(3, 4, {voiceOf(1, six)})}), wideOptions());
+
+        REQUIRE(layout.systems.size() == 1);
+
+        CHECK(beamGroupCount(layout.systems.front()) == 3);
+    }
+
+    SECTION("cut time beams eight eighths as four and four")
+    {
+        const ScoreLayout layout = layOutScore(
+            scoreOf(
+                {measureInTime(2, 2, {voiceOf(1, runOf(8, eighth, pitch(score::Step::g, 0, 4)))})}),
+            wideOptions());
+
+        REQUIRE(layout.systems.size() == 1);
+
+        CHECK(beamGroupCount(layout.systems.front()) == 2);
+    }
+}
+
+TEST_CASE("a beam does not cross a barline", "[score][engraving][layout][beams]")
+{
+    const Tick eighth = ticksPerQuarterNote / 2;
+
+    // Two bars of 1/4, each holding two eighths. Nothing but the barline
+    // separates the second eighth from the third.
+    score::Measure first =
+        measureInTime(1, 4, {voiceOf(1, runOf(2, eighth, pitch(score::Step::g, 0, 4)))});
+
+    score::Measure second =
+        measureInTime(1, 4, {voiceOf(1, runOf(2, eighth, pitch(score::Step::g, 0, 4)))});
+    second.index = 1;
+    second.printedNumber = "2";
+    second.start = first.nominalDuration;
+    second.attributes = score::AttributeChanges{};
+
+    const ScoreLayout layout = layOutScore(scoreOf({first, second}), wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    REQUIRE(beamGroupCount(system) == 2);
+
+    // And no beam spans the barline between them.
+    const auto barline = std::find_if(
+        system.barlines.begin(), system.barlines.end(), [&system](const BarlineGlyph& glyph)
+        { return glyph.x > system.stems.at(1).x && glyph.x < system.stems.at(2).x; });
+
+    REQUIRE(barline != system.barlines.end());
+
+    for (const BeamGlyph& beam : system.beams)
+    {
+        CHECK_FALSE((beam.startX < barline->x && beam.endX > barline->x));
+    }
+}
+
+TEST_CASE(
+    "a lone sixteenth among eighths takes a partial beam",
+    "[score][engraving][layout][beams]")
+{
+    // A dotted eighth and a sixteenth: one beam joins them and the second
+    // belongs to the sixteenth alone, so it is a stub pointing back at the beat.
+    const Tick sixteenth = ticksPerQuarterNote / 4;
+
+    const ScoreLayout layout = layOutScore(
+        scoreOf({measureInTime(
+            1, 4,
+            {voiceOf(
+                1, {noteAt(0, sixteenth * 3, pitch(score::Step::g, 0, 4)),
+                    noteAt(sixteenth * 3, sixteenth, pitch(score::Step::g, 0, 4))})})}),
+        wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.beams.size() == 2);
+
+    CHECK(system.beams.at(0).level == 1);
+    CHECK_FALSE(system.beams.at(0).partial);
+
+    CHECK(system.beams.at(1).level == 2);
+    CHECK(system.beams.at(1).partial);
+
+    // The stub ends on the sixteenth's own stem and reaches back towards the
+    // note before it.
+    CHECK(system.beams.at(1).endX == Catch::Approx(system.stems.at(1).x));
+    CHECK(system.beams.at(1).startX < system.stems.at(1).x);
+    CHECK(system.beams.at(1).startX > system.stems.at(0).x);
+}
+
+TEST_CASE("a beamed group takes one stem direction", "[score][engraving][layout][beams]")
+{
+    const Tick eighth = ticksPerQuarterNote / 2;
+
+    // One note below the middle line and one well above it. Left to the
+    // single-note rule these would stem in opposite directions, and a beam
+    // cannot join two stems pointing apart.
+    const ScoreLayout layout = layOutScore(
+        scoreOf({measureInTime(
+            1, 4,
+            {voiceOf(
+                1, {noteAt(0, eighth, pitch(score::Step::g, 0, 4)),
+                    noteAt(eighth, eighth, pitch(score::Step::c, 0, 6))})})}),
+        wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.stems.size() == 2);
+
+    CHECK(system.stems.at(0).up == system.stems.at(1).up);
+
+    // And the direction is the one the note furthest from the middle line
+    // wants: C6 is five steps above it, G4 three below.
+    CHECK_FALSE(system.stems.at(0).up);
+
+    REQUIRE(system.beams.size() == 1);
+    CHECK_FALSE(system.beams.front().up);
+}
+
+TEST_CASE(
+    "two voices on one staff beam separately and in opposite directions",
+    "[score][engraving][layout][beams]")
+{
+    const Tick eighth = ticksPerQuarterNote / 2;
+
+    const ScoreLayout layout = layOutScore(
+        scoreOf({measureInTime(
+            1, 4,
+            {voiceOf(1, runOf(2, eighth, pitch(score::Step::g, 0, 4))),
+             voiceOf(2, runOf(2, eighth, pitch(score::Step::e, 0, 4)))})}),
+        wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    // One group per voice, not one group of four: a beam never joins two
+    // voices, whatever beat they share.
+    REQUIRE(beamGroupCount(system) == 2);
+
+    const auto up = std::find_if(
+        system.beams.begin(), system.beams.end(), [](const BeamGlyph& beam) { return beam.up; });
+    const auto down = std::find_if(
+        system.beams.begin(), system.beams.end(), [](const BeamGlyph& beam) { return !beam.up; });
+
+    CHECK(up != system.beams.end());
+    CHECK(down != system.beams.end());
+}
+
+TEST_CASE("a dotted note carries its dots into the layout", "[score][engraving][layout][beams]")
+{
+    const Tick sixteenth = ticksPerQuarterNote / 4;
+
+    const ScoreLayout layout = layOutScore(
+        scoreOf({measureInTime(
+            1, 4,
+            {voiceOf(
+                1, {noteAt(0, sixteenth * 3, pitch(score::Step::g, 0, 4)),
+                    noteAt(sixteenth * 3, sixteenth, pitch(score::Step::g, 0, 4))})})}),
+        wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const std::vector<NoteheadGlyph>& heads = layout.systems.front().noteheads;
+
+    REQUIRE(heads.size() == 2);
+
+    // Without the dot the first note is drawn as an eighth, which is a
+    // different duration from the one in the file.
+    CHECK(heads.at(0).dots == 1);
+    CHECK(heads.at(1).dots == 0);
+}
+
+TEST_CASE(
+    "the room between two onsets clears a notehead and its flag",
+    "[score][engraving][layout][beams]")
+{
+    // Two flagged eighths, one per beat, so neither is beamed and both carry a
+    // flag hanging off the right of the stem.
+    const Tick eighth = ticksPerQuarterNote / 2;
+
+    LayoutOptions options = wideOptions();
+
+    // Below what a notehead and a flag need, so the floor has to be derived
+    // rather than taken as given.
+    options.minimumSlotWidth = 0.1;
+
+    const ScoreLayout layout = layOutScore(
+        scoreOf({measureInTime(
+            4, 4,
+            {voiceOf(
+                1,
+                {noteAt(0, eighth, pitch(score::Step::g, 0, 4)),
+                 noteAt(
+                     eighth, ticksPerQuarterNote * 3 + eighth, pitch(score::Step::g, 0, 4))})})}),
+        options);
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const std::vector<NoteheadGlyph>& heads = layout.systems.front().noteheads;
+
+    REQUIRE(heads.size() == 2);
+
+    CHECK(heads.at(1).x - heads.at(0).x >= options.noteheadWidth + options.flagWidth);
 }
