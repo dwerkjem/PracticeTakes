@@ -8,7 +8,7 @@ TEST_CASE("the built-in catalog declares every shipped tool", "[tools][catalog]"
     const auto& catalog = builtInToolCatalog();
 
     REQUIRE(catalog.rejectedIds().empty());
-    REQUIRE(catalog.tools().size() == 4);
+    REQUIRE(catalog.tools().size() == 5);
 
     for (const auto& definition : catalog.tools())
     {

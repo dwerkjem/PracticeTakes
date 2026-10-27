@@ -36,6 +36,13 @@
             ToolInstancePolicy::single,
             std::nullopt,
             {560, 340}},
+        ToolDefinition{
+            "score-view",
+            "Score View",
+            {"notation", "scoreView"},
+            ToolInstancePolicy::single,
+            std::nullopt,
+            {1060, 620}},
     });
     return catalog;
 }
