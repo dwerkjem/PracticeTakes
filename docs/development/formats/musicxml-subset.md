@@ -8,6 +8,13 @@ may rely on anything listed as imported being present in the model, and on
 nothing else being there. If the importer changes, this changes with it in the
 same pull request.
 
+**Its audience is no longer only contributors.** Every diagnostic described here
+is now shown to the user, in the import summary window the File menu's Open
+Score command opens — grouped by severity, with the part and the printed bar
+number where it has one. So the wording of a diagnostic is user-facing text: a
+message written for whoever is reading this document will be read by a musician
+who wants to know why their file came in differently from how it went out.
+
 ## Accepted input
 
 | Extension | What it is |

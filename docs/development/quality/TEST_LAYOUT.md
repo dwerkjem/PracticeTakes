@@ -16,8 +16,9 @@ a layer — you could not answer "what covers the audio service?" by looking.
 Beside the mirror of the file it exercises. If `src/` gains a directory, create
 the matching one under `src/tests/` rather than putting the test at the top level.
 
-Add the file to `add_executable(PracticeTakesTests ...)` in `CMakeLists.txt`;
-the source list is explicit, so a test not listed there silently never runs.
+Add the file to `PRACTICE_TAKES_TEST_SOURCES` in `tools/cmake/Sources.cmake`,
+which the root `CMakeLists.txt` includes and hands to `add_executable`; the
+source list is explicit, so a test not listed there silently never runs.
 
 ## Includes
 

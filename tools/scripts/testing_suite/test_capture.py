@@ -179,6 +179,23 @@ class WindowTargetingTests(unittest.TestCase):
                 with self.subTest(surface=surface.title):
                     self.assertEqual(surface.window_title, surfaces.SETTINGS_WINDOW)
 
+    def test_the_score_import_surfaces_name_their_window(self) -> None:
+        """The summary is its own top-level window, and it appears while the
+        main one is on screen -- so an unnamed capture photographs the shell
+        with nothing in it, which is what happened to the settings surface."""
+        for surface in surfaces.SURFACES:
+            if surface.state.startswith("score-import"):
+                with self.subTest(surface=surface.title):
+                    self.assertEqual(surface.window_title, surfaces.SCORE_IMPORT_WINDOW)
+
+    def test_a_document_surface_waits_for_its_import(self) -> None:
+        """The import is asynchronous: without a warmup the capture is of
+        "Reading ..." rather than of the finished report."""
+        for surface in surfaces.SURFACES:
+            if surface.state.startswith("score-import"):
+                with self.subTest(surface=surface.title):
+                    self.assertGreater(surface.warmup_seconds, 0)
+
     def test_a_surface_with_its_own_window_is_captured_once(self) -> None:
         """The geometry command resizes the main window, not this one."""
         for surface in surfaces.SURFACES:

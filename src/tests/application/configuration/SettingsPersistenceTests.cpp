@@ -41,6 +41,8 @@ TEST_CASE("normal settings survive an atomic file round trip", "[settings][persi
     expected.inputGain = 1.25;
     expected.audioDeviceState =
         R"(<DEVICESETUP deviceType="Test" audioInputDeviceName="Missing microphone"/>)";
+    expected.midiInputDeviceIdentifier = "alsa-seq-24-0";
+    expected.midiInputDeviceName = "Casio PX-S1100";
     expected.tuner = {3, 0.4, 8.0, 0.7, 6.0, 25.0};
     expected.tunerBounds = "10 20 920 760";
     expected.spectrogramBounds = "30 40 980 650";
@@ -65,6 +67,8 @@ TEST_CASE("normal settings survive an atomic file round trip", "[settings][persi
     CHECK(loaded.state.microphoneMuted);
     CHECK(loaded.state.inputGain == Catch::Approx(expected.inputGain));
     CHECK(loaded.state.audioDeviceState == expected.audioDeviceState);
+    CHECK(loaded.state.midiInputDeviceIdentifier == expected.midiInputDeviceIdentifier);
+    CHECK(loaded.state.midiInputDeviceName == expected.midiInputDeviceName);
     CHECK(loaded.state.tuner.displayMode == expected.tuner.displayMode);
     CHECK(loaded.state.tuner.easing == Catch::Approx(expected.tuner.easing));
     CHECK(loaded.state.tuner.averaging == Catch::Approx(expected.tuner.averaging));
@@ -438,4 +442,80 @@ TEST_CASE("clearing settings removes only Practice Takes owned values", "[settin
     CHECK_FALSE(properties.containsKey("global.theme"));
     CHECK_FALSE(properties.containsKey("window.fullscreenMode"));
     CHECK(properties.getValue("another.application.value") == "keep me");
+}
+
+// Adding the MIDI keys bumped the schema, so every settings file in existence
+// loads as `migrated`. That path has to leave a user with no MIDI device
+// selected rather than with something invented, and has to keep everything
+// they had already set.
+TEST_CASE(
+    "settings written before MIDI existed migrate with no device selected",
+    "[settings][midi]")
+{
+    TemporarySettingsFile temporary;
+
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.setValue("settings.schema", 5);
+        writer.setValue("global.theme", 2);
+        writer.setValue("audio.inputGain", 1.5);
+        REQUIRE(writer.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    CHECK(loaded.status == AppSettings::LoadStatus::migrated);
+    CHECK(loaded.state.midiInputDeviceIdentifier.isEmpty());
+    CHECK(loaded.state.midiInputDeviceName.isEmpty());
+
+    // And what was already there survived, which is the half of a migration
+    // that is easy to break without noticing.
+    CHECK(loaded.state.theme == Theme::dark);
+    CHECK(loaded.state.inputGain == Catch::Approx(1.5));
+}
+
+TEST_CASE(
+    "a remembered MIDI device name survives without its identifier resolving",
+    "[settings][midi]")
+{
+    // The unplugged-keyboard case. Nothing here resolves the identifier against
+    // real hardware -- that is the service's job -- but both values have to come
+    // back, because the name is what the interface shows while the device is
+    // away.
+    TemporarySettingsFile temporary;
+    AppSettings::State expected;
+    expected.midiInputDeviceIdentifier = "a-device-that-is-not-here";
+    expected.midiInputDeviceName = "Yamaha P-125";
+
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    CHECK(loaded.state.midiInputDeviceIdentifier == "a-device-that-is-not-here");
+    CHECK(loaded.state.midiInputDeviceName == "Yamaha P-125");
+}
+
+TEST_CASE("clearing settings removes the MIDI keys too", "[settings][midi]")
+{
+    // A key absent from `ownedKeys` survives a reset, which would leave a user
+    // who reset everything still pointed at a device.
+    TemporarySettingsFile temporary;
+    AppSettings::State state;
+    state.midiInputDeviceIdentifier = "alsa-seq-24-0";
+    state.midiInputDeviceName = "Casio PX-S1100";
+
+    juce::PropertiesFile properties(temporary.path, settingsOptions());
+    AppSettings::store(properties, state);
+    REQUIRE(properties.containsKey("midi.inputDeviceIdentifier"));
+
+    AppSettings::clearOwnedValues(properties);
+
+    CHECK_FALSE(properties.containsKey("midi.inputDeviceIdentifier"));
+    CHECK_FALSE(properties.containsKey("midi.inputDeviceName"));
 }

@@ -23,6 +23,7 @@ broader music-practice and digital-audio workstation application.
 - [Domain glossary](architecture/CONTEXT.md) — the vocabulary Practice Takes uses for itself, and the terms to prefer over their synonyms
 - [Adding a tool](architecture/adding-a-tool.md) — the two entries that register an analysis tool, and the lifecycle it runs through
 - [Design and architecture review checklist](architecture/ARCHITECTURE_QA.md) — what reviewers check on pull requests beyond formatting/linting
+- [What the score model got wrong](architecture/score-model-findings.md) — what the first application consumer of `src/platform/score` revealed, and what should happen about each of it
 
 ### `formats/`
 
@@ -35,6 +36,7 @@ broader music-practice and digital-audio workstation application.
 - [QA strategy](quality/QA_STRATEGY.md) — the current CI/testing gap analysis and plan for closing it
 - [Test layout](quality/TEST_LAYOUT.md) — how `src/tests/` mirrors `src/`, where a new test goes, and what sits outside the mirror
 - [The testing suite](quality/TESTING_SUITE.md) — the standalone suite: unattended capture, the grid review, the run store, and the release record
+- [Verifying score import by hand](quality/score-import-manual-verification.md) — the generated fixture corpus and the four checks the native file chooser keeps out of reach
 
 ### `performance/`
 

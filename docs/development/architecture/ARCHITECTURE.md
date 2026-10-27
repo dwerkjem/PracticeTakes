@@ -233,9 +233,31 @@ diagnostic for each, and hands back `std::shared_ptr<const Score>`.
 before it is first shared and is never mutated afterwards, so any number of
 readers on any number of threads need no lock and no consumer can mutate a score
 another consumer is mid-way through reading. A single owner holds the current
-score — the importer's caller today, the session when #39 lands — and everything
+score — the application shell today, the session when #39 lands — and everything
 else holds a `shared_ptr<const Score>` copy, so a score stays alive as long as
 any reader is using it even if the owner swaps in a different one.
+
+### Who owns the current score, and how it is loaded
+
+`MainComponent` owns one `ScoreImportState`
+(`src/application/shell/ui/score/ScoreImportState.h`), which holds the current
+`std::shared_ptr<const Score>` and hands it out **by value**. It is declared
+before `liveTools`, alongside `audioInputService` and `appLookAndFeel`, so that
+a tool reading the current score cannot outlive it — the same reverse-order
+destruction argument that governs the audio services.
+
+`ScoreImportState` is JUCE-free and carries one rule worth stating here: a
+**failed** import leaves the current score exactly as it was. Closing the score
+a user already has open because a second file turned out to be malformed would
+be worse than the malformed file.
+
+The load path is the File menu's Open Score command →
+`juce::FileChooser` → `ScoreImportJob` (a `juce::Thread`) →
+`importMusicXmlFile` → `juce::MessageManager::callAsync` back to
+`MainComponent::finishScoreImport`. One import runs at a time; a second request
+brings the import window forward rather than starting or cancelling anything.
+The window shows the summary `ScoreImportSummary` produces, for a success and a
+failure alike, and draws no notation.
 
 Violations are always **a repair plus a diagnostic, never a throw**. A score
 arrives from a stranger's file, so "this file is wrong" has to produce something

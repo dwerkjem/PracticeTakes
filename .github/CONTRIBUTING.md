@@ -81,8 +81,8 @@ checklist pass](../docs/development/architecture/ARCHITECTURE_QA.md) for the cri
   (`PracticeTakesTests` for C++ changes, `npm run check`/`npm run test`
   from `src/services/` for changes under `src/services/**`).
 - `pre-commit install` also installs this repository's Git merge
-  configuration — merge drivers for the `CMakeLists.txt` source lists and the
-  npm lockfile, plus `rerere`. See
+  configuration — merge drivers for the `tools/cmake/Sources.cmake` source
+  lists and the npm lockfile, plus `rerere`. See
   [Merging](../docs/development/operations/MERGING.md).
 - `clang-format` runs automatically on commit via pre-commit; `clang-tidy`
   and the services type-check/test suite run automatically on pull

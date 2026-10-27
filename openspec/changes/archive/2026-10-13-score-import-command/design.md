@@ -223,3 +223,29 @@ menu. Nothing existing changes behaviour, so nothing can regress.
   holder would be tidier and is what #39 will want. Keeping it on
   `MainComponent` for now on the grounds that one `shared_ptr` member is not
   worth a new type, and #39 is the change that should decide.
+
+## Answers, recorded after implementation (task 6.4)
+
+- **Does the File menu hold anything else?** Still one item. Nothing was added,
+  and the question still belongs to the next change in this area. What the
+  implementation did settle is *where* the menu lives: this application draws
+  its own title bar, so the "File menu" the spec asks for is the File button's
+  `juce::PopupMenu`, not a `juce::MenuBarModel`. The button already existed with
+  the tooltip "File actions will be added later"; it is now wired, carries the
+  `file-button` component id, and is an approved click target.
+- **Dialog or window for a failure?** Answered as designed: one window. The
+  summary and the failure share a surface, because an import that *succeeded*
+  while dropping content is the outcome most worth not hiding.
+- **Progress and cancellation?** Progress: done, and smaller than expected --
+  the window opens when the import starts and names the file it is reading, so
+  the question "did my click do anything" never arises. Cancellation: still
+  deferred, and now cheap to add if wanted, since `ScoreImportJob` already owns
+  the only thread involved. The one thing in the way is that
+  `importMusicXmlFile` never polls `threadShouldExit()`, so real cancellation
+  needs a cooperation point inside the importer rather than a flag out here.
+- **A dedicated owner for the current score?** Partly answered, differently than
+  expected. The `shared_ptr` did not stay a bare member: `ScoreImportState`
+  holds it, because "a failed import must not close the open score" is a rule
+  worth a test, and a rule needs somewhere to live. `MainComponent` owns one of
+  those instead of one pointer. #39 still decides whether the session takes it
+  over.

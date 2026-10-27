@@ -32,6 +32,11 @@ jobs:
     timeout-minutes: 45
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
+      # Compare the compiler by its contents rather than by its modification
+      # time. A runner image rebuild -- about weekly -- gives every binary a new
+      # mtime, and ccache's default then treats the same compiler as a new one
+      # and misses every object. See build-multiplatform.yml for the measurement.
+      CCACHE_COMPILERCHECK: content
 
     steps:
       - name: Check out pull request

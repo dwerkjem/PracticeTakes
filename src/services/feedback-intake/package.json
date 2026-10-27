@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test": "vitest run --config ../vitest.config.mts",
+    "test:coverage": "vitest run --coverage --config ../vitest.config.mts",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "db:migrate:local": "wrangler d1 migrations apply practice-takes-feedback --local",
@@ -15,14 +15,14 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260728.1",
-    "@types/node": "26.2.0",
-    "@vitest/coverage-v8": "4.1.10",
+    "@types/node": "26.6.5",
+    "@vitest/coverage-v8": "5.0.4",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
-    "vitest": "4.1.10",
-    "wrangler": "4.123.0"
+    "vitest": "5.0.4",
+    "wrangler": "4.149.0"
   },
   "dependencies": {
-    "jose": "^6.2.8"
+    "jose": "^6.2.12"
   }
 }

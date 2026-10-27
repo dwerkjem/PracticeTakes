@@ -17,6 +17,7 @@ on:
       - "src/**"
       - "src/tests/**"
       - "tools/scripts/**"
+      - "tools/cmake/**"
       - "src/services/**"
       - "CMakeLists.txt"
       - ".github/workflows/coverage.yml"
@@ -27,6 +28,7 @@ on:
       - "src/**"
       - "src/tests/**"
       - "tools/scripts/**"
+      - "tools/cmake/**"
       - "src/services/**"
       - "CMakeLists.txt"
       - ".github/workflows/coverage.yml"
@@ -93,7 +95,8 @@ jobs:
             echo '### Sources not built into the test binary'
             echo
             echo 'These cannot be measured by any coverage tool until they are'
-            echo 'added to `add_executable(PracticeTakesTests ...)`. This is a'
+            echo 'added to `PRACTICE_TAKES_TEST_SOURCES` in'
+            echo '`tools/cmake/Sources.cmake`. This is a'
             echo 'more serious category than 0% covered, and it is reported'
             echo 'separately so the headline figure cannot hide it.'
             echo
@@ -104,7 +107,7 @@ jobs:
 
       - name: Upload the C++ coverage report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-cpp
           path: build/coverage
@@ -119,7 +122,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
           cache: npm
@@ -156,7 +159,7 @@ jobs:
 
       - name: Upload the TypeScript coverage report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-typescript
           path: build/coverage/services
@@ -201,7 +204,7 @@ jobs:
 
       - name: Upload the Python coverage report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-python
           path: build/coverage/python

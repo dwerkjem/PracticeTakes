@@ -75,7 +75,7 @@ void MainComponent::showFeedback(const juce::String& context)
                 safeThis->closeFeedback();
             }
         });
-    feedbackWindow->setLookAndFeel(&appLookAndFeel);
+    feedbackWindow->applyAppearance(&appLookAndFeel, appPaletteFor(currentTheme).background);
     feedbackWindow->toFront(true);
 }
 
@@ -100,6 +100,14 @@ void MainComponent::recordSuccessfulToolUse()
 
 void MainComponent::maybeOfferFeedbackInvitation()
 {
+#if PRACTICE_TAKES_ENABLE_TEST_CONTROL
+    // Never during a harness run. See `testControlDriving`.
+    if (testControlDriving)
+    {
+        return;
+    }
+#endif
+
     auto* settingsFile = applicationProperties.getUserSettings();
     if (settingsFile == nullptr)
     {

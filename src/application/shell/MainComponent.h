@@ -4,12 +4,15 @@
 
 #include "../../platform/audio/AudioInputService.h"
 #include "../../platform/audio/SharedPitchAnalysis.h"
+#include "../../platform/midi/MidiInputService.h"
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
 #include "../theme/AppLookAndFeel.h"
 #include "../theme/Theme.h"
 #include "../tools/BuiltInTools.h"
 #include "../tools/ToolInstanceId.h"
+#include "ui/score/ScoreImportJob.h"
+#include "ui/score/ScoreImportState.h"
 #include "ui/workspace/model/NamedWorkspaceService.h"
 #include "ui/workspace/model/WorkspaceDocuments.h"
 #include "ui/workspace/model/WorkspaceLayoutState.h"
@@ -70,6 +73,12 @@ class MainComponent final
     [[nodiscard]] bool applyTestControlGeometry(const std::string& geometry);
     [[nodiscard]] bool applyTestControlTheme(const std::string& theme);
     [[nodiscard]] std::string currentTestControlStateId() const;
+
+    // This process is being driven by the harness rather than used by a person.
+    // Called before the workspace restore lands, because that is early enough
+    // for a tool to close and the feedback invitation to be raised over the
+    // first surface -- see `testControlDriving`.
+    void beginTestControlSession();
 #endif
 
   private:
@@ -122,6 +131,7 @@ class MainComponent final
     };
     class SettingsWindow;
     class FeedbackWindow;
+    class ScoreImportWindow;
     class MicrophoneWarning;
 
     // Initial setup ---------------------------------------------------------
@@ -168,6 +178,27 @@ class MainComponent final
     [[nodiscard]] bool applyTransferredSettings(const SettingsTransferModel& model);
     void closeSettings();
     void showHelpMenu();
+
+    // The application's first File menu, hung off the File button that has
+    // existed unwired since the shell was built.
+    void showFileMenu();
+
+    // Ask for a file, then import it. Dismissing the chooser does nothing.
+    void openScore();
+
+    // Start reading `file` on the import thread. Does nothing but report when
+    // an import is already running -- see ScoreImportJob::start.
+    void startScoreImport(const juce::File& file);
+
+    // Deliver a finished import: the summary is shown, and a successful score
+    // becomes the current one. Runs on the message thread.
+    void finishScoreImport(const score::musicxml::MusicXmlImportResult& result);
+
+    // Show the import window, creating it if it is not open. Re-openable and
+    // non-modal: an import is not a question the user has to answer.
+    void showScoreImportWindow();
+    void closeScoreImportWindow();
+
     void showFeedback(const juce::String& context = {});
     void recordSuccessfulToolUse();
     void maybeOfferFeedbackInvitation();
@@ -252,11 +283,35 @@ class MainComponent final
     // the note on liveTools below for why declaration order here matters at
     // all.
     SharedPitchAnalysis pitchAnalysis{audioInputService};
+
+    // The MIDI keyboard. Independent of audioInputService on purpose -- it
+    // opens its own device rather than going through that service's
+    // AudioDeviceManager -- so a pianist with a keyboard and no microphone is
+    // unaffected by audio-device recovery, which is the one thing here that can
+    // block without limit.
+    //
+    // Declared before liveTools for the reason the services above are: a member
+    // declared after it would be destroyed while something still borrowed it,
+    // and reverse-order destruction is the whole of the enforcement. Nothing in
+    // src/features reads it yet; when one does, it arrives through ToolServices
+    // and not by reaching in here.
+    MidiInputService midiInputService;
     juce::ApplicationProperties applicationProperties;
     // Declared here, before liveTools, on purpose -- see the note on liveTools
     // below. AppLookAndFeel differs from LookAndFeel_V4 only in carrying the
     // embedded UI typeface.
     AppLookAndFeel appLookAndFeel;
+
+    // The current score, and the summary of the import that produced it. The
+    // shell stands in for #39's session file until it exists.
+    //
+    // Declared here, before liveTools, for the same reason audioInputService
+    // and appLookAndFeel are: the Target Note tool borrows the CurrentScore
+    // holder inside this through ToolServices, and a member declared after
+    // liveTools would be destroyed while tools still held it. That ordering is
+    // the whole of the enforcement -- there is no runtime check -- so do not
+    // move this declaration below liveTools.
+    ScoreImportState scoreImport;
 
     juce::TextButton fileButton{"File"};
     juce::TextButton settingsButton{"Settings"};
@@ -291,6 +346,22 @@ class MainComponent final
     std::unique_ptr<FeedbackWindow> feedbackWindow;
     std::unique_ptr<MicrophoneWarning> microphoneWarning;
 
+    // Constructed on first use rather than at startup: a session that never
+    // opens a score never creates an import thread. Declared after
+    // scoreImport (far above, before liveTools), so the job -- whose
+    // destructor stops the import thread -- is destroyed before both the
+    // tools and the state its callback writes into.
+    std::unique_ptr<ScoreImportJob> scoreImportJob;
+
+    // Held as a member for the same reason settingsTransferChooser is: an
+    // asynchronously launched FileChooser must outlive the call that launched
+    // it.
+    std::unique_ptr<juce::FileChooser> scoreChooser;
+
+    // Opened when an import starts and reused for its result, so "reading..."
+    // and "here is what was read" are the same surface.
+    std::unique_ptr<ScoreImportWindow> scoreImportWindow;
+
     Theme currentTheme = Theme::light;
     ToolInstanceId currentTool;
     WorkspaceLayoutState workspaceLayoutState;
@@ -314,6 +385,17 @@ class MainComponent final
     // hasUsableInput there also drives device recovery, so forcing it false
     // would have the service continuously trying to reopen the device.
     bool testControlNoMicrophone = false;
+
+    // Set the first time a state is applied, and never cleared: this process is
+    // being driven by the harness rather than used by a person.
+    //
+    // Read by maybeOfferFeedbackInvitation, which must not raise its AlertWindow
+    // during a run. The invitation is triggered by closing a tool, which is the
+    // first thing establishing a state does, and a modal window over a surface
+    // is photographed as a black rectangle -- an obscured window has no pixels
+    // to capture. Cancelling the modal instead does not work: the alert is
+    // raised asynchronously, so it appears after the state is established.
+    bool testControlDriving = false;
 #endif
     bool automaticSettingsSaveEnabled = true;
     bool feedbackInvitationsDisabledState = false;

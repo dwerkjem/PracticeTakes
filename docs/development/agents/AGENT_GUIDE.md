@@ -196,15 +196,25 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   approved window state, clicks a named target, sets geometry/theme, and quits.
   See `docs/development/quality/TESTING_SUITE.md`.
 - `src/features` — user-facing tools: `analysis/{tuner,spectrogram,harmonics}`,
+  `score` (the Target Note tool, the first consumer of the score model),
   `feedback`, `performance` (launch timing).
 - `src/platform` — shared infrastructure: `audio/` (`AudioInputService`,
-  `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`) and `score/` — a
-  JUCE-free score model (`Score`, `TempoMap`, `Pitch`, `MusicalTime`) plus a
-  MusicXML importer under `score/musicxml/`. `score/` has **no application
-  consumer yet**: it is reached only from `src/tests/platform/score/`, so it is
-  headless infrastructure landed ahead of the feature that will use it. What
-  the importer accepts, drops with a diagnostic, or refuses is specified in
-  `docs/development/formats/musicxml-subset.md`.
+  `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`), `midi/`
+  (`MidiInputService`, `MidiEventFifo`, `MidiMessageTranslation`,
+  `MidiRecoveryPolicy`) — live keyboard capture, owning its own
+  `juce::MidiInput` rather than going through the audio device manager, with a
+  JUCE-free byte-level translation layer that is where every rule worth
+  asserting about the event stream lives — and `score/` — a JUCE-free score
+  model (`Score`, `TempoMap`, `Pitch`, `MusicalTime`, `CurrentScore`) plus a
+  MusicXML importer under `score/musicxml/`. `score/` has two application
+  consumers: the shell's Open Score command, which imports a file and publishes
+  the result into the `CurrentScore` holder, and the Target Note tool, which
+  reads that holder through `ToolServices`. What the importer accepts, drops
+  with a diagnostic, or refuses is specified in
+  `docs/development/formats/musicxml-subset.md`; what consuming the model from
+  the application revealed about its shape is in
+  `docs/development/architecture/score-model-findings.md`, and each entry there
+  is a thing the next consumer will hit too.
 
 A `src/features/*` tool must never reach into another tool's internals —
 shared behavior belongs in `src/platform` or `src/application`. A tool reaches
@@ -232,6 +242,14 @@ outlive its shared services" is enforced — there is no runtime check. Do not
 move the declaration.
 
 ### Audio-thread boundary (hard constraint)
+
+Two driver callbacks are under this contract, not one: the audio callback
+below, and `MidiInputService::handleIncomingMidiMessage`. The MIDI one is not
+the audio thread and cannot underrun a buffer, but the discipline is identical
+and it carries the same annotation. `docs/development/performance/audio-thread-safety.md`
+§ The MIDI callback has what differs — chiefly that `midi::MidiEventFifo` drops
+the **oldest** event on overflow where `AudioSampleFifo` drops the newest block,
+because no MIDI event is safe to lose.
 
 `AudioInputService::audioDeviceIOCallbackWithContext` runs on the real-time
 audio thread and must stay bounded: no heap allocation, locks, blocking waits,
@@ -274,7 +292,9 @@ covered.
 covers: `src/platform/score/TempoMap.h` is tested by
 `src/tests/platform/score/TempoMapTests.cpp`. Put a new test beside the mirror
 of the file it exercises rather than at the top level, and add its path to
-`add_executable(PracticeTakesTests ...)` in `CMakeLists.txt`.
+`PRACTICE_TAKES_TEST_SOURCES` in `tools/cmake/Sources.cmake`. Both source
+lists live there rather than in the root `CMakeLists.txt`, which includes the
+file and passes the variables to its targets.
 
 Both `src/` and `src/tests/` are on the test target's include path, so a test
 includes its subject as `"platform/score/TempoMap.h"` and a shared fixture as
@@ -312,8 +332,8 @@ against it — they can drift (`docs/development/quality/QA_STRATEGY.md` area 12
   generated, browsable graph of the whole repo — useful for finding where a
   change belongs before starting.
 - This repository configures Git merge drivers and `rerere`; `pre-commit
-  install` sets them up. `CMakeLists.txt` source lists union automatically,
-  and generated files under `.ua/` keep ours rather than merging. See
+  install` sets them up. The `tools/cmake/Sources.cmake` source lists union
+  automatically, and generated files under `.ua/` keep ours rather than merging. See
   `docs/development/operations/MERGING.md` before hand-resolving a conflict
   in either.
 - Run the relevant test suite before requesting review: `PracticeTakesTests`

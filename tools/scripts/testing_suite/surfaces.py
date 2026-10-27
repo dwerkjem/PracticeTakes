@@ -38,6 +38,7 @@ FULL = "full"
 # to name the window or it photographs the main one instead.
 SETTINGS_WINDOW = "Settings"
 FEEDBACK_WINDOW = "Send feedback"
+SCORE_IMPORT_WINDOW = "Score import"
 
 # The palettes a run captures each surface in. A capture dimension rather than a
 # property of a surface, for the same reason resolution is: every surface exists
@@ -370,13 +371,15 @@ SURFACES: tuple[Surface, ...] = (
     ),
     Surface(
         state="all-tools-docked",
-        title="All three tools open at once",
-        tools=("tuner", "spectrogram", "harmonics"),
+        title="Every tool open at once",
+        tools=("tuner", "spectrogram", "harmonics", "target-note"),
         presentation="split",
         modes=frozenset({FULL}),
         extras=(
             Question(
-                "all-live", "Do all three respond to sound at the same time?", behavioural=True
+                "all-live",
+                "Do all three audio tools respond to sound at the same time?",
+                behavioural=True,
             ),
         ),
     ),
@@ -469,6 +472,40 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The only surface that looks at the MIDI capture path at all. What it can
+    # show without hardware is the empty case -- no keyboard connected -- which
+    # is worth a picture in its own right, because it is what a user sees before
+    # they switch their piano on and it has to tell them what to do. The
+    # connected case needs a keyboard and is task 7.5 in the change, not a
+    # capture.
+    Surface(
+        state="settings-midi",
+        title="Settings: MIDI keyboard selection",
+        area="settings",
+        modes=frozenset({FULL}),
+        window_title=SETTINGS_WINDOW,
+        instruction=(
+            "If you have a MIDI keyboard, connect it, choose it, and play a few notes "
+            "with and without the sustain pedal. If you do not, answer for the "
+            "disconnected state only and say so."
+        ),
+        extras=(
+            Question(
+                "empty-state-helpful",
+                "With no keyboard connected, does it say so and say what to do about it?",
+            ),
+            Question(
+                "notes-appear",
+                "With a keyboard connected, do played notes appear with their velocities?",
+                behavioural=True,
+            ),
+            Question(
+                "pedal-appears",
+                "Does the sustain pedal show as going down and up?",
+                behavioural=True,
+            ),
+        ),
+    ),
     Surface(
         state="settings-appearance",
         title="Settings: appearance and theme",
@@ -530,6 +567,86 @@ SURFACES: tuple[Surface, ...] = (
         area="feedback",
         modes=frozenset({FULL}),
         window_title=FEEDBACK_WINDOW,
+    ),
+    # The score import summary. The only surfaces that depend on a *document*:
+    # the window has nothing to show until a file has been read, so the state
+    # imports a committed fixture on the way in, through the same job the File
+    # menu uses.
+    #
+    # `warmup_seconds` here waits for an import rather than for a tool's
+    # drawing history, which is what every other surface using it waits for.
+    # The import is deliberately asynchronous -- the result crosses back to the
+    # message thread -- so a capture taken the instant the state settles is a
+    # picture of "Reading ...", not of the report. The fixtures are small
+    # enough to read in milliseconds; the seconds here are slack for a loaded
+    # machine, and an in-progress capture is obviously wrong in the review grid
+    # rather than subtly wrong.
+    Surface(
+        state="score-import-diagnostics",
+        title="The score import summary, with diagnostics",
+        area="score",
+        modes=frozenset({FULL}),
+        window_title=SCORE_IMPORT_WINDOW,
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "diagnostics-name-their-element",
+                "Does every diagnostic say which element it is about?",
+            ),
+            Question(
+                "repeated-message-still-legible",
+                "Where several diagnostics share one message, can you still tell the rows apart?",
+            ),
+            Question(
+                "severities-separated",
+                "Are the dropped, repaired, and ignored groups each under their own heading?",
+            ),
+        ),
+    ),
+    # Kept alongside the diagnostic surface, which covers strictly more of the
+    # renderer, because "Nothing was dropped or repaired." is a branch of its
+    # own: an empty diagnostics list and a failure to report diagnostics look
+    # identical on screen, and that sentence is the only thing distinguishing
+    # them.
+    Surface(
+        state="score-import-clean",
+        title="The score import summary for a clean import",
+        area="score",
+        modes=frozenset({FULL}),
+        window_title=SCORE_IMPORT_WINDOW,
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "says-nothing-was-dropped",
+                "Does it say explicitly that nothing was dropped, rather than showing an "
+                "empty list?",
+            ),
+            Question(
+                "metadata-complete",
+                "Are the work, composer, parts, length, and tempo all shown?",
+            ),
+        ),
+    ),
+    # The target note tool's paint routine is Component code: selectTargetNote
+    # is unit tested, what it looks like is not. Only its empty state is here,
+    # and not because the populated one matters less -- there is no approved
+    # state that opens a score *into* a tool, because importing one also opens
+    # the summary window over whatever the surface is about. See
+    # docs/development/architecture/score-model-findings.md.
+    Surface(
+        state="target-note-empty",
+        title="The target note tool with no score open",
+        tools=("target-note",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        extras=(
+            Question(
+                "says-what-to-do",
+                "Does it name the command that opens a score, rather than showing an empty "
+                "panel?",
+            ),
+        ),
     ),
     Surface(
         state="tuner-docked",

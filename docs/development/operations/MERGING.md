@@ -42,9 +42,9 @@ is a script rather than a committed config file.
 
 Declared in `.gitattributes`, defined by `configure_merge.py`.
 
-### `cmake-sources` — `CMakeLists.txt`
+### `cmake-sources` — `tools/cmake/Sources.cmake` and `CMakeLists.txt`
 
-The source lists inside `target_sources(...)` and `add_executable(...)` are
+The source lists in `tools/cmake/Sources.cmake` are
 unordered sets of paths. Any two branches that add or move a file collide in
 them, and the resolution is always the same: keep every path both sides still
 want.

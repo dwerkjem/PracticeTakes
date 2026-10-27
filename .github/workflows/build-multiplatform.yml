@@ -63,8 +63,46 @@ on:
 permissions:
   contents: read
 
+# Matching the other workflows. A release calls this one through
+# `workflow_call`, where the event is the caller's -- a push to main -- so a
+# release build is never cancelled by this.
+concurrency:
+  group: build-desktop-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   BUILD_TYPE: Release
+
+  # Compare the compiler by its contents, not by its size and modification
+  # time, which is what ccache does by default.
+  #
+  # A runner image is rebuilt about weekly, and a rebuild gives every binary in
+  # it a new modification time. The compiler is the same compiler -- the image
+  # that produced a 91% hit rate on 8 October and the one five days later both
+  # carry MSVC 19.51.36260.0 -- but ccache saw a different one and missed every
+  # single object: 286 of 286, a twenty-minute Windows arm64 build against
+  # seven. Every platform here caches the same way and so had the same hole.
+  #
+  # The cost is that neither mode notices a change confined to the files the
+  # driver loads -- cl.exe's backend DLLs, gcc's cc1plus -- so this is not a
+  # weaker check than the default, only a differently blind one.
+  CCACHE_COMPILERCHECK: content
+
+  # Trust the hashes ccache stores for an included file rather than also
+  # requiring its timestamps to look old enough.
+  #
+  # Without this, a header written moments before it is compiled stops ccache
+  # recording the direct-mode manifest for that object, and the next build has
+  # to run the preprocessor to find its cache entry. This build generates
+  # headers -- JuceHeader.h and the binary-data headers are written by the
+  # build itself -- so every translation unit that includes one is affected:
+  # 166 of 283 hits come back preprocessed rather than direct, in both Windows
+  # jobs, identically across runs. The 117 that stay direct are the Catch2 and
+  # JUCE module sources, which include none of them.
+  #
+  # What is given up is the timestamp as a second opinion; the content hash
+  # still has to match.
+  CCACHE_SLOPPINESS: include_file_ctime,include_file_mtime
 
 jobs:
   linux:
@@ -190,7 +228,7 @@ jobs:
           apt-get install --yes "./${package_path}"
 
       - name: Upload Linux artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
           path: dist/PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.deb
@@ -207,14 +245,23 @@ jobs:
           - runner: windows-2022
             arch: x64
             msvc_arch: amd64
+            # The ccache release's own name for this architecture, and the
+            # hash of that asset. Both are part of the pin: a version alone
+            # says which ccache, and the hash says it is the one we checked.
+            ccache_arch: x86_64
+            ccache_sha256: 3d7cebb05850ad704e197b3f1d3f0f924ab6c9fdfc561578e146184fe9d89380
             run_tests: true
           - runner: windows-11-arm
             arch: arm64
             msvc_arch: arm64
+            ccache_arch: aarch64
+            ccache_sha256: bec01846b06d6d87bf35eda50544d7c8bf9b9a4859f218417a7081aa45d7fd47
             run_tests: true
     runs-on: ${{ matrix.runner }}
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_VERSION: 4.13.6
+      NSIS_VERSION: 3.12.0
       # The Authenticode steps below stay dormant until both certificate
       # secrets exist. Secrets cannot be read from a step `if:`, so the
       # decision is resolved here where the secrets context is available.
@@ -251,18 +298,93 @@ jobs:
           $version = (python tools/scripts/release/version.py current).Trim()
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
+      # Real-time scanning reads back every object file a build writes, and
+      # this build writes a few hundred of them through a compiler cache that
+      # writes each one twice. The workspace holds the sources, the objects,
+      # and the cache; RUNNER_TEMP holds the toolchain unpacked below.
+      #
+      # x64 only. Asking costs about eight seconds there and about thirty-seven
+      # on the arm64 runner -- measured across three runs, and unchanged by
+      # batching seven calls into two, so it is the Defender service rather than
+      # the number of requests. Thirty-seven seconds is a sixth of that job,
+      # against a saving that did not show up in its step times.
+      #
+      # Best effort on purpose: a slower build is a better outcome than a job
+      # that fails because a runner image did not let us ask.
+      - name: Exclude the build from Defender
+        if: ${{ matrix.arch == 'x64' }}
+        shell: pwsh
+        run: |
+          # Two calls rather than seven. Each Add-MpPreference is a round trip
+          # through the Defender service and costs about five seconds on the
+          # arm64 runner, which made asking for the exclusions cost more there
+          # than some of what they save.
+          try {
+            Add-MpPreference -ExclusionPath @("${{ github.workspace }}", "${env:RUNNER_TEMP}")
+            Add-MpPreference -ExclusionProcess @(
+              "ccache.exe", "cl.exe", "link.exe", "lib.exe", "ninja.exe")
+          }
+          catch {
+            Write-Warning "Could not add Defender exclusions: $($_.Exception.Message)"
+          }
+
       - name: Install Windows build tools
         shell: pwsh
         run: |
-          # NSIS generates the shipped installer, so both Chocolatey packages
-          # are pinned to explicit versions and bumped deliberately.
-          # --allow-downgrade keeps the pins usable on runner images that
-          # already carry a newer build of the same package, which Chocolatey
-          # otherwise refuses to replace.
-          choco install ccache --yes --no-progress --version 4.13.6 --allow-downgrade
-          choco install nsis --yes --no-progress --version 3.12.0 --allow-downgrade
-          ccache --max-size=1G
-          ccache --zero-stats
+          $ErrorActionPreference = "Stop"
+
+          # Invoke-WebRequest renders a progress bar per chunk when one is
+          # attached, which costs more than the download.
+          $ProgressPreference = "SilentlyContinue"
+
+          # ccache comes from its own release rather than from Chocolatey,
+          # because the Chocolatey package ships the x86_64 build on every
+          # Windows host. On the arm64 runner that put an emulated process in
+          # front of every compiler invocation: a cache *hit* cost about a
+          # second, so a 91%-hit build still took three and a half minutes.
+          #
+          # Pinned the same way the Chocolatey version was, plus a hash --
+          # a version says which ccache, a hash says it is the one we checked.
+          $name = "ccache-${env:CCACHE_VERSION}-windows-${{ matrix.ccache_arch }}"
+          $zip = Join-Path ${env:RUNNER_TEMP} "$name.zip"
+
+          Invoke-WebRequest -Uri `
+            "https://github.com/ccache/ccache/releases/download/v${env:CCACHE_VERSION}/$name.zip" `
+            -OutFile $zip
+
+          $actual = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLower()
+
+          if ($actual -ne "${{ matrix.ccache_sha256 }}") {
+            throw "$name.zip hashed $actual, not the pinned ${{ matrix.ccache_sha256 }}."
+          }
+
+          Expand-Archive -Path $zip -DestinationPath ${env:RUNNER_TEMP} -Force
+          $ccache = Join-Path ${env:RUNNER_TEMP} $name
+
+          # On PATH for every later step, which is how Configure and Build find
+          # it: CMAKE_{C,CXX}_COMPILER_LAUNCHER=ccache is resolved by name.
+          $ccache | Out-File -FilePath ${env:GITHUB_PATH} -Encoding utf8 -Append
+
+          & (Join-Path $ccache "ccache.exe") --version
+          & (Join-Path $ccache "ccache.exe") --max-size=1G
+          & (Join-Path $ccache "ccache.exe") --zero-stats
+
+          # Both Windows runner images already ship NSIS, which is how this was
+          # found: a run that cached the install directory reported a cache miss
+          # and still found makensis.exe. Installing it unconditionally was
+          # about thirty seconds of download per Windows job, for bytes already
+          # on the machine.
+          #
+          # The install stays as the fallback, because an image that stops
+          # shipping NSIS would otherwise fail at packaging time, twelve minutes
+          # in. Tested by the file rather than by an image version, so it needs
+          # no maintenance when that changes.
+          if (Test-Path -LiteralPath "C:\Program Files (x86)\NSIS\makensis.exe") {
+            Write-Host "NSIS is already installed on this image."
+          }
+          else {
+            choco install nsis --yes --no-progress --version ${env:NSIS_VERSION} --allow-downgrade
+          }
 
       - name: Configure
         shell: pwsh
@@ -425,7 +547,7 @@ jobs:
           }
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}
           path: dist/PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}.exe
@@ -742,7 +864,7 @@ jobs:
           xcrun stapler validate "${package_path}"
 
       - name: Upload macOS artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}
           path: dist/PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}.pkg
@@ -818,7 +940,7 @@ jobs:
           apt-get install --yes ca-certificates
 
       - name: Download Linux package
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: PracticeTakes-*-linux-${{ matrix.arch }}
           path: dist
@@ -880,7 +1002,7 @@ jobs:
           echo "source_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
 
       - name: Download platform artifacts
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: PracticeTakes-${{ steps.metadata.outputs.version }}-*
           path: release-assets
@@ -936,7 +1058,7 @@ jobs:
           } > release-assets/BUILD-METADATA.txt
 
       - name: Upload release artifact bundle
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: PracticeTakes-${{ steps.metadata.outputs.version }}-release-assets
           path: release-assets/*
