@@ -114,13 +114,19 @@ set(PRACTICE_TAKES_SOURCES
     src/features/analysis/tuner/TunerSettingsCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.h
     src/features/analysis/tuner/TunerDrawing.cpp
+    src/features/score/MusicFont.cpp
+    src/features/score/MusicFont.h
     src/features/score/ScoreGlyphPainter.cpp
     src/features/score/ScoreGlyphPainter.h
     src/features/score/ScoreViewComponent.cpp
     src/features/score/ScoreViewComponent.h
+    src/features/score/SmuflGlyphs.cpp
+    src/features/score/SmuflGlyphs.h
     src/features/score/TargetNoteComponent.cpp
     src/features/score/TargetNoteComponent.h
     src/features/score/TargetNoteSelection.cpp
+    src/features/score/engraving/BeamGeometry.cpp
+    src/features/score/engraving/BeamGrouping.cpp
     src/features/score/engraving/KeySignatureLayout.cpp
     src/features/score/engraving/MeasureAccidentals.cpp
     src/features/score/engraving/NoteValue.cpp
@@ -128,6 +134,10 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/StaffPosition.cpp
     src/features/score/TargetNoteSelection.h
     src/features/score/engraving/Accidental.h
+    src/features/score/engraving/BeamGeometry.cpp
+    src/features/score/engraving/BeamGeometry.h
+    src/features/score/engraving/BeamGrouping.cpp
+    src/features/score/engraving/BeamGrouping.h
     src/features/score/engraving/KeySignatureLayout.cpp
     src/features/score/engraving/KeySignatureLayout.h
     src/features/score/engraving/MeasureAccidentals.cpp
@@ -243,6 +253,10 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/analysis/tuner/PitchTrackerTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
     src/tests/features/score/TargetNoteSelectionTests.cpp
+    src/tests/features/score/MusicFontTests.cpp
+    src/tests/features/score/SmuflGlyphsTests.cpp
+    src/tests/features/score/engraving/BeamGeometryTests.cpp
+    src/tests/features/score/engraving/BeamGroupingTests.cpp
     src/tests/features/score/engraving/KeySignatureLayoutTests.cpp
     src/tests/features/score/engraving/ScoreLayoutCorpusTests.cpp
     src/tests/features/score/engraving/MeasureAccidentalsTests.cpp
@@ -291,7 +305,11 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/features/analysis/harmonics/HarmonicAnalyzer.cpp
     src/features/analysis/tuner/PitchTracker.cpp
     src/features/performance/ApplicationLaunchTimer.cpp
+    src/features/score/MusicFont.cpp
+    src/features/score/SmuflGlyphs.cpp
     src/features/score/TargetNoteSelection.cpp
+    src/features/score/engraving/BeamGeometry.cpp
+    src/features/score/engraving/BeamGrouping.cpp
     src/features/score/engraving/KeySignatureLayout.cpp
     src/features/score/engraving/MeasureAccidentals.cpp
     src/features/score/engraving/NoteValue.cpp

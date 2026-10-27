@@ -262,8 +262,8 @@ const std::vector<ApprovedWindowState>& states()
         {"score-view-notation", Tools{"score-view"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false,
-         "The score view drawing a staff: key signature, accidentals, rests, dots, flags, a "
-         "tie, a clef change, a chord, lyrics and a dynamic",
+         "The score view drawing a staff: key signature, accidentals, rests, dots, flags, "
+         "beams, a tie, a clef change, a chord and lyrics",
          0.0, "", "notation-sample.musicxml", false},
         {"score-view-notation-large", Tools{"score-view"}, ToolPresentation::floating,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,

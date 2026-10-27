@@ -1,5 +1,7 @@
 #include "ScoreLayoutEngine.h"
 
+#include "BeamGeometry.h"
+#include "BeamGrouping.h"
 #include "KeySignatureLayout.h"
 #include "MeasureAccidentals.h"
 
@@ -54,6 +56,11 @@ struct PlacedEvent
 
     bool stemUp = true;
     bool isRest = false;
+
+    // Which beam group this event belongs to, or `noBeamGroup`. A beamed event
+    // draws no flags: the beam stands in for them.
+    std::size_t beamGroup = 0;
+    bool beamed = false;
 };
 
 // One measure, with its attributes resolved and its events placed in
@@ -78,6 +85,12 @@ struct MeasurePlan
     double contentWidth = 0.0;
 
     std::vector<PlacedEvent> events;
+
+    // One entry per beam group, holding its members as indices into `events`
+    // in reading order. Resolved before the horizontal pass, because a beamed
+    // group takes one stem direction for all of its notes and that decides
+    // nothing about x but everything about where the beam goes.
+    std::vector<std::vector<std::size_t>> beamGroups;
 
     // Dynamics and tempo marks, with their measure-local x.
     std::vector<TextGlyph> texts;
@@ -213,6 +226,157 @@ void offsetSeconds(std::vector<PlacedNote>& notes, double noteheadWidth)
     }
 }
 
+// The voice numbers a measure's placed events use, in the order they were met.
+[[nodiscard]] std::vector<int> voiceNumbersOf(const std::vector<PlacedEvent>& events)
+{
+    std::vector<int> numbers;
+
+    for (const PlacedEvent& placed : events)
+    {
+        if (std::find(numbers.begin(), numbers.end(), placed.voiceNumber) == numbers.end())
+        {
+            numbers.push_back(placed.voiceNumber);
+        }
+    }
+
+    return numbers;
+}
+
+// Beams this event carries: none unless it is a pitched, non-grace note of an
+// eighth or shorter. A grace note is drawn with flags in this pass, which is
+// the one gap beaming leaves behind and the notice below says so.
+[[nodiscard]] int beamLevelsOf(const PlacedEvent& placed)
+{
+    if (placed.isRest || placed.notes.empty() || placed.event->isGrace || !placed.value.has_value())
+    {
+        return 0;
+    }
+
+    return flagCountFor(placed.value->value);
+}
+
+// Beam direction for a whole group: the note furthest from the middle line
+// decides, which is the convention and is the reason a group is not just every
+// note's own direction agreeing by luck. A tie goes down, as an engraver's
+// does.
+[[nodiscard]] bool
+groupStemPointsUp(const std::vector<PlacedEvent>& events, const std::vector<std::size_t>& group)
+{
+    StaffSteps highest = middleLineSteps;
+    StaffSteps lowest = middleLineSteps;
+    bool anyNote = false;
+
+    for (const std::size_t index : group)
+    {
+        for (const PlacedNote& note : events.at(index).notes)
+        {
+            if (!anyNote)
+            {
+                highest = note.position;
+                lowest = note.position;
+                anyNote = true;
+
+                continue;
+            }
+
+            highest = std::min(highest, note.position);
+            lowest = std::max(lowest, note.position);
+        }
+    }
+
+    const int distanceAbove = middleLineSteps - highest;
+    const int distanceBelow = lowest - middleLineSteps;
+
+    return distanceBelow > distanceAbove;
+}
+
+// Resolve a measure's beam groups, one voice at a time, and report the runs
+// beaming does not reach.
+void resolveBeamGroups(MeasurePlan& plan, NoticeList& notices)
+{
+    const score::Tick groupTicks = beamGroupTicks(plan.time);
+
+    for (const int voiceNumber : voiceNumbersOf(plan.events))
+    {
+        std::vector<BeamCandidate> candidates;
+        std::vector<std::size_t> eventIndices;
+
+        for (std::size_t index = 0; index < plan.events.size(); ++index)
+        {
+            const PlacedEvent& placed = plan.events.at(index);
+
+            if (placed.voiceNumber != voiceNumber)
+            {
+                continue;
+            }
+
+            candidates.push_back(
+                BeamCandidate{placed.event->onset, placed.event->duration, beamLevelsOf(placed)});
+            eventIndices.push_back(index);
+        }
+
+        for (const std::vector<std::size_t>& group : beamGroupsFor(candidates, plan.time))
+        {
+            std::vector<std::size_t> members;
+            members.reserve(group.size());
+
+            for (const std::size_t candidateIndex : group)
+            {
+                members.push_back(eventIndices.at(candidateIndex));
+            }
+
+            for (const std::size_t member : members)
+            {
+                plan.events.at(member).beamed = true;
+                plan.events.at(member).beamGroup = plan.beamGroups.size();
+            }
+
+            plan.beamGroups.push_back(std::move(members));
+        }
+
+        // What beaming did not reach, reported rather than left to be noticed
+        // as a page that beams inconsistently. A rest inside a beat with a
+        // beamable note either side of it is the case an engraver would beam
+        // over and this pass does not.
+        for (std::size_t index = 1; groupTicks > 0 && index + 1 < candidates.size(); ++index)
+        {
+            const BeamCandidate& before = candidates.at(index - 1);
+            const BeamCandidate& candidate = candidates.at(index);
+            const BeamCandidate& after = candidates.at(index + 1);
+
+            if (candidate.beamLevels > 0 || before.beamLevels == 0 || after.beamLevels == 0)
+            {
+                continue;
+            }
+
+            const score::Tick group = candidate.onset / groupTicks;
+
+            if (before.onset / groupTicks == group && after.onset / groupTicks == group)
+            {
+                notices.add("A beam is not carried over a rest, so a beat holding one is drawn "
+                            "with flags either side of it.");
+            }
+        }
+
+        std::size_t consecutiveGraceNotes = 0;
+
+        for (const std::size_t index : eventIndices)
+        {
+            const PlacedEvent& placed = plan.events.at(index);
+
+            consecutiveGraceNotes = placed.event->isGrace ? consecutiveGraceNotes + 1 : 0;
+
+            if (consecutiveGraceNotes > 1)
+            {
+                notices.add("A run of grace notes is drawn with flags; grace notes are not "
+                            "beamed in this pass.");
+
+                break;
+            }
+        }
+    }
+}
+
 // One onset's worth of events, and the room needed to the left of it.
 struct Slot
 {
@@ -311,10 +475,16 @@ void planMeasure(
         plan.events.push_back(std::move(placed));
     }
 
+    // Which notes beam together, before stem directions: a beamed group takes
+    // one direction for all of its notes, so the group has to be known first.
+    resolveBeamGroups(plan, notices);
+
     if (voiceNumbersSeen.size() > 1)
     {
         // Two voices on one staff read by stem direction, not by pitch: voice
-        // one up, everything else down. See design.md decision 6.
+        // one up, everything else down. See design.md decision 6. A beam group
+        // never spans two voices, so this already gives every group one
+        // direction and nothing below needs to override it.
         for (PlacedEvent& placed : plan.events)
         {
             placed.stemUp = placed.voiceNumber == voiceNumbersSeen.front();
@@ -337,6 +507,18 @@ void planMeasure(
                 { return lhs.position < rhs.position; });
 
             placed.stemUp = stemPointsUpFor(lowest->position);
+        }
+
+        // A beam joins stems pointing the same way, so a group overrules every
+        // note's own direction with one of its own.
+        for (const std::vector<std::size_t>& group : plan.beamGroups)
+        {
+            const bool up = groupStemPointsUp(plan.events, group);
+
+            for (const std::size_t index : group)
+            {
+                plan.events.at(index).stemUp = up;
+            }
         }
     }
 
@@ -378,6 +560,13 @@ void planMeasure(
     const double stretchPerTick =
         options.durationStretchPerQuarter / static_cast<double>(score::ticksPerQuarterNote);
 
+    // A flag hangs off the right of an up stem, so the least room between two
+    // onsets has to clear a notehead and a flag together. Derived rather than
+    // left to `minimumSlotWidth` alone, so that lowering one number cannot
+    // quietly let a flagged eighth touch the note after it.
+    const double slotFloor =
+        std::max(options.minimumSlotWidth, options.noteheadWidth + options.flagWidth);
+
     double cursor = 0.0;
 
     for (std::size_t index = 0; index < slots.size(); ++index)
@@ -392,8 +581,7 @@ void planMeasure(
         }
         else
         {
-            slot.x = std::max(
-                proportional + slot.leftPad, cursor + options.minimumSlotWidth + slot.leftPad);
+            slot.x = std::max(proportional + slot.leftPad, cursor + slotFloor + slot.leftPad);
         }
 
         cursor = slot.x;
@@ -427,8 +615,7 @@ void planMeasure(
     const double trailing =
         static_cast<double>(std::max<score::Tick>(measureDuration - lastOnset, 0)) * stretchPerTick;
 
-    plan.contentWidth =
-        cursor + std::max(trailing, options.minimumSlotWidth) + options.measureTrailingWidth;
+    plan.contentWidth = cursor + std::max(trailing, slotFloor) + options.measureTrailingWidth;
 
     // A measure whose only content is a rest covering it centres that rest,
     // which is the convention and is what makes an empty bar legible.
@@ -600,6 +787,12 @@ double emitMeasure(
         system.texts.push_back(TextGlyph{startX, plan.printedNumber, TextRole::measureNumber});
     }
 
+    // Where each beam group's stems landed, so the beams can be laid out once
+    // every stem in the group has an x and a direction.
+    std::vector<std::vector<BeamStem>> beamStems(plan.beamGroups.size());
+    std::vector<std::vector<std::size_t>> beamStemIndices(plan.beamGroups.size());
+    std::vector<bool> beamGroupPointsUp(plan.beamGroups.size(), true);
+
     for (const PlacedEvent& placed : plan.events)
     {
         const double x = contentStart + placed.localX;
@@ -652,24 +845,61 @@ double emitMeasure(
         const StaffSteps lowest = positions.second->position;
 
         const StaffSteps attach = placed.stemUp ? lowest : highest;
-        const StaffSteps far = placed.stemUp ? highest : lowest;
+        const StaffSteps farthest = placed.stemUp ? highest : lowest;
 
         StaffSteps tip = placed.stemUp ? attach - options.stemLength : attach + options.stemLength;
 
         if (placed.stemUp)
         {
-            tip = std::min(tip, static_cast<StaffSteps>(far - 2));
+            tip = std::min(tip, static_cast<StaffSteps>(farthest - 2));
             tip = std::min(tip, middleLineSteps);
         }
         else
         {
-            tip = std::max(tip, static_cast<StaffSteps>(far + 2));
+            tip = std::max(tip, static_cast<StaffSteps>(farthest + 2));
             tip = std::max(tip, middleLineSteps);
         }
 
+        const int beamLevels = placed.beamed ? flagCountFor(value.value) : 0;
+
+        // Set in by half the stem's thickness, so its outer edge is flush with
+        // the notehead's: right edge on the right for an up stem, left on the
+        // left for a down one.
+        const double inset = options.stemThickness * 0.5;
+        const double stemX = placed.stemUp ? x + options.noteheadWidth - inset : x + inset;
+
+        // A beam stands in for the flags it replaces, so a beamed stem draws
+        // none. Its tip is overwritten below, once the group's slope is known.
         system.stems.push_back(StemGlyph{
-            x + (placed.stemUp ? options.noteheadWidth : 0.0), attach, tip,
-            flagCountFor(value.value), placed.stemUp, placed.event->isGrace});
+            stemX, options.stemThickness, attach, spacesBelowTopLine(tip),
+            placed.beamed ? 0 : flagCountFor(value.value), beamLevels, placed.stemUp,
+            placed.event->isGrace});
+
+        if (placed.beamed)
+        {
+            beamStems.at(placed.beamGroup).push_back(BeamStem{stemX, attach, farthest, beamLevels});
+            beamStemIndices.at(placed.beamGroup).push_back(system.stems.size() - 1);
+            beamGroupPointsUp.at(placed.beamGroup) = placed.stemUp;
+        }
+    }
+
+    // The beams, once their stems are placed. Laying a group out needs every
+    // one of its stems, which is why this is not done inside the loop above.
+    for (std::size_t group = 0; group < beamStems.size(); ++group)
+    {
+        const BeamGroupGeometry geometry =
+            layOutBeamGroup(beamStems.at(group), beamGroupPointsUp.at(group), options);
+
+        for (std::size_t member = 0; member < geometry.stemTips.size(); ++member)
+        {
+            system.stems.at(beamStemIndices.at(group).at(member)).tipSpaces =
+                geometry.stemTips.at(member);
+        }
+
+        for (const BeamGlyph& beam : geometry.beams)
+        {
+            system.beams.push_back(beam);
+        }
     }
 
     for (const PlacedEvent& placed : plan.events)
@@ -1045,9 +1275,17 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
             " whose two notes fall on different lines of the layout.");
     }
 
-    notices.add(
-        "Eighth notes and shorter are drawn with flags rather than beamed. Beaming is not in "
-        "this pass.");
+    const bool anyBeam = std::any_of(
+        layout.systems.begin(), layout.systems.end(),
+        [](const System& system) { return !system.beams.empty(); });
+
+    if (anyBeam)
+    {
+        notices.add(
+            "Beam groups are chosen from the time signature. MusicXML's own <beam> elements are "
+            "not read into the model, so the grouping a file was written with is not "
+            "necessarily the grouping drawn.");
+    }
 
     layout.outcome = LayoutOutcome::laidOut;
     layout.totalHeight = static_cast<double>(layout.systems.size()) * systemHeight;

@@ -299,6 +299,10 @@ TEST_CASE("the notation fixture holds what its picture is about", "[testcontrol]
     std::size_t repeatBarlines = 0;
     std::size_t dynamics = 0;
     std::size_t tempoMarks = 0;
+    std::size_t beams = 0;
+    std::size_t secondBeams = 0;
+    std::size_t partialBeams = 0;
+    std::size_t beamedStems = 0;
 
     for (const engraving::System& system : layout.systems)
     {
@@ -326,6 +330,15 @@ TEST_CASE("the notation fixture holds what its picture is about", "[testcontrol]
         for (const engraving::StemGlyph& glyph : system.stems)
         {
             flaggedStems += glyph.flags > 0 ? 1 : 0;
+            beamedStems += glyph.beamLevels > 0 ? 1 : 0;
+        }
+
+        beams += system.beams.size();
+
+        for (const engraving::BeamGlyph& glyph : system.beams)
+        {
+            secondBeams += glyph.level == 2 ? 1 : 0;
+            partialBeams += glyph.partial ? 1 : 0;
         }
 
         for (const engraving::BarlineGlyph& glyph : system.barlines)
@@ -365,7 +378,22 @@ TEST_CASE("the notation fixture holds what its picture is about", "[testcontrol]
 
     CHECK(graceNotes == 1);
     CHECK(dottedNotes == 1);
-    CHECK(flaggedStems == 7);
+
+    // Bar 1's pair of eighths share one beat and so beam; bar 3's pair of
+    // sixteenths do the same and carry a second beam. Everything else short
+    // enough to take a tail is alone in its beat and keeps its flags: the
+    // grace note, and bar 3's two eighths either side of the sixteenths.
+    CHECK(flaggedStems == 3);
+    CHECK(beamedStems == 4);
+    CHECK(beams == 3);
+    CHECK(secondBeams == 1);
+
+    // No partial beam: nothing in the fixture is a lone sixteenth among
+    // eighths. `drawBeam` branches on nothing a stub changes -- a partial beam
+    // is the same filled quad between two x values -- so the picture of the
+    // full beams is a picture of that code path too, and where a stub is
+    // placed is pinned in BeamGeometryTests.
+    CHECK(partialBeams == 0);
 
     // The B-flat is signed, the B-flat after it is not, and the B after that
     // is cancelled -- the whole in-bar accidental rule, in one picture.
