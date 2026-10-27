@@ -1,0 +1,82 @@
+diff --git a/understand-anything-plugin/packages/dashboard/src/components/NodeInfo.tsx b/understand-anything-plugin/packages/dashboard/src/components/NodeInfo.tsx
+index a92ad73..86776b3 100644
+--- a/understand-anything-plugin/packages/dashboard/src/components/NodeInfo.tsx
++++ b/understand-anything-plugin/packages/dashboard/src/components/NodeInfo.tsx
+@@ -1,6 +1,7 @@
+ import { useState } from "react";
+ import { useDashboardStore } from "../store";
+ import { useI18n } from "../contexts/I18nContext";
++import { githubSourceUrl } from "../utils/sourceLink";
+ import type { NodeType, EdgeType, KnowledgeGraph, GraphNode } from "@understand-anything/core/types";
+ 
+ // Badge color classes keyed by NodeType — must be kept in sync with core NodeType union.
+@@ -419,13 +420,30 @@ export default function NodeInfo() {
+                 )}
+               </div>
+             </div>
+-            <button
+-              type="button"
+-              onClick={() => openCodeViewer(node.id)}
+-              className="shrink-0 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded border border-accent/30 text-accent hover:text-accent-bright hover:border-accent/60 transition-colors"
+-            >
+-              {t.common.openCode}
+-            </button>
++            {(() => {
++              const className =
++                "shrink-0 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded border border-accent/30 text-accent hover:text-accent-bright hover:border-accent/60 transition-colors";
++              const githubUrl = githubSourceUrl(
++                import.meta.env.VITE_SOURCE_REPO_URL,
++                graph?.project.gitCommitHash,
++                node,
++              );
++              return githubUrl ? (
++                <a
++                  href={githubUrl}
++                  target="_blank"
++                  rel="noopener noreferrer"
++                  title="View this file on GitHub"
++                  className={className}
++                >
++                  {t.common.openCode}
++                </a>
++              ) : (
++                <button type="button" onClick={() => openCodeViewer(node.id)} className={className}>
++                  {t.common.openCode}
++                </button>
++              );
++            })()}
+           </div>
+         </div>
+       )}
+diff --git a/understand-anything-plugin/packages/dashboard/src/utils/sourceLink.ts b/understand-anything-plugin/packages/dashboard/src/utils/sourceLink.ts
+new file mode 100644
+index 0000000..6e4060d
+--- /dev/null
++++ b/understand-anything-plugin/packages/dashboard/src/utils/sourceLink.ts
+@@ -0,0 +1,26 @@
++import type { GraphNode } from "@understand-anything/core/types";
++
++/**
++ * Where a node's source lives on GitHub, or null when the build was not given a
++ * repository to link to. The static site has no server to read files from, so
++ * "Open code" links out instead; the dev server leaves the repository unset and
++ * keeps its in-app viewer.
++ *
++ * Pinned to the commit the graph describes rather than a branch, so a line
++ * range from the graph still points at the lines it was measured against.
++ */
++export function githubSourceUrl(
++  repoUrl: string | undefined,
++  commit: string | undefined,
++  node: Pick<GraphNode, "filePath" | "lineRange">,
++): string | null {
++  if (!repoUrl || !node.filePath) return null;
++  const ref = commit && /^[0-9a-f]{7,40}$/i.test(commit) ? commit : "HEAD";
++  const path = node.filePath
++    .replace(/^(\.?\/)+/, "")
++    .split("/")
++    .map(encodeURIComponent)
++    .join("/");
++  const lines = node.lineRange ? `#L${node.lineRange[0]}-L${node.lineRange[1]}` : "";
++  return `${repoUrl.replace(/\/+$/, "")}/blob/${ref}/${path}${lines}`;
++}
