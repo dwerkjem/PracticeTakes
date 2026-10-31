@@ -35,12 +35,22 @@ inline constexpr std::uint8_t controlChangeStatus = 0xB0;
 // The sustain pedal's controller number.
 inline constexpr std::uint8_t sustainPedalController = 64;
 
-// At or above this, the pedal is down.
+// The default of the `midi.pedalDownThreshold` setting: at or above this, the
+// pedal counts as down.
+//
+// A setting's default rather than a fact about MIDI, and nothing in translation
+// reads it -- the pedal's position is carried unchanged and the threshold is
+// applied later, by whoever needs the answer.
 //
 // Written as `== 127` surprisingly often, which is wrong for every keyboard
 // that half-pedals: those send a continuous value, and a pedal held at 100 is
 // a pedal that is down. 64 is the midpoint the MIDI specification names.
-inline constexpr std::uint8_t sustainPedalDownThreshold = 64;
+inline constexpr int defaultPedalDownThreshold = 64;
+
+// The range the setting accepts. 0 would mean the pedal is always down, which
+// is a fault rather than a preference.
+inline constexpr int minimumPedalDownThreshold = 1;
+inline constexpr int maximumPedalDownThreshold = 127;
 
 // Translate one message, or nothing.
 //

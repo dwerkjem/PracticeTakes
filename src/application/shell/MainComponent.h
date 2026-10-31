@@ -296,6 +296,9 @@ class MainComponent final
     // src/features reads it yet; when one does, it arrives through ToolServices
     // and not by reaching in here.
     MidiInputService midiInputService;
+    // Where the sustain pedal counts as down (1-127). Persisted, and applied by
+    // whoever tracks note durations; the settings panel's tracker is the only one.
+    int midiPedalDownThreshold = AppDefaults::Midi::pedalDownThreshold;
     juce::ApplicationProperties applicationProperties;
     // Declared here, before liveTools, on purpose -- see the note on liveTools
     // below. AppLookAndFeel differs from LookAndFeel_V4 only in carrying the

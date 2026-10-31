@@ -519,3 +519,87 @@ TEST_CASE("clearing settings removes the MIDI keys too", "[settings][midi]")
     CHECK_FALSE(properties.containsKey("midi.inputDeviceIdentifier"));
     CHECK_FALSE(properties.containsKey("midi.inputDeviceName"));
 }
+
+TEST_CASE("the pedal threshold round-trips", "[settings][midi]")
+{
+    TemporarySettingsFile temporary;
+    AppSettings::State expected;
+    expected.midiPedalDownThreshold = 90;
+
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    CHECK(loaded.status == AppSettings::LoadStatus::loaded);
+    CHECK(loaded.state.midiPedalDownThreshold == 90);
+}
+
+TEST_CASE(
+    "settings written before the pedal threshold migrate with the default",
+    "[settings][midi]")
+{
+    TemporarySettingsFile temporary;
+
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.setValue("settings.schema", 6);
+        writer.setValue("global.theme", 2);
+        writer.setValue("midi.inputDeviceName", "Casio PX-S1100");
+        REQUIRE(writer.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    CHECK(loaded.status == AppSettings::LoadStatus::migrated);
+    CHECK(loaded.state.midiPedalDownThreshold == 64);
+
+    // And the key the previous schema introduced survived the bump.
+    CHECK(loaded.state.midiInputDeviceName == "Casio PX-S1100");
+}
+
+TEST_CASE("an out-of-range pedal threshold is clamped, not rejected", "[settings][midi]")
+{
+    // 0 would mean the pedal is always down, which is a fault and not a
+    // preference; 200 is "as far as it goes". Neither discards the file.
+    const auto thresholdLoadedFrom = [](int stored)
+    {
+        TemporarySettingsFile temporary;
+
+        {
+            juce::PropertiesFile writer(temporary.path, settingsOptions());
+            AppSettings::store(writer, AppSettings::State{});
+            writer.setValue("midi.pedalDownThreshold", stored);
+            REQUIRE(writer.saveIfNeeded());
+        }
+
+        juce::PropertiesFile reader(temporary.path, settingsOptions());
+        const auto loaded = AppSettings::load(reader);
+        CHECK(loaded.status == AppSettings::LoadStatus::loaded);
+        return loaded.state.midiPedalDownThreshold;
+    };
+
+    CHECK(thresholdLoadedFrom(0) == 1);
+    CHECK(thresholdLoadedFrom(-5) == 1);
+    CHECK(thresholdLoadedFrom(200) == 127);
+    CHECK(thresholdLoadedFrom(1) == 1);
+    CHECK(thresholdLoadedFrom(127) == 127);
+}
+
+TEST_CASE("clearing settings removes the pedal threshold", "[settings][midi]")
+{
+    juce::PropertySet properties;
+    AppSettings::State state;
+    state.midiPedalDownThreshold = 100;
+    AppSettings::store(properties, state);
+    REQUIRE(properties.containsKey("midi.pedalDownThreshold"));
+
+    AppSettings::clearOwnedValues(properties);
+
+    CHECK_FALSE(properties.containsKey("midi.pedalDownThreshold"));
+}

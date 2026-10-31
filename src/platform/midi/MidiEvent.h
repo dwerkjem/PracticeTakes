@@ -36,11 +36,18 @@ struct MidiEvent
     int noteNumber = 0;
 
     // 0-127. On a note off this is the release velocity, which most keyboards
-    // send as zero and a few send meaningfully.
+    // send as zero and a few send meaningfully. Meaningless for `sustainPedal`.
     int velocity = 0;
 
-    // Only meaningful for `sustainPedal`.
-    bool pedalDown = false;
+    // 0-127, the sustain pedal's position exactly as the device sent it. Only
+    // meaningful for `sustainPedal`.
+    //
+    // There is deliberately no "is the pedal down" field beside it. Where the
+    // pedal counts as down is a user setting (`midi.pedalDownThreshold`), and a
+    // boolean fixed at capture time would be a second answer to the same
+    // question that ignores the setting. Whoever needs the answer applies the
+    // threshold to this -- see NoteSoundingTracker.
+    int pedalPosition = 0;
 
     // What the device's own clock said, in seconds on a backend-chosen origin.
     // Good for the interval between two MIDI events and for nothing else.

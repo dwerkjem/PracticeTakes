@@ -3,6 +3,7 @@
 #include "../../features/analysis/tuner/TunerSettingsCodec.h"
 #include "../shell/ui/workspace/model/WorkspaceCatalogCodec.h"
 
+#include <algorithm>
 #include <array>
 #include <charconv>
 #include <cmath>
@@ -16,6 +17,7 @@ constexpr auto audioStateKey = "audio.deviceState";
 constexpr auto audioInputGainKey = "audio.inputGain";
 constexpr auto midiInputDeviceIdentifierKey = "midi.inputDeviceIdentifier";
 constexpr auto midiInputDeviceNameKey = "midi.inputDeviceName";
+constexpr auto midiPedalDownThresholdKey = "midi.pedalDownThreshold";
 constexpr auto tunerDisplayModeKey = "tuner.displayMode";
 constexpr auto tunerEasingKey = "tuner.easing";
 constexpr auto tunerAveragingKey = "tuner.averaging";
@@ -49,6 +51,7 @@ constexpr const char* ownedKeys[] = {
     audioInputGainKey,
     midiInputDeviceIdentifierKey,
     midiInputDeviceNameKey,
+    midiPedalDownThresholdKey,
     tunerDisplayModeKey,
     tunerEasingKey,
     tunerAveragingKey,
@@ -207,6 +210,11 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
     result.state.audioDeviceState = properties.getValue(audioStateKey);
     result.state.midiInputDeviceIdentifier = properties.getValue(midiInputDeviceIdentifierKey);
     result.state.midiInputDeviceName = properties.getValue(midiInputDeviceNameKey);
+    // Clamped rather than replaced by the default: a hand-edited 200 means "as
+    // far as it goes", and a 0 would mean the pedal is always down.
+    result.state.midiPedalDownThreshold = std::clamp(
+        properties.getIntValue(midiPedalDownThresholdKey, AppDefaults::Midi::pedalDownThreshold),
+        ::midi::minimumPedalDownThreshold, ::midi::maximumPedalDownThreshold);
     result.state.tuner = {
         loadDisplayMode(properties),
         boundedValue(properties, tunerEasingKey, AppDefaults::Tuner::easing, 0.02, 1.0),
@@ -266,6 +274,7 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(audioStateKey, state.audioDeviceState);
     properties.setValue(midiInputDeviceIdentifierKey, state.midiInputDeviceIdentifier);
     properties.setValue(midiInputDeviceNameKey, state.midiInputDeviceName);
+    properties.setValue(midiPedalDownThresholdKey, state.midiPedalDownThreshold);
     properties.setValue(tunerDisplayModeKey, state.tuner.displayMode);
     properties.setValue(tunerEasingKey, state.tuner.easing);
     properties.setValue(tunerAveragingKey, state.tuner.averaging);

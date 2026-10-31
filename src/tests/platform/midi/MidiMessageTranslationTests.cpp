@@ -104,31 +104,29 @@ TEST_CASE("the full note and velocity range translates", "[midi][translation]")
     }
 }
 
-TEST_CASE("the sustain pedal crosses at sixty-four", "[midi][translation]")
+TEST_CASE("the sustain pedal's position is carried unchanged", "[midi][translation]")
 {
-    // Written as `== 127` surprisingly often, which is wrong for every keyboard
-    // that half-pedals: a pedal held at 100 is a pedal that is down.
-    SECTION("below the threshold is up")
+    // Where the pedal counts as down is a setting, applied by whoever needs the
+    // answer (NoteSoundingTracker). Translation must therefore lose nothing: a
+    // half-pedalling keyboard sends a continuous value, and a position collapsed
+    // to a boolean here could never be re-read under a different threshold.
+    for (const int position : {0, 1, 63, 64, 65, 100, 127})
     {
-        CHECK_FALSE(translateOf(0xB0, 64, 0)->pedalDown);
-        CHECK_FALSE(translateOf(0xB0, 64, 63)->pedalDown);
-    }
-
-    SECTION("at and above the threshold is down")
-    {
-        CHECK(translateOf(0xB0, 64, 64)->pedalDown);
-        CHECK(translateOf(0xB0, 64, 65)->pedalDown);
-        CHECK(translateOf(0xB0, 64, 100)->pedalDown);
-        CHECK(translateOf(0xB0, 64, 127)->pedalDown);
-    }
-
-    SECTION("it is a pedal event, and carries the raw value")
-    {
-        const auto event = translateOf(0xB0, 64, 100);
+        const auto event = translateOf(0xB0, 64, static_cast<std::uint8_t>(position));
 
         REQUIRE(event.has_value());
         CHECK(event->kind == MidiEventKind::sustainPedal);
-        CHECK(event->velocity == 100);
+        CHECK(event->pedalPosition == position);
+    }
+
+    SECTION("a pedal event does not smuggle the position into velocity")
+    {
+        CHECK(translateOf(0xB0, 64, 100)->velocity == 0);
+    }
+
+    SECTION("the position is on the channel it arrived on")
+    {
+        CHECK(translateOf(0xB3, 64, 90)->channel == 4);
     }
 }
 
