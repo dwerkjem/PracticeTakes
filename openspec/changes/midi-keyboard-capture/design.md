@@ -357,6 +357,13 @@ removing one member and one panel.
   settle it, most likely by the service synthesising note-offs for everything it
   believes is held when a device goes away.
 
+  **Settled by `pedal-aware-note-duration`, differently from that guess.** The
+  tracker ends every held note as `abandoned` when the consumer reports lost
+  events or a disconnection, rather than the service synthesising note-offs: a
+  synthesised release is indistinguishable from a real one and would turn "the
+  keyboard left" into a confident duration, where `abandoned` is declined by the
+  judgement. See `docs/development/architecture/note-sounding.md`.
+
 Three things the implementation settled that this design did not ask:
 
 - **The settings transfer file deliberately does not carry the MIDI

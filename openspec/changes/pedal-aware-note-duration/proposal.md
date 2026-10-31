@@ -74,7 +74,8 @@ Out of scope, and said so rather than left implicit:
   not only a down/up reading. This capability is still an active change
   (task 7.5, hardware verification, is open), so the amendment is recorded here
   and folded in when that change archives.
-- **`settings-transfer`** — one new persisted key. Additive.
+- **Settings persistence** — one new key, `midi.pedalDownThreshold`. It is
+  deliberately **not** added to the settings transfer file; see design.
 
 ## Impact
 

@@ -24,6 +24,7 @@ broader music-practice and digital-audio workstation application.
 - [Adding a tool](architecture/adding-a-tool.md) — the two entries that register an analysis tool, and the lifecycle it runs through
 - [Design and architecture review checklist](architecture/ARCHITECTURE_QA.md) — what reviewers check on pull requests beyond formatting/linting
 - [What the score model got wrong](architecture/score-model-findings.md) — what the first application consumer of `src/platform/score` revealed, and what should happen about each of it
+- [How long a played note sounds](architecture/note-sounding.md) — deriving a note's sounding duration from key and sustain-pedal state, and what it declines to judge
 
 ### `formats/`
 

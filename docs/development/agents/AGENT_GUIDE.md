@@ -201,10 +201,13 @@ subdirectory is the right answer when a subject grows. Add it to the index in
 - `src/platform` — shared infrastructure: `audio/` (`AudioInputService`,
   `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`), `midi/`
   (`MidiInputService`, `MidiEventFifo`, `MidiMessageTranslation`,
-  `MidiRecoveryPolicy`) — live keyboard capture, owning its own
-  `juce::MidiInput` rather than going through the audio device manager, with a
-  JUCE-free byte-level translation layer that is where every rule worth
-  asserting about the event stream lives — and `score/` — a JUCE-free score
+  `MidiRecoveryPolicy`, `NoteSoundingTracker`, `SoundingDurationJudgement`) —
+  live keyboard capture, owning its own `juce::MidiInput` rather than going
+  through the audio device manager, with a JUCE-free byte-level translation
+  layer that is where every rule worth asserting about the event stream lives,
+  and a JUCE-free tracker that turns the stream into per-note sounding
+  durations (key *and* sustain pedal; see
+  `docs/development/architecture/note-sounding.md`) — and `score/` — a JUCE-free score
   model (`Score`, `TempoMap`, `Pitch`, `MusicalTime`, `CurrentScore`) plus a
   MusicXML importer under `score/musicxml/`. `score/` has two application
   consumers: the shell's Open Score command, which imports a file and publishes

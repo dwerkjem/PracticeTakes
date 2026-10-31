@@ -146,7 +146,7 @@ nothing to close.
 ```
 judgeSoundingDuration(notatedSeconds, SoundedNote, tolerance) -> Verdict
 Verdict { Outcome outcome; HeldBy heldBy; }
-Outcome: short | onTarget | long | notJudged
+Outcome: tooShort | onTarget | tooLong | notJudged   (`short`/`long` are keywords)
 ```
 
 - `short` when `soundingSeconds < notated * (1 - tolerance)`.
@@ -178,9 +178,12 @@ down, which is not a setting but a fault). Default 64. Persisted with the
 existing keys; clamped on load so a hand-edited file cannot produce 0.
 Surfaces in the MIDI settings panel as a labelled slider with its value shown
 as a number, since the point is that a user can *see* where the line is.
-Whether it belongs in an exported settings file is decided in the tasks, not by
-the codec default — a threshold is a preference about a keyboard rather than an
-identifier of a machine, so the lean is to include it.
+It is **not** carried in a settings transfer file, and `applyTransferredSettings`
+does not touch it — decided when implementing, reversing this section's earlier
+lean. A threshold is calibration for one particular keyboard's pedal, the same
+class of setting as the device selection, which `midi-keyboard-capture` already
+declined to export for the same reason. Carrying it would also have meant a
+transfer-format bump (2 → 3) for a value that does not travel meaningfully.
 
 ## Risks / Trade-offs
 
@@ -223,3 +226,19 @@ version ignoring an unknown key, which it already does.
   Per-channel is the correct reading of the protocol and costs 16 ints; kept
   unless the hardware check shows a keyboard sending CC64 on a different channel
   than its notes, in which case it becomes a bug rather than a feature.
+
+## Answers, recorded after implementation
+
+- **Transfer file.** Not carried; see *Where the threshold lives*. **Reset all**
+  does not clear it either, matching the device selection.
+- **Held notes at disconnect.** Settled in the tracker with `invalidate`, and not
+  by the service synthesising note-offs as `midi-keyboard-capture` guessed; the
+  reason is in `docs/development/architecture/note-sounding.md`.
+- **Do device timestamps behave on every backend?** Still open. Only byte arrays
+  and synthetic streams have been exercised; no keyboard has been played. The
+  readout would show durations of 0.00 s if a backend reports a constant
+  timestamp, which is the symptom to look for.
+- **Is per-channel pedal state right?** Kept, on the same evidence: untested
+  against a real keyboard that puts CC64 on a different channel than its notes.
+- **Cap on a pedal-held note.** None. No decay model, so no cap; one parameter if
+  #44 wants it.
