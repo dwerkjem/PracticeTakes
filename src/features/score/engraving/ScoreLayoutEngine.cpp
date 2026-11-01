@@ -485,9 +485,19 @@ void planMeasure(
         // one up, everything else down. See design.md decision 6. A beam group
         // never spans two voices, so this already gives every group one
         // direction and nothing below needs to override it.
+        //
+        // The *lowest numbered* voice, not the first one met. `voiceNumbersSeen`
+        // is filled in reading order -- onset first, voice second -- so the
+        // first entry is the voice that happens to start the measure. A staff
+        // where voice 2 sounds from beat one and voice 1 enters at beat two
+        // with no written rest (a `<forward>` leaves exactly that gap) would
+        // otherwise put up stems on voice 2 and down stems on voice 1, which
+        // inverts the one cue a reader uses to tell the parts apart.
+        const int upperVoice = *std::min_element(voiceNumbersSeen.begin(), voiceNumbersSeen.end());
+
         for (PlacedEvent& placed : plan.events)
         {
-            placed.stemUp = placed.voiceNumber == voiceNumbersSeen.front();
+            placed.stemUp = placed.voiceNumber == upperVoice;
         }
     }
     else
@@ -577,7 +587,14 @@ void planMeasure(
 
         if (index == 0)
         {
-            slot.x = slot.leftPad;
+            // Proportional even here. A measure whose first event does not
+            // begin at tick zero -- a staff that opens with a `<forward>`, which
+            // the importer carries as a gap rather than as a rest -- would
+            // otherwise draw that event hard against the measure start, as if
+            // it fell on beat one, and then jump to its proportional place for
+            // the next slot. For the usual onset of zero this is `leftPad`, as
+            // before.
+            slot.x = proportional + slot.leftPad;
         }
         else
         {
@@ -626,8 +643,40 @@ void planMeasure(
         plan.events.front().localX = plan.contentWidth * 0.5;
     }
 
-    // Tempo and dynamic markings, placed by the same proportional rule as the
-    // notes so that a marking lands under the note it was attached to.
+    // Tempo and dynamic markings, placed at the slot they were attached to so
+    // that a marking lands under its note.
+    //
+    // The proportional position is not that place. A slot is pushed right by
+    // whatever room its accidentals and grace notes needed, and by
+    // `minimumSlotWidth` once the music is dense enough that proportional
+    // spacing alone would crowd it -- sixteenth notes are already past that
+    // point. Positioning a marking from the raw onset therefore drifts further
+    // left of its note with every slot, which in a bar of sixteenths puts it
+    // most of a bar away, under a different beat entirely.
+    const auto xForOnset = [&slots, &plan](score::Tick onset)
+    {
+        if (slots.empty())
+        {
+            return 0.0;
+        }
+
+        // The slot at that onset, or the last one before it: a marking between
+        // two notes belongs to the one it follows.
+        double x = slots.front().x;
+
+        for (const Slot& slot : slots)
+        {
+            if (slot.onset > onset)
+            {
+                break;
+            }
+
+            x = slot.x;
+        }
+
+        return std::min(x, plan.contentWidth);
+    };
+
     for (const score::Direction& direction : measure.directions)
     {
         if (direction.staff != staff)
@@ -635,8 +684,7 @@ void planMeasure(
             continue;
         }
 
-        const double x =
-            std::min(static_cast<double>(direction.onset) * stretchPerTick, plan.contentWidth);
+        const double x = xForOnset(direction.onset);
 
         if (direction.kind == score::DirectionKind::dynamic)
         {
