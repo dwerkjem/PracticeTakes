@@ -234,6 +234,26 @@ report.
 analysis FIFOs; the device's output is cleared at the top of the callback and
 never written, and this is the only audio callback the application registers.
 
+**A capture instance opens no input device.** The driver passes
+`--no-audio-input` alongside `--test-control`, which means: open no device,
+attempt no recovery, scan for no device changes, leaving the generated tone as
+the only producer into the analysis path.
+
+One process at a time can hold the input device, so a capture run and a live
+application used to compete for it and the live application lost
+([#176](https://github.com/dwerkjem/PracticeTakes/issues/176)). A capture
+instance never wanted it: the callback replaces device input with the tone
+whenever one is asked for, so a worker that won the microphone read from it and
+discarded every sample. Declining it outright is what lets you run a sweep while
+Practice Takes is open, and what makes the workers interchangeable — none holds
+anything another needs, so any worker captures any surface and there is no
+routing of tone surfaces towards whoever can hear.
+
+Devices are still *enumerated*, so the Settings input-device chooser stays
+populated and `settings-audio-device` remains answerable. The flag is separate
+from `--test-control` on purpose: driving the control channel against a real
+microphone by hand stays possible.
+
 Surfaces with a tone wait a couple of seconds before being captured, so a tool
 drawing a history has one to draw.
 

@@ -718,3 +718,25 @@ TEST_CASE("an ordinary instance is unchanged by the flag existing", "[audio][dec
     REQUIRE_FALSE(harness.service.hasUsableInput());
     REQUIRE_FALSE(AudioInputServiceRecoveryAccess::recovering(harness.service));
 }
+
+TEST_CASE("a declined instance still enumerates the devices it will not open", "[audio][declined]")
+{
+    // The Settings input-device chooser is a captured surface, and it carries a
+    // human instruction to switch input device and switch back. An empty list
+    // makes that unanswerable, so declining to *open* a device must not become
+    // declining to know which devices exist.
+    //
+    // `getCurrentDeviceTypeObject()` is the assertion rather than a device-name
+    // list, for two reasons: it is a plain read of what enumeration already
+    // populated -- it starts no scan of its own, so it cannot manufacture the
+    // result it is checking -- and it does not depend on the machine running
+    // the tests having a microphone, which a name list would.
+    ServiceUnderTest harness{true};
+
+    REQUIRE(harness.service.deviceManager().getCurrentDeviceTypeObject() == nullptr);
+
+    harness.service.initialiseDefaultInput();
+
+    REQUIRE(harness.service.deviceManager().getCurrentDeviceTypeObject() != nullptr);
+    REQUIRE(harness.service.deviceManager().getCurrentAudioDevice() == nullptr);
+}

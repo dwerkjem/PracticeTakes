@@ -194,6 +194,11 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   `main.cpp` sees `--test-control`. Newline-delimited commands in, replies out,
   no socket and no port; the channel dies with the process. It applies an
   approved window state, clicks a named target, sets geometry/theme, and quits.
+  The harness passes `--no-audio-input` alongside it, so a capture instance
+  opens no input device and the generated tone is its only signal — one process
+  at a time can hold the microphone, and a capture run must not take it from a
+  live application. The two flags are separate so the channel can still be
+  driven against a real device by hand.
   See `docs/development/quality/TESTING_SUITE.md`.
 - `src/features` — user-facing tools: `analysis/{tuner,spectrogram,harmonics}`,
   `score` (the Target Note tool, the first consumer of the score model) and

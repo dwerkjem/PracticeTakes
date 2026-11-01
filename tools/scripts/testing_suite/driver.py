@@ -119,7 +119,18 @@ class ApplicationDriver:
             )
 
         self._process = subprocess.Popen(
-            [str(self.executable), "--test-control", *self.extra_arguments],
+            [
+                str(self.executable),
+                "--test-control",
+                # No input device, ever. One process at a time can hold the
+                # microphone, so a capture run and a live application used to
+                # compete for it and the application lost (#176). A capture
+                # instance does not want it: the tone replaces device input
+                # whenever one is asked for, so winning the device meant reading
+                # from it and discarding every sample.
+                "--no-audio-input",
+                *self.extra_arguments,
+            ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,

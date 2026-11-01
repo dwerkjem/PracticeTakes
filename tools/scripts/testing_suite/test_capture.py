@@ -1432,27 +1432,39 @@ class ReopeningTests(unittest.TestCase):
         self.assertLess(len(self.driver.opened), len(plan) / 3)
 
 
-class InputRoutingTests(unittest.TestCase):
-    """Which worker may take a surface that has to be hearing something.
+class WorkDealingTests(unittest.TestCase):
+    """How a plan is divided between workers, now that none of them is special.
 
-    One application at a time holds the input device. Measured with eight
-    workers running: seven reported none. A tone surface photographed by a
-    worker without input is a picture of a tool that has heard nothing, and it
-    is counted as captured — which is how a blank tuner saying "waiting for the
-    microphone" landed in a run that reported twelve captured.
+    Workers used to be sorted into those holding the input device and those
+    without. One application at a time holds it — measured with eight workers
+    running, seven reported none — and a tone surface photographed by a worker
+    hearing nothing is a picture of a tool that has heard nothing, counted as
+    captured, which is how a blank tuner saying "waiting for the microphone"
+    landed in a run that reported twelve captured.
+
+    No worker opens a device at all now (`--no-audio-input`, #176), so the
+    generated tone always fills the analysis path and every worker can honestly
+    capture every surface. The routing is gone, and with it any guarantee about
+    *which* worker takes what — so what is asserted here is the dealing itself:
+    every entry goes to exactly one worker, and nothing consults a worker's
+    input state to decide.
     """
 
     def plan(self) -> tuple:
         return surfaces.plan(surfaces.QUICK, ("default", "constrained"), surfaces.THEMES)
 
-    def capture_with(self, deaf: set[int], workers: int = 4) -> dict:
+    def capture_with(self, workers: int = 4) -> dict:
         took: dict[int, list] = {}
         guard = threading.Lock()
 
         @contextmanager
         def worker(index: int, shared):
             class Pass:
-                has_input = index not in deaf
+                @property
+                def has_input(inner):  # noqa: N805 - test double
+                    raise AssertionError(
+                        "dealing work must not consult a worker's input state"
+                    )
 
                 def run(inner, plan, **kwargs):  # noqa: N805 - test double
                     with guard:
@@ -1468,33 +1480,35 @@ class InputRoutingTests(unittest.TestCase):
 
         return {"result": result, "took": took}
 
-    def test_a_worker_without_input_never_takes_a_tone_surface(self) -> None:
-        run = self.capture_with(deaf={1, 2, 3})
+    def test_a_workers_input_state_is_never_consulted(self) -> None:
+        """The property raises, so any reader fails the run rather than hiding.
 
-        for index, entries in run["took"].items():
-            if index in {1, 2, 3}:
-                with self.subTest(worker=index):
-                    self.assertFalse(
-                        any(surface.warmup_seconds > 0 for surface, _, _ in entries),
-                        "a worker with no input photographed a tool that needed one",
-                    )
-
-    def test_everything_is_still_captured(self) -> None:
-        run = self.capture_with(deaf={1, 2, 3})
+        Asserting "a deaf worker now takes tone surfaces" would be a race:
+        whichever worker starts first can drain the queue before the others
+        wake, which is also why the old routing tests kept passing after the
+        routing was deleted — their assertions ran over workers that had taken
+        nothing.
+        """
+        run = self.capture_with()
         dealt = [entry for entries in run["took"].values() for entry in entries]
 
         self.assertEqual(len(dealt), len(self.plan()))
 
-    def test_nobody_hearing_means_the_pictures_are_taken_anyway(self) -> None:
-        """A missing capture is invisible; a tool saying it is waiting is not."""
-        run = self.capture_with(deaf={0, 1, 2, 3})
+    def test_every_entry_is_dealt_exactly_once(self) -> None:
+        run = self.capture_with()
         dealt = [entry for entries in run["took"].values() for entry in entries]
 
         self.assertEqual(len(dealt), len(self.plan()))
-        self.assertTrue(any(surface.warmup_seconds > 0 for surface, _, _ in dealt))
+        self.assertEqual(
+            sorted((surface.state, geometry, theme) for surface, geometry, theme in dealt),
+            sorted(
+                (surface.state, geometry, theme) for surface, geometry, theme in self.plan()
+            ),
+        )
 
-    def test_the_worker_that_can_hear_takes_them_all(self) -> None:
-        run = self.capture_with(deaf={1, 2, 3})
+    def test_the_surfaces_that_wait_for_a_tone_are_all_dealt(self) -> None:
+        """The ones the routing used to hold back for a worker that could hear."""
+        run = self.capture_with()
         tone = [
             entry
             for entries in run["took"].values()
@@ -1507,6 +1521,12 @@ class InputRoutingTests(unittest.TestCase):
             {surface.title for surface, _, _ in tone},
             {surface.title for surface, _, _ in self.plan() if surface.warmup_seconds > 0},
         )
+
+    def test_a_single_worker_takes_the_whole_plan(self) -> None:
+        run = self.capture_with(workers=1)
+        dealt = [entry for entries in run["took"].values() for entry in entries]
+
+        self.assertEqual(len(dealt), len(self.plan()))
 
 
 class ZeroSizeTests(unittest.TestCase):

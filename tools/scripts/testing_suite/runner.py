@@ -1155,7 +1155,9 @@ class Job:
         before: the tone needed an open input device, one process at a time
         holds one, so every surface carrying a tone queued behind whichever
         worker won it. Generating the tone without a device is what made this
-        worth wiring in.
+        worth wiring in, and declining the device outright (#176) is what makes
+        the workers interchangeable -- none of them holds anything the others
+        need, so any of them can take any surface.
         """
         began = time.monotonic()
         images_at = self.store.path.parent / "images" / f"run-{run_id}"
@@ -1187,7 +1189,6 @@ class Job:
                         lock=shared.checks,
                         audio_gate=shared.audio,
                     )
-                    made.has_input = driver.wait_for_input(timeout=4.0)
 
                     yield made
                 finally:
