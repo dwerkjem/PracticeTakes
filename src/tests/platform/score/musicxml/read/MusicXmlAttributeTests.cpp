@@ -275,6 +275,61 @@ TEST_CASE(
     CHECK_FALSE(marking->beatsPerMinute.has_value());
 }
 
+TEST_CASE(
+    "a dynamic the importer reads is not also reported as unrecognised",
+    "[score][musicxml][attributes]")
+{
+    const std::string dynamics =
+        "      <direction>\n"
+        "        <direction-type><dynamics><mp/></dynamics></direction-type>\n"
+        "      </direction>\n"
+        "      <direction>\n"
+        "        <direction-type><dynamics><sfz/></dynamics></direction-type>\n"
+        "      </direction>\n";
+    const std::string body =
+        measure("1", attributes(1, 4, 4) + dynamics + note("C", 5, 2) + note("D", 5, 2));
+
+    const MusicXmlImportResult result = importMusicXmlDocument(scoreDocument(body));
+
+    REQUIRE(succeeded(result.status));
+    REQUIRE(result.score->parts.front().measures.front().directions.size() == 2);
+
+    // Both markings are in the model, so a report saying the importer does not
+    // read "mp" is false -- and it is the first thing a user opening almost
+    // any real score would see.
+    CHECK(result.diagnostics.empty());
+}
+
+TEST_CASE("a dynamic the importer drops is still reported", "[score][musicxml][attributes]")
+{
+    // Text dynamics are not one of the markings the model holds, and a marking
+    // written on a note's notations rather than as a direction is not read at
+    // all. Both are dropped, so both are owed a diagnostic; the exemption above
+    // must not swallow them.
+    const std::string textDynamic =
+        "      <direction>\n"
+        "        <direction-type><dynamics><other-dynamics>molto p</other-dynamics>"
+        "</dynamics></direction-type>\n"
+        "      </direction>\n";
+    const std::string noteDynamic = "        <notations><dynamics><ff/></dynamics></notations>\n";
+    const std::string body = measure(
+        "1", attributes(1, 4, 4) + textDynamic + note("C", 5, 2, 1, noteDynamic) + note("D", 5, 2));
+
+    const MusicXmlImportResult result = importMusicXmlDocument(scoreDocument(body));
+
+    REQUIRE(succeeded(result.status));
+    CHECK(result.score->parts.front().measures.front().directions.empty());
+
+    const auto reports = [&result](const std::string& name)
+    {
+        return std::any_of(
+            result.diagnostics.begin(), result.diagnostics.end(),
+            [&name](const Diagnostic& diagnostic) { return diagnostic.elementName == name; });
+    };
+    CHECK(reports("other-dynamics"));
+    CHECK(reports("ff"));
+}
+
 TEST_CASE("score metadata is read from the head of the file", "[score][musicxml][attributes]")
 {
     const std::string head = R"(<?xml version="1.0" encoding="UTF-8"?>
