@@ -254,6 +254,23 @@ TEST_CASE("the muted state opens a tool that shows the mute", "[testcontrol][app
 
     CHECK(state.microphone == MicrophoneCondition::muted);
     CHECK_FALSE(state.tools.empty());
+
+    // The tone is what makes this a picture of mute rather than of silence. A
+    // capture instance opens no input device, so without one the window says
+    // "no microphone detected" and the capture shows disconnection under a
+    // mute surface's name -- which is what it did.
+    CHECK(state.toneHz > 0.0);
+}
+
+TEST_CASE("every muted state carries a tone to mute", "[testcontrol][approved]")
+{
+    for (const auto* name : {"microphone-muted", "muted-all-tools"})
+    {
+        const ApprovedWindowState& state = require(name);
+
+        CHECK(state.microphone == MicrophoneCondition::muted);
+        CHECK(state.toneHz > 0.0);
+    }
 }
 
 TEST_CASE("the warning state has no usable input", "[testcontrol][approved]")

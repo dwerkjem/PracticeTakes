@@ -44,7 +44,7 @@ void storeMaximum(std::atomic<float>& destination, float value) noexcept
 }
 } // namespace
 
-AudioInputService::AudioInputService()
+AudioInputService::AudioInputService(bool declineInputDevice) : inputDeclined(declineInputDevice)
 {
     manager.addChangeListener(this);
     manager.addAudioCallback(this);
@@ -306,6 +306,27 @@ void AudioInputService::initialiseInput(const juce::XmlElement* state, bool forc
 
     initialised = true;
 
+    if (inputDeclined)
+    {
+        // Enumeration, and nothing else. `getAvailableDeviceTypes()` scans the
+        // backends and picks a current device type without opening anything --
+        // which is what keeps the Settings input-device chooser populated while
+        // this instance holds no device. Checked against
+        // AudioDeviceManager::scanDevicesIfNeeded() rather than assumed,
+        // because the whole point of declining is that nothing opens a device.
+        //
+        // Here rather than in the constructor on purpose. Scanning creates the
+        // backend objects and the timers they own, so doing it at construction
+        // would make every test that merely builds a service enumerate ALSA --
+        // the JUCE assertion wall `AudioInputServiceRecoveryAccess::attempt`
+        // documents. This is the moment an ordinary instance would have opened
+        // a device, which is the honest place to learn what devices exist.
+        juce::ignoreUnused(manager.getAvailableDeviceTypes());
+        publishState();
+
+        return;
+    }
+
     // Nobody asked for a device here -- they started the application, or they
     // imported settings. Opening one is automatic, so it is the same class of
     // work as the recovery timer and blocks the message thread the same way:
@@ -389,6 +410,11 @@ void AudioInputService::updateToneSource()
     // better signal when there is one -- it is what a person's microphone
     // sounds like -- and two producers is the thing `deliverSamples` guards
     // against rather than something to arrange on purpose.
+    //
+    // This needs no special case for a declined instance: `deviceRunning` is
+    // never true in one, so the generator starts whenever a tone is asked for.
+    // One rule -- "the device wins when there is one" -- rather than a second
+    // that only happens to agree with it.
     const auto wanted = toneFrequency.load(std::memory_order_acquire) > 0.0f &&
                         !deviceRunning.load(std::memory_order_acquire);
 
@@ -422,6 +448,22 @@ void AudioInputService::renderToneBlock()
     const auto frequency = toneFrequency.load(std::memory_order_acquire);
 
     if (frequency <= 0.0f || generatedBlock.empty())
+    {
+        return;
+    }
+
+    // Mute means the tools receive nothing, whatever is producing the samples.
+    // The audio callback returns before delivering for exactly this reason, and
+    // this path has to agree with it: it bypasses the callback entirely, so
+    // without this muting a device-free instance silenced nothing and a tool
+    // went on drawing a reading from a microphone the user had just turned off.
+    //
+    // Before rendering rather than after, so the phase stops where the device
+    // path's does. The generator keeps *running* -- `toneSourceRunning` stays
+    // true, so `hasUsableInput()` still reports input and `inputState()` can
+    // say `muted` rather than `disconnected`, which are not the same thing to a
+    // person.
+    if (muted.load(std::memory_order_relaxed))
     {
         return;
     }
@@ -725,6 +767,15 @@ void AudioInputService::deliverFormatChange()
 
 void AudioInputService::scanForDeviceChanges()
 {
+    // Quiet, not correctness -- `startDeviceWork` is what guarantees no device
+    // is opened. Without this the timer would notice the absent device and
+    // queue work that is then refused, once per tick, for the life of the
+    // process.
+    if (inputDeclined)
+    {
+        return;
+    }
+
     // Device backends refresh their lists when scanned. If the active device
     // vanished, restart the last setup; JUCE falls back to the system default
     // when that setup is no longer available. Repeated scans also recover a
@@ -762,6 +813,17 @@ void AudioInputService::attemptRecovery()
 
 void AudioInputService::startDeviceWork(std::function<void()> step)
 {
+    // This is the guard that makes "a declined instance opens no device" hold.
+    // Every open -- startup, an explicit user choice, a settings import, an
+    // automatic recovery -- funnels through here, so one return covers all of
+    // them. The matching return in `scanForDeviceChanges` is for quiet, not for
+    // correctness: do not remove this one on the grounds that the scan already
+    // stops, because the explicit-request paths do not go through the scan.
+    if (inputDeclined)
+    {
+        return;
+    }
+
     if (recoveryInFlight())
     {
         return;

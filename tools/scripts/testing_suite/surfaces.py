@@ -110,6 +110,21 @@ class Surface:
     # process.
     restart_before: bool = False
 
+    # Capture this surface with a real input device, against the harness's
+    # default of `--no-audio-input`.
+    #
+    # Almost nothing needs one: the generated tone gives the analysis tools a
+    # signal without a device, and declining the device is what stops a capture
+    # run taking the microphone from a live application (#176). But a surface
+    # that is *about* the device layer cannot be photographed by an instance
+    # that has no device -- the Settings input chooser came back reading
+    # "<< none >>", with no channel list and no advanced settings, and its
+    # question ("did switching take effect?") could only ever answer no.
+    #
+    # The worker restarts into this mode for the surface and back out after, so
+    # the microphone is held for one surface rather than for the whole run.
+    needs_input_device: bool = False
+
     # Something the tester must do by hand before answering, because it is an
     # interaction rather than a state. The harness prompts and waits; it does
     # not simulate it.
@@ -462,6 +477,7 @@ SURFACES: tuple[Surface, ...] = (
         title="Settings: audio device selection",
         area="settings",
         modes=frozenset({FULL}),
+        needs_input_device=True,
         window_title=SETTINGS_WINDOW,
         instruction="Switch to a different input device, then back.",
         extras=(
