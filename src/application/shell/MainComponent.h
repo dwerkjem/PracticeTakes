@@ -189,6 +189,10 @@ class MainComponent final
     // Ask for a file, then import it. Dismissing the chooser does nothing.
     void openScore();
 
+    // Open the score the application ships, through the same import path as a
+    // chosen file. Says so in an alert if the sample cannot be written out.
+    void openSampleScore();
+
     // Start reading `file` on the import thread. Does nothing but report when
     // an import is already running -- see ScoreImportJob::start.
     void startScoreImport(const juce::File& file);
@@ -329,6 +333,11 @@ class MainComponent final
     ScoreImportState scoreImport;
 
     juce::TextButton fileButton{"File"};
+
+    // Shown in the empty workspace, under the guidance text, so a first launch
+    // has a way to see a score without owning one. Hidden whenever a tool is
+    // open: it is part of the guidance, not of the workspace.
+    juce::TextButton openSampleButton{"Open the sample score"};
     juce::TextButton settingsButton{"Settings"};
     juce::TextButton toolsButton{"Tools"};
     juce::TextButton helpButton{"Help"};

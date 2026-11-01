@@ -811,6 +811,42 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The score the application ships, opened the way a first launch opens it.
+    # Real exporter output with far more in it than the hand-written fixtures,
+    # so this is the picture that shows what the renderer does with an actual
+    # song -- including what it says it leaves out.
+    Surface(
+        state="score-view-sample",
+        title="The score view showing the sample score",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "sample-is-the-song",
+                "Does the top of the view name the song cycle, Lieder eines fahrenden "
+                "Gesellen, and the Voice part?",
+            ),
+            Question(
+                "sample-reads-as-music",
+                "Does the first system read as music -- clef, key, time signature, notes "
+                "with stems and beams -- rather than as overlapping or misplaced symbols?",
+            ),
+            Question(
+                "sample-says-what-is-missing",
+                "Does the view say plainly what it is not showing of this song, such as the "
+                "piano part?",
+            ),
+            Question(
+                "sample-opens-from-empty-window",
+                "Close every tool, then click Open the sample score in the empty window: does "
+                "the Score View open showing this song?",
+                behavioural=True,
+            ),
+        ),
+    ),
     # The same score with more room. Worth its own picture because system
     # breaking is the one layout decision that cannot be seen at a single width:
     # a bar is either on this line or the next, and the only way to see that the

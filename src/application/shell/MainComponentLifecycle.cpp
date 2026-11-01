@@ -5,6 +5,7 @@
 #include "ui/feedback/FeedbackWindow.h"
 #include "ui/main_window/MainTitleBar.h"
 #include "ui/main_window/MicrophoneWarning.h"
+#include "ui/score/BundledSampleScore.h"
 #include "ui/score/ScoreImportWindow.h"
 #include "ui/settings/SettingsWindow.h"
 #include "ui/workspace/components/DockedToolPanel.h"
@@ -20,6 +21,19 @@ constexpr int microphoneWarningGap = 10;
 
 // The margin every edge of the workspace keeps from the window.
 constexpr int workspaceMargin = 18;
+
+// The empty-workspace guidance: a title, two lines of text, and the sample
+// button under them, centred as one block.
+constexpr int guidanceTitleHeight = 32;
+constexpr int guidanceTextHeight = 48;
+constexpr int sampleButtonWidth = 220;
+constexpr int sampleButtonHeight = 32;
+constexpr int guidanceBlockHeight = guidanceTitleHeight + guidanceTextHeight + sampleButtonHeight;
+
+juce::Rectangle<int> emptyGuidanceBlock(juce::Rectangle<int> area)
+{
+    return area.withSizeKeepingCentre(juce::jmin(area.getWidth(), 560), guidanceBlockHeight);
+}
 
 juce::String settingsFolderName()
 {
@@ -125,6 +139,9 @@ void MainComponent::configureTopButtons()
     helpButton.onClick = [this] { showHelpMenu(); };
     microphoneButton.setTitle("Global microphone mute control");
     microphoneButton.onClick = [this] { audioInputService.toggleMuted(); };
+    openSampleButton.setTooltip(bundled_sample::menuLabel());
+    openSampleButton.onClick = [this] { openSampleScore(); };
+    addChildComponent(openSampleButton);
 
     // Component ids let the development-only test control channel address these
     // by name rather than by screen position, so the manual GUI harness never
@@ -137,6 +154,7 @@ void MainComponent::configureTopButtons()
     toolsButton.setComponentID("tools-button");
     helpButton.setComponentID("help-button");
     microphoneButton.setComponentID("microphone-button");
+    openSampleButton.setComponentID("open-sample-button");
 }
 
 std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(
@@ -232,19 +250,20 @@ void MainComponent::paintEmptyWorkspaceGuidance(juce::Graphics& graphics) const
     // a tour -- the menus are right above it.
     const AppPalette colours = appPaletteFor(currentTheme);
     auto area = workspaceArea().reduced(24);
-    auto block = area.withSizeKeepingCentre(juce::jmin(area.getWidth(), 560), 96);
+    auto block = emptyGuidanceBlock(area);
 
     graphics.setColour(colours.foreground);
     graphics.setFont(juce::FontOptions(20.0f, juce::Font::bold));
     graphics.drawFittedText(
-        "Open a score to get started", block.removeFromTop(32), juce::Justification::centred, 1);
+        "Open a score to get started", block.removeFromTop(guidanceTitleHeight),
+        juce::Justification::centred, 1);
 
     graphics.setColour(colours.muted);
     graphics.setFont(juce::FontOptions(14.5f));
     graphics.drawFittedText(
-        "File > Open score reads a MusicXML file and shows it here. The Tools menu adds "
-        "a tuner, spectrogram or harmonic analyser.",
-        block, juce::Justification::centredTop, 3);
+        "File > Open score reads a MusicXML file and shows it here, or try the sample "
+        "below. The Tools menu adds a tuner, spectrogram or harmonic analyser.",
+        block.removeFromTop(guidanceTextHeight), juce::Justification::centredTop, 3);
 }
 
 void MainComponent::resized()
@@ -262,6 +281,19 @@ void MainComponent::resized()
     }
 
     layoutWorkspace(workspaceArea());
+
+    // Part of the guidance painted behind it, so it follows the same rule:
+    // visible exactly when no tool is open, laid out under the text.
+    const bool showGuidance = !anyToolOpen();
+    openSampleButton.setVisible(showGuidance);
+
+    if (showGuidance)
+    {
+        auto block = emptyGuidanceBlock(workspaceArea().reduced(24));
+        block.removeFromTop(guidanceTitleHeight + guidanceTextHeight);
+        openSampleButton.setBounds(block.withSizeKeepingCentre(
+            juce::jmin(block.getWidth(), sampleButtonWidth), sampleButtonHeight));
+    }
 
     // The background carries the empty-workspace guidance, which appears and
     // disappears as tools open and close. Every open and close, docked or
