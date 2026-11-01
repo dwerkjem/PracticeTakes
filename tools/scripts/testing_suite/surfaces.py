@@ -419,6 +419,17 @@ SURFACES: tuple[Surface, ...] = (
         area="shell",
         modes=frozenset({FULL}),
         fixed_geometry=True,
+        extras=(
+            # What a new user sees first, which used to be a blank window with
+            # nothing to say a score could be opened. Asked here rather than on
+            # `empty` because a narrow window is where the guidance is likeliest
+            # to be clipped -- and because the review tests use `empty` as their
+            # surface that owes only the three fixed axes.
+            Question(
+                "says-how-to-start",
+                "Does the window say how to open a score, and where the tools are?",
+            ),
+        ),
     ),
     Surface(
         state="fullscreen",
@@ -640,6 +651,14 @@ SURFACES: tuple[Surface, ...] = (
             Question(
                 "metadata-complete",
                 "Are the work, composer, parts, length, and tempo all shown?",
+            ),
+            # The capture is of the summary, which sits in front; this is about
+            # the main window behind it. Opening a score used to stop at this
+            # report, and closing it changed nothing on screen.
+            Question(
+                "score-is-shown",
+                "Close this window. Is the score now shown in the Score View?",
+                behavioural=True,
             ),
         ),
     ),

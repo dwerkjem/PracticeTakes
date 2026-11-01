@@ -245,6 +245,15 @@ class MainComponent final
     void detachWorkspaceContainer();
     void rebuildWorkspaceContainer();
     void layoutWorkspace(juce::Rectangle<int> bounds);
+    // Where docked tools go: the window inside its margin, below the microphone
+    // warning while that is showing. One function so the warning's reservation
+    // and the empty-workspace guidance cannot disagree about it.
+    [[nodiscard]] juce::Rectangle<int> workspaceArea() const;
+    // Whether any tool is open, docked or floating. Not `liveTools.empty()`: a
+    // closed tool keeps its entry, and its saved settings, so that reopening
+    // brings it back as it was.
+    [[nodiscard]] bool anyToolOpen() const;
+    void paintEmptyWorkspaceGuidance(juce::Graphics& graphics) const;
     [[nodiscard]] juce::Component* buildWorkspaceNode(const WorkspaceLayoutState::Node* node);
     [[nodiscard]] std::vector<ToolInstanceId> dockedTools();
     [[nodiscard]] std::optional<ToolInstanceId> dockedToolAt(juce::Point<int> position);

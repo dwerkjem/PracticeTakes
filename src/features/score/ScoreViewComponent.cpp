@@ -265,7 +265,7 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
         {
             paintMessage(
                 graphics, message, "No score open",
-                "Open a MusicXML file with File > Open Score, and it is drawn here.");
+                "Open a MusicXML file with File > Open score, and it is drawn here.");
 
             return;
         }

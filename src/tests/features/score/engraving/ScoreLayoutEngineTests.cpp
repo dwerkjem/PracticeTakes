@@ -618,7 +618,7 @@ TEST_CASE("a tie split across two systems is reported, not drawn", "[score][engr
     const ScoreLayout layout = layOutScore(scoreOf(measures), narrow);
 
     REQUIRE(layout.systems.size() > 1);
-    CHECK(anyNoticeContains(layout, "different lines of the layout"));
+    CHECK(anyNoticeContains(layout, "from one line of music onto the next"));
 }
 
 TEST_CASE("lyrics are carried through to the layout", "[score][engraving][layout]")
@@ -771,8 +771,8 @@ TEST_CASE("repeat barlines are drawn from the measure's markings", "[score][engr
 
     // The markings this pass carries but does not draw say so, rather than
     // being dropped on the floor.
-    CHECK(anyNoticeContains(layout, "volta"));
-    CHECK(anyNoticeContains(layout, "Jump markings"));
+    CHECK(anyNoticeContains(layout, "endings"));
+    CHECK(anyNoticeContains(layout, "D.C., D.S., Fine and Coda"));
 }
 
 TEST_CASE("every notehead names the note it came from", "[score][engraving][layout]")
@@ -813,7 +813,7 @@ TEST_CASE("what is not drawn is named", "[score][engraving][layout]")
                 true)}),
             wideOptions());
 
-        CHECK(anyNoticeContains(layout, "chosen from the time signature"));
+        CHECK(anyNoticeContains(layout, "grouped by the time signature"));
     }
 
     SECTION("nothing about beams when a part holds no beamable note")
@@ -852,7 +852,11 @@ TEST_CASE("what is not drawn is named", "[score][engraving][layout]")
 
         CHECK(layout.partName == "Voice");
         CHECK(anyNoticeContains(layout, "Piano"));
-        CHECK(anyNoticeContains(layout, "#33"));
+        CHECK(anyNoticeContains(layout, "Not shown"));
+
+        // Said to the person reading the score, so no issue number: "#33" told
+        // them where the work was tracked and nothing about their music.
+        CHECK_FALSE(anyNoticeContains(layout, "#"));
     }
 
     SECTION("further staves of the drawn part, and what was on them")
@@ -877,8 +881,9 @@ TEST_CASE("what is not drawn is named", "[score][engraving][layout]")
         // Only the first staff's note is drawn, and the other one is accounted
         // for rather than silently absent.
         CHECK(layout.systems.front().noteheads.size() == 1);
-        CHECK(anyNoticeContains(layout, "#200"));
-        CHECK(anyNoticeContains(layout, "another staff"));
+        CHECK(anyNoticeContains(layout, "only the top one is shown"));
+        CHECK(anyNoticeContains(layout, "other staff"));
+        CHECK_FALSE(anyNoticeContains(layout, "#"));
     }
 
     SECTION("a duration no written value matches")
@@ -888,7 +893,7 @@ TEST_CASE("what is not drawn is named", "[score][engraving][layout]")
                 {measureOf(0, {voiceOf(1, {noteAt(0, 1000, pitch(score::Step::g, 0, 4))})}, true)}),
             wideOptions());
 
-        CHECK(anyNoticeContains(layout, "no written note value"));
+        CHECK(anyNoticeContains(layout, "drawn as quarter notes"));
     }
 }
 
@@ -904,7 +909,10 @@ TEST_CASE(
 
     CHECK(layout.outcome == LayoutOutcome::nothingToDraw);
     CHECK(layout.systems.empty());
-    CHECK(anyNoticeContains(layout, "names no pitch"));
+    CHECK(anyNoticeContains(layout, "a percussion clef"));
+
+    // In words, not MusicXML's <sign> value quoted back.
+    CHECK_FALSE(anyNoticeContains(layout, "\"percussion\""));
 }
 
 TEST_CASE("tempo and dynamic markings reach the layout", "[score][engraving][layout]")

@@ -136,9 +136,25 @@ void MainComponent::finishScoreImport(const score::musicxml::MusicXmlImportResul
     }
 #endif
 
+    // Show the music. Opening a score used to publish it into the holder and
+    // stop there, so unless the Score View happened to be open already, the
+    // only visible result of opening a file was a report about it -- and
+    // closing the report changed nothing on screen. The tool is single
+    // instance, so this opens it once and only brings it forward after that.
+    //
+    // After the test-control return above, not before: an approved state that
+    // places a score into a particular tool has already arranged the
+    // workspace it wants photographed. And only on success: a failed import
+    // leaves the previous score in place, and a view opened onto that would
+    // look like the file that failed had loaded.
+    if (summary.succeeded)
+    {
+        openToolById("score-view");
+    }
+
     // The window may have been closed while the import ran -- the result is
     // still worth showing, and reopening it is what the user asked for by
-    // opening the file.
+    // opening the file. Shown after the view opens, so it lands in front of it.
     showScoreImportWindow();
     scoreImportWindow->showSummary(summary);
 }

@@ -118,6 +118,24 @@ class NoticeList
     std::vector<std::string> ordered;
 };
 
+// What to call a clef that names no pitch, in words a reader uses. MusicXML's
+// <sign> values -- "percussion", "TAB", "none" -- are file vocabulary, and
+// quoting them at someone who only wanted to read the music tells them nothing.
+[[nodiscard]] std::string unpitchedClefDescription(const std::string& sign)
+{
+    if (sign == "percussion")
+    {
+        return "a percussion clef";
+    }
+
+    if (sign == "TAB")
+    {
+        return "tablature";
+    }
+
+    return "a clef without pitches";
+}
+
 [[nodiscard]] std::string pluralised(std::size_t count, const std::string& singular)
 {
     return std::to_string(count) + " " + singular + (count == 1 ? "" : "s");
@@ -353,8 +371,8 @@ void resolveBeamGroups(MeasurePlan& plan, NoticeList& notices)
 
             if (before.onset / groupTicks == group && after.onset / groupTicks == group)
             {
-                notices.add("A beam is not carried over a rest, so a beat holding one is drawn "
-                            "with flags either side of it.");
+                notices.add("Beams stop at rests, so notes either side of a rest are drawn with "
+                            "flags.");
             }
         }
 
@@ -368,8 +386,7 @@ void resolveBeamGroups(MeasurePlan& plan, NoticeList& notices)
 
             if (consecutiveGraceNotes > 1)
             {
-                notices.add("A run of grace notes is drawn with flags; grace notes are not "
-                            "beamed in this pass.");
+                notices.add("Grace notes are drawn with flags rather than beams.");
 
                 break;
             }
@@ -432,7 +449,7 @@ void planMeasure(
         if (!placed.value.has_value())
         {
             notices.add(
-                "Some durations in this part match no written note value and are drawn as "
+                "Some notes are a length no single note symbol shows, and are drawn as "
                 "quarter notes. Bar " +
                 (plan.printedNumber.empty() ? std::to_string(plan.index + 1) : plan.printedNumber) +
                 " is the first.");
@@ -451,8 +468,8 @@ void planMeasure(
                 // Guarded before the measure is planned at all; reaching here
                 // would mean the clef changed to an unpitched one mid-part.
                 notices.add(
-                    "This part changes to a clef that names no pitch, and the notes under it are "
-                    "not drawn.");
+                    "This part switches to a clef without pitches, such as percussion, and the "
+                    "notes after the switch are not shown.");
 
                 continue;
             }
@@ -1038,25 +1055,28 @@ double emitMeasure(
             anyClefDeclared = true;
         }
 
-        if (measure.attributes.key.has_value())
+        // Copied into a local once checked. Dereferencing the member twice with
+        // calls between reads, to a dataflow checker, as a second unchecked
+        // access -- clang-tidy 21 reports it, 18 does not.
+        if (const std::optional<score::KeySignature> declaredKey = measure.attributes.key)
         {
-            const bool cancelling = keySignatureAccidentalCount(*measure.attributes.key) == 0 &&
+            const bool cancelling = keySignatureAccidentalCount(*declaredKey) == 0 &&
                                     keySignatureAccidentalCount(key) > 0;
 
-            key = *measure.attributes.key;
+            key = *declaredKey;
             plan.keyChangesHere = true;
 
             if (cancelling)
             {
                 notices.add(
-                    "A key change that cancels accidentals is drawn as an empty key signature; "
-                    "the cancelling naturals are not drawn.");
+                    "A change to a key with no sharps or flats is shown without the naturals "
+                    "that cancel the old key.");
             }
         }
 
-        if (measure.attributes.time.has_value())
+        if (const std::optional<score::TimeSignature> declaredTime = measure.attributes.time)
         {
-            time = *measure.attributes.time;
+            time = *declaredTime;
             plan.timeChangesHere = true;
         }
 
@@ -1066,14 +1086,12 @@ double emitMeasure(
 
         if (!measure.repeats.endingNumbers.empty())
         {
-            notices.add("Ending (volta) brackets are not drawn in this pass.");
+            notices.add("First and second endings are not marked yet.");
         }
 
         if (!measure.repeats.jumps.empty())
         {
-            notices.add(
-                "Jump markings -- D.C., D.S., Fine, Coda -- are carried by the score but not "
-                "drawn, and nothing follows them.");
+            notices.add("Navigation marks such as D.C., D.S., Fine and Coda are not shown yet.");
         }
 
         planMeasure(plan, measure, staff, options, notices, lyricVerseCount, skippedOnOtherStaves);
@@ -1137,7 +1155,7 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     if (score->parts.empty())
     {
         layout.outcome = LayoutOutcome::nothingToDraw;
-        notices.add("This score holds no parts.");
+        notices.add("This score has no parts to show.");
         layout.notices = notices.take();
 
         return layout;
@@ -1150,8 +1168,7 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     if (score->parts.size() > 1)
     {
         notices.add(
-            "Only the first part is drawn. Not drawn: " + otherPartNames(score->parts) +
-            ". Choosing a part is #33.");
+            "Only the first part is shown. Not shown: " + otherPartNames(score->parts) + ".");
     }
 
     constexpr int drawnStaff = 1;
@@ -1160,7 +1177,7 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     {
         notices.add(
             "This part has " + std::to_string(part.staffCount) +
-            " staves and only the first is drawn. The braced grand staff is #200.");
+            " staves, and only the top one is shown.");
     }
 
     const score::Clef opening = openingClef(part, drawnStaff);
@@ -1169,8 +1186,8 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     {
         layout.outcome = LayoutOutcome::nothingToDraw;
         notices.add(
-            "This part is written in a \"" + opening.sign +
-            "\" clef, which names no pitch, so its notes have no staff position to be drawn at.");
+            "This part is written in " + unpitchedClefDescription(opening.sign) +
+            ", which has no pitches to place on a staff, so it cannot be shown.");
         layout.notices = notices.take();
 
         return layout;
@@ -1179,7 +1196,7 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     if (part.measures.empty() || !holdsAnyEvent(part))
     {
         layout.outcome = LayoutOutcome::nothingToDraw;
-        notices.add("This part holds no notes or rests.");
+        notices.add("This part has no notes or rests to show.");
         layout.notices = notices.take();
 
         return layout;
@@ -1187,8 +1204,8 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
 
     if (!keySignatureIsConventional(opening))
     {
-        notices.add("This part's clef sits on an unusual line, and its key signature is placed by "
-                    "shifting the conventional positions rather than from a checked table.");
+        notices.add("This part's clef sits on an uncommon line, so compare its key signature "
+                    "with the printed music.");
     }
 
     std::size_t skippedOnOtherStaves = 0;
@@ -1199,8 +1216,9 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     if (skippedOnOtherStaves > 0)
     {
         notices.add(
-            "Not drawn: " + pluralised(skippedOnOtherStaves, "event") +
-            " written on another staff of this part.");
+            "Not shown: " + std::to_string(skippedOnOtherStaves) +
+            (skippedOnOtherStaves == 1 ? " note or rest" : " notes and rests") +
+            " on this part's " + (part.staffCount > 2 ? "other staves." : "other staff."));
     }
 
     // Pack measures into systems. At least one measure per system, however
@@ -1319,8 +1337,8 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     if (tiesAcrossSystems > 0)
     {
         notices.add(
-            "Not drawn: " + pluralised(tiesAcrossSystems, "tie") +
-            " whose two notes fall on different lines of the layout.");
+            "Not shown: " + pluralised(tiesAcrossSystems, "tie") +
+            " that run from one line of music onto the next.");
     }
 
     const bool anyBeam = std::any_of(
@@ -1330,9 +1348,8 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     if (anyBeam)
     {
         notices.add(
-            "Beam groups are chosen from the time signature. MusicXML's own <beam> elements are "
-            "not read into the model, so the grouping a file was written with is not "
-            "necessarily the grouping drawn.");
+            "Beams are grouped by the time signature, so they may not match how the original "
+            "file grouped them.");
     }
 
     layout.outcome = LayoutOutcome::laidOut;
