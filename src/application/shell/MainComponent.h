@@ -45,7 +45,10 @@ class MainComponent final
       private juce::ChangeListener
 {
   public:
-    explicit MainComponent(bool muteMicrophoneForSession = false);
+    // `declineAudioInput` is passed straight to AudioInputService: open no
+    // input device at all, leaving the generated tone as the only producer.
+    // See that constructor for why a capture instance wants it.
+    explicit MainComponent(bool muteMicrophoneForSession = false, bool declineAudioInput = false);
     ~MainComponent() override;
 
     void paint(juce::Graphics& graphics) override;

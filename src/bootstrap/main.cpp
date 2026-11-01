@@ -96,6 +96,11 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         juce::StringArray arguments;
         arguments.addTokens(argument, true);
         const auto muteMicrophoneForSession = arguments.contains("--mute-microphone");
+        // Open no input device at all. Deliberately its own flag rather than
+        // something --test-control implies: the capture harness passes both, but
+        // driving the control channel against a real microphone by hand is worth
+        // keeping possible, and conflating them would remove it silently.
+        const auto declineAudioInput = arguments.contains("--no-audio-input");
         juce::String uiValidationScenario;
         if (const auto scenarioIndex = arguments.indexOf("--ui-validation-scenario");
             scenarioIndex >= 0 && scenarioIndex + 1 < arguments.size())
@@ -124,8 +129,8 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         const auto windowTitle = getApplicationName() + " v" + getApplicationVersion();
 
         mainWindow = std::make_unique<MainWindow>(
-            windowTitle, muteMicrophoneForSession, uiValidationScenario, testControlState,
-            testControlChannelRequested);
+            windowTitle, muteMicrophoneForSession, declineAudioInput, uiValidationScenario,
+            testControlState, testControlChannelRequested);
     }
 
     void shutdown() override
@@ -148,6 +153,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         MainWindow(
             const juce::String& title,
             bool muteMicrophoneForSession,
+            bool declineAudioInput,
             const juce::String& uiValidationScenario,
             const juce::String& testControlState,
             bool testControlChannelRequested)
@@ -158,7 +164,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         {
             setUsingNativeTitleBar(false);
 
-            content = new MainComponent(muteMicrophoneForSession);
+            content = new MainComponent(muteMicrophoneForSession, declineAudioInput);
             setContentOwned(content, true);
 
             auto customTitleBar = content->createTitleBar(

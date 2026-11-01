@@ -47,6 +47,15 @@ struct AudioInputServiceRecoveryAccess
     {
         return service.recoveryInFlight();
     }
+
+    // The scan the timer runs. Safe to drive only on an instance that has
+    // declined input -- that is the case it returns from before it reaches the
+    // backends, so none of the enumeration the comment above warns about
+    // happens. Driving it on an ordinary service would bring the timers back.
+    static void scan(AudioInputService& service)
+    {
+        service.scanForDeviceChanges();
+    }
 };
 
 namespace
@@ -72,8 +81,15 @@ struct ServiceUnderTest
     // segfaulted on Windows while passing everywhere else. The application
     // never had the problem: MainComponent owns the service as a member of a
     // heap-allocated component.
-    std::unique_ptr<AudioInputService> owned = std::make_unique<AudioInputService>();
-    AudioInputService& service = *owned;
+    std::unique_ptr<AudioInputService> owned;
+    AudioInputService& service;
+
+    // `declineInput` builds the service a capture instance gets: one that opens
+    // no input device at all. Defaulted, so every case above is unaffected.
+    explicit ServiceUnderTest(bool declineInput = false)
+        : owned(std::make_unique<AudioInputService>(declineInput)), service(*owned)
+    {
+    }
 };
 
 // A consumer that only needs to exist. What it receives is read back through
@@ -600,4 +616,105 @@ TEST_CASE(
     }
 
     harness.service.setSyntheticTone(0.0f);
+}
+
+// --- Declining the input device ---------------------------------------------
+//
+// One process at a time holds the input device, so a verification capture run
+// and a live application compete for it and the application loses (#176). A
+// capture instance does not want the device it is competing for: the callback
+// above already replaces device input with the tone whenever one is asked for,
+// so an instance that only ever analyses a tone opens a device, reads from it,
+// and discards every sample.
+//
+// These cases cover the instance that declines one outright.
+
+TEST_CASE("a declined instance opens no device when asked to initialise", "[audio][declined]")
+{
+    ServiceUnderTest harness{true};
+
+    harness.service.initialiseDefaultInput();
+
+    REQUIRE(harness.service.deviceManager().getCurrentAudioDevice() == nullptr);
+    REQUIRE_FALSE(harness.service.hasUsableInput());
+    REQUIRE_FALSE(AudioInputServiceRecoveryAccess::recovering(harness.service));
+}
+
+TEST_CASE("a declined instance refuses an explicit device request", "[audio][declined]")
+{
+    ServiceUnderTest harness{true};
+
+    // The two paths a user reaches: the Settings button, and a settings import.
+    // Both go through initialiseInput, and both must come back without opening
+    // anything and without blocking the caller -- the drop being silent is the
+    // right behaviour here, because declining was the instruction.
+    harness.service.resetToDefaultInput();
+
+    juce::XmlElement saved{"DEVICESETUP"};
+    saved.setAttribute("audioDeviceName", "Some Input");
+    harness.service.applySavedDeviceState(saved);
+
+    REQUIRE(harness.service.deviceManager().getCurrentAudioDevice() == nullptr);
+    REQUIRE_FALSE(AudioInputServiceRecoveryAccess::recovering(harness.service));
+}
+
+TEST_CASE("a declined instance attempts no recovery when its timer scans", "[audio][declined]")
+{
+    ServiceUnderTest harness{true};
+
+    // The scan would otherwise notice the absent device and queue work that is
+    // then refused, once per tick, for the life of the process.
+    AudioInputServiceRecoveryAccess::scan(harness.service);
+    AudioInputServiceRecoveryAccess::scan(harness.service);
+
+    REQUIRE_FALSE(AudioInputServiceRecoveryAccess::recovering(harness.service));
+    REQUIRE(harness.service.deviceManager().getCurrentAudioDevice() == nullptr);
+}
+
+TEST_CASE("a declined instance still feeds a tone to a tool", "[audio][declined]")
+{
+    ServiceUnderTest harness{true};
+    SilentConsumer consumer;
+    harness.service.addListener(&consumer);
+
+    harness.service.setSyntheticTone(440.0f);
+
+    std::vector<float> heard(4096, 0.0f);
+    std::size_t got = 0;
+
+    for (auto waited = 0; waited < 3000 && got == 0; waited += 20)
+    {
+        juce::Thread::sleep(20);
+        got = harness.service.readSamples(&consumer, heard.data(), heard.size());
+    }
+
+    const auto reported = harness.service.hasUsableInput();
+    const auto state = harness.service.inputState();
+
+    harness.service.setSyntheticTone(0.0f);
+    harness.service.removeListener(&consumer);
+
+    REQUIRE(got > 0);
+    REQUIRE(std::any_of(
+        heard.begin(), heard.begin() + static_cast<long>(got),
+        [](float sample) { return std::abs(sample) > 0.001f; }));
+
+    // Being fed a tone is having input, whatever the reason there is no device.
+    // A declined instance that drew "microphone disconnected" over a graph of
+    // the signal it is being given would be describing its own plumbing.
+    REQUIRE(reported);
+    REQUIRE(state == AudioInputService::InputState::active);
+    REQUIRE(harness.service.deviceManager().getCurrentAudioDevice() == nullptr);
+}
+
+TEST_CASE("an ordinary instance is unchanged by the flag existing", "[audio][declined]")
+{
+    // The default, which is what the application and every other case here
+    // builds. Nothing is opened in a bare test process either, but for the
+    // ordinary reason -- no device was asked for -- and the scan is still the
+    // live code path rather than an early return.
+    ServiceUnderTest harness;
+
+    REQUIRE_FALSE(harness.service.hasUsableInput());
+    REQUIRE_FALSE(AudioInputServiceRecoveryAccess::recovering(harness.service));
 }
