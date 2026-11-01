@@ -293,11 +293,16 @@ def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
         with display_module.virtual_display(publish=False) as screen:
             driver = ApplicationDriver(arguments.executable, display=screen)
 
-            # One application opens the input device at a time. Held until this
-            # one answers, which is the proof that it is past the open rather
-            # than a guess at how long one takes -- and released before any
-            # capturing, because the device is only contended while it is being
-            # acquired.
+            # Held until this one answers, which is the proof that it is past
+            # startup rather than a guess at how long it takes, and released
+            # before any capturing.
+            #
+            # A worker opens no input device now (#176), so there is nothing
+            # here to contend for: what the gate still guards is the one surface
+            # that asks for a real device and restarts into it mid-run. Keeping
+            # it at startup costs a lock nobody is holding. Retiring it is noted
+            # in openspec/changes/device-free-capture/tasks.md rather than done
+            # here.
             #
             # Tried more than once, because the gate cannot cover everything:
             # the application reopens the device from a timer of its own when it
@@ -858,12 +863,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--workers",
         type=int,
         default=1,
-        help="How many screens to capture on at once. Default 1; 2 is the most "
-        "that works today. Never derived from the processor count. Above two, "
-        "instances contend for the input device and one blocks inside ALSA "
-        "opening it, on the thread that answers the control channel — so the "
-        "application runs but stops answering, and its share is recorded as "
-        "failures.",
+        help="How many screens to capture on at once. Default 1. Never derived "
+        "from the processor count. Workers used to contend for the input device "
+        "above two — one would block inside ALSA opening it, on the thread that "
+        "answers the control channel, so the application ran but stopped "
+        "answering and its share was recorded as failures. They open no device "
+        "now (#176), so that limit is gone; the one surface that still needs a "
+        "real device takes it under the audio gate, for that surface only. "
+        "Higher counts are untested rather than known good.",
     )
     capture_parser.add_argument("--build-config", default="", help="How the build under test was configured.")
     capture_parser.add_argument("--audio-device", default="", help="The input device in use.")

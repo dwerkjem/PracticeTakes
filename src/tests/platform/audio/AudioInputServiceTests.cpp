@@ -740,3 +740,57 @@ TEST_CASE("a declined instance still enumerates the devices it will not open", "
     REQUIRE(harness.service.deviceManager().getCurrentDeviceTypeObject() != nullptr);
     REQUIRE(harness.service.deviceManager().getCurrentAudioDevice() == nullptr);
 }
+
+TEST_CASE("muting silences the generated tone as well as a device", "[audio][tone][declined]")
+{
+    // The generator bypasses the audio callback entirely, and the callback is
+    // where mute was honoured -- so muting a device-free instance silenced
+    // nothing, and a tool went on drawing a reading from a microphone the user
+    // had just turned off. Latent until capture instances stopped opening
+    // devices; every one of them is device-free now.
+    ServiceUnderTest harness{true};
+    SilentConsumer consumer;
+    harness.service.addListener(&consumer);
+    harness.service.setSyntheticTone(440.0f);
+
+    std::vector<float> heard(4096, 0.0f);
+
+    for (auto waited = 0; waited < 3000; waited += 20)
+    {
+        juce::Thread::sleep(20);
+
+        if (harness.service.readSamples(&consumer, heard.data(), heard.size()) > 0)
+        {
+            break;
+        }
+    }
+
+    harness.service.setMuted(true);
+
+    // Settle before discarding, not after. The generator runs on a timer
+    // thread, so a block that was already past the mute check when `setMuted`
+    // landed still delivers -- discarding first and reading straight away
+    // raced that block and failed about half the time.
+    juce::Thread::sleep(100);
+    harness.service.discardPendingSamples(&consumer);
+
+    // Several times the 20ms block interval, so an unmuted generator would
+    // have delivered a dozen blocks into the gap.
+    juce::Thread::sleep(300);
+
+    const auto afterMute = harness.service.readSamples(&consumer, heard.data(), heard.size());
+
+    // Still *running*, so the interface can say muted rather than disconnected.
+    // Those are different things to a person: one means you turned it off, the
+    // other means plug something in.
+    const auto state = harness.service.inputState();
+    const auto usable = harness.service.hasUsableInput();
+
+    harness.service.setMuted(false);
+    harness.service.setSyntheticTone(0.0f);
+    harness.service.removeListener(&consumer);
+
+    REQUIRE(afterMute == 0);
+    REQUIRE(usable);
+    REQUIRE(state == AudioInputService::InputState::muted);
+}

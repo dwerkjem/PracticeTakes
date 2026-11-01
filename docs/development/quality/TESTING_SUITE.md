@@ -249,10 +249,24 @@ Practice Takes is open, and what makes the workers interchangeable — none hold
 anything another needs, so any worker captures any surface and there is no
 routing of tone surfaces towards whoever can hear.
 
-Devices are still *enumerated*, so the Settings input-device chooser stays
-populated and `settings-audio-device` remains answerable. The flag is separate
-from `--test-control` on purpose: driving the control channel against a real
-microphone by hand stays possible.
+The flag is separate from `--test-control` on purpose: driving the control
+channel against a real microphone by hand stays possible.
+
+**One surface still asks for a real device.** `settings-audio-device` is *about*
+the device layer, and a declining instance photographed it as an empty chooser
+reading `<< none >>`, with no channel list, no advanced settings, and a question
+— whether switching device takes effect — that could only answer no. A surface
+can therefore set `needs_input_device`, and the worker restarts into an instance
+with a device for it and back out afterwards, under the audio gate. The
+microphone is held for that one surface rather than for the whole run.
+
+**The muted surfaces carry a tone**, because mute and silence look identical
+without one: with no input at all the window says "no microphone detected", so
+the capture showed disconnection under a mute surface's name. With a tone the
+tools have a signal, mute stops it reaching them, and the interface says muted.
+Muting silences the generated tone as well as a device — the generator bypasses
+the audio callback, which is where mute used to be honoured, so until this was
+fixed muting a device-free instance silenced nothing.
 
 Surfaces with a tone wait a couple of seconds before being captured, so a tool
 drawing a history has one to draw.

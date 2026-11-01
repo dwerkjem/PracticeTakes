@@ -103,6 +103,13 @@ class ApplicationDriver:
         # is wedged rather than busy, and every further command it is sent
         # waits the same again.
         self.default_timeout: float | None = None
+        # Whether the next launch declines an input device. Settable rather
+        # than fixed, because a surface that is about the device layer has to
+        # be captured by an instance that has one -- see
+        # `surfaces.Surface.needs_input_device`. The capture pass restarts into
+        # the mode a surface needs and back out after, so the microphone is
+        # held for that surface rather than for the whole run.
+        self.decline_audio_input = True
         self._process: subprocess.Popen[str] | None = None
 
     def _environment(self) -> dict[str, str] | None:
@@ -122,13 +129,13 @@ class ApplicationDriver:
             [
                 str(self.executable),
                 "--test-control",
-                # No input device, ever. One process at a time can hold the
+                # No input device by default. One process at a time can hold the
                 # microphone, so a capture run and a live application used to
                 # compete for it and the application lost (#176). A capture
                 # instance does not want it: the tone replaces device input
                 # whenever one is asked for, so winning the device meant reading
                 # from it and discarding every sample.
-                "--no-audio-input",
+                *(["--no-audio-input"] if self.decline_audio_input else []),
                 *self.extra_arguments,
             ],
             stdin=subprocess.PIPE,

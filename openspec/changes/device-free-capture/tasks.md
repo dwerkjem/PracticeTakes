@@ -86,27 +86,34 @@ gone.
 The part that cannot be reasoned out. These three are the risk the proposal
 names.
 
-Images are still outstanding: capturing needs ImageMagick's `import`, which is
-not installed on the machine this was implemented on, so 5.2-5.4 are unrun
-rather than passed. 5.1's *claim* was moved into a unit test, which is a better
-home for it than a screenshot -- but the picture still has to be taken.
+Taken, and they found two regressions the reasoning had not: declining the
+device changed what two of these three surfaces are pictures *of*. Both are
+fixed below. This is why the section exists.
 
-- [x] 5.1 Confirm the input-device chooser still has devices to list.
-      Asserted in `AudioInputServiceTests.cpp` instead of by screenshot: a
-      declined instance has no current device type before `initialiseInput`
-      and does have one after, which is only reachable through the enumeration
-      scan. `getCurrentDeviceTypeObject()` starts no scan itself, so the test
-      cannot manufacture its own result, and it does not need the test machine
-      to own a microphone. **Still to do:** the capture itself, and the
-      behavioural "did switching take effect" question, which only a person at
-      the window can answer.
-- [ ] 5.2 Capture `microphone-warning` and confirm a declined instance with a
-      tone does not show the no-usable-input warning, since
-      `synthetic-input` requires the interface not to report input as
-      disconnected while a tone is feeding the tools.
-- [ ] 5.3 Capture `microphone-muted` and `muted-all-tools` and confirm muting
-      still reads as muted — the mute path is upstream of the tone and should be
-      unaffected, which is worth a picture rather than an assumption.
+- [x] 5.1 `settings-audio-device`. **Regressed, then fixed.** A declining
+      instance showed `Input: << none >>`, no channel list and no advanced
+      settings, and its question — whether switching device takes effect —
+      could only answer no, since a declined instance refuses device requests
+      by design. Fixed with a per-surface `needs_input_device` declaration:
+      the worker restarts into an instance with a device for that surface and
+      back out after, under the audio gate, so the microphone is held for one
+      surface instead of the whole run. Recaptured and it matches the
+      reference: device selected, channel list and advanced settings present.
+- [x] 5.2 `microphone-warning`. **Correct, and better than before.** It shows
+      "No microphone detected" with Open Settings and Dismiss, which is what
+      the surface is for — and it no longer depends on the capture machine
+      happening to have no microphone.
+- [x] 5.3 `microphone-muted`. **Regressed, then fixed.** It showed
+      *disconnected*, not muted: `inputState()` only reports `muted` when
+      `hasUsableInput()` is true, and a declining instance with no tone has no
+      input, so the capture was a picture of disconnection under a mute
+      surface's name. Fixed by giving `microphone-muted` and `muted-all-tools`
+      a tone. That exposed a second bug — `renderToneBlock()` never checked
+      `muted`, because mute was honoured in the audio callback and the
+      generator bypasses it, so **muting a device-free instance silenced
+      nothing**. Latent until every capture worker became device-free. Fixed
+      and covered by a test; the recapture shows the amber "Mic muted" badge,
+      "Microphone muted." and an empty graph.
 - [ ] 5.4 Run a full parallel capture sweep and confirm no worker reports
       contention, and that the duplicate-capture check flags nothing new.
 

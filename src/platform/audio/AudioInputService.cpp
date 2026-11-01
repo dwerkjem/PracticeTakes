@@ -452,6 +452,22 @@ void AudioInputService::renderToneBlock()
         return;
     }
 
+    // Mute means the tools receive nothing, whatever is producing the samples.
+    // The audio callback returns before delivering for exactly this reason, and
+    // this path has to agree with it: it bypasses the callback entirely, so
+    // without this muting a device-free instance silenced nothing and a tool
+    // went on drawing a reading from a microphone the user had just turned off.
+    //
+    // Before rendering rather than after, so the phase stops where the device
+    // path's does. The generator keeps *running* -- `toneSourceRunning` stays
+    // true, so `hasUsableInput()` still reports input and `inputState()` can
+    // say `muted` rather than `disconnected`, which are not the same thing to a
+    // person.
+    if (muted.load(std::memory_order_relaxed))
+    {
+        return;
+    }
+
     const auto rate = currentSampleRate.load(std::memory_order_relaxed);
     const auto count = std::min(
         generatedBlock.size(), static_cast<std::size_t>(rate * toneBlockMilliseconds / 1000.0));

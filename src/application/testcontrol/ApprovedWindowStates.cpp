@@ -113,12 +113,17 @@ const std::vector<ApprovedWindowState>& states()
          "The empty shell in a narrow window, with the collapsed menu and no tool"},
 
         // --- Audio conditions ---
+        // Both carry a tone, which is what makes them pictures of *mute* rather
+        // than of silence. Without one a capture instance has no input at all,
+        // so the window says "no microphone detected" and the picture shows
+        // disconnection wearing a mute surface's name. With one the tools have
+        // a signal, mute stops it reaching them, and the interface says muted.
         {"microphone-muted", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
          WindowGeometry::normal, MicrophoneCondition::muted, false, "", false,
-         "The tuner with the global microphone mute engaged"},
+         "The tuner with the global microphone mute engaged", 440.0, ""},
         {"muted-all-tools", Tools{"tuner", "spectrogram", "harmonics"}, ToolPresentation::docked,
          WorkspaceArrangement::split, WindowGeometry::normal, MicrophoneCondition::muted, false, "",
-         false, "Every audio tool at once with the microphone muted"},
+         false, "Every audio tool at once with the microphone muted", 440.0, ""},
         {"microphone-warning",
          {},
          ToolPresentation::none,

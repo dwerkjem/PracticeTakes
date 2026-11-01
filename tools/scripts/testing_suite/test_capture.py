@@ -47,6 +47,8 @@ class FakeDriver:
         self.geometries: list[str] = []
         self.themes: list[str] = []
         self.restarts = 0
+        # The real driver's: whether the next launch declines an input device.
+        self.decline_audio_input = True
 
     def restart(self) -> None:
         self.restarts += 1
@@ -809,6 +811,7 @@ class AudioGateTests(unittest.TestCase):
                 inner.audio_gate = gate
                 inner.driver = inner
                 inner._open = None
+                inner.decline_audio_input = True
 
             def restart(inner) -> None:  # noqa: N805 - standing in for the driver
                 held.append("locked" if gate.locked() else "UNGUARDED")
@@ -841,6 +844,7 @@ class AudioGateTests(unittest.TestCase):
                 inner.audio_gate = gate
                 inner.driver = inner
                 inner._open = None
+                inner.decline_audio_input = True
 
             def open_state(inner, state):  # noqa: N805 - test double
                 return Reply(True, [])
@@ -1430,6 +1434,98 @@ class ReopeningTests(unittest.TestCase):
 
         self.assertEqual(len(self.driver.opened), expected)
         self.assertLess(len(self.driver.opened), len(plan) / 3)
+
+
+class InputDeviceModeTests(unittest.TestCase):
+    """Which instance a surface is captured by: one with a device, or without.
+
+    Capture workers decline the input device, so a run cannot take the
+    microphone from a live application (#176). A surface that is *about* the
+    device layer cannot be photographed by an instance that has none — the
+    Settings input chooser came back reading "<< none >>", with no channel list
+    and no advanced settings. Those surfaces restart into an instance that has
+    a device and back out after, so the microphone is held for one surface
+    rather than for the whole run.
+    """
+
+    def pass_with(self, gate):
+        restarts: list[bool] = []
+
+        class Switching(capture_module.CapturePass):
+            def __init__(inner):  # noqa: N805 - test double
+                inner.audio_gate = gate
+                inner.driver = inner
+                inner._open = None
+                inner.decline_audio_input = True
+
+            def restart(inner) -> None:  # noqa: N805 - standing in for the driver
+                # What the launch would carry, recorded at the moment it happens.
+                restarts.append(inner.decline_audio_input)
+
+            def open_state(inner, state):  # noqa: N805 - test double
+                return Reply(True, [])
+
+            def set_theme(inner, theme):  # noqa: N805 - test double
+                return ""
+
+            def set_geometry(inner, geometry):  # noqa: N805 - test double
+                return ""
+
+        return Switching(), restarts
+
+    def surface(self, **kwargs) -> surfaces.Surface:
+        return surfaces.Surface(
+            state="tuner-docked", title="A surface",
+            modes=frozenset({surfaces.FULL}), **kwargs
+        )
+
+    def test_a_surface_that_needs_a_device_restarts_into_one(self) -> None:
+        pass_, restarts = self.pass_with(threading.Lock())
+
+        pass_.move_to(self.surface(needs_input_device=True), "default", surfaces.DARK)
+
+        self.assertEqual(restarts, [False], "the relaunch should not decline the device")
+        self.assertFalse(pass_.decline_audio_input)
+
+    def test_it_restarts_back_out_for_the_next_ordinary_surface(self) -> None:
+        pass_, restarts = self.pass_with(threading.Lock())
+
+        pass_.move_to(self.surface(needs_input_device=True), "default", surfaces.DARK)
+        pass_.move_to(self.surface(), "default", surfaces.DARK)
+
+        # Held for the surface, not for the run: the device goes back the
+        # moment a surface that does not need it comes along.
+        self.assertEqual(restarts, [False, True])
+        self.assertTrue(pass_.decline_audio_input)
+
+    def test_an_ordinary_surface_alone_never_restarts(self) -> None:
+        """A relaunch per surface would undo what one-application-per-worker is for."""
+        pass_, restarts = self.pass_with(threading.Lock())
+
+        pass_.move_to(self.surface(), "default", surfaces.DARK)
+
+        self.assertEqual(restarts, [])
+        self.assertTrue(pass_.decline_audio_input)
+
+    def test_the_switch_is_made_under_the_audio_gate(self) -> None:
+        """Ungated, one worker's open can block in ALSA against another's."""
+        gate = threading.Lock()
+        pass_, _ = self.pass_with(gate)
+        held: list[str] = []
+
+        def watching() -> None:
+            held.append("locked" if gate.locked() else "UNGUARDED")
+
+        pass_.restart = watching
+        pass_.move_to(self.surface(needs_input_device=True), "default", surfaces.DARK)
+
+        self.assertEqual(held, ["locked"])
+
+    def test_only_the_settings_device_surface_asks_for_one(self) -> None:
+        """Every extra one is a window where the run holds the microphone."""
+        wanting = {s.state for s in surfaces.SURFACES if s.needs_input_device}
+
+        self.assertEqual(wanting, {"settings-audio-device"})
 
 
 class WorkDealingTests(unittest.TestCase):

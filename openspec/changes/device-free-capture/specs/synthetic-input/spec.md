@@ -53,8 +53,8 @@ device; opening it does.
 
 ### Requirement: No capture worker is privileged by holding a device
 Where several instances capture surfaces in parallel, the set of surfaces an
-instance can honestly capture SHALL NOT depend on which instance holds an input
-device.
+instance can honestly capture SHALL NOT depend on which instance happens to hold
+an input device.
 
 A surface carrying a tone that is photographed by an instance hearing nothing is
 a picture of a tool that has analysed silence, and it is counted as captured —
@@ -73,3 +73,32 @@ nothing left to decide.
 - **WHEN** a surface that waits for a tone is captured by any instance
 - **THEN** that instance was feeding the tone to its tools at the moment of
   capture
+
+### Requirement: A surface about the device layer declares that it needs one
+A surface whose subject is the input device itself SHALL be able to require a
+real input device, and SHALL be captured by an instance that has one.
+
+Declining the device is right for every surface whose signal is the tone, and
+wrong for the few that are *about* the device. Captured by a declining instance,
+the Settings input chooser showed no selected device, no channel list and no
+advanced settings, and its question — whether switching device takes effect —
+could only ever answer no, because a declining instance refuses device requests
+by design. A picture of that is not a weaker version of the surface; it is a
+picture of something else.
+
+The requirement is on the surface declaring it, not on the worker discovering
+it: the distinction is a property of what is being photographed, and a run must
+hold the microphone for that surface alone rather than for its whole length.
+
+#### Scenario: A surface that needs a device gets one
+- **WHEN** a surface declaring that it needs an input device is captured
+- **THEN** the instance capturing it has an input device open
+
+#### Scenario: The device is given back afterwards
+- **WHEN** the next surface captured does not declare that it needs one
+- **THEN** the instance capturing it has declined the input device again
+
+#### Scenario: Declaring it is the exception
+- **WHEN** the set of surfaces is read
+- **THEN** only those whose subject is the device layer declare the need, so a
+  run holds the microphone for a bounded part of itself rather than throughout

@@ -379,11 +379,20 @@ class CapturePass:
         try:
             here = (surface.state, theme)
 
-            if surface.restart_before:
-                # The one place a capture reopens the audio device. Left
-                # ungated, a restart in one worker can block in ALSA against
-                # another's device and take this worker's whole share with it.
+            # A surface that is about the device layer needs an instance with a
+            # device; everything else is captured without one, so the run never
+            # takes the microphone from a live application (#176). Switching
+            # costs a relaunch, so it happens only when the mode is wrong for
+            # this surface -- held for the surface, not for the run.
+            wants_device = surface.needs_input_device
+            wrong_mode = wants_device == self.driver.decline_audio_input
+
+            if surface.restart_before or wrong_mode:
+                # The one place a capture opens the audio device. Left ungated,
+                # a restart in one worker can block in ALSA against another's
+                # device and take this worker's whole share with it.
                 with self.audio_gate:
+                    self.driver.decline_audio_input = not wants_device
                     self.driver.restart()
 
                 self._open = None
