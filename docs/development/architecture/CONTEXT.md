@@ -106,3 +106,10 @@ attributed to the machine that produced it.
 **Test control** — the newline-delimited stdin/stdout command channel the
 harness drives the running application through, opened only under
 `--test-control`. No socket, no port; it dies with the process.
+
+**Declined input** — an instance started with `--no-audio-input`, which opens no
+input device, attempts no recovery and scans for no device changes, leaving the
+generated tone as the only producer into the analysis path. What every capture
+worker is, so that a verification run does not take the microphone from a live
+application. Distinct from *muted*, which has a device and is not listening to
+it, and from *disconnected*, which wanted a device and has none.
