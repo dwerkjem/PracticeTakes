@@ -261,8 +261,16 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     // and a summary window opened before that is then behind it -- which the
     // capture records as a black rectangle over the report, differently in
     // every run.
+    // Cleared for every state, set only by one that asks: a suppression that
+    // leaked from the previous capture would hide a report the next surface is
+    // about, which is the same accumulation problem the window hiding above
+    // exists for.
+    testControlHideScoreImportSummary = false;
+
     if (!state.scoreFixture.empty())
     {
+        testControlHideScoreImportSummary = !state.showScoreImportSummary;
+
         const juce::File fixture = scoreFixtureFile(state.scoreFixture);
 
         // A state naming a fixture that is not there is a drifted state, and

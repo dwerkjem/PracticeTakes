@@ -114,10 +114,32 @@ set(PRACTICE_TAKES_SOURCES
     src/features/analysis/tuner/TunerSettingsCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.h
     src/features/analysis/tuner/TunerDrawing.cpp
+    src/features/score/ScoreGlyphPainter.cpp
+    src/features/score/ScoreGlyphPainter.h
+    src/features/score/ScoreViewComponent.cpp
+    src/features/score/ScoreViewComponent.h
     src/features/score/TargetNoteComponent.cpp
     src/features/score/TargetNoteComponent.h
     src/features/score/TargetNoteSelection.cpp
+    src/features/score/engraving/KeySignatureLayout.cpp
+    src/features/score/engraving/MeasureAccidentals.cpp
+    src/features/score/engraving/NoteValue.cpp
+    src/features/score/engraving/ScoreLayoutEngine.cpp
+    src/features/score/engraving/StaffPosition.cpp
     src/features/score/TargetNoteSelection.h
+    src/features/score/engraving/Accidental.h
+    src/features/score/engraving/KeySignatureLayout.cpp
+    src/features/score/engraving/KeySignatureLayout.h
+    src/features/score/engraving/MeasureAccidentals.cpp
+    src/features/score/engraving/MeasureAccidentals.h
+    src/features/score/engraving/NoteValue.cpp
+    src/features/score/engraving/NoteValue.h
+    src/features/score/engraving/ScoreLayout.h
+    src/features/score/engraving/ScoreLayoutEngine.cpp
+    src/features/score/engraving/ScoreLayoutEngine.h
+    src/features/score/engraving/StaffGeometry.h
+    src/features/score/engraving/StaffPosition.cpp
+    src/features/score/engraving/StaffPosition.h
     src/features/performance/ApplicationLaunchTimer.cpp
     src/features/performance/ApplicationLaunchTimer.h
     src/features/feedback/FeedbackComponent.cpp
@@ -221,6 +243,12 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/analysis/tuner/PitchTrackerTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
     src/tests/features/score/TargetNoteSelectionTests.cpp
+    src/tests/features/score/engraving/KeySignatureLayoutTests.cpp
+    src/tests/features/score/engraving/ScoreLayoutCorpusTests.cpp
+    src/tests/features/score/engraving/MeasureAccidentalsTests.cpp
+    src/tests/features/score/engraving/NoteValueTests.cpp
+    src/tests/features/score/engraving/ScoreLayoutEngineTests.cpp
+    src/tests/features/score/engraving/StaffPositionTests.cpp
     src/tests/features/performance/ApplicationLaunchTimerTests.cpp
     src/tests/platform/audio/AudioRecoveryPolicyTests.cpp
     src/tests/platform/audio/AudioInputServiceTests.cpp
@@ -264,6 +292,11 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/features/analysis/tuner/PitchTracker.cpp
     src/features/performance/ApplicationLaunchTimer.cpp
     src/features/score/TargetNoteSelection.cpp
+    src/features/score/engraving/KeySignatureLayout.cpp
+    src/features/score/engraving/MeasureAccidentals.cpp
+    src/features/score/engraving/NoteValue.cpp
+    src/features/score/engraving/ScoreLayoutEngine.cpp
+    src/features/score/engraving/StaffPosition.cpp
     src/platform/audio/PitchDetector.cpp
     src/platform/audio/SharedPitchAnalysis.cpp
     src/platform/score/ScoreBuilder.cpp

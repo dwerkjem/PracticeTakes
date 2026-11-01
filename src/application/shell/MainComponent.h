@@ -386,6 +386,13 @@ class MainComponent final
     // would have the service continuously trying to reopen the device.
     bool testControlNoMicrophone = false;
 
+    // Suppresses the score import summary window for the state being applied,
+    // so a state that opens a score *into a tool* photographs the tool rather
+    // than a report sitting over it. Set from the approved state on the way in
+    // and cleared by every state that does not ask for it, so it cannot leak
+    // from one capture to the next.
+    bool testControlHideScoreImportSummary = false;
+
     // Set the first time a state is applied, and never cleared: this process is
     // being driven by the harness rather than used by a person.
     //

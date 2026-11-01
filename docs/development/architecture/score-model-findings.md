@@ -12,9 +12,14 @@ first pitched note and describes it. Everything below came out of writing about
 a hundred lines against a model that until then had only ever been written
 *to*.
 
-Each entry says what the friction was and what should happen about it. Nothing
-here is a bug report against the importer: every file the corpus holds imports
-exactly as it did before.
+Each entry says what the friction was and what should happen about it.
+
+**A second consumer has since read the model**, and this file was extended
+rather than replaced. `score-notation-renderer` (#32) draws the score, which
+asks far more of it than describing one note did: every note's staff position,
+every duration's written value, every accidental in context. Findings 10 and 11
+came out of that, and finding 7 was resolved by it. What drawing the model
+revealed is in [*What drawing it revealed*](#what-drawing-it-revealed) below.
 
 ## What survived contact
 
@@ -34,6 +39,31 @@ misreports the result. Three decisions were load-bearing and held.
   factory". That was tested for the first time here and was exactly true: one
   field, one line at each of the two construction sites, and not one existing
   tool factory changed.
+
+## What drawing it revealed
+
+Added by `score-notation-renderer`. The headline is the one worth stating
+plainly: **the model was built for a renderer and it works.**
+
+- **Keeping the spelling *and* the sounding number was the right call, and
+  `Pitch.h` was right about why.** Its own comment says "the renderer (#32)
+  needs step/alter/octave to pick a staff line and an accidental". That is
+  exactly what `StaffPosition` does, and nothing else in the model was needed
+  to do it: a clef is a sign on a line, a pitch is a spelling, and the position
+  is a subtraction.
+- **Invariant 10 cost nothing and bought the layout.** Having nowhere to put a
+  coordinate meant there was never a question about where one came from. The
+  layout is a value computed from the score and the available width, and that is
+  the only reason it can be unit tested at all.
+- **Integer ticks at 3840 made the written-value lookup exact.** Every value
+  from a breve to a 128th, with one or two dots, and every triplet and
+  quintuplet of them, lands on an integer. `NoteValue` compares integers and
+  reports anything that does not match, rather than rounding — which is the same
+  stance `rescaleToTicks` takes one layer down.
+- **A chord being one event with several pitches is what a renderer wants.** One
+  stem, several noteheads, one duration. Modelling a chord as simultaneous
+  events would have meant grouping them back together here, by onset and voice,
+  and guessing.
 
 ## Findings
 
@@ -136,7 +166,7 @@ guarantee), and let #33 settle part and voice selection properly.
 
 ## Findings outside the model
 
-### 7. A score cannot be got into a tool under the capture harness
+### 7. A score cannot be got into a tool under the capture harness — *fixed by #32*
 
 `src/application/testcontrol` can put the application into a state that imports a
 fixture, and the only route it has is `startScoreImport`, which also opens the
@@ -144,15 +174,24 @@ import summary window. An overlapping top-level window corrupts a capture — th
 harness's own comment records this happening — so **no surface about a score
 consumer other than the summary window can be photographed.**
 
-The Target Note tool's populated state is the first casualty: it has an approved
+The Target Note tool's populated state was the first casualty: it has an approved
 state and a surface for its *empty* state only, and the one picture actually
-worth taking cannot be taken. Its paint routine is `Component` code and so sits
-outside `PracticeTakesTests`, which leaves it with no automated verification at
-all.
+worth taking could not be taken.
 
-**Should happen:** a way for a state to import a fixture without leaving the
-summary window up — a flag on the state, or a `close-score-summary` command on
-the test-control channel.
+**Done, by `score-notation-renderer`.** For a tool that shows a note as text
+this was an inconvenience. For a renderer it was fatal — the entire deliverable
+is a picture — so it had to be fixed there rather than deferred again.
+
+`ApprovedWindowState::showScoreImportSummary` defaults to true, so the two
+states that are *about* the summary are untouched; a state that opens a score
+into a tool sets it false, `MainComponent::finishScoreImport` honours it, and
+the flag is cleared on the way into every state so it cannot leak between
+captures. The invariant the old tests protected — one subject per picture — was
+restated rather than dropped: a state showing the summary opens nothing else,
+and a state suppressing it opens exactly one tool.
+
+What remains for the Target Note tool is one approved state, which nothing now
+prevents.
 
 ### 8. Adding a tool costs more than the two entries it is documented to cost
 
@@ -185,8 +224,59 @@ Nothing here caused it and nothing here should fix it, but the reference image
 for that state is now a picture of the bug, which is worth knowing before
 someone approves it.
 
+**Worse again since.** `score-view` is the fifth tool in that state, and it is
+the one that most needs width. The reference image for `all-tools-docked` is now
+a picture of the bug with a renderer in it.
+
+### 10. A dynamic marking is read correctly and reported as unread
+
+Found by `score-notation-renderer`, and the only finding here that is a defect
+in the importer rather than a shape in the model.
+
+`<direction-type><dynamics><mf/></dynamics></direction-type>` is imported
+correctly — `MusicXmlMeasureReader` recognises the marking through
+`isDynamicMarking` and produces a `Direction` for it — and the file *also* gets
+a diagnostic saying "The importer does not read this element, so it was
+ignored." The marking names live in `isDynamicMarking` and not in
+`knownElements`, and `countUnrecognisedElements` walks every element in the
+document against the latter.
+
+So every real score with dynamics in it carries one misleading diagnostic per
+distinct marking, saying the opposite of what happened. This is not cosmetic:
+the import summary is how a user decides whether the file was read properly.
+
+It also has a direct cost here. `notation-sample.musicxml` was written with a
+dynamic in it and had to have it taken out again: a fixture whose picture is of
+the renderer cannot import with a diagnostic, because the surface would then
+show "1 import diagnostic" and say the file was not fully read. The renderer's
+handling of dynamics is covered by `ScoreLayoutEngineTests` instead, which
+builds a `score::Direction` directly.
+
+**Should happen:** add the dynamic marking names to `knownElements`, or skip the
+children of a `<dynamics>` element in `countUnrecognisedElements`. Deliberately
+*not* fixed by #32: the fix changes the pinned diagnostic count of most of the
+50-plus files in `expectations.txt`, and that corpus file's own header says
+"'The importer changed' is not a reason to edit this file, it is a reason to look
+at the diff." That diff belongs to a change about the importer.
+
+### 11. `<part-group>` is still dropped, and #200 will need it
+
+Recorded on #32 when #31 landed, and still true: which parts brace together on
+the page was judged engraving data and is dropped with a diagnostic.
+
+#32 does not need it, because it draws one staff of one part. **#200 does** — a
+braced grand staff is exactly the bracketing that is not imported. The comment
+on #32 already called capturing it "a small additive change to the importer",
+and this is the note that it is now the next change's problem rather than a
+hypothetical.
+
 ## Where these go
 
 Findings 2, 3, 4, 5 and 6 belong under #13 as issues against the score model.
-Finding 7 is a harness issue, 8 a documentation and test issue, and 9 is
-evidence on the existing #150.
+Finding 8 is a documentation and test issue, 9 is evidence on the existing #150,
+10 is an issue against the importer under #31, and 11 is a prerequisite to note
+on #200.
+
+Findings 1 and 7 are done: 1 by `score-target-note-tool`, which added
+`score::spelledName`, and 7 by `score-notation-renderer`, which could not have
+been verified at all without it.

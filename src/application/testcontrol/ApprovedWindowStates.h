@@ -129,6 +129,20 @@ struct ApprovedWindowState
     // committed fixture -- which is what keeps the set of surfaces under
     // verification a reviewable list in this one file.
     std::string scoreFixture;
+
+    // Whether to show the import summary window for `scoreFixture`.
+    //
+    // Appended last, for the reason the comments above give: the list is
+    // initialised positionally. Defaults to true so the two states that are
+    // *about* the summary keep behaving exactly as they did.
+    //
+    // A state that opens a tool sets it false. Without it the renderer could
+    // not be photographed at all -- the only way to get a score into the
+    // running application is `startScoreImport`, which also opens the summary
+    // window over whatever the surface is about. That was finding 7 of
+    // docs/development/architecture/score-model-findings.md, and this field is
+    // what closes it.
+    bool showScoreImportSummary = true;
 };
 
 // An object that can be asked to act, as though clicked.

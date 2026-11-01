@@ -104,6 +104,13 @@ void MainComponent::startScoreImport(const juce::File& file)
         return;
     }
 
+#if PRACTICE_TAKES_ENABLE_TEST_CONTROL
+    if (testControlHideScoreImportSummary)
+    {
+        return;
+    }
+#endif
+
     // Shown before the import finishes, so a large file does not look like a
     // command that did nothing.
     showScoreImportWindow();
@@ -116,6 +123,18 @@ void MainComponent::finishScoreImport(const score::musicxml::MusicXmlImportResul
     // score already open exactly as it was. ScoreImportState owns that rule and
     // is tested on it.
     const ScoreImportSummary& summary = scoreImport.apply(result);
+
+#if PRACTICE_TAKES_ENABLE_TEST_CONTROL
+    // An approved state that opens a score into a tool wants the tool in the
+    // picture, not a report over it. The score has already been published into
+    // the holder above, so the tool will pick it up on its own timer.
+    if (testControlHideScoreImportSummary)
+    {
+        juce::ignoreUnused(summary);
+
+        return;
+    }
+#endif
 
     // The window may have been closed while the import ran -- the result is
     // still worth showing, and reopening it is what the user asked for by

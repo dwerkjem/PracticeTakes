@@ -196,8 +196,12 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   approved window state, clicks a named target, sets geometry/theme, and quits.
   See `docs/development/quality/TESTING_SUITE.md`.
 - `src/features` — user-facing tools: `analysis/{tuner,spectrogram,harmonics}`,
-  `score` (the Target Note tool, the first consumer of the score model),
-  `feedback`, `performance` (launch timing).
+  `score` (the Target Note tool, which reads one note as text, and the Score
+  View tool, which draws the score as notation — with `score/engraving/`, a
+  JUCE-free layout pass turning a `Score` into glyphs with positions in staff
+  spaces, where every engraving rule worth asserting lives; see
+  `docs/development/architecture/notation-engraving.md`), `feedback`,
+  `performance` (launch timing).
 - `src/platform` — shared infrastructure: `audio/` (`AudioInputService`,
   `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`), `midi/`
   (`MidiInputService`, `MidiEventFifo`, `MidiMessageTranslation`,
@@ -206,10 +210,10 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   JUCE-free byte-level translation layer that is where every rule worth
   asserting about the event stream lives — and `score/` — a JUCE-free score
   model (`Score`, `TempoMap`, `Pitch`, `MusicalTime`, `CurrentScore`) plus a
-  MusicXML importer under `score/musicxml/`. `score/` has two application
+  MusicXML importer under `score/musicxml/`. `score/` has three application
   consumers: the shell's Open Score command, which imports a file and publishes
-  the result into the `CurrentScore` holder, and the Target Note tool, which
-  reads that holder through `ToolServices`. What the importer accepts, drops
+  the result into the `CurrentScore` holder, and the Target Note and Score View
+  tools, which read that holder through `ToolServices`. What the importer accepts, drops
   with a diagnostic, or refuses is specified in
   `docs/development/formats/musicxml-subset.md`; what consuming the model from
   the application revealed about its shape is in

@@ -628,11 +628,7 @@ SURFACES: tuple[Surface, ...] = (
         ),
     ),
     # The target note tool's paint routine is Component code: selectTargetNote
-    # is unit tested, what it looks like is not. Only its empty state is here,
-    # and not because the populated one matters less -- there is no approved
-    # state that opens a score *into* a tool, because importing one also opens
-    # the summary window over whatever the surface is about. See
-    # docs/development/architecture/score-model-findings.md.
+    # is unit tested, what it looks like is not.
     Surface(
         state="target-note-empty",
         title="The target note tool with no score open",
@@ -645,6 +641,117 @@ SURFACES: tuple[Surface, ...] = (
                 "says-what-to-do",
                 "Does it name the command that opens a score, rather than showing an empty "
                 "panel?",
+            ),
+        ),
+    ),
+    Surface(
+        state="score-view-empty",
+        title="The score view with no score open",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        extras=(
+            Question(
+                "says-what-to-do",
+                "Does it name the command that opens a score, rather than showing an empty "
+                "staff?",
+            ),
+        ),
+    ),
+    # The surfaces the renderer exists for. Everything about this tool is
+    # visual: the layout is a value and is unit tested down to which line each
+    # note sits on, and whether the result is *readable* is a question only an
+    # image can answer.
+    #
+    # These are the first states that open a score into a tool. That was
+    # impossible until the import summary could be suppressed -- see finding 7
+    # in docs/development/architecture/score-model-findings.md -- and the same
+    # asynchronous import applies here as to the two summary surfaces above, so
+    # they carry the same warmup.
+    Surface(
+        state="score-view-notation",
+        title="The score view drawing a staff",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "reads-as-music",
+                "Does it read as music -- five staff lines, a recognisable clef, and noteheads "
+                "sitting on lines and in spaces rather than between them?",
+            ),
+            Question(
+                "two-sharps-after-the-clef",
+                "Are there exactly two sharps between the clef and the first note, and is the "
+                "time signature after them?",
+            ),
+            Question(
+                "accidentals-once-each",
+                "Bar 2 is a flat, the same flat again, then a natural: is the sign drawn on the "
+                "first and third of those and not on the second?",
+            ),
+            Question(
+                "stems-and-flags-attached",
+                "Is every stem touching its notehead, on the correct side, with its flags "
+                "curling away from the head?",
+            ),
+            Question(
+                "nothing-collides",
+                "Do any two symbols overlap -- an accidental over a notehead, a lyric over a "
+                "stem, a dot over a barline?",
+            ),
+            Question(
+                "clef-change-visible",
+                "Is the change to a bass clef part way through drawn, and are the notes after "
+                "it low on the staff rather than high?",
+            ),
+            Question(
+                "lyrics-under-their-notes",
+                "Is each syllable under the note it belongs to, on one row, with a hyphen only "
+                "where a word continues?",
+            ),
+            Question(
+                "notices-are-readable",
+                "Does the strip at the bottom say what is not drawn -- beams, at least -- in a "
+                "sentence rather than a code?",
+            ),
+        ),
+    ),
+    # The same score with more room. Worth its own picture because system
+    # breaking is the one layout decision that cannot be seen at a single width:
+    # a bar is either on this line or the next, and the only way to see that the
+    # break is in a sensible place is to see it move.
+    Surface(
+        state="score-view-notation-large",
+        title="The score view drawing a staff, with room to spare",
+        tools=("score-view",),
+        presentation="floating",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "fewer-systems-than-docked",
+                "Does the extra width put more bars on each line, rather than stretching the "
+                "same bars wider?",
+            ),
+            Question(
+                "systems-evenly-stacked",
+                "Is the vertical gap between staves the same for every pair, with room for the "
+                "lyrics in between?",
+            ),
+            Question(
+                "tie-drawn-as-a-curve",
+                "Is the tie between the two held notes a curve from one notehead to the other, "
+                "bowing away from the stems?",
+            ),
+            Question(
+                "chord-notes-share-a-stem",
+                "Does the chord near the end share one stem, with the two notes a step apart "
+                "offset sideways rather than printed on top of each other?",
             ),
         ),
     ),
