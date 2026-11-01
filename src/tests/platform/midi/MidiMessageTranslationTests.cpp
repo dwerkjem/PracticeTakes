@@ -128,6 +128,19 @@ TEST_CASE("the sustain pedal's position is carried unchanged", "[midi][translati
     {
         CHECK(translateOf(0xB3, 64, 90)->channel == 4);
     }
+
+    SECTION("a pedal event carries both timestamps, so transitions can be ordered")
+    {
+        const auto down = translateOf(0xB0, 64, 127, 1.25, 11.5);
+        const auto up = translateOf(0xB0, 64, 0, 2.75, 13.0);
+
+        REQUIRE(down.has_value());
+        REQUIRE(up.has_value());
+        CHECK(down->deviceTimestampSeconds == Catch::Approx(1.25));
+        CHECK(down->receivedTimestampSeconds == Catch::Approx(11.5));
+        CHECK(up->deviceTimestampSeconds == Catch::Approx(2.75));
+        CHECK(up->deviceTimestampSeconds > down->deviceTimestampSeconds);
+    }
 }
 
 TEST_CASE("other controllers are ignored", "[midi][translation]")

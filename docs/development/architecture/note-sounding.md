@@ -34,9 +34,15 @@ otherwise leave the tracker believing the pedal down for ever.
 
 "Unknown means up" is the optimistic default, and it is wrong in the direction
 that produces false *short* verdicts — the failure all of this exists to
-prevent. A note released while the pedal is unknown is reported as such. The
-price is one unjudged note for a player who starts with the pedal already
-down, which is the right price.
+prevent. A note released while the pedal is unknown is reported as such.
+
+The price is every note released before the first pedal event on its channel. For
+a player who uses the pedal that is the first few notes. For one who never moves
+it, or whose keyboard has no pedal, it is *every* note, and "move the pedal once"
+is not available to them. There is deliberately no "assume up" mode: assuming is
+the guess this design refuses to make. An explicit, user-chosen "I have no pedal"
+setting is the honest fix and belongs with whatever consumes the verdicts
+(#42/#44).
 
 ## Lost events and disconnection
 
@@ -52,7 +58,11 @@ device went away. It is settled by the tracker instead, deliberately:
 
 So a consumer calls `invalidate(atSeconds)` when `lostEvents(consumer)` has
 advanced or the connection leaves *open*, passing the last device timestamp it
-saw. Every held note ends `abandoned`, and every channel's pedal becomes
+saw. The tracker cannot see either condition, so the *detection* stays with the
+consumer — the settings panel does it, and any later consumer must too; what the
+tracker removes is the need to decide what a loss means for a held note. When the
+selected device changes, the consumer must also discard the events already queued
+for it before invalidating, or the old device's notes arrive after the reset. Every held note ends `abandoned`, and every channel's pedal becomes
 unknown. The settings panel does this before it reads each batch, because
 whatever was lost happened before the batch.
 

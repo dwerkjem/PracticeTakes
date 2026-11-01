@@ -408,7 +408,12 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 recentNotes.clear();
 
                 // Another device is another stream: nothing held on the old one
-                // can be ended by the new one.
+                // can be ended by the new one. Events it already pushed into this
+                // consumer's FIFO are still queued, though, and would reach the
+                // freshly invalidated tracker as notes the new keyboard cannot
+                // release -- on a different device clock, so with nonsense
+                // durations. Drop them first.
+                midiInputService.discardPendingEvents(this);
                 tracker.invalidate(lastEventSeconds, finishedScratch);
                 finishedScratch.clear();
                 lastState = midiInputService.connectionState();
@@ -559,7 +564,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 if (note.pedal == midi::PedalCertainty::unknown)
                 {
                     return name + "   key " + seconds(note.fingerSeconds()) +
-                           "   not measured (press the pedal once so its position is known)";
+                           "   not measured (the pedal has not been seen yet; move it once, "
+                           "otherwise sounding time cannot be told from key time)";
                 }
 
                 return name + "   key " + seconds(note.fingerSeconds()) + "   sounding " +

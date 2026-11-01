@@ -25,7 +25,12 @@ SHALL NOT accept a value outside 1–127.
 
 #### Scenario: A file with no threshold
 - **WHEN** settings written before this change are loaded
-- **THEN** the threshold is 64 and the file is reported as migrated
+- **THEN** the threshold is 64, and nothing else the file held — saved
+  workspaces and window positions included — is changed or lost
+
+#### Scenario: A value that is not a number
+- **WHEN** a settings file holds a threshold that is not a number
+- **THEN** the threshold is 64
 
 #### Scenario: A value out of range in a file
 - **WHEN** a settings file holds a threshold of 0 or above 127

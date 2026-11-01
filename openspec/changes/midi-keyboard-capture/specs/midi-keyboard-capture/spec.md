@@ -30,7 +30,10 @@ selected and when none is available.
 The application SHALL deliver note-on, note-off and sustain-pedal events from the
 selected device to a consumer on the message thread. Each event SHALL carry the
 channel it arrived on, a timestamp, and — for a note event — the note number and
-velocity. Pedal events SHALL state whether the pedal is down or up.
+velocity. Pedal events SHALL state the pedal's position (0–127) as the device
+sent it. *(Amended by `pedal-aware-note-duration`: this originally said pedal
+events state whether the pedal is down or up. Where the pedal counts as down is
+now a setting applied by the consumer, not a decision fixed at capture.)*
 
 #### Scenario: A key is pressed and released
 - **WHEN** a key on the selected device is pressed and then released
@@ -43,12 +46,15 @@ velocity. Pedal events SHALL state whether the pedal is down or up.
 
 #### Scenario: The sustain pedal
 - **WHEN** the sustain pedal is pressed and then released
-- **THEN** a pedal-down event and later a pedal-up event are delivered
+- **THEN** a pedal event at a high position and later one at a low position are
+  delivered, in that order
 
 #### Scenario: A partly depressed pedal
 - **WHEN** the device sends a sustain-pedal value at or above the midpoint of
   its range
-- **THEN** the pedal is reported as down, rather than only at the maximum value
+- **THEN** that position is delivered unchanged, and a consumer using the default
+  threshold of 64 treats the pedal as down, rather than only at the maximum value
+  *(Amended: the down/up reading moved from translation to the consumer.)*
 
 #### Scenario: Messages the application does not use
 - **WHEN** the device sends a message that is not a note or a sustain pedal
@@ -110,8 +116,10 @@ consumer SHALL be testable the same way.
 
 #### Scenario: The translation rules are asserted directly
 - **WHEN** the test suite runs on a machine with no MIDI device
-- **THEN** note-on, note-off, zero-velocity note-on, the pedal threshold,
-  ignored messages and malformed messages are each exercised and asserted
+- **THEN** note-on, note-off, zero-velocity note-on, the pedal position carried
+  unchanged, ignored messages and malformed messages are each exercised and
+  asserted *(Amended: the threshold itself is asserted in the note-sounding
+  tracker's tests, where it is now applied.)*
 
 #### Scenario: Buffer behaviour is asserted directly
 - **WHEN** the test suite runs

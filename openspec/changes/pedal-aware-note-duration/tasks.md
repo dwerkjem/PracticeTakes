@@ -69,7 +69,8 @@ JUCE-free, no consumer yet, so the tree keeps building at every step.
 
 - [x] 3.1 Add `src/platform/midi/SoundingDurationJudgement.h`:
       `judgeSoundingDuration(notatedSeconds, const SoundedNote&, tolerance)`
-      returning `Outcome` (`short`, `onTarget`, `long`, `notJudged`) and `HeldBy`
+      returning `DurationOutcome` (`tooShort`, `onTarget`, `tooLong`, `notJudged`)
+      and `HeldBy`
       (`finger`, `pedal`). `defaultDurationTolerance` is a named constant with a
       comment pointing at #44/#50.
 - [x] 3.2 Rules as in `design.md`: short on sounding time; long only when
@@ -85,10 +86,18 @@ JUCE-free, no consumer yet, so the tree keeps building at every step.
 
 - [x] 4.1 Add `midiPedalDownThreshold` to `AppSettings::State`, key
       `midi.pedalDownThreshold`, default `defaultPedalDownThreshold`.
-- [x] 4.2 Bump `AppDefaults::schemaVersion` 6 → 7.
-- [x] 4.3 Extend `SettingsPersistenceTests`: round-trip; a schema-6 file loads
-      `migrated` with 64; 0, −5 and 200 clamp to 1, 1 and 127; the key is in the
-      owned-key list so a reset clears it.
+- [x] 4.2 **No schema bump** (reverses this task's first form, "bump 6 → 7").
+      `AppSettings::load` treats every non-current schema as the pre-workspace
+      layout and discards saved workspaces, so a bump for an additive key would
+      have wiped them. `schemaVersion` stays 6.
+- [x] 4.3 Extend `SettingsPersistenceTests`: round-trip; a schema-6 file with no
+      key loads as `loaded` with 64 *and keeps its workspace* (stamped as schema
+      6 explicitly, so a reintroduced bump fails it — checked by mutation); 0, −5
+      and 200 clamp to 1, 1 and 127; a non-numeric value falls back to 64; the key
+      is in the owned-key list, so `clearOwnedValues` removes it. (That function runs
+      only when an explicit Save follows a recovery from a newer-schema or unreadable
+      file, and is immediately followed by a store of the live state. **Reset all**
+      does not touch MIDI settings at all, as with the device selection.)
 - [x] 4.4 Decided, and recorded in `design.md`: **not carried.** It is calibration
       for one keyboard's pedal, like the device selection, and carrying it would
       cost a transfer-format bump. `applyTransferredSettings` leaves it alone and

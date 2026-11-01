@@ -40,7 +40,8 @@ asks *"what happens to held notes when a device disconnects?"* and says #203
   or long — together with whether the pedal or the finger was holding the note.
   The notated duration is an input because producing it is #42's matching, which
   does not exist yet.
-- **One persisted setting**, `midi.pedalDownThreshold`, default 64, schema 6 → 7.
+- **One persisted setting**, `midi.pedalDownThreshold`, default 64. Additive, so no
+  schema bump (a bump would discard saved workspaces; see design).
 - **A consumer.** The MIDI settings panel gains a threshold control and its live
   readout shows each note's finger duration, sounding duration and a *pedal*
   tag — the same lesson as #199: infrastructure with no consumer is
@@ -71,9 +72,12 @@ Out of scope, and said so rather than left implicit:
 ### Modified Capabilities
 
 - **`midi-keyboard-capture`** — the sustain-pedal event states its position,
-  not only a down/up reading. This capability is still an active change
-  (task 7.5, hardware verification, is open), so the amendment is recorded here
-  and folded in when that change archives.
+  not only a down/up reading. This capability is still an active change (task
+  7.5, hardware verification, is open) and so is not yet in `openspec/specs/`,
+  where a MODIFIED delta could target it. The amendment is therefore made
+  **in place** in `midi-keyboard-capture`'s spec and design, each marked as
+  amended by this change, so that archiving it does not publish a spec the code
+  contradicts.
 - **Settings persistence** — one new key, `midi.pedalDownThreshold`. It is
   deliberately **not** added to the settings transfer file; see design.
 
@@ -83,8 +87,8 @@ Out of scope, and said so rather than left implicit:
   two new headers (`NoteSoundingTracker.h`, `SoundingDurationJudgement.h`).
   All JUCE-free; no change to `MidiInputService` or its callback, and nothing
   new runs on the driver thread.
-- **Settings** — one key, schema 6 → 7; an older file loads as `migrated`
-  with the default.
+- **Settings** — one additive key; a file without it loads with the default and
+  nothing else is touched. No schema bump.
 - **Settings window** — the existing MIDI panel gains a control and richer
   readout. No new panel.
 - **Verification gap inherited, not closed.** #199's hardware check (7.5) has

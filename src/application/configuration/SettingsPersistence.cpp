@@ -158,6 +158,28 @@ migratedWorkspaceCatalog(const AppDefaults::TunerSettings& tunerSettings)
     return catalog;
 }
 
+// A number out of range is clamped rather than replaced by the default: a
+// hand-edited 200 means "as far as it goes", and a 0 would mean the pedal is
+// always down. A value that is not a number at all is not a preference, so it
+// gets the default -- `getIntValue` would read it as 0 and clamp it to 1, which
+// is the opposite of a sensible fallback.
+//
+// There is deliberately no schema bump for this key. It is purely additive (a
+// file without it takes the default), and a bump sends every older file down the
+// pre-workspace migration path in `load`, which discards saved workspaces.
+[[nodiscard]] int loadPedalDownThreshold(const juce::PropertySet& properties)
+{
+    const auto text = properties.getValue(midiPedalDownThresholdKey).trim();
+
+    if (text.isEmpty() || !text.containsOnly("-0123456789") || !text.containsAnyOf("0123456789"))
+    {
+        return AppDefaults::Midi::pedalDownThreshold;
+    }
+
+    return std::clamp(
+        text.getIntValue(), ::midi::minimumPedalDownThreshold, ::midi::maximumPedalDownThreshold);
+}
+
 [[nodiscard]] AppSettings::RecentTool recentTool(const WorkspaceCatalog& catalog)
 {
     if (catalog.active.focusedTool == "spectrogram")
@@ -210,11 +232,7 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
     result.state.audioDeviceState = properties.getValue(audioStateKey);
     result.state.midiInputDeviceIdentifier = properties.getValue(midiInputDeviceIdentifierKey);
     result.state.midiInputDeviceName = properties.getValue(midiInputDeviceNameKey);
-    // Clamped rather than replaced by the default: a hand-edited 200 means "as
-    // far as it goes", and a 0 would mean the pedal is always down.
-    result.state.midiPedalDownThreshold = std::clamp(
-        properties.getIntValue(midiPedalDownThresholdKey, AppDefaults::Midi::pedalDownThreshold),
-        ::midi::minimumPedalDownThreshold, ::midi::maximumPedalDownThreshold);
+    result.state.midiPedalDownThreshold = loadPedalDownThreshold(properties);
     result.state.tuner = {
         loadDisplayMode(properties),
         boundedValue(properties, tunerEasingKey, AppDefaults::Tuner::easing, 0.02, 1.0),

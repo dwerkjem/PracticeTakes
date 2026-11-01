@@ -240,6 +240,27 @@ TEST_CASE("the same stream gives a different answer under a different threshold"
     CHECK_FALSE(sustainedAt(100));
 }
 
+TEST_CASE(
+    "a threshold changed after the pedal was seen applies to the next decision",
+    "[midi][tracker]")
+{
+    // The reason `pedalDown` was removed from the event: a boolean frozen at
+    // capture time cannot honour a setting changed afterwards. Every other
+    // threshold test sets it on a fresh tracker; this one changes it between the
+    // pedal event and the note off, which is what the slider does.
+    Run run;
+    run.feed(pedal(80, 0.0)); // down under the default of 64
+    run.feed(noteOn(60, 1.0));
+
+    run.tracker.setPedalThreshold(100); // ... and up under 100
+
+    run.feed(noteOff(60, 2.0));
+
+    REQUIRE(run.finished.size() == 1);
+    CHECK(run.finished[0].end == SoundingEnd::finger);
+    CHECK_FALSE(run.finished[0].heldByPedal());
+}
+
 TEST_CASE("a half-pedal that stays above the threshold keeps the note sounding", "[midi][tracker]")
 {
     Run run;

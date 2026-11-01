@@ -119,7 +119,8 @@ struct MidiEvent
     int channel;            // 1-16, as MIDI numbers them
     int noteNumber;         // 0-127; unused for sustainPedal
     int velocity;           // 0-127; release velocity on a note off
-    bool pedalDown;         // only meaningful for sustainPedal
+    int pedalPosition;      // 0-127; only meaningful for sustainPedal
+                            // (was `bool pedalDown`; amended by pedal-aware-note-duration)
     double deviceTimestampSeconds;
     double receivedTimestampSeconds;
 };
@@ -144,8 +145,12 @@ actually bite are all reachable without a device or a JUCE object:
   stuck notes in MIDI consumers, emitted by a large fraction of real keyboards
   under running status. It is a *translation* rule, so it belongs here and is
   tested here.
-- **CC64 ≥ 64 is pedal down, < 64 is up.** The threshold is in the spec and is
-  routinely written as `== 127`, which is wrong for half-pedalling keyboards.
+- **CC64 is carried as a position, 0-127.** *(Amended by
+  `pedal-aware-note-duration`: this originally said "CC64 ≥ 64 is pedal down,
+  < 64 is up", decided in translation.)* Where the pedal counts as down is now the
+  setting `midi.pedalDownThreshold`, default 64, applied by the consumer. The
+  default stays at 64 because the threshold is routinely written as `== 127`,
+  which is wrong for half-pedalling keyboards.
 - **Everything else is dropped**, and dropping is not an error.
 - **A truncated or malformed message yields nothing** rather than reading past
   the buffer — the file-format lesson from `score/musicxml`, applied to a

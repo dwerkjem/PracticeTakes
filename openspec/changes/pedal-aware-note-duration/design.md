@@ -122,15 +122,28 @@ that produces false *short* verdicts — the failure this change exists to avoid
 So the tracker has a third state. A note released while the pedal state is
 unknown is emitted with `PedalCertainty::unknown`, its `soundingEnd` is its
 `keyUp`, and the judgement returns *no verdict* for it rather than guessing. The
-state becomes known at the first pedal event on that channel. At application
-start this costs one un-judged note for a player who has not touched the
-pedal; that is the right price.
+state becomes known at the first pedal event on that channel.
+
+**What this costs, stated plainly:** every note released before the first pedal
+event on its channel is un-judged. For a player who uses the pedal, that is the
+notes before its first movement. For a player who never moves it — or whose
+keyboard has no pedal at all — it is *every* note, and the panel's remedy ("move
+the pedal once") is not available to them. The tracker deliberately offers no
+"assume up" mode, because assuming is exactly the guess this design refuses to
+make. Whether to give such a player an explicit, user-chosen "I have no pedal"
+setting is a decision for whoever consumes the verdicts (#42/#44) — see Open
+Questions.
 
 ### Lost events and disconnection end every open note as `abandoned`
 
-This is the answer to the question `midi-keyboard-capture` left open, and the
-honest place is the consumer that tracked the notes — which is the tracker, so
-no consumer has to remember. Two entry points, both explicit:
+This is the answer to the question `midi-keyboard-capture` left open. The tracker
+is where the consequence of a loss is decided — what a lost note-off *means* for
+a held note — but it cannot observe the loss itself: it never sees
+`lostEvents(consumer)` or `connectionState()`. So the *detection* is still the
+consumer's job, and `midi-keyboard-capture`'s worry that every consumer has to
+remember is relocated and made cheap, not removed. The settings panel is the one
+consumer that exists and does the wiring; #42 or #202 must do it too. There is one
+entry point:
 
 - `invalidate(atSeconds)` — the consumer calls it when the lost-event counter
   has advanced (a note-off may be gone) or the connection state leaves *open*.
@@ -149,8 +162,8 @@ Verdict { Outcome outcome; HeldBy heldBy; }
 Outcome: tooShort | onTarget | tooLong | notJudged   (`short`/`long` are keywords)
 ```
 
-- `short` when `soundingSeconds < notated * (1 - tolerance)`.
-- `long` when `soundingSeconds > notated * (1 + tolerance)` **and the note was
+- `tooShort` when `soundingSeconds < notated * (1 - tolerance)`.
+- `tooLong` when `soundingSeconds > notated * (1 + tolerance)` **and the note was
   finger-held**. A pedal-held note outrunning its notation is ordinary pedalling,
   not an error, and calling it long would reproduce the false-negative problem in
   the other direction. A pedalled note that sounds long is `onTarget`; the
@@ -203,14 +216,27 @@ transfer-format bump (2 → 3) for a value that does not travel meaningfully.
   simplification.
 - **Removing `pedalDown`** touches existing tests and the panel; a mechanical
   change, listed as a task so it is not discovered late.
-- **Two un-judged notes at session start** if the pedal is used immediately:
-  accepted above.
+- **Un-judged notes until the pedal is first seen**: every note, for a player
+  who never moves the pedal. Accepted above, with the cost stated there; the
+  remedy for a pedal-less player is an open question, not a silent default.
 
 ## Migration Plan
 
-Schema 6 → 7, additive; a v6 file loads `migrated` with threshold 64. No saved
-workspace is affected. No data migration, no rollback beyond the previous
-version ignoring an unknown key, which it already does.
+**No schema bump.** The key is purely additive: a file without it loads with
+threshold 64, and `AppSettings::load` clamps or defaults whatever it finds.
+
+A bump is not merely unnecessary here, it is harmful. `AppSettings::load` treats
+*any* stored schema other than the current one as the pre-workspace layout format
+and replaces the saved workspace catalog and window bounds with defaults — so
+bumping 6 → 7 would have wiped every existing user's saved workspaces, and the
+first version of this change did exactly that (found by review; pinned now by a
+test that stamps schema 6 explicitly). The same path was taken by
+`midi-keyboard-capture`'s 5 → 6 bump, so that hazard already exists in `main`
+and is not fixed by this change.
+
+Rollback is clean for the same reason: an older build reads the file at its own
+schema and ignores the unknown key. (A *bump* would have made the older build
+see a newer schema and discard the whole file.)
 
 ## Open Questions
 
@@ -238,6 +264,10 @@ version ignoring an unknown key, which it already does.
   and synthetic streams have been exercised; no keyboard has been played. The
   readout would show durations of 0.00 s if a backend reports a constant
   timestamp, which is the symptom to look for.
+- **Should a player with no pedal be able to say so?** Today a pedal never seen
+  leaves every note un-judged. An explicit user setting ("I have no pedal; treat
+  it as up") would fix that without the tracker guessing, but where it lives and
+  what it is called belongs with the consumer of the verdicts (#42/#44), not here.
 - **Is per-channel pedal state right?** Kept, on the same evidence: untested
   against a real keyboard that puts CC64 on a different channel than its notes.
 - **Cap on a pedal-held note.** None. No decay model, so no cap; one parameter if

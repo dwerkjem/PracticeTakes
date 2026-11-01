@@ -540,27 +540,69 @@ TEST_CASE("the pedal threshold round-trips", "[settings][midi]")
 }
 
 TEST_CASE(
-    "settings written before the pedal threshold migrate with the default",
+    "a current settings file without the pedal threshold loads with the default and keeps its "
+    "workspace",
     "[settings][midi]")
 {
+    // The key is purely additive, so there is deliberately no schema bump for it:
+    // a bump sends every older file down the pre-workspace migration path, which
+    // discards saved workspaces. This pins both halves -- the default arrives, and
+    // what the file already held is not thrown away.
     TemporarySettingsFile temporary;
 
     {
+        AppSettings::State saved;
+        saved.workspaceCatalog.active = WorkspaceBuiltIns::spectrumAnalysis().snapshot;
+        saved.workspaceCatalog.activeSource = WorkspaceBuiltIns::spectrumAnalysis().id;
+
         juce::PropertiesFile writer(temporary.path, settingsOptions());
+        AppSettings::store(writer, saved);
+        writer.removeValue("midi.pedalDownThreshold");
+        REQUIRE_FALSE(writer.containsKey("midi.pedalDownThreshold"));
+
+        // Stamped explicitly, because `store` writes whatever the current schema
+        // is and so could never notice that the current schema had moved on. This
+        // is the file the release before the key shipped would have left behind.
+        // If the schema is bumped, this fails until `load` stops treating every
+        // older schema as the pre-workspace layout -- which is the point.
         writer.setValue("settings.schema", 6);
-        writer.setValue("global.theme", 2);
-        writer.setValue("midi.inputDeviceName", "Casio PX-S1100");
         REQUIRE(writer.saveIfNeeded());
     }
 
     juce::PropertiesFile reader(temporary.path, settingsOptions());
     const auto loaded = AppSettings::load(reader);
 
-    CHECK(loaded.status == AppSettings::LoadStatus::migrated);
+    CHECK(loaded.status == AppSettings::LoadStatus::loaded);
     CHECK(loaded.state.midiPedalDownThreshold == 64);
+    // What the legacy path would have replaced with the default workspace.
+    CHECK(loaded.state.workspaceCatalog.activeSource == WorkspaceBuiltIns::spectrumAnalysis().id);
+}
 
-    // And the key the previous schema introduced survived the bump.
-    CHECK(loaded.state.midiInputDeviceName == "Casio PX-S1100");
+TEST_CASE("a pedal threshold that is not a number gets the default", "[settings][midi]")
+{
+    // `getIntValue` reads "abc" as 0, which clamping would turn into 1 -- a
+    // pedal that is down from the first sliver of travel. Garbage is not a
+    // preference, so it falls back instead.
+    const auto thresholdLoadedFrom = [](const juce::String& stored)
+    {
+        TemporarySettingsFile temporary;
+
+        {
+            juce::PropertiesFile writer(temporary.path, settingsOptions());
+            AppSettings::store(writer, AppSettings::State{});
+            writer.setValue("midi.pedalDownThreshold", stored);
+            REQUIRE(writer.saveIfNeeded());
+        }
+
+        juce::PropertiesFile reader(temporary.path, settingsOptions());
+        return AppSettings::load(reader).state.midiPedalDownThreshold;
+    };
+
+    CHECK(thresholdLoadedFrom("abc") == 64);
+    CHECK(thresholdLoadedFrom("") == 64);
+    CHECK(thresholdLoadedFrom("-") == 64);
+    CHECK(thresholdLoadedFrom("12abc") == 64);
+    CHECK(thresholdLoadedFrom(" 90 ") == 90);
 }
 
 TEST_CASE("an out-of-range pedal threshold is clamped, not rejected", "[settings][midi]")
