@@ -2,6 +2,9 @@
 
 #include "../../MainComponent.h"
 
+#include "../../../../platform/midi/NoteSoundingTracker.h"
+
+#include <algorithm>
 #include <functional>
 #include <utility>
 
@@ -242,9 +245,14 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
           public:
             explicit MidiPanel(
                 MidiInputService& inputService,
-                std::function<void()> selectionHandler)
-                : midiInputService(inputService), onSelectionChanged(std::move(selectionHandler))
+                int initialPedalThreshold,
+                std::function<void()> selectionHandler,
+                std::function<void(int)> thresholdHandler)
+                : midiInputService(inputService), onSelectionChanged(std::move(selectionHandler)),
+                  onThresholdChanged(std::move(thresholdHandler))
             {
+                tracker.setPedalThreshold(initialPedalThreshold);
+
                 configureHeading(heading, "MIDI");
                 configureDescription(
                     description,
@@ -269,6 +277,44 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 activityLabel.setJustificationType(juce::Justification::topLeft);
                 addAndMakeVisible(activityLabel);
+
+                thresholdLabel.setText("Pedal counts as down at", juce::dontSendNotification);
+                addAndMakeVisible(thresholdLabel);
+
+                // A number the user can see, because the point of the setting is
+                // that they can find out where the line is. 64 is the midpoint the
+                // MIDI specification names; a keyboard whose pedal rests above
+                // zero, or never quite reaches 127, is what this is for.
+                thresholdSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+                thresholdSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 52, 24);
+                thresholdSlider.setRange(
+                    midi::minimumPedalDownThreshold, midi::maximumPedalDownThreshold, 1.0);
+                thresholdSlider.setValue(tracker.pedalThreshold(), juce::dontSendNotification);
+                thresholdSlider.setTitle(
+                    "Sustain pedal position at which the pedal counts as down");
+                thresholdSlider.onValueChange = [this]
+                {
+                    const int value = static_cast<int>(thresholdSlider.getValue());
+                    tracker.setPedalThreshold(value);
+
+                    if (onThresholdChanged)
+                    {
+                        onThresholdChanged(value);
+                    }
+                };
+                addAndMakeVisible(thresholdSlider);
+
+                notesLabel.setJustificationType(juce::Justification::topLeft);
+                addAndMakeVisible(notesLabel);
+
+                // Said in words, wherever pedal use is shown, so that nobody reads
+                // the absence of a complaint as agreement with their score.
+                pedalNoteLabel.setText(
+                    "Pedal markings in a score are not read, so pedal use is shown here but "
+                    "never compared with the score.",
+                    juce::dontSendNotification);
+                pedalNoteLabel.setJustificationType(juce::Justification::topLeft);
+                addAndMakeVisible(pedalNoteLabel);
 
                 midiInputService.addConsumer(this);
                 rebuildDeviceList();
@@ -297,7 +343,17 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 bounds.removeFromTop(14);
                 statusLabel.setBounds(bounds.removeFromTop(30));
                 bounds.removeFromTop(6);
-                activityLabel.setBounds(bounds.removeFromTop(120));
+                activityLabel.setBounds(bounds.removeFromTop(84));
+
+                bounds.removeFromTop(10);
+                auto thresholdRow = bounds.removeFromTop(30);
+                thresholdLabel.setBounds(thresholdRow.removeFromLeft(170));
+                thresholdSlider.setBounds(thresholdRow.removeFromLeft(380));
+
+                bounds.removeFromTop(10);
+                notesLabel.setBounds(bounds.removeFromTop(84));
+                bounds.removeFromTop(6);
+                pedalNoteLabel.setBounds(bounds.removeFromTop(40));
             }
 
           private:
@@ -349,6 +405,18 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 }
 
                 recent.clear();
+                recentNotes.clear();
+
+                // Another device is another stream: nothing held on the old one
+                // can be ended by the new one. Events it already pushed into this
+                // consumer's FIFO are still queued, though, and would reach the
+                // freshly invalidated tracker as notes the new keyboard cannot
+                // release -- on a different device clock, so with nonsense
+                // durations. Drop them first.
+                midiInputService.discardPendingEvents(this);
+                tracker.invalidate(lastEventSeconds, finishedScratch);
+                finishedScratch.clear();
+                lastState = midiInputService.connectionState();
                 updateStatus();
 
                 if (onSelectionChanged)
@@ -389,6 +457,24 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
             void timerCallback() override
             {
+                // The stream can no longer be trusted when the keyboard leaves or
+                // when the FIFO dropped events (the oldest go first, and a note
+                // off may be among them). Both end every held note as unmeasured
+                // rather than leaving it held for ever. This runs before the batch
+                // below is read: whatever was lost happened before it.
+                const auto state = midiInputService.connectionState();
+                const auto lost = midiInputService.lostEvents(this);
+
+                if ((lastState == MidiInputService::ConnectionState::open &&
+                     state != MidiInputService::ConnectionState::open) ||
+                    lost > lastLostEvents)
+                {
+                    tracker.invalidate(lastEventSeconds, finishedScratch);
+                }
+
+                lastState = state;
+                lastLostEvents = lost;
+
                 std::array<midi::MidiEvent, 128> buffer{};
                 const std::size_t count =
                     midiInputService.readEvents(this, buffer.data(), buffer.size());
@@ -396,11 +482,25 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 for (std::size_t index = 0; index < count; ++index)
                 {
                     recent.insert(recent.begin(), describe(buffer[index]));
+                    tracker.consume(buffer[index], finishedScratch);
+                    lastEventSeconds = buffer[index].deviceTimestampSeconds;
                 }
+
+                for (const midi::SoundedNote& note : finishedScratch)
+                {
+                    recentNotes.insert(recentNotes.begin(), describeNote(note));
+                }
+
+                finishedScratch.clear();
 
                 if (recent.size() > shownEventCount)
                 {
                     recent.resize(shownEventCount);
+                }
+
+                if (recentNotes.size() > shownEventCount)
+                {
+                    recentNotes.resize(shownEventCount);
                 }
 
                 updateStatus();
@@ -409,6 +509,10 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 {
                     activityLabel.setText(
                         "Nothing received yet. Play a key to check the connection.",
+                        juce::dontSendNotification);
+                    notesLabel.setText(
+                        "Each finished note will appear here with how long the key was held "
+                        "and how long it sounded.",
                         juce::dontSendNotification);
 
                     return;
@@ -422,6 +526,51 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 }
 
                 activityLabel.setText(lines.joinIntoString("\n"), juce::dontSendNotification);
+
+                juce::StringArray noteLines;
+
+                for (const juce::String& line : recentNotes)
+                {
+                    noteLines.add(line);
+                }
+
+                notesLabel.setText(
+                    noteLines.isEmpty() ? juce::String("Finished notes appear here.")
+                                        : noteLines.joinIntoString("\n"),
+                    juce::dontSendNotification);
+            }
+
+            [[nodiscard]] static juce::String seconds(double value)
+            {
+                return juce::String(value, 2) + " s";
+            }
+
+            // How long a finished note lasted, by finger and by sound.
+            //
+            // A note whose length is not known says so rather than showing a
+            // number: an abandoned note was cut off by lost events or by the
+            // keyboard leaving, and one released before the pedal was ever seen
+            // might or might not have been held by it. Showing 0.00 s for either
+            // would be a measurement that was never taken.
+            [[nodiscard]] static juce::String describeNote(const midi::SoundedNote& note)
+            {
+                const juce::String name = "Note " + juce::String(note.noteNumber);
+
+                if (note.end == midi::SoundingEnd::abandoned)
+                {
+                    return name + "   not measured (events were lost or the keyboard left)";
+                }
+
+                if (note.pedal == midi::PedalCertainty::unknown)
+                {
+                    return name + "   key " + seconds(note.fingerSeconds()) +
+                           "   not measured (the pedal has not been seen yet; move it once, "
+                           "otherwise sounding time cannot be told from key time)";
+                }
+
+                return name + "   key " + seconds(note.fingerSeconds()) + "   sounding " +
+                       seconds(note.soundingSeconds()) +
+                       (note.heldByPedal() ? "   held by pedal" : "   held by finger");
             }
 
             // Note NUMBERS, not names.
@@ -451,8 +600,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                            juce::String(event.channel);
 
                 case midi::MidiEventKind::sustainPedal:
-                    return juce::String(event.pedalDown ? "Pedal down" : "Pedal up") + "   value " +
-                           juce::String(event.velocity);
+                    return "Pedal     position " + juce::String(event.pedalPosition) +
+                           "   channel " + juce::String(event.channel);
                 }
 
                 return {};
@@ -460,8 +609,18 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
             MidiInputService& midiInputService;
             std::function<void()> onSelectionChanged;
+            std::function<void(int)> onThresholdChanged;
             std::vector<MidiInputService::DeviceDescription> devices;
             std::vector<juce::String> recent;
+            std::vector<juce::String> recentNotes;
+
+            // Message-thread only, like the drain that feeds it.
+            midi::NoteSoundingTracker tracker;
+            std::vector<midi::SoundedNote> finishedScratch;
+            std::uint64_t lastLostEvents = 0;
+            double lastEventSeconds = 0.0;
+            MidiInputService::ConnectionState lastState =
+                MidiInputService::ConnectionState::noDeviceSelected;
 
             juce::Label heading;
             juce::Label description;
@@ -470,6 +629,10 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::TextButton refreshButton;
             juce::Label statusLabel;
             juce::Label activityLabel;
+            juce::Label thresholdLabel;
+            juce::Slider thresholdSlider;
+            juce::Label notesLabel;
+            juce::Label pedalNoteLabel;
         };
 
         class PracticePanel final : public CategoryPanel
@@ -617,10 +780,12 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         Content(
             AudioInputService& inputService,
             MidiInputService& midiService,
+            int pedalDownThreshold,
             Theme initialTheme,
             std::function<void(Theme)> appearanceHandler,
             std::function<void(AppDefaults::Preset)> presetHandler,
             std::function<void()> midiSelectionHandler,
+            std::function<void(int)> pedalThresholdHandler,
             std::function<void()> saveHandler,
             std::function<void()> importHandler,
             std::function<void()> exportHandler,
@@ -630,7 +795,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             std::function<void()> resetLayoutHandler,
             std::function<void()> resetAllHandler)
             : appearancePanel(initialTheme, std::move(appearanceHandler)), audioPanel(inputService),
-              midiPanel(midiService, std::move(midiSelectionHandler)),
+              midiPanel(
+                  midiService,
+                  pedalDownThreshold,
+                  std::move(midiSelectionHandler),
+                  std::move(pedalThresholdHandler)),
               practicePanel(std::move(presetHandler)),
               resetPanel(
                   std::move(feedbackHandler),
@@ -723,10 +892,12 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
     SettingsWindow(
         AudioInputService& audioInputService,
         MidiInputService& midiInputService,
+        int pedalDownThreshold,
         Theme initialTheme,
         std::function<void(Theme)> appearanceHandler,
         std::function<void(AppDefaults::Preset)> presetHandler,
         std::function<void()> midiSelectionHandler,
+        std::function<void(int)> pedalThresholdHandler,
         std::function<void()> saveHandler,
         std::function<void()> importHandler,
         std::function<void()> exportHandler,
@@ -742,11 +913,13 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         setUsingNativeTitleBar(true);
         setContentOwned(
             new Content(
-                audioInputService, midiInputService, initialTheme, std::move(appearanceHandler),
-                std::move(presetHandler), std::move(midiSelectionHandler), std::move(saveHandler),
-                std::move(importHandler), std::move(exportHandler), std::move(feedbackHandler),
-                std::move(resetToolHandler), std::move(resetAudioHandler),
-                std::move(resetLayoutHandler), std::move(resetAllHandler)),
+                audioInputService, midiInputService, pedalDownThreshold, initialTheme,
+                std::move(appearanceHandler), std::move(presetHandler),
+                std::move(midiSelectionHandler), std::move(pedalThresholdHandler),
+                std::move(saveHandler), std::move(importHandler), std::move(exportHandler),
+                std::move(feedbackHandler), std::move(resetToolHandler),
+                std::move(resetAudioHandler), std::move(resetLayoutHandler),
+                std::move(resetAllHandler)),
             true);
         setResizable(true, true);
         setResizeLimits(760, 620, 1600, 1200);

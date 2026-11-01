@@ -25,6 +25,7 @@ broader music-practice and digital-audio workstation application.
 - [Design and architecture review checklist](architecture/ARCHITECTURE_QA.md) — what reviewers check on pull requests beyond formatting/linting
 - [Notation engraving](architecture/notation-engraving.md) — how a score becomes a staff on screen: the coordinate space, the layout pass, what is drawn and what is reported instead
 - [What the score model got wrong](architecture/score-model-findings.md) — what the first application consumer of `src/platform/score` revealed, and what should happen about each of it
+- [How long a played note sounds](architecture/note-sounding.md) — deriving a note's sounding duration from key and sustain-pedal state, and what it declines to judge
 
 ### `formats/`
 

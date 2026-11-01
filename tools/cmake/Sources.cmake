@@ -171,6 +171,9 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/midi/MidiMessageTranslation.cpp
     src/platform/midi/MidiMessageTranslation.h
     src/platform/midi/MidiRecoveryPolicy.h
+    src/platform/midi/NoteSoundingTracker.cpp
+    src/platform/midi/NoteSoundingTracker.h
+    src/platform/midi/SoundingDurationJudgement.h
     src/platform/score/CurrentScore.h
     src/platform/score/Diagnostic.h
     src/platform/score/LyricSyllable.h
@@ -219,6 +222,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/midi/MidiInputService.cpp
     src/platform/midi/MidiInputService.h
     src/platform/midi/MidiMessageTranslation.cpp
+    src/platform/midi/NoteSoundingTracker.cpp
     src/tests/application/configuration/AppDefaultsTests.cpp
     src/tests/application/configuration/SettingsPersistenceTests.cpp
     src/tests/application/configuration/SettingsTransferCodecTests.cpp
@@ -275,6 +279,8 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/midi/MidiInputServiceTests.cpp
     src/tests/platform/midi/MidiMessageTranslationTests.cpp
     src/tests/platform/midi/MidiRecoveryPolicyTests.cpp
+    src/tests/platform/midi/NoteSoundingTrackerTests.cpp
+    src/tests/platform/midi/SoundingDurationJudgementTests.cpp
     src/tests/platform/score/CurrentScoreTests.cpp
     src/tests/platform/score/MusicalTimeTests.cpp
     src/tests/platform/score/PitchNamesTests.cpp

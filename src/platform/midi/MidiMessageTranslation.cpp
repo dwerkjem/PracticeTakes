@@ -83,8 +83,7 @@ std::optional<MidiEvent> translate(
         }
 
         event.kind = MidiEventKind::sustainPedal;
-        event.velocity = static_cast<int>(second);
-        event.pedalDown = second >= sustainPedalDownThreshold;
+        event.pedalPosition = static_cast<int>(second);
 
         return event;
 

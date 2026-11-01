@@ -268,9 +268,9 @@ TEST_CASE("the sustain pedal reaches a consumer as a pedal event", "[midi][servi
 
     REQUIRE(events.size() == 2);
     CHECK(events[0].kind == midi::MidiEventKind::sustainPedal);
-    CHECK(events[0].pedalDown);
+    CHECK(events[0].pedalPosition == 127);
     CHECK(events[1].kind == midi::MidiEventKind::sustainPedal);
-    CHECK_FALSE(events[1].pedalDown);
+    CHECK(events[1].pedalPosition == 0);
 
     fixture.service.removeConsumer(&consumer);
 }

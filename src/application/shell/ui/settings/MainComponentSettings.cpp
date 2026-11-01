@@ -106,7 +106,7 @@ void MainComponent::showSettings()
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     settingsWindow = std::make_unique<SettingsWindow>(
-        audioInputService, midiInputService, currentTheme,
+        audioInputService, midiInputService, midiPedalDownThreshold, currentTheme,
         [safeThis](Theme theme)
         {
             if (safeThis != nullptr)
@@ -128,6 +128,16 @@ void MainComponent::showSettings()
             // closes the application should find it chosen next time.
             if (safeThis != nullptr)
             {
+                safeThis->saveSettings(false);
+            }
+        },
+        [safeThis](int threshold)
+        {
+            // Same reasoning as the keyboard choice above: a preference about a
+            // particular pedal, kept as soon as it is changed.
+            if (safeThis != nullptr)
+            {
+                safeThis->midiPedalDownThreshold = threshold;
                 safeThis->saveSettings(false);
             }
         },
@@ -491,7 +501,8 @@ bool MainComponent::applyTransferredSettings(const SettingsTransferModel& model)
     // one is not a setting that travels: importing someone else's would at best
     // name a device that is not here, and would silently replace a working
     // selection. The transfer codec therefore does not carry it, and this does
-    // not clear it.
+    // not clear it. The same goes for the pedal threshold: it is calibration for
+    // a particular keyboard's pedal, and equally does not travel.
     updateMicrophoneStateControl();
     updateMicrophoneWarning();
 
@@ -583,6 +594,7 @@ AppSettings::State MainComponent::captureSettingsState()
     state.workspaceCatalog = workspaceCatalog;
     state.midiInputDeviceIdentifier = midiInputService.selectedDeviceIdentifier();
     state.midiInputDeviceName = midiInputService.selectedDeviceName();
+    state.midiPedalDownThreshold = midiPedalDownThreshold;
 
     if (pendingAudioDeviceState != nullptr)
     {
@@ -645,6 +657,7 @@ void MainComponent::loadSettings()
     // service holds the selection and opens it when it appears.
     midiInputService.selectDevice(
         loaded.state.midiInputDeviceIdentifier, loaded.state.midiInputDeviceName);
+    midiPedalDownThreshold = loaded.state.midiPedalDownThreshold;
 
     savedSettingsBounds = validWindowBounds(loaded.state.settingsBounds);
 
