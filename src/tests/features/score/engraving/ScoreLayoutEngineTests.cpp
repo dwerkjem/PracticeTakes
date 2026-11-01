@@ -878,11 +878,15 @@ TEST_CASE("what is not drawn is named", "[score][engraving][layout]")
 
         REQUIRE(layout.systems.size() == 1);
 
-        // Only the first staff's note is drawn, and the other one is accounted
-        // for rather than silently absent.
-        CHECK(layout.systems.front().noteheads.size() == 1);
-        CHECK(anyNoticeContains(layout, "only the top one is shown"));
-        CHECK(anyNoticeContains(layout, "other staff"));
+        // Both staves are drawn now -- the grand staff -- so the lower staff's
+        // note is on the page and nothing reports it missing. This section
+        // used to assert the opposite, when only the top staff was drawn.
+        const System& system = layout.systems.front();
+
+        CHECK(system.noteheads.size() == 2);
+        CHECK(system.staffOffsets.size() == 2);
+        CHECK_FALSE(anyNoticeContains(layout, "only the top one is shown"));
+        CHECK_FALSE(anyNoticeContains(layout, "Not shown"));
         CHECK_FALSE(anyNoticeContains(layout, "#"));
     }
 
@@ -1447,4 +1451,403 @@ TEST_CASE(
     CHECK(
         lateLayout.systems.front().noteheads.front().x >
         onTimeLayout.systems.front().noteheads.front().x + 1.0);
+}
+
+// --- The grand staff ---------------------------------------------------------
+//
+// A piano part used to be drawn as its right hand alone. These pin what drawing
+// both staves has to get right; the one that matters most is alignment, since
+// two staves each spaced correctly on their own can still disagree about where
+// the beats are.
+
+namespace
+{
+// An event on the lower staff of a grand staff.
+[[nodiscard]] score::ScoreEvent lowerAt(Tick onset, Tick duration, score::Pitch pitch)
+{
+    score::ScoreEvent event = noteAt(onset, duration, pitch);
+    event.staff = 2;
+
+    return event;
+}
+
+// A measure of a two-staff part: the upper staff in voice 1, the lower in voice
+// 5 as a piano part's usually are, treble over bass when `declare` is set.
+[[nodiscard]] score::Measure grandStaffMeasureOf(
+    std::size_t index,
+    std::vector<score::ScoreEvent> upper,
+    std::vector<score::ScoreEvent> lower,
+    bool declare = false)
+{
+    score::Measure measure =
+        measureOf(index, {voiceOf(1, std::move(upper)), voiceOf(5, std::move(lower))}, declare);
+
+    if (declare)
+    {
+        measure.attributes.clefs = {score::Clef{"G", 2, 0, 1}, score::Clef{"F", 4, 0, 2}};
+    }
+
+    return measure;
+}
+
+// The x of the notehead on `staff` whose event begins at `onset`.
+[[nodiscard]] double headXAt(const System& system, int staff, Tick onset, const score::Score& model)
+{
+    for (const NoteheadGlyph& head : system.noteheads)
+    {
+        const score::Measure& measure = model.parts.front().measures.at(head.source.measureIndex);
+        const score::ScoreEvent& event =
+            measure.voices.at(head.source.voiceIndex).events.at(head.source.eventIndex);
+
+        if (head.staff == staff && event.onset == onset)
+        {
+            return head.x;
+        }
+    }
+
+    FAIL("no notehead on staff " << staff << " at onset " << onset);
+
+    return 0.0;
+}
+} // namespace
+
+TEST_CASE("a two-staff part is drawn as one braced system", "[score][engraving][layout][grand]")
+{
+    const auto model = scoreOf(
+        {grandStaffMeasureOf(
+            0, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))},
+            {lowerAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 2))}, true)},
+        2);
+
+    const ScoreLayout layout = layOutScore(model, wideOptions());
+
+    REQUIRE(layout.outcome == LayoutOutcome::laidOut);
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.staffOffsets.size() == 2);
+    CHECK(system.staffOffsets.at(0) == 0.0);
+
+    // The second staff starts below the first one's bottom line, past a gap.
+    CHECK(system.staffOffsets.at(1) > staffHeightInSpaces);
+
+    // Room reserved at the left for the brace and the barline joining them.
+    CHECK(system.staffStartX > 0.0);
+
+    // Both hands are on the page, each on its own staff.
+    const auto on = [&system](int staff)
+    {
+        return std::count_if(
+            system.noteheads.begin(), system.noteheads.end(),
+            [staff](const NoteheadGlyph& head) { return head.staff == staff; });
+    };
+
+    CHECK(on(0) == 1);
+    CHECK(on(1) == 1);
+    CHECK_FALSE(anyNoticeContains(layout, "staff"));
+}
+
+TEST_CASE("notes at the same moment line up across staves", "[score][engraving][layout][grand]")
+{
+    SECTION("a run over half notes stays on the beat")
+    {
+        // The case a piano part is full of: sixteenths in the right hand over
+        // half notes in the left. Sixteenths are dense enough that each slot is
+        // pushed right by the minimum slot width, so a right hand spaced on its
+        // own drifts steadily right of where proportional spacing would put
+        // it -- and a left hand spaced on its own does not. Spaced separately,
+        // beat three of the two hands lands in two places; spaced together, in
+        // one. With plain quarters over halves the two would agree by
+        // coincidence, which is why this case is the one that is tested.
+        std::vector<score::ScoreEvent> run;
+        constexpr Tick sixteenth = ticksPerQuarterNote / 4;
+
+        for (int index = 0; index < 16; ++index)
+        {
+            run.push_back(noteAt(
+                static_cast<Tick>(index) * sixteenth, sixteenth, pitch(score::Step::b, 0, 4)));
+        }
+
+        const auto model = scoreOf(
+            {grandStaffMeasureOf(
+                0, std::move(run),
+                {lowerAt(0, ticksPerQuarterNote * 2, pitch(score::Step::g, 0, 2)),
+                 lowerAt(
+                     ticksPerQuarterNote * 2, ticksPerQuarterNote * 2,
+                     pitch(score::Step::d, 0, 3))},
+                true)},
+            2);
+
+        const ScoreLayout layout = layOutScore(model, wideOptions());
+        REQUIRE(layout.systems.size() == 1);
+        const System& system = layout.systems.front();
+
+        CHECK(headXAt(system, 1, 0, *model) == Catch::Approx(headXAt(system, 0, 0, *model)));
+        CHECK(
+            headXAt(system, 1, ticksPerQuarterNote * 2, *model) ==
+            Catch::Approx(headXAt(system, 0, ticksPerQuarterNote * 2, *model)));
+    }
+
+    SECTION("an accidental on one staff moves both")
+    {
+        const auto withSharp = [](int alter)
+        {
+            return scoreOf(
+                {grandStaffMeasureOf(
+                    0,
+                    {noteAt(
+                         ticksPerQuarterNote, ticksPerQuarterNote, pitch(score::Step::c, alter, 5)),
+                     noteAt(0, ticksPerQuarterNote, pitch(score::Step::g, 0, 4))},
+                    {lowerAt(0, ticksPerQuarterNote, pitch(score::Step::g, 0, 2)),
+                     lowerAt(
+                         ticksPerQuarterNote, ticksPerQuarterNote, pitch(score::Step::b, 0, 2))},
+                    true)},
+                2);
+        };
+
+        const auto sharp = withSharp(1);
+        const auto plain = withSharp(0);
+
+        const ScoreLayout sharpLayout = layOutScore(sharp, wideOptions());
+        const ScoreLayout plainLayout = layOutScore(plain, wideOptions());
+        REQUIRE(sharpLayout.systems.size() == 1);
+        REQUIRE(plainLayout.systems.size() == 1);
+        const System& sharpSystem = sharpLayout.systems.front();
+        const System& plainSystem = plainLayout.systems.front();
+
+        // The upper staff's sharp at beat two: both staves' beat-two notes stay
+        // one above the other...
+        CHECK(
+            headXAt(sharpSystem, 1, ticksPerQuarterNote, *sharp) ==
+            Catch::Approx(headXAt(sharpSystem, 0, ticksPerQuarterNote, *sharp)));
+
+        // ...because the lower staff's note moved right with the upper's, by the
+        // room the sharp needed.
+        CHECK(
+            headXAt(sharpSystem, 1, ticksPerQuarterNote, *sharp) >
+            headXAt(plainSystem, 1, ticksPerQuarterNote, *plain));
+    }
+
+    SECTION("a note on one staff only falls between the other staff's")
+    {
+        const auto model = scoreOf(
+            {grandStaffMeasureOf(
+                0,
+                {noteAt(0, ticksPerQuarterNote, pitch(score::Step::g, 0, 4)),
+                 noteAt(ticksPerQuarterNote, ticksPerQuarterNote * 3, pitch(score::Step::a, 0, 4))},
+                {lowerAt(0, ticksPerQuarterNote / 2, pitch(score::Step::g, 0, 2)),
+                 lowerAt(
+                     ticksPerQuarterNote / 2, ticksPerQuarterNote / 2, pitch(score::Step::a, 0, 2)),
+                 lowerAt(
+                     ticksPerQuarterNote, ticksPerQuarterNote * 3, pitch(score::Step::b, 0, 2))},
+                true)},
+            2);
+
+        const ScoreLayout layout = layOutScore(model, wideOptions());
+        REQUIRE(layout.systems.size() == 1);
+        const System& system = layout.systems.front();
+
+        const double offBeat = headXAt(system, 1, ticksPerQuarterNote / 2, *model);
+
+        CHECK(offBeat > headXAt(system, 0, 0, *model));
+        CHECK(offBeat < headXAt(system, 0, ticksPerQuarterNote, *model));
+    }
+}
+
+TEST_CASE("each staff keeps its own clef and accidentals", "[score][engraving][layout][grand]")
+{
+    SECTION("treble over bass, and a clef change on the lower staff alone")
+    {
+        score::Measure second = grandStaffMeasureOf(
+            1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))},
+            {lowerAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 3))});
+        second.attributes.clefs = {score::Clef{"G", 2, 0, 2}};
+
+        const auto model = scoreOf(
+            {grandStaffMeasureOf(
+                 0, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))},
+                 {lowerAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 2))}, true),
+             second},
+            2);
+
+        const ScoreLayout layout = layOutScore(model, wideOptions());
+        REQUIRE(layout.systems.size() == 1);
+        const System& system = layout.systems.front();
+
+        const auto clefsOn = [&system](int staff)
+        {
+            std::vector<std::string> signs;
+
+            for (const ClefGlyph& clef : system.clefs)
+            {
+                if (clef.staff == staff)
+                {
+                    signs.push_back(clef.clef.sign);
+                }
+            }
+
+            return signs;
+        };
+
+        CHECK(clefsOn(0) == std::vector<std::string>{"G"});
+        CHECK(clefsOn(1) == std::vector<std::string>{"F", "G"});
+
+        // The upper staff's music still starts where the lower staff's does in
+        // the bar where only the lower drew a clef.
+        const Tick barTwo = 0;
+        const NoteheadGlyph* upper = nullptr;
+        const NoteheadGlyph* lower = nullptr;
+
+        for (const NoteheadGlyph& head : system.noteheads)
+        {
+            if (head.source.measureIndex == 1 && head.staff == 0)
+            {
+                upper = &head;
+            }
+
+            if (head.source.measureIndex == 1 && head.staff == 1)
+            {
+                lower = &head;
+            }
+        }
+
+        static_cast<void>(barTwo);
+        REQUIRE(upper != nullptr);
+        REQUIRE(lower != nullptr);
+        CHECK(upper->x == Catch::Approx(lower->x));
+    }
+
+    SECTION("an accidental applies to its own staff only")
+    {
+        // F sharp on the upper staff, then F natural on the lower staff in the
+        // same octave and measure, in C major. Shared accidental state would
+        // draw a natural on the lower F to cancel the upper staff's sharp; the
+        // convention is that it reads only from its own staff, so it needs none.
+        const auto model = scoreOf(
+            {grandStaffMeasureOf(
+                0, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::f, 1, 4))},
+                {lowerAt(
+                    ticksPerQuarterNote, ticksPerQuarterNote * 3, pitch(score::Step::f, 0, 4))},
+                true)},
+            2);
+
+        const ScoreLayout layout = layOutScore(model, wideOptions());
+        REQUIRE(layout.systems.size() == 1);
+        const System& system = layout.systems.front();
+
+        for (const NoteheadGlyph& head : system.noteheads)
+        {
+            if (head.staff == 0)
+            {
+                CHECK(head.accidental == AccidentalKind::sharp);
+            }
+            else
+            {
+                CHECK(head.accidental == AccidentalKind::none);
+            }
+        }
+    }
+}
+
+TEST_CASE(
+    "a barline is drawn once per measure, not once per staff",
+    "[score][engraving][layout][grand]")
+{
+    const auto bar = [](std::size_t index, bool declare)
+    {
+        return grandStaffMeasureOf(
+            index, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))},
+            {lowerAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 2))}, declare);
+    };
+
+    const ScoreLayout layout =
+        layOutScore(scoreOf({bar(0, true), bar(1, false)}, 2), wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    // Two measures, two barlines: each one runs through both staves, which the
+    // painter does from the system's staff offsets.
+    CHECK(layout.systems.front().barlines.size() == 2);
+}
+
+TEST_CASE(
+    "a percussion staff in a pitched part is left out, and said so",
+    "[score][engraving][layout][grand]")
+{
+    score::Measure measure = grandStaffMeasureOf(
+        0, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))},
+        {lowerAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 0, 4))}, true);
+    measure.attributes.clefs = {score::Clef{"G", 2, 0, 1}, score::Clef{"percussion", 3, 0, 2}};
+
+    const ScoreLayout layout = layOutScore(scoreOf({measure}, 2), wideOptions());
+
+    // The pitched staff is drawn on its own -- the part is not refused.
+    REQUIRE(layout.outcome == LayoutOutcome::laidOut);
+    REQUIRE(layout.systems.size() == 1);
+    CHECK(layout.systems.front().staffOffsets.size() == 1);
+    CHECK(layout.systems.front().staffStartX == 0.0);
+
+    CHECK(anyNoticeContains(layout, "One staff of this part is written in a percussion clef"));
+    CHECK(anyNoticeContains(layout, "Not shown: 1 note or rest"));
+}
+
+TEST_CASE("dynamics stay on the staff they belong to", "[score][engraving][layout][grand]")
+{
+    score::Measure measure = grandStaffMeasureOf(
+        0, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))},
+        {lowerAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 2))}, true);
+
+    score::Direction upper;
+    upper.kind = score::DirectionKind::dynamic;
+    upper.staff = 1;
+    upper.text = "p";
+
+    score::Direction lower = upper;
+    lower.staff = 2;
+    lower.text = "f";
+
+    measure.directions = {upper, lower};
+
+    const ScoreLayout layout = layOutScore(scoreOf({measure}, 2), wideOptions());
+    REQUIRE(layout.systems.size() == 1);
+    const System& system = layout.systems.front();
+
+    // A piano part's dynamics hang below their own staff: the right hand's in
+    // the gap between the hands, the left hand's below the bass staff.
+    for (const TextGlyph& text : system.texts)
+    {
+        if (text.role != TextRole::dynamic)
+        {
+            continue;
+        }
+
+        CHECK(text.staff == (text.text == "p" ? 0 : 1));
+    }
+}
+
+TEST_CASE(
+    "a single staff is one staff at offset zero, unbraced",
+    "[score][engraving][layout][grand]")
+{
+    // Identical to before the grand staff, number for number: checked once by
+    // dumping every glyph of every single-staff corpus layout at full precision
+    // before and after the change and comparing them byte for byte. This pins
+    // the shape that guarantees it.
+    const ScoreLayout layout = layOutScore(
+        scoreOf({measureOf(
+            0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))})},
+            true)}),
+        wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+    const System& system = layout.systems.front();
+
+    CHECK(system.staffOffsets == std::vector<double>{0.0});
+    CHECK(system.staffStartX == 0.0);
+
+    for (const NoteheadGlyph& head : system.noteheads)
+    {
+        CHECK(head.staff == 0);
+    }
 }

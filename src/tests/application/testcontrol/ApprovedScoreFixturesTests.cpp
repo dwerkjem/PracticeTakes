@@ -92,8 +92,8 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
     // assumption.
     CHECK(
         naming == std::set<std::string>{
-                      "score-import-clean", "score-import-diagnostics", "score-view-notation",
-                      "score-view-notation-large"});
+                      "score-import-clean", "score-import-diagnostics", "score-view-grand-staff",
+                      "score-view-notation", "score-view-notation-large"});
 }
 
 // The invariant this started as was "a state naming a score opens nothing
@@ -431,5 +431,79 @@ TEST_CASE("report what the summary window will show for each fixture", "[.harnes
         WARN(
             state.id << " -- " << state.scoreFixture << "\n  " << summary.headline << "\n"
                      << scoreImportReport(summary));
+    }
+}
+
+// The piano fixture for the grand-staff surface. Pinned through the importer and
+// the layout, like the notation fixture, so that the file quietly losing a
+// staff, a clef change or its alignment case fails a build rather than turning
+// its reference image into a picture of less.
+TEST_CASE(
+    "the grand-staff fixture holds what its picture is about",
+    "[testcontrol][approved][score]")
+{
+    const MusicXmlImportResult result = importFixture("grand-staff-sample.musicxml");
+
+    // Clean: the surface is of the renderer, so a diagnostic means the fixture
+    // drifted outside the supported subset.
+    CHECK(result.status == MusicXmlImportStatus::imported);
+
+    for (const Diagnostic& diagnostic : result.diagnostics)
+    {
+        INFO(
+            "unexpected diagnostic on <"
+            << diagnostic.elementName << "> in bar "
+            << diagnostic.location.measureNumber.value_or("-") << ": " << diagnostic.message);
+        CHECK(false);
+    }
+
+    REQUIRE(result.score != nullptr);
+    REQUIRE(result.score->parts.size() == 1);
+    CHECK(result.score->parts.front().name == "Piano");
+    CHECK(result.score->parts.front().staffCount == 2);
+    CHECK(measureCount(*result.score) == 4);
+
+    engraving::LayoutOptions options;
+    options.availableWidth = 400.0;
+
+    const engraving::ScoreLayout layout = engraving::layOutScore(result.score, options);
+
+    REQUIRE(layout.outcome == engraving::LayoutOutcome::laidOut);
+    REQUIRE(layout.systems.size() == 1);
+
+    const engraving::System& system = layout.systems.front();
+
+    // Both staves, in one braced system.
+    CHECK(system.staffOffsets.size() == 2);
+    CHECK(system.staffStartX > 0.0);
+
+    // Both hands present.
+    const auto onStaff = [&system](int staff)
+    {
+        return std::count_if(
+            system.noteheads.begin(), system.noteheads.end(),
+            [staff](const engraving::NoteheadGlyph& head) { return head.staff == staff; });
+    };
+
+    CHECK(onStaff(0) > 0);
+    CHECK(onStaff(1) > 0);
+
+    // The lower staff alone changes clef: two clefs on staff 1 (bass, then
+    // treble), one on staff 0.
+    const auto clefsOn = [&system](int staff)
+    {
+        return std::count_if(
+            system.clefs.begin(), system.clefs.end(),
+            [staff](const engraving::ClefGlyph& clef) { return clef.staff == staff; });
+    };
+
+    CHECK(clefsOn(0) == 1);
+    CHECK(clefsOn(1) == 2);
+
+    // Nothing about a missing staff.
+    for (const std::string& notice : layout.notices)
+    {
+        INFO(notice);
+        CHECK(notice.find("staff") == std::string::npos);
     }
 }

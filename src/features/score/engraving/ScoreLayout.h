@@ -65,6 +65,12 @@ struct NoteheadGlyph
 
     // Drawn smaller, and took no horizontal time of its own.
     bool isGrace = false;
+
+    // Which staff of its system this sits on: 0 for the top staff. Positions
+    // are relative to that staff's own lines; `System::staffOffsets` says where
+    // the staff is. Last, and defaulted, so every existing initialiser still
+    // describes a glyph on the only staff a single-staff system has.
+    int staff = 0;
 };
 
 // A stem, with its flags. One per event that has one -- a chord's notes share
@@ -103,6 +109,12 @@ struct StemGlyph
     bool up = true;
 
     bool isGrace = false;
+
+    // Which staff of its system this sits on: 0 for the top staff. Positions
+    // are relative to that staff's own lines; `System::staffOffsets` says where
+    // the staff is. Last, and defaulted, so every existing initialiser still
+    // describes a glyph on the only staff a single-staff system has.
+    int staff = 0;
 };
 
 // One beam, as a sloped bar joining the stems under or over it.
@@ -136,6 +148,12 @@ struct BeamGlyph
     bool partial = false;
 
     bool up = true;
+
+    // Which staff of its system this sits on: 0 for the top staff. Positions
+    // are relative to that staff's own lines; `System::staffOffsets` says where
+    // the staff is. Last, and defaulted, so every existing initialiser still
+    // describes a glyph on the only staff a single-staff system has.
+    int staff = 0;
 };
 
 struct RestGlyph
@@ -150,6 +168,12 @@ struct RestGlyph
     // fourth line, a half rest sits on the middle line, and everything shorter
     // centres on the middle line.
     StaffSteps position = middleLineSteps;
+
+    // Which staff of its system this sits on: 0 for the top staff. Positions
+    // are relative to that staff's own lines; `System::staffOffsets` says where
+    // the staff is. Last, and defaulted, so every existing initialiser still
+    // describes a glyph on the only staff a single-staff system has.
+    int staff = 0;
 };
 
 // One accidental of a key signature. A note's accidental is on its notehead.
@@ -158,6 +182,12 @@ struct KeyAccidentalGlyph
     double x = 0.0;
     StaffSteps position = 0;
     AccidentalKind kind = AccidentalKind::sharp;
+
+    // Which staff of its system this sits on: 0 for the top staff. Positions
+    // are relative to that staff's own lines; `System::staffOffsets` says where
+    // the staff is. Last, and defaulted, so every existing initialiser still
+    // describes a glyph on the only staff a single-staff system has.
+    int staff = 0;
 };
 
 struct ClefGlyph
@@ -170,6 +200,12 @@ struct ClefGlyph
 
     // The staff position the sign centres on, from `clef.line`.
     StaffSteps position = 0;
+
+    // Which staff of its system this sits on: 0 for the top staff. Positions
+    // are relative to that staff's own lines; `System::staffOffsets` says where
+    // the staff is. Last, and defaulted, so every existing initialiser still
+    // describes a glyph on the only staff a single-staff system has.
+    int staff = 0;
 };
 
 struct TimeSignatureGlyph
@@ -177,6 +213,12 @@ struct TimeSignatureGlyph
     double x = 0.0;
     int beats = 4;
     int beatType = 4;
+
+    // Which staff of its system this sits on: 0 for the top staff. Positions
+    // are relative to that staff's own lines; `System::staffOffsets` says where
+    // the staff is. Last, and defaulted, so every existing initialiser still
+    // describes a glyph on the only staff a single-staff system has.
+    int staff = 0;
 };
 
 struct BarlineGlyph
@@ -197,6 +239,12 @@ struct TieGlyph
 
     // Which side of the notehead the curve bows to.
     bool above = true;
+
+    // Which staff of its system this sits on: 0 for the top staff. Positions
+    // are relative to that staff's own lines; `System::staffOffsets` says where
+    // the staff is. Last, and defaulted, so every existing initialiser still
+    // describes a glyph on the only staff a single-staff system has.
+    int staff = 0;
 };
 
 struct LyricGlyph
@@ -213,6 +261,12 @@ struct LyricGlyph
     // them precisely because neither is recoverable from the text.
     bool hyphenAfter = false;
     bool extend = false;
+
+    // Which staff of its system this sits on: 0 for the top staff. Positions
+    // are relative to that staff's own lines; `System::staffOffsets` says where
+    // the staff is. Last, and defaulted, so every existing initialiser still
+    // describes a glyph on the only staff a single-staff system has.
+    int staff = 0;
 };
 
 // Where a piece of text sits relative to the staff.
@@ -233,6 +287,12 @@ struct TextGlyph
     double x = 0.0;
     std::string text;
     TextRole role = TextRole::dynamic;
+
+    // Which staff of its system this sits on: 0 for the top staff. Positions
+    // are relative to that staff's own lines; `System::staffOffsets` says where
+    // the staff is. Last, and defaulted, so every existing initialiser still
+    // describes a glyph on the only staff a single-staff system has.
+    int staff = 0;
 };
 
 // One staff's worth of music across the width of the tool.
@@ -261,6 +321,18 @@ struct System
     // The measures this system holds, as indices into the part. Inclusive.
     std::size_t firstMeasureIndex = 0;
     std::size_t lastMeasureIndex = 0;
+
+    // Where each staff's top line sits, in staff spaces below `topOfStaff`. One
+    // entry of zero for a single staff, which is what a default system is, so a
+    // single-staff layout reads exactly as it did before systems had more than
+    // one. More than one means a grand staff: the painter braces them and runs
+    // every barline from the first staff's top line to the last staff's bottom.
+    std::vector<double> staffOffsets{0.0};
+
+    // Where the staff lines begin, in staff spaces from the system's left edge.
+    // Zero, except on a braced system, whose staves start after the brace and
+    // the barline that joins them.
+    double staffStartX = 0.0;
 };
 
 enum class LayoutOutcome
@@ -346,6 +418,15 @@ struct LayoutOptions
     // below it for dynamics.
     double spaceAboveStaff = 4.0;
     double spaceBelowStaff = 3.0;
+
+    // Between one staff's bottom line and the next staff's top line in a grand
+    // staff, before any lyric rows of the upper staff. A piano part's dynamics
+    // hang below the right hand, in this gap, as printed.
+    double interStaffGap = 6.0;
+
+    // Room at the start of a braced system for the brace and the barline that
+    // joins the staves.
+    double braceWidth = 1.6;
 
     // Room per lyric verse, below the staff and above the dynamics.
     double lyricRowHeight = 1.8;

@@ -189,7 +189,9 @@ TEST_CASE("an absent glyph is empty rather than a crash", "[score][typeface]")
     const MusicFontUnderTest fixture;
 
     // Not a SMuFL glyph this table lists, so the font was never asked for it.
-    const auto unlisted = static_cast<Glyph>(0xE000);
+    // SMuFL's reversed brace: U+E000, the brace beside it, used to stand in here
+    // until the grand staff started drawing it.
+    const auto unlisted = static_cast<Glyph>(0xE001);
 
     CHECK_FALSE(fixture.font.hasGlyph(unlisted));
     CHECK(fixture.font.outline(unlisted).isEmpty());
