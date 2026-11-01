@@ -258,9 +258,9 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/score/engraving/BeamGeometryTests.cpp
     src/tests/features/score/engraving/BeamGroupingTests.cpp
     src/tests/features/score/engraving/KeySignatureLayoutTests.cpp
-    src/tests/features/score/engraving/ScoreLayoutCorpusTests.cpp
     src/tests/features/score/engraving/MeasureAccidentalsTests.cpp
     src/tests/features/score/engraving/NoteValueTests.cpp
+    src/tests/features/score/engraving/ScoreLayoutCorpusTests.cpp
     src/tests/features/score/engraving/ScoreLayoutEngineTests.cpp
     src/tests/features/score/engraving/StaffPositionTests.cpp
     src/tests/features/performance/ApplicationLaunchTimerTests.cpp

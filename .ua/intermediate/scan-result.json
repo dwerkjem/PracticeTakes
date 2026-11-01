@@ -47,7 +47,7 @@
     {
       "path": ".gitattributes",
       "language": "unknown",
-      "sizeLines": 34,
+      "sizeLines": 33,
       "fileCategory": "code"
     },
     {
@@ -77,13 +77,13 @@
     {
       "path": ".github/workflows/benchmarks.yml",
       "language": "yaml",
-      "sizeLines": 77,
+      "sizeLines": 126,
       "fileCategory": "infra"
     },
     {
       "path": ".github/workflows/build-multiplatform.yml",
       "language": "yaml",
-      "sizeLines": 945,
+      "sizeLines": 1067,
       "fileCategory": "infra"
     },
     {
@@ -95,19 +95,19 @@
     {
       "path": ".github/workflows/coverage.yml",
       "language": "yaml",
-      "sizeLines": 208,
+      "sizeLines": 211,
       "fileCategory": "infra"
     },
     {
       "path": ".github/workflows/cpp-quality-check.yml",
       "language": "yaml",
-      "sizeLines": 86,
+      "sizeLines": 91,
       "fileCategory": "infra"
     },
     {
       "path": ".github/workflows/pages.yml",
       "language": "yaml",
-      "sizeLines": 175,
+      "sizeLines": 190,
       "fileCategory": "infra"
     },
     {
@@ -123,9 +123,21 @@
       "fileCategory": "infra"
     },
     {
+      "path": ".github/workflows/sanitizers-scheduled.yml",
+      "language": "yaml",
+      "sizeLines": 105,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/sanitizers.yml",
+      "language": "yaml",
+      "sizeLines": 137,
+      "fileCategory": "infra"
+    },
+    {
       "path": ".github/workflows/secret-scan.yml",
       "language": "yaml",
-      "sizeLines": 51,
+      "sizeLines": 96,
       "fileCategory": "infra"
     },
     {
@@ -143,20 +155,14 @@
     {
       "path": ".pre-commit-config.yaml",
       "language": "yaml",
-      "sizeLines": 43,
+      "sizeLines": 58,
       "fileCategory": "config"
     },
     {
       "path": ".sops.yaml",
       "language": "yaml",
-      "sizeLines": 3,
+      "sizeLines": 17,
       "fileCategory": "config"
-    },
-    {
-      "path": ".sops.yaml.example",
-      "language": "example",
-      "sizeLines": 10,
-      "fileCategory": "code"
     },
     {
       "path": "CLAUDE.md",
@@ -167,7 +173,7 @@
     {
       "path": "CMakeLists.txt",
       "language": "txt",
-      "sizeLines": 462,
+      "sizeLines": 383,
       "fileCategory": "docs"
     },
     {
@@ -185,19 +191,37 @@
     {
       "path": "docs/development/README.md",
       "language": "markdown",
-      "sizeLines": 60,
+      "sizeLines": 71,
       "fileCategory": "docs"
     },
     {
       "path": "docs/development/agents/AGENT_GUIDE.md",
       "language": "markdown",
-      "sizeLines": 255,
+      "sizeLines": 369,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/agents/domain.md",
+      "language": "markdown",
+      "sizeLines": 101,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/agents/issue-tracker.md",
+      "language": "markdown",
+      "sizeLines": 82,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/agents/triage-labels.md",
+      "language": "markdown",
+      "sizeLines": 35,
       "fileCategory": "docs"
     },
     {
       "path": "docs/development/architecture/ARCHITECTURE.md",
       "language": "markdown",
-      "sizeLines": 166,
+      "sizeLines": 339,
       "fileCategory": "docs"
     },
     {
@@ -207,9 +231,39 @@
       "fileCategory": "docs"
     },
     {
+      "path": "docs/development/architecture/CONTEXT.md",
+      "language": "markdown",
+      "sizeLines": 108,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/architecture/adding-a-tool.md",
+      "language": "markdown",
+      "sizeLines": 165,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/architecture/score-model-findings.md",
+      "language": "markdown",
+      "sizeLines": 192,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/formats/musicxml-subset.md",
+      "language": "markdown",
+      "sizeLines": 214,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/operations/EMAIL_DISPATCH.md",
+      "language": "markdown",
+      "sizeLines": 246,
+      "fileCategory": "docs"
+    },
+    {
       "path": "docs/development/operations/FEEDBACK.md",
       "language": "markdown",
-      "sizeLines": 48,
+      "sizeLines": 51,
       "fileCategory": "docs"
     },
     {
@@ -227,19 +281,13 @@
     {
       "path": "docs/development/operations/SECRETS.md",
       "language": "markdown",
-      "sizeLines": 206,
+      "sizeLines": 291,
       "fileCategory": "docs"
     },
     {
       "path": "docs/development/performance/audio-thread-safety.md",
       "language": "markdown",
-      "sizeLines": 33,
-      "fileCategory": "docs"
-    },
-    {
-      "path": "docs/development/performance/hardware-acceptance.md",
-      "language": "markdown",
-      "sizeLines": 111,
+      "sizeLines": 140,
       "fileCategory": "docs"
     },
     {
@@ -249,27 +297,27 @@
       "fileCategory": "docs"
     },
     {
-      "path": "docs/development/quality/MANUAL_GUI_VERIFICATION.md",
-      "language": "markdown",
-      "sizeLines": 238,
-      "fileCategory": "docs"
-    },
-    {
       "path": "docs/development/quality/QA_STRATEGY.md",
       "language": "markdown",
-      "sizeLines": 303,
+      "sizeLines": 333,
       "fileCategory": "docs"
     },
     {
       "path": "docs/development/quality/QUALITY.md",
       "language": "markdown",
-      "sizeLines": 180,
+      "sizeLines": 242,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/quality/TESTING_SUITE.md",
+      "language": "markdown",
+      "sizeLines": 603,
       "fileCategory": "docs"
     },
     {
       "path": "docs/development/quality/TEST_LAYOUT.md",
       "language": "markdown",
-      "sizeLines": 66,
+      "sizeLines": 67,
       "fileCategory": "docs"
     },
     {
@@ -345,75 +393,375 @@
       "fileCategory": "docs"
     },
     {
+      "path": "docs/development/quality/run-history/20260803-010103-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260803-010306-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260803-010316-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260803-010324-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 23,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260803-011411-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 23,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260803-012725-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 23,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260803-014133-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 84,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-112044-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-112140-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-112333-d29d3047.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-112738-d29d3047.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-112821-d29d3047.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-122411-d29d3047.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-122506-d29d3047.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-123043-d29d3047.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-123253-d29d3047.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-123655-d29d3047.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-123904-d29d3047.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-124319-d29d3047.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-124527-d29d3047.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-125059-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 23,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-125840-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 120,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-131339-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 23,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-131552-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 23,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-131642-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-140437-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 120,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-141318-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-141342-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-141618-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-141805-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-194842-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 120,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-204304-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 23,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-204401-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 23,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-204452-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 23,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-204553-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-204640-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 29,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-215712-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-215745-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-215807-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-215836-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-220021-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-220329-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-222857-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-223130-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-224011-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-225307-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 138,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-230158-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-230526-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/20260811-230534-dd578dc4.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/development/quality/run-history/README.md",
+      "language": "markdown",
+      "sizeLines": 24,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/development/quality/score-import-manual-verification.md",
+      "language": "markdown",
+      "sizeLines": 166,
+      "fileCategory": "docs"
+    },
+    {
       "path": "docs/settings-defaults.md",
       "language": "markdown",
       "sizeLines": 119,
       "fileCategory": "docs"
     },
     {
-      "path": "openspec/changes/musicxml-import/.openspec.yaml",
+      "path": "openspec/changes/midi-keyboard-capture/.openspec.yaml",
       "language": "yaml",
       "sizeLines": 2,
       "fileCategory": "config"
     },
     {
-      "path": "openspec/changes/musicxml-import/design.md",
+      "path": "openspec/changes/midi-keyboard-capture/design.md",
       "language": "markdown",
-      "sizeLines": 695,
+      "sizeLines": 380,
       "fileCategory": "docs"
     },
     {
-      "path": "openspec/changes/musicxml-import/proposal.md",
+      "path": "openspec/changes/midi-keyboard-capture/proposal.md",
+      "language": "markdown",
+      "sizeLines": 115,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/changes/midi-keyboard-capture/specs/midi-keyboard-capture/spec.md",
       "language": "markdown",
       "sizeLines": 133,
       "fileCategory": "docs"
     },
     {
-      "path": "openspec/changes/musicxml-import/specs/musicxml-import/spec.md",
+      "path": "openspec/changes/midi-keyboard-capture/tasks.md",
       "language": "markdown",
-      "sizeLines": 172,
+      "sizeLines": 180,
       "fileCategory": "docs"
     },
     {
-      "path": "openspec/changes/musicxml-import/specs/normalized-score-model/spec.md",
-      "language": "markdown",
-      "sizeLines": 139,
-      "fileCategory": "docs"
-    },
-    {
-      "path": "openspec/changes/musicxml-import/tasks.md",
-      "language": "markdown",
-      "sizeLines": 235,
-      "fileCategory": "docs"
-    },
-    {
-      "path": "openspec/changes/real-world-performance-benchmarking/.openspec.yaml",
+      "path": "openspec/changes/score-target-note-tool/.openspec.yaml",
       "language": "yaml",
       "sizeLines": 2,
       "fileCategory": "config"
     },
     {
-      "path": "openspec/changes/real-world-performance-benchmarking/design.md",
+      "path": "openspec/changes/score-target-note-tool/design.md",
       "language": "markdown",
-      "sizeLines": 80,
+      "sizeLines": 333,
       "fileCategory": "docs"
     },
     {
-      "path": "openspec/changes/real-world-performance-benchmarking/proposal.md",
+      "path": "openspec/changes/score-target-note-tool/proposal.md",
       "language": "markdown",
-      "sizeLines": 28,
+      "sizeLines": 118,
       "fileCategory": "docs"
     },
     {
-      "path": "openspec/changes/real-world-performance-benchmarking/specs/hardware-performance-lab/spec.md",
+      "path": "openspec/changes/score-target-note-tool/specs/score-target-note-tool/spec.md",
       "language": "markdown",
-      "sizeLines": 67,
+      "sizeLines": 140,
       "fileCategory": "docs"
     },
     {
-      "path": "openspec/changes/real-world-performance-benchmarking/tasks.md",
+      "path": "openspec/changes/score-target-note-tool/tasks.md",
       "language": "markdown",
-      "sizeLines": 47,
+      "sizeLines": 183,
       "fileCategory": "docs"
     },
     {
@@ -421,6 +769,12 @@
       "language": "yaml",
       "sizeLines": 20,
       "fileCategory": "config"
+    },
+    {
+      "path": "openspec/specs/audio-device-recovery/spec.md",
+      "language": "markdown",
+      "sizeLines": 95,
+      "fileCategory": "docs"
     },
     {
       "path": "openspec/specs/benchmark-ci-reporting/spec.md",
@@ -437,7 +791,7 @@
     {
       "path": "openspec/specs/cpp-pr-quality-gate/spec.md",
       "language": "markdown",
-      "sizeLines": 58,
+      "sizeLines": 70,
       "fileCategory": "docs"
     },
     {
@@ -447,9 +801,15 @@
       "fileCategory": "docs"
     },
     {
+      "path": "openspec/specs/feedback-email-dispatch/spec.md",
+      "language": "markdown",
+      "sizeLines": 180,
+      "fileCategory": "docs"
+    },
+    {
       "path": "openspec/specs/knowledge-graph-site/spec.md",
       "language": "markdown",
-      "sizeLines": 240,
+      "sizeLines": 253,
       "fileCategory": "docs"
     },
     {
@@ -461,13 +821,43 @@
     {
       "path": "openspec/specs/manual-gui-verification/spec.md",
       "language": "markdown",
-      "sizeLines": 303,
+      "sizeLines": 324,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/musicxml-import/spec.md",
+      "language": "markdown",
+      "sizeLines": 201,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/normalized-score-model/spec.md",
+      "language": "markdown",
+      "sizeLines": 145,
       "fileCategory": "docs"
     },
     {
       "path": "openspec/specs/python-script-test-gate/spec.md",
       "language": "markdown",
-      "sizeLines": 52,
+      "sizeLines": 64,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/runtime-safety-verification/spec.md",
+      "language": "markdown",
+      "sizeLines": 118,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/score-import-command/spec.md",
+      "language": "markdown",
+      "sizeLines": 145,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/secret-material-handling/spec.md",
+      "language": "markdown",
+      "sizeLines": 130,
       "fileCategory": "docs"
     },
     {
@@ -477,9 +867,27 @@
       "fileCategory": "docs"
     },
     {
+      "path": "openspec/specs/shared-pitch-analysis/spec.md",
+      "language": "markdown",
+      "sizeLines": 67,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/synthetic-input/spec.md",
+      "language": "markdown",
+      "sizeLines": 65,
+      "fileCategory": "docs"
+    },
+    {
       "path": "openspec/specs/test-coverage-reporting/spec.md",
       "language": "markdown",
       "sizeLines": 80,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/test-suite-hub/spec.md",
+      "language": "markdown",
+      "sizeLines": 355,
       "fileCategory": "docs"
     },
     {
@@ -489,15 +897,39 @@
       "fileCategory": "docs"
     },
     {
+      "path": "openspec/specs/tool-registry/spec.md",
+      "language": "markdown",
+      "sizeLines": 147,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/ui-capture-and-review/spec.md",
+      "language": "markdown",
+      "sizeLines": 585,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/verification-run-store/spec.md",
+      "language": "markdown",
+      "sizeLines": 182,
+      "fileCategory": "docs"
+    },
+    {
       "path": "openspec/specs/worker-database-fidelity/spec.md",
       "language": "markdown",
-      "sizeLines": 75,
+      "sizeLines": 88,
       "fileCategory": "docs"
     },
     {
       "path": "openspec/specs/workspace-layout-restoration/spec.md",
       "language": "markdown",
       "sizeLines": 95,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openspec/specs/workspace-pane-sizing/spec.md",
+      "language": "markdown",
+      "sizeLines": 67,
       "fileCategory": "docs"
     },
     {
@@ -509,7 +941,7 @@
     {
       "path": "pyproject.toml",
       "language": "toml",
-      "sizeLines": 49,
+      "sizeLines": 57,
       "fileCategory": "config"
     },
     {
@@ -533,13 +965,13 @@
     {
       "path": "src/application/configuration/SettingsPersistence.cpp",
       "language": "cpp",
-      "sizeLines": 298,
+      "sizeLines": 296,
       "fileCategory": "code"
     },
     {
       "path": "src/application/configuration/SettingsPersistence.h",
       "language": "c",
-      "sizeLines": 64,
+      "sizeLines": 71,
       "fileCategory": "code"
     },
     {
@@ -551,7 +983,7 @@
     {
       "path": "src/application/configuration/SettingsTransferCodec.h",
       "language": "c",
-      "sizeLines": 65,
+      "sizeLines": 71,
       "fileCategory": "code"
     },
     {
@@ -563,13 +995,13 @@
     {
       "path": "src/application/shell/MainComponent.h",
       "language": "c",
-      "sizeLines": 283,
+      "sizeLines": 407,
       "fileCategory": "code"
     },
     {
       "path": "src/application/shell/MainComponentLifecycle.cpp",
       "language": "cpp",
-      "sizeLines": 208,
+      "sizeLines": 202,
       "fileCategory": "code"
     },
     {
@@ -581,31 +1013,31 @@
     {
       "path": "src/application/shell/state/appearance/MainComponentAppearance.cpp",
       "language": "cpp",
-      "sizeLines": 131,
+      "sizeLines": 127,
       "fileCategory": "code"
     },
     {
       "path": "src/application/shell/state/audio/MainComponentAudioState.cpp",
       "language": "cpp",
-      "sizeLines": 93,
+      "sizeLines": 103,
       "fileCategory": "code"
     },
     {
       "path": "src/application/shell/state/testcontrol/MainComponentTestControl.cpp",
       "language": "cpp",
-      "sizeLines": 253,
+      "sizeLines": 431,
       "fileCategory": "code"
     },
     {
       "path": "src/application/shell/ui/feedback/FeedbackWindow.h",
       "language": "c",
-      "sizeLines": 46,
+      "sizeLines": 61,
       "fileCategory": "code"
     },
     {
       "path": "src/application/shell/ui/feedback/MainComponentFeedback.cpp",
       "language": "cpp",
-      "sizeLines": 160,
+      "sizeLines": 171,
       "fileCategory": "code"
     },
     {
@@ -617,31 +1049,67 @@
     {
       "path": "src/application/shell/ui/main_window/MicrophoneWarning.h",
       "language": "c",
-      "sizeLines": 110,
+      "sizeLines": 132,
       "fileCategory": "code"
     },
     {
-      "path": "src/application/shell/ui/performance/PerformanceLabWindow.h",
+      "path": "src/application/shell/ui/score/MainComponentScore.cpp",
+      "language": "cpp",
+      "sizeLines": 157,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/score/ScoreImportJob.cpp",
+      "language": "cpp",
+      "sizeLines": 101,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/score/ScoreImportJob.h",
       "language": "c",
-      "sizeLines": 1027,
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/score/ScoreImportState.h",
+      "language": "c",
+      "sizeLines": 92,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/score/ScoreImportSummary.cpp",
+      "language": "cpp",
+      "sizeLines": 406,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/score/ScoreImportSummary.h",
+      "language": "c",
+      "sizeLines": 153,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/shell/ui/score/ScoreImportWindow.h",
+      "language": "c",
+      "sizeLines": 148,
       "fileCategory": "code"
     },
     {
       "path": "src/application/shell/ui/settings/MainComponentSettings.cpp",
       "language": "cpp",
-      "sizeLines": 666,
+      "sizeLines": 703,
       "fileCategory": "code"
     },
     {
       "path": "src/application/shell/ui/settings/SettingsWindow.h",
       "language": "c",
-      "sizeLines": 544,
+      "sizeLines": 797,
       "fileCategory": "code"
     },
     {
       "path": "src/application/shell/ui/workspace/components/DockedToolPanel.h",
       "language": "c",
-      "sizeLines": 127,
+      "sizeLines": 203,
       "fileCategory": "code"
     },
     {
@@ -653,19 +1121,19 @@
     {
       "path": "src/application/shell/ui/workspace/components/ToolOptionsButton.h",
       "language": "c",
-      "sizeLines": 77,
+      "sizeLines": 125,
       "fileCategory": "code"
     },
     {
       "path": "src/application/shell/ui/workspace/components/ToolWindow.h",
       "language": "c",
-      "sizeLines": 136,
+      "sizeLines": 156,
       "fileCategory": "code"
     },
     {
       "path": "src/application/shell/ui/workspace/components/WorkspaceSplitPane.h",
       "language": "c",
-      "sizeLines": 140,
+      "sizeLines": 261,
       "fileCategory": "code"
     },
     {
@@ -707,7 +1175,7 @@
     {
       "path": "src/application/shell/ui/workspace/model/WorkspaceDocuments.h",
       "language": "c",
-      "sizeLines": 201,
+      "sizeLines": 195,
       "fileCategory": "code"
     },
     {
@@ -725,7 +1193,7 @@
     {
       "path": "src/application/shell/ui/workspace/model/WorkspaceNormalizer.h",
       "language": "c",
-      "sizeLines": 235,
+      "sizeLines": 271,
       "fileCategory": "code"
     },
     {
@@ -737,19 +1205,13 @@
     {
       "path": "src/application/shell/ui/workspace/model/WorkspaceSnapshotApply.h",
       "language": "c",
-      "sizeLines": 246,
+      "sizeLines": 251,
       "fileCategory": "code"
     },
     {
       "path": "src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h",
       "language": "c",
       "sizeLines": 124,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h",
-      "language": "c",
-      "sizeLines": 70,
       "fileCategory": "code"
     },
     {
@@ -761,13 +1223,13 @@
     {
       "path": "src/application/shell/ui/workspace/shell/MainComponentWorkspaceDrag.cpp",
       "language": "cpp",
-      "sizeLines": 288,
+      "sizeLines": 299,
       "fileCategory": "code"
     },
     {
       "path": "src/application/shell/ui/workspace/shell/MainComponentWorkspaceLayout.cpp",
       "language": "cpp",
-      "sizeLines": 185,
+      "sizeLines": 194,
       "fileCategory": "code"
     },
     {
@@ -779,31 +1241,31 @@
     {
       "path": "src/application/shell/ui/workspace/shell/MainComponentWorkspaceMenu.cpp",
       "language": "cpp",
-      "sizeLines": 270,
+      "sizeLines": 185,
       "fileCategory": "code"
     },
     {
       "path": "src/application/shell/ui/workspace/shell/MainComponentWorkspacePresentation.cpp",
       "language": "cpp",
-      "sizeLines": 364,
+      "sizeLines": 396,
       "fileCategory": "code"
     },
     {
       "path": "src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp",
       "language": "cpp",
-      "sizeLines": 254,
+      "sizeLines": 153,
       "fileCategory": "code"
     },
     {
       "path": "src/application/testcontrol/ApprovedWindowStates.cpp",
       "language": "cpp",
-      "sizeLines": 193,
+      "sizeLines": 333,
       "fileCategory": "code"
     },
     {
       "path": "src/application/testcontrol/ApprovedWindowStates.h",
       "language": "c",
-      "sizeLines": 139,
+      "sizeLines": 180,
       "fileCategory": "code"
     },
     {
@@ -815,7 +1277,7 @@
     {
       "path": "src/application/testcontrol/TestControlChannel.h",
       "language": "c",
-      "sizeLines": 78,
+      "sizeLines": 90,
       "fileCategory": "code"
     },
     {
@@ -833,19 +1295,19 @@
     {
       "path": "src/application/testcontrol/TestControlCommand.cpp",
       "language": "cpp",
-      "sizeLines": 171,
+      "sizeLines": 179,
       "fileCategory": "code"
     },
     {
       "path": "src/application/testcontrol/TestControlCommand.h",
       "language": "c",
-      "sizeLines": 84,
+      "sizeLines": 89,
       "fileCategory": "code"
     },
     {
       "path": "src/application/testcontrol/TestControlSession.cpp",
       "language": "cpp",
-      "sizeLines": 156,
+      "sizeLines": 178,
       "fileCategory": "code"
     },
     {
@@ -857,7 +1319,19 @@
     {
       "path": "src/application/testcontrol/TestControlTarget.h",
       "language": "c",
-      "sizeLines": 47,
+      "sizeLines": 57,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/theme/AppLookAndFeel.cpp",
+      "language": "cpp",
+      "sizeLines": 89,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/theme/AppLookAndFeel.h",
+      "language": "c",
+      "sizeLines": 65,
       "fileCategory": "code"
     },
     {
@@ -879,87 +1353,165 @@
       "fileCategory": "code"
     },
     {
-      "path": "src/bootstrap/main.cpp",
-      "language": "cpp",
-      "sizeLines": 447,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/analysis/harmonics/HarmonicAnalyzer.cpp",
-      "language": "cpp",
-      "sizeLines": 90,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/analysis/harmonics/HarmonicAnalyzer.h",
+      "path": "src/application/tools/BuiltInToolCatalog.h",
       "language": "c",
-      "sizeLines": 37,
+      "sizeLines": 41,
       "fileCategory": "code"
     },
     {
-      "path": "src/features/analysis/harmonics/HarmonicAnalyzerComponent.cpp",
+      "path": "src/application/tools/BuiltInTools.cpp",
       "language": "cpp",
-      "sizeLines": 214,
+      "sizeLines": 35,
       "fileCategory": "code"
     },
     {
-      "path": "src/features/analysis/harmonics/HarmonicAnalyzerComponent.h",
+      "path": "src/application/tools/BuiltInTools.h",
       "language": "c",
-      "sizeLines": 53,
+      "sizeLines": 10,
       "fileCategory": "code"
     },
     {
-      "path": "src/features/analysis/spectrogram/SpectrogramComponent.cpp",
-      "language": "cpp",
-      "sizeLines": 276,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/analysis/spectrogram/SpectrogramComponent.h",
+      "path": "src/application/tools/CompactPresentation.h",
       "language": "c",
       "sizeLines": 78,
       "fileCategory": "code"
     },
     {
-      "path": "src/features/analysis/tuner/PitchDetector.cpp",
-      "language": "cpp",
-      "sizeLines": 107,
+      "path": "src/application/tools/ToolCatalog.h",
+      "language": "c",
+      "sizeLines": 162,
       "fileCategory": "code"
     },
     {
-      "path": "src/features/analysis/tuner/PitchDetector.h",
+      "path": "src/application/tools/ToolComponent.h",
       "language": "c",
-      "sizeLines": 34,
+      "sizeLines": 106,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/tools/ToolInstanceAllocator.h",
+      "language": "c",
+      "sizeLines": 51,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/tools/ToolInstanceId.h",
+      "language": "c",
+      "sizeLines": 103,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/tools/ToolRegistry.h",
+      "language": "c",
+      "sizeLines": 114,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/tools/ToolServices.h",
+      "language": "c",
+      "sizeLines": 45,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/application/tools/ToolSettingsPayload.h",
+      "language": "c",
+      "sizeLines": 21,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/bootstrap/main.cpp",
+      "language": "cpp",
+      "sizeLines": 435,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/harmonics/HarmonicAnalyzer.cpp",
+      "language": "cpp",
+      "sizeLines": 95,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/harmonics/HarmonicAnalyzer.h",
+      "language": "c",
+      "sizeLines": 39,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/harmonics/HarmonicAnalyzerComponent.cpp",
+      "language": "cpp",
+      "sizeLines": 334,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/harmonics/HarmonicAnalyzerComponent.h",
+      "language": "c",
+      "sizeLines": 61,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/spectrogram/SpectrogramComponent.cpp",
+      "language": "cpp",
+      "sizeLines": 432,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/spectrogram/SpectrogramComponent.h",
+      "language": "c",
+      "sizeLines": 92,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/tuner/PitchTracker.cpp",
+      "language": "cpp",
+      "sizeLines": 199,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/tuner/PitchTracker.h",
+      "language": "c",
+      "sizeLines": 105,
       "fileCategory": "code"
     },
     {
       "path": "src/features/analysis/tuner/TunerComponent.cpp",
       "language": "cpp",
-      "sizeLines": 520,
+      "sizeLines": 539,
       "fileCategory": "code"
     },
     {
       "path": "src/features/analysis/tuner/TunerComponent.h",
       "language": "c",
-      "sizeLines": 138,
+      "sizeLines": 196,
       "fileCategory": "code"
     },
     {
       "path": "src/features/analysis/tuner/TunerDrawing.cpp",
       "language": "cpp",
-      "sizeLines": 343,
+      "sizeLines": 830,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/tuner/TunerSettingsCodec.cpp",
+      "language": "cpp",
+      "sizeLines": 84,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/features/analysis/tuner/TunerSettingsCodec.h",
+      "language": "c",
+      "sizeLines": 23,
       "fileCategory": "code"
     },
     {
       "path": "src/features/feedback/FeedbackComponent.cpp",
       "language": "cpp",
-      "sizeLines": 712,
+      "sizeLines": 728,
       "fileCategory": "code"
     },
     {
       "path": "src/features/feedback/FeedbackComponent.h",
       "language": "c",
-      "sizeLines": 89,
+      "sizeLines": 98,
       "fileCategory": "code"
     },
     {
@@ -981,189 +1533,39 @@
       "fileCategory": "code"
     },
     {
-      "path": "src/features/performance/BenchmarkComparability.cpp",
+      "path": "src/features/score/TargetNoteComponent.cpp",
       "language": "cpp",
-      "sizeLines": 57,
+      "sizeLines": 199,
       "fileCategory": "code"
     },
     {
-      "path": "src/features/performance/BenchmarkComparability.h",
+      "path": "src/features/score/TargetNoteComponent.h",
       "language": "c",
-      "sizeLines": 24,
+      "sizeLines": 73,
       "fileCategory": "code"
     },
     {
-      "path": "src/features/performance/BenchmarkComparison.cpp",
+      "path": "src/features/score/TargetNoteSelection.cpp",
       "language": "cpp",
-      "sizeLines": 64,
+      "sizeLines": 151,
       "fileCategory": "code"
     },
     {
-      "path": "src/features/performance/BenchmarkComparison.h",
+      "path": "src/features/score/TargetNoteSelection.h",
       "language": "c",
-      "sizeLines": 27,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/BenchmarkInterfaces.h",
-      "language": "c",
-      "sizeLines": 94,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/BenchmarkRecordCodec.cpp",
-      "language": "cpp",
-      "sizeLines": 310,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/BenchmarkRecordCodec.h",
-      "language": "c",
-      "sizeLines": 31,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/BenchmarkRecordStore.cpp",
-      "language": "cpp",
-      "sizeLines": 119,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/BenchmarkRecordStore.h",
-      "language": "c",
-      "sizeLines": 42,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/BenchmarkRunner.cpp",
-      "language": "cpp",
-      "sizeLines": 158,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/BenchmarkRunner.h",
-      "language": "c",
-      "sizeLines": 66,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/BenchmarkTypes.h",
-      "language": "c",
-      "sizeLines": 120,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/HarmonicAnalysisActions.cpp",
-      "language": "cpp",
-      "sizeLines": 49,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/HarmonicAnalysisActions.h",
-      "language": "c",
-      "sizeLines": 28,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/InTreeOptimizationStrategy.cpp",
-      "language": "cpp",
-      "sizeLines": 63,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/InTreeOptimizationStrategy.h",
-      "language": "c",
-      "sizeLines": 46,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/NonRealTimeTelemetryCollector.cpp",
-      "language": "cpp",
-      "sizeLines": 82,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/NonRealTimeTelemetryCollector.h",
-      "language": "c",
-      "sizeLines": 45,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/PerformanceLabController.cpp",
-      "language": "cpp",
-      "sizeLines": 207,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/PerformanceLabController.h",
-      "language": "c",
-      "sizeLines": 80,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/PlatformProvenanceProvider.cpp",
-      "language": "cpp",
-      "sizeLines": 89,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/PlatformProvenanceProvider.h",
-      "language": "c",
-      "sizeLines": 47,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/RealTimeEventCapture.h",
-      "language": "c",
-      "sizeLines": 94,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/StrategyRegistry.cpp",
-      "language": "cpp",
-      "sizeLines": 74,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/StrategyRegistry.h",
-      "language": "c",
-      "sizeLines": 30,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/SustainedAudioAnalysisScenario.cpp",
-      "language": "cpp",
-      "sizeLines": 77,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/SustainedAudioAnalysisScenario.h",
-      "language": "c",
-      "sizeLines": 42,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/TrialAggregator.cpp",
-      "language": "cpp",
-      "sizeLines": 81,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/features/performance/TrialAggregator.h",
-      "language": "c",
-      "sizeLines": 27,
+      "sizeLines": 109,
       "fileCategory": "code"
     },
     {
       "path": "src/platform/audio/AudioInputService.cpp",
       "language": "cpp",
-      "sizeLines": 552,
+      "sizeLines": 832,
       "fileCategory": "code"
     },
     {
       "path": "src/platform/audio/AudioInputService.h",
       "language": "c",
-      "sizeLines": 127,
+      "sizeLines": 292,
       "fileCategory": "code"
     },
     {
@@ -1175,7 +1577,91 @@
     {
       "path": "src/platform/audio/AudioSampleFifo.h",
       "language": "c",
-      "sizeLines": 106,
+      "sizeLines": 113,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/audio/PitchDetector.cpp",
+      "language": "cpp",
+      "sizeLines": 113,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/audio/PitchDetector.h",
+      "language": "c",
+      "sizeLines": 36,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/audio/RealtimeSafety.h",
+      "language": "c",
+      "sizeLines": 37,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/audio/SharedPitchAnalysis.cpp",
+      "language": "cpp",
+      "sizeLines": 87,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/audio/SharedPitchAnalysis.h",
+      "language": "c",
+      "sizeLines": 62,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/audio/SyntheticTone.h",
+      "language": "c",
+      "sizeLines": 281,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/midi/MidiEvent.h",
+      "language": "c",
+      "sizeLines": 70,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/midi/MidiEventFifo.h",
+      "language": "c",
+      "sizeLines": 131,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/midi/MidiInputService.cpp",
+      "language": "cpp",
+      "sizeLines": 315,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/midi/MidiInputService.h",
+      "language": "c",
+      "sizeLines": 198,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/midi/MidiMessageTranslation.cpp",
+      "language": "cpp",
+      "sizeLines": 95,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/midi/MidiMessageTranslation.h",
+      "language": "c",
+      "sizeLines": 57,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/midi/MidiRecoveryPolicy.h",
+      "language": "c",
+      "sizeLines": 45,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/CurrentScore.h",
+      "language": "c",
+      "sizeLines": 64,
       "fileCategory": "code"
     },
     {
@@ -1205,7 +1691,13 @@
     {
       "path": "src/platform/score/Pitch.h",
       "language": "c",
-      "sizeLines": 115,
+      "sizeLines": 221,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/PitchNames.h",
+      "language": "c",
+      "sizeLines": 74,
       "fileCategory": "code"
     },
     {
@@ -1217,13 +1709,37 @@
     {
       "path": "src/platform/score/ScoreAttributes.h",
       "language": "c",
-      "sizeLines": 117,
+      "sizeLines": 129,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/ScoreBuilder.cpp",
+      "language": "cpp",
+      "sizeLines": 27,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/ScoreBuilder.h",
+      "language": "c",
+      "sizeLines": 62,
       "fileCategory": "code"
     },
     {
       "path": "src/platform/score/ScoreEvent.h",
       "language": "c",
-      "sizeLines": 119,
+      "sizeLines": 185,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/ScoreInvariants.cpp",
+      "language": "cpp",
+      "sizeLines": 600,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/ScoreInvariants.h",
+      "language": "c",
+      "sizeLines": 97,
       "fileCategory": "code"
     },
     {
@@ -1236,6 +1752,132 @@
       "path": "src/platform/score/TempoMap.h",
       "language": "c",
       "sizeLines": 89,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/MusicXmlDiagnosticSink.cpp",
+      "language": "cpp",
+      "sizeLines": 108,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/MusicXmlDiagnosticSink.h",
+      "language": "c",
+      "sizeLines": 79,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/MusicXmlImportResult.h",
+      "language": "c",
+      "sizeLines": 116,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/MusicXmlImporter.cpp",
+      "language": "cpp",
+      "sizeLines": 149,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/MusicXmlImporter.h",
+      "language": "c",
+      "sizeLines": 32,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/XmlDocumentAdapter.cpp",
+      "language": "cpp",
+      "sizeLines": 300,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/XmlDocumentAdapter.h",
+      "language": "c",
+      "sizeLines": 109,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/container/MusicXmlContainer.cpp",
+      "language": "cpp",
+      "sizeLines": 282,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/container/MusicXmlContainer.h",
+      "language": "c",
+      "sizeLines": 56,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/read/MusicXmlMeasureReader.cpp",
+      "language": "cpp",
+      "sizeLines": 784,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/read/MusicXmlMeasureReader.h",
+      "language": "c",
+      "sizeLines": 41,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/read/MusicXmlReadContext.cpp",
+      "language": "cpp",
+      "sizeLines": 28,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/read/MusicXmlReadContext.h",
+      "language": "c",
+      "sizeLines": 91,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/read/MusicXmlScoreReader.cpp",
+      "language": "cpp",
+      "sizeLines": 182,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/read/MusicXmlScoreReader.h",
+      "language": "c",
+      "sizeLines": 36,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/read/MusicXmlSubset.cpp",
+      "language": "cpp",
+      "sizeLines": 188,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/read/MusicXmlSubset.h",
+      "language": "c",
+      "sizeLines": 36,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/read/MusicXmlTieResolver.cpp",
+      "language": "cpp",
+      "sizeLines": 99,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/read/MusicXmlTieResolver.h",
+      "language": "c",
+      "sizeLines": 28,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/read/MusicXmlValueParsing.cpp",
+      "language": "cpp",
+      "sizeLines": 153,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/platform/score/musicxml/read/MusicXmlValueParsing.h",
+      "language": "c",
+      "sizeLines": 38,
       "fileCategory": "code"
     },
     {
@@ -1253,7 +1895,7 @@
     {
       "path": "src/services/feedback-intake/.env.example",
       "language": "config",
-      "sizeLines": 18,
+      "sizeLines": 26,
       "fileCategory": "config"
     },
     {
@@ -1265,7 +1907,7 @@
     {
       "path": "src/services/feedback-intake/README.md",
       "language": "markdown",
-      "sizeLines": 372,
+      "sizeLines": 386,
       "fileCategory": "docs"
     },
     {
@@ -1323,6 +1965,12 @@
       "fileCategory": "data"
     },
     {
+      "path": "src/services/feedback-intake/migrations/0008_notification_dispatch.sql",
+      "language": "sql",
+      "sizeLines": 44,
+      "fileCategory": "data"
+    },
+    {
       "path": "src/services/feedback-intake/package.json",
       "language": "json",
       "sizeLines": 28,
@@ -1349,7 +1997,7 @@
     {
       "path": "src/services/feedback-intake/src/admin.ts",
       "language": "typescript",
-      "sizeLines": 522,
+      "sizeLines": 577,
       "fileCategory": "code"
     },
     {
@@ -1373,7 +2021,7 @@
     {
       "path": "src/services/feedback-intake/src/docker-server.ts",
       "language": "typescript",
-      "sizeLines": 165,
+      "sizeLines": 174,
       "fileCategory": "code"
     },
     {
@@ -1385,13 +2033,13 @@
     {
       "path": "src/services/feedback-intake/src/index.ts",
       "language": "typescript",
-      "sizeLines": 539,
+      "sizeLines": 540,
       "fileCategory": "code"
     },
     {
       "path": "src/services/feedback-intake/src/notifications.ts",
       "language": "typescript",
-      "sizeLines": 225,
+      "sizeLines": 541,
       "fileCategory": "code"
     },
     {
@@ -1409,7 +2057,7 @@
     {
       "path": "src/services/feedback-intake/test/admin.test.ts",
       "language": "typescript",
-      "sizeLines": 427,
+      "sizeLines": 650,
       "fileCategory": "code"
     },
     {
@@ -1421,13 +2069,13 @@
     {
       "path": "src/services/feedback-intake/test/migrations.test.ts",
       "language": "typescript",
-      "sizeLines": 75,
+      "sizeLines": 116,
       "fileCategory": "code"
     },
     {
       "path": "src/services/feedback-intake/test/notifications.test.ts",
       "language": "typescript",
-      "sizeLines": 222,
+      "sizeLines": 567,
       "fileCategory": "code"
     },
     {
@@ -1443,9 +2091,9 @@
       "fileCategory": "config"
     },
     {
-      "path": "src/services/feedback-intake/wrangler.example.jsonc",
+      "path": "src/services/feedback-intake/wrangler.jsonc",
       "language": "jsonc",
-      "sizeLines": 49,
+      "sizeLines": 52,
       "fileCategory": "config"
     },
     {
@@ -1457,7 +2105,7 @@
     {
       "path": "src/services/vitest.config.mts",
       "language": "mts",
-      "sizeLines": 44,
+      "sizeLines": 51,
       "fileCategory": "code"
     },
     {
@@ -1469,13 +2117,13 @@
     {
       "path": "src/tests/application/configuration/SettingsPersistenceTests.cpp",
       "language": "cpp",
-      "sizeLines": 441,
+      "sizeLines": 521,
       "fileCategory": "code"
     },
     {
       "path": "src/tests/application/configuration/SettingsTransferCodecTests.cpp",
       "language": "cpp",
-      "sizeLines": 610,
+      "sizeLines": 608,
       "fileCategory": "code"
     },
     {
@@ -1485,9 +2133,21 @@
       "fileCategory": "code"
     },
     {
+      "path": "src/tests/application/shell/ui/score/ScoreImportStateTests.cpp",
+      "language": "cpp",
+      "sizeLines": 171,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/shell/ui/score/ScoreImportSummaryTests.cpp",
+      "language": "cpp",
+      "sizeLines": 572,
+      "fileCategory": "code"
+    },
+    {
       "path": "src/tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp",
       "language": "cpp",
-      "sizeLines": 62,
+      "sizeLines": 164,
       "fileCategory": "code"
     },
     {
@@ -1529,7 +2189,7 @@
     {
       "path": "src/tests/application/shell/ui/workspace/model/WorkspaceRecoveryTests.cpp",
       "language": "cpp",
-      "sizeLines": 87,
+      "sizeLines": 131,
       "fileCategory": "code"
     },
     {
@@ -1557,9 +2217,15 @@
       "fileCategory": "code"
     },
     {
+      "path": "src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp",
+      "language": "cpp",
+      "sizeLines": 214,
+      "fileCategory": "code"
+    },
+    {
       "path": "src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp",
       "language": "cpp",
-      "sizeLines": 361,
+      "sizeLines": 426,
       "fileCategory": "code"
     },
     {
@@ -1577,7 +2243,13 @@
     {
       "path": "src/tests/application/testcontrol/TestControlSessionTests.cpp",
       "language": "cpp",
-      "sizeLines": 362,
+      "sizeLines": 451,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/theme/AppLookAndFeelTests.cpp",
+      "language": "cpp",
+      "sizeLines": 81,
       "fileCategory": "code"
     },
     {
@@ -1587,15 +2259,45 @@
       "fileCategory": "code"
     },
     {
-      "path": "src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp",
+      "path": "src/tests/application/tools/CompactPresentationTests.cpp",
+      "language": "cpp",
+      "sizeLines": 69,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/tools/ToolCatalogTests.cpp",
       "language": "cpp",
       "sizeLines": 109,
       "fileCategory": "code"
     },
     {
-      "path": "src/tests/features/analysis/tuner/PitchDetectorTests.cpp",
+      "path": "src/tests/application/tools/ToolInstanceIdTests.cpp",
       "language": "cpp",
-      "sizeLines": 181,
+      "sizeLines": 60,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/tools/ToolLifecycleTests.cpp",
+      "language": "cpp",
+      "sizeLines": 199,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/application/tools/UnknownToolIntegrationTests.cpp",
+      "language": "cpp",
+      "sizeLines": 136,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp",
+      "language": "cpp",
+      "sizeLines": 134,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/features/analysis/tuner/PitchTrackerTests.cpp",
+      "language": "cpp",
+      "sizeLines": 289,
       "fileCategory": "code"
     },
     {
@@ -1611,93 +2313,15 @@
       "fileCategory": "code"
     },
     {
-      "path": "src/tests/features/performance/BenchmarkComparabilityTests.cpp",
+      "path": "src/tests/features/score/TargetNoteSelectionTests.cpp",
       "language": "cpp",
-      "sizeLines": 71,
+      "sizeLines": 552,
       "fileCategory": "code"
     },
     {
-      "path": "src/tests/features/performance/BenchmarkComparisonTests.cpp",
+      "path": "src/tests/platform/audio/AudioInputServiceTests.cpp",
       "language": "cpp",
-      "sizeLines": 68,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/tests/features/performance/BenchmarkInterfacesTests.cpp",
-      "language": "cpp",
-      "sizeLines": 93,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/tests/features/performance/BenchmarkRecordCodecTests.cpp",
-      "language": "cpp",
-      "sizeLines": 85,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/tests/features/performance/BenchmarkRecordStoreTests.cpp",
-      "language": "cpp",
-      "sizeLines": 108,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/tests/features/performance/BenchmarkRunnerTests.cpp",
-      "language": "cpp",
-      "sizeLines": 126,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/tests/features/performance/BenchmarkTypesTests.cpp",
-      "language": "cpp",
-      "sizeLines": 47,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/tests/features/performance/InTreeOptimizationStrategyTests.cpp",
-      "language": "cpp",
-      "sizeLines": 48,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/tests/features/performance/NonRealTimeTelemetryCollectorTests.cpp",
-      "language": "cpp",
-      "sizeLines": 64,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/tests/features/performance/PerformanceLabControllerTests.cpp",
-      "language": "cpp",
-      "sizeLines": 173,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/tests/features/performance/PlatformProvenanceProviderTests.cpp",
-      "language": "cpp",
-      "sizeLines": 67,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/tests/features/performance/RealTimeEventCaptureTests.cpp",
-      "language": "cpp",
-      "sizeLines": 91,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/tests/features/performance/StrategyRegistryTests.cpp",
-      "language": "cpp",
-      "sizeLines": 39,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/tests/features/performance/SustainedAudioAnalysisScenarioTests.cpp",
-      "language": "cpp",
-      "sizeLines": 71,
-      "fileCategory": "code"
-    },
-    {
-      "path": "src/tests/features/performance/TrialAggregatorTests.cpp",
-      "language": "cpp",
-      "sizeLines": 75,
+      "sizeLines": 603,
       "fileCategory": "code"
     },
     {
@@ -1709,13 +2333,61 @@
     {
       "path": "src/tests/platform/audio/AudioSampleFifoLoadTests.cpp",
       "language": "cpp",
-      "sizeLines": 459,
+      "sizeLines": 491,
       "fileCategory": "code"
     },
     {
       "path": "src/tests/platform/audio/AudioSampleFifoTests.cpp",
       "language": "cpp",
-      "sizeLines": 198,
+      "sizeLines": 256,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/audio/PitchDetectorTests.cpp",
+      "language": "cpp",
+      "sizeLines": 181,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/audio/SharedPitchAnalysisTests.cpp",
+      "language": "cpp",
+      "sizeLines": 135,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/audio/SyntheticToneTests.cpp",
+      "language": "cpp",
+      "sizeLines": 209,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/midi/MidiEventFifoTests.cpp",
+      "language": "cpp",
+      "sizeLines": 221,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/midi/MidiInputServiceTests.cpp",
+      "language": "cpp",
+      "sizeLines": 306,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/midi/MidiMessageTranslationTests.cpp",
+      "language": "cpp",
+      "sizeLines": 217,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/midi/MidiRecoveryPolicyTests.cpp",
+      "language": "cpp",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/score/CurrentScoreTests.cpp",
+      "language": "cpp",
+      "sizeLines": 92,
       "fileCategory": "code"
     },
     {
@@ -1725,15 +2397,27 @@
       "fileCategory": "code"
     },
     {
+      "path": "src/tests/platform/score/PitchNamesTests.cpp",
+      "language": "cpp",
+      "sizeLines": 84,
+      "fileCategory": "code"
+    },
+    {
       "path": "src/tests/platform/score/PitchTests.cpp",
       "language": "cpp",
       "sizeLines": 109,
       "fileCategory": "code"
     },
     {
+      "path": "src/tests/platform/score/ScoreInvariantsTests.cpp",
+      "language": "cpp",
+      "sizeLines": 573,
+      "fileCategory": "code"
+    },
+    {
       "path": "src/tests/platform/score/ScoreModelTests.cpp",
       "language": "cpp",
-      "sizeLines": 391,
+      "sizeLines": 394,
       "fileCategory": "code"
     },
     {
@@ -1743,15 +2427,327 @@
       "fileCategory": "code"
     },
     {
-      "path": "src/tests/support/BenchmarkFakes.h",
-      "language": "c",
-      "sizeLines": 153,
+      "path": "src/tests/platform/score/musicxml/MusicXmlCorpusTests.cpp",
+      "language": "cpp",
+      "sizeLines": 346,
       "fileCategory": "code"
     },
     {
-      "path": "src/tests/support/BenchmarkFakesTests.cpp",
+      "path": "src/tests/platform/score/musicxml/container/MusicXmlContainerTests.cpp",
       "language": "cpp",
-      "sizeLines": 45,
+      "sizeLines": 362,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/score/musicxml/read/MusicXmlAttributeTests.cpp",
+      "language": "cpp",
+      "sizeLines": 343,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/score/musicxml/read/MusicXmlDiagnosticsTests.cpp",
+      "language": "cpp",
+      "sizeLines": 311,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/score/musicxml/read/MusicXmlLyricTests.cpp",
+      "language": "cpp",
+      "sizeLines": 173,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/score/musicxml/read/MusicXmlNoteTests.cpp",
+      "language": "cpp",
+      "sizeLines": 536,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/score/musicxml/read/MusicXmlPercussionTests.cpp",
+      "language": "cpp",
+      "sizeLines": 213,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/score/musicxml/read/MusicXmlTimingTests.cpp",
+      "language": "cpp",
+      "sizeLines": 352,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/platform/score/musicxml/read/MusicXmlTranspositionTests.cpp",
+      "language": "cpp",
+      "sizeLines": 296,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/harness-scores/README.md",
+      "language": "markdown",
+      "sizeLines": 68,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "src/tests/resources/harness-scores/clean-import.musicxml",
+      "language": "musicxml",
+      "sizeLines": 161,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/harness-scores/diagnostic-import.musicxml",
+      "language": "musicxml",
+      "sizeLines": 104,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/README.md",
+      "language": "markdown",
+      "sizeLines": 136,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "src/tests/resources/musicxml/anonymous-accept-almighty-father.mxl",
+      "language": "mxl",
+      "sizeLines": 23,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/anonymous-ad-laudes.mxl",
+      "language": "mxl",
+      "sizeLines": 21,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/beach-1-o-mistress-mine.mxl",
+      "language": "mxl",
+      "sizeLines": 62,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/beethoven-3-vom-tode.mxl",
+      "language": "mxl",
+      "sizeLines": 17,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/berg-1-nacht.mxl",
+      "language": "mxl",
+      "sizeLines": 140,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/boulanger-5-au-pied-de-mon-lit.mxl",
+      "language": "mxl",
+      "sizeLines": 53,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/brahms-6-du-sprichst-dass-ich-mich-taeuschte.mxl",
+      "language": "mxl",
+      "sizeLines": 30,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/burgk-a-solis-ortus.mxl",
+      "language": "mxl",
+      "sizeLines": 348,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/debussy-2-il-pleure-dans-mon-coeur.mxl",
+      "language": "mxl",
+      "sizeLines": 64,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/expectations.txt",
+      "language": "txt",
+      "sizeLines": 55,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "src/tests/resources/musicxml/faure-4-a-clymene.mxl",
+      "language": "mxl",
+      "sizeLines": 51,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/french-abyssinia.mxl",
+      "language": "mxl",
+      "sizeLines": 33,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/gabrieli-ave-regina.mxl",
+      "language": "mxl",
+      "sizeLines": 87,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/hensel-2-vorwurf.mxl",
+      "language": "mxl",
+      "sizeLines": 25,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/holyoke-acworth-2v.mxl",
+      "language": "mxl",
+      "sizeLines": 34,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/holyoke-acworth.mxl",
+      "language": "mxl",
+      "sizeLines": 49,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/jenks-anthem-for-thanksgiving.mxl",
+      "language": "mxl",
+      "sizeLines": 102,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/joplin-please-say-you-will.mxl",
+      "language": "mxl",
+      "sizeLines": 47,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/king-abbeville.mxl",
+      "language": "mxl",
+      "sizeLines": 9,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/liliuokalani-aloha-oe.mxl",
+      "language": "mxl",
+      "sizeLines": 28,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/liszt-2-pace-non-trovo.mxl",
+      "language": "mxl",
+      "sizeLines": 124,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/mahler-4-die-zwei-blauen-augen-von-meinem-schatz.mxl",
+      "language": "mxl",
+      "sizeLines": 64,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/marenzio-ahime-tal-fu-d-amore-e-l-esca-e-l-amo.mxl",
+      "language": "mxl",
+      "sizeLines": 76,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/mel-asiso-sovra-un-sasso.mxl",
+      "language": "mxl",
+      "sizeLines": 163,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/mendelssohn-3-die-liebende-schreibt-mwv-k-66.mxl",
+      "language": "mxl",
+      "sizeLines": 55,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/mendelssohn-hark-the-herald-angels-sing.mxl",
+      "language": "mxl",
+      "sizeLines": 16,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/morley-a-la-strada-a-dio.mxl",
+      "language": "mxl",
+      "sizeLines": 102,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/prez-allegez-moy.mxl",
+      "language": "mxl",
+      "sizeLines": 43,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/satie-5-chanson-du-chat.mxl",
+      "language": "mxl",
+      "sizeLines": 49,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/schubert-12-am-meer.mxl",
+      "language": "mxl",
+      "sizeLines": 49,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/schumann-1-was-weinst-du-bluemlein.mxl",
+      "language": "mxl",
+      "sizeLines": 34,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/schumann-4-die-stille.mxl",
+      "language": "mxl",
+      "sizeLines": 30,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/strauss-2-caecilie.mxl",
+      "language": "mxl",
+      "sizeLines": 55,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/usper-la-battaglia-a-8.mxl",
+      "language": "mxl",
+      "sizeLines": 936,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/webern-5-ihr-tratet-zu-dem-herde.mxl",
+      "language": "mxl",
+      "sizeLines": 25,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/wolf-9-der-schreckenberger.mxl",
+      "language": "mxl",
+      "sizeLines": 44,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/resources/musicxml/wood-acton.mxl",
+      "language": "mxl",
+      "sizeLines": 22,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/support/AudioInputServiceCallbackAccess.h",
+      "language": "c",
+      "sizeLines": 49,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/support/MidiInputServiceCallbackAccess.h",
+      "language": "c",
+      "sizeLines": 39,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/support/MusicXmlFixtures.h",
+      "language": "c",
+      "sizeLines": 204,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tests/support/ScoreFixtures.h",
+      "language": "c",
+      "sizeLines": 34,
       "fileCategory": "code"
     },
     {
@@ -1779,6 +2775,12 @@
       "fileCategory": "code"
     },
     {
+      "path": "tools/cmake/Sources.cmake",
+      "language": "cmake",
+      "sizeLines": 282,
+      "fileCategory": "code"
+    },
+    {
       "path": "tools/cmake/triplets/arm64-linux-practice.cmake",
       "language": "cmake",
       "sizeLines": 9,
@@ -1789,6 +2791,18 @@
       "language": "cmake",
       "sizeLines": 9,
       "fileCategory": "code"
+    },
+    {
+      "path": "tools/packaging/fonts/OFL.txt",
+      "language": "txt",
+      "sizeLines": 93,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "tools/packaging/fonts/README.md",
+      "language": "markdown",
+      "sizeLines": 54,
+      "fileCategory": "docs"
     },
     {
       "path": "tools/packaging/icons/README.md",
@@ -1803,9 +2817,15 @@
       "fileCategory": "code"
     },
     {
+      "path": "tools/sanitizers/lsan.supp",
+      "language": "supp",
+      "sizeLines": 24,
+      "fileCategory": "code"
+    },
+    {
       "path": "tools/scripts/README.md",
       "language": "markdown",
-      "sizeLines": 40,
+      "sizeLines": 33,
       "fileCategory": "docs"
     },
     {
@@ -1817,8 +2837,26 @@
     {
       "path": "tools/scripts/build/check-linux-build-dependencies.sh",
       "language": "shell",
-      "sizeLines": 134,
+      "sizeLines": 189,
       "fileCategory": "script"
+    },
+    {
+      "path": "tools/scripts/build/install-clang-20.sh",
+      "language": "shell",
+      "sizeLines": 71,
+      "fileCategory": "script"
+    },
+    {
+      "path": "tools/scripts/ci/report_workflow_failure.py",
+      "language": "python",
+      "sizeLines": 190,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/ci/test_report_workflow_failure.py",
+      "language": "python",
+      "sizeLines": 171,
+      "fileCategory": "code"
     },
     {
       "path": "tools/scripts/design/generate_app_icons.py",
@@ -1835,13 +2873,13 @@
     {
       "path": "tools/scripts/feedback/configure-cloudflare-access.sh",
       "language": "shell",
-      "sizeLines": 247,
+      "sizeLines": 272,
       "fileCategory": "script"
     },
     {
       "path": "tools/scripts/feedback/migrate-feedback-database.sh",
       "language": "shell",
-      "sizeLines": 79,
+      "sizeLines": 85,
       "fileCategory": "script"
     },
     {
@@ -1899,117 +2937,15 @@
       "fileCategory": "code"
     },
     {
-      "path": "tools/scripts/manual_gui/__init__.py",
-      "language": "python",
-      "sizeLines": 0,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/manual_gui/__main__.py",
-      "language": "python",
-      "sizeLines": 260,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/manual_gui/app.py",
-      "language": "python",
-      "sizeLines": 189,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/manual_gui/driver.py",
-      "language": "python",
-      "sizeLines": 193,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/manual_gui/record.py",
-      "language": "python",
-      "sizeLines": 197,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/manual_gui/session.py",
-      "language": "python",
-      "sizeLines": 264,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/manual_gui/surfaces.py",
-      "language": "python",
-      "sizeLines": 332,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/manual_gui/test_manual_gui.py",
-      "language": "python",
-      "sizeLines": 599,
+      "path": "tools/scripts/pages/dashboard-github-source.patch",
+      "language": "patch",
+      "sizeLines": 82,
       "fileCategory": "code"
     },
     {
       "path": "tools/scripts/pages/verify-graph.mjs",
       "language": "javascript",
       "sizeLines": 260,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/practice_takes_roadmap/__init__.py",
-      "language": "python",
-      "sizeLines": 3,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/practice_takes_roadmap/__main__.py",
-      "language": "python",
-      "sizeLines": 3,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/practice_takes_roadmap/config.py",
-      "language": "python",
-      "sizeLines": 71,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/practice_takes_roadmap/discovery.py",
-      "language": "python",
-      "sizeLines": 74,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/practice_takes_roadmap/github.py",
-      "language": "python",
-      "sizeLines": 444,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/practice_takes_roadmap/main.py",
-      "language": "python",
-      "sizeLines": 789,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/practice_takes_roadmap/models.py",
-      "language": "python",
-      "sizeLines": 45,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/practice_takes_roadmap/planning.py",
-      "language": "python",
-      "sizeLines": 285,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/practice_takes_roadmap/progress.py",
-      "language": "python",
-      "sizeLines": 97,
-      "fileCategory": "code"
-    },
-    {
-      "path": "tools/scripts/practice_takes_roadmap/state.py",
-      "language": "python",
-      "sizeLines": 235,
       "fileCategory": "code"
     },
     {
@@ -2021,7 +2957,7 @@
     {
       "path": "tools/scripts/quality/coverage_sources.py",
       "language": "python",
-      "sizeLines": 166,
+      "sizeLines": 172,
       "fileCategory": "code"
     },
     {
@@ -2031,10 +2967,10 @@
       "fileCategory": "code"
     },
     {
-      "path": "tools/scripts/quality/run-performance-lab.sh",
-      "language": "shell",
-      "sizeLines": 20,
-      "fileCategory": "script"
+      "path": "tools/scripts/quality/make_score_import_fixtures.py",
+      "language": "python",
+      "sizeLines": 456,
+      "fileCategory": "code"
     },
     {
       "path": "tools/scripts/quality/run_clang_format.py",
@@ -2051,7 +2987,7 @@
     {
       "path": "tools/scripts/quality/run_coverage.py",
       "language": "python",
-      "sizeLines": 175,
+      "sizeLines": 177,
       "fileCategory": "code"
     },
     {
@@ -2075,7 +3011,13 @@
     {
       "path": "tools/scripts/quality/test_coverage_sources.py",
       "language": "python",
-      "sizeLines": 173,
+      "sizeLines": 176,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/test_make_score_import_fixtures.py",
+      "language": "python",
+      "sizeLines": 124,
       "fileCategory": "code"
     },
     {
@@ -2087,19 +3029,25 @@
     {
       "path": "tools/scripts/quality/ui-validation/run-ui-golden.zsh",
       "language": "shell",
-      "sizeLines": 379,
+      "sizeLines": 382,
       "fileCategory": "script"
     },
     {
       "path": "tools/scripts/quality/ui-validation/window_control.cpp",
       "language": "cpp",
-      "sizeLines": 202,
+      "sizeLines": 127,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/quality/ui-validation/x_window_lookup.h",
+      "language": "c",
+      "sizeLines": 228,
       "fileCategory": "code"
     },
     {
       "path": "tools/scripts/quality/ui-validation/xwindow_capture.cpp",
       "language": "cpp",
-      "sizeLines": 224,
+      "sizeLines": 216,
       "fileCategory": "code"
     },
     {
@@ -2127,33 +3075,279 @@
       "fileCategory": "code"
     },
     {
-      "path": "tools/scripts/roadmap/setup.sh",
-      "language": "shell",
-      "sizeLines": 7,
-      "fileCategory": "script"
-    },
-    {
       "path": "tools/scripts/run_tests.py",
       "language": "python",
       "sizeLines": 64,
       "fileCategory": "code"
     },
     {
+      "path": "tools/scripts/secrets/provision-vault.sh",
+      "language": "shell",
+      "sizeLines": 614,
+      "fileCategory": "script"
+    },
+    {
       "path": "tools/scripts/secrets/secrets_manager.py",
       "language": "python",
-      "sizeLines": 875,
+      "sizeLines": 751,
       "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/secrets/sync-secrets.sh",
+      "language": "shell",
+      "sizeLines": 97,
+      "fileCategory": "script"
     },
     {
       "path": "tools/scripts/secrets/test_secrets_manager.py",
       "language": "python",
-      "sizeLines": 196,
+      "sizeLines": 306,
       "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/__init__.py",
+      "language": "python",
+      "sizeLines": 10,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/__main__.py",
+      "language": "python",
+      "sizeLines": 978,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/attend.py",
+      "language": "python",
+      "sizeLines": 147,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/capture.py",
+      "language": "python",
+      "sizeLines": 1022,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/display.py",
+      "language": "python",
+      "sizeLines": 250,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/driver.py",
+      "language": "python",
+      "sizeLines": 374,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/export.py",
+      "language": "python",
+      "sizeLines": 176,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/fleet.py",
+      "language": "python",
+      "sizeLines": 134,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/freshness.py",
+      "language": "python",
+      "sizeLines": 129,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/history.py",
+      "language": "python",
+      "sizeLines": 275,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/images.py",
+      "language": "python",
+      "sizeLines": 117,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/ingest.py",
+      "language": "python",
+      "sizeLines": 171,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/launcher.py",
+      "language": "python",
+      "sizeLines": 145,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/machine.py",
+      "language": "python",
+      "sizeLines": 198,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/record.py",
+      "language": "python",
+      "sizeLines": 271,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/restart.py",
+      "language": "python",
+      "sizeLines": 67,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/review.py",
+      "language": "python",
+      "sizeLines": 487,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/runner.py",
+      "language": "python",
+      "sizeLines": 1310,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/server.py",
+      "language": "python",
+      "sizeLines": 563,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/store.py",
+      "language": "python",
+      "sizeLines": 964,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/suites.py",
+      "language": "python",
+      "sizeLines": 361,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/surfaces.py",
+      "language": "python",
+      "sizeLines": 887,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_attend.py",
+      "language": "python",
+      "sizeLines": 438,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_capture.py",
+      "language": "python",
+      "sizeLines": 1569,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_core.py",
+      "language": "python",
+      "sizeLines": 486,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_display.py",
+      "language": "python",
+      "sizeLines": 279,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_driver.py",
+      "language": "python",
+      "sizeLines": 263,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_fleet.py",
+      "language": "python",
+      "sizeLines": 248,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_freshness.py",
+      "language": "python",
+      "sizeLines": 158,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_history.py",
+      "language": "python",
+      "sizeLines": 299,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_launcher.py",
+      "language": "python",
+      "sizeLines": 159,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_main.py",
+      "language": "python",
+      "sizeLines": 120,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_restart.py",
+      "language": "python",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_review.py",
+      "language": "python",
+      "sizeLines": 824,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_runner.py",
+      "language": "python",
+      "sizeLines": 1124,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_store.py",
+      "language": "python",
+      "sizeLines": 509,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/test_web.py",
+      "language": "python",
+      "sizeLines": 289,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/web/app.js",
+      "language": "javascript",
+      "sizeLines": 1840,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tools/scripts/testing_suite/web/index.html",
+      "language": "html",
+      "sizeLines": 205,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "tools/scripts/testing_suite/web/style.css",
+      "language": "css",
+      "sizeLines": 647,
+      "fileCategory": "markup"
     },
     {
       "path": "tools/secret-patterns",
       "language": "unknown",
-      "sizeLines": 36,
+      "sizeLines": 33,
       "fileCategory": "code"
     },
     {
@@ -2163,9 +3357,9 @@
       "fileCategory": "config"
     }
   ],
-  "totalFiles": 355,
-  "filteredByIgnore": 105,
-  "estimatedComplexity": "large",
+  "totalFiles": 554,
+  "filteredByIgnore": 183,
+  "estimatedComplexity": "very-large",
   "importMap": {
     ".clang-format": [],
     ".clang-tidy": [],
@@ -2182,30 +3376,38 @@
     ".github/workflows/pages.yml": [],
     ".github/workflows/python-check.yml": [],
     ".github/workflows/release.yml": [],
+    ".github/workflows/sanitizers-scheduled.yml": [],
+    ".github/workflows/sanitizers.yml": [],
     ".github/workflows/secret-scan.yml": [],
     ".github/workflows/services-check.yml": [],
     ".github/workflows/smoke.yml": [],
     ".pre-commit-config.yaml": [],
     ".sops.yaml": [],
-    ".sops.yaml.example": [],
     "CLAUDE.md": [],
     "CMakeLists.txt": [],
     "README.md": [],
     "docs/contracts/feedback/v1.schema.json": [],
     "docs/development/README.md": [],
     "docs/development/agents/AGENT_GUIDE.md": [],
+    "docs/development/agents/domain.md": [],
+    "docs/development/agents/issue-tracker.md": [],
+    "docs/development/agents/triage-labels.md": [],
     "docs/development/architecture/ARCHITECTURE.md": [],
     "docs/development/architecture/ARCHITECTURE_QA.md": [],
+    "docs/development/architecture/CONTEXT.md": [],
+    "docs/development/architecture/adding-a-tool.md": [],
+    "docs/development/architecture/score-model-findings.md": [],
+    "docs/development/formats/musicxml-subset.md": [],
+    "docs/development/operations/EMAIL_DISPATCH.md": [],
     "docs/development/operations/FEEDBACK.md": [],
     "docs/development/operations/MERGING.md": [],
     "docs/development/operations/RELEASING.md": [],
     "docs/development/operations/SECRETS.md": [],
     "docs/development/performance/audio-thread-safety.md": [],
-    "docs/development/performance/hardware-acceptance.md": [],
     "docs/development/quality/CODE_STYLE.md": [],
-    "docs/development/quality/MANUAL_GUI_VERIFICATION.md": [],
     "docs/development/quality/QA_STRATEGY.md": [],
     "docs/development/quality/QUALITY.md": [],
+    "docs/development/quality/TESTING_SUITE.md": [],
     "docs/development/quality/TEST_LAYOUT.md": [],
     "docs/development/quality/manual-runs/20260801-122601-quick.json": [],
     "docs/development/quality/manual-runs/20260801-122601-quick.md": [],
@@ -2219,32 +3421,96 @@
     "docs/development/quality/manual-runs/20260801-125606-full.md": [],
     "docs/development/quality/manual-runs/20260801-130349-full.json": [],
     "docs/development/quality/manual-runs/20260801-130349-full.md": [],
+    "docs/development/quality/run-history/20260803-010103-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260803-010306-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260803-010316-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260803-010324-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260803-011411-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260803-012725-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260803-014133-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-112044-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-112140-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-112333-d29d3047.json": [],
+    "docs/development/quality/run-history/20260811-112738-d29d3047.json": [],
+    "docs/development/quality/run-history/20260811-112821-d29d3047.json": [],
+    "docs/development/quality/run-history/20260811-122411-d29d3047.json": [],
+    "docs/development/quality/run-history/20260811-122506-d29d3047.json": [],
+    "docs/development/quality/run-history/20260811-123043-d29d3047.json": [],
+    "docs/development/quality/run-history/20260811-123253-d29d3047.json": [],
+    "docs/development/quality/run-history/20260811-123655-d29d3047.json": [],
+    "docs/development/quality/run-history/20260811-123904-d29d3047.json": [],
+    "docs/development/quality/run-history/20260811-124319-d29d3047.json": [],
+    "docs/development/quality/run-history/20260811-124527-d29d3047.json": [],
+    "docs/development/quality/run-history/20260811-125059-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-125840-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-131339-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-131552-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-131642-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-140437-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-141318-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-141342-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-141618-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-141805-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-194842-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-204304-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-204401-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-204452-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-204553-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-204640-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-215712-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-215745-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-215807-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-215836-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-220021-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-220329-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-222857-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-223130-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-224011-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-225307-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-230158-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-230526-dd578dc4.json": [],
+    "docs/development/quality/run-history/20260811-230534-dd578dc4.json": [],
+    "docs/development/quality/run-history/README.md": [],
+    "docs/development/quality/score-import-manual-verification.md": [],
     "docs/settings-defaults.md": [],
-    "openspec/changes/musicxml-import/.openspec.yaml": [],
-    "openspec/changes/musicxml-import/design.md": [],
-    "openspec/changes/musicxml-import/proposal.md": [],
-    "openspec/changes/musicxml-import/specs/musicxml-import/spec.md": [],
-    "openspec/changes/musicxml-import/specs/normalized-score-model/spec.md": [],
-    "openspec/changes/musicxml-import/tasks.md": [],
-    "openspec/changes/real-world-performance-benchmarking/.openspec.yaml": [],
-    "openspec/changes/real-world-performance-benchmarking/design.md": [],
-    "openspec/changes/real-world-performance-benchmarking/proposal.md": [],
-    "openspec/changes/real-world-performance-benchmarking/specs/hardware-performance-lab/spec.md": [],
-    "openspec/changes/real-world-performance-benchmarking/tasks.md": [],
+    "openspec/changes/midi-keyboard-capture/.openspec.yaml": [],
+    "openspec/changes/midi-keyboard-capture/design.md": [],
+    "openspec/changes/midi-keyboard-capture/proposal.md": [],
+    "openspec/changes/midi-keyboard-capture/specs/midi-keyboard-capture/spec.md": [],
+    "openspec/changes/midi-keyboard-capture/tasks.md": [],
+    "openspec/changes/score-target-note-tool/.openspec.yaml": [],
+    "openspec/changes/score-target-note-tool/design.md": [],
+    "openspec/changes/score-target-note-tool/proposal.md": [],
+    "openspec/changes/score-target-note-tool/specs/score-target-note-tool/spec.md": [],
+    "openspec/changes/score-target-note-tool/tasks.md": [],
     "openspec/config.yaml": [],
+    "openspec/specs/audio-device-recovery/spec.md": [],
     "openspec/specs/benchmark-ci-reporting/spec.md": [],
     "openspec/specs/codeql-security-scanning/spec.md": [],
     "openspec/specs/cpp-pr-quality-gate/spec.md": [],
     "openspec/specs/end-to-end-smoke-tests/spec.md": [],
+    "openspec/specs/feedback-email-dispatch/spec.md": [],
     "openspec/specs/knowledge-graph-site/spec.md": [],
     "openspec/specs/load-and-soak-tests/spec.md": [],
     "openspec/specs/manual-gui-verification/spec.md": [],
+    "openspec/specs/musicxml-import/spec.md": [],
+    "openspec/specs/normalized-score-model/spec.md": [],
     "openspec/specs/python-script-test-gate/spec.md": [],
+    "openspec/specs/runtime-safety-verification/spec.md": [],
+    "openspec/specs/score-import-command/spec.md": [],
+    "openspec/specs/secret-material-handling/spec.md": [],
     "openspec/specs/settings-transfer/spec.md": [],
+    "openspec/specs/shared-pitch-analysis/spec.md": [],
+    "openspec/specs/synthetic-input/spec.md": [],
     "openspec/specs/test-coverage-reporting/spec.md": [],
+    "openspec/specs/test-suite-hub/spec.md": [],
     "openspec/specs/test-suite-layout/spec.md": [],
+    "openspec/specs/tool-registry/spec.md": [],
+    "openspec/specs/ui-capture-and-review/spec.md": [],
+    "openspec/specs/verification-run-store/spec.md": [],
     "openspec/specs/worker-database-fidelity/spec.md": [],
     "openspec/specs/workspace-layout-restoration/spec.md": [],
+    "openspec/specs/workspace-pane-sizing/spec.md": [],
     "openspec/specs/workspace-tab-drag/spec.md": [],
     "pyproject.toml": [],
     "src/application/configuration/AppDefaults.h": [
@@ -2258,7 +3524,8 @@
     ],
     "src/application/configuration/SettingsPersistence.cpp": [
       "src/application/configuration/SettingsPersistence.h",
-      "src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.h"
+      "src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.h",
+      "src/features/analysis/tuner/TunerSettingsCodec.h"
     ],
     "src/application/configuration/SettingsPersistence.h": [
       "src/application/configuration/AppDefaults.h",
@@ -2276,19 +3543,27 @@
     "src/application/shell/MainComponent.h": [
       "src/application/configuration/AppDefaults.h",
       "src/application/configuration/SettingsPersistence.h",
+      "src/application/shell/ui/score/ScoreImportJob.h",
+      "src/application/shell/ui/score/ScoreImportState.h",
       "src/application/shell/ui/workspace/model/NamedWorkspaceService.h",
       "src/application/shell/ui/workspace/model/WorkspaceDocuments.h",
       "src/application/shell/ui/workspace/model/WorkspaceLayoutState.h",
       "src/application/shell/ui/workspace/model/WorkspaceSessionLifecycle.h",
       "src/application/shell/ui/workspace/model/WorkspaceToolState.h",
+      "src/application/theme/AppLookAndFeel.h",
       "src/application/theme/Theme.h",
-      "src/platform/audio/AudioInputService.h"
+      "src/application/tools/BuiltInTools.h",
+      "src/application/tools/ToolInstanceId.h",
+      "src/platform/audio/AudioInputService.h",
+      "src/platform/audio/SharedPitchAnalysis.h",
+      "src/platform/midi/MidiInputService.h"
     ],
     "src/application/shell/MainComponentLifecycle.cpp": [
       "src/application/shell/MainComponent.h",
       "src/application/shell/ui/feedback/FeedbackWindow.h",
       "src/application/shell/ui/main_window/MainTitleBar.h",
       "src/application/shell/ui/main_window/MicrophoneWarning.h",
+      "src/application/shell/ui/score/ScoreImportWindow.h",
       "src/application/shell/ui/settings/SettingsWindow.h",
       "src/application/shell/ui/workspace/components/DockedToolPanel.h",
       "src/application/shell/ui/workspace/components/ToolWindow.h"
@@ -2298,6 +3573,7 @@
       "src/application/shell/MainComponent.h",
       "src/application/shell/ui/feedback/FeedbackWindow.h",
       "src/application/shell/ui/main_window/MicrophoneWarning.h",
+      "src/application/shell/ui/score/ScoreImportWindow.h",
       "src/application/shell/ui/settings/SettingsWindow.h"
     ],
     "src/application/shell/state/audio/MainComponentAudioState.cpp": [
@@ -2320,7 +3596,35 @@
     "src/application/shell/ui/main_window/MicrophoneWarning.h": [
       "src/application/shell/MainComponent.h"
     ],
-    "src/application/shell/ui/performance/PerformanceLabWindow.h": [],
+    "src/application/shell/ui/score/MainComponentScore.cpp": [
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/ui/score/ScoreImportWindow.h"
+    ],
+    "src/application/shell/ui/score/ScoreImportJob.cpp": [
+      "src/application/shell/ui/score/ScoreImportJob.h",
+      "src/platform/score/musicxml/MusicXmlImporter.h"
+    ],
+    "src/application/shell/ui/score/ScoreImportJob.h": [
+      "src/platform/score/musicxml/MusicXmlImportResult.h"
+    ],
+    "src/application/shell/ui/score/ScoreImportState.h": [
+      "src/application/shell/ui/score/ScoreImportSummary.h",
+      "src/platform/score/CurrentScore.h",
+      "src/platform/score/Score.h",
+      "src/platform/score/musicxml/MusicXmlImportResult.h"
+    ],
+    "src/application/shell/ui/score/ScoreImportSummary.cpp": [
+      "src/application/shell/ui/score/ScoreImportSummary.h",
+      "src/platform/score/Score.h"
+    ],
+    "src/application/shell/ui/score/ScoreImportSummary.h": [
+      "src/platform/score/Diagnostic.h",
+      "src/platform/score/musicxml/MusicXmlImportResult.h"
+    ],
+    "src/application/shell/ui/score/ScoreImportWindow.h": [
+      "src/application/shell/MainComponent.h",
+      "src/application/shell/ui/score/ScoreImportSummary.h"
+    ],
     "src/application/shell/ui/settings/MainComponentSettings.cpp": [
       "src/application/configuration/SettingsImportPersistence.h",
       "src/application/configuration/SettingsImportTransaction.h",
@@ -2329,19 +3633,21 @@
       "src/application/shell/MainComponent.h",
       "src/application/shell/ui/settings/SettingsWindow.h",
       "src/application/shell/ui/workspace/components/ToolWindow.h",
-      "src/features/analysis/harmonics/HarmonicAnalyzerComponent.h",
-      "src/features/analysis/spectrogram/SpectrogramComponent.h",
-      "src/features/analysis/tuner/TunerComponent.h"
+      "src/features/analysis/tuner/TunerComponent.h",
+      "src/features/analysis/tuner/TunerSettingsCodec.h"
     ],
     "src/application/shell/ui/settings/SettingsWindow.h": [
       "src/application/shell/MainComponent.h"
     ],
     "src/application/shell/ui/workspace/components/DockedToolPanel.h": [
       "src/application/shell/MainComponent.h",
-      "src/application/shell/ui/workspace/components/ToolOptionsButton.h"
+      "src/application/shell/ui/workspace/components/ToolOptionsButton.h",
+      "src/application/tools/CompactPresentation.h"
     ],
     "src/application/shell/ui/workspace/components/ToolDragHandle.h": [],
-    "src/application/shell/ui/workspace/components/ToolOptionsButton.h": [],
+    "src/application/shell/ui/workspace/components/ToolOptionsButton.h": [
+      "src/application/tools/ToolComponent.h"
+    ],
     "src/application/shell/ui/workspace/components/ToolWindow.h": [
       "src/application/shell/MainComponent.h",
       "src/application/shell/ui/workspace/components/ToolDragHandle.h",
@@ -2366,9 +3672,11 @@
     ],
     "src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.h": [
       "src/application/shell/ui/workspace/model/WorkspaceDocuments.h",
-      "src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h"
+      "src/application/tools/BuiltInToolCatalog.h"
     ],
-    "src/application/shell/ui/workspace/model/WorkspaceDocuments.h": [],
+    "src/application/shell/ui/workspace/model/WorkspaceDocuments.h": [
+      "src/application/tools/ToolSettingsPayload.h"
+    ],
     "src/application/shell/ui/workspace/model/WorkspaceLayoutState.h": [],
     "src/application/shell/ui/workspace/model/WorkspaceMenuModel.h": [
       "src/application/shell/ui/workspace/model/NamedWorkspaceService.h"
@@ -2376,25 +3684,24 @@
     "src/application/shell/ui/workspace/model/WorkspaceNormalizer.h": [
       "src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h",
       "src/application/shell/ui/workspace/model/WorkspaceDocuments.h",
-      "src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h"
+      "src/application/tools/BuiltInToolCatalog.h"
     ],
     "src/application/shell/ui/workspace/model/WorkspaceSessionLifecycle.h": [
       "src/application/shell/ui/workspace/model/WorkspaceBuiltIns.h",
       "src/application/shell/ui/workspace/model/WorkspaceNormalizer.h",
-      "src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h"
+      "src/application/tools/BuiltInToolCatalog.h"
     ],
     "src/application/shell/ui/workspace/model/WorkspaceSnapshotApply.h": [
       "src/application/shell/ui/workspace/model/WorkspaceDocuments.h",
       "src/application/shell/ui/workspace/model/WorkspaceLayoutState.h",
-      "src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h",
-      "src/application/shell/ui/workspace/model/WorkspaceToolState.h"
+      "src/application/shell/ui/workspace/model/WorkspaceToolState.h",
+      "src/application/tools/BuiltInToolCatalog.h"
     ],
     "src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h": [
       "src/application/shell/ui/workspace/model/WorkspaceDocuments.h",
       "src/application/shell/ui/workspace/model/WorkspaceLayoutState.h",
       "src/application/shell/ui/workspace/model/WorkspaceToolState.h"
     ],
-    "src/application/shell/ui/workspace/model/WorkspaceToolRegistry.h": [],
     "src/application/shell/ui/workspace/model/WorkspaceToolState.h": [],
     "src/application/shell/ui/workspace/shell/MainComponentWorkspaceDrag.cpp": [
       "src/application/shell/MainComponent.h",
@@ -2418,16 +3725,15 @@
       "src/application/shell/MainComponent.h",
       "src/application/shell/ui/workspace/components/DockedToolPanel.h",
       "src/application/shell/ui/workspace/components/ToolWindow.h",
-      "src/features/analysis/harmonics/HarmonicAnalyzerComponent.h",
-      "src/features/analysis/spectrogram/SpectrogramComponent.h",
-      "src/features/analysis/tuner/TunerComponent.h"
+      "src/application/tools/ToolInstanceAllocator.h",
+      "src/application/tools/ToolServices.h"
     ],
     "src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp": [
       "src/application/shell/MainComponent.h",
       "src/application/shell/ui/workspace/components/ToolWindow.h",
       "src/application/shell/ui/workspace/model/WorkspaceSnapshotApply.h",
       "src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h",
-      "src/features/analysis/tuner/TunerComponent.h"
+      "src/application/tools/ToolServices.h"
     ],
     "src/application/testcontrol/ApprovedWindowStates.cpp": [
       "src/application/testcontrol/ApprovedWindowStates.h"
@@ -2458,6 +3764,10 @@
     "src/application/testcontrol/TestControlTarget.h": [
       "src/application/testcontrol/ApprovedWindowStates.h"
     ],
+    "src/application/theme/AppLookAndFeel.cpp": [
+      "src/application/theme/AppLookAndFeel.h"
+    ],
+    "src/application/theme/AppLookAndFeel.h": [],
     "src/application/theme/Theme.cpp": [
       "src/application/theme/Theme.h"
     ],
@@ -2465,6 +3775,42 @@
       "src/application/theme/ThemeType.h"
     ],
     "src/application/theme/ThemeType.h": [],
+    "src/application/tools/BuiltInToolCatalog.h": [
+      "src/application/tools/ToolCatalog.h"
+    ],
+    "src/application/tools/BuiltInTools.cpp": [
+      "src/application/tools/BuiltInToolCatalog.h",
+      "src/application/tools/BuiltInTools.h",
+      "src/features/analysis/harmonics/HarmonicAnalyzerComponent.h",
+      "src/features/analysis/spectrogram/SpectrogramComponent.h",
+      "src/features/analysis/tuner/TunerComponent.h",
+      "src/features/score/TargetNoteComponent.h"
+    ],
+    "src/application/tools/BuiltInTools.h": [
+      "src/application/tools/ToolRegistry.h"
+    ],
+    "src/application/tools/CompactPresentation.h": [],
+    "src/application/tools/ToolCatalog.h": [
+      "src/application/tools/ToolInstanceId.h"
+    ],
+    "src/application/tools/ToolComponent.h": [
+      "src/application/theme/ThemeType.h",
+      "src/application/tools/ToolSettingsPayload.h"
+    ],
+    "src/application/tools/ToolInstanceAllocator.h": [
+      "src/application/tools/ToolCatalog.h",
+      "src/application/tools/ToolInstanceId.h"
+    ],
+    "src/application/tools/ToolInstanceId.h": [],
+    "src/application/tools/ToolRegistry.h": [
+      "src/application/tools/ToolCatalog.h",
+      "src/application/tools/ToolComponent.h",
+      "src/application/tools/ToolServices.h"
+    ],
+    "src/application/tools/ToolServices.h": [
+      "src/application/theme/ThemeType.h"
+    ],
+    "src/application/tools/ToolSettingsPayload.h": [],
     "src/bootstrap/main.cpp": [
       "src/application/shell/MainComponent.h",
       "src/application/shell/WorkspaceStartupSequence.h",
@@ -2475,38 +3821,55 @@
       "src/features/analysis/harmonics/HarmonicAnalyzer.h"
     ],
     "src/features/analysis/harmonics/HarmonicAnalyzer.h": [
-      "src/features/analysis/tuner/PitchDetector.h"
+      "src/platform/audio/PitchDetector.h"
     ],
     "src/features/analysis/harmonics/HarmonicAnalyzerComponent.cpp": [
       "src/features/analysis/harmonics/HarmonicAnalyzerComponent.h"
     ],
     "src/features/analysis/harmonics/HarmonicAnalyzerComponent.h": [
       "src/application/theme/Theme.h",
+      "src/application/tools/CompactPresentation.h",
+      "src/application/tools/ToolComponent.h",
       "src/features/analysis/harmonics/HarmonicAnalyzer.h",
-      "src/platform/audio/AudioInputService.h"
+      "src/platform/audio/AudioInputService.h",
+      "src/platform/audio/SharedPitchAnalysis.h"
     ],
     "src/features/analysis/spectrogram/SpectrogramComponent.cpp": [
       "src/features/analysis/spectrogram/SpectrogramComponent.h"
     ],
     "src/features/analysis/spectrogram/SpectrogramComponent.h": [
       "src/application/theme/Theme.h",
+      "src/application/tools/CompactPresentation.h",
+      "src/application/tools/ToolComponent.h",
       "src/platform/audio/AudioInputService.h"
     ],
-    "src/features/analysis/tuner/PitchDetector.cpp": [
-      "src/features/analysis/tuner/PitchDetector.h"
+    "src/features/analysis/tuner/PitchTracker.cpp": [
+      "src/features/analysis/tuner/PitchTracker.h"
     ],
-    "src/features/analysis/tuner/PitchDetector.h": [],
+    "src/features/analysis/tuner/PitchTracker.h": [],
     "src/features/analysis/tuner/TunerComponent.cpp": [
-      "src/features/analysis/tuner/TunerComponent.h"
+      "src/application/theme/AppLookAndFeel.h",
+      "src/features/analysis/tuner/TunerComponent.h",
+      "src/features/analysis/tuner/TunerSettingsCodec.h"
     ],
     "src/features/analysis/tuner/TunerComponent.h": [
       "src/application/configuration/AppDefaults.h",
       "src/application/theme/Theme.h",
-      "src/features/analysis/tuner/PitchDetector.h",
-      "src/platform/audio/AudioInputService.h"
+      "src/application/tools/CompactPresentation.h",
+      "src/application/tools/ToolComponent.h",
+      "src/features/analysis/tuner/PitchTracker.h",
+      "src/platform/audio/AudioInputService.h",
+      "src/platform/audio/SharedPitchAnalysis.h"
     ],
     "src/features/analysis/tuner/TunerDrawing.cpp": [
       "src/features/analysis/tuner/TunerComponent.h"
+    ],
+    "src/features/analysis/tuner/TunerSettingsCodec.cpp": [
+      "src/features/analysis/tuner/TunerSettingsCodec.h"
+    ],
+    "src/features/analysis/tuner/TunerSettingsCodec.h": [
+      "src/application/configuration/AppDefaults.h",
+      "src/application/tools/ToolSettingsPayload.h"
     ],
     "src/features/feedback/FeedbackComponent.cpp": [
       "src/features/feedback/FeedbackComponent.h"
@@ -2517,101 +3880,72 @@
       "src/features/performance/ApplicationLaunchTimer.h"
     ],
     "src/features/performance/ApplicationLaunchTimer.h": [],
-    "src/features/performance/BenchmarkComparability.cpp": [
-      "src/features/performance/BenchmarkComparability.h"
+    "src/features/score/TargetNoteComponent.cpp": [
+      "src/features/score/TargetNoteComponent.h"
     ],
-    "src/features/performance/BenchmarkComparability.h": [
-      "src/features/performance/BenchmarkTypes.h"
+    "src/features/score/TargetNoteComponent.h": [
+      "src/application/theme/Theme.h",
+      "src/application/tools/ToolComponent.h",
+      "src/features/score/TargetNoteSelection.h",
+      "src/platform/score/CurrentScore.h"
     ],
-    "src/features/performance/BenchmarkComparison.cpp": [
-      "src/features/performance/BenchmarkComparison.h"
+    "src/features/score/TargetNoteSelection.cpp": [
+      "src/features/score/TargetNoteSelection.h",
+      "src/platform/score/Measure.h",
+      "src/platform/score/PitchNames.h"
     ],
-    "src/features/performance/BenchmarkComparison.h": [
-      "src/features/performance/BenchmarkComparability.h"
-    ],
-    "src/features/performance/BenchmarkInterfaces.h": [
-      "src/features/performance/BenchmarkTypes.h"
-    ],
-    "src/features/performance/BenchmarkRecordCodec.cpp": [
-      "src/features/performance/BenchmarkRecordCodec.h"
-    ],
-    "src/features/performance/BenchmarkRecordCodec.h": [
-      "src/features/performance/BenchmarkTypes.h"
-    ],
-    "src/features/performance/BenchmarkRecordStore.cpp": [
-      "src/features/performance/BenchmarkRecordStore.h"
-    ],
-    "src/features/performance/BenchmarkRecordStore.h": [
-      "src/features/performance/BenchmarkRecordCodec.h"
-    ],
-    "src/features/performance/BenchmarkRunner.cpp": [
-      "src/features/performance/BenchmarkRunner.h"
-    ],
-    "src/features/performance/BenchmarkRunner.h": [
-      "src/features/performance/BenchmarkInterfaces.h"
-    ],
-    "src/features/performance/BenchmarkTypes.h": [],
-    "src/features/performance/HarmonicAnalysisActions.cpp": [
-      "src/features/performance/HarmonicAnalysisActions.h"
-    ],
-    "src/features/performance/HarmonicAnalysisActions.h": [
-      "src/features/analysis/harmonics/HarmonicAnalyzer.h",
-      "src/features/performance/SustainedAudioAnalysisScenario.h"
-    ],
-    "src/features/performance/InTreeOptimizationStrategy.cpp": [
-      "src/features/performance/InTreeOptimizationStrategy.h"
-    ],
-    "src/features/performance/InTreeOptimizationStrategy.h": [
-      "src/features/performance/BenchmarkInterfaces.h"
-    ],
-    "src/features/performance/NonRealTimeTelemetryCollector.cpp": [
-      "src/features/performance/NonRealTimeTelemetryCollector.h"
-    ],
-    "src/features/performance/NonRealTimeTelemetryCollector.h": [
-      "src/features/performance/BenchmarkInterfaces.h"
-    ],
-    "src/features/performance/PerformanceLabController.cpp": [
-      "src/features/performance/PerformanceLabController.h"
-    ],
-    "src/features/performance/PerformanceLabController.h": [
-      "src/features/performance/BenchmarkComparison.h",
-      "src/features/performance/BenchmarkRunner.h"
-    ],
-    "src/features/performance/PlatformProvenanceProvider.cpp": [
-      "src/features/performance/PlatformProvenanceProvider.h"
-    ],
-    "src/features/performance/PlatformProvenanceProvider.h": [
-      "src/features/performance/BenchmarkTypes.h"
-    ],
-    "src/features/performance/RealTimeEventCapture.h": [],
-    "src/features/performance/StrategyRegistry.cpp": [
-      "src/features/performance/InTreeOptimizationStrategy.h",
-      "src/features/performance/StrategyRegistry.h"
-    ],
-    "src/features/performance/StrategyRegistry.h": [
-      "src/features/performance/BenchmarkInterfaces.h"
-    ],
-    "src/features/performance/SustainedAudioAnalysisScenario.cpp": [
-      "src/features/performance/SustainedAudioAnalysisScenario.h"
-    ],
-    "src/features/performance/SustainedAudioAnalysisScenario.h": [
-      "src/features/performance/BenchmarkInterfaces.h"
-    ],
-    "src/features/performance/TrialAggregator.cpp": [
-      "src/features/performance/TrialAggregator.h"
-    ],
-    "src/features/performance/TrialAggregator.h": [
-      "src/features/performance/BenchmarkTypes.h"
+    "src/features/score/TargetNoteSelection.h": [
+      "src/platform/score/Score.h",
+      "src/platform/score/ScoreEvent.h"
     ],
     "src/platform/audio/AudioInputService.cpp": [
       "src/platform/audio/AudioInputService.h",
       "src/platform/audio/AudioRecoveryPolicy.h"
     ],
     "src/platform/audio/AudioInputService.h": [
-      "src/platform/audio/AudioSampleFifo.h"
+      "src/platform/audio/AudioSampleFifo.h",
+      "src/platform/audio/RealtimeSafety.h",
+      "src/platform/audio/SyntheticTone.h"
     ],
     "src/platform/audio/AudioRecoveryPolicy.h": [],
     "src/platform/audio/AudioSampleFifo.h": [],
+    "src/platform/audio/PitchDetector.cpp": [
+      "src/platform/audio/PitchDetector.h"
+    ],
+    "src/platform/audio/PitchDetector.h": [],
+    "src/platform/audio/RealtimeSafety.h": [],
+    "src/platform/audio/SharedPitchAnalysis.cpp": [
+      "src/platform/audio/SharedPitchAnalysis.h"
+    ],
+    "src/platform/audio/SharedPitchAnalysis.h": [
+      "src/platform/audio/AudioInputService.h",
+      "src/platform/audio/PitchDetector.h"
+    ],
+    "src/platform/audio/SyntheticTone.h": [],
+    "src/platform/midi/MidiEvent.h": [],
+    "src/platform/midi/MidiEventFifo.h": [
+      "src/platform/midi/MidiEvent.h"
+    ],
+    "src/platform/midi/MidiInputService.cpp": [
+      "src/platform/midi/MidiInputService.h",
+      "src/platform/midi/MidiMessageTranslation.h",
+      "src/platform/midi/MidiRecoveryPolicy.h"
+    ],
+    "src/platform/midi/MidiInputService.h": [
+      "src/platform/audio/RealtimeSafety.h",
+      "src/platform/midi/MidiEvent.h",
+      "src/platform/midi/MidiEventFifo.h"
+    ],
+    "src/platform/midi/MidiMessageTranslation.cpp": [
+      "src/platform/midi/MidiMessageTranslation.h"
+    ],
+    "src/platform/midi/MidiMessageTranslation.h": [
+      "src/platform/midi/MidiEvent.h"
+    ],
+    "src/platform/midi/MidiRecoveryPolicy.h": [],
+    "src/platform/score/CurrentScore.h": [
+      "src/platform/score/Score.h"
+    ],
     "src/platform/score/Diagnostic.h": [
       "src/platform/score/MusicalTime.h"
     ],
@@ -2623,6 +3957,9 @@
     ],
     "src/platform/score/MusicalTime.h": [],
     "src/platform/score/Pitch.h": [],
+    "src/platform/score/PitchNames.h": [
+      "src/platform/score/Pitch.h"
+    ],
     "src/platform/score/Score.h": [
       "src/platform/score/Diagnostic.h",
       "src/platform/score/Measure.h",
@@ -2630,18 +3967,116 @@
       "src/platform/score/TempoMap.h"
     ],
     "src/platform/score/ScoreAttributes.h": [
-      "src/platform/score/MusicalTime.h"
+      "src/platform/score/MusicalTime.h",
+      "src/platform/score/Pitch.h"
+    ],
+    "src/platform/score/ScoreBuilder.cpp": [
+      "src/platform/score/ScoreBuilder.h",
+      "src/platform/score/ScoreInvariants.h"
+    ],
+    "src/platform/score/ScoreBuilder.h": [
+      "src/platform/score/Score.h"
     ],
     "src/platform/score/ScoreEvent.h": [
       "src/platform/score/LyricSyllable.h",
       "src/platform/score/MusicalTime.h",
       "src/platform/score/Pitch.h"
     ],
+    "src/platform/score/ScoreInvariants.cpp": [
+      "src/platform/score/ScoreInvariants.h"
+    ],
+    "src/platform/score/ScoreInvariants.h": [
+      "src/platform/score/Score.h"
+    ],
     "src/platform/score/TempoMap.cpp": [
       "src/platform/score/TempoMap.h"
     ],
     "src/platform/score/TempoMap.h": [
       "src/platform/score/MusicalTime.h"
+    ],
+    "src/platform/score/musicxml/MusicXmlDiagnosticSink.cpp": [
+      "src/platform/score/musicxml/MusicXmlDiagnosticSink.h"
+    ],
+    "src/platform/score/musicxml/MusicXmlDiagnosticSink.h": [
+      "src/platform/score/Diagnostic.h"
+    ],
+    "src/platform/score/musicxml/MusicXmlImportResult.h": [
+      "src/platform/score/Diagnostic.h",
+      "src/platform/score/Score.h"
+    ],
+    "src/platform/score/musicxml/MusicXmlImporter.cpp": [
+      "src/platform/score/ScoreBuilder.h",
+      "src/platform/score/musicxml/MusicXmlImporter.h",
+      "src/platform/score/musicxml/XmlDocumentAdapter.h",
+      "src/platform/score/musicxml/container/MusicXmlContainer.h",
+      "src/platform/score/musicxml/read/MusicXmlReadContext.h",
+      "src/platform/score/musicxml/read/MusicXmlScoreReader.h"
+    ],
+    "src/platform/score/musicxml/MusicXmlImporter.h": [
+      "src/platform/score/musicxml/MusicXmlImportResult.h"
+    ],
+    "src/platform/score/musicxml/XmlDocumentAdapter.cpp": [
+      "src/platform/score/musicxml/XmlDocumentAdapter.h"
+    ],
+    "src/platform/score/musicxml/XmlDocumentAdapter.h": [],
+    "src/platform/score/musicxml/container/MusicXmlContainer.cpp": [
+      "src/platform/score/musicxml/XmlDocumentAdapter.h",
+      "src/platform/score/musicxml/container/MusicXmlContainer.h"
+    ],
+    "src/platform/score/musicxml/container/MusicXmlContainer.h": [
+      "src/platform/score/musicxml/MusicXmlImportResult.h"
+    ],
+    "src/platform/score/musicxml/read/MusicXmlMeasureReader.cpp": [
+      "src/platform/score/musicxml/read/MusicXmlMeasureReader.h",
+      "src/platform/score/musicxml/read/MusicXmlSubset.h",
+      "src/platform/score/musicxml/read/MusicXmlValueParsing.h"
+    ],
+    "src/platform/score/musicxml/read/MusicXmlMeasureReader.h": [
+      "src/platform/score/Measure.h",
+      "src/platform/score/MusicalTime.h",
+      "src/platform/score/Score.h",
+      "src/platform/score/musicxml/XmlDocumentAdapter.h",
+      "src/platform/score/musicxml/read/MusicXmlReadContext.h"
+    ],
+    "src/platform/score/musicxml/read/MusicXmlReadContext.cpp": [
+      "src/platform/score/musicxml/read/MusicXmlReadContext.h"
+    ],
+    "src/platform/score/musicxml/read/MusicXmlReadContext.h": [
+      "src/platform/score/Measure.h",
+      "src/platform/score/MusicalTime.h",
+      "src/platform/score/Score.h",
+      "src/platform/score/ScoreEvent.h",
+      "src/platform/score/TempoMap.h",
+      "src/platform/score/musicxml/MusicXmlDiagnosticSink.h"
+    ],
+    "src/platform/score/musicxml/read/MusicXmlScoreReader.cpp": [
+      "src/platform/score/musicxml/read/MusicXmlMeasureReader.h",
+      "src/platform/score/musicxml/read/MusicXmlScoreReader.h",
+      "src/platform/score/musicxml/read/MusicXmlSubset.h",
+      "src/platform/score/musicxml/read/MusicXmlTieResolver.h"
+    ],
+    "src/platform/score/musicxml/read/MusicXmlScoreReader.h": [
+      "src/platform/score/Score.h",
+      "src/platform/score/musicxml/XmlDocumentAdapter.h",
+      "src/platform/score/musicxml/read/MusicXmlReadContext.h"
+    ],
+    "src/platform/score/musicxml/read/MusicXmlSubset.cpp": [
+      "src/platform/score/musicxml/read/MusicXmlSubset.h"
+    ],
+    "src/platform/score/musicxml/read/MusicXmlSubset.h": [],
+    "src/platform/score/musicxml/read/MusicXmlTieResolver.cpp": [
+      "src/platform/score/musicxml/read/MusicXmlTieResolver.h"
+    ],
+    "src/platform/score/musicxml/read/MusicXmlTieResolver.h": [
+      "src/platform/score/Score.h",
+      "src/platform/score/musicxml/read/MusicXmlReadContext.h"
+    ],
+    "src/platform/score/musicxml/read/MusicXmlValueParsing.cpp": [
+      "src/platform/score/musicxml/read/MusicXmlValueParsing.h"
+    ],
+    "src/platform/score/musicxml/read/MusicXmlValueParsing.h": [
+      "src/platform/score/LyricSyllable.h",
+      "src/platform/score/Pitch.h"
     ],
     "src/services/.dockerignore": [],
     "src/services/feedback-intake/.dev.vars.example": [],
@@ -2657,6 +4092,7 @@
     "src/services/feedback-intake/migrations/0005_idempotent_submissions.sql": [],
     "src/services/feedback-intake/migrations/0006_operations.sql": [],
     "src/services/feedback-intake/migrations/0007_email_notification_limits.sql": [],
+    "src/services/feedback-intake/migrations/0008_notification_dispatch.sql": [],
     "src/services/feedback-intake/package.json": [],
     "src/services/feedback-intake/src/access.ts": [],
     "src/services/feedback-intake/src/admin.css": [],
@@ -2667,6 +4103,7 @@
       "src/services/feedback-intake/src/audit.html",
       "src/services/feedback-intake/src/audit.js",
       "src/services/feedback-intake/src/dashboard.js",
+      "src/services/feedback-intake/src/notifications.ts",
       "src/services/feedback-intake/src/operations.ts"
     ],
     "src/services/feedback-intake/src/audit.html": [],
@@ -2682,7 +4119,9 @@
       "src/services/feedback-intake/src/notifications.ts",
       "src/services/feedback-intake/src/operations.ts"
     ],
-    "src/services/feedback-intake/src/notifications.ts": [],
+    "src/services/feedback-intake/src/notifications.ts": [
+      "src/services/feedback-intake/src/operations.ts"
+    ],
     "src/services/feedback-intake/src/operations.ts": [],
     "src/services/feedback-intake/test/access.test.ts": [
       "src/services/feedback-intake/src/access.ts"
@@ -2704,7 +4143,7 @@
     ],
     "src/services/feedback-intake/test/support/database.ts": [],
     "src/services/feedback-intake/tsconfig.json": [],
-    "src/services/feedback-intake/wrangler.example.jsonc": [],
+    "src/services/feedback-intake/wrangler.jsonc": [],
     "src/services/package.json": [],
     "src/services/vitest.config.mts": [],
     "src/tests/application/configuration/AppDefaultsTests.cpp": [
@@ -2723,6 +4162,14 @@
     ],
     "src/tests/application/shell/WorkspaceStartupSequenceTests.cpp": [
       "src/application/shell/WorkspaceStartupSequence.h"
+    ],
+    "src/tests/application/shell/ui/score/ScoreImportStateTests.cpp": [
+      "src/application/shell/ui/score/ScoreImportState.h",
+      "src/platform/score/Score.h"
+    ],
+    "src/tests/application/shell/ui/score/ScoreImportSummaryTests.cpp": [
+      "src/application/shell/ui/score/ScoreImportSummary.h",
+      "src/platform/score/Score.h"
     ],
     "src/tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp": [
       "src/application/shell/ui/workspace/components/WorkspaceSplitPane.h",
@@ -2764,8 +4211,14 @@
     "src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp": [
       "src/application/shell/ui/workspace/model/WorkspaceToolState.h"
     ],
+    "src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp": [
+      "src/application/shell/ui/score/ScoreImportSummary.h",
+      "src/application/testcontrol/ApprovedWindowStates.h",
+      "src/platform/score/musicxml/MusicXmlImporter.h"
+    ],
     "src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp": [
-      "src/application/testcontrol/ApprovedWindowStates.h"
+      "src/application/testcontrol/ApprovedWindowStates.h",
+      "src/application/tools/BuiltInToolCatalog.h"
     ],
     "src/tests/application/testcontrol/TestControlClickerTests.cpp": [
       "src/application/testcontrol/ApprovedWindowStates.h",
@@ -2777,14 +4230,39 @@
     "src/tests/application/testcontrol/TestControlSessionTests.cpp": [
       "src/application/testcontrol/TestControlSession.h"
     ],
+    "src/tests/application/theme/AppLookAndFeelTests.cpp": [
+      "src/application/theme/AppLookAndFeel.h"
+    ],
     "src/tests/application/theme/ThemeContrastTests.cpp": [
       "src/application/theme/Theme.h"
     ],
-    "src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp": [
-      "src/features/analysis/harmonics/HarmonicAnalyzer.h"
+    "src/tests/application/tools/CompactPresentationTests.cpp": [
+      "src/application/tools/CompactPresentation.h"
     ],
-    "src/tests/features/analysis/tuner/PitchDetectorTests.cpp": [
-      "src/features/analysis/tuner/PitchDetector.h"
+    "src/tests/application/tools/ToolCatalogTests.cpp": [
+      "src/application/tools/BuiltInToolCatalog.h",
+      "src/application/tools/ToolCatalog.h"
+    ],
+    "src/tests/application/tools/ToolInstanceIdTests.cpp": [
+      "src/application/tools/ToolInstanceId.h"
+    ],
+    "src/tests/application/tools/ToolLifecycleTests.cpp": [
+      "src/application/tools/BuiltInToolCatalog.h",
+      "src/application/tools/ToolComponent.h",
+      "src/application/tools/ToolInstanceAllocator.h"
+    ],
+    "src/tests/application/tools/UnknownToolIntegrationTests.cpp": [
+      "src/application/shell/ui/workspace/model/WorkspaceNormalizer.h",
+      "src/application/shell/ui/workspace/model/WorkspaceSnapshotApply.h",
+      "src/application/shell/ui/workspace/model/WorkspaceSnapshotCapture.h",
+      "src/application/tools/ToolInstanceAllocator.h"
+    ],
+    "src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp": [
+      "src/features/analysis/harmonics/HarmonicAnalyzer.h",
+      "src/platform/audio/PitchDetector.h"
+    ],
+    "src/tests/features/analysis/tuner/PitchTrackerTests.cpp": [
+      "src/features/analysis/tuner/PitchTracker.h"
     ],
     "src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp": [
       "src/features/feedback/FeedbackInvitationPolicy.h"
@@ -2792,51 +4270,13 @@
     "src/tests/features/performance/ApplicationLaunchTimerTests.cpp": [
       "src/features/performance/ApplicationLaunchTimer.h"
     ],
-    "src/tests/features/performance/BenchmarkComparabilityTests.cpp": [
-      "src/features/performance/BenchmarkComparability.h"
+    "src/tests/features/score/TargetNoteSelectionTests.cpp": [
+      "src/features/score/TargetNoteSelection.h",
+      "src/platform/score/PitchNames.h",
+      "src/platform/score/musicxml/MusicXmlImporter.h"
     ],
-    "src/tests/features/performance/BenchmarkComparisonTests.cpp": [
-      "src/features/performance/BenchmarkComparison.h"
-    ],
-    "src/tests/features/performance/BenchmarkInterfacesTests.cpp": [
-      "src/features/performance/BenchmarkInterfaces.h"
-    ],
-    "src/tests/features/performance/BenchmarkRecordCodecTests.cpp": [
-      "src/features/performance/BenchmarkRecordCodec.h"
-    ],
-    "src/tests/features/performance/BenchmarkRecordStoreTests.cpp": [
-      "src/features/performance/BenchmarkRecordStore.h"
-    ],
-    "src/tests/features/performance/BenchmarkRunnerTests.cpp": [
-      "src/features/performance/BenchmarkRunner.h"
-    ],
-    "src/tests/features/performance/BenchmarkTypesTests.cpp": [
-      "src/features/performance/BenchmarkTypes.h"
-    ],
-    "src/tests/features/performance/InTreeOptimizationStrategyTests.cpp": [
-      "src/features/performance/InTreeOptimizationStrategy.h"
-    ],
-    "src/tests/features/performance/NonRealTimeTelemetryCollectorTests.cpp": [
-      "src/features/performance/NonRealTimeTelemetryCollector.h"
-    ],
-    "src/tests/features/performance/PerformanceLabControllerTests.cpp": [
-      "src/features/performance/PerformanceLabController.h"
-    ],
-    "src/tests/features/performance/PlatformProvenanceProviderTests.cpp": [
-      "src/features/performance/PlatformProvenanceProvider.h"
-    ],
-    "src/tests/features/performance/RealTimeEventCaptureTests.cpp": [
-      "src/features/performance/RealTimeEventCapture.h"
-    ],
-    "src/tests/features/performance/StrategyRegistryTests.cpp": [
-      "src/features/performance/StrategyRegistry.h"
-    ],
-    "src/tests/features/performance/SustainedAudioAnalysisScenarioTests.cpp": [
-      "src/features/performance/HarmonicAnalysisActions.h",
-      "src/features/performance/SustainedAudioAnalysisScenario.h"
-    ],
-    "src/tests/features/performance/TrialAggregatorTests.cpp": [
-      "src/features/performance/TrialAggregator.h"
+    "src/tests/platform/audio/AudioInputServiceTests.cpp": [
+      "src/platform/audio/AudioInputService.h"
     ],
     "src/tests/platform/audio/AudioRecoveryPolicyTests.cpp": [
       "src/platform/audio/AudioRecoveryPolicy.h"
@@ -2847,11 +4287,43 @@
     "src/tests/platform/audio/AudioSampleFifoTests.cpp": [
       "src/platform/audio/AudioSampleFifo.h"
     ],
+    "src/tests/platform/audio/PitchDetectorTests.cpp": [
+      "src/platform/audio/PitchDetector.h"
+    ],
+    "src/tests/platform/audio/SharedPitchAnalysisTests.cpp": [
+      "src/platform/audio/SharedPitchAnalysis.h"
+    ],
+    "src/tests/platform/audio/SyntheticToneTests.cpp": [
+      "src/platform/audio/PitchDetector.h",
+      "src/platform/audio/SyntheticTone.h"
+    ],
+    "src/tests/platform/midi/MidiEventFifoTests.cpp": [
+      "src/platform/midi/MidiEventFifo.h"
+    ],
+    "src/tests/platform/midi/MidiInputServiceTests.cpp": [
+      "src/platform/midi/MidiInputService.h"
+    ],
+    "src/tests/platform/midi/MidiMessageTranslationTests.cpp": [
+      "src/platform/midi/MidiMessageTranslation.h"
+    ],
+    "src/tests/platform/midi/MidiRecoveryPolicyTests.cpp": [
+      "src/platform/midi/MidiRecoveryPolicy.h"
+    ],
+    "src/tests/platform/score/CurrentScoreTests.cpp": [
+      "src/platform/score/CurrentScore.h"
+    ],
     "src/tests/platform/score/MusicalTimeTests.cpp": [
       "src/platform/score/MusicalTime.h"
     ],
+    "src/tests/platform/score/PitchNamesTests.cpp": [
+      "src/platform/score/PitchNames.h"
+    ],
     "src/tests/platform/score/PitchTests.cpp": [
       "src/platform/score/Pitch.h"
+    ],
+    "src/tests/platform/score/ScoreInvariantsTests.cpp": [
+      "src/platform/score/ScoreBuilder.h",
+      "src/platform/score/ScoreInvariants.h"
     ],
     "src/tests/platform/score/ScoreModelTests.cpp": [
       "src/platform/score/Score.h"
@@ -2859,21 +4331,105 @@
     "src/tests/platform/score/TempoMapTests.cpp": [
       "src/platform/score/TempoMap.h"
     ],
-    "src/tests/support/BenchmarkFakes.h": [
-      "src/features/performance/BenchmarkInterfaces.h"
+    "src/tests/platform/score/musicxml/MusicXmlCorpusTests.cpp": [
+      "src/platform/score/musicxml/MusicXmlImporter.h"
     ],
-    "src/tests/support/BenchmarkFakesTests.cpp": [],
+    "src/tests/platform/score/musicxml/container/MusicXmlContainerTests.cpp": [
+      "src/platform/score/musicxml/MusicXmlImporter.h",
+      "src/platform/score/musicxml/container/MusicXmlContainer.h"
+    ],
+    "src/tests/platform/score/musicxml/read/MusicXmlAttributeTests.cpp": [
+      "src/platform/score/musicxml/MusicXmlImporter.h"
+    ],
+    "src/tests/platform/score/musicxml/read/MusicXmlDiagnosticsTests.cpp": [
+      "src/platform/score/musicxml/MusicXmlImporter.h"
+    ],
+    "src/tests/platform/score/musicxml/read/MusicXmlLyricTests.cpp": [
+      "src/platform/score/musicxml/MusicXmlImporter.h"
+    ],
+    "src/tests/platform/score/musicxml/read/MusicXmlNoteTests.cpp": [
+      "src/platform/score/musicxml/MusicXmlImporter.h"
+    ],
+    "src/tests/platform/score/musicxml/read/MusicXmlPercussionTests.cpp": [
+      "src/platform/score/musicxml/MusicXmlImporter.h"
+    ],
+    "src/tests/platform/score/musicxml/read/MusicXmlTimingTests.cpp": [
+      "src/platform/score/musicxml/MusicXmlImporter.h"
+    ],
+    "src/tests/platform/score/musicxml/read/MusicXmlTranspositionTests.cpp": [
+      "src/platform/score/musicxml/MusicXmlImporter.h"
+    ],
+    "src/tests/resources/harness-scores/README.md": [],
+    "src/tests/resources/harness-scores/clean-import.musicxml": [],
+    "src/tests/resources/harness-scores/diagnostic-import.musicxml": [],
+    "src/tests/resources/musicxml/README.md": [],
+    "src/tests/resources/musicxml/anonymous-accept-almighty-father.mxl": [],
+    "src/tests/resources/musicxml/anonymous-ad-laudes.mxl": [],
+    "src/tests/resources/musicxml/beach-1-o-mistress-mine.mxl": [],
+    "src/tests/resources/musicxml/beethoven-3-vom-tode.mxl": [],
+    "src/tests/resources/musicxml/berg-1-nacht.mxl": [],
+    "src/tests/resources/musicxml/boulanger-5-au-pied-de-mon-lit.mxl": [],
+    "src/tests/resources/musicxml/brahms-6-du-sprichst-dass-ich-mich-taeuschte.mxl": [],
+    "src/tests/resources/musicxml/burgk-a-solis-ortus.mxl": [],
+    "src/tests/resources/musicxml/debussy-2-il-pleure-dans-mon-coeur.mxl": [],
+    "src/tests/resources/musicxml/expectations.txt": [],
+    "src/tests/resources/musicxml/faure-4-a-clymene.mxl": [],
+    "src/tests/resources/musicxml/french-abyssinia.mxl": [],
+    "src/tests/resources/musicxml/gabrieli-ave-regina.mxl": [],
+    "src/tests/resources/musicxml/hensel-2-vorwurf.mxl": [],
+    "src/tests/resources/musicxml/holyoke-acworth-2v.mxl": [],
+    "src/tests/resources/musicxml/holyoke-acworth.mxl": [],
+    "src/tests/resources/musicxml/jenks-anthem-for-thanksgiving.mxl": [],
+    "src/tests/resources/musicxml/joplin-please-say-you-will.mxl": [],
+    "src/tests/resources/musicxml/king-abbeville.mxl": [],
+    "src/tests/resources/musicxml/liliuokalani-aloha-oe.mxl": [],
+    "src/tests/resources/musicxml/liszt-2-pace-non-trovo.mxl": [],
+    "src/tests/resources/musicxml/mahler-4-die-zwei-blauen-augen-von-meinem-schatz.mxl": [],
+    "src/tests/resources/musicxml/marenzio-ahime-tal-fu-d-amore-e-l-esca-e-l-amo.mxl": [],
+    "src/tests/resources/musicxml/mel-asiso-sovra-un-sasso.mxl": [],
+    "src/tests/resources/musicxml/mendelssohn-3-die-liebende-schreibt-mwv-k-66.mxl": [],
+    "src/tests/resources/musicxml/mendelssohn-hark-the-herald-angels-sing.mxl": [],
+    "src/tests/resources/musicxml/morley-a-la-strada-a-dio.mxl": [],
+    "src/tests/resources/musicxml/prez-allegez-moy.mxl": [],
+    "src/tests/resources/musicxml/satie-5-chanson-du-chat.mxl": [],
+    "src/tests/resources/musicxml/schubert-12-am-meer.mxl": [],
+    "src/tests/resources/musicxml/schumann-1-was-weinst-du-bluemlein.mxl": [],
+    "src/tests/resources/musicxml/schumann-4-die-stille.mxl": [],
+    "src/tests/resources/musicxml/strauss-2-caecilie.mxl": [],
+    "src/tests/resources/musicxml/usper-la-battaglia-a-8.mxl": [],
+    "src/tests/resources/musicxml/webern-5-ihr-tratet-zu-dem-herde.mxl": [],
+    "src/tests/resources/musicxml/wolf-9-der-schreckenberger.mxl": [],
+    "src/tests/resources/musicxml/wood-acton.mxl": [],
+    "src/tests/support/AudioInputServiceCallbackAccess.h": [
+      "src/platform/audio/AudioInputService.h"
+    ],
+    "src/tests/support/MidiInputServiceCallbackAccess.h": [
+      "src/platform/midi/MidiInputService.h"
+    ],
+    "src/tests/support/MusicXmlFixtures.h": [],
+    "src/tests/support/ScoreFixtures.h": [
+      "src/platform/score/ScoreEvent.h"
+    ],
     "tools/VERSION": [],
     "tools/cmake/Packaging.cmake": [],
     "tools/cmake/PatchJuceAlsaChannelMismatch.cmake": [],
     "tools/cmake/PatchJuceAlsaInputStartup.cmake": [],
+    "tools/cmake/Sources.cmake": [],
     "tools/cmake/triplets/arm64-linux-practice.cmake": [],
     "tools/cmake/triplets/x64-linux-practice.cmake": [],
+    "tools/packaging/fonts/OFL.txt": [],
+    "tools/packaging/fonts/README.md": [],
     "tools/packaging/icons/README.md": [],
     "tools/packaging/linux/org.derekrneilson.practicetakes.desktop": [],
+    "tools/sanitizers/lsan.supp": [],
     "tools/scripts/README.md": [],
     "tools/scripts/build/build-and-run.sh": [],
     "tools/scripts/build/check-linux-build-dependencies.sh": [],
+    "tools/scripts/build/install-clang-20.sh": [],
+    "tools/scripts/ci/report_workflow_failure.py": [],
+    "tools/scripts/ci/test_report_workflow_failure.py": [
+      "tools/scripts/ci/report_workflow_failure.py"
+    ],
     "tools/scripts/design/generate_app_icons.py": [],
     "tools/scripts/design/test_generate_app_icons.py": [],
     "tools/scripts/feedback/configure-cloudflare-access.sh": [],
@@ -2887,64 +4443,12 @@
     "tools/scripts/git/test_configure_merge.py": [],
     "tools/scripts/git/test_merge_cmake_sources.py": [],
     "tools/scripts/git/test_merge_npm_lock.py": [],
-    "tools/scripts/manual_gui/__init__.py": [],
-    "tools/scripts/manual_gui/__main__.py": [
-      "tools/scripts/manual_gui/driver.py",
-      "tools/scripts/manual_gui/record.py",
-      "tools/scripts/manual_gui/session.py",
-      "tools/scripts/manual_gui/surfaces.py"
-    ],
-    "tools/scripts/manual_gui/app.py": [
-      "tools/scripts/manual_gui/session.py"
-    ],
-    "tools/scripts/manual_gui/driver.py": [],
-    "tools/scripts/manual_gui/record.py": [],
-    "tools/scripts/manual_gui/session.py": [
-      "tools/scripts/manual_gui/record.py",
-      "tools/scripts/manual_gui/surfaces.py"
-    ],
-    "tools/scripts/manual_gui/surfaces.py": [],
-    "tools/scripts/manual_gui/test_manual_gui.py": [
-      "tools/scripts/manual_gui/driver.py",
-      "tools/scripts/manual_gui/record.py",
-      "tools/scripts/manual_gui/session.py",
-      "tools/scripts/manual_gui/surfaces.py"
-    ],
+    "tools/scripts/pages/dashboard-github-source.patch": [],
     "tools/scripts/pages/verify-graph.mjs": [],
-    "tools/scripts/practice_takes_roadmap/__init__.py": [],
-    "tools/scripts/practice_takes_roadmap/__main__.py": [
-      "tools/scripts/practice_takes_roadmap/main.py"
-    ],
-    "tools/scripts/practice_takes_roadmap/config.py": [
-      "tools/scripts/practice_takes_roadmap/models.py"
-    ],
-    "tools/scripts/practice_takes_roadmap/discovery.py": [
-      "tools/scripts/practice_takes_roadmap/github.py",
-      "tools/scripts/practice_takes_roadmap/models.py"
-    ],
-    "tools/scripts/practice_takes_roadmap/github.py": [
-      "tools/scripts/practice_takes_roadmap/models.py"
-    ],
-    "tools/scripts/practice_takes_roadmap/main.py": [
-      "tools/scripts/practice_takes_roadmap/config.py",
-      "tools/scripts/practice_takes_roadmap/discovery.py",
-      "tools/scripts/practice_takes_roadmap/github.py",
-      "tools/scripts/practice_takes_roadmap/models.py",
-      "tools/scripts/practice_takes_roadmap/planning.py",
-      "tools/scripts/practice_takes_roadmap/progress.py",
-      "tools/scripts/practice_takes_roadmap/state.py"
-    ],
-    "tools/scripts/practice_takes_roadmap/models.py": [],
-    "tools/scripts/practice_takes_roadmap/planning.py": [
-      "tools/scripts/practice_takes_roadmap/config.py",
-      "tools/scripts/practice_takes_roadmap/models.py"
-    ],
-    "tools/scripts/practice_takes_roadmap/progress.py": [],
-    "tools/scripts/practice_takes_roadmap/state.py": [],
     "tools/scripts/quality/check_test_layout.py": [],
     "tools/scripts/quality/coverage_sources.py": [],
     "tools/scripts/quality/format_benchmarks.py": [],
-    "tools/scripts/quality/run-performance-lab.sh": [],
+    "tools/scripts/quality/make_score_import_fixtures.py": [],
     "tools/scripts/quality/run_clang_format.py": [],
     "tools/scripts/quality/run_clang_tidy.py": [],
     "tools/scripts/quality/run_coverage.py": [
@@ -2958,21 +4462,184 @@
     "tools/scripts/quality/test_coverage_sources.py": [
       "tools/scripts/quality/coverage_sources.py"
     ],
+    "tools/scripts/quality/test_make_score_import_fixtures.py": [
+      "tools/scripts/quality/make_score_import_fixtures.py"
+    ],
     "tools/scripts/quality/ui-validation/pointer_control.cpp": [],
     "tools/scripts/quality/ui-validation/run-ui-golden.zsh": [],
-    "tools/scripts/quality/ui-validation/window_control.cpp": [],
-    "tools/scripts/quality/ui-validation/xwindow_capture.cpp": [],
+    "tools/scripts/quality/ui-validation/window_control.cpp": [
+      "tools/scripts/quality/ui-validation/x_window_lookup.h"
+    ],
+    "tools/scripts/quality/ui-validation/x_window_lookup.h": [],
+    "tools/scripts/quality/ui-validation/xwindow_capture.cpp": [
+      "tools/scripts/quality/ui-validation/x_window_lookup.h"
+    ],
     "tools/scripts/release/check_manual_verification.py": [],
     "tools/scripts/release/test_check_manual_verification.py": [
       "tools/scripts/release/check_manual_verification.py"
     ],
     "tools/scripts/release/test_version.py": [],
     "tools/scripts/release/version.py": [],
-    "tools/scripts/roadmap/setup.sh": [],
     "tools/scripts/run_tests.py": [],
+    "tools/scripts/secrets/provision-vault.sh": [],
     "tools/scripts/secrets/secrets_manager.py": [],
+    "tools/scripts/secrets/sync-secrets.sh": [],
     "tools/scripts/secrets/test_secrets_manager.py": [],
+    "tools/scripts/testing_suite/__init__.py": [],
+    "tools/scripts/testing_suite/__main__.py": [
+      "tools/scripts/testing_suite/attend.py",
+      "tools/scripts/testing_suite/capture.py",
+      "tools/scripts/testing_suite/display.py",
+      "tools/scripts/testing_suite/driver.py",
+      "tools/scripts/testing_suite/export.py",
+      "tools/scripts/testing_suite/fleet.py",
+      "tools/scripts/testing_suite/freshness.py",
+      "tools/scripts/testing_suite/history.py",
+      "tools/scripts/testing_suite/ingest.py",
+      "tools/scripts/testing_suite/launcher.py",
+      "tools/scripts/testing_suite/machine.py",
+      "tools/scripts/testing_suite/review.py",
+      "tools/scripts/testing_suite/runner.py",
+      "tools/scripts/testing_suite/server.py",
+      "tools/scripts/testing_suite/store.py",
+      "tools/scripts/testing_suite/suites.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/attend.py": [
+      "tools/scripts/testing_suite/driver.py",
+      "tools/scripts/testing_suite/review.py",
+      "tools/scripts/testing_suite/store.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/capture.py": [
+      "tools/scripts/testing_suite/driver.py",
+      "tools/scripts/testing_suite/images.py",
+      "tools/scripts/testing_suite/store.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/display.py": [],
+    "tools/scripts/testing_suite/driver.py": [],
+    "tools/scripts/testing_suite/export.py": [
+      "tools/scripts/testing_suite/machine.py",
+      "tools/scripts/testing_suite/record.py",
+      "tools/scripts/testing_suite/review.py",
+      "tools/scripts/testing_suite/store.py"
+    ],
+    "tools/scripts/testing_suite/fleet.py": [],
+    "tools/scripts/testing_suite/freshness.py": [],
+    "tools/scripts/testing_suite/history.py": [],
+    "tools/scripts/testing_suite/images.py": [],
+    "tools/scripts/testing_suite/ingest.py": [
+      "tools/scripts/testing_suite/store.py"
+    ],
+    "tools/scripts/testing_suite/launcher.py": [
+      "tools/scripts/testing_suite/driver.py",
+      "tools/scripts/testing_suite/freshness.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/machine.py": [],
+    "tools/scripts/testing_suite/record.py": [],
+    "tools/scripts/testing_suite/restart.py": [],
+    "tools/scripts/testing_suite/review.py": [
+      "tools/scripts/testing_suite/store.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/runner.py": [
+      "tools/scripts/testing_suite/capture.py",
+      "tools/scripts/testing_suite/display.py",
+      "tools/scripts/testing_suite/driver.py",
+      "tools/scripts/testing_suite/machine.py",
+      "tools/scripts/testing_suite/store.py",
+      "tools/scripts/testing_suite/suites.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/server.py": [
+      "tools/scripts/testing_suite/freshness.py",
+      "tools/scripts/testing_suite/history.py",
+      "tools/scripts/testing_suite/launcher.py",
+      "tools/scripts/testing_suite/restart.py",
+      "tools/scripts/testing_suite/review.py",
+      "tools/scripts/testing_suite/runner.py",
+      "tools/scripts/testing_suite/store.py",
+      "tools/scripts/testing_suite/suites.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/store.py": [],
+    "tools/scripts/testing_suite/suites.py": [],
+    "tools/scripts/testing_suite/surfaces.py": [],
+    "tools/scripts/testing_suite/test_attend.py": [
+      "tools/scripts/testing_suite/attend.py",
+      "tools/scripts/testing_suite/driver.py",
+      "tools/scripts/testing_suite/review.py",
+      "tools/scripts/testing_suite/server.py",
+      "tools/scripts/testing_suite/store.py",
+      "tools/scripts/testing_suite/suites.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/test_capture.py": [
+      "tools/scripts/testing_suite/capture.py",
+      "tools/scripts/testing_suite/driver.py",
+      "tools/scripts/testing_suite/images.py",
+      "tools/scripts/testing_suite/store.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/test_core.py": [
+      "tools/scripts/testing_suite/driver.py",
+      "tools/scripts/testing_suite/record.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/test_display.py": [
+      "tools/scripts/testing_suite/display.py"
+    ],
+    "tools/scripts/testing_suite/test_driver.py": [
+      "tools/scripts/testing_suite/driver.py"
+    ],
+    "tools/scripts/testing_suite/test_fleet.py": [
+      "tools/scripts/testing_suite/fleet.py"
+    ],
+    "tools/scripts/testing_suite/test_freshness.py": [
+      "tools/scripts/testing_suite/freshness.py"
+    ],
+    "tools/scripts/testing_suite/test_history.py": [
+      "tools/scripts/testing_suite/history.py",
+      "tools/scripts/testing_suite/store.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/test_launcher.py": [
+      "tools/scripts/testing_suite/driver.py",
+      "tools/scripts/testing_suite/launcher.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/test_main.py": [
+      "tools/scripts/testing_suite/store.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/test_restart.py": [
+      "tools/scripts/testing_suite/restart.py"
+    ],
+    "tools/scripts/testing_suite/test_review.py": [
+      "tools/scripts/testing_suite/export.py",
+      "tools/scripts/testing_suite/ingest.py",
+      "tools/scripts/testing_suite/review.py",
+      "tools/scripts/testing_suite/store.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/test_runner.py": [
+      "tools/scripts/testing_suite/runner.py",
+      "tools/scripts/testing_suite/store.py",
+      "tools/scripts/testing_suite/suites.py",
+      "tools/scripts/testing_suite/surfaces.py"
+    ],
+    "tools/scripts/testing_suite/test_store.py": [
+      "tools/scripts/testing_suite/machine.py",
+      "tools/scripts/testing_suite/store.py"
+    ],
+    "tools/scripts/testing_suite/test_web.py": [],
+    "tools/scripts/testing_suite/web/app.js": [],
+    "tools/scripts/testing_suite/web/index.html": [],
+    "tools/scripts/testing_suite/web/style.css": [],
     "tools/secret-patterns": [],
     "tools/vcpkg.json": []
-  }
+  },
+  "contentDigest": "86d2693a1fa411bc916266015cad1a94400b293d5d76839c94ccc6eb133cd78e"
 }
