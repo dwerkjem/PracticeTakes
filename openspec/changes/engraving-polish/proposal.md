@@ -32,10 +32,10 @@ about them is still missing.
   stem rather than always to the right, which is what `offsetSeconds` does now
   by its own admission. Ledger lines of adjacent notes merge rather than
   doubling.
-- **Slurs, and ties that cross a system break.** Ties within a system are drawn.
-  A tie whose ends land on different systems is counted and reported rather than
-  drawn, which is honest but is still a tie the reader cannot see. Slurs are not
-  drawn at all.
+- **Ties that cross a system break.** Ties within a system are drawn. A tie
+  whose ends land on different systems is counted and reported rather than
+  drawn, which is honest but is still a tie the reader cannot see -- and an
+  unseen tie reads as two struck notes.
 - **Vertical placement of what is already drawn.** Dynamics, tempo marks and
   lyrics all reach the page, each in a reserved band. What they do not do is
   avoid each other or the notes: a low note and a dynamic claim the same space
@@ -43,29 +43,56 @@ about them is still missing.
 - **Better spacing.** The current rule is proportional with a minimum, which is
   a first approximation; real engraving also accounts for the content of
   neighbouring columns, so a bar dense with accidentals does not crush the bar
-  after it.
-- **Multi-measure rests and volta brackets.** Repeat barlines are drawn.
-  `RepeatMarkings` also carries endings and jumps, which the renderer reports as
-  undrawn in a notice; nothing draws them.
+  after it. `engraving-stems-and-beams` already made each gap clear a notehead
+  and its flag; what is left is the accidentals, and it falls out of stacking
+  them — a slot reserves the width its stack actually uses rather than one
+  constant (design.md decision 3).
+- **Volta brackets and jump marks.** Repeat barlines are drawn, but the endings
+  under them are not, so a first and second ending read as two bars played in
+  turn -- which is the wrong music, not a missing ornament. `RepeatMarkings`
+  carries the ending numbers and the jump text (Segno, Coda, D.S. al Coda,
+  Fine); the renderer reports both as undrawn and nothing draws them.
+- **Multi-measure rests.** A run of whole-bar rests condensed to one bar with a
+  count, which is the convention for a single part -- and a single part is what
+  the score view draws.
 - **Page breaks that fall at musical places** rather than wherever the greedy
   fill runs out of width, and justification so a system fills its width instead
   of ending ragged.
 
+### Non-goals
+
+- **Slurs.** Drawing one is the easy half. The importer drops `<slur>` on
+  purpose -- "slurs are phrasing marks; this importer reads only sounding ties"
+  -- so the model has nothing to draw. Adding them is an import and model change
+  first, with its own compatibility questions, and belongs in a change of its
+  own rather than at the end of an engraving list.
+- **Anything not on the list above.** "Looks like a published score" has no
+  end state; the list is the scope.
+
 ## Capabilities
 
-### Modified Capabilities
-- `score-notation-rendering`: adds collision rules, ties and slurs, directions,
-  lyrics, repeat structures, justification, a first-system indent, and a stated
-  spacing quality bar. Everything already required stays required.
+### Added Capabilities
+- `engraving-polish`: collision rules for accidentals, seconds and ledger
+  lines; ties across a system break; vertical placement of text decided by the
+  layout against what is already on the staff; volta brackets and jump marks;
+  multi-measure rests; justified systems with a first-system indent. Its own
+  capability, as `engraving-stems-and-beams` is, because the renderer's
+  capability is not yet archived into `openspec/specs/` for a delta to modify.
+  Everything the renderer and the beaming change already require stays
+  required.
 
 ## Impact
 
 - **Changed, broadly**: most of `src/features/score/engraving/`. Collision
   avoidance in particular is not a local addition — it is a pass over a placed
   column, and the layout types need to carry enough to run it.
-- **Changed**: `ScoreLayout.h` grows curves, text runs and spanning elements.
-  Text means the painter needs the *UI* typeface as well as the music font,
-  which it does not use today.
+- **Changed**: `ScoreLayout.h` grows half ties, volta brackets, chord ledger
+  lines, a vertical position for text, and an accidental x. The painter already
+  draws text in the UI typeface; what changes is that it stops deciding where.
+- **Moved**: two placement rules go from `ScoreGlyphPainter` to the layout —
+  where an accidental sits, and how far above or below the staff text sits —
+  because both depend on neighbours the painter never sees. See design.md
+  decisions 2 and 6.
 - **Risk**: this is the change most likely to sprawl. "Looks like a published
   score" has no end state, so the scope above is a list and anything not on it
   is a later change. A named list is the mitigation.
