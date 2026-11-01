@@ -907,3 +907,133 @@ TEST_CASE("a bar that cannot fit anywhere is still laid out", "[score][engraving
     CHECK(layout.systems.front().noteheads.size() == 3);
     CHECK(layout.systems.front().width > tiny.availableWidth);
 }
+
+// --- What a review pass over this engine found -------------------------------
+//
+// Three placement rules that were right for the common case and wrong for a
+// case a real file produces. Each is a wrong *reading* rather than a crash:
+// the page says something the music does not.
+
+TEST_CASE("a dynamic lands under its own note, not at its raw onset", "[score][engraving][layout]")
+{
+    // Sixteenths are past the point where proportional spacing alone would
+    // crowd, so every slot is pushed right by `minimumSlotWidth` and the gap
+    // between a note's drawn x and its proportional x grows across the bar.
+    // Placing a marking from the onset alone put it most of a bar to the left,
+    // under a different beat.
+    constexpr Tick sixteenth = ticksPerQuarterNote / 4;
+
+    std::vector<score::ScoreEvent> events;
+
+    for (int index = 0; index < 16; ++index)
+    {
+        events.push_back(
+            noteAt(static_cast<Tick>(index) * sixteenth, sixteenth, pitch(score::Step::b, 0, 4)));
+    }
+
+    const Tick lastOnset = static_cast<Tick>(15) * sixteenth;
+
+    score::Measure measure = measureOf(0, {voiceOf(1, std::move(events))}, true);
+
+    score::Direction dynamic;
+    dynamic.kind = score::DirectionKind::dynamic;
+    dynamic.onset = lastOnset;
+    dynamic.staff = 1;
+    dynamic.text = "ff";
+    measure.directions.push_back(dynamic);
+
+    const ScoreLayout layout = layOutScore(scoreOf({measure}), wideOptions());
+
+    REQUIRE(layout.outcome == LayoutOutcome::laidOut);
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.noteheads.size() == 16);
+
+    const auto marking = std::find_if(
+        system.texts.begin(), system.texts.end(),
+        [](const TextGlyph& text) { return text.role == TextRole::dynamic; });
+
+    REQUIRE(marking != system.texts.end());
+
+    // Under the sixteenth it was attached to, within a notehead's width.
+    CHECK(marking->x == Catch::Approx(system.noteheads.back().x).margin(1.3));
+}
+
+TEST_CASE(
+    "stems follow the lowest voice number, not the first one met",
+    "[score][engraving][layout]")
+{
+    // Voice 2 sounds from beat one and voice 1 enters at beat two with no
+    // written rest, which is what a `<forward>` leaves behind. Events are read
+    // by onset first, so voice 2 is met first -- and keying the direction on
+    // that inverted both voices.
+    score::Measure measure = measureOf(
+        0,
+        {voiceOf(
+             1, {noteAt(ticksPerQuarterNote, ticksPerQuarterNote, pitch(score::Step::g, 0, 5))}),
+         voiceOf(2, {noteAt(0, ticksPerQuarterNote, pitch(score::Step::d, 0, 4))})},
+        true);
+
+    const ScoreLayout layout = layOutScore(scoreOf({measure}), wideOptions());
+
+    REQUIRE(layout.outcome == LayoutOutcome::laidOut);
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.stems.size() == 2);
+
+    // The upper voice is voice 1 whichever of them starts the bar, so its stem
+    // goes up and voice 2's goes down. Voice 1's note is the higher of the two,
+    // so the stem attached to the higher position is the one that must be up.
+    const auto upper = std::min_element(
+        system.stems.begin(), system.stems.end(), [](const StemGlyph& lhs, const StemGlyph& rhs)
+        { return lhs.attachPosition < rhs.attachPosition; });
+
+    REQUIRE(upper != system.stems.end());
+
+    CHECK(upper->up);
+
+    const auto lower = std::max_element(
+        system.stems.begin(), system.stems.end(), [](const StemGlyph& lhs, const StemGlyph& rhs)
+        { return lhs.attachPosition < rhs.attachPosition; });
+
+    REQUIRE(lower != system.stems.end());
+
+    CHECK_FALSE(lower->up);
+}
+
+TEST_CASE(
+    "a measure whose first event starts late is not drawn at the barline",
+    "[score][engraving][layout]")
+{
+    // A staff that opens with a gap -- the importer carries a `<forward>` as
+    // one rather than as a rest -- used to have its first note pinned to the
+    // measure start as if it fell on beat one, and the bar then read as the
+    // wrong rhythm.
+    const score::Measure late = measureOf(
+        0,
+        {voiceOf(
+            1,
+            {noteAt(ticksPerQuarterNote * 2, ticksPerQuarterNote, pitch(score::Step::b, 0, 4))})},
+        true);
+
+    const score::Measure onTime = measureOf(
+        0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote, pitch(score::Step::b, 0, 4))})}, true);
+
+    const ScoreLayout lateLayout = layOutScore(scoreOf({late}), wideOptions());
+    const ScoreLayout onTimeLayout = layOutScore(scoreOf({onTime}), wideOptions());
+
+    REQUIRE(lateLayout.outcome == LayoutOutcome::laidOut);
+    REQUIRE(onTimeLayout.outcome == LayoutOutcome::laidOut);
+    REQUIRE(lateLayout.systems.front().noteheads.size() == 1);
+    REQUIRE(onTimeLayout.systems.front().noteheads.size() == 1);
+
+    // Two quarters into the bar is two quarters to the right of where the same
+    // note sits when it starts the bar.
+    CHECK(
+        lateLayout.systems.front().noteheads.front().x >
+        onTimeLayout.systems.front().noteheads.front().x + 1.0);
+}
