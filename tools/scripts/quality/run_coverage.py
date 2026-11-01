@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -63,8 +64,38 @@ def configure(build_dir: Path, cmake: str) -> None:
     )
 
 
+def build_jobs() -> int:
+    """How many compiles to run at once: one per core."""
+    return max(1, os.cpu_count() or 1)
+
+
+def build_command(build_dir: Path, cmake: str, jobs: int) -> list[str]:
+    """The build, with an explicit job count.
+
+    A bare ``--parallel`` is unbounded here. This tree is configured with
+    CMake's default generator, Unix Makefiles -- every other C++ workflow uses
+    Ninja -- and CMake hands a bare ``--parallel`` to make as ``-j`` with no
+    number, which make reads as *no limit*. Under coverage instrumentation every
+    compile is heavier than usual, and the JUCE modules are the heaviest of
+    all, so make started them all in the same second, the runner ran out of
+    memory, and systemd-oomd terminated the whole build with SIGTERM (exit 143,
+    not an OOM kill's 137) before a test ran. It took down #238's coverage job
+    and then #247's; #238's passed on a re-run with nothing changed, which is
+    what an intermittent resource limit looks like.
+    """
+    return [
+        cmake,
+        "--build",
+        str(build_dir),
+        "--target",
+        "PracticeTakesTests",
+        "--parallel",
+        str(jobs),
+    ]
+
+
 def build(build_dir: Path, cmake: str) -> None:
-    run([cmake, "--build", str(build_dir), "--target", "PracticeTakesTests", "--parallel"])
+    run(build_command(build_dir, cmake, build_jobs()))
 
 
 def run_tests(build_dir: Path) -> None:
