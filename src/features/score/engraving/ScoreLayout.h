@@ -71,22 +71,71 @@ struct NoteheadGlyph
 // a stem, which is why this is not a field on the notehead.
 struct StemGlyph
 {
+    // The stem's centre line. Set in from the notehead's edge by half the
+    // stem's thickness, so that the stem's outer edge and the notehead's are
+    // flush -- which is where an engraver puts it, and what makes a stem read
+    // as attached rather than as a line drawn next to a note.
     double x = 0.0;
 
+    double thickness = 0.12;
+
     // The notehead the stem attaches to: the lowest of a chord for an upward
-    // stem, the highest for a downward one.
+    // stem, the highest for a downward one. A staff position, because this end
+    // of a stem is always on a notehead.
     StaffSteps attachPosition = 0;
 
-    // The far end.
-    StaffSteps tipPosition = 0;
+    // The far end, in **spaces below the top line** rather than in half-space
+    // positions. A beam has a slope, so the stems under it end between
+    // positions; this end of a stem is not on a notehead and has no reason to
+    // land on one. `spacesBelowTopLine` converts a position into these units.
+    double tipSpaces = 0.0;
 
-    // None for a quarter note and longer. These are **flags**, not beams: this
-    // pass does not beam, which the layout says in a notice.
+    // None for a quarter note and longer, and none for a note a beam reached:
+    // a beam replaces the flags it stands in for, which is what `beamLevels`
+    // records.
     int flags = 0;
+
+    // How many beams meet this stem, zero for an unbeamed one. The stem already
+    // reaches the outermost of them -- this is here so that a caller can tell a
+    // beamed stem from a flagged one without searching the beam list.
+    int beamLevels = 0;
 
     bool up = true;
 
     bool isGrace = false;
+};
+
+// One beam, as a sloped bar joining the stems under or over it.
+//
+// Level 1 is the beam nearest the noteheads, which every beamed note carries;
+// each further level is one more beam, stacked away from the noteheads. A
+// sixteenth in a group of eighths therefore has a level-2 beam that the eighths
+// do not.
+struct BeamGlyph
+{
+    // Already reaching the outer edges of the stems at each end of a full
+    // beam, so the bar covers those stems rather than stopping at their centre
+    // lines. A partial beam reaches its own stem's outer edge on that side.
+    double startX = 0.0;
+    double endX = 0.0;
+
+    // The y of the beam's near edge -- the side facing the noteheads -- at each
+    // end, in spaces below the top line. The bar is `thickness` deep from
+    // there, **away** from the noteheads: upwards for `up`, downwards for down.
+    double startY = 0.0;
+    double endY = 0.0;
+
+    double thickness = 0.5;
+
+    int level = 1;
+
+    // A partial beam: the stub drawn on a stem whose beam level has no
+    // neighbour to join -- the second beam of a lone sixteenth among eighths.
+    // `startX`/`endX` already bound the stub, so a painter draws every beam the
+    // same way.
+    bool partial = false;
+
+    bool up = true;
 };
 
 struct RestGlyph
@@ -202,6 +251,7 @@ struct System
     std::vector<TimeSignatureGlyph> timeSignatures;
     std::vector<NoteheadGlyph> noteheads;
     std::vector<StemGlyph> stems;
+    std::vector<BeamGlyph> beams;
     std::vector<RestGlyph> rests;
     std::vector<BarlineGlyph> barlines;
     std::vector<TieGlyph> ties;
@@ -244,7 +294,11 @@ struct LayoutOptions
     // sixteenths still has space for a notehead.
     double minimumSlotWidth = 2.6;
 
-    double noteheadWidth = 1.2;
+    // The music font's black notehead, which every stemmed notehead matches:
+    // Bravura's is 1.18 spaces wide. MusicFontTests checks this number against
+    // the font, because a stem placed by one width against a notehead drawn at
+    // another stands off it or cuts into it.
+    double noteheadWidth = 1.18;
     double accidentalWidth = 1.4;
     double graceNoteWidth = 1.7;
     double clefWidth = 3.6;
@@ -254,10 +308,39 @@ struct LayoutOptions
     // Room after the last onset of a measure, before its barline.
     double measureTrailingWidth = 1.8;
 
+    // Room a flag needs to the right of an up stem. The floor between two
+    // onsets has to clear a notehead and a flag together, or a flagged eighth
+    // touches whatever follows it; `minimumSlotWidth` is raised to this sum
+    // when it falls short, rather than the two numbers being kept in step by
+    // hand.
+    double flagWidth = 1.0;
+
+    // A stem's thickness, from the music font's engraving defaults. A layout
+    // number rather than a painter one, because it decides where the stem's
+    // centre line goes and how far a beam reaches past it.
+    double stemThickness = 0.12;
+
     // How long a stem is, in half spaces, measured from the notehead it
     // attaches to. Seven half spaces is three and a half staff spaces, which is
     // the conventional length.
     StaffSteps stemLength = 7;
+
+    // The least a stem may be shortened to when a beam's slope pulls it in, in
+    // staff spaces. Shorter than this and the notehead and the beam read as one
+    // blot.
+    double minimumStemLength = 2.5;
+
+    // How far a beamed group's far end may rise or fall against its near end,
+    // in staff spaces. A beam follows the shape of its notes, but only so far:
+    // an unclamped slope through a wide leap is a diagonal, not a beam.
+    double maximumBeamRise = 1.5;
+
+    // One beam's depth, and the gap between two stacked beams.
+    double beamThickness = 0.5;
+    double beamSeparation = 0.25;
+
+    // How far a partial beam reaches from its stem.
+    double partialBeamLength = 1.0;
 
     // Vertical room above a staff for tempo marks and measure numbers, and
     // below it for dynamics.

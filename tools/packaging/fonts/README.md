@@ -1,7 +1,11 @@
-# UI typeface
+# Typefaces
 
-Practice Takes draws its interface in **IBM Plex Sans**, embedded in the
-executable rather than requested from the platform by name.
+Practice Takes draws its interface in **IBM Plex Sans** and its notation in
+**Bravura**, both embedded in the executable rather than requested from the
+platform by name. Plex is described first; Bravura has a section of its own at
+the end.
+
+## UI typeface
 
 - `IBMPlexSans-Regular.ttf`
 - `IBMPlexSans-Bold.ttf`
@@ -52,3 +56,52 @@ has to actually be present.
 Replace the files from the same upstream path, keep `OFL.txt` in step, and run
 `ctest --test-dir build -R typeface`. If IBM ever renames the family, that test
 is what will tell you.
+
+## Music font
+
+- `Bravura.otf`
+- `Bravura-OFL.txt`
+
+Bravura version 1.482, taken unmodified from
+[github.com/steinbergmedia/bravura](https://github.com/steinbergmedia/bravura)
+at `redist/otf/Bravura.otf` (SHA-256
+`cdf0f893ee1fdb64b7f6713d71ee0dcfc349c0ac01429a8e451b01a9e79f5f3b`), with the
+repository's `LICENSE.txt` beside it as `Bravura-OFL.txt`.
+
+Bravura is Steinberg's reference font for SMuFL, the Standard Music Font Layout,
+which fixes a codepoint for every notation symbol and fixes one em at four staff
+spaces. The score view's layout already measured in staff spaces, so the font
+dropped in without the layout changing scale. `src/features/score/MusicFont`
+loads it and `src/features/score/SmuflGlyphs` names the glyphs drawn.
+
+### Why embedded
+
+The same reason as Plex, and stronger. A missing UI face falls back to the
+platform sans; a missing music font draws a Private Use Area codepoint as
+nothing. `src/tests/features/score/MusicFontTests.cpp` asserts the family, that
+every glyph the renderer asks for is present, and that a notehead measures the
+1.18 by 1.0 staff spaces Bravura publishes, which is the check that the size
+conversion is right.
+
+### Why the whole font
+
+Bravura holds some 3,000 glyphs and the renderer uses about fifty, so a subset
+would be a few percent of the ~870 KB this file adds. It is shipped whole
+anyway, because of the licence: Bravura has a **Reserved Font Name**, and under
+the OFL a subset is a Modified Version, which may not use that name. A subset
+would have to be renamed, and its provenance explained. The whole file needs
+neither.
+
+### Licence
+
+SIL Open Font License 1.1, with Reserved Font Name "Bravura", reproduced in full
+in `Bravura-OFL.txt`. The same licence text is also inside the font's own name
+table.
+
+### Updating
+
+Replace `Bravura.otf` from the same upstream path, update the version and hash
+above, and run `ctest --test-dir build -R typeface`. A new release that moves a
+glyph's origin or size fails "glyphs keep SMuFL's origins" or "one em of the
+music font is four staff spaces", and if the notehead width changes, "the
+layout's notehead is the font's notehead" fails too.

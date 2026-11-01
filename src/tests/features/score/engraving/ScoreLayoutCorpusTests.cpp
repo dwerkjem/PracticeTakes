@@ -6,6 +6,7 @@
 
 #include <juce_core/juce_core.h>
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -144,15 +145,87 @@ TEST_CASE("every corpus score lays out", "[score][engraving][corpus]")
             for (const engraving::StemGlyph& glyph : system.stems)
             {
                 CHECK(isFinite(glyph.x));
+                CHECK(isFinite(glyph.tipSpaces));
+
+                const double attachSpaces = engraving::spacesBelowTopLine(glyph.attachPosition);
 
                 // A stem that ends where it starts is a stem nobody can see.
-                CHECK(glyph.attachPosition != glyph.tipPosition);
-                const bool pointsUp = glyph.tipPosition < glyph.attachPosition;
+                CHECK(glyph.tipSpaces != attachSpaces);
+                const bool pointsUp = glyph.tipSpaces < attachSpaces;
 
                 CHECK(pointsUp == glyph.up);
 
                 CHECK(glyph.flags >= 0);
                 CHECK(glyph.flags <= 5);
+
+                CHECK(glyph.beamLevels >= 0);
+                CHECK(glyph.beamLevels <= 5);
+
+                // A beam stands in for flags; carrying both would draw the
+                // duration twice.
+                CHECK_FALSE((glyph.flags > 0 && glyph.beamLevels > 0));
+
+                // However steep a group's slope, a beamed stem is still long
+                // enough to read as a stem.
+                if (glyph.beamLevels > 0)
+                {
+                    CHECK(std::abs(glyph.tipSpaces - attachSpaces) >= 2.0);
+                }
+            }
+
+            for (const engraving::BeamGlyph& glyph : system.beams)
+            {
+                CHECK(isFinite(glyph.startX));
+                CHECK(isFinite(glyph.endX));
+                CHECK(isFinite(glyph.startY));
+                CHECK(isFinite(glyph.endY));
+
+                // A beam with no width joins nothing, and one running
+                // backwards means two stems were gathered out of order.
+                CHECK(glyph.endX > glyph.startX);
+
+                CHECK(glyph.level >= 1);
+                CHECK(glyph.level <= 5);
+
+                CHECK(glyph.thickness > 0.0);
+
+                // The slope is clamped, so no beam in any real file is a
+                // diagonal however far its notes leap. The clamp holds between
+                // the outer stems; a full beam's drawn ends reach half a stem
+                // past each, along the same slope, so the rise is scaled back
+                // to the stems before it is compared.
+                if (!glyph.partial)
+                {
+                    const double drawn = glyph.endX - glyph.startX;
+                    const double betweenStems = drawn - options.stemThickness;
+                    const double rise = std::abs(glyph.endY - glyph.startY) * betweenStems / drawn;
+
+                    CHECK(rise <= options.maximumBeamRise + 0.001);
+                }
+            }
+
+            // Every beamed stem's level is covered by a beam at its own x, or a
+            // stem would end in mid-air above the beams that reach it.
+            for (const engraving::StemGlyph& stem : system.stems)
+            {
+                if (stem.beamLevels <= 0)
+                {
+                    continue;
+                }
+
+                for (int level = 1; level <= stem.beamLevels; ++level)
+                {
+                    const bool covered = std::any_of(
+                        system.beams.begin(), system.beams.end(),
+                        [&stem, level](const engraving::BeamGlyph& beam)
+                        {
+                            return beam.level == level && beam.up == stem.up &&
+                                   beam.startX <= stem.x + 0.001 && beam.endX >= stem.x - 0.001;
+                        });
+
+                    INFO("stem at x " << stem.x << " level " << level);
+                    CHECK(covered);
+                }
             }
 
             for (const engraving::TieGlyph& glyph : system.ties)

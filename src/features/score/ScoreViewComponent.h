@@ -101,6 +101,11 @@ class ScoreViewComponent final : public ToolComponent, private juce::Timer
 
     engraving::ScoreLayout layout;
 
+    // Owned here rather than shared across the application: parsing it is
+    // once per tool opened, and the score view is the only thing that draws
+    // notation. Declared before `canvas`, which borrows it to paint.
+    MusicFont musicFont;
+
     Canvas canvas{*this};
     juce::Viewport viewport;
 

@@ -699,6 +699,18 @@ SURFACES: tuple[Surface, ...] = (
                 "curling away from the head?",
             ),
             Question(
+                "beams-join-their-stems",
+                "Bar 1 ends with two eighths and bar 3 holds two sixteenths: is each pair "
+                "joined by a bar across the ends of their stems, with the sixteenths carrying "
+                "two bars and the eighths one, and does every bar meet its stems flush rather "
+                "than stopping short of them?",
+            ),
+            Question(
+                "an-eighth-is-not-a-quarter",
+                "Can you tell every eighth and sixteenth from a quarter note -- by a flag or a "
+                "beam -- without counting anything?",
+            ),
+            Question(
                 "nothing-collides",
                 "Do any two symbols overlap -- an accidental over a notehead, a lyric over a "
                 "stem, a dot over a barline?",
@@ -715,8 +727,9 @@ SURFACES: tuple[Surface, ...] = (
             ),
             Question(
                 "notices-are-readable",
-                "Does the strip at the bottom say what is not drawn -- beams, at least -- in a "
-                "sentence rather than a code?",
+                "Does the strip at the bottom say what is not drawn, and that beam groups came "
+                "from the time signature rather than from the file, in sentences rather than "
+                "in codes?",
             ),
         ),
     ),

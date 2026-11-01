@@ -166,6 +166,11 @@ juce_add_binary_data(PracticeTakesIcon
 # and 600 weights collapse onto these two; carrying Medium and SemiBold as well
 # would need a name-keyed lookup and another 400 KB for weights nothing asks
 # for by name. See tools/packaging/fonts/README.md.
+#
+# Bravura is the music font the score view engraves with, embedded for the same
+# reason: a notation glyph has no platform fallback at all, so a name-based
+# lookup on a machine without it would draw nothing rather than something
+# slightly different.
 set(PRACTICE_TAKES_FONT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/tools/packaging/fonts")
 
 juce_add_binary_data(PracticeTakesFonts
@@ -174,6 +179,7 @@ juce_add_binary_data(PracticeTakesFonts
     SOURCES
         "${PRACTICE_TAKES_FONT_DIRECTORY}/IBMPlexSans-Regular.ttf"
         "${PRACTICE_TAKES_FONT_DIRECTORY}/IBMPlexSans-Bold.ttf"
+        "${PRACTICE_TAKES_FONT_DIRECTORY}/Bravura.otf"
 )
 
 # The space-free binary name is what the Debian package, the NSIS installer,

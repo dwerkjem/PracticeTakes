@@ -10,11 +10,13 @@
   nothing else does:
 
     bar 1  key signature of two sharps, 4/4, a forward repeat, a tempo mark,
-           lyrics, and a note inside the key needing no accidental
+           lyrics, a note inside the key needing no accidental, and a pair of
+           eighths sharing one beat, which beam
     bar 2  an accidental outside the key, the same accidental not repeated, a
            natural cancelling it, and a rest
-    bar 3  a grace note, a dotted quarter, flagged eighths and sixteenths, and a
-           backward repeat
+    bar 3  a grace note, a dotted quarter, two eighths each alone in a beat and
+           so flagged, a pair of sixteenths sharing a beat and so beamed with a
+           second beam, and a backward repeat
     bars 4-5  a tie across a barline, whose second note carries no accidental
     bar 6  a clef change, and the notes after it on the new staff
     bar 7  a chord, and a chord holding two notes a second apart

@@ -35,7 +35,8 @@ ScoreViewComponent::Canvas::Canvas(ScoreViewComponent& ownerToUse) : owner(owner
 void ScoreViewComponent::Canvas::paint(juce::Graphics& graphics)
 {
     const ScoreGlyphPainter painter(
-        graphics, owner.pixelsPerSpace(), scoreNotationPaletteFor(owner.currentTheme));
+        graphics, owner.musicFont, owner.pixelsPerSpace(),
+        scoreNotationPaletteFor(owner.currentTheme));
 
     for (const engraving::System& system : owner.layout.systems)
     {
@@ -153,9 +154,9 @@ void ScoreViewComponent::resized()
     bounds.removeFromTop(titleStripHeight);
 
     // Reserved whether or not there is anything in it, so that opening a score
-    // does not move the staff: a laid-out score always has at least one notice
-    // -- this pass does not beam -- and a strip that appeared later would
-    // reflow everything the moment a file finished loading.
+    // does not move the staff. A strip that appeared only when a notice did
+    // would reflow everything the moment a file finished loading, and which
+    // files have notices is a property of the files rather than of the tool.
     bounds.removeFromBottom(noticeStripHeight);
 
     viewport.setBounds(bounds);
@@ -211,6 +212,15 @@ std::vector<ToolComponent::MenuEntry> ScoreViewComponent::optionsMenuEntries()
 juce::String ScoreViewComponent::noticeText() const
 {
     juce::StringArray lines;
+
+    // First, because it explains everything else on the page. Without the
+    // font the staff, stems and beams still draw and every symbol is missing,
+    // which would otherwise look like a score with no notes in it.
+    if (!musicFont.isLoaded())
+    {
+        lines.add("The music font did not load, so noteheads, clefs, accidentals and rests are "
+                  "not drawn.");
+    }
 
     for (const std::string& notice : layout.notices)
     {
@@ -290,7 +300,7 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
             title, juce::Justification::centredRight);
     }
 
-    if (layout.notices.empty())
+    if (layout.notices.empty() && musicFont.isLoaded())
     {
         return;
     }
