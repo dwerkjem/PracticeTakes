@@ -52,7 +52,29 @@ class AudioInputService final
         virtual void audioInputStateChanged(InputState state) = 0;
     };
 
-    AudioInputService();
+    // `declineInputDevice` means: open no input device, attempt no recovery,
+    // and scan for no device changes, leaving the generated tone as the only
+    // producer into the analysis path.
+    //
+    // It exists because one process at a time can hold the input device, so a
+    // verification capture run and a live application compete for it -- and a
+    // capture instance does not want the device it is competing for. The audio
+    // callback already replaces a device's input with the tone whenever one is
+    // asked for, so an instance that only ever analyses a tone opens a device,
+    // reads from it, and discards every sample.
+    //
+    // Taken at construction and held `const` on purpose. A setter would imply
+    // an instance can change its mind, and changing it *towards* declining
+    // would mean cancelling an in-flight device open -- a blocking JUCE/ALSA
+    // call on a detached thread, which
+    // docs/development/performance/audio-thread-safety.md and the
+    // audio-device-recovery spec specifically decided not to support. Declining
+    // is decided before any open is attempted, which is what makes it safe.
+    //
+    // Devices are still *enumerated*. Declining to open one is not declining to
+    // know they exist, and the Settings input-device chooser is a verified
+    // capture surface that an empty list would make unanswerable.
+    explicit AudioInputService(bool declineInputDevice = false);
     ~AudioInputService() override;
 
     void addListener(Listener* listener);
@@ -217,6 +239,9 @@ class AudioInputService final
     std::array<ConsumerSlot, maximumConsumers> consumers;
     juce::String lastDeviceName;
     InputState lastState = InputState::disconnected;
+
+    // See the constructor. Never opens a device, never recovers, never scans.
+    const bool inputDeclined;
 
     std::atomic<unsigned int> callbacksInProgress{0};
     std::atomic<bool> muted{false};

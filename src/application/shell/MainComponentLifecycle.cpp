@@ -56,8 +56,11 @@ void migrateLegacySettingsFile(const juce::File& destination)
 }
 } // namespace
 
-MainComponent::MainComponent(bool muteMicrophoneForSession)
-    : sessionMicrophoneMuteEnabled(muteMicrophoneForSession)
+MainComponent::MainComponent(bool muteMicrophoneForSession, bool declineAudioInput)
+    // Declaration order, not argument order: audioInputService is declared well
+    // before sessionMicrophoneMuteEnabled, so the parameter is used directly
+    // rather than reading the member, which is not initialised yet.
+    : audioInputService(declineAudioInput), sessionMicrophoneMuteEnabled(muteMicrophoneForSession)
 {
     setOpaque(true);
     audioInputService.addChangeListener(this);
