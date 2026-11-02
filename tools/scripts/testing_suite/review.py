@@ -40,6 +40,78 @@ def questions_for_capture(state: str, title: str) -> tuple[surfaces.Question, ..
     )
 
 
+def carry_verdicts(store: Store, run_id: int) -> dict:
+    """Score this run's captures that are identical to ones already scored.
+
+    Most of a full run is surfaces a change did not touch, and the reviewer
+    has already looked at those exact pixels. So a capture whose image is
+    byte-for-byte the same as an earlier scored capture of the same surface,
+    size and palette takes that capture's answers -- passes and failures alike,
+    since an identical picture of a fault is still a fault.
+
+    Only the questions answered from the picture. Attended questions are about
+    the running application, and a new build has to be run to answer them, so
+    they are never carried. A question this capture has already answered keeps
+    its answer. Every carried answer says where it came from, so the record
+    shows which verdicts were looked at in this run and which were inherited.
+    """
+    captures = 0
+    verdicts = 0
+
+    for capture in store.captures(run_id):
+        if capture.failure or not capture.digest:
+            continue
+
+        source = store.execute(
+            """
+            SELECT c.id, c.run_id FROM capture c
+            WHERE c.digest = ? AND c.surface_state = ? AND c.geometry = ? AND c.theme = ?
+              AND c.run_id < ? AND c.failure = ''
+              AND EXISTS (SELECT 1 FROM axis_verdict v WHERE v.capture_id = c.id AND v.attended = 0)
+            ORDER BY c.run_id DESC, c.id DESC
+            LIMIT 1
+            """,
+            (capture.digest, capture.surface_state, capture.geometry, capture.theme, run_id),
+        ).fetchone()
+
+        if source is None:
+            continue
+
+        asked = {
+            question.id
+            for question in _question_lookup(capture.surface_state, capture.surface_title, False)
+        }
+        answered = {row["question"] for row in store.verdicts(capture.id)}
+        carried_here = 0
+
+        for row in store.verdicts(source["id"]):
+            if row["attended"] or row["question"] not in asked or row["question"] in answered:
+                continue
+
+            note = f"Carried from run {source['run_id']}: the image is identical."
+
+            if row["note"]:
+                note += f" {row['note']}"
+
+            problems = store.record_verdict(
+                capture.id,
+                question=row["question"],
+                prompt=row["prompt"],
+                verdict=row["verdict"],
+                note=note,
+                attended=False,
+            )
+
+            if not problems:
+                carried_here += 1
+
+        if carried_here:
+            captures += 1
+            verdicts += carried_here
+
+    return {"captures": captures, "verdicts": verdicts}
+
+
 def attended_capture_ids(store: Store, run_id: int) -> dict[str, int]:
     """Which capture each surface's behavioural questions hang off.
 

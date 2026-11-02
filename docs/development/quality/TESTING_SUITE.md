@@ -476,6 +476,19 @@ apart.
 The tag vocabulary is data, not code: it starts at `broken`, `ugly`,
 `illegible`, and grows from the page.
 
+### Answers carried to identical captures
+
+A capture whose image is byte-for-byte identical to an earlier capture of the
+same surface, at the same size and in the same palette, takes that capture's
+answers when the capture pass finishes. Passes and failures carry alike,
+because an identical picture of a fault is still a fault. Each carried answer
+says which run it came from. So a full run after a small change asks for a
+review of what changed, not of everything again.
+
+Attended questions are never carried. They are about the running application,
+and a new build has to be run to answer them. An answer already given on the
+new capture is kept.
+
 ## The attended pass
 
 A question about behaviour is not a question about pixels. "Does the tuner

@@ -369,6 +369,7 @@ def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
         f"{result['already_captured']} already present, "
         f"across {result['workers']} worker(s)."
     )
+    _report_carried(store, run_id)
     print(f"Images: {images_at}")
 
     return 1 if result["failed"] or result["errors"] else 0
@@ -435,12 +436,24 @@ def _capture_on_current_display(arguments, plan, store, resolutions) -> int:
         f"Run {run_id}: {result['captured']} captured, {result['failed']} failed, "
         f"{result['already_captured']} already present."
     )
+    _report_carried(store, run_id)
     # The path, not just the review command: someone who captured two surfaces
     # to look at a change wants the files, not a browser grid.
     print(f"Images:          {image_directory(store, run_id)}")
     print(f"Review it with:  test-suite review --run {run_id}")
 
     return 0
+
+
+def _report_carried(store, run_id: int) -> None:
+    """Carry answers onto identical captures, and say how many."""
+    carried = review_module.carry_verdicts(store, run_id)
+
+    if carried["captures"]:
+        print(
+            f"{carried['captures']} capture(s) identical to ones already scored: "
+            f"{carried['verdicts']} answer(s) carried over. Attended questions never are."
+        )
 
 
 def command_attend(arguments) -> int:
