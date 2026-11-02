@@ -28,6 +28,16 @@ without being opened.
   modification time, so a library of a hundred scores does not re-import and
   re-render on every launch. A changed file invalidates its own preview and
   nothing else.
+- **The shipped sample is a built-in entry.** The application already writes its
+  sample score -- Mahler's "Die zwei blauen Augen", CC0, chosen for how much
+  notation it holds -- into a `Samples` folder under its own data folder
+  (`tools/packaging/samples`). The library lists that folder as a built-in
+  source beside the user's own: always present, not removable, and not counted
+  as a folder the user nominated. So a first launch opens onto a library with
+  one real score in it rather than an empty list, and that score is the **first
+  preview the library renders** -- and, being voice and piano with key and metre
+  changes, tuplets, grace notes, ties, dynamics and lyrics, the one that
+  exercises the preview renderer hardest from day one.
 - **Open from the library**, replacing the file dialog as the usual route in.
   The dialog stays, because a score outside the library must still be openable.
 - **The library survives a missing folder.** A removable drive or a moved
@@ -38,9 +48,9 @@ without being opened.
 ## Capabilities
 
 ### New Capabilities
-- `score-library`: nominating folders, scanning them, what is listed about each
-  score, how entries are identified across renames and moves, and what happens
-  when a folder or file goes missing.
+- `score-library`: nominating folders, scanning them, the built-in sample
+  folder, what is listed about each score, how entries are identified across
+  renames and moves, and what happens when a folder or file goes missing.
 - `score-previews`: rendering a score's first system to an image without
   opening it, the cache that stores them, and what invalidates one.
 
@@ -63,6 +73,9 @@ without being opened.
   it"; `ScoreImportState`'s assumption that an import is always interactive.
 - **Depends on**: the engraving layer (`score-notation-renderer`), which
   previews render through. Without it a preview would be a filename in a box.
+  And on the bundled sample (`bundled_sample::defaultFolder()`), whose folder is
+  the built-in source; the library reads it and never writes it -- rewriting a
+  damaged sample stays the job of the code that ships it.
 - **Performance**: scanning and rendering happen off the message thread and
   publish finished values back to it, the same shape import already uses. The
   audio thread is not involved at any point.
