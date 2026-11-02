@@ -608,6 +608,35 @@ SURFACES: tuple[Surface, ...] = (
     # enough to read in milliseconds; the seconds here are slack for a loaded
     # machine, and an in-progress capture is obviously wrong in the review grid
     # rather than subtly wrong.
+    # A score being imported: the moment between choosing a file and its
+    # report. Held by the state rather than waited for, since a small file is
+    # read in milliseconds and would otherwise only ever be photographed by
+    # accident.
+    Surface(
+        state="score-import-in-progress",
+        title="The score import window while a score is being read",
+        area="score",
+        modes=frozenset({FULL}),
+        window_title=SCORE_IMPORT_WINDOW,
+        warmup_seconds=1.0,
+        extras=(
+            Question(
+                "names-the-file",
+                "Does it say which file is being read -- Mahler - Die zwei blauen Augen.mxl?",
+            ),
+            Question(
+                "reads-as-in-progress",
+                "Is it plainly an import still in progress, rather than a finished report "
+                "with nothing in it?",
+            ),
+            Question(
+                "progress-becomes-the-report",
+                "Open the sample score from File: does this window appear straight away and "
+                "then turn into the import report, without a second window?",
+                behavioural=True,
+            ),
+        ),
+    ),
     Surface(
         state="score-import-diagnostics",
         title="The score import summary, with diagnostics",

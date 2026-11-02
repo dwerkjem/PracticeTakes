@@ -6,6 +6,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 
 #include "application/shell/ui/score/ScoreImportSummary.h"
 #include "application/testcontrol/ApprovedWindowStates.h"
@@ -94,8 +95,9 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
     // assumption.
     CHECK(
         naming == std::set<std::string>{
-                      "score-import-clean", "score-import-diagnostics", "score-view-grand-staff",
-                      "score-view-notation", "score-view-notation-large", "score-view-sample"});
+                      "score-import-clean", "score-import-diagnostics", "score-import-in-progress",
+                      "score-view-grand-staff", "score-view-notation", "score-view-notation-large",
+                      "score-view-sample"});
 }
 
 // The invariant this started as was "a state naming a score opens nothing
@@ -132,6 +134,31 @@ TEST_CASE("one subject per score picture", "[testcontrol][approved][score]")
         // tool would import a score for nobody to look at.
         CHECK(state.tools.size() == 1);
     }
+}
+
+// Holding an import is only meaningful for a state that names something to
+// import and shows the window it would be read in -- and one such picture is
+// enough. A held import with the window suppressed would be a capture of an
+// empty desk.
+TEST_CASE("one state holds an import in progress, and shows it", "[testcontrol][approved][score]")
+{
+    std::vector<std::string> holding;
+
+    for (const ApprovedWindowState& state : approvedWindowStates())
+    {
+        if (!state.holdScoreImportInProgress)
+        {
+            continue;
+        }
+
+        INFO("state " << state.id);
+        holding.push_back(state.id);
+        CHECK_FALSE(state.scoreFixture.empty());
+        CHECK(state.showScoreImportSummary);
+        CHECK(state.tools.empty());
+    }
+
+    CHECK(holding == std::vector<std::string>{"score-import-in-progress"});
 }
 
 // The field is not a general switch: only a state that names a fixture has a

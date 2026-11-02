@@ -293,6 +293,24 @@ const std::vector<ApprovedWindowState>& states()
          "The score view showing the sample score the application ships: a Mahler song for "
          "voice and piano",
          0.0, "", bundledSampleFixtureName(), false},
+        // A score being imported: the window that says which file is being
+        // read, held there. The shipped sample, so the name on it is the one a
+        // new user sees when they open it.
+        {"score-import-in-progress",
+         {},
+         ToolPresentation::none,
+         WorkspaceArrangement::single,
+         WindowGeometry::normal,
+         MicrophoneCondition::available,
+         false,
+         "",
+         false,
+         "The score import window while a score is being read",
+         0.0,
+         "",
+         bundledSampleFixtureName(),
+         true,
+         true},
     };
 
     return approved;

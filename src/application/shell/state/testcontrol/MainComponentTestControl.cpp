@@ -297,7 +297,16 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
         // renders a *finished* asynchronous result. So this returns with the
         // import still running, and the surface's `warmup_seconds` is what
         // waits for it.
-        startScoreImport(fixture);
+        if (state.holdScoreImportInProgress)
+        {
+            // The same call every import makes before its result arrives,
+            // without the read that would replace it.
+            showScoreImportProgress(fixture);
+        }
+        else
+        {
+            startScoreImport(fixture);
+        }
     }
 
     testControlStateId = state.id;

@@ -143,6 +143,15 @@ struct ApprovedWindowState
     // docs/development/architecture/score-model-findings.md, and this field is
     // what closes it.
     bool showScoreImportSummary = true;
+
+    // Show the import window reading `scoreFixture`, and leave it there:
+    // the window a user sees while a score is being imported, which for any
+    // committed fixture lasts milliseconds and so could never be photographed
+    // otherwise. The file is named but never read, so no result arrives to
+    // replace the progress with a summary.
+    //
+    // Appended last, for the reason the comments above give.
+    bool holdScoreImportInProgress = false;
 };
 
 // An object that can be asked to act, as though clicked.
