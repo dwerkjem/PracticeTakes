@@ -36,11 +36,11 @@
 // A peer of AudioInputService rather than a passenger on it: this opens
 // `juce::MidiInput` directly and does **not** go through the
 // `juce::AudioDeviceManager` that AudioInputService owns. The reasons are in
-// openspec/changes/midi-keyboard-capture/design.md, and the one that decides it
-// is that routing MIDI through that manager would couple a keyboard's liveness
-// to audio-device recovery -- the one subsystem here documented as able to block
-// without limit. A pianist with a keyboard and no microphone is an ordinary
-// user of this application.
+// openspec/changes/archive/2026-11-02-midi-keyboard-capture/design.md, and the
+// one that decides it is that routing MIDI through that manager would couple a
+// keyboard's liveness to audio-device recovery -- the one subsystem here
+// documented as able to block without limit. A pianist with a keyboard and no
+// microphone is an ordinary user of this application.
 class MidiInputService final : private juce::MidiInputCallback, private juce::Timer
 {
   public:
