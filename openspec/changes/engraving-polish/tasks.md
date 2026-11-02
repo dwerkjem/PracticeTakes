@@ -68,17 +68,27 @@ decision 1.
 
 ### Vertical placement
 
-- [ ] 2.1 `TextGlyph` gains a `y`. `drawText` stops computing offsets, and the
-      duplicated `1.8` goes with it.
-- [ ] 2.2 A per-system envelope above and below the staff from everything placed
+- [x] 2.1 `TextGlyph` gains a `y`. `drawText` stops computing offsets, and the
+      duplicated `1.8` goes with it. `LyricGlyph` gained one too, for the same
+      reason, and `drawSystem` lost its verse-count parameter.
+- [x] 2.2 A per-system envelope above and below the staff from everything placed
       on it: noteheads and their ledger lines, stems, beams, accidentals.
-- [ ] 2.3 Bands placed clear of it: measure numbers, tempo, voltas and jumps
-      above; lyrics, then dynamics below.
-- [ ] 2.4 Variable system height: `topOfStaff` accumulates and `totalHeight` is
-      the sum. Confirm `ScoreViewComponent` needs no change.
-- [ ] 2.5 Tests: a note four ledger lines below moves that system's lyrics down
+      Per staff, not per system: a piano's hands have different envelopes.
+- [x] 2.3 Bands placed clear of it: measure numbers, tempo above; lyrics, then
+      dynamics below. Voltas and jumps join the above bands with 1.12–1.14.
+- [x] 2.4 Variable system height: `topOfStaff` accumulates and `totalHeight` is
+      the sum. `ScoreViewComponent` needed one line: it passed the verse count
+      `drawSystem` no longer takes. A system grows by how far its notes pushed
+      its text, not by where text already sat, so a system with nothing in the
+      way keeps its old height exactly — pinned by a test.
+- [x] 2.5 Tests: a note four ledger lines below moves that system's lyrics down
       and not the next system's; a tempo mark clears a note above the staff;
-      changing `lyricRowHeight` moves the dynamics with the lyrics.
+      changing `lyricRowHeight` moves the dynamics with the lyrics; a dynamic
+      between a piano's staves clears the left hand's high notes; nothing in
+      the way leaves every band where it was; determinism. Three mutations —
+      lyrics ignoring the notes, tempo ignoring them, staves ignoring what they
+      hold — each fail one. `score-view-sample` and `score-view-notation` gained
+      a `text-clear-of-notes` question (#252).
 
 ### Ledger lines
 
