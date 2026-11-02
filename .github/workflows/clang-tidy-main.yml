@@ -50,7 +50,15 @@ jobs:
       - name: Generate JUCE headers and validate compilation
         run: cmake --build build --target PracticeTakes --parallel
 
-      - name: Apply safe clang-tidy fixes
+      # Every pull request already has to pass clang-tidy on the whole tree
+      # (cpp-quality-check.yml), so main is almost always clean, and this job
+      # has not had anything to fix in a month. Check first, which runs in
+      # parallel and takes a few minutes. Only the fix pass is serial, so it
+      # runs only when the check finds something. Running the fix pass on every
+      # push cost about 27 runner-minutes, and because this job shares the
+      # main-and-release queue, a release had to wait behind each one.
+      - name: Check clang-tidy findings
+        id: check
         shell: bash
         run: |
           mapfile -t cpp_files < <(find src -type f -name "*.cpp" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
@@ -58,6 +66,17 @@ jobs:
             echo "::error::No .cpp files discovered under src/ - refusing to report success on zero analyzed files."
             exit 1
           fi
+          if python3 tools/scripts/quality/run_clang_tidy.py "${cpp_files[@]}"; then
+            echo "findings=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "findings=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply safe clang-tidy fixes
+        if: steps.check.outputs.findings == 'true'
+        shell: bash
+        run: |
+          mapfile -t cpp_files < <(find src -type f -name "*.cpp" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
           # clang-tidy can return a non-zero status while still applying valid
           # fix-its. Preserve those edits and verify unresolved findings later.
           python3 tools/scripts/quality/run_clang_tidy.py --fix "${cpp_files[@]}" || true
@@ -74,15 +93,16 @@ jobs:
           python3 tools/scripts/quality/run_clang_format.py "${cpp_files[@]}" "${header_files[@]}"
 
       - name: Validate automatic edits
+        if: steps.check.outputs.findings == 'true'
         shell: bash
         run: |
           cmake --build build --target PracticeTakes --parallel
           mapfile -t cpp_files < <(find src -type f -name "*.cpp" -not -path "src/tests/*" -not -path "*/node_modules/*" | sort)
-          if [ "${#cpp_files[@]}" -eq 0 ]; then
-            echo "::error::No .cpp files discovered under src/ - refusing to report success on zero analyzed files."
-            exit 1
-          fi
           python3 tools/scripts/quality/run_clang_tidy.py "${cpp_files[@]}"
+
+      - name: Validate formatting edits
+        if: steps.check.outputs.findings != 'true'
+        run: cmake --build build --target PracticeTakes --parallel
 
       - name: Commit automatic fixes
         shell: bash
