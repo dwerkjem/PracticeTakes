@@ -132,6 +132,7 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/KeySignatureLayout.cpp
     src/features/score/engraving/MeasureAccidentals.cpp
     src/features/score/engraving/NoteValue.cpp
+    src/features/score/engraving/PartNames.cpp
     src/features/score/engraving/ScoreLayoutEngine.cpp
     src/features/score/engraving/StaffPosition.cpp
     src/features/score/TargetNoteSelection.h
@@ -146,6 +147,8 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/MeasureAccidentals.h
     src/features/score/engraving/NoteValue.cpp
     src/features/score/engraving/NoteValue.h
+    src/features/score/engraving/PartNames.cpp
+    src/features/score/engraving/PartNames.h
     src/features/score/engraving/ScoreLayout.h
     src/features/score/engraving/ScoreLayoutEngine.cpp
     src/features/score/engraving/ScoreLayoutEngine.h
@@ -267,6 +270,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/score/engraving/KeySignatureLayoutTests.cpp
     src/tests/features/score/engraving/MeasureAccidentalsTests.cpp
     src/tests/features/score/engraving/NoteValueTests.cpp
+    src/tests/features/score/engraving/PartNamesTests.cpp
     src/tests/features/score/engraving/ScoreLayoutCorpusTests.cpp
     src/tests/features/score/engraving/ScoreLayoutEngineTests.cpp
     src/tests/features/score/engraving/StaffPositionTests.cpp
@@ -323,6 +327,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/features/score/engraving/KeySignatureLayout.cpp
     src/features/score/engraving/MeasureAccidentals.cpp
     src/features/score/engraving/NoteValue.cpp
+    src/features/score/engraving/PartNames.cpp
     src/features/score/engraving/ScoreLayoutEngine.cpp
     src/features/score/engraving/StaffPosition.cpp
     src/platform/audio/PitchDetector.cpp
