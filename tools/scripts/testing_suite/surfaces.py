@@ -631,8 +631,9 @@ SURFACES: tuple[Surface, ...] = (
             ),
             Question(
                 "progress-becomes-the-report",
-                "Open the sample score from File: does this window appear straight away and "
-                "then turn into the import report, without a second window?",
+                "This window starts held at 'Reading...' on purpose, for the picture. Now use "
+                "File > Open sample score: does this same window turn into the import report, "
+                "without a second window appearing?",
                 behavioural=True,
             ),
         ),
