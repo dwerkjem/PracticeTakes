@@ -71,6 +71,13 @@ TEST_CASE("what cannot be read falls back field by field", "[score][view-setting
     CHECK(badView.view == ViewMode::page);
     CHECK(sizeLadder.at(badView.sizeStep) == 11.0);
 
+    // Only plain digits with an optional point are a size.
+    CHECK(decode({1, "size=1e1"}).sizeStep == defaultSizeStep);
+    CHECK(decode({1, "size=+9.4"}).sizeStep == defaultSizeStep);
+    CHECK(decode({1, "size=9.4.1"}).sizeStep == defaultSizeStep);
+    CHECK(decode({1, "size=."}).sizeStep == defaultSizeStep);
+    CHECK(sizeLadder.at(decode({1, "size=11."}).sizeStep) == 11.0);
+
     CHECK(decode({1, ""}) == Settings{});
     CHECK(decode({1, ";;=;view"}) == Settings{});
     CHECK(decode({1, "size=-4"}) == Settings{});

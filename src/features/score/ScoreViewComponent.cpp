@@ -83,18 +83,23 @@ void ScoreViewComponent::Canvas::paint(juce::Graphics& graphics)
         owner.pages.at(std::min(owner.currentPage, owner.pages.size() - 1));
     const juce::Rectangle<float> content = owner.pageContent();
 
-    // Clipped to the sheet, so a system taller than the page -- reported in the
-    // notice strip -- is cut at the page's foot rather than drawn off it.
-    const juce::Graphics::ScopedSaveState saved(graphics);
-    graphics.reduceClipRegion(page.toNearestInt());
+    // A page whose one system is larger than the page, in either direction, is
+    // drawn just small enough to show all of it: nothing on a page is ever cut
+    // off. Every other page is drawn at the chosen size.
+    const double scale = engraving::fitScale(
+        shown, owner.layout.systems, static_cast<double>(content.getHeight()) / px,
+        static_cast<double>(content.getWidth()) / px);
+    const double pagePx = px * scale;
+    const ScoreGlyphPainter pagePainter(
+        graphics, owner.musicFont, pagePx, scoreNotationPaletteFor(owner.currentTheme));
 
     for (std::size_t index = shown.firstSystem; index <= shown.lastSystem; ++index)
     {
         const engraving::System& system = owner.layout.systems.at(index);
 
-        painter.drawSystem(
+        pagePainter.drawSystem(
             system, static_cast<double>(content.getX()),
-            static_cast<double>(content.getY()) + ((system.topOfStaff - shown.top) * px));
+            static_cast<double>(content.getY()) + ((system.topOfStaff - shown.top) * pagePx));
     }
 }
 
@@ -264,8 +269,12 @@ void ScoreViewComponent::relayout(std::optional<std::size_t> keep, bool force)
 
     if (settings.view == score_view::ViewMode::page)
     {
+        // A system too tall for the page, or holding a bar too wide for it,
+        // goes on the next page by itself and that page is drawn smaller: no
+        // bar is cut off at the page's foot or its right edge.
         pages = engraving::paginate(
-            layout.systems, static_cast<double>(pageContent().getHeight()) / px);
+            layout.systems, static_cast<double>(pageContent().getHeight()) / px,
+            static_cast<double>(pageContent().getWidth()) / px);
         currentPage = pages.empty() ? 0 : std::min(currentPage, pages.size() - 1);
 
         // One page on the canvas, scrolled vertically when it is taller than
@@ -304,8 +313,9 @@ void ScoreViewComponent::relayout(std::optional<std::size_t> keep, bool force)
             // Wide enough for the viewport, or wider if a single bar overflowed
             // -- a measure that does not fit anywhere still has to go somewhere,
             // and the layout says so by returning a system wider than it was
-            // asked for.
-            viewport.setScrollBarsShown(true, false);
+            // asked for. A horizontal scrollbar then appears, so that bar can be
+            // scrolled to rather than cut off at the panel's edge.
+            viewport.setScrollBarsShown(true, true);
             canvas.setSize(std::max(width, contentWidth), std::max(height, contentHeight));
         }
     }
@@ -420,8 +430,12 @@ void ScoreViewComponent::revealMeasure(std::size_t measure)
 
                 // And down the page to the system, which may be below the
                 // panel's foot.
+                const double scale = engraving::fitScale(
+                    pages.at(page), layout.systems,
+                    static_cast<double>(pageContent().getHeight()) / px,
+                    static_cast<double>(pageContent().getWidth()) / px);
                 const double offset =
-                    (layout.systems.at(holding).bandTop - pages.at(page).top) * px;
+                    (layout.systems.at(holding).bandTop - pages.at(page).top) * px * scale;
                 viewport.setViewPosition(
                     0, static_cast<int>(std::floor(pageContent().getY() + offset)));
             }
@@ -437,17 +451,19 @@ void ScoreViewComponent::revealMeasure(std::size_t measure)
     case score_view::ViewMode::horizontal:
     {
         const engraving::System& system = layout.systems.at(holding);
-        double first = std::numeric_limits<double>::max();
+        double first = 0.0;
+        bool found = false;
 
         for (const engraving::NoteheadGlyph& head : system.noteheads)
         {
             if (head.source.measureIndex == measure)
             {
-                first = std::min(first, head.x);
+                first = found ? std::min(first, head.x) : head.x;
+                found = true;
             }
         }
 
-        if (first == std::numeric_limits<double>::max())
+        if (!found)
         {
             break;
         }
@@ -732,13 +748,13 @@ juce::String ScoreViewComponent::noticeText() const
                   "not drawn.");
     }
 
-    const bool anyOverflow = std::any_of(
-        pages.begin(), pages.end(), [](const engraving::Page& page) { return page.overflows; });
+    const bool anyOversize = std::any_of(
+        pages.begin(), pages.end(), [](const engraving::Page& page) { return page.oversize; });
 
-    if (settings.view == score_view::ViewMode::page && anyOverflow)
+    if (settings.view == score_view::ViewMode::page && anyOversize)
     {
-        lines.add("A line of music is taller than the page and is cut off at its foot; shrink "
-                  "the music, or use Vertical scroll, to see all of it.");
+        lines.add("A line of music too large for the page is on a page of its own, drawn "
+                  "smaller so all of it shows.");
     }
 
     for (const std::string& notice : layout.notices)

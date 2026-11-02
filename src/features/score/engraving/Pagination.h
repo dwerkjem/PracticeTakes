@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <limits>
 #include <vector>
 
 #include "ScoreLayout.h"
@@ -26,15 +27,26 @@ struct Page
     // systems up by this much.
     double top = 0.0;
 
-    // The one system on this page is taller than a page, so its foot is cut
-    // off. Said, not hidden: the view reports it rather than shrinking the
-    // music.
-    bool overflows = false;
+    // The one system on this page is larger than a page -- taller than its
+    // height, or a bar wider than its width -- so the page has to be drawn
+    // smaller to show all of it. Such a system always has a page to itself, so
+    // shrinking it shrinks nothing else.
+    bool oversize = false;
 };
 
 // Greedy and in order: each page takes whole systems until the next would not
-// fit, and a system never spans two pages. A system taller than a page gets a
-// page to itself, marked `overflows`. No systems, no pages. A page height that
-// is not positive puts every system on its own page.
-[[nodiscard]] std::vector<Page> paginate(const std::vector<System>& systems, double pageHeight);
+// fit, and a system never spans two pages. A system larger than a page in
+// either direction -- taller than `pageHeight`, or wider than `pageWidth`
+// because one bar would not fit the width at all -- goes on a page of its own,
+// marked `oversize`, and the page after it starts afresh. No systems, no pages.
+[[nodiscard]] std::vector<Page> paginate(
+    const std::vector<System>& systems,
+    double pageHeight,
+    double pageWidth = std::numeric_limits<double>::infinity());
+
+// How much a page has to be scaled down for every system on it to show whole:
+// 1 for a page whose systems fit, less for an oversize one. Never more than 1
+// -- a page is never enlarged to fill space.
+[[nodiscard]] double
+fitScale(const Page& page, const std::vector<System>& systems, double pageHeight, double pageWidth);
 } // namespace engraving

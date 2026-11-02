@@ -1,12 +1,76 @@
 #include "ScoreViewSettings.h"
 
-#include <charconv>
 #include <cmath>
 #include <limits>
 #include <string>
 
 namespace score_view
 {
+namespace
+{
+// The size in tenths of a pixel, written and read by hand. Every ladder step
+// has at most one decimal place, and the floating-point std::to_chars and
+// std::from_chars this used first are missing from Apple's standard library
+// before macOS 13.3, which the macOS build targets.
+[[nodiscard]] std::string formatSize(double pixelsPerSpace)
+{
+    const long long tenths = std::llround(pixelsPerSpace * 10.0);
+    std::string text = std::to_string(tenths / 10);
+
+    if (tenths % 10 != 0)
+    {
+        text += '.';
+        text += static_cast<char>('0' + (tenths % 10));
+    }
+
+    return text;
+}
+
+// Digits, then optionally a point and digits. Anything else -- a sign, an
+// exponent, a stray character -- is not a size.
+[[nodiscard]] std::optional<double> parseSize(std::string_view text)
+{
+    double value = 0.0;
+    double scale = 1.0;
+    bool seenPoint = false;
+    bool seenDigit = false;
+
+    for (const char character : text)
+    {
+        if (character == '.' && !seenPoint)
+        {
+            seenPoint = true;
+            continue;
+        }
+
+        if (character < '0' || character > '9')
+        {
+            return std::nullopt;
+        }
+
+        seenDigit = true;
+        const auto digit = static_cast<double>(character - '0');
+
+        if (seenPoint)
+        {
+            scale /= 10.0;
+            value += digit * scale;
+        }
+        else
+        {
+            value = (value * 10.0) + digit;
+        }
+    }
+
+    if (!seenDigit)
+    {
+        return std::nullopt;
+    }
+
+    return value;
+}
+} // namespace
+
 std::size_t nearestSizeStep(double pixelsPerSpace)
 {
     if (!std::isfinite(pixelsPerSpace))
@@ -66,14 +130,10 @@ ToolSettingsPayload encode(const Settings& settings)
     const std::size_t step =
         settings.sizeStep < sizeLadder.size() ? settings.sizeStep : defaultSizeStep;
 
-    // Shortest round-trip form, so 7.0 is "7" and 8.2 is "8.2".
-    std::array<char, 32> size{};
-    const auto written = std::to_chars(size.data(), size.data() + size.size(), sizeLadder.at(step));
-
     std::string data = "view=";
     data += nameOf(settings.view);
     data += ";size=";
-    data.append(size.data(), written.ptr);
+    data += formatSize(sizeLadder.at(step));
 
     return {settingsVersion, data};
 }
@@ -110,14 +170,11 @@ Settings decode(const ToolSettingsPayload& payload)
             }
             else if (key == "size")
             {
-                double size = 0.0;
-                const auto parsed =
-                    std::from_chars(value.data(), value.data() + value.size(), size);
+                const std::optional<double> size = parseSize(value);
 
-                if (parsed.ec == std::errc{} && parsed.ptr == value.data() + value.size() &&
-                    size > 0.0)
+                if (size.has_value() && *size > 0.0)
                 {
-                    settings.sizeStep = nearestSizeStep(size);
+                    settings.sizeStep = nearestSizeStep(*size);
                 }
             }
         }
