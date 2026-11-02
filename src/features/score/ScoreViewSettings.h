@@ -1,0 +1,62 @@
+#pragma once
+
+#include "../../application/tools/ToolSettingsPayload.h"
+
+#include <array>
+#include <cstddef>
+#include <optional>
+#include <string_view>
+
+// What a Score View remembers about itself, and how it is saved (no JUCE
+// dependency). See openspec/changes/score-view-modes/design.md, decisions 4
+// and 5.
+namespace score_view
+{
+// How the laid-out systems are arranged on screen.
+enum class ViewMode
+{
+    // Fixed-size pages, one at a time. The default for a new Score View.
+    page,
+
+    // One column of systems, scrolled up and down: the view as it always was.
+    vertical,
+
+    // Every bar on one system, scrolled left to right.
+    horizontal
+};
+
+// The staff sizes enlarge and shrink step through, as pixels per staff space,
+// smallest first. The old Small, Medium and Large (5.2, 7.0, 9.4) are on it, so
+// nobody's chosen size disappears.
+inline constexpr std::array<double, 9> sizeLadder{4.0, 4.6, 5.2, 6.0, 7.0, 8.2, 9.4, 11.0, 13.0};
+
+// Index of 7.0 -- the old Medium, and the size a new Score View starts at.
+inline constexpr std::size_t defaultSizeStep = 4;
+
+struct Settings
+{
+    ViewMode view = ViewMode::page;
+    std::size_t sizeStep = defaultSizeStep;
+
+    bool operator==(const Settings&) const = default;
+};
+
+// The ladder step nearest to `pixelsPerSpace`, so a size saved by a version
+// with a different ladder still comes back as something offered.
+[[nodiscard]] std::size_t nearestSizeStep(double pixelsPerSpace);
+
+[[nodiscard]] std::string_view nameOf(ViewMode view);
+[[nodiscard]] std::optional<ViewMode> viewNamed(std::string_view name);
+
+// The payload version, which the Score View's ToolDefinition::settingsVersion
+// must equal.
+inline constexpr int settingsVersion = 1;
+
+// "view=page;size=7" -- the view by name and the size in pixels per space.
+[[nodiscard]] ToolSettingsPayload encode(const Settings& settings);
+
+// Anything the payload does not say, or says in a way that cannot be read,
+// falls back to its default rather than discarding the rest: a view saved
+// beside a size that no longer parses still comes back as that view.
+[[nodiscard]] Settings decode(const ToolSettingsPayload& payload);
+} // namespace score_view

@@ -376,6 +376,13 @@ struct System
     // no name. Room for them is reserved at the system's start, before
     // `staffStartX`.
     std::vector<PartNameGlyph> partNames;
+
+    // The vertical strip this system occupies, in staff spaces from the top of
+    // the layout: from the end of the system above to the start of the one
+    // below. Consecutive bands touch and the last ends at `totalHeight`, so a
+    // view can cut pages between systems without measuring glyphs.
+    double bandTop = 0.0;
+    double bandBottom = 0.0;
 };
 
 enum class LayoutOutcome
