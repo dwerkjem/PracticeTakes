@@ -48,6 +48,7 @@ import history as history_module  # noqa: E402
 import ingest as ingest_module  # noqa: E402
 import launcher as launcher_module  # noqa: E402
 import machine as machine_module  # noqa: E402
+import remote as remote_module  # noqa: E402
 import review as review_module  # noqa: E402
 import server as server_module  # noqa: E402
 import surfaces  # noqa: E402
@@ -475,11 +476,43 @@ def command_hub(arguments) -> int:
     """Serve the hub. Works against an empty store — that is the normal first visit."""
     store = open_store(arguments)
     run_id = None if getattr(arguments, "run", None) is None else int(arguments.run)
-    httpd = server_module.serve(store, run_id, arguments.port)
+    remote_config = None
+
+    if getattr(arguments, "remote", False):
+        try:
+            remote_config = remote_module.RemoteConfig.load(remote_module.config_path())
+        except remote_module.RemoteError as error:
+            print(str(error), file=sys.stderr)
+
+            return 1
+
+    httpd = server_module.serve(
+        store, run_id, arguments.port, remote_config.hostname if remote_config else ""
+    )
     address = f"http://{server_module.HOST}:{arguments.port}/"
     latest = store.latest_run()
+    tunnel = None
+
+    if remote_config is not None:
+        # After the server has the port, so a refusal here cannot leave a
+        # tunnel pointing at nothing; and before serving, so a tunnel that
+        # cannot start stops the hub rather than leaving it local-only while
+        # the person who asked for it is somewhere else.
+        tunnel = remote_module.Tunnel(remote_config, arguments.port)
+
+        try:
+            print(tunnel.start())
+        except remote_module.RemoteError as error:
+            print(str(error), file=sys.stderr)
+            httpd.server_close()
+
+            return 1
 
     print(f"Testing suite at {address}")
+
+    if remote_config is not None:
+        print(f"Remotely at {remote_config.url} -- signed in through Cloudflare Access.")
+        print("Everything it runs, runs on this machine.")
 
     if latest is None:
         print("The store is empty — pick some suites in the Run tab and the hub will")
@@ -507,6 +540,9 @@ def command_hub(arguments) -> int:
             print("Left the application running.")
 
         httpd.server_close()
+
+        if tunnel is not None:
+            tunnel.stop()
 
     return 0
 
@@ -797,6 +833,12 @@ def build_parser() -> argparse.ArgumentParser:
     hub_parser = subparsers.add_parser("hub", help="The hub (also what a bare `test-suite` opens).")
     hub_parser.add_argument("--port", type=int, default=8730)
     hub_parser.add_argument("--no-browser", action="store_true")
+    hub_parser.add_argument(
+        "--remote",
+        action="store_true",
+        help="Also open the hub through its Cloudflare Tunnel, behind Access. "
+        "Everything still runs on this machine.",
+    )
     add_run_option(hub_parser)
     hub_parser.set_defaults(handler=command_hub)
 

@@ -55,6 +55,7 @@ uv run test-suite run --suites cpp python       # a selection
 uv run test-suite capture                       # unattended captures only
 uv run test-suite attend                        # the behavioural questions, live
 uv run test-suite review                        # the grid, in a browser
+uv run test-suite hub --remote                  # the hub, also reachable remotely
 uv run test-suite export                        # the record the release gate reads
 uv run test-suite status                        # what is in the store
 ```
@@ -95,6 +96,70 @@ state was this build in" one question rather than five.
 **A suite's verdict is its exit status.** Counts scraped out of output are
 detail; a suite whose output cannot be parsed still reports pass or fail
 correctly, with its counts left unknown rather than reported as zero failures.
+
+## Using the hub remotely
+
+`uv run test-suite hub --remote` serves the hub exactly as usual and also opens
+it at an https address you can reach from a phone or another computer. Whatever
+you press there **runs on the machine that started the hub**: its builds, its
+suites, its captures, and any application they open. The other device only ever
+has the page.
+
+It uses the same Cloudflare account and Zero Trust team as the feedback
+dashboard:
+
+- **A Cloudflare Tunnel** carries requests from the address to the hub's
+  127.0.0.1 port. The hub starts it as a child process and stops it when the hub
+  stops, so the address answers only while that hub is running. An in-place
+  restart from the page keeps the same tunnel.
+- **Cloudflare Access** puts its sign-in in front of the address and admits one
+  email, `ADMIN_EMAIL`, the same identity the feedback dashboard admits.
+  cloudflared is configured to require a valid Access token for this
+  application, and checks it before forwarding anything.
+- **One machine per tunnel.** Each machine gets its own tunnel, named
+  `practice-takes-hub-<machine>`. If the tunnel is already connected from
+  somewhere else, the hub refuses to start rather than sharing the address,
+  because two connectors on one tunnel split its traffic. A tunnel left running
+  by a hub on this machine that was killed is stopped and replaced.
+
+### Setting it up, once per machine
+
+1. Log cloudflared in to the zone the address will live on, if it isn't
+   already: `cloudflared tunnel login`.
+2. Make sure `src/services/feedback-intake/.env` has `CLOUDFLARE_ACCOUNT_ID`,
+   `ADMIN_EMAIL`, and a `CLOUDFLARE_SETUP_API_TOKEN` that has
+   **Access: Apps and Policies Write**. The feedback setup uses the same file
+   and the same token.
+3. Run:
+
+   ```bash
+   uv run python tools/scripts/testing_suite/configure_remote_hub.py --hostname tests.example.org
+   ```
+
+   This creates or reuses the tunnel, points the hostname at it, and creates or
+   updates the Access application "Practice Takes testing hub". It never
+   overwrites an existing DNS record: if the name is taken, choose another. Its
+   settings go to `~/.config/practice-takes/remote-hub.json` (mode 0600). That
+   file names the tunnel's credentials file but does not contain it; cloudflared
+   keeps the credentials in `~/.cloudflared/` as usual.
+
+Then `uv run test-suite hub --remote`, open the printed address, and sign in.
+
+### What the hub checks itself
+
+Every request, remote or not, goes through `RequestGuard` in `remote.py` before
+any route runs:
+
+- **The Host header has to name this hub**: `127.0.0.1:<port>`,
+  `localhost:<port>`, or the remote hostname. This also closes a hole the local
+  hub always had: a web page elsewhere could point a name it controls at
+  127.0.0.1 and talk to the hub.
+- **A request on the remote hostname must carry the Access header.**
+- **Anything that changes state must come from the hub's own page.** A POST is
+  refused if its Origin is any other site.
+
+The attended pass is still local only: it puts a live application in front of
+the person answering, and that person has to be at the machine.
 
 ## Capture
 
@@ -631,6 +696,8 @@ edit to that list.
 | `attend.py` | The short attended pass |
 | `ingest.py` | Measurement exports and automated suite results |
 | `export.py` | The record the release gate reads |
+| `remote.py` | Opening the hub remotely: the tunnel and the request guard |
+| `configure_remote_hub.py` | The one-time Cloudflare setup for `--remote` |
 
 Everything except `web/` is standard-library only apart from `images.py`, and is
 tested without a display, an application, or Pillow —

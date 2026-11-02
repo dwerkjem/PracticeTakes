@@ -25,6 +25,7 @@ from urllib.parse import parse_qs, urlparse
 import freshness
 import history as history_module
 import launcher as launcher_module
+import remote as remote_module
 import restart as restart_module
 import review
 import runner as runner_module
@@ -268,7 +269,19 @@ class ReviewHandler(BaseHTTPRequestHandler):
 
     # --- Routes -------------------------------------------------------------
 
+    def _refused(self, method: str) -> bool:
+        """Answer 403 and say why, when the guard turns a request away."""
+        reason = self.session.guard.refusal(method, self.headers)
+
+        if reason:
+            self._send_json({"error": reason}, status=403)
+
+        return bool(reason)
+
     def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler's name
+        if self._refused("GET"):
+            return
+
         # A review is a long session over a store another process may be
         # writing. One request that hits something unreadable should say so and
         # leave the rest of the page working, rather than printing a traceback
@@ -279,6 +292,9 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self._send_json({"error": f"{type(error).__name__}: {error}"}, status=500)
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler's name
+        if self._refused("POST"):
+            return
+
         try:
             self._post()
         except Exception as error:  # noqa: BLE001 - the last line before a dead request
@@ -549,15 +565,23 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "not found"}, status=404)
 
 
-def serve(store: Store, run_id: int | None = None, port: int = 8730) -> ThreadingHTTPServer:
+def serve(
+    store: Store, run_id: int | None = None, port: int = 8730, remote_hostname: str = ""
+) -> ThreadingHTTPServer:
     """The hub's server. The caller owns its lifetime.
 
     `run_id` may be None: an empty store is how this looks the first time, and
     the page offers to run something rather than refusing to open.
+
+    Always bound to 127.0.0.1. `remote_hostname` is the name a Cloudflare
+    Tunnel delivers requests under when the hub is opened remotely; see
+    `remote.py`. Without it, only this machine's own names are answered.
     """
     session = ReviewSession(store, run_id)
     handler = type("BoundReviewHandler", (ReviewHandler,), {"session": session})
     httpd = ThreadingHTTPServer((HOST, port), handler)
+    # The port actually bound, which is not `port` when that is 0.
+    session.guard = remote_module.RequestGuard(httpd.server_address[1], remote_hostname)  # type: ignore[attr-defined]
     httpd.session = session  # type: ignore[attr-defined]
 
     return httpd
