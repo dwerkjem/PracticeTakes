@@ -209,6 +209,31 @@ beams, ledger lines, rests, ties,
 barlines including repeats and the final double bar, lyrics with hyphens, tempo
 marks, dynamics, and printed bar numbers at system starts.
 
+### Text is placed clear of the notes
+
+Lyrics, dynamics, tempo marks and measure numbers are placed by the layout, not
+the painter: `LyricGlyph::y` and `TextGlyph::y` say where each one goes, and
+the painter only chooses how it looks. Each kind of text is one band per staff
+per system — every syllable of a verse on one line, every dynamic on a staff on
+another, the tempo marks on a third — placed just clear of the furthest note on
+that staff: noteheads with their ledger lines, accidentals, stems and beams
+(`placeTextAndStaves`). Clefs, key and time signatures stay inside the staff and
+are not counted.
+
+A band starts where it always did (`LayoutOptions::textGapBelowStaff`,
+`tempoAboveStaff`, `measureNumberAboveStaff`) and only moves further out, so a
+system with nothing in its way is laid out exactly as before. One low note
+moves its whole system's lyric line, not just the syllables near it: that is a
+maximum rather than a contour, chosen because it is deterministic and keeps
+each band a straight line (design decision 6 of `engraving-polish`).
+
+So systems are no longer one height. `System::topOfStaff` accumulates, a
+system growing by however far its notes pushed its text, and
+`ScoreLayout::totalHeight` is the sum. A staff's distance from the one above it
+grows when the upper staff's text, or the lower staff's high notes, would
+otherwise meet — which is what keeps a piano's dynamics, between the hands,
+off the left hand's ledger-line notes.
+
 ### Several staves, several parts
 
 Every part is drawn, top to bottom in score order, and every staff of each

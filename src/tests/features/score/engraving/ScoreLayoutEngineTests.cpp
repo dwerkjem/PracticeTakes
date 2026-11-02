@@ -2293,3 +2293,270 @@ TEST_CASE("a part with no name is left unlabelled", "[score][engraving][layout][
     REQUIRE(layout.systems.front().partNames.size() == 1);
     CHECK(layout.systems.front().partNames.front().text == "Piano");
 }
+
+// Text placed clear of the notes (engraving-polish design decision 6, #252).
+//
+// Lyrics, dynamics, tempo marks and measure numbers each sit on one band per
+// staff per system, placed by the layout just clear of the furthest note -- and
+// exactly where they always were when nothing is in the way.
+
+namespace
+{
+[[nodiscard]] score::ScoreEvent sungWhole(score::Pitch sung, const char* syllable)
+{
+    score::ScoreEvent event = noteAt(0, ticksPerQuarterNote * 4, sung);
+    event.lyrics = {score::LyricSyllable{1, score::SyllabicPosition::single, syllable, false}};
+
+    return event;
+}
+
+[[nodiscard]] score::Direction dynamicOn(int staff, const char* text)
+{
+    return score::Direction{score::DirectionKind::dynamic, 0, staff, text, std::nullopt};
+}
+
+// Every syllable of `verse` on `system`.
+[[nodiscard]] std::vector<double> lyricLine(const System& system, int verse)
+{
+    std::vector<double> ys;
+
+    for (const LyricGlyph& lyric : system.lyrics)
+    {
+        if (lyric.verse == verse)
+        {
+            ys.push_back(lyric.y);
+        }
+    }
+
+    return ys;
+}
+
+[[nodiscard]] const TextGlyph* firstTextOf(const System& system, TextRole role)
+{
+    for (const TextGlyph& text : system.texts)
+    {
+        if (text.role == role)
+        {
+            return &text;
+        }
+    }
+
+    return nullptr;
+}
+
+// `count` bars of sung whole notes, the first at `first` and the rest on the
+// middle line, so only the first bar has anything outside the staff.
+[[nodiscard]] std::shared_ptr<const score::Score> sungBars(std::size_t count, score::Pitch first)
+{
+    std::vector<score::Measure> measures;
+
+    for (std::size_t index = 0; index < count; ++index)
+    {
+        const score::Pitch sung = index == 0 ? first : pitch(score::Step::b, 0, 4);
+
+        measures.push_back(measureOf(index, {voiceOf(1, {sungWhole(sung, "la")})}, index == 0));
+    }
+
+    return scoreOf(std::move(measures));
+}
+} // namespace
+
+TEST_CASE(
+    "text sits where it always did when nothing is in its way",
+    "[score][engraving][layout][text-placement]")
+{
+    score::Measure bar =
+        measureOf(0, {voiceOf(1, {sungWhole(pitch(score::Step::b, 0, 4), "la")})}, true);
+    bar.directions = {
+        score::Direction{score::DirectionKind::tempo, 0, 1, "Andante", 72.0}, dynamicOn(1, "p")};
+
+    const LayoutOptions options = wideOptions();
+    const ScoreLayout layout = layOutScore(scoreOf({bar}), options);
+
+    REQUIRE(layout.systems.size() == 1);
+    const System& system = layout.systems.front();
+
+    const std::vector<double> lyrics = lyricLine(system, 1);
+    REQUIRE(lyrics.size() == 1);
+    CHECK(lyrics.front() == Catch::Approx(staffHeightInSpaces + options.textGapBelowStaff));
+
+    const TextGlyph* dynamic = firstTextOf(system, TextRole::dynamic);
+    REQUIRE(dynamic != nullptr);
+    CHECK(
+        dynamic->y ==
+        Catch::Approx(staffHeightInSpaces + options.textGapBelowStaff + options.lyricRowHeight));
+
+    const TextGlyph* tempo = firstTextOf(system, TextRole::tempo);
+    REQUIRE(tempo != nullptr);
+    CHECK(tempo->y == Catch::Approx(-options.tempoAboveStaff));
+
+    // The system is as tall as it always was.
+    CHECK(system.topOfStaff == Catch::Approx(options.spaceAboveStaff));
+    CHECK(
+        layout.totalHeight == Catch::Approx(
+                                  options.spaceAboveStaff + staffHeightInSpaces +
+                                  options.lyricRowHeight + options.spaceBelowStaff));
+}
+
+TEST_CASE(
+    "a low note moves its own system's lyric line down, and no other",
+    "[score][engraving][layout][text-placement]")
+{
+    // D3 under a treble staff: four ledger lines below it.
+    LayoutOptions options;
+    options.availableWidth = 70.0;
+
+    const ScoreLayout layout = layOutScore(sungBars(10, pitch(score::Step::d, 0, 3)), options);
+
+    REQUIRE(layout.systems.size() > 1);
+
+    const std::vector<double> first = lyricLine(layout.systems.at(0), 1);
+    const std::vector<double> second = lyricLine(layout.systems.at(1), 1);
+    REQUIRE(first.size() > 1);
+    REQUIRE_FALSE(second.empty());
+
+    // One straight line per system: every syllable of the verse shares it.
+    for (const double y : first)
+    {
+        CHECK(y == Catch::Approx(first.front()));
+    }
+
+    // Below the low note's head, by the clearance.
+    double lowHeadBottom = 0.0;
+
+    for (const NoteheadGlyph& head : layout.systems.at(0).noteheads)
+    {
+        lowHeadBottom = std::max(lowHeadBottom, spacesBelowTopLine(head.position) + 0.5);
+    }
+
+    REQUIRE(lowHeadBottom > staffHeightInSpaces + 2.0);
+    CHECK(first.front() >= lowHeadBottom + options.textClearance - 1.0e-9);
+
+    // The next system has nothing low, so its line is where it always was.
+    for (const double y : second)
+    {
+        CHECK(y == Catch::Approx(staffHeightInSpaces + options.textGapBelowStaff));
+    }
+
+    // And the system below moved down to make room.
+    const double usualHeight = options.spaceAboveStaff + staffHeightInSpaces +
+                               options.lyricRowHeight + options.spaceBelowStaff;
+    CHECK(layout.systems.at(1).topOfStaff - layout.systems.at(0).topOfStaff > usualHeight);
+}
+
+TEST_CASE("a high note pushes the tempo line up", "[score][engraving][layout][text-placement]")
+{
+    // G6 over a treble staff: four ledger lines above it.
+    const score::Pitch high = pitch(score::Step::g, 0, 6);
+
+    score::Measure bar = measureOf(0, {voiceOf(1, {sungWhole(high, "la")})}, true);
+    bar.directions = {score::Direction{score::DirectionKind::tempo, 0, 1, "Andante", 72.0}};
+
+    const LayoutOptions options = wideOptions();
+    const ScoreLayout layout = layOutScore(scoreOf({bar}), options);
+
+    const System& system = layout.systems.front();
+    const TextGlyph* tempo = firstTextOf(system, TextRole::tempo);
+    REQUIRE(tempo != nullptr);
+
+    double highHeadTop = 0.0;
+
+    for (const NoteheadGlyph& head : system.noteheads)
+    {
+        highHeadTop = std::min(highHeadTop, spacesBelowTopLine(head.position) - 0.5);
+    }
+
+    REQUIRE(highHeadTop < -2.0);
+    CHECK(tempo->y + options.textBandHeight <= highHeadTop - options.textClearance + 1.0e-9);
+
+    // The system starts low enough that the raised text is still on it.
+    CHECK(system.topOfStaff + tempo->y >= 0.0);
+}
+
+TEST_CASE(
+    "the dynamics move with the lyric rows above them",
+    "[score][engraving][layout][text-placement]")
+{
+    score::Measure bar =
+        measureOf(0, {voiceOf(1, {sungWhole(pitch(score::Step::b, 0, 4), "la")})}, true);
+    bar.directions = {dynamicOn(1, "p")};
+
+    LayoutOptions usual = wideOptions();
+    LayoutOptions taller = wideOptions();
+    taller.lyricRowHeight = usual.lyricRowHeight + 1.2;
+
+    const ScoreLayout usualLayout = layOutScore(scoreOf({bar}), usual);
+    const ScoreLayout tallerLayout = layOutScore(scoreOf({bar}), taller);
+    const TextGlyph* before = firstTextOf(usualLayout.systems.front(), TextRole::dynamic);
+    const TextGlyph* after = firstTextOf(tallerLayout.systems.front(), TextRole::dynamic);
+
+    REQUIRE(before != nullptr);
+    REQUIRE(after != nullptr);
+
+    // One lyric row's worth taller, so the dynamic under it is that much lower.
+    CHECK(after->y - before->y == Catch::Approx(1.2));
+}
+
+TEST_CASE(
+    "a dynamic between a piano's staves clears the notes of the lower staff",
+    "[score][engraving][layout][text-placement]")
+{
+    // B4 in the bass clef: four ledger lines above the left hand's staff, up
+    // into the gap where the right hand's dynamic sits.
+    score::Measure piano = grandStaffMeasureOf(
+        0, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::e, 0, 4))},
+        {lowerAt(0, ticksPerQuarterNote * 4, pitch(score::Step::b, 0, 4))}, true);
+    piano.directions = {dynamicOn(1, "pp")};
+
+    const auto model = songOf(
+        {measureOf(
+            0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))})},
+            true)},
+        {piano});
+
+    const LayoutOptions options = wideOptions();
+    const ScoreLayout layout = layOutScore(model, options);
+    const System& system = layout.systems.front();
+
+    const TextGlyph* dynamic = firstTextOf(system, TextRole::dynamic);
+    REQUIRE(dynamic != nullptr);
+    REQUIRE(dynamic->staff == 1);
+
+    double lowerTop = 0.0;
+
+    for (const NoteheadGlyph& head : system.noteheads)
+    {
+        if (head.staff == 2)
+        {
+            lowerTop = std::min(lowerTop, spacesBelowTopLine(head.position) - 0.5);
+        }
+    }
+
+    REQUIRE(lowerTop < -1.0);
+
+    // In system coordinates: the bottom of the dynamic, and the top of the
+    // highest left-hand note, with the clearance between them.
+    const double dynamicBottom = system.staffOffsets.at(1) + dynamic->y + options.textBandHeight;
+    const double noteTop = system.staffOffsets.at(2) + lowerTop;
+
+    CHECK(dynamicBottom + options.minimumStaffClearance <= noteTop + 1.0e-9);
+}
+
+TEST_CASE("text placement is the same every time", "[score][engraving][layout][text-placement]")
+{
+    LayoutOptions options;
+    options.availableWidth = 70.0;
+
+    const auto model = sungBars(10, pitch(score::Step::d, 0, 3));
+    const ScoreLayout first = layOutScore(model, options);
+    const ScoreLayout second = layOutScore(model, options);
+
+    REQUIRE(first.systems.size() == second.systems.size());
+    CHECK(first.totalHeight == second.totalHeight);
+
+    for (std::size_t index = 0; index < first.systems.size(); ++index)
+    {
+        CHECK(first.systems.at(index).topOfStaff == second.systems.at(index).topOfStaff);
+        CHECK(lyricLine(first.systems.at(index), 1) == lyricLine(second.systems.at(index), 1));
+    }
+}

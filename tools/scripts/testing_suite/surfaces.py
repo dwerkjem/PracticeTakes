@@ -776,6 +776,12 @@ SURFACES: tuple[Surface, ...] = (
                 "beam -- without counting anything?",
             ),
             Question(
+                "text-clear-of-notes",
+                "Is every lyric, dynamic, tempo mark and bar number clear of the notes -- not "
+                "touching a notehead, stem, beam or ledger line -- and does each kind of text "
+                "sit on one straight line across its row of music?",
+            ),
+            Question(
                 "nothing-collides",
                 "Do any two symbols overlap -- an accidental over a notehead, a lyric over a "
                 "stem, a dot over a barline?",
@@ -878,6 +884,12 @@ SURFACES: tuple[Surface, ...] = (
                 "parts-line-up",
                 "In the first full bar, are the voice's notes directly above the piano notes "
                 "played at the same moment?",
+            ),
+            Question(
+                "text-clear-of-notes",
+                "Is every lyric, dynamic, tempo mark and bar number clear of the notes -- not "
+                "touching a notehead, stem, beam or ledger line -- and does each kind of text "
+                "sit on one straight line across its row of music?",
             ),
             Question(
                 "tempo-once",

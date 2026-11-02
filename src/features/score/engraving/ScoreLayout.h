@@ -267,6 +267,11 @@ struct LyricGlyph
     // the staff is. Last, and defaulted, so every existing initialiser still
     // describes a glyph on the only staff a single-staff system has.
     int staff = 0;
+
+    // The top of the syllable's row, in staff spaces below its staff's top line.
+    // Placed by the layout, after everything else on the system, so the row
+    // clears the lowest note on the staff (see `placeTextAndStaves`).
+    double y = 0.0;
 };
 
 // Where a piece of text sits relative to the staff.
@@ -293,6 +298,11 @@ struct TextGlyph
     // the staff is. Last, and defaulted, so every existing initialiser still
     // describes a glyph on the only staff a single-staff system has.
     int staff = 0;
+
+    // The top of the text, in staff spaces below its staff's top line --
+    // negative above it. Placed by the layout on one band per kind of text,
+    // clear of the notes, so the painter computes no offsets of its own.
+    double y = 0.0;
 };
 
 // A part's name at the start of its staves, so a reader can tell which staff is
@@ -490,6 +500,27 @@ struct LayoutOptions
 
     // Room per lyric verse, below the staff and above the dynamics.
     double lyricRowHeight = 1.8;
+
+    // Where text sits when nothing is in its way, in staff spaces from the
+    // staff: lyrics and dynamics start this far below the bottom line; tempo
+    // marks and measure numbers start this far above the top line. A band only
+    // ever moves further out than this, never in.
+    double textGapBelowStaff = 1.55;
+    double tempoAboveStaff = 2.1;
+    double measureNumberAboveStaff = 3.4;
+
+    // How much higher a measure number sits than a tempo mark beside it.
+    double measureNumberAboveTempo = 1.3;
+
+    // How tall a line of text is, for clearing it.
+    double textBandHeight = 1.7;
+
+    // The least room between text and the furthest note it has to clear.
+    double textClearance = 0.3;
+
+    // The least room between the lowest thing on one staff -- its notes, lyrics
+    // or dynamics -- and the highest note on the staff below.
+    double minimumStaffClearance = 1.0;
 };
 
 // Everything the engine produced, and everything it did not.
