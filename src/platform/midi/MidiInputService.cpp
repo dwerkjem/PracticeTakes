@@ -4,14 +4,26 @@
 #include "MidiRecoveryPolicy.h"
 
 #include <algorithm>
+#include <optional>
+#include <string>
 
 MidiInputService::MidiInputService()
 {
     startTimerHz(serviceRefreshRateHz);
+
+    // The device list changing is the moment a reconcile is needed, so it is
+    // asked for then rather than left to the next scan. The scan alone missed a
+    // keyboard unplugged and replugged between two scans: the identifier was
+    // present both times, so nothing was reopened, and the application showed
+    // "Connected" to a subscription that had died with the old device. JUCE
+    // delivers this on the message thread, as reconcileDevice requires. The
+    // timer stays as the fallback for a backend that announces nothing.
+    deviceListConnection = juce::MidiDeviceListConnection::make([this] { reconcileDevice(); });
 }
 
 MidiInputService::~MidiInputService()
 {
+    deviceListConnection.reset();
     stopTimer();
 
     // Stop the device before anything it writes into goes away. `MidiInput`'s
@@ -184,22 +196,16 @@ std::uint64_t MidiInputService::receivedEventCount() const noexcept
     return eventsReceived.load(std::memory_order_relaxed);
 }
 
-bool MidiInputService::isDevicePresent(const juce::String& identifier)
+std::vector<MidiRecoveryPolicy::DeviceListing> MidiInputService::presentDevices()
 {
-    if (identifier.isEmpty())
-    {
-        return false;
-    }
+    std::vector<MidiRecoveryPolicy::DeviceListing> present;
 
     for (const juce::MidiDeviceInfo& info : juce::MidiInput::getAvailableDevices())
     {
-        if (info.identifier == identifier)
-        {
-            return true;
-        }
+        present.push_back({info.identifier.toStdString(), info.name.toStdString()});
     }
 
-    return false;
+    return present;
 }
 
 std::unique_ptr<juce::MidiInput> MidiInputService::openDevice(const juce::String& identifier)
@@ -212,40 +218,64 @@ void MidiInputService::reconcileDevice()
     // Enumerated once, outside the lock, because it is the one step here that
     // calls into the backend.
     juce::String wanted;
+    juce::String wantedName;
     juce::String currentlyOpen;
 
     {
         const juce::ScopedLock lock(deviceLock);
         wanted = chosenIdentifier;
+        wantedName = chosenName;
         currentlyOpen = openIdentifier;
     }
 
-    const bool selectedIsPresent = isDevicePresent(wanted);
-    const bool openIsPresent = isDevicePresent(currentlyOpen);
+    const std::vector<MidiRecoveryPolicy::DeviceListing> present = presentDevices();
+
+    // Which present device is the chosen one -- by identifier while that still
+    // carries the chosen name, by the name alone when the identifier has moved.
+    const std::optional<std::string> resolved = MidiRecoveryPolicy::resolveSelectedDevice(
+        wanted.toStdString(), wantedName.toStdString(), present);
+    const juce::String target = resolved.has_value() ? juce::String(*resolved) : juce::String();
+
+    const std::string openId = currentlyOpen.toStdString();
+    const bool openIsPresent =
+        !openId.empty() &&
+        std::any_of(
+            present.begin(), present.end(),
+            [&openId](const MidiRecoveryPolicy::DeviceListing& device)
+            { return device.identifier == openId; });
 
     const juce::ScopedLock lock(deviceLock);
 
     const bool somethingOpen = openInput != nullptr;
 
-    if (MidiRecoveryPolicy::shouldClose(somethingOpen, openIdentifier == wanted, openIsPresent))
+    // What is open is the selection only if it is the device the selection
+    // resolved to. An identifier now carrying another device's name resolves to
+    // nothing, so a device that took the keyboard's old address is closed
+    // rather than read as the keyboard.
+    if (MidiRecoveryPolicy::shouldClose(
+            somethingOpen, target.isNotEmpty() && openIdentifier == target, openIsPresent))
     {
         openInput.reset();
         openIdentifier.clear();
     }
 
-    const bool selectedIsOpen = openInput != nullptr && openIdentifier == wanted;
+    const bool selectedIsOpen = openInput != nullptr && openIdentifier == target;
 
     if (!MidiRecoveryPolicy::shouldAttemptOpen(
-            wanted.isNotEmpty(), selectedIsOpen, selectedIsPresent))
+            wanted.isNotEmpty(), selectedIsOpen, resolved.has_value()))
     {
         return;
     }
 
-    if (auto device = openDevice(wanted); device != nullptr)
+    if (auto device = openDevice(target); device != nullptr)
     {
         device->start();
-        openIdentifier = wanted;
+        openIdentifier = target;
         openInput = std::move(device);
+
+        // The keyboard is where its name now is, so the selection follows it
+        // there; saving settings records the new identifier.
+        chosenIdentifier = target;
     }
 }
 

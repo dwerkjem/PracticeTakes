@@ -1,5 +1,10 @@
 #pragma once
 
+#include <algorithm>
+#include <optional>
+#include <string>
+#include <vector>
+
 // Whether the MIDI input device should be (re)opened, as a pure decision.
 //
 // The same shape as AudioRecoveryPolicy next door, and for the same reason: the
@@ -41,5 +46,60 @@ shouldClose(bool isSomethingOpen, bool openDeviceIsSelected, bool openDeviceIsPr
     }
 
     return !openDeviceIsSelected || !openDeviceIsPresent;
+}
+
+// A device as enumerated: the identifier the backend opens it by, and the name
+// it shows. Plain strings, so the choice below is checkable without a backend.
+struct DeviceListing
+{
+    std::string identifier;
+    std::string name;
+};
+
+// Which of the `present` devices is the one the user chose, if any.
+//
+// An identifier alone is not an identity. ALSA names a port by sequencer client
+// and port number, and a client number is handed out afresh each time a device
+// appears: the keyboard can return under another identifier, and its old one
+// can be given to something else. So the chosen identifier counts only while it
+// still carries the chosen name, and otherwise the chosen name is looked for --
+// but only when exactly one device carries it. Two devices with one name could
+// each be the keyboard, and opening the wrong one is choosing a device on the
+// user's behalf, which the selection requirement forbids. A selection with no
+// remembered name is matched by identifier alone, as it always was.
+[[nodiscard]] inline std::optional<std::string> resolveSelectedDevice(
+    const std::string& chosenIdentifier,
+    const std::string& chosenName,
+    const std::vector<DeviceListing>& present)
+{
+    if (chosenIdentifier.empty())
+    {
+        return std::nullopt;
+    }
+
+    const auto atChosenIdentifier = std::find_if(
+        present.begin(), present.end(), [&chosenIdentifier](const DeviceListing& device)
+        { return device.identifier == chosenIdentifier; });
+
+    if (atChosenIdentifier != present.end() &&
+        (chosenName.empty() || atChosenIdentifier->name == chosenName))
+    {
+        return chosenIdentifier;
+    }
+
+    if (chosenName.empty())
+    {
+        return std::nullopt;
+    }
+
+    const auto carriesName = [&chosenName](const DeviceListing& device)
+    { return device.name == chosenName; };
+
+    if (std::count_if(present.begin(), present.end(), carriesName) != 1)
+    {
+        return std::nullopt;
+    }
+
+    return std::find_if(present.begin(), present.end(), carriesName)->identifier;
 }
 } // namespace MidiRecoveryPolicy
