@@ -1,0 +1,77 @@
+name: Decide whether a check applies
+
+# Called by every check that `main` requires but that is only about some files.
+#
+# Such a check used to filter itself with `on.pull_request.paths`. A filtered
+# workflow that does not match never starts, so it never reports, and a
+# required check that never reports blocks the pull request forever. Now the
+# check always starts, calls this, and runs its real job only when the pull
+# request touches one of `paths`. A skipped job counts as passing, so a change
+# the check has nothing to say about is not held up by it.
+#
+# Fails open. Anything other than a clear "no" -- an event that is not a pull
+# request, an API error, a failure of this job itself -- leaves `relevant`
+# unset or "true", and callers run unless it is exactly "false". A broken
+# decision must never be the reason a required check skipped.
+
+on:
+  workflow_call:
+    inputs:
+      paths:
+        description: >-
+          Newline-separated path patterns, with the same meaning as
+          `on.<event>.paths`. See tools/scripts/ci/changed_paths.py.
+        required: true
+        type: string
+    outputs:
+      relevant:
+        description: '"true" when the check applies, "false" when it does not.'
+        value: ${{ jobs.decide.outputs.relevant }}
+
+jobs:
+  decide:
+    name: Decide
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      relevant: ${{ steps.decide.outputs.relevant }}
+
+    steps:
+      - name: Check out the decision script
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          sparse-checkout: tools/scripts/ci
+          sparse-checkout-cone-mode: true
+
+      - name: Decide
+        id: decide
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+          PULL_REQUEST: ${{ github.event.pull_request.number }}
+          PATTERNS: ${{ inputs.paths }}
+        run: |
+          if [[ "${EVENT}" != "pull_request" ]]; then
+            echo "Not a pull request, so the check applies."
+            echo "relevant=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          # Both names of a renamed file, so moving a file out of a check's
+          # scope still runs the check once.
+          if ! gh api --paginate "repos/${REPOSITORY}/pulls/${PULL_REQUEST}/files" \
+              --jq '.[] | .filename, (.previous_filename // empty)' > changed.txt; then
+            echo "::warning::Could not list the changed files, so the check runs."
+            echo "relevant=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          echo "Changed files:"
+          sed 's/^/  /' changed.txt
+
+          python3 tools/scripts/ci/changed_paths.py --patterns "${PATTERNS}" changed.txt \
+            | tee -a "${GITHUB_OUTPUT}"

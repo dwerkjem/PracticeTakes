@@ -10,13 +10,6 @@ name: Smoke tests
 
 on:
   pull_request:
-    paths:
-      - "src/**"
-      - "CMakeLists.txt"
-      - "cmake/**"
-      - "tools/scripts/quality/smoke_test.py"
-      - "tools/scripts/testing_suite/driver.py"
-      - ".github/workflows/smoke.yml"
   push:
     branches:
       - main
@@ -36,8 +29,31 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Always runs, so the jobs below always report and can be required by
+  # main's ruleset. They skip when the pull request touches nothing here.
+  # The list is what `on.pull_request.paths` used to carry, and must stay
+  # in step with `on.push.paths`.
+  changes:
+    name: Decide whether this check applies
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/changed-paths.yml
+    with:
+      paths: |
+        src/**
+        CMakeLists.txt
+        cmake/**
+        tools/scripts/quality/smoke_test.py
+        tools/scripts/testing_suite/driver.py
+        .github/workflows/smoke.yml
+
   smoke:
     name: Launch the built application
+    needs: changes
+    # Runs unless the decision is exactly "false", so a failed decision
+    # runs the check rather than skipping it.
+    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     runs-on: ubuntu-24.04
 
     steps:

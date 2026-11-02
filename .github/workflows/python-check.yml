@@ -2,14 +2,6 @@ name: Python quality check
 
 on:
   pull_request:
-    paths:
-      - "tools/scripts/**"
-      - ".github/workflows/python-check.yml"
-      # The layout check below reads src/tests/ and src/, so a change to either has
-      # to be able to fail it. Without these, a test added at the root of
-      # src/tests/ would never trigger the job that rejects it.
-      - "src/tests/**"
-      - "src/**"
   push:
     branches:
       - main
@@ -27,8 +19,32 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Always runs, so the jobs below always report and can be required by
+  # main's ruleset. They skip when the pull request touches nothing here.
+  # The list is what `on.pull_request.paths` used to carry, and must stay
+  # in step with `on.push.paths`.
+  changes:
+    name: Decide whether this check applies
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/changed-paths.yml
+    with:
+      paths: |
+        tools/scripts/**
+        .github/workflows/python-check.yml
+        # The layout check below reads src/tests/ and src/, so a change to either has
+        # to be able to fail it. Without these, a test added at the root of
+        # src/tests/ would never trigger the job that rejects it.
+        src/tests/**
+        src/**
+
   python-tests:
     name: Test repository scripts
+    needs: changes
+    # Runs unless the decision is exactly "false", so a failed decision
+    # runs the check rather than skipping it.
+    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     runs-on: ubuntu-24.04
 
     steps:

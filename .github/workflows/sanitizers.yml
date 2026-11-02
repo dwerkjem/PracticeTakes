@@ -10,13 +10,6 @@ name: Sanitizers
 
 on:
   pull_request:
-    paths:
-      - "src/**"
-      - "!src/services/**"
-      - "CMakeLists.txt"
-      - "tools/cmake/**"
-      - "tools/sanitizers/**"
-      - ".github/workflows/sanitizers.yml"
 
 permissions:
   contents: read
@@ -26,8 +19,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Always runs, so the jobs below always report and can be required by
+  # main's ruleset. They skip when the pull request touches nothing here.
+  # The list is what `on.pull_request.paths` used to carry.
+  changes:
+    name: Decide whether this check applies
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/changed-paths.yml
+    with:
+      paths: |
+        src/**
+        !src/services/**
+        CMakeLists.txt
+        tools/cmake/**
+        tools/sanitizers/**
+        .github/workflows/sanitizers.yml
+
   address-undefined:
     name: Address and Undefined
+    needs: changes
+    # Runs unless the decision is exactly "false", so a failed decision
+    # runs the check rather than skipping it.
+    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -91,6 +106,10 @@ jobs:
 
   realtime:
     name: Realtime
+    needs: changes
+    # Runs unless the decision is exactly "false", so a failed decision
+    # runs the check rather than skipping it.
+    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
 
