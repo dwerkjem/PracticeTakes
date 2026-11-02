@@ -276,6 +276,13 @@ const std::vector<ApprovedWindowState>& states()
          "The same staff in a floating window, where it has the room to break into fewer "
          "systems",
          0.0, "", "notation-sample.musicxml", false},
+        // A piano part, which used to show its right hand alone. Both staves,
+        // braced, with the beats of the two hands lined up.
+        {"score-view-grand-staff", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view drawing a piano part as a braced grand staff, both hands aligned", 0.0, "",
+         "grand-staff-sample.musicxml", false},
     };
 
     return approved;

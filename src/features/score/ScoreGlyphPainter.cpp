@@ -158,13 +158,18 @@ void ScoreGlyphPainter::drawStaffLines(
 {
     graphics.setColour(palette.staffLines);
 
-    for (int line = 0; line < engraving::staffLineCount; ++line)
-    {
-        const float y = static_cast<float>(originY) + px(static_cast<double>(line));
+    const float left = static_cast<float>(originX) + px(system.staffStartX);
+    const float width = px(system.width - system.staffStartX);
 
-        graphics.fillRect(juce::Rectangle<float>(
-            static_cast<float>(originX), y - (px(staffLineThickness) * 0.5f), px(system.width),
-            px(staffLineThickness)));
+    for (const double offset : system.staffOffsets)
+    {
+        for (int line = 0; line < engraving::staffLineCount; ++line)
+        {
+            const float y = static_cast<float>(originY) + px(offset + static_cast<double>(line));
+
+            graphics.fillRect(juce::Rectangle<float>(
+                left, y - (px(staffLineThickness) * 0.5f), width, px(staffLineThickness)));
+        }
     }
 }
 
@@ -336,10 +341,15 @@ void ScoreGlyphPainter::drawKeyAccidental(
 
 void ScoreGlyphPainter::drawBarline(
     const engraving::BarlineGlyph& glyph,
+    const engraving::System& system,
     double originX,
     double originY) const
 {
     graphics.setColour(palette.notation);
+
+    // From the first staff's top line to the last staff's bottom line, across
+    // the gap between them: on a grand staff one barline joins both hands.
+    const double span = system.staffOffsets.back() + engraving::staffHeightInSpaces;
 
     // A barline is drawn by its edges rather than its centre, so that a final
     // barline's thick line ends where the staff does instead of overhanging it
@@ -348,16 +358,20 @@ void ScoreGlyphPainter::drawBarline(
     {
         graphics.fillRect(juce::Rectangle<float>(
             static_cast<float>(originX) + px(left), static_cast<float>(originY), px(thickness),
-            px(engraving::staffHeightInSpaces)));
+            px(span)));
     };
 
     const auto dotsFrom = [&](double left)
     {
-        for (const StaffSteps steps : repeatDotPositions)
+        // On every staff: each staff's repeat is read on that staff.
+        for (const double offset : system.staffOffsets)
         {
-            drawGlyph(
-                smufl::Glyph::repeatDot, left, yForSteps(steps), originX, originY,
-                palette.notation);
+            for (const StaffSteps steps : repeatDotPositions)
+            {
+                drawGlyph(
+                    smufl::Glyph::repeatDot, left, yForSteps(steps) + offset, originX, originY,
+                    palette.notation);
+            }
         }
     };
 
@@ -598,62 +612,118 @@ void ScoreGlyphPainter::drawSystem(
     double originY,
     int lyricVerseCount) const
 {
+    // Each glyph is positioned on its own staff's lines, so it is drawn from
+    // that staff's top line. For a single staff that is `originY` itself.
+    const auto staffOrigin = [&system, originY, this](int staff)
+    {
+        const auto index = static_cast<std::size_t>(std::max(0, staff));
+        const double offset =
+            index < system.staffOffsets.size() ? system.staffOffsets.at(index) : 0.0;
+
+        return originY + px(offset);
+    };
+
     drawStaffLines(system, originX, originY);
+
+    if (system.staffOffsets.size() > 1)
+    {
+        drawBrace(system, originX, originY);
+    }
 
     for (const engraving::BarlineGlyph& glyph : system.barlines)
     {
-        drawBarline(glyph, originX, originY);
+        drawBarline(glyph, system, originX, originY);
     }
 
     for (const engraving::ClefGlyph& glyph : system.clefs)
     {
-        drawClef(glyph, originX, originY);
+        drawClef(glyph, originX, staffOrigin(glyph.staff));
     }
 
     for (const engraving::KeyAccidentalGlyph& glyph : system.keyAccidentals)
     {
-        drawKeyAccidental(glyph, originX, originY);
+        drawKeyAccidental(glyph, originX, staffOrigin(glyph.staff));
     }
 
     for (const engraving::TimeSignatureGlyph& glyph : system.timeSignatures)
     {
-        drawTimeSignature(glyph, originX, originY);
+        drawTimeSignature(glyph, originX, staffOrigin(glyph.staff));
     }
 
     for (const engraving::RestGlyph& glyph : system.rests)
     {
-        drawRest(glyph, originX, originY);
+        drawRest(glyph, originX, staffOrigin(glyph.staff));
     }
 
     // Stems before noteheads, so a notehead covers the end of its own stem
     // rather than the stem cutting across it.
     for (const engraving::StemGlyph& glyph : system.stems)
     {
-        drawStem(glyph, originX, originY);
+        drawStem(glyph, originX, staffOrigin(glyph.staff));
     }
 
     for (const engraving::BeamGlyph& glyph : system.beams)
     {
-        drawBeam(glyph, originX, originY);
+        drawBeam(glyph, originX, staffOrigin(glyph.staff));
     }
 
     for (const engraving::NoteheadGlyph& glyph : system.noteheads)
     {
-        drawNotehead(glyph, originX, originY);
+        drawNotehead(glyph, originX, staffOrigin(glyph.staff));
     }
 
     for (const engraving::TieGlyph& glyph : system.ties)
     {
-        drawTie(glyph, originX, originY);
+        drawTie(glyph, originX, staffOrigin(glyph.staff));
     }
 
     for (const engraving::LyricGlyph& glyph : system.lyrics)
     {
-        drawLyric(glyph, originX, originY);
+        drawLyric(glyph, originX, staffOrigin(glyph.staff));
     }
 
     for (const engraving::TextGlyph& glyph : system.texts)
     {
-        drawText(glyph, originX, originY, lyricVerseCount);
+        drawText(glyph, originX, staffOrigin(glyph.staff), lyricVerseCount);
     }
+}
+
+void ScoreGlyphPainter::drawBrace(const engraving::System& system, double originX, double originY)
+    const
+{
+    // From the first staff's top line to the last staff's bottom line.
+    const double span = system.staffOffsets.back() + engraving::staffHeightInSpaces;
+
+    // The barline that joins the staves at the start of the system, where the
+    // staff lines begin.
+    graphics.setColour(palette.notation);
+    graphics.fillRect(juce::Rectangle<float>(
+        static_cast<float>(originX) + px(system.staffStartX) - (px(thinBarlineThickness) * 0.5f),
+        static_cast<float>(originY), px(thinBarlineThickness), px(span)));
+
+    // SMuFL's brace is drawn at one staff's height. Scaled uniformly to the
+    // span it keeps the proportions it was drawn with; stretched vertically
+    // alone, as a first version did, a two-staff brace came out a hairline.
+    // Its width is capped at the room the layout reserved, so a tall system
+    // never pushes it past the system's left edge.
+    const juce::Path& outline = font.outline(smufl::Glyph::brace);
+    const juce::Rectangle<float> bounds = font.bounds(smufl::Glyph::brace);
+
+    if (outline.isEmpty() || bounds.getHeight() <= 0.0f)
+    {
+        return;
+    }
+
+    const auto stretch = static_cast<float>(span) / bounds.getHeight();
+    const float gap = 0.25f;
+    const float room = static_cast<float>(system.staffStartX) - gap;
+    const float across =
+        bounds.getWidth() > 0.0f ? std::min(stretch, room / bounds.getWidth()) : stretch;
+
+    juce::Path placed = outline;
+    placed.applyTransform(juce::AffineTransform::translation(-bounds.getRight(), -bounds.getY())
+                              .scaled(across, stretch)
+                              .translated(room, 0.0f));
+
+    fillInSpaces(placed, originX, originY, palette.notation);
 }

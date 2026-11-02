@@ -7,6 +7,7 @@ namespace smufl
 const std::vector<Glyph>& allGlyphs()
 {
     static const std::vector<Glyph> glyphs{
+        Glyph::brace,
         Glyph::noteheadDoubleWhole,
         Glyph::noteheadWhole,
         Glyph::noteheadHalf,

@@ -27,6 +27,10 @@ namespace smufl
 // use, so a reader can look any of them up.
 enum class Glyph : char32_t
 {
+    // Joins the staves of a grand staff. Designed at one staff's height and
+    // stretched vertically to span all of them.
+    brace = 0xE000,
+
     noteheadDoubleWhole = 0xE0A0,
     noteheadWhole = 0xE0A2,
     noteheadHalf = 0xE0A3,

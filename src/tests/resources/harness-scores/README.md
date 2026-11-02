@@ -1,6 +1,6 @@
 # Harness scores
 
-Three MusicXML documents that exist to be photographed. An approved window state
+Four MusicXML documents that exist to be photographed. An approved window state
 in `src/application/testcontrol/ApprovedWindowStates.cpp` names one by file
 name, the shell imports it on the way into that state, and the capture pass
 takes a reference image of the result.
@@ -10,18 +10,21 @@ takes a reference image of the result.
 | `clean-import.musicxml` | `imported`, no diagnostics | Every metadata field the summary can show, a part on two staves, and the explicit "Nothing was dropped or repaired." line |
 | `diagnostic-import.musicxml` | `importedWithDiagnostics` | All three severity groups at once, and six unrecognised elements sharing one message |
 | `notation-sample.musicxml` | `imported`, no diagnostics | A staff, in the Score View tool: key signature, accidentals in and out of the key, a rest, a grace note, dots, flags, a tie across a barline, a clef change, a chord, repeat barlines and lyrics |
+| `grand-staff-sample.musicxml` | `imported`, no diagnostics | A piano part on a braced grand staff, in the Score View tool: both hands on the beat, a sharp in one hand moving the other with it, a left-hand note between the right hand's, a clef change on the lower staff alone, and a tie |
 
-The first two are pictures of the **import summary window**. The third is a
-picture of a **tool**, which the two before it could not be: the only way to get
+The first two are pictures of the **import summary window**. The third and
+fourth are pictures of a **tool**, which the two before it could not be: the only way to get
 a score into the running application is `startScoreImport`, which also opens the
-summary window over whatever the surface is about. `score-view-notation` sets
-`showScoreImportSummary` to false to suppress it — see finding 7 in
+summary window over whatever the surface is about. `score-view-notation` and
+`score-view-grand-staff` set `showScoreImportSummary` to false to suppress it — see finding 7 in
 `docs/development/architecture/score-model-findings.md`.
 
 `src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp` pins all
-three: that each file a state names exists, and that it still imports to the
+four: that each file a state names exists, and that it still imports to the
 status and the shape of result its surface is about — for `notation-sample`,
-through the layout, construct by construct, so a fixture quietly losing one
+and for `grand-staff-sample` through the layout too -- two staves, both hands
+present, the lower staff's clef change on that staff alone -- construct by
+construct, so a fixture quietly losing one
 fails a build rather than turning a reference image into one of less. Run
 
 ```bash
@@ -44,7 +47,7 @@ someone regenerated a fixture is a false failure.
 
 ## Provenance
 
-**Both files are hand-written for this repository**, by its own developer, and
+**Every file here is hand-written for this repository**, by its own developer, and
 carry no third-party content: no repertoire, no exporter output, nothing under
 anyone else's licence. The pitches are a scale.
 
@@ -62,12 +65,12 @@ exporter output, and `diagnostic-import.musicxml` reproduces the *shape* of the
 MuseScore report — several unrecognised elements, one shared message, the
 element name as the only thing telling the rows apart — rather than its bytes.
 
-## Why `notation-sample.musicxml` has no dynamic in it
+## Why `notation-sample.musicxml` and `grand-staff-sample.musicxml` have no dynamic in them
 
 It would be the obvious thing to include, and #32 asks for "basic dynamics".
 A `<dynamics><mf/></dynamics>` is read correctly by the importer and *also*
 reported by it as an element it does not read, because the marking names are in
-`isDynamicMarking` and not in `knownElements`. A dynamic here would make this
+`isDynamicMarking` and not in `knownElements`. A dynamic in either would make that
 file import with a diagnostic, and the surface would then say the file was not
 fully read — which is the one thing a picture of a renderer must not say.
 

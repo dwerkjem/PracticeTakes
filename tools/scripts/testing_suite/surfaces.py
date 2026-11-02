@@ -768,6 +768,49 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # A piano part, which the score view used to draw as its right hand alone.
+    # The fixture's four bars each exist for one thing a grand staff has to get
+    # right; the questions name them bar by bar.
+    Surface(
+        state="score-view-grand-staff",
+        title="The score view drawing a piano part as a grand staff",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "both-staves-braced",
+                "Are both staves drawn, treble above bass, joined at the left by a brace?",
+            ),
+            Question(
+                "barlines-through-both",
+                "Does every barline run through both staves and the gap between them, rather "
+                "than stopping at each staff?",
+            ),
+            Question(
+                "beats-line-up",
+                "In bar 1, are the left hand's two half notes directly under the right hand's "
+                "first and third quarter notes?",
+            ),
+            Question(
+                "sharp-moves-both-hands",
+                "In bar 2, the right hand's first note has a sharp: is the left hand's first "
+                "note still directly under it, and does the left hand's second eighth fall "
+                "between the right hand's notes rather than under one?",
+            ),
+            Question(
+                "lower-clef-change-only",
+                "At bar 3, does only the lower staff change to a treble clef, with the upper "
+                "staff's music still lined up with it?",
+            ),
+            Question(
+                "nothing-collides",
+                "Do any two symbols overlap anywhere on either staff?",
+            ),
+        ),
+    ),
     # The same score with more room. Worth its own picture because system
     # breaking is the one layout decision that cannot be seen at a single width:
     # a bar is either on this line or the next, and the only way to see that the
