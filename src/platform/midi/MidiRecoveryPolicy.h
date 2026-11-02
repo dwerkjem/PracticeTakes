@@ -48,6 +48,25 @@ shouldClose(bool isSomethingOpen, bool openDeviceIsSelected, bool openDeviceIsPr
     return !openDeviceIsSelected || !openDeviceIsPresent;
 }
 
+// Whether what is open should be closed and opened afresh because the system's
+// device list changed since it was opened.
+//
+// A device unplugged and replugged comes back under the same identifier, so
+// "present and open" cannot tell it from one that never left -- and the open
+// input is subscribed to a port that died with the old device. Any change to
+// the list therefore re-opens the selected device if it is open and present.
+// The service asks this only once the list has stopped changing: acting at once,
+// while the kernel was still tearing a USB keyboard's port down, coincided with
+// the kernel's teardown hanging on real hardware (a Donner DDP-200 MK2 on
+// Debian, 2026-11-02). See MidiInputService's constructor.
+[[nodiscard]] constexpr bool shouldReopenAfterListChange(
+    bool listChanged,
+    bool isSelectedDeviceOpen,
+    bool isSelectedDevicePresent) noexcept
+{
+    return listChanged && isSelectedDeviceOpen && isSelectedDevicePresent;
+}
+
 // A device as enumerated: the identifier the backend opens it by, and the name
 // it shows. Plain strings, so the choice below is checkable without a backend.
 struct DeviceListing

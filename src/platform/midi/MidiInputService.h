@@ -139,6 +139,10 @@ class MidiInputService final : private juce::MidiInputCallback, private juce::Ti
     static constexpr int disconnectedDeviceScanIntervalTicks = serviceRefreshRateHz * 2;
     static constexpr int connectedDeviceScanIntervalTicks = serviceRefreshRateHz * 10;
 
+    // How long the system's device list has to stay unchanged before the
+    // service acts on a change: a second and a half. See the constructor.
+    static constexpr int deviceListSettleTicks = (serviceRefreshRateHz * 3) / 2;
+
     struct ConsumerSlot
     {
         midi::MidiEventFifo<consumerFifoCapacity> fifo;
@@ -163,7 +167,9 @@ class MidiInputService final : private juce::MidiInputCallback, private juce::Ti
 
     // Open or close to match the selection and what is present. Message thread
     // only.
-    void reconcileDevice();
+    // `listChanged` re-opens the selected device if it is open and present, so a
+    // keyboard replugged under the same identifier gets a fresh subscription.
+    void reconcileDevice(bool listChanged = false);
 
     // The one call that touches the backend to open a device, behind a seam of
     // its own.
@@ -202,6 +208,10 @@ class MidiInputService final : private juce::MidiInputCallback, private juce::Ti
 
     // Message thread only, but atomic so reading it never needs the lock.
     std::atomic<std::uint64_t> deviceListChanges{0};
+
+    // The device list changed and the service has not acted on it yet: it waits
+    // for the list to settle. Message thread only.
+    bool deviceListChangePending = false;
 
     // Reconciles the moment the system's device list changes. Last, so it is
     // destroyed first -- though the destructor resets it explicitly anyway,

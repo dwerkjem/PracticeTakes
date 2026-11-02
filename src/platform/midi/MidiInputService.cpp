@@ -6,23 +6,31 @@
 #include <algorithm>
 #include <optional>
 #include <string>
+#include <utility>
 
 MidiInputService::MidiInputService()
 {
     startTimerHz(serviceRefreshRateHz);
 
-    // The device list changing is the moment a reconcile is needed, so it is
-    // asked for then rather than left to the next scan. The scan alone missed a
-    // keyboard unplugged and replugged between two scans: the identifier was
-    // present both times, so nothing was reopened, and the application showed
-    // "Connected" to a subscription that had died with the old device. JUCE
-    // delivers this on the message thread, as reconcileDevice requires. The
-    // timer stays as the fallback for a backend that announces nothing.
+    // A change to the device list is noted here and acted on once the list has
+    // been quiet for `deviceListSettleTicks` -- never in this callback.
+    //
+    // Reacting at once was tried, and unplugging a real USB keyboard with the
+    // application open then hung the kernel: its port deletion
+    // (snd_seq_midisynth_remove -> port_delete) waited forever on a reference
+    // to the keyboard's port, and USB stopped enumerating until a reboot. The
+    // same unplug without the application did not hang. JUCE raises this from
+    // ALSA's announcement port while the port is still being torn down, and
+    // closing the input here unsubscribed from it mid-teardown -- the likeliest
+    // trigger, and the one thing the application can stop doing. Waiting until
+    // the list settles lets the kernel finish first. A replug inside the window restarts the wait,
+    // and the settled reconcile re-opens the keyboard, so a quick replug still recovers -- the case
+    // the scan alone missed. JUCE delivers this on the message thread, as the timer runs.
     deviceListConnection = juce::MidiDeviceListConnection::make(
         [this]
         {
-            deviceListChanges.fetch_add(1, std::memory_order_relaxed);
-            reconcileDevice();
+            deviceListChangePending = true;
+            ticksUntilNextScan = deviceListSettleTicks;
         });
 }
 
@@ -223,7 +231,7 @@ std::unique_ptr<juce::MidiInput> MidiInputService::openDevice(const juce::String
     return juce::MidiInput::openDevice(identifier, this);
 }
 
-void MidiInputService::reconcileDevice()
+void MidiInputService::reconcileDevice(bool listChanged)
 {
     // Enumerated once, outside the lock, because it is the one step here that
     // calls into the backend.
@@ -255,6 +263,16 @@ void MidiInputService::reconcileDevice()
             { return device.identifier == openId; });
 
     const juce::ScopedLock lock(deviceLock);
+
+    // The list changed since the selected device was opened, and it is still
+    // present: open it afresh, because the subscription may belong to a port
+    // that died with the device before it came back under the same identifier.
+    if (MidiRecoveryPolicy::shouldReopenAfterListChange(
+            listChanged, openInput != nullptr && openIdentifier == target, resolved.has_value()))
+    {
+        openInput.reset();
+        openIdentifier.clear();
+    }
 
     const bool somethingOpen = openInput != nullptr;
 
@@ -309,7 +327,16 @@ void MidiInputService::timerCallback()
     ticksUntilNextScan =
         connected ? connectedDeviceScanIntervalTicks : disconnectedDeviceScanIntervalTicks;
 
-    reconcileDevice();
+    const bool listChanged = std::exchange(deviceListChangePending, false);
+
+    reconcileDevice(listChanged);
+
+    // Only now does the interface hear the list moved, so it re-reads it after
+    // the system has settled rather than during a teardown.
+    if (listChanged)
+    {
+        deviceListChanges.fetch_add(1, std::memory_order_relaxed);
+    }
 }
 
 void MidiInputService::handleIncomingMidiMessage(
