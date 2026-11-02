@@ -78,6 +78,7 @@ parity test and a test assertion reads as a position you can count off a staff.
 | `KeySignatureLayout.{h,cpp}` | Where a key signature's accidentals sit, per clef. |
 | `MeasureAccidentals.{h,cpp}` | Which notes need an accidental drawn. |
 | `Accidental.h` | The accidental signs, shared by the two above. |
+| `PartNames.{h,cpp}` | What a part is called beside its staves, and its short form. |
 | `ScoreLayout.h` | The glyph types, the system, and the spacing options. |
 
 ### A clef is a reference pitch on a line
@@ -247,6 +248,20 @@ with more than one staff, and each barline through one part's staves at a time,
 so a voice's bars read as its own above the piano's. A part's lyric rows push
 down only the staves below it (`System::staffLyricVerses`). A tempo mark is
 drawn once, over the top staff, however many parts the file wrote it into.
+
+With more than one part, each is named at the start of its staves
+(`System::partNames`), centred across them, so a piano's name sits between its
+hands: in full on the first system, shortened on every system after
+(`PartNames.h`). The short form is the file's `<part-abbreviation>` when it has
+one, and otherwise derived — most files have none — from a table of the
+instruments and voices a song or chamber score carries ("Piano" → "Pno.",
+"Violin 2" → "Vln. 2"), falling back to the first three letters. A name is
+shown even where the file marks it `print-object="no"`, as the bundled sample
+does: telling the staves apart is the point of drawing every part. The room
+names take is reserved before the brace and comes off the width the music has,
+estimated from the name's length because the engine has no font; the painter
+fits the text into that room rather than trusting the estimate. A solo score is
+not labelled.
 
 A single part lays out exactly as it did when only the first part was drawn.
 That was checked by dumping every glyph of every part of every test score, laid

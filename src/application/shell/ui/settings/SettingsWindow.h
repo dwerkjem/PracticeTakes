@@ -360,6 +360,10 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             static constexpr int refreshRateHz = 10;
             static constexpr int shownEventCount = 4;
 
+            // Far above any device index's id (index + 2), so it can never
+            // collide with a real entry.
+            static constexpr int absentDeviceItemId = 1'000'000;
+
             void rebuildDeviceList()
             {
                 devices = midiInputService.availableDevices();
@@ -386,13 +390,36 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     }
                 }
 
+                // The chosen keyboard is unplugged. Showing "No MIDI input" would
+                // read as the choice having been cleared, when it is only waiting,
+                // so it keeps its place under its name -- shown, not choosable.
+                const juce::String selectedName = midiInputService.selectedDeviceName();
+
+                if (selectedId == 1 && selected.isNotEmpty())
+                {
+                    deviceBox.addItem(
+                        (selectedName.isNotEmpty() ? selectedName : selected) + " (not connected)",
+                        absentDeviceItemId);
+                    deviceBox.setItemEnabled(absentDeviceItemId, false);
+                    selectedId = absentDeviceItemId;
+                }
+
                 deviceBox.setSelectedId(selectedId, juce::dontSendNotification);
+                shownDeviceListGeneration = midiInputService.deviceListGeneration();
                 updateStatus();
             }
 
             void applySelection()
             {
                 const int id = deviceBox.getSelectedId();
+
+                // The placeholder for an unplugged keyboard is not a device;
+                // landing on it must not clear the choice it stands for.
+                if (id == absentDeviceItemId)
+                {
+                    return;
+                }
+
                 const auto index = static_cast<std::size_t>(id - 2);
 
                 if (id <= 1 || index >= devices.size())
@@ -457,6 +484,14 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
             void timerCallback() override
             {
+                // A keyboard plugged in or out while this is open appears or
+                // goes without pressing Rescan. The service hears the change at
+                // once; this only notices that its list moved.
+                if (midiInputService.deviceListGeneration() != shownDeviceListGeneration)
+                {
+                    rebuildDeviceList();
+                }
+
                 // The stream can no longer be trusted when the keyboard leaves or
                 // when the FIFO dropped events (the oldest go first, and a note
                 // off may be among them). Both end every held note as unmeasured
@@ -621,6 +656,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             double lastEventSeconds = 0.0;
             MidiInputService::ConnectionState lastState =
                 MidiInputService::ConnectionState::noDeviceSelected;
+            std::uint64_t shownDeviceListGeneration = 0;
 
             juce::Label heading;
             juce::Label description;

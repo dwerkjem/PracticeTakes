@@ -305,6 +305,23 @@ struct TextGlyph
     double y = 0.0;
 };
 
+// A part's name at the start of its staves, so a reader can tell which staff is
+// the voice and which the piano. The full name on the first system, the short
+// one after it (see PartNames.h).
+struct PartNameGlyph
+{
+    std::string text;
+
+    // Where the name ends, in staff spaces from the system's left edge. It is
+    // right-aligned there, clear of the brace and the staff lines.
+    double rightX = 0.0;
+
+    // The staves it names, inclusive, as indices into `System::staffOffsets`.
+    // Centred across them, so a piano's name sits between its two staves.
+    int firstStaff = 0;
+    int lastStaff = 0;
+};
+
 // The staves of one part within a system, as indices into
 // `System::staffOffsets`, inclusive. A part on more than one staff -- a piano --
 // is braced, and its barlines run through all of its staves; between two parts
@@ -363,6 +380,12 @@ struct System
     // a voice's lyrics sit below the voice, not below the piano under it.
     // Empty means every staff has the layout's own `lyricVerseCount`.
     std::vector<int> staffLyricVerses;
+
+    // One per named part, top to bottom. Empty for a single part -- a solo
+    // score needs no label to say which staff is which -- and for a part with
+    // no name. Room for them is reserved at the system's start, before
+    // `staffStartX`.
+    std::vector<PartNameGlyph> partNames;
 };
 
 enum class LayoutOutcome
@@ -457,6 +480,16 @@ struct LayoutOptions
     // Room at the start of a braced system for the brace and the barline that
     // joins the staves.
     double braceWidth = 1.6;
+
+    // Part names beside the staves. The engine has no font, so a name's width is
+    // estimated from its length; the painter fits it into the room reserved,
+    // so an estimate that runs long squeezes the text rather than overlapping
+    // the brace. Capped, so one long name cannot take a third of every system.
+    double partNameCharacterWidth = 0.75;
+    double maximumPartNameWidth = 12.0;
+
+    // Between the end of a name and the brace or staves it names.
+    double partNameGap = 1.0;
 
     // Room per lyric verse, below the staff and above the dynamics.
     double lyricRowHeight = 1.8;

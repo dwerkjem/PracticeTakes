@@ -2150,6 +2150,150 @@ TEST_CASE("bars only some parts have are reported", "[score][engraving][layout][
     CHECK(anyNoticeContains(layout, "1 bar at the end that only some parts have"));
 }
 
+// Part names beside the staves.
+//
+// A song's voice and piano are told apart by a label at the start of each
+// part's staves: in full on the first system, shortened after it, and nowhere
+// on a solo score, where there is nothing to tell apart.
+
+namespace
+{
+// `count` bars of the song above, each a whole note in every staff.
+[[nodiscard]] std::shared_ptr<const score::Score> songOfBars(std::size_t count)
+{
+    std::vector<score::Measure> voice;
+    std::vector<score::Measure> piano;
+
+    for (std::size_t index = 0; index < count; ++index)
+    {
+        const bool first = index == 0;
+
+        voice.push_back(measureOf(
+            index, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))})},
+            first));
+        piano.push_back(grandStaffMeasureOf(
+            index, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::e, 0, 4))},
+            {lowerAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 0, 3))}, first));
+    }
+
+    return songOf(std::move(voice), std::move(piano));
+}
+
+[[nodiscard]] LayoutOptions severalSystems()
+{
+    LayoutOptions options;
+    options.availableWidth = 70.0;
+
+    return options;
+}
+} // namespace
+
+TEST_CASE(
+    "each part is named in full on the first system",
+    "[score][engraving][layout][part-names]")
+{
+    const ScoreLayout layout = layOutScore(songOfBars(1), wideOptions());
+
+    REQUIRE(layout.outcome == LayoutOutcome::laidOut);
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.partNames.size() == 2);
+    CHECK(system.partNames.at(0).text == "Voice");
+    CHECK(system.partNames.at(1).text == "Piano");
+
+    // The voice's name is beside the voice; the piano's spans both its staves,
+    // so it is drawn between them rather than beside one hand.
+    CHECK(system.partNames.at(0).firstStaff == 0);
+    CHECK(system.partNames.at(0).lastStaff == 0);
+    CHECK(system.partNames.at(1).firstStaff == 1);
+    CHECK(system.partNames.at(1).lastStaff == 2);
+
+    // Names end before the brace, which ends where the staff lines begin.
+    for (const PartNameGlyph& name : system.partNames)
+    {
+        CHECK(name.rightX > 0.0);
+        CHECK(name.rightX + wideOptions().braceWidth < system.staffStartX + 0.001);
+    }
+}
+
+TEST_CASE("later systems carry the shortened names", "[score][engraving][layout][part-names]")
+{
+    const ScoreLayout layout = layOutScore(songOfBars(12), severalSystems());
+
+    REQUIRE(layout.outcome == LayoutOutcome::laidOut);
+    REQUIRE(layout.systems.size() > 1);
+
+    for (std::size_t index = 1; index < layout.systems.size(); ++index)
+    {
+        INFO("system " << index);
+        const System& system = layout.systems.at(index);
+
+        REQUIRE(system.partNames.size() == 2);
+        CHECK(system.partNames.at(0).text == "Vo.");
+        CHECK(system.partNames.at(1).text == "Pno.");
+    }
+
+    // The short names need less room, so later systems start their staves
+    // further left than the first.
+    CHECK(layout.systems.at(1).staffStartX < layout.systems.front().staffStartX);
+}
+
+TEST_CASE(
+    "the file's own abbreviation is used on later systems",
+    "[score][engraving][layout][part-names]")
+{
+    auto model = std::make_shared<score::Score>(*songOfBars(12));
+    model->parts.at(1).abbreviation = "Klav.";
+
+    const ScoreLayout layout = layOutScore(model, severalSystems());
+
+    REQUIRE(layout.systems.size() > 1);
+    REQUIRE(layout.systems.at(1).partNames.size() == 2);
+    CHECK(layout.systems.at(1).partNames.at(1).text == "Klav.");
+}
+
+TEST_CASE(
+    "the room names take comes out of the music's width",
+    "[score][engraving][layout][part-names]")
+{
+    // Nothing may run past the width the layout was given, names included.
+    const LayoutOptions options = severalSystems();
+    const ScoreLayout layout = layOutScore(songOfBars(12), options);
+
+    for (const System& system : layout.systems)
+    {
+        CHECK(system.width <= options.availableWidth + 0.001);
+    }
+}
+
+TEST_CASE("a solo score is not labelled", "[score][engraving][layout][part-names]")
+{
+    const ScoreLayout layout = layOutScore(
+        scoreOf({measureOf(
+            0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))})},
+            true)}),
+        wideOptions());
+
+    REQUIRE(layout.outcome == LayoutOutcome::laidOut);
+
+    for (const System& system : layout.systems)
+    {
+        CHECK(system.partNames.empty());
+        CHECK(system.staffStartX == 0.0);
+    }
+}
+
+TEST_CASE("a part with no name is left unlabelled", "[score][engraving][layout][part-names]")
+{
+    auto model = std::make_shared<score::Score>(*songOfBars(1));
+    model->parts.at(0).name = " ";
+
+    const ScoreLayout layout = layOutScore(model, wideOptions());
+
+    REQUIRE(layout.systems.front().partNames.size() == 1);
+    CHECK(layout.systems.front().partNames.front().text == "Piano");
+}
+
 // Text placed clear of the notes (engraving-polish design decision 6, #252).
 //
 // Lyrics, dynamics, tempo marks and measure numbers each sit on one band per

@@ -111,6 +111,12 @@ class MidiInputService final : private juce::MidiInputCallback, private juce::Ti
     // Total events seen since start, for a proof-of-life readout.
     [[nodiscard]] std::uint64_t receivedEventCount() const noexcept;
 
+    // How many times the set of MIDI devices has changed, or the selection has
+    // followed its device to a new identifier. A list shown to the user is
+    // stale once this moves; comparing it on a timer is cheaper than a listener
+    // and is what the interface already does for the connection state.
+    [[nodiscard]] std::uint64_t deviceListGeneration() const noexcept;
+
   private:
     // The driver callback is private and the MidiInputCallback base is
     // inherited privately, because nothing in the application may invoke it --
@@ -193,6 +199,9 @@ class MidiInputService final : private juce::MidiInputCallback, private juce::Ti
 
     std::atomic<std::uint64_t> eventsReceived{0};
     int ticksUntilNextScan = 0;
+
+    // Message thread only, but atomic so reading it never needs the lock.
+    std::atomic<std::uint64_t> deviceListChanges{0};
 
     // Reconciles the moment the system's device list changes. Last, so it is
     // destroyed first -- though the destructor resets it explicitly anyway,
