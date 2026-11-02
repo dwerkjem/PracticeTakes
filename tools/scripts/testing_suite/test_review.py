@@ -822,3 +822,96 @@ class BulkAxisTests(unittest.TestCase):
         self.assertEqual(
             set(self.verdicts(self.ids[0]).values()), {"pass"}
         )
+
+
+class CarryTests(ReviewTestCase):
+    """Answers follow an identical picture into the next run, and nothing else."""
+
+    def captured(self, run_id: int, surface, digest: str, geometry: str = "default",
+                 theme: str = "dark") -> int:
+        return self.store.record_capture(
+            run_id, state=surface.state, title=surface.title, geometry=geometry,
+            theme=theme, image_path="x.png", thumbnail_path="x.png", width=1280,
+            height=800, digest=digest,
+        )
+
+    def next_run(self) -> int:
+        return self.store.start_run(
+            provenance=PROVENANCE, commit="def456", mode=surfaces.QUICK,
+            resolutions=("default",), platform="Linux 6.12 (x86_64)",
+            audio_device="Built-in Audio",
+        )
+
+    def answers(self, capture_id: int) -> dict[str, tuple[str, str, int]]:
+        return {
+            row["question"]: (row["verdict"], row["note"], row["attended"])
+            for row in self.store.verdicts(capture_id)
+        }
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.earlier = self.captured(self.run_id, TUNER, "same")
+        review.score(self.store, self.earlier, "looks-correct", "pass")
+        review.score(self.store, self.earlier, "looks-good", "fail", "Cramped")
+        review.score(self.store, self.earlier, "works", "pass")
+        review.score(self.store, self.earlier, "live-input", "pass", attended=True)
+        self.later_run = self.next_run()
+
+    def test_an_identical_picture_takes_the_earlier_answers(self) -> None:
+        later = self.captured(self.later_run, TUNER, "same")
+
+        result = review.carry_verdicts(self.store, self.later_run)
+        carried = self.answers(later)
+
+        self.assertEqual(result, {"captures": 1, "verdicts": 3})
+        self.assertEqual(carried["looks-correct"][0], "pass")
+        # A failure is carried too: the same picture of a fault is still one.
+        self.assertEqual(carried["looks-good"][0], "fail")
+        self.assertIn("Cramped", carried["looks-good"][1])
+        self.assertTrue(all("Carried from run" in note for _, note, _ in carried.values()))
+
+    def test_attended_answers_are_never_carried(self) -> None:
+        """A new build has to be run to say whether it works live."""
+        later = self.captured(self.later_run, TUNER, "same")
+
+        review.carry_verdicts(self.store, self.later_run)
+
+        self.assertNotIn("live-input", self.answers(later))
+        self.assertTrue(
+            any(entry["question"] == "live-input"
+                for entry in review.outstanding(self.store, self.later_run))
+        )
+
+    def test_a_changed_picture_is_asked_again(self) -> None:
+        later = self.captured(self.later_run, TUNER, "different")
+
+        self.assertEqual(review.carry_verdicts(self.store, self.later_run)["captures"], 0)
+        self.assertEqual(self.answers(later), {})
+
+    def test_the_same_picture_at_another_size_or_palette_is_not_the_same_capture(self) -> None:
+        other_size = self.captured(self.later_run, TUNER, "same", geometry="tiny")
+        other_theme = self.captured(self.later_run, TUNER, "same", theme="light")
+
+        review.carry_verdicts(self.store, self.later_run)
+
+        self.assertEqual(self.answers(other_size), {})
+        self.assertEqual(self.answers(other_theme), {})
+
+    def test_an_answer_already_given_is_kept(self) -> None:
+        later = self.captured(self.later_run, TUNER, "same")
+        review.score(self.store, later, "looks-good", "pass", "Fixed now")
+
+        review.carry_verdicts(self.store, self.later_run)
+
+        self.assertEqual(self.answers(later)["looks-good"], ("pass", "Fixed now", 0))
+
+    def test_answers_come_from_the_newest_scored_picture(self) -> None:
+        middle = self.captured(self.later_run, TUNER, "same")
+        review.score(self.store, middle, "looks-good", "pass", "Looked again")
+        newest_run = self.next_run()
+        newest = self.captured(newest_run, TUNER, "same")
+
+        review.carry_verdicts(self.store, newest_run)
+
+        self.assertEqual(self.answers(newest)["looks-good"][0], "pass")
+        self.assertIn(f"run {self.later_run}", self.answers(newest)["looks-good"][1])

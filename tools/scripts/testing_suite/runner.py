@@ -52,6 +52,7 @@ import time
 import capture as capture_module
 import display as display_module
 import machine as machine_module
+import review as review_module
 import suites as suites_module
 import surfaces
 from driver import STARTUP_TIMEOUT_SECONDS, ApplicationDriver, missing_states
@@ -1349,6 +1350,16 @@ class Job:
             message=summary,
         )
         self._say(f"UI capture: {summary}", percent=ceiling)
+
+        if self.run_id is not None:
+            carried = review_module.carry_verdicts(self.store, self.run_id)
+
+            if carried["captures"]:
+                self._say(
+                    f"UI capture: {carried['captures']} identical to captures already scored -- "
+                    f"their {carried['verdicts']} answers were carried over",
+                    percent=ceiling,
+                )
 
         # Unwind like every other stop, so the run says it was stopped. Left to
         # return normally, a stopped capture reached the end of `_work` and was
