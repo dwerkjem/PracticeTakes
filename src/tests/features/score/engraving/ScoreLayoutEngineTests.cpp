@@ -827,32 +827,36 @@ TEST_CASE("what is not drawn is named", "[score][engraving][layout]")
         CHECK_FALSE(anyNoticeContains(layout, "time signature"));
     }
 
-    SECTION("further parts, by name")
+    SECTION("a part with nothing on a staff, by name")
     {
-        score::Part second;
-        second.id = "P2";
-        second.name = "Piano";
-        second.measures = {measureOf(
-            0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 0, 3))})},
+        // Every part is drawn now, so what is left to report about a second
+        // part is a reason it could not be: here, a drum kit.
+        score::Part drums;
+        drums.id = "P2";
+        drums.name = "Drums";
+        drums.measures = {measureOf(
+            0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 0, 5))})},
             true)};
+        drums.measures.front().attributes.clefs = {score::Clef{"percussion", 2, 0, 1}};
 
         auto built = std::make_shared<score::Score>();
         built->metadata.workTitle = "A Duet";
 
-        score::Part first;
-        first.id = "P1";
-        first.name = "Voice";
-        first.measures = {measureOf(
+        score::Part voice;
+        voice.id = "P1";
+        voice.name = "Voice";
+        voice.measures = {measureOf(
             0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))})},
             true)};
 
-        built->parts = {first, second};
+        built->parts = {voice, drums};
 
         const ScoreLayout layout = layOutScore(built, wideOptions());
 
+        REQUIRE(layout.outcome == LayoutOutcome::laidOut);
         CHECK(layout.partName == "Voice");
-        CHECK(anyNoticeContains(layout, "Piano"));
-        CHECK(anyNoticeContains(layout, "Not shown"));
+        CHECK(anyNoticeContains(layout, "Drums is written in"));
+        CHECK(anyNoticeContains(layout, "is not shown"));
 
         // Said to the person reading the score, so no issue number: "#33" told
         // them where the work was tracked and nothing about their music.
@@ -1850,4 +1854,298 @@ TEST_CASE(
     {
         CHECK(head.staff == 0);
     }
+}
+
+// --- Every part ---------------------------------------------------------------
+//
+// Only a score's first part used to be drawn, so a song showed its voice and
+// said the piano was missing. Every part is now stacked in each system, and
+// these pin what that has to get right: the parts share one spacing, each keeps
+// its own staves, braces and lyrics, and nothing addressed within one part
+// leaks into another.
+
+namespace
+{
+// A voice over a two-staff piano, one measure each, declared in the first.
+[[nodiscard]] std::shared_ptr<const score::Score>
+songOf(std::vector<score::Measure> voiceMeasures, std::vector<score::Measure> pianoMeasures)
+{
+    score::Part voice;
+    voice.id = "P1";
+    voice.name = "Voice";
+    voice.measures = std::move(voiceMeasures);
+
+    score::Part piano;
+    piano.id = "P2";
+    piano.name = "Piano";
+    piano.staffCount = 2;
+    piano.measures = std::move(pianoMeasures);
+
+    auto built = std::make_shared<score::Score>();
+    built->metadata.workTitle = "A Song";
+    built->parts = {voice, piano};
+
+    return built;
+}
+
+// The x of a notehead on `staff` whose event, in `part`, begins at `onset`.
+[[nodiscard]] double
+headXInPart(const System& system, int staff, Tick onset, const score::Part& part)
+{
+    for (const NoteheadGlyph& head : system.noteheads)
+    {
+        if (head.staff != staff)
+        {
+            continue;
+        }
+
+        const score::Measure& measure = part.measures.at(head.source.measureIndex);
+        const score::ScoreEvent& event =
+            measure.voices.at(head.source.voiceIndex).events.at(head.source.eventIndex);
+
+        if (event.onset == onset)
+        {
+            return head.x;
+        }
+    }
+
+    FAIL("no notehead on staff " << staff << " at onset " << onset);
+
+    return 0.0;
+}
+} // namespace
+
+TEST_CASE("every part is drawn, each on its own staves", "[score][engraving][layout][parts]")
+{
+    const auto model = songOf(
+        {measureOf(
+            0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))})},
+            true)},
+        {grandStaffMeasureOf(
+            0, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::e, 0, 4))},
+            {lowerAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 0, 3))}, true)});
+
+    const ScoreLayout layout = layOutScore(model, wideOptions());
+
+    REQUIRE(layout.outcome == LayoutOutcome::laidOut);
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    CHECK(layout.partName == "Voice, Piano");
+    CHECK_FALSE(anyNoticeContains(layout, "Not shown"));
+
+    // Three staves, top to bottom: the voice, then both hands of the piano.
+    REQUIRE(system.staffOffsets.size() == 3);
+    CHECK(system.staffOffsets.at(1) > system.staffOffsets.at(0) + staffHeightInSpaces);
+    CHECK(system.staffOffsets.at(2) > system.staffOffsets.at(1) + staffHeightInSpaces);
+
+    // Two parts: the voice alone, the piano braced across its two staves.
+    REQUIRE(system.staffGroups.size() == 2);
+    CHECK(system.staffGroups.at(0).firstStaff == 0);
+    CHECK(system.staffGroups.at(0).lastStaff == 0);
+    CHECK(system.staffGroups.at(1).firstStaff == 1);
+    CHECK(system.staffGroups.at(1).lastStaff == 2);
+    CHECK(system.staffStartX > 0.0);
+
+    for (int staff = 0; staff < 3; ++staff)
+    {
+        INFO("staff " << staff);
+        CHECK(
+            std::count_if(
+                system.noteheads.begin(), system.noteheads.end(),
+                [staff](const NoteheadGlyph& head) { return head.staff == staff; }) == 1);
+        CHECK(
+            std::count_if(
+                system.clefs.begin(), system.clefs.end(),
+                [staff](const ClefGlyph& clef) { return clef.staff == staff; }) == 1);
+    }
+}
+
+TEST_CASE("notes at the same moment line up across parts", "[score][engraving][layout][parts]")
+{
+    // The grand-staff case again, across a part boundary: sixteenths in the
+    // voice over half notes in the piano. Spaced part by part, the dense voice
+    // drifts right of the sparse piano and beat three lands in two places.
+    std::vector<score::ScoreEvent> run;
+
+    for (int index = 0; index < 16; ++index)
+    {
+        run.push_back(noteAt(
+            static_cast<Tick>(index) * (ticksPerQuarterNote / 4), ticksPerQuarterNote / 4,
+            pitch(score::Step::a, 0, 4)));
+    }
+
+    const auto model = songOf(
+        {measureOf(0, {voiceOf(1, std::move(run))}, true)},
+        {grandStaffMeasureOf(
+            0,
+            {noteAt(0, ticksPerQuarterNote * 2, pitch(score::Step::e, 0, 4)),
+             noteAt(ticksPerQuarterNote * 2, ticksPerQuarterNote * 2, pitch(score::Step::e, 0, 4))},
+            {lowerAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 0, 3))}, true)});
+
+    const ScoreLayout layout = layOutScore(model, wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+    const score::Part& voice = model->parts.at(0);
+    const score::Part& piano = model->parts.at(1);
+
+    for (const Tick beat : {Tick{0}, ticksPerQuarterNote * 2})
+    {
+        INFO("onset " << beat);
+        CHECK(
+            headXInPart(system, 0, beat, voice) ==
+            Catch::Approx(headXInPart(system, 1, beat, piano)));
+    }
+
+    CHECK(headXInPart(system, 0, 0, voice) == Catch::Approx(headXInPart(system, 2, 0, piano)));
+}
+
+TEST_CASE("a part's lyrics push down only the parts below it", "[score][engraving][layout][parts]")
+{
+    score::ScoreEvent sung = noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4));
+    sung.lyrics = {score::LyricSyllable{1, score::SyllabicPosition::single, "Ah", false}};
+
+    LayoutOptions options = wideOptions();
+
+    const auto model = songOf(
+        {measureOf(0, {voiceOf(1, {sung})}, true)},
+        {grandStaffMeasureOf(
+            0, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::e, 0, 4))},
+            {lowerAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 0, 3))}, true)});
+
+    const ScoreLayout layout = layOutScore(model, options);
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+    const double plainStep = staffHeightInSpaces + options.interStaffGap;
+
+    REQUIRE(system.staffLyricVerses == std::vector<int>{1, 0, 0});
+
+    // Room for one row of lyrics under the voice, and none inside the piano:
+    // the voice's words are not the piano's.
+    CHECK(system.staffOffsets.at(1) == Catch::Approx(plainStep + options.lyricRowHeight));
+    CHECK(system.staffOffsets.at(2) - system.staffOffsets.at(1) == Catch::Approx(plainStep));
+    CHECK(layout.lyricVerseCount == 1);
+}
+
+TEST_CASE(
+    "a tie in one part is not confused with a tie in another",
+    "[score][engraving][layout][parts]")
+{
+    // A note is addressed within its own part, so both parts' first notes have
+    // the same address. Kept in one table, the piano's placement overwrites the
+    // voice's and the voice's tie is drawn on the piano's staff.
+    const score::NoteRef firstNote{0, 0, 0, 0};
+    const score::NoteRef secondNote{1, 0, 0, 0};
+
+    const auto tiedPair = [&](score::Pitch onPitch)
+    {
+        score::ScoreEvent start = noteAt(0, ticksPerQuarterNote * 4, onPitch);
+        start.notes.front().tiedTo = secondNote;
+
+        score::ScoreEvent stop = noteAt(0, ticksPerQuarterNote * 4, onPitch);
+        stop.notes.front().tiedFrom = firstNote;
+
+        return std::make_pair(start, stop);
+    };
+
+    const auto [voiceStart, voiceStop] = tiedPair(pitch(score::Step::g, 0, 4));
+    const auto [pianoStart, pianoStop] = tiedPair(pitch(score::Step::e, 0, 4));
+
+    score::Measure pianoFirst = measureOf(0, {voiceOf(1, {pianoStart})}, true);
+    pianoFirst.attributes.clefs = {score::Clef{"G", 2, 0, 1}, score::Clef{"F", 4, 0, 2}};
+
+    const auto model = songOf(
+        {measureOf(0, {voiceOf(1, {voiceStart})}, true), measureOf(1, {voiceOf(1, {voiceStop})})},
+        {pianoFirst, measureOf(1, {voiceOf(1, {pianoStop})})});
+
+    const ScoreLayout layout = layOutScore(model, wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const std::vector<TieGlyph>& ties = layout.systems.front().ties;
+
+    REQUIRE(ties.size() == 2);
+
+    std::vector<int> staves{ties.at(0).staff, ties.at(1).staff};
+    std::sort(staves.begin(), staves.end());
+
+    CHECK(staves == std::vector<int>{0, 1});
+
+    for (const TieGlyph& tie : ties)
+    {
+        INFO("tie on staff " << tie.staff);
+        CHECK(tie.endX > tie.startX);
+
+        // G4 on the voice's treble staff and E4 on the piano's sit at different
+        // positions, so a tie carried to the other part's note would show here.
+        CHECK(tie.position == (tie.staff == 0 ? StaffSteps{6} : StaffSteps{8}));
+    }
+}
+
+TEST_CASE("a tempo mark every part carries is drawn once", "[score][engraving][layout][parts]")
+{
+    const auto tempo = score::Direction{score::DirectionKind::tempo, 0, 1, "Andante", 72.0};
+
+    score::Measure voiceBar = measureOf(
+        0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))})}, true);
+    voiceBar.directions = {tempo};
+
+    score::Measure pianoBar = grandStaffMeasureOf(
+        0, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::e, 0, 4))},
+        {lowerAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 0, 3))}, true);
+
+    SECTION("written in both parts")
+    {
+        pianoBar.directions = {tempo};
+    }
+
+    SECTION("written only in the piano")
+    {
+        voiceBar.directions.clear();
+        pianoBar.directions = {tempo};
+    }
+
+    const ScoreLayout layout = layOutScore(songOf({voiceBar}, {pianoBar}), wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const std::vector<TextGlyph>& texts = layout.systems.front().texts;
+    std::vector<int> tempoStaves;
+
+    for (const TextGlyph& text : texts)
+    {
+        if (text.role == TextRole::tempo)
+        {
+            tempoStaves.push_back(text.staff);
+        }
+    }
+
+    // Once, above the top staff, wherever the file wrote it.
+    CHECK(tempoStaves == std::vector<int>{0});
+}
+
+TEST_CASE("bars only some parts have are reported", "[score][engraving][layout][parts]")
+{
+    const auto bar = [](std::size_t index)
+    {
+        return measureOf(
+            index, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))})},
+            index == 0);
+    };
+
+    score::Measure pianoBar = grandStaffMeasureOf(
+        0, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::e, 0, 4))},
+        {lowerAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 0, 3))}, true);
+
+    const ScoreLayout layout = layOutScore(songOf({bar(0), bar(1)}, {pianoBar}), wideOptions());
+
+    REQUIRE(layout.outcome == LayoutOutcome::laidOut);
+    REQUIRE(layout.systems.size() == 1);
+    CHECK(layout.systems.front().lastMeasureIndex == 0);
+    CHECK(anyNoticeContains(layout, "1 bar at the end that only some parts have"));
 }

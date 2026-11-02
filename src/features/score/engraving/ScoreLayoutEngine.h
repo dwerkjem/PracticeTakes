@@ -8,8 +8,9 @@
 // Turning a score into glyphs with positions (no JUCE dependency).
 namespace engraving
 {
-// Lay out the first staff of the first part of `score` to fit
-// `options.availableWidth`.
+// Lay out every part of `score`, each on its own staves, to fit
+// `options.availableWidth`. Each system holds every staff, spaced together so
+// that a moment in the music lands at one x on all of them.
 //
 // Deterministic: the same score at the same width gives identical numbers,
 // every time, with no dependence on anything outside its arguments. That is

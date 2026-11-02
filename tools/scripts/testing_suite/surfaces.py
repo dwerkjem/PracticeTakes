@@ -827,7 +827,7 @@ SURFACES: tuple[Surface, ...] = (
             Question(
                 "sample-is-the-song",
                 "Does the top of the view name the song cycle, Lieder eines fahrenden "
-                "Gesellen, and the Voice part?",
+                "Gesellen, and both parts, Voice and Piano?",
             ),
             Question(
                 "sample-reads-as-music",
@@ -835,9 +835,24 @@ SURFACES: tuple[Surface, ...] = (
                 "with stems and beams -- rather than as overlapping or misplaced symbols?",
             ),
             Question(
-                "sample-says-what-is-missing",
-                "Does the view say plainly what it is not showing of this song, such as the "
-                "piano part?",
+                "voice-over-braced-piano",
+                "Is the voice drawn above the piano, with only the piano's two staves joined by "
+                "a brace?",
+            ),
+            Question(
+                "barlines-break-between-parts",
+                "Do the barlines run through both piano staves but stop at the voice's staff, "
+                "rather than running from the voice down through the piano?",
+            ),
+            Question(
+                "parts-line-up",
+                "In the first full bar, are the voice's notes directly above the piano notes "
+                "played at the same moment?",
+            ),
+            Question(
+                "tempo-once",
+                "Is the tempo mark (Alla Marcia) written once, above the voice, rather than "
+                "again above the piano?",
             ),
             Question(
                 "sample-opens-from-empty-window",

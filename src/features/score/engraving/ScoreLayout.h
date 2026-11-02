@@ -295,6 +295,16 @@ struct TextGlyph
     int staff = 0;
 };
 
+// The staves of one part within a system, as indices into
+// `System::staffOffsets`, inclusive. A part on more than one staff -- a piano --
+// is braced, and its barlines run through all of its staves; between two parts
+// they break, so each part's bars read as its own.
+struct StaffGroup
+{
+    int firstStaff = 0;
+    int lastStaff = 0;
+};
+
 // One staff's worth of music across the width of the tool.
 struct System
 {
@@ -325,14 +335,24 @@ struct System
     // Where each staff's top line sits, in staff spaces below `topOfStaff`. One
     // entry of zero for a single staff, which is what a default system is, so a
     // single-staff layout reads exactly as it did before systems had more than
-    // one. More than one means a grand staff: the painter braces them and runs
-    // every barline from the first staff's top line to the last staff's bottom.
+    // one. More than one means several staves: `staffGroups` says which belong
+    // to which part, and so which are braced and which a barline joins.
     std::vector<double> staffOffsets{0.0};
 
     // Where the staff lines begin, in staff spaces from the system's left edge.
     // Zero, except on a braced system, whose staves start after the brace and
     // the barline that joins them.
     double staffStartX = 0.0;
+
+    // One group per part, top to bottom. Empty means one group holding every
+    // staff, which is what a single part is, so a system built without them
+    // draws as it did before a system could hold more than one part.
+    std::vector<StaffGroup> staffGroups;
+
+    // How many lyric rows hang below each staff, parallel to `staffOffsets`:
+    // a voice's lyrics sit below the voice, not below the piano under it.
+    // Empty means every staff has the layout's own `lyricVerseCount`.
+    std::vector<int> staffLyricVerses;
 };
 
 enum class LayoutOutcome
@@ -437,7 +457,8 @@ struct ScoreLayout
 {
     LayoutOutcome outcome = LayoutOutcome::noScore;
 
-    // How to name what is being drawn. Empty when nothing is.
+    // How to name what is being drawn. Empty when nothing is. `partName` lists
+    // every part drawn, in score order, separated by commas.
     std::string scoreTitle;
     std::string partName;
 
@@ -446,8 +467,9 @@ struct ScoreLayout
     // Total height in staff spaces, for a scrollable canvas.
     double totalHeight = 0.0;
 
-    // How many lyric verses the drawn part uses, so a caller sizing a system
-    // does not have to work it out from the glyphs.
+    // The most lyric verses any drawn part uses, so a caller sizing a system
+    // does not have to work it out from the glyphs. Per staff, see
+    // `System::staffLyricVerses`.
     int lyricVerseCount = 0;
 
     // Everything in the open score this pass did not draw, as sentences meant
