@@ -30,7 +30,7 @@ test-suite = "testing_suite.__main__:main"
 # several megabytes per window. Everything else here -- the store, the plan, the
 # review server, the exporter -- is standard library, so the tests run on a
 # machine that has never installed it.
-testing-suite = ["pillow>=11,<12"]
+testing-suite = ["pillow>=11,<14"]
 
 [project.optional-dependencies]
 # Pinned developer tooling. CI installs what it needs directly; the scripts
