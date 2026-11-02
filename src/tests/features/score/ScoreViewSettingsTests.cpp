@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "application/tools/BuiltInToolCatalog.h"
 #include "features/score/ScoreViewSettings.h"
 
 using namespace score_view;
@@ -78,4 +79,14 @@ TEST_CASE("what cannot be read falls back field by field", "[score][view-setting
 TEST_CASE("another version's payload is not read", "[score][view-settings]")
 {
     CHECK(decode({2, "view=horizontal;size=13"}) == Settings{});
+}
+
+TEST_CASE("the catalog restores what the Score View saves", "[score][view-settings]")
+{
+    // The shell discards a saved payload whose version is not the tool's
+    // settingsVersion, so a mismatch would silently forget every view.
+    const ToolDefinition* definition = builtInToolCatalog().find("score-view");
+
+    REQUIRE(definition != nullptr);
+    CHECK(definition->settingsVersion == std::optional<int>(settingsVersion));
 }

@@ -293,6 +293,22 @@ const std::vector<ApprovedWindowState>& states()
          "The score view showing the sample score the application ships: a Mahler song for "
          "voice and piano",
          0.0, "", bundledSampleFixtureName(), false},
+        // The same song in each of the Score View's three views, so a picture of
+        // the default says nothing it should not about the other two.
+        {"score-view-page", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false, "The score view in Page view: the sample score on its first page", 0.0,
+         "page", bundledSampleFixtureName(), false},
+        {"score-view-vertical", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view in Vertical scroll: the sample score as one scrolling column", 0.0,
+         "vertical", bundledSampleFixtureName(), false},
+        {"score-view-horizontal", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view in Horizontal scroll: the sample score on one long system", 0.0,
+         "horizontal", bundledSampleFixtureName(), false},
         // A score being imported: the window that says which file is being
         // read, held there. The shipped sample, so the name on it is the one a
         // new user sees when they open it.

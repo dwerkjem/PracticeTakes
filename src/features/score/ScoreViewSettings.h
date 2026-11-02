@@ -8,8 +8,8 @@
 #include <string_view>
 
 // What a Score View remembers about itself, and how it is saved (no JUCE
-// dependency). See openspec/changes/score-view-modes/design.md, decisions 4
-// and 5.
+// dependency). See decisions 4 and 5 of
+// openspec/changes/archive/2026-11-02-score-view-modes/design.md.
 namespace score_view
 {
 // How the laid-out systems are arranged on screen.

@@ -17,8 +17,9 @@ the layout is given, never the engraving rules themselves.
   column with a vertical scrollbar, as before this change
 
 ### Requirement: Page view shows the score page by page
-In Page view the Score View SHALL show one fixed-proportion page at a time, with
-a visible page edge, and SHALL never split a system across pages. It SHALL turn
+In Page view the Score View SHALL show one fixed-proportion page at a time, as
+wide as the panel and scrolled within when taller than it, with a visible page
+edge, and SHALL never split a system across pages. It SHALL turn
 pages by on-screen buttons and by the Page Up, Page Down, Left, Right, Home and
 End keys, and SHALL show which page of how many is in view.
 

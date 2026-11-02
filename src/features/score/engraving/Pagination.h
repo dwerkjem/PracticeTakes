@@ -10,7 +10,8 @@
 // The layout engine knows nothing about pages: it lays systems out at a width
 // and stacks them. A page view then cuts that stack between systems, which
 // keeps every engraving rule -- and every test of one -- the same in every view.
-// See openspec/changes/score-view-modes/design.md, decisions 1 and 2.
+// See decisions 1 and 2 of
+// openspec/changes/archive/2026-11-02-score-view-modes/design.md.
 namespace engraving
 {
 struct Page

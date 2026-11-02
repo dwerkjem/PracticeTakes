@@ -41,7 +41,9 @@
             "Score View",
             {"notation", "scoreView"},
             ToolInstancePolicy::single,
-            std::nullopt,
+            // score_view::settingsVersion; a test pins the two together, since
+            // this catalog may not include a feature's header.
+            1,
             {1060, 620}},
     });
     return catalog;

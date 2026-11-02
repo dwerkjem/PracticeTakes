@@ -398,10 +398,11 @@ TEST_CASE("both vocabularies are non-empty", "[testcontrol][approved]")
 TEST_CASE("a state naming a tool view names a tone as well", "[testcontrol]")
 {
     // A view of an analysis tool with nothing to analyse is a screenshot of it
-    // waiting, which is the thing the tone exists to stop.
+    // waiting, which is the thing the tone exists to stop. A Score View's view
+    // has its subject already: the score the state opens.
     for (const auto& state : approvedWindowStates())
     {
-        if (state.toolView.empty() || state.toolView == "advanced")
+        if (state.toolView.empty() || state.toolView == "advanced" || !state.scoreFixture.empty())
         {
             continue;
         }

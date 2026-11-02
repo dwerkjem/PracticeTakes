@@ -2560,3 +2560,33 @@ TEST_CASE("text placement is the same every time", "[score][engraving][layout][t
         CHECK(lyricLine(first.systems.at(index), 1) == lyricLine(second.systems.at(index), 1));
     }
 }
+
+TEST_CASE(
+    "each system's band runs from the one above to the one below",
+    "[score][engraving][layout][pagination]")
+{
+    // What a page view cuts between: bands that touch, start at the top, end
+    // at the total height, and hold their own staff.
+    LayoutOptions options;
+    options.availableWidth = 70.0;
+
+    const ScoreLayout layout = layOutScore(sungBars(10, pitch(score::Step::d, 0, 3)), options);
+
+    REQUIRE(layout.systems.size() > 1);
+    CHECK(layout.systems.front().bandTop == 0.0);
+    CHECK(layout.systems.back().bandBottom == Catch::Approx(layout.totalHeight));
+
+    for (std::size_t index = 0; index < layout.systems.size(); ++index)
+    {
+        const System& system = layout.systems.at(index);
+
+        INFO("system " << index);
+        CHECK(system.bandTop < system.topOfStaff);
+        CHECK(system.topOfStaff < system.bandBottom);
+
+        if (index > 0)
+        {
+            CHECK(system.bandTop == Catch::Approx(layout.systems.at(index - 1).bandBottom));
+        }
+    }
+}

@@ -1372,8 +1372,10 @@ void placeTextAndStaves(ScoreLayout& layout, const LayoutOptions& options)
                 pushedDown,
             offsets.back() + notes.at(last).bottom + options.textClearance);
 
+        system.bandTop = cursor;
         system.topOfStaff = cursor + above;
         cursor = system.topOfStaff + below;
+        system.bandBottom = cursor;
     }
 
     layout.totalHeight = cursor;

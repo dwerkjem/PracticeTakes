@@ -38,14 +38,18 @@ Each `System` therefore records its band — `bandTop` and `bandBottom`, in staf
 spaces from the top of the layout, from the same accumulation that places
 `topOfStaff`. Consecutive bands touch, and the last one ends at `totalHeight`.
 
-### 2. Page: one page at a time, A4-shaped, fitted to the panel
+### 2. Page: one page at a time, A4-shaped, as wide as the panel
 
-A page has the proportion of A4 (1 : √2), as large as fits the panel, with a
-margin inside it and a visible edge. Its size in pixels follows the panel; the
-staff size follows the zoom, so enlarging puts fewer systems on a page, as
-#253 asks. One page is shown at a time rather than a scrolling column of pages:
-the point of the view is the page turn, and a page that scrolls is a tall
-canvas again.
+A page has the proportion of A4 (1 : √2) and is as wide as the panel, with a
+margin inside it and a visible edge; when that makes it taller than the panel,
+the page scrolls vertically within itself. The staff size follows the zoom, so
+enlarging puts fewer systems on a page, as #253 asks. One page is shown at a
+time rather than a scrolling column of pages: the point of the view is the page
+turn, and a turned page is shown from its top.
+
+Fitting the whole page into the panel was tried first and rejected on sight: a
+docked Score View is wide and short, so the page came out a few hundred pixels
+wide, with one bar to a line and the sample score on 68 pages.
 
 Systems are assigned to pages greedily, in order, never split. A system taller
 than a page — a large score at a large size — gets a page of its own and is
@@ -53,7 +57,8 @@ clipped at the page's foot, and the view says so in its notice strip rather
 than shrinking the music behind the user's back.
 
 Page turns: `‹` and `›` buttons and "Page *n* of *m*" in the title strip;
-Page Up/Down, Left/Right and Home/End when the Score View has focus.
+Page Up/Down, Left/Right and Home/End when the Score View has focus. Up and
+Down are left to scroll the page.
 
 ### 3. Horizontal: one system, and only the scrollbar it needs
 
