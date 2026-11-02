@@ -134,7 +134,9 @@ JUCE-free, no consumer yet, so the tree keeps building at every step.
       surfaced one defect — the finished-notes area was blank in the empty state
       — now fixed. The *populated* readout is not captured: it needs events, and
       the harness has no way to inject any.
-- [ ] 6.5 **NOT DONE — needs hardware — do not mark done without it.** Play a real keyboard
+- [x] 6.5 **Moved to #203 (`status:ready-for-human`), NOT done — needs hardware.** Checked only
+      so the change can be archived, as `.github/CONTRIBUTING.md` asks; the
+      checklist lives on #203. Play a real keyboard
       with a real pedal: confirm device timestamps advance, record what a
       half-pedal ramp and a chattering pedal actually send, and confirm per-channel
       pedal state matches the notes' channel. Answers the two hardware-dependent

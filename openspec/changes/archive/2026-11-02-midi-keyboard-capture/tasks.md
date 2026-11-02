@@ -154,7 +154,9 @@ anything needs a keyboard.
 - [x] 7.3 `check_test_layout.py` — `src/tests/platform/midi/` mirrors
       `src/platform/midi/`, so nothing needs an exemption.
 - [x] 7.4 `python tools/scripts/run_tests.py` for any `tools/scripts` change.
-- [ ] 7.5 **NOT DONE — needs a real keyboard.** What a virtual device cannot
+- [x] 7.5 **Moved to #199 (`status:ready-for-human`), NOT done — needs a real keyboard.** Checked
+      only so the change can be archived, as `.github/CONTRIBUTING.md` asks of a
+      change whose last tasks need hardware; the checklist lives on #199. What a virtual device cannot
       stand in for (7.6 covers the rest): a USB keyboard's own unplug and
       replug, which is a kernel client going away rather than a user-space one;
       the timestamps a real driver puts on events; and whatever dialect the
@@ -203,7 +205,7 @@ anything needs a keyboard.
 - [x] 8.2 Add `src/platform/midi` to the layering section of
       `docs/development/agents/AGENT_GUIDE.md`, and to the architecture
       document.
-- [ ] 8.3 **Blocked on 7.5.** What a virtual keyboard revealed is recorded in
+- [x] 8.3 **Moved to #199 with 7.5, NOT done.** What a virtual keyboard revealed is recorded in
       7.6 and in `design.md`; what a real one reveals is still unrecorded,
       because nobody has played one into this yet.
 - [x] 8.4 Answer `design.md`'s open questions after implementation, as
