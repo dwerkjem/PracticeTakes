@@ -26,6 +26,24 @@ selected and when none is available.
   rather than by an opaque identifier, and does not select a different device on
   the user's behalf
 
+#### Scenario: The keyboard returns at another address
+- **WHEN** the selected device reappears under a different system identifier,
+  and it is the only available device carrying the remembered name
+- **THEN** the application reads events from it without the user selecting it
+  again
+
+#### Scenario: Another device takes the keyboard's old address
+- **WHEN** the remembered identifier now belongs to a device with a different
+  name
+- **THEN** the application does not read from that device, and reports the
+  selected device as not connected
+
+#### Scenario: Two devices carry the remembered name
+- **WHEN** the remembered identifier is gone and two or more available devices
+  carry the remembered name
+- **THEN** the application opens neither and reports the selected device as not
+  connected
+
 ### Requirement: Note and pedal events reach the application on the message thread
 The application SHALL deliver note-on, note-off and sustain-pedal events from the
 selected device to a consumer on the message thread. Each event SHALL carry the
@@ -102,6 +120,12 @@ application or prevent the rest of it from working.
   available again
 - **THEN** the application resumes reading events from it without the user
   selecting it again
+
+#### Scenario: The keyboard is unplugged and replugged quickly
+- **WHEN** the selected device is disconnected and reconnected within a few
+  seconds, under the same identifier
+- **THEN** the application resumes reading events from the reconnected device,
+  rather than continuing to report a connection that no longer delivers events
 
 #### Scenario: Audio and MIDI are independent
 - **WHEN** no audio input device is available, or the audio device is being
