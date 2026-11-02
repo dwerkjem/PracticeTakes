@@ -154,15 +154,45 @@ anything needs a keyboard.
 - [x] 7.3 `check_test_layout.py` — `src/tests/platform/midi/` mirrors
       `src/platform/midi/`, so nothing needs an exemption.
 - [x] 7.4 `python tools/scripts/run_tests.py` for any `tools/scripts` change.
-- [ ] 7.5 **NOT DONE — needs hardware this machine does not have.** The
-      container has no MIDI sequencer at all (`/dev/snd/seq` does not exist), so
-      no device can be enumerated, opened or played, and no virtual one can be
-      created without kernel module access. Everything below the device open is
-      covered by 7.1; the open itself, the real driver callback, the unplug, the
-      replug, and the selection surviving a restart against real hardware are
-      covered by nothing. Someone with a keyboard must run this before the
-      change is believed. Done without hardware instead: the panel's empty
-      state, driven through the test-control channel and photographed.
+- [ ] 7.5 **NOT DONE — needs a real keyboard.** What a virtual device cannot
+      stand in for (7.6 covers the rest): a USB keyboard's own unplug and
+      replug, which is a kernel client going away rather than a user-space one;
+      the timestamps a real driver puts on events; and whatever dialect the
+      keyboard actually speaks — running status, note-on at velocity 0, a
+      pedal that sends more than 0 and 127. Someone with a keyboard must run
+      this before the change is believed. The steps are the rehearsal in 7.6,
+      done by hand: choose the keyboard, play with and without the pedal, unplug
+      it for a few seconds and replug, unplug it for half a minute and replug,
+      restart with it plugged in, and restart with it unplugged and plug it in
+      afterwards.
+- [x] 7.6 Rehearsed against a real ALSA sequencer with a virtual keyboard, on a
+      machine that has one (the container 7.5 was first written on did not). A
+      `python-rtmidi` virtual port in its own process, so killing the process
+      unplugs it, drove the built application on a hidden display through the
+      settings panel: choose, play notes with and without the pedal and a
+      half-pedal ramp, unplug for 12 s, replug, restart. All of it worked —
+      events arrive with their velocities and channel, the half-pedal positions
+      come through unchanged, "held by pedal" and "held by finger" are told
+      apart, unplugging says *not connected* and replugging resumes, and the
+      choice survives a restart. Two defects were found and fixed:
+      - **A quick replug left the application deaf.** Unplugged and replugged
+        inside the 10 s connected scan, the keyboard returned under the same
+        identifier, so every scan saw it present and nothing was reopened. The
+        ALSA subscription had died with the old client; the panel said
+        "Connected" and no event ever arrived again. The service now also
+        reconciles on `juce::MidiDeviceListConnection`, which JUCE raises from
+        ALSA's announcement port the moment a port comes or goes. The timer
+        stays as the fallback.
+      - **The keyboard's old address opened the wrong device.** ALSA hands out
+        client numbers afresh, so the identifier a keyboard was chosen under
+        can come back belonging to another device. The application opened
+        "Some Other Device" under the keyboard's name and ignored the keyboard
+        at its new address — which the selection requirement forbids. The
+        chosen identifier now counts only while it carries the chosen name, and
+        otherwise the one device carrying that name is used
+        (`MidiRecoveryPolicy::resolveSelectedDevice`, tested in
+        `MidiRecoveryPolicyTests`; two devices with the name are not guessed
+        between).
 
 ## 8. Documentation
 
@@ -173,8 +203,8 @@ anything needs a keyboard.
 - [x] 8.2 Add `src/platform/midi` to the layering section of
       `docs/development/agents/AGENT_GUIDE.md`, and to the architecture
       document.
-- [ ] 8.3 **Blocked on 7.5.** Nothing to record until a real keyboard has been
-      played into this. The answer is not "nothing was revealed" — it is that
-      nobody has looked yet.
+- [ ] 8.3 **Blocked on 7.5.** What a virtual keyboard revealed is recorded in
+      7.6 and in `design.md`; what a real one reveals is still unrecorded,
+      because nobody has played one into this yet.
 - [x] 8.4 Answer `design.md`'s open questions after implementation, as
       `score-import-command` and `score-target-note-tool` did.

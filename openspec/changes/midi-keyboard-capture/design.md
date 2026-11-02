@@ -369,6 +369,16 @@ removing one member and one panel.
   keyboard left" into a confident duration, where `abandoned` is declined by the
   judgement. See `docs/development/architecture/note-sounding.md`.
 
+**An identifier is not an identity, and a scan is not a notification** —
+both found by rehearsing against a real ALSA sequencer with a virtual keyboard
+(task 7.6), and both the risk *Risks / Trade-offs* named as "if the timer scan
+proves unreliable". *Persistence: an identifier and a name* above made the name
+display-only; it is now half of the identity, because ALSA's identifier is a
+sequencer client number handed out afresh each time a device appears. And the
+scan alone cannot tell a device that left and came back between two scans from
+one that never left, so the service also listens for the device list changing.
+The timer remains, as the fallback for a backend that announces nothing.
+
 Three things the implementation settled that this design did not ask:
 
 - **The settings transfer file deliberately does not carry the MIDI

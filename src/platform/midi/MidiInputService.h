@@ -19,6 +19,7 @@
 
 #include "MidiEvent.h"
 #include "MidiEventFifo.h"
+#include "MidiRecoveryPolicy.h"
 
 #include <array>
 #include <atomic>
@@ -174,10 +175,9 @@ class MidiInputService final : private juce::MidiInputCallback, private juce::Ti
     [[nodiscard]] ConsumerSlot* findConsumer(Consumer* consumer);
     [[nodiscard]] const ConsumerSlot* findConsumer(Consumer* consumer) const;
 
-    // Whether an identifier appears in the current enumeration. Static because
-    // it asks the system rather than this object, and because reconcileDevice
-    // needs the answer for two different identifiers.
-    [[nodiscard]] static bool isDevicePresent(const juce::String& identifier);
+    // Every input the system currently reports, as the recovery policy reads
+    // them. Static because it asks the system rather than this object.
+    [[nodiscard]] static std::vector<MidiRecoveryPolicy::DeviceListing> presentDevices();
 
     mutable juce::CriticalSection consumerLock;
     std::array<ConsumerSlot, maximumConsumers> consumers;
@@ -193,6 +193,11 @@ class MidiInputService final : private juce::MidiInputCallback, private juce::Ti
 
     std::atomic<std::uint64_t> eventsReceived{0};
     int ticksUntilNextScan = 0;
+
+    // Reconciles the moment the system's device list changes. Last, so it is
+    // destroyed first -- though the destructor resets it explicitly anyway,
+    // before anything the callback reads goes away.
+    juce::MidiDeviceListConnection deviceListConnection;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MidiInputService)
 };
