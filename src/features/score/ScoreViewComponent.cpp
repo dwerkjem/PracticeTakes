@@ -42,8 +42,7 @@ void ScoreViewComponent::Canvas::paint(juce::Graphics& graphics)
     {
         painter.drawSystem(
             system, static_cast<double>(canvasMargin),
-            static_cast<double>(canvasMargin) + (system.topOfStaff * owner.pixelsPerSpace()),
-            owner.layout.lyricVerseCount);
+            static_cast<double>(canvasMargin) + (system.topOfStaff * owner.pixelsPerSpace()));
     }
 }
 

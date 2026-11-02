@@ -49,9 +49,7 @@ class ScoreGlyphPainter
 
     // Draw one system, with `originX`/`originY` the pixel position of its left
     // edge and its top staff line.
-    void
-    drawSystem(const engraving::System& system, double originX, double originY, int lyricVerseCount)
-        const;
+    void drawSystem(const engraving::System& system, double originX, double originY) const;
 
   private:
     [[nodiscard]] float px(double spaces) const;
@@ -99,9 +97,7 @@ class ScoreGlyphPainter
 
     void drawLyric(const engraving::LyricGlyph& glyph, double originX, double originY) const;
 
-    void
-    drawText(const engraving::TextGlyph& glyph, double originX, double originY, int lyricVerseCount)
-        const;
+    void drawText(const engraving::TextGlyph& glyph, double originX, double originY) const;
 
     void fillInSpaces(
         const juce::Path& pathInSpaces,

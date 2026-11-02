@@ -1186,6 +1186,198 @@ void assignStaff(System& system, const GlyphCounts& before, int staff)
 // to the top staff, and dropped where the top staff already has the same mark at
 // the same place. The first part's own staves are left alone, so a part drawn
 // on its own is exactly as it was.
+// How far the notes on one staff reach, in staff spaces below its top line:
+// `top` is negative when something stands above the staff. Starts as the staff
+// lines themselves.
+struct StaffExtent
+{
+    double top = 0.0;
+    double bottom = staffHeightInSpaces;
+
+    void include(double y)
+    {
+        top = std::min(top, y);
+        bottom = std::max(bottom, y);
+    }
+};
+
+// What text has to clear on each staff of a system: noteheads with their
+// ledger lines, accidentals, stems and beams. Clefs, key and time signatures
+// stay inside the staff and are not counted, so a system with a clef change does
+// not push its lyrics away for nothing.
+[[nodiscard]] std::vector<StaffExtent> noteExtentsOf(const System& system)
+{
+    std::vector<StaffExtent> extents(std::max<std::size_t>(1, system.staffOffsets.size()));
+
+    const auto on = [&extents](int staff) -> StaffExtent&
+    {
+        const auto index = static_cast<std::size_t>(std::max(0, staff));
+
+        return extents.at(std::min(index, extents.size() - 1));
+    };
+
+    // Half a space each side of a notehead's centre; an accidental reaches a
+    // space and a half, which covers a flat's stem above and a sharp's below.
+    constexpr double headReach = 0.5;
+    constexpr double accidentalReach = 1.5;
+
+    for (const NoteheadGlyph& head : system.noteheads)
+    {
+        const double y = spacesBelowTopLine(head.position);
+        const double reach = head.accidental == AccidentalKind::none ? headReach : accidentalReach;
+
+        on(head.staff).include(y - reach);
+        on(head.staff).include(y + reach);
+    }
+
+    for (const StemGlyph& stem : system.stems)
+    {
+        on(stem.staff).include(spacesBelowTopLine(stem.attachPosition));
+        on(stem.staff).include(stem.tipSpaces);
+    }
+
+    for (const BeamGlyph& beam : system.beams)
+    {
+        // The beam is `thickness` deep away from the noteheads.
+        const double away = beam.up ? -beam.thickness : beam.thickness;
+
+        on(beam.staff).include(beam.startY);
+        on(beam.staff).include(beam.endY);
+        on(beam.staff).include(beam.startY + away);
+        on(beam.staff).include(beam.endY + away);
+    }
+
+    return extents;
+}
+
+// Puts every line of text on its band, clear of the notes, then stacks the
+// staves and systems by what they now hold (design decision 6).
+//
+// One band per kind of text per staff, per system: every syllable of a verse
+// shares one line, every dynamic on a staff another, the tempo marks a third.
+// One low note moves its whole system's lyric line, not the syllables near it,
+// which is what keeps each band straight. A band starts where it always did and
+// only ever moves further from the staff, so a system with nothing in the way
+// is laid out exactly as before.
+//
+// That makes systems different heights, so `topOfStaff` accumulates and
+// `totalHeight` is the sum, and a staff's distance from the one above it
+// grows when the upper staff's text, or the lower staff's high notes, need it.
+void placeTextAndStaves(ScoreLayout& layout, const LayoutOptions& options)
+{
+    double cursor = 0.0;
+
+    for (System& system : layout.systems)
+    {
+        const std::vector<StaffExtent> notes = noteExtentsOf(system);
+        const std::size_t staffCount = notes.size();
+
+        const auto versesOn = [&system, &layout](std::size_t staff)
+        {
+            return staff < system.staffLyricVerses.size()
+                       ? system.staffLyricVerses.at(staff)
+                       : layout.lyricVerseCount;
+        };
+
+        // Below the staff: lyric rows from the first clear line down, then the
+        // dynamics under them. Above: the tempo line, and the measure numbers
+        // over it.
+        std::vector<double> belowBase(staffCount);
+        std::vector<double> aboveBase(staffCount);
+
+        for (std::size_t staff = 0; staff < staffCount; ++staff)
+        {
+            belowBase.at(staff) = std::max(
+                staffHeightInSpaces + options.textGapBelowStaff,
+                notes.at(staff).bottom + options.textClearance);
+            aboveBase.at(staff) = std::min(
+                -options.tempoAboveStaff,
+                notes.at(staff).top - options.textClearance - options.textBandHeight);
+        }
+
+        const auto staffIndex = [staffCount](int staff)
+        { return std::min(static_cast<std::size_t>(std::max(0, staff)), staffCount - 1); };
+
+        // How far each staff's contents reach once its text is placed.
+        std::vector<StaffExtent> reach = notes;
+
+        for (LyricGlyph& lyric : system.lyrics)
+        {
+            const std::size_t staff = staffIndex(lyric.staff);
+
+            lyric.y = belowBase.at(staff) +
+                      (static_cast<double>(std::max(1, lyric.verse) - 1) * options.lyricRowHeight);
+            reach.at(staff).include(lyric.y + options.textBandHeight);
+        }
+
+        for (TextGlyph& text : system.texts)
+        {
+            const std::size_t staff = staffIndex(text.staff);
+
+            switch (text.role)
+            {
+            case TextRole::dynamic:
+                text.y = belowBase.at(staff) +
+                         (static_cast<double>(versesOn(staff)) * options.lyricRowHeight);
+                reach.at(staff).include(text.y + options.textBandHeight);
+                break;
+
+            case TextRole::tempo:
+                text.y = aboveBase.at(staff);
+                reach.at(staff).include(text.y);
+                break;
+
+            case TextRole::measureNumber:
+                text.y = std::min(
+                    -options.measureNumberAboveStaff,
+                    aboveBase.at(staff) - options.measureNumberAboveTempo);
+                reach.at(staff).include(text.y);
+                break;
+            }
+        }
+
+        // Each staff below the last thing on the one above, and the lowest
+        // note it has, by at least the clearance -- but never closer than the
+        // fixed spacing it always had.
+        const auto lyricRows = [&versesOn, &options](std::size_t staff)
+        { return static_cast<double>(versesOn(staff)) * options.lyricRowHeight; };
+
+        std::vector<double> offsets{0.0};
+
+        for (std::size_t staff = 1; staff < staffCount; ++staff)
+        {
+            const double previous = offsets.back();
+            const double fixed =
+                previous + staffHeightInSpaces + options.interStaffGap + lyricRows(staff - 1);
+            const double needed = previous + reach.at(staff - 1).bottom +
+                                  options.minimumStaffClearance - reach.at(staff).top;
+
+            offsets.push_back(std::max(fixed, needed));
+        }
+
+        system.staffOffsets = offsets;
+
+        const std::size_t last = staffCount - 1;
+        const double above =
+            std::max(options.spaceAboveStaff, -reach.front().top + options.textClearance);
+        // Below the last staff: the room it always had, grown by however far
+        // its notes pushed its text down -- and never short of the notes
+        // themselves. Text in its usual place already fitted, and growing a
+        // system for it would move every system with a dynamic in it.
+        const double pushedDown =
+            belowBase.at(last) - (staffHeightInSpaces + options.textGapBelowStaff);
+        const double below = std::max(
+            offsets.back() + staffHeightInSpaces + lyricRows(last) + options.spaceBelowStaff +
+                pushedDown,
+            offsets.back() + notes.at(last).bottom + options.textClearance);
+
+        system.topOfStaff = cursor + above;
+        cursor = system.topOfStaff + below;
+    }
+
+    layout.totalHeight = cursor;
+}
+
 void liftTempoMarksToTop(System& system, int lastStaffOfFirstPart)
 {
     std::vector<TextGlyph> kept;
@@ -1662,10 +1854,6 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
             lyricRowsBelow(staff - 1));
     }
 
-    const double systemHeight =
-        options.spaceAboveStaff + staffOffsets.back() + staffHeightInSpaces +
-        lyricRowsBelow(plansByStaff.size() - 1) + options.spaceBelowStaff;
-
     // One map per part: a NoteRef addresses a note within its own part, so two
     // parts' first notes have the same ref.
     std::vector<NotePlacementMap> placements(drawnParts.size());
@@ -1676,9 +1864,9 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     {
         const std::vector<std::size_t>& measures = packed.at(systemIndex);
 
+        // Where it sits vertically, and how far apart its staves are, is
+        // decided once its text is placed: see placeTextAndStaves.
         System system;
-        system.topOfStaff =
-            (static_cast<double>(systemIndex) * systemHeight) + options.spaceAboveStaff;
         system.firstMeasureIndex = plansByStaff.front().at(measures.front()).index;
         system.lastMeasureIndex = plansByStaff.front().at(measures.back()).index;
         system.staffOffsets = staffOffsets;
@@ -1803,7 +1991,7 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     }
 
     layout.outcome = LayoutOutcome::laidOut;
-    layout.totalHeight = static_cast<double>(layout.systems.size()) * systemHeight;
+    placeTextAndStaves(layout, options);
     layout.notices = notices.take();
 
     return layout;

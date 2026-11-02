@@ -563,8 +563,8 @@ void ScoreGlyphPainter::drawLyric(
     double originX,
     double originY) const
 {
-    const double rowOffset =
-        engraving::staffHeightInSpaces + 1.55 + (static_cast<double>(glyph.verse - 1) * 1.8);
+    // The row is the layout's: one line per verse, clear of the lowest note.
+    const double rowOffset = glyph.y;
 
     juce::String text{glyph.text};
 
@@ -590,13 +590,12 @@ void ScoreGlyphPainter::drawLyric(
         juce::Justification::centredTop);
 }
 
-void ScoreGlyphPainter::drawText(
-    const engraving::TextGlyph& glyph,
-    double originX,
-    double originY,
-    int lyricVerseCount) const
+void ScoreGlyphPainter::drawText(const engraving::TextGlyph& glyph, double originX, double originY)
+    const
 {
-    double offset = 0.0;
+    // Where it goes is the layout's decision, made clear of the notes; this
+    // only chooses how each kind of text looks.
+    const double offset = glyph.y;
     juce::Colour colour = palette.notation;
     int style = juce::Font::plain;
     double size = 1.4;
@@ -605,19 +604,15 @@ void ScoreGlyphPainter::drawText(
     switch (glyph.role)
     {
     case engraving::TextRole::tempo:
-        offset = -2.1;
         style = juce::Font::bold;
         break;
 
     case engraving::TextRole::dynamic:
-        offset =
-            engraving::staffHeightInSpaces + 1.5 + (static_cast<double>(lyricVerseCount) * 1.8);
         style = juce::Font::bold | juce::Font::italic;
         colour = palette.accent;
         break;
 
     case engraving::TextRole::measureNumber:
-        offset = -3.4;
         colour = palette.muted;
         size = 1.1;
         break;
@@ -633,11 +628,8 @@ void ScoreGlyphPainter::drawText(
         justification);
 }
 
-void ScoreGlyphPainter::drawSystem(
-    const engraving::System& system,
-    double originX,
-    double originY,
-    int lyricVerseCount) const
+void ScoreGlyphPainter::drawSystem(const engraving::System& system, double originX, double originY)
+    const
 {
     // Each glyph is positioned on its own staff's lines, so it is drawn from
     // that staff's top line. For a single staff that is `originY` itself.
@@ -672,16 +664,6 @@ void ScoreGlyphPainter::drawSystem(
             }
         }
     }
-
-    // The lyric rows below a staff, which its dynamics sit under.
-    const auto versesBelow = [&system, lyricVerseCount](int staff)
-    {
-        const auto index = static_cast<std::size_t>(std::max(0, staff));
-
-        return index < system.staffLyricVerses.size()
-                   ? system.staffLyricVerses.at(index)
-                   : lyricVerseCount;
-    };
 
     for (const engraving::BarlineGlyph& glyph : system.barlines)
     {
@@ -737,7 +719,7 @@ void ScoreGlyphPainter::drawSystem(
 
     for (const engraving::TextGlyph& glyph : system.texts)
     {
-        drawText(glyph, originX, staffOrigin(glyph.staff), versesBelow(glyph.staff));
+        drawText(glyph, originX, staffOrigin(glyph.staff));
     }
 }
 
