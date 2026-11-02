@@ -129,6 +129,20 @@ struct ApprovedWindowState
     // committed fixture -- which is what keeps the set of surfaces under
     // verification a reviewable list in this one file.
     std::string scoreFixture;
+
+    // Whether to show the import summary window for `scoreFixture`.
+    //
+    // Appended last, for the reason the comments above give: the list is
+    // initialised positionally. Defaults to true so the two states that are
+    // *about* the summary keep behaving exactly as they did.
+    //
+    // A state that opens a tool sets it false. Without it the renderer could
+    // not be photographed at all -- the only way to get a score into the
+    // running application is `startScoreImport`, which also opens the summary
+    // window over whatever the surface is about. That was finding 7 of
+    // docs/development/architecture/score-model-findings.md, and this field is
+    // what closes it.
+    bool showScoreImportSummary = true;
 };
 
 // An object that can be asked to act, as though clicked.
@@ -148,6 +162,12 @@ struct ApprovedClickTarget
 // root. Here rather than in the shell so the test that checks every named
 // fixture exists resolves it exactly as the application does.
 [[nodiscard]] const std::string& approvedScoreFixtureDirectory();
+
+// The `scoreFixture` that means "the sample score the application ships"
+// rather than a file in that directory. The shell writes the sample out exactly
+// as File > Open sample score does and imports that, so the picture is of the
+// bytes a user gets.
+[[nodiscard]] const std::string& bundledSampleFixtureName();
 
 // Every state the application will enter on request.
 [[nodiscard]] const std::vector<ApprovedWindowState>& approvedWindowStates();

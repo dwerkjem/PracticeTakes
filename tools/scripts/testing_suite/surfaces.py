@@ -110,6 +110,21 @@ class Surface:
     # process.
     restart_before: bool = False
 
+    # Capture this surface with a real input device, against the harness's
+    # default of `--no-audio-input`.
+    #
+    # Almost nothing needs one: the generated tone gives the analysis tools a
+    # signal without a device, and declining the device is what stops a capture
+    # run taking the microphone from a live application (#176). But a surface
+    # that is *about* the device layer cannot be photographed by an instance
+    # that has no device -- the Settings input chooser came back reading
+    # "<< none >>", with no channel list and no advanced settings, and its
+    # question ("did switching take effect?") could only ever answer no.
+    #
+    # The worker restarts into this mode for the surface and back out after, so
+    # the microphone is held for one surface rather than for the whole run.
+    needs_input_device: bool = False
+
     # Something the tester must do by hand before answering, because it is an
     # interaction rather than a state. The harness prompts and waits; it does
     # not simulate it.
@@ -404,6 +419,17 @@ SURFACES: tuple[Surface, ...] = (
         area="shell",
         modes=frozenset({FULL}),
         fixed_geometry=True,
+        extras=(
+            # What a new user sees first, which used to be a blank window with
+            # nothing to say a score could be opened. Asked here rather than on
+            # `empty` because a narrow window is where the guidance is likeliest
+            # to be clipped -- and because the review tests use `empty` as their
+            # surface that owes only the three fixed axes.
+            Question(
+                "says-how-to-start",
+                "Does the window say how to open a score, and where the tools are?",
+            ),
+        ),
     ),
     Surface(
         state="fullscreen",
@@ -462,6 +488,7 @@ SURFACES: tuple[Surface, ...] = (
         title="Settings: audio device selection",
         area="settings",
         modes=frozenset({FULL}),
+        needs_input_device=True,
         window_title=SETTINGS_WINDOW,
         instruction="Switch to a different input device, then back.",
         extras=(
@@ -625,14 +652,18 @@ SURFACES: tuple[Surface, ...] = (
                 "metadata-complete",
                 "Are the work, composer, parts, length, and tempo all shown?",
             ),
+            # The capture is of the summary, which sits in front; this is about
+            # the main window behind it. Opening a score used to stop at this
+            # report, and closing it changed nothing on screen.
+            Question(
+                "score-is-shown",
+                "Close this window. Is the score now shown in the Score View?",
+                behavioural=True,
+            ),
         ),
     ),
     # The target note tool's paint routine is Component code: selectTargetNote
-    # is unit tested, what it looks like is not. Only its empty state is here,
-    # and not because the populated one matters less -- there is no approved
-    # state that opens a score *into* a tool, because importing one also opens
-    # the summary window over whatever the surface is about. See
-    # docs/development/architecture/score-model-findings.md.
+    # is unit tested, what it looks like is not.
     Surface(
         state="target-note-empty",
         title="The target note tool with no score open",
@@ -645,6 +676,224 @@ SURFACES: tuple[Surface, ...] = (
                 "says-what-to-do",
                 "Does it name the command that opens a score, rather than showing an empty "
                 "panel?",
+            ),
+        ),
+    ),
+    Surface(
+        state="score-view-empty",
+        title="The score view with no score open",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        extras=(
+            Question(
+                "says-what-to-do",
+                "Does it name the command that opens a score, rather than showing an empty "
+                "staff?",
+            ),
+        ),
+    ),
+    # The surfaces the renderer exists for. Everything about this tool is
+    # visual: the layout is a value and is unit tested down to which line each
+    # note sits on, and whether the result is *readable* is a question only an
+    # image can answer.
+    #
+    # These are the first states that open a score into a tool. That was
+    # impossible until the import summary could be suppressed -- see finding 7
+    # in docs/development/architecture/score-model-findings.md -- and the same
+    # asynchronous import applies here as to the two summary surfaces above, so
+    # they carry the same warmup.
+    Surface(
+        state="score-view-notation",
+        title="The score view drawing a staff",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "reads-as-music",
+                "Does it read as music -- five staff lines, a recognisable clef, and noteheads "
+                "sitting on lines and in spaces rather than between them?",
+            ),
+            Question(
+                "two-sharps-after-the-clef",
+                "Are there exactly two sharps between the clef and the first note, and is the "
+                "time signature after them?",
+            ),
+            Question(
+                "accidentals-once-each",
+                "Bar 2 is a flat, the same flat again, then a natural: is the sign drawn on the "
+                "first and third of those and not on the second?",
+            ),
+            Question(
+                "stems-and-flags-attached",
+                "Is every stem touching its notehead, on the correct side, with its flags "
+                "curling away from the head?",
+            ),
+            Question(
+                "beams-join-their-stems",
+                "Bar 1 ends with two eighths and bar 3 holds two sixteenths: is each pair "
+                "joined by a bar across the ends of their stems, with the sixteenths carrying "
+                "two bars and the eighths one, and does every bar meet its stems flush rather "
+                "than stopping short of them?",
+            ),
+            Question(
+                "an-eighth-is-not-a-quarter",
+                "Can you tell every eighth and sixteenth from a quarter note -- by a flag or a "
+                "beam -- without counting anything?",
+            ),
+            Question(
+                "nothing-collides",
+                "Do any two symbols overlap -- an accidental over a notehead, a lyric over a "
+                "stem, a dot over a barline?",
+            ),
+            Question(
+                "clef-change-visible",
+                "Is the change to a bass clef part way through drawn, and are the notes after "
+                "it low on the staff rather than high?",
+            ),
+            Question(
+                "lyrics-under-their-notes",
+                "Is each syllable under the note it belongs to, on one row, with a hyphen only "
+                "where a word continues?",
+            ),
+            Question(
+                "notices-are-readable",
+                "Does the strip at the bottom say what is not drawn, and that beam groups came "
+                "from the time signature rather than from the file, in sentences rather than "
+                "in codes?",
+            ),
+        ),
+    ),
+    # A piano part, which the score view used to draw as its right hand alone.
+    # The fixture's four bars each exist for one thing a grand staff has to get
+    # right; the questions name them bar by bar.
+    Surface(
+        state="score-view-grand-staff",
+        title="The score view drawing a piano part as a grand staff",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "both-staves-braced",
+                "Are both staves drawn, treble above bass, joined at the left by a brace?",
+            ),
+            Question(
+                "barlines-through-both",
+                "Does every barline run through both staves and the gap between them, rather "
+                "than stopping at each staff?",
+            ),
+            Question(
+                "beats-line-up",
+                "In bar 1, are the left hand's two half notes directly under the right hand's "
+                "first and third quarter notes?",
+            ),
+            Question(
+                "sharp-moves-both-hands",
+                "In bar 2, the right hand's first note has a sharp: is the left hand's first "
+                "note still directly under it, and does the left hand's second eighth fall "
+                "between the right hand's notes rather than under one?",
+            ),
+            Question(
+                "lower-clef-change-only",
+                "At bar 3, does only the lower staff change to a treble clef, with the upper "
+                "staff's music still lined up with it?",
+            ),
+            Question(
+                "nothing-collides",
+                "Do any two symbols overlap anywhere on either staff?",
+            ),
+        ),
+    ),
+    # The score the application ships, opened the way a first launch opens it.
+    # Real exporter output with far more in it than the hand-written fixtures,
+    # so this is the picture that shows what the renderer does with an actual
+    # song -- including what it says it leaves out.
+    Surface(
+        state="score-view-sample",
+        title="The score view showing the sample score",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "sample-is-the-song",
+                "Does the top of the view name the song cycle, Lieder eines fahrenden "
+                "Gesellen, and both parts, Voice and Piano?",
+            ),
+            Question(
+                "sample-reads-as-music",
+                "Does the first system read as music -- clef, key, time signature, notes "
+                "with stems and beams -- rather than as overlapping or misplaced symbols?",
+            ),
+            Question(
+                "voice-over-braced-piano",
+                "Is the voice drawn above the piano, with only the piano's two staves joined by "
+                "a brace?",
+            ),
+            Question(
+                "barlines-break-between-parts",
+                "Do the barlines run through both piano staves but stop at the voice's staff, "
+                "rather than running from the voice down through the piano?",
+            ),
+            Question(
+                "parts-line-up",
+                "In the first full bar, are the voice's notes directly above the piano notes "
+                "played at the same moment?",
+            ),
+            Question(
+                "tempo-once",
+                "Is the tempo mark (Alla Marcia) written once, above the voice, rather than "
+                "again above the piano?",
+            ),
+            Question(
+                "sample-opens-from-empty-window",
+                "Close every tool, then click Open the sample score in the empty window: does "
+                "the Score View open showing this song?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    # The same score with more room. Worth its own picture because system
+    # breaking is the one layout decision that cannot be seen at a single width:
+    # a bar is either on this line or the next, and the only way to see that the
+    # break is in a sensible place is to see it move.
+    Surface(
+        state="score-view-notation-large",
+        title="The score view drawing a staff, with room to spare",
+        tools=("score-view",),
+        presentation="floating",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "fewer-systems-than-docked",
+                "Does the extra width put more bars on each line, rather than stretching the "
+                "same bars wider?",
+            ),
+            Question(
+                "systems-evenly-stacked",
+                "Is the vertical gap between staves the same for every pair, with room for the "
+                "lyrics in between?",
+            ),
+            Question(
+                "tie-drawn-as-a-curve",
+                "Is the tie between the two held notes a curve from one notehead to the other, "
+                "bowing away from the stems?",
+            ),
+            Question(
+                "chord-notes-share-a-stem",
+                "Does the chord near the end share one stem, with the two notes a step apart "
+                "offset sideways rather than printed on top of each other?",
             ),
         ),
     ),

@@ -77,27 +77,42 @@ void MainComponent::updateMicrophoneWarning()
         return;
     }
 
+    // The workspace is laid out below the warning while it shows (see
+    // workspaceArea), so a change in whether it shows moves the workspace.
+    // Relaid out only on a change: this runs on every audio state change, and
+    // most of those leave the warning exactly where it was.
+    const bool wasVisible = microphoneWarning->isVisible();
+
     if (hasUsableMicrophone())
     {
         isMicrophoneWarningDismissed = false;
         microphoneWarning->setVisible(false);
-        return;
+    }
+    else
+    {
+        microphoneWarning->describe(
+            audioInputService.inputState() == AudioInputService::InputState::opening);
+        microphoneWarning->setVisible(!isMicrophoneWarningDismissed);
+        if (microphoneWarning->isVisible())
+        {
+            microphoneWarning->toFront(false);
+        }
     }
 
-    microphoneWarning->describe(
-        audioInputService.inputState() == AudioInputService::InputState::opening);
-    microphoneWarning->setVisible(!isMicrophoneWarningDismissed);
-    if (microphoneWarning->isVisible())
+    if (microphoneWarning->isVisible() != wasVisible)
     {
-        microphoneWarning->toFront(false);
+        resized();
     }
 }
 
 void MainComponent::dismissMicrophoneWarning()
 {
     isMicrophoneWarningDismissed = true;
-    if (microphoneWarning != nullptr)
+    if (microphoneWarning != nullptr && microphoneWarning->isVisible())
     {
         microphoneWarning->setVisible(false);
+
+        // Give the reserved space back to the workspace.
+        resized();
     }
 }

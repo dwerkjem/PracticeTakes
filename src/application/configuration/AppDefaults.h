@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../platform/midi/MidiMessageTranslation.h"
 #include "../theme/ThemeType.h"
 
 namespace AppDefaults
@@ -11,6 +12,14 @@ namespace Audio
 {
 inline constexpr double inputGain = 1.0;
 } // namespace Audio
+
+namespace Midi
+{
+// The one default lives with the MIDI code, which is what applies it. Re-stated
+// here so the settings layer reads every default from AppDefaults, but not
+// re-declared: two 64s would drift the first time one changed.
+inline constexpr int pedalDownThreshold = ::midi::defaultPedalDownThreshold;
+} // namespace Midi
 
 namespace Tuner
 {

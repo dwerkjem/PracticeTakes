@@ -85,7 +85,18 @@ class MainComponent::ScoreImportWindow final : public juce::DocumentWindow
             headline.setFont(juce::FontOptions(18.0f, juce::Font::bold));
             addAndMakeVisible(headline);
 
-            body.setMultiLine(true, false);
+            // Wrapped. The importer's diagnostics are full sentences ending
+            // in the location they are about -- "[Flute, bar 1, voice 1]" --
+            // and without wrapping that tail ran off the right edge at the
+            // window's default width, reachable only by dragging a horizontal
+            // scrollbar one line at a time. The location is the part somebody
+            // goes and looks up, so it is the part that has to be on screen.
+            //
+            // The cost is real and was weighed: a long diagnostic becomes
+            // several lines, so the severity groups are a little harder to
+            // scan than a list of one-line rows. Unreadable beats harder to
+            // skim. See #212.
+            body.setMultiLine(true, true);
             body.setReadOnly(true);
             body.setScrollbarsShown(true);
             body.setCaretVisible(false);

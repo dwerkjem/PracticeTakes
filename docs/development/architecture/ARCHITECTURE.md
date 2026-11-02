@@ -223,6 +223,14 @@ the engraved renderer, the score tool, playback, and the session file — across
 at least two feature directories, and a `src/features/*` tool may not reach into
 another's internals.
 
+Three of those consumers now exist: the shell's Open Score command, which
+imports a file and publishes the result; the Target Note tool, which reads one
+note out of it as text; and the Score View tool, which draws it. Drawing lives
+in `src/features/score/engraving` — a JUCE-free layout pass producing a
+`ScoreLayout` of glyphs with positions in staff spaces — and is documented in
+[`notation-engraving.md`](notation-engraving.md). No coordinate reaches the
+model: invariant 10 is why the layout exists at all.
+
 ### Ownership and immutability
 
 A score is a tree of value types assembled by `ScoreBuilder` and then **frozen**.

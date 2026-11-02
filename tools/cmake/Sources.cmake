@@ -42,6 +42,8 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/ui/main_window/MicrophoneWarning.h
     src/application/shell/ui/feedback/FeedbackWindow.h
     src/application/shell/ui/feedback/MainComponentFeedback.cpp
+    src/application/shell/ui/score/BundledSampleScore.cpp
+    src/application/shell/ui/score/BundledSampleScore.h
     src/application/shell/ui/score/MainComponentScore.cpp
     src/application/shell/ui/score/ScoreImportJob.cpp
     src/application/shell/ui/score/ScoreImportJob.h
@@ -114,10 +116,42 @@ set(PRACTICE_TAKES_SOURCES
     src/features/analysis/tuner/TunerSettingsCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.h
     src/features/analysis/tuner/TunerDrawing.cpp
+    src/features/score/MusicFont.cpp
+    src/features/score/MusicFont.h
+    src/features/score/ScoreGlyphPainter.cpp
+    src/features/score/ScoreGlyphPainter.h
+    src/features/score/ScoreViewComponent.cpp
+    src/features/score/ScoreViewComponent.h
+    src/features/score/SmuflGlyphs.cpp
+    src/features/score/SmuflGlyphs.h
     src/features/score/TargetNoteComponent.cpp
     src/features/score/TargetNoteComponent.h
     src/features/score/TargetNoteSelection.cpp
+    src/features/score/engraving/BeamGeometry.cpp
+    src/features/score/engraving/BeamGrouping.cpp
+    src/features/score/engraving/KeySignatureLayout.cpp
+    src/features/score/engraving/MeasureAccidentals.cpp
+    src/features/score/engraving/NoteValue.cpp
+    src/features/score/engraving/ScoreLayoutEngine.cpp
+    src/features/score/engraving/StaffPosition.cpp
     src/features/score/TargetNoteSelection.h
+    src/features/score/engraving/Accidental.h
+    src/features/score/engraving/BeamGeometry.cpp
+    src/features/score/engraving/BeamGeometry.h
+    src/features/score/engraving/BeamGrouping.cpp
+    src/features/score/engraving/BeamGrouping.h
+    src/features/score/engraving/KeySignatureLayout.cpp
+    src/features/score/engraving/KeySignatureLayout.h
+    src/features/score/engraving/MeasureAccidentals.cpp
+    src/features/score/engraving/MeasureAccidentals.h
+    src/features/score/engraving/NoteValue.cpp
+    src/features/score/engraving/NoteValue.h
+    src/features/score/engraving/ScoreLayout.h
+    src/features/score/engraving/ScoreLayoutEngine.cpp
+    src/features/score/engraving/ScoreLayoutEngine.h
+    src/features/score/engraving/StaffGeometry.h
+    src/features/score/engraving/StaffPosition.cpp
+    src/features/score/engraving/StaffPosition.h
     src/features/performance/ApplicationLaunchTimer.cpp
     src/features/performance/ApplicationLaunchTimer.h
     src/features/feedback/FeedbackComponent.cpp
@@ -139,6 +173,9 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/midi/MidiMessageTranslation.cpp
     src/platform/midi/MidiMessageTranslation.h
     src/platform/midi/MidiRecoveryPolicy.h
+    src/platform/midi/NoteSoundingTracker.cpp
+    src/platform/midi/NoteSoundingTracker.h
+    src/platform/midi/SoundingDurationJudgement.h
     src/platform/score/CurrentScore.h
     src/platform/score/Diagnostic.h
     src/platform/score/LyricSyllable.h
@@ -187,10 +224,12 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/midi/MidiInputService.cpp
     src/platform/midi/MidiInputService.h
     src/platform/midi/MidiMessageTranslation.cpp
+    src/platform/midi/NoteSoundingTracker.cpp
     src/tests/application/configuration/AppDefaultsTests.cpp
     src/tests/application/configuration/SettingsPersistenceTests.cpp
     src/tests/application/configuration/SettingsTransferCodecTests.cpp
     src/tests/application/shell/WorkspaceStartupSequenceTests.cpp
+    src/tests/application/shell/ui/score/BundledSampleScoreTests.cpp
     src/tests/application/shell/ui/score/ScoreImportStateTests.cpp
     src/tests/application/shell/ui/score/ScoreImportSummaryTests.cpp
     src/tests/application/shell/ui/workspace/components/WorkspacePresentationComponentsTests.cpp
@@ -221,6 +260,16 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/analysis/tuner/PitchTrackerTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
     src/tests/features/score/TargetNoteSelectionTests.cpp
+    src/tests/features/score/MusicFontTests.cpp
+    src/tests/features/score/SmuflGlyphsTests.cpp
+    src/tests/features/score/engraving/BeamGeometryTests.cpp
+    src/tests/features/score/engraving/BeamGroupingTests.cpp
+    src/tests/features/score/engraving/KeySignatureLayoutTests.cpp
+    src/tests/features/score/engraving/MeasureAccidentalsTests.cpp
+    src/tests/features/score/engraving/NoteValueTests.cpp
+    src/tests/features/score/engraving/ScoreLayoutCorpusTests.cpp
+    src/tests/features/score/engraving/ScoreLayoutEngineTests.cpp
+    src/tests/features/score/engraving/StaffPositionTests.cpp
     src/tests/features/performance/ApplicationLaunchTimerTests.cpp
     src/tests/platform/audio/AudioRecoveryPolicyTests.cpp
     src/tests/platform/audio/AudioInputServiceTests.cpp
@@ -233,6 +282,8 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/midi/MidiInputServiceTests.cpp
     src/tests/platform/midi/MidiMessageTranslationTests.cpp
     src/tests/platform/midi/MidiRecoveryPolicyTests.cpp
+    src/tests/platform/midi/NoteSoundingTrackerTests.cpp
+    src/tests/platform/midi/SoundingDurationJudgementTests.cpp
     src/tests/platform/score/CurrentScoreTests.cpp
     src/tests/platform/score/MusicalTimeTests.cpp
     src/tests/platform/score/PitchNamesTests.cpp
@@ -252,6 +303,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/application/configuration/SettingsPersistence.cpp
     src/application/configuration/SettingsTransferCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.cpp
+    src/application/shell/ui/score/BundledSampleScore.cpp
     src/application/shell/ui/score/ScoreImportSummary.cpp
     src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
     src/application/testcontrol/ApprovedWindowStates.cpp
@@ -263,7 +315,16 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/features/analysis/harmonics/HarmonicAnalyzer.cpp
     src/features/analysis/tuner/PitchTracker.cpp
     src/features/performance/ApplicationLaunchTimer.cpp
+    src/features/score/MusicFont.cpp
+    src/features/score/SmuflGlyphs.cpp
     src/features/score/TargetNoteSelection.cpp
+    src/features/score/engraving/BeamGeometry.cpp
+    src/features/score/engraving/BeamGrouping.cpp
+    src/features/score/engraving/KeySignatureLayout.cpp
+    src/features/score/engraving/MeasureAccidentals.cpp
+    src/features/score/engraving/NoteValue.cpp
+    src/features/score/engraving/ScoreLayoutEngine.cpp
+    src/features/score/engraving/StaffPosition.cpp
     src/platform/audio/PitchDetector.cpp
     src/platform/audio/SharedPitchAnalysis.cpp
     src/platform/score/ScoreBuilder.cpp

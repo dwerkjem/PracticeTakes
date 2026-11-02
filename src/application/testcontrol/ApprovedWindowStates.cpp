@@ -81,6 +81,9 @@ const std::vector<ApprovedWindowState>& states()
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false,
          "The target note tool with no score open, which is what a new session shows"},
+        {"score-view-empty", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false, "The score view with no score open, which is what a new session shows"},
 
         // --- Several tools at once. Nothing else reaches the split tree with
         // more than one leaf, or the tab strip at all.
@@ -96,10 +99,11 @@ const std::vector<ApprovedWindowState>& states()
         {"three-tools-tabbed", Tools{"tuner", "spectrogram", "harmonics"}, ToolPresentation::docked,
          WorkspaceArrangement::tabbed, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "All three tools sharing one tab strip"},
-        {"all-tools-docked", Tools{"tuner", "spectrogram", "harmonics", "target-note"},
+        {"all-tools-docked",
+         Tools{"tuner", "spectrogram", "harmonics", "target-note", "score-view"},
          ToolPresentation::docked, WorkspaceArrangement::split, WindowGeometry::normal,
          MicrophoneCondition::available, false, "", false,
-         "Every tool tiled at once -- the three live-audio tools and the one that reads a score"},
+         "Every tool tiled at once -- the three live-audio tools and the two that read a score"},
 
         // --- Window geometry ---
         {"narrow-window", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
@@ -113,12 +117,17 @@ const std::vector<ApprovedWindowState>& states()
          "The empty shell in a narrow window, with the collapsed menu and no tool"},
 
         // --- Audio conditions ---
+        // Both carry a tone, which is what makes them pictures of *mute* rather
+        // than of silence. Without one a capture instance has no input at all,
+        // so the window says "no microphone detected" and the picture shows
+        // disconnection wearing a mute surface's name. With one the tools have
+        // a signal, mute stops it reaching them, and the interface says muted.
         {"microphone-muted", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
          WindowGeometry::normal, MicrophoneCondition::muted, false, "", false,
-         "The tuner with the global microphone mute engaged"},
+         "The tuner with the global microphone mute engaged", 440.0, ""},
         {"muted-all-tools", Tools{"tuner", "spectrogram", "harmonics"}, ToolPresentation::docked,
          WorkspaceArrangement::split, WindowGeometry::normal, MicrophoneCondition::muted, false, "",
-         false, "Every audio tool at once with the microphone muted"},
+         false, "Every audio tool at once with the microphone muted", 440.0, ""},
         {"microphone-warning",
          {},
          ToolPresentation::none,
@@ -212,16 +221,17 @@ const std::vector<ApprovedWindowState>& states()
         // until a file has been read, so these are the only states that ask
         // the shell to open a document on the way in.
         //
-        // The target note tool would want a third, and cannot have one: the
-        // only way in here to get a score into the running application is
-        // `startScoreImport`, which also opens the summary window over
-        // whatever the surface is about. The comment below on geometry records
-        // what an overlapping window does to a capture. See
-        // docs/development/architecture/score-model-findings.md.
-        //
         // The trailing fields are positional: description, tone, tool view,
-        // then the fixture. The two empty strings in the middle are the tone
-        // and the view, neither of which means anything here.
+        // the fixture, and then whether to show the summary. The two empty
+        // strings in the middle are the tone and the view, neither of which
+        // means anything here.
+        //
+        // The two states below leave the summary showing, because the summary
+        // is what they are pictures of. The two score-view states after them
+        // suppress it, which is what lets a *tool* be photographed with a score
+        // in it -- see `showScoreImportSummary` in ApprovedWindowStates.h, and
+        // finding 7 in docs/development/architecture/score-model-findings.md,
+        // which this is the resolution of.
         {"score-import-clean",
          {},
          ToolPresentation::none,
@@ -248,6 +258,41 @@ const std::vector<ApprovedWindowState>& states()
          0.0,
          "",
          "diagnostic-import.musicxml"},
+
+        // --- The renderer, with a score in it ---
+        //
+        // The whole reason the suppression field exists. Everything about this
+        // tool is visual, so an approved state that could only show it empty
+        // would leave the feature unverifiable.
+        {"score-view-notation", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view drawing a staff: key signature, accidentals, rests, dots, flags, "
+         "beams, a tie, a clef change, a chord and lyrics",
+         0.0, "", "notation-sample.musicxml", false},
+        {"score-view-notation-large", Tools{"score-view"}, ToolPresentation::floating,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The same staff in a floating window, where it has the room to break into fewer "
+         "systems",
+         0.0, "", "notation-sample.musicxml", false},
+        // A piano part, which used to show its right hand alone. Both staves,
+        // braced, with the beats of the two hands lined up.
+        {"score-view-grand-staff", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view drawing a piano part as a braced grand staff, both hands aligned", 0.0, "",
+         "grand-staff-sample.musicxml", false},
+        // The sample the application ships, opened the way the File menu and
+        // the empty-window button open it: written out of the executable, then
+        // imported. The one score state whose input is not a committed fixture
+        // but the bytes a user actually gets.
+        {"score-view-sample", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view showing the sample score the application ships: a Mahler song for "
+         "voice and piano",
+         0.0, "", bundledSampleFixtureName(), false},
     };
 
     return approved;
@@ -264,6 +309,7 @@ const std::vector<ApprovedClickTarget>& targets()
         {"settings-button", "Opens the settings menu"},
         {"help-button", "Opens the help menu"},
         {"microphone-button", "Toggles the global microphone mute"},
+        {"open-sample-button", "Opens the sample score from the empty window"},
         {"hamburger-button", "Opens the collapsed menu in a narrow window"},
         {"fullscreen-button", "Toggles fullscreen"},
     };
@@ -314,6 +360,15 @@ const std::string& approvedScoreFixtureDirectory()
     static const std::string directory{"src/tests/resources/harness-scores"};
 
     return directory;
+}
+
+const std::string& bundledSampleFixtureName()
+{
+    // Not a file name, so it can never collide with one in the fixture
+    // directory: a state naming it gets the shipped sample instead.
+    static const std::string name{"<bundled sample>"};
+
+    return name;
 }
 
 const std::vector<std::string>& approvedThemeNames()

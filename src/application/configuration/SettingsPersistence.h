@@ -43,6 +43,11 @@ struct State
     // (not connected)" rather than an opaque identifier or a blank.
     juce::String midiInputDeviceIdentifier;
     juce::String midiInputDeviceName;
+
+    // Where the sustain pedal counts as down: at or above this, 1-127. A
+    // preference about a particular keyboard's pedal, which is why -- like the
+    // device selection -- it is not carried in a settings transfer file.
+    int midiPedalDownThreshold = AppDefaults::Midi::pedalDownThreshold;
     AppDefaults::TunerSettings tuner = AppDefaults::tunerDefaults();
     juce::String tunerBounds;
     juce::String spectrogramBounds;

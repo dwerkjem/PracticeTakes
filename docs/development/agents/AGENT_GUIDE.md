@@ -194,22 +194,34 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   `main.cpp` sees `--test-control`. Newline-delimited commands in, replies out,
   no socket and no port; the channel dies with the process. It applies an
   approved window state, clicks a named target, sets geometry/theme, and quits.
+  The harness passes `--no-audio-input` alongside it, so a capture instance
+  opens no input device and the generated tone is its only signal — one process
+  at a time can hold the microphone, and a capture run must not take it from a
+  live application. The two flags are separate so the channel can still be
+  driven against a real device by hand.
   See `docs/development/quality/TESTING_SUITE.md`.
 - `src/features` — user-facing tools: `analysis/{tuner,spectrogram,harmonics}`,
-  `score` (the Target Note tool, the first consumer of the score model),
-  `feedback`, `performance` (launch timing).
+  `score` (the Target Note tool, which reads one note as text, and the Score
+  View tool, which draws the score as notation — with `score/engraving/`, a
+  JUCE-free layout pass turning a `Score` into glyphs with positions in staff
+  spaces, where every engraving rule worth asserting lives; see
+  `docs/development/architecture/notation-engraving.md`), `feedback`,
+  `performance` (launch timing).
 - `src/platform` — shared infrastructure: `audio/` (`AudioInputService`,
   `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`), `midi/`
   (`MidiInputService`, `MidiEventFifo`, `MidiMessageTranslation`,
-  `MidiRecoveryPolicy`) — live keyboard capture, owning its own
-  `juce::MidiInput` rather than going through the audio device manager, with a
-  JUCE-free byte-level translation layer that is where every rule worth
-  asserting about the event stream lives — and `score/` — a JUCE-free score
+  `MidiRecoveryPolicy`, `NoteSoundingTracker`, `SoundingDurationJudgement`) —
+  live keyboard capture, owning its own `juce::MidiInput` rather than going
+  through the audio device manager, with a JUCE-free byte-level translation
+  layer that is where every rule worth asserting about the event stream lives,
+  and a JUCE-free tracker that turns the stream into per-note sounding
+  durations (key *and* sustain pedal; see
+  `docs/development/architecture/note-sounding.md`) — and `score/` — a JUCE-free score
   model (`Score`, `TempoMap`, `Pitch`, `MusicalTime`, `CurrentScore`) plus a
-  MusicXML importer under `score/musicxml/`. `score/` has two application
+  MusicXML importer under `score/musicxml/`. `score/` has three application
   consumers: the shell's Open Score command, which imports a file and publishes
-  the result into the `CurrentScore` holder, and the Target Note tool, which
-  reads that holder through `ToolServices`. What the importer accepts, drops
+  the result into the `CurrentScore` holder, and the Target Note and Score View
+  tools, which read that holder through `ToolServices`. What the importer accepts, drops
   with a diagnostic, or refuses is specified in
   `docs/development/formats/musicxml-subset.md`; what consuming the model from
   the application revealed about its shape is in
@@ -328,6 +340,11 @@ against it — they can drift (`docs/development/quality/QA_STRATEGY.md` area 12
   through an OpenSpec proposal in `openspec/changes/` first — see
   `docs/development/architecture/ARCHITECTURE_QA.md § When to write more than a checklist
   pass`.
+- Keep work in progress small: at most three OpenSpec changes in
+  implementation at once, archive a change as soon as its last task is done,
+  and move a task blocked on hardware to a `status:ready-for-human` issue
+  instead of leaving the change open. See `.github/CONTRIBUTING.md § Keep work
+  in progress small`.
 - The [architecture map](https://dwerkjem.github.io/PracticeTakes/) is a
   generated, browsable graph of the whole repo — useful for finding where a
   change belongs before starting.

@@ -6,6 +6,7 @@
 
 #include "../../../testcontrol/TestControlClicker.h"
 #include "../../ui/feedback/FeedbackWindow.h"
+#include "../../ui/score/BundledSampleScore.h"
 #include "../../ui/score/ScoreImportWindow.h"
 #include "../../ui/settings/SettingsWindow.h"
 
@@ -19,6 +20,14 @@ namespace
 // compiled away without PRACTICE_TAKES_ENABLE_TEST_CONTROL.
 [[nodiscard]] juce::File scoreFixtureFile(const std::string& fixture)
 {
+    // The shipped sample, through the same install step the menu item uses. A
+    // failed install returns a default File, which the caller already treats
+    // as a missing fixture.
+    if (fixture == testcontrol::bundledSampleFixtureName())
+    {
+        return bundled_sample::installBundledSampleScore();
+    }
+
     return juce::File(PRACTICE_TAKES_SOURCE_DIR)
         .getChildFile(juce::String(testcontrol::approvedScoreFixtureDirectory()))
         .getChildFile(juce::String(fixture));
@@ -261,8 +270,16 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     // and a summary window opened before that is then behind it -- which the
     // capture records as a black rectangle over the report, differently in
     // every run.
+    // Cleared for every state, set only by one that asks: a suppression that
+    // leaked from the previous capture would hide a report the next surface is
+    // about, which is the same accumulation problem the window hiding above
+    // exists for.
+    testControlHideScoreImportSummary = false;
+
     if (!state.scoreFixture.empty())
     {
+        testControlHideScoreImportSummary = !state.showScoreImportSummary;
+
         const juce::File fixture = scoreFixtureFile(state.scoreFixture);
 
         // A state naming a fixture that is not there is a drifted state, and

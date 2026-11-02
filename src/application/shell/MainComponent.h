@@ -45,7 +45,10 @@ class MainComponent final
       private juce::ChangeListener
 {
   public:
-    explicit MainComponent(bool muteMicrophoneForSession = false);
+    // `declineAudioInput` is passed straight to AudioInputService: open no
+    // input device at all, leaving the generated tone as the only producer.
+    // See that constructor for why a capture instance wants it.
+    explicit MainComponent(bool muteMicrophoneForSession = false, bool declineAudioInput = false);
     ~MainComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -186,6 +189,10 @@ class MainComponent final
     // Ask for a file, then import it. Dismissing the chooser does nothing.
     void openScore();
 
+    // Open the score the application ships, through the same import path as a
+    // chosen file. Says so in an alert if the sample cannot be written out.
+    void openSampleScore();
+
     // Start reading `file` on the import thread. Does nothing but report when
     // an import is already running -- see ScoreImportJob::start.
     void startScoreImport(const juce::File& file);
@@ -242,6 +249,15 @@ class MainComponent final
     void detachWorkspaceContainer();
     void rebuildWorkspaceContainer();
     void layoutWorkspace(juce::Rectangle<int> bounds);
+    // Where docked tools go: the window inside its margin, below the microphone
+    // warning while that is showing. One function so the warning's reservation
+    // and the empty-workspace guidance cannot disagree about it.
+    [[nodiscard]] juce::Rectangle<int> workspaceArea() const;
+    // Whether any tool is open, docked or floating. Not `liveTools.empty()`: a
+    // closed tool keeps its entry, and its saved settings, so that reopening
+    // brings it back as it was.
+    [[nodiscard]] bool anyToolOpen() const;
+    void paintEmptyWorkspaceGuidance(juce::Graphics& graphics) const;
     [[nodiscard]] juce::Component* buildWorkspaceNode(const WorkspaceLayoutState::Node* node);
     [[nodiscard]] std::vector<ToolInstanceId> dockedTools();
     [[nodiscard]] std::optional<ToolInstanceId> dockedToolAt(juce::Point<int> position);
@@ -296,6 +312,9 @@ class MainComponent final
     // src/features reads it yet; when one does, it arrives through ToolServices
     // and not by reaching in here.
     MidiInputService midiInputService;
+    // Where the sustain pedal counts as down (1-127). Persisted, and applied by
+    // whoever tracks note durations; the settings panel's tracker is the only one.
+    int midiPedalDownThreshold = AppDefaults::Midi::pedalDownThreshold;
     juce::ApplicationProperties applicationProperties;
     // Declared here, before liveTools, on purpose -- see the note on liveTools
     // below. AppLookAndFeel differs from LookAndFeel_V4 only in carrying the
@@ -314,6 +333,11 @@ class MainComponent final
     ScoreImportState scoreImport;
 
     juce::TextButton fileButton{"File"};
+
+    // Shown in the empty workspace, under the guidance text, so a first launch
+    // has a way to see a score without owning one. Hidden whenever a tool is
+    // open: it is part of the guidance, not of the workspace.
+    juce::TextButton openSampleButton{"Open the sample score"};
     juce::TextButton settingsButton{"Settings"};
     juce::TextButton toolsButton{"Tools"};
     juce::TextButton helpButton{"Help"};
@@ -385,6 +409,13 @@ class MainComponent final
     // hasUsableInput there also drives device recovery, so forcing it false
     // would have the service continuously trying to reopen the device.
     bool testControlNoMicrophone = false;
+
+    // Suppresses the score import summary window for the state being applied,
+    // so a state that opens a score *into a tool* photographs the tool rather
+    // than a report sitting over it. Set from the approved state on the way in
+    // and cleared by every state that does not ask for it, so it cannot leak
+    // from one capture to the next.
+    bool testControlHideScoreImportSummary = false;
 
     // Set the first time a state is applied, and never cleared: this process is
     // being driven by the harness rather than used by a person.

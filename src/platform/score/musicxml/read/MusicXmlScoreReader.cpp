@@ -34,7 +34,12 @@ void readPart(const XmlNode& partNode, ReadContext& context, Part& part)
 }
 } // namespace
 
-void countUnrecognisedElements(const XmlNode& node, ReadContext& context)
+namespace
+{
+void countUnrecognisedElements(
+    const XmlNode& node,
+    const std::string& parentName,
+    ReadContext& context)
 {
     for (const XmlNode& child : node.children)
     {
@@ -45,13 +50,27 @@ void countUnrecognisedElements(const XmlNode& node, ReadContext& context)
             continue;
         }
 
-        if (knownElements().count(child.name) == 0)
+        // A dynamic marking is an element per marking -- <mp/>, <sfz/> -- so
+        // no fixed list of element names can hold it. The measure reader takes
+        // each one isDynamicMarking accepts into the model, but only from a
+        // direction: under a note's <notations> it is dropped, and so still
+        // owed the report below.
+        const bool readAsDynamic = node.name == "dynamics" && parentName == "direction-type" &&
+                                   isDynamicMarking(child.name);
+
+        if (knownElements().count(child.name) == 0 && !readAsDynamic)
         {
             context.diagnostics.noteUnrecognisedElement(child.name);
         }
 
-        countUnrecognisedElements(child, context);
+        countUnrecognisedElements(child, node.name, context);
     }
+}
+} // namespace
+
+void countUnrecognisedElements(const XmlNode& node, ReadContext& context)
+{
+    countUnrecognisedElements(node, std::string{}, context);
 }
 
 void readMetadata(const XmlNode& root, Score& score)

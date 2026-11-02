@@ -1,8 +1,11 @@
 #include "MainComponent.h"
 
+#include <algorithm>
+
 #include "ui/feedback/FeedbackWindow.h"
 #include "ui/main_window/MainTitleBar.h"
 #include "ui/main_window/MicrophoneWarning.h"
+#include "ui/score/BundledSampleScore.h"
 #include "ui/score/ScoreImportWindow.h"
 #include "ui/settings/SettingsWindow.h"
 #include "ui/workspace/components/DockedToolPanel.h"
@@ -12,6 +15,25 @@ namespace
 {
 constexpr int microphoneWarningWidth = 470;
 constexpr int microphoneWarningHeight = 118;
+
+// Space between the microphone warning and the workspace laid out below it.
+constexpr int microphoneWarningGap = 10;
+
+// The margin every edge of the workspace keeps from the window.
+constexpr int workspaceMargin = 18;
+
+// The empty-workspace guidance: a title, two lines of text, and the sample
+// button under them, centred as one block.
+constexpr int guidanceTitleHeight = 32;
+constexpr int guidanceTextHeight = 48;
+constexpr int sampleButtonWidth = 220;
+constexpr int sampleButtonHeight = 32;
+constexpr int guidanceBlockHeight = guidanceTitleHeight + guidanceTextHeight + sampleButtonHeight;
+
+juce::Rectangle<int> emptyGuidanceBlock(juce::Rectangle<int> area)
+{
+    return area.withSizeKeepingCentre(juce::jmin(area.getWidth(), 560), guidanceBlockHeight);
+}
 
 juce::String settingsFolderName()
 {
@@ -56,8 +78,11 @@ void migrateLegacySettingsFile(const juce::File& destination)
 }
 } // namespace
 
-MainComponent::MainComponent(bool muteMicrophoneForSession)
-    : sessionMicrophoneMuteEnabled(muteMicrophoneForSession)
+MainComponent::MainComponent(bool muteMicrophoneForSession, bool declineAudioInput)
+    // Declaration order, not argument order: audioInputService is declared well
+    // before sessionMicrophoneMuteEnabled, so the parameter is used directly
+    // rather than reading the member, which is not initialised yet.
+    : audioInputService(declineAudioInput), sessionMicrophoneMuteEnabled(muteMicrophoneForSession)
 {
     setOpaque(true);
     audioInputService.addChangeListener(this);
@@ -114,6 +139,9 @@ void MainComponent::configureTopButtons()
     helpButton.onClick = [this] { showHelpMenu(); };
     microphoneButton.setTitle("Global microphone mute control");
     microphoneButton.onClick = [this] { audioInputService.toggleMuted(); };
+    openSampleButton.setTooltip(bundled_sample::menuLabel());
+    openSampleButton.onClick = [this] { openSampleScore(); };
+    addChildComponent(openSampleButton);
 
     // Component ids let the development-only test control channel address these
     // by name rather than by screen position, so the manual GUI harness never
@@ -126,6 +154,7 @@ void MainComponent::configureTopButtons()
     toolsButton.setComponentID("tools-button");
     helpButton.setComponentID("help-button");
     microphoneButton.setComponentID("microphone-button");
+    openSampleButton.setComponentID("open-sample-button");
 }
 
 std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(
@@ -181,16 +210,67 @@ void MainComponent::createMicrophoneWarning()
 void MainComponent::paint(juce::Graphics& graphics)
 {
     graphics.fillAll(appPaletteFor(currentTheme).background);
+
+    if (!anyToolOpen())
+    {
+        paintEmptyWorkspaceGuidance(graphics);
+    }
+}
+
+bool MainComponent::anyToolOpen() const
+{
+    return std::any_of(
+        liveTools.begin(), liveTools.end(),
+        [](const LiveTool& tool) { return tool.state.isOpen(); });
+}
+
+juce::Rectangle<int> MainComponent::workspaceArea() const
+{
+    auto area = getLocalBounds().reduced(workspaceMargin);
+
+    // Laid out below the warning rather than under it. It used to float over
+    // the workspace's top-right corner, so on a machine with no microphone it
+    // covered whatever tool was docked there -- the Score View's first bars
+    // included, for someone who only came to read music and needs no
+    // microphone for it. Reserving its height keeps every tool clear of it,
+    // whichever tool happens to be in that corner.
+    if (microphoneWarning != nullptr && microphoneWarning->isVisible())
+    {
+        area.removeFromTop(microphoneWarningHeight + microphoneWarningGap);
+    }
+
+    return area;
+}
+
+void MainComponent::paintEmptyWorkspaceGuidance(juce::Graphics& graphics) const
+{
+    // What a new user sees on first launch, and what anyone sees after closing
+    // the last tool: before this, a blank window with nothing to say that a
+    // score can be opened or that the Tools menu holds anything. Two lines, not
+    // a tour -- the menus are right above it.
+    const AppPalette colours = appPaletteFor(currentTheme);
+    auto area = workspaceArea().reduced(24);
+    auto block = emptyGuidanceBlock(area);
+
+    graphics.setColour(colours.foreground);
+    graphics.setFont(juce::FontOptions(20.0f, juce::Font::bold));
+    graphics.drawFittedText(
+        "Open a score to get started", block.removeFromTop(guidanceTitleHeight),
+        juce::Justification::centred, 1);
+
+    graphics.setColour(colours.muted);
+    graphics.setFont(juce::FontOptions(14.5f));
+    graphics.drawFittedText(
+        "File > Open score reads a MusicXML file and shows it here, or try the sample "
+        "below. The Tools menu adds a tuner, spectrogram or harmonic analyser.",
+        block.removeFromTop(guidanceTextHeight), juce::Justification::centredTop, 3);
 }
 
 void MainComponent::resized()
 {
-    const auto bounds = getLocalBounds();
-    layoutWorkspace(bounds.reduced(18));
-
     if (microphoneWarning != nullptr)
     {
-        auto warningArea = bounds.reduced(18);
+        auto warningArea = getLocalBounds().reduced(workspaceMargin);
         const auto availableWidth = juce::jmin(microphoneWarningWidth, warningArea.getWidth());
         microphoneWarning->setBounds(
             warningArea.removeFromTop(microphoneWarningHeight).removeFromRight(availableWidth));
@@ -199,4 +279,25 @@ void MainComponent::resized()
             microphoneWarning->toFront(false);
         }
     }
+
+    layoutWorkspace(workspaceArea());
+
+    // Part of the guidance painted behind it, so it follows the same rule:
+    // visible exactly when no tool is open, laid out under the text.
+    const bool showGuidance = !anyToolOpen();
+    openSampleButton.setVisible(showGuidance);
+
+    if (showGuidance)
+    {
+        auto block = emptyGuidanceBlock(workspaceArea().reduced(24));
+        block.removeFromTop(guidanceTitleHeight + guidanceTextHeight);
+        openSampleButton.setBounds(block.withSizeKeepingCentre(
+            juce::jmin(block.getWidth(), sampleButtonWidth), sampleButtonHeight));
+    }
+
+    // The background carries the empty-workspace guidance, which appears and
+    // disappears as tools open and close. Every open and close, docked or
+    // floating, rebuilds the workspace and lands here, so this is the one place
+    // that keeps it current.
+    repaint();
 }
