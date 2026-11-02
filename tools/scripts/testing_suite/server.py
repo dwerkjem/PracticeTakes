@@ -24,6 +24,7 @@ from urllib.parse import parse_qs, urlparse
 
 import freshness
 import history as history_module
+import display as display_module
 import launcher as launcher_module
 import remote as remote_module
 import restart as restart_module
@@ -151,6 +152,7 @@ class ReviewSession:
             "kinds": list(suites_module.KINDS),
             "builds": runner_module.build_overview(),
             "display": runner_module.display_available(),
+            "virtual_display": display_module.is_available(),
             "stale_server": freshness.suite_staleness_warning(SOURCES_LOADED_AT),
             "boot": BOOT_ID,
             "job": self.job.status(),

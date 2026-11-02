@@ -41,8 +41,11 @@ The hub has three views:
 | UI golden images | ui | a build, and a display |
 | UI capture | ui | a build with the control channel, and a display |
 
-A suite that needs a display is **skipped with that reason** on a headless
-machine rather than failing.
+A suite that needs a display runs on the desktop when the hub has one. When it
+does not -- a hub started over SSH, from a terminal outside the desktop session,
+or for remote use -- the suite runs on a private Xvfb screen instead, and the
+capture pass on its own screens as it always does. Only with no desktop *and* no
+Xvfb is it **skipped with that reason** rather than failing.
 
 ### Without a browser
 

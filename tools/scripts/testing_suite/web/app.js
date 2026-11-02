@@ -177,9 +177,12 @@ function renderBuilds(view) {
 
   if (behind.length) holder.appendChild(needsBuildingNotice(behind, running));
 
-  if (!view.display) {
+  if (!view.display && view.virtual_display) {
     holder.appendChild(buildNotice(
-      "No display detected — UI suites will be skipped rather than failing."));
+      "No desktop display — UI suites will run on a virtual screen (Xvfb) instead."));
+  } else if (!view.display) {
+    holder.appendChild(buildNotice(
+      "No display, and Xvfb is not installed — UI suites will be skipped rather than failing."));
   }
 }
 
