@@ -904,6 +904,91 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The sample in each of the Score View's three views. One surface per
+    # view, because a picture of the default says nothing about the other two.
+    Surface(
+        state="score-view-page",
+        title="The score view in Page view",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "page-edge",
+                "Is the music on a page with a visible edge, lighter than what surrounds it, "
+                "with \"Page 1 of\" a number above it?",
+            ),
+            Question(
+                "whole-systems-on-the-page",
+                "Is every line of music on the page whole, with none cut off at the page's "
+                "foot?",
+            ),
+            Question(
+                "page-turns",
+                "Click \u203a, then press Page Down, then Home: does each show the right page "
+                "from its top, with no bar split between two pages?",
+                behavioural=True,
+            ),
+            Question(
+                "enlarge-keeps-the-place",
+                "On page 2, click +: is the bar that began the page still on screen, and does "
+                "the page count go up?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    Surface(
+        state="score-view-vertical",
+        title="The score view in Vertical scroll",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "vertical-as-before",
+                "Is the score one column of lines of music with only a vertical scrollbar, as "
+                "the Score View looked before it had views?",
+            ),
+            Question(
+                "size-controls",
+                "Click +, then \u2212, then press Ctrl (or Cmd) and 0: does the music grow, "
+                "shrink, and return to 100%, with the percentage between the buttons following?",
+                behavioural=True,
+            ),
+            Question(
+                "view-remembered",
+                "Choose Horizontal scroll from the ... menu and restart the application: does "
+                "the Score View come back in Horizontal scroll?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    Surface(
+        state="score-view-horizontal",
+        title="The score view in Horizontal scroll",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "one-long-line",
+                "Is all the music on one long line, with a horizontal scrollbar and no second "
+                "line below it?",
+            ),
+            Question(
+                "scrolls-to-the-end",
+                "Scroll right to the end: is the final barline there, with nothing wrapped onto "
+                "another line?",
+                behavioural=True,
+            ),
+        ),
+    ),
     # The same score with more room. Worth its own picture because system
     # breaking is the one layout decision that cannot be seen at a single width:
     # a bar is either on this line or the next, and the only way to see that the

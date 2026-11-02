@@ -122,6 +122,8 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/ScoreGlyphPainter.h
     src/features/score/ScoreViewComponent.cpp
     src/features/score/ScoreViewComponent.h
+    src/features/score/ScoreViewSettings.cpp
+    src/features/score/ScoreViewSettings.h
     src/features/score/SmuflGlyphs.cpp
     src/features/score/SmuflGlyphs.h
     src/features/score/TargetNoteComponent.cpp
@@ -132,6 +134,7 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/KeySignatureLayout.cpp
     src/features/score/engraving/MeasureAccidentals.cpp
     src/features/score/engraving/NoteValue.cpp
+    src/features/score/engraving/Pagination.cpp
     src/features/score/engraving/PartNames.cpp
     src/features/score/engraving/ScoreLayoutEngine.cpp
     src/features/score/engraving/StaffPosition.cpp
@@ -147,6 +150,8 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/MeasureAccidentals.h
     src/features/score/engraving/NoteValue.cpp
     src/features/score/engraving/NoteValue.h
+    src/features/score/engraving/Pagination.cpp
+    src/features/score/engraving/Pagination.h
     src/features/score/engraving/PartNames.cpp
     src/features/score/engraving/PartNames.h
     src/features/score/engraving/ScoreLayout.h
@@ -264,12 +269,14 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
     src/tests/features/score/TargetNoteSelectionTests.cpp
     src/tests/features/score/MusicFontTests.cpp
+    src/tests/features/score/ScoreViewSettingsTests.cpp
     src/tests/features/score/SmuflGlyphsTests.cpp
     src/tests/features/score/engraving/BeamGeometryTests.cpp
     src/tests/features/score/engraving/BeamGroupingTests.cpp
     src/tests/features/score/engraving/KeySignatureLayoutTests.cpp
     src/tests/features/score/engraving/MeasureAccidentalsTests.cpp
     src/tests/features/score/engraving/NoteValueTests.cpp
+    src/tests/features/score/engraving/PaginationTests.cpp
     src/tests/features/score/engraving/PartNamesTests.cpp
     src/tests/features/score/engraving/ScoreLayoutCorpusTests.cpp
     src/tests/features/score/engraving/ScoreLayoutEngineTests.cpp
@@ -320,6 +327,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/features/analysis/tuner/PitchTracker.cpp
     src/features/performance/ApplicationLaunchTimer.cpp
     src/features/score/MusicFont.cpp
+    src/features/score/ScoreViewSettings.cpp
     src/features/score/SmuflGlyphs.cpp
     src/features/score/TargetNoteSelection.cpp
     src/features/score/engraving/BeamGeometry.cpp
@@ -327,6 +335,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/features/score/engraving/KeySignatureLayout.cpp
     src/features/score/engraving/MeasureAccidentals.cpp
     src/features/score/engraving/NoteValue.cpp
+    src/features/score/engraving/Pagination.cpp
     src/features/score/engraving/PartNames.cpp
     src/features/score/engraving/ScoreLayoutEngine.cpp
     src/features/score/engraving/StaffPosition.cpp

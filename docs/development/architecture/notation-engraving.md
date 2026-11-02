@@ -234,6 +234,24 @@ grows when the upper staff's text, or the lower staff's high notes, would
 otherwise meet — which is what keeps a piano's dynamics, between the hands,
 off the left hand's ledger-line notes.
 
+### Three views, one layout
+
+The Score View lays a score out in one of three views (`score_view::ViewMode`):
+**Page**, the default — A4-shaped pages as wide as the panel, one at a time,
+turned with `‹ ›` or Page Up/Down, Left/Right, Home/End; **Vertical scroll**, a
+column of systems; and **Horizontal scroll**, every bar on one system. A view
+changes only the width the engine is given — the panel's, the page's, or an
+unbounded one — and how the systems are arranged on screen, so every rule in
+this document holds in all three.
+
+Pages are cut after layout, by `engraving::paginate`, from each system's
+vertical band (`System::bandTop`/`bandBottom`): greedily, never splitting a
+system, a system taller than a page on a page of its own and reported. The
+staff size steps through `score_view::sizeLadder` with `−`/`+` on the title
+strip and Ctrl/Cmd `+`, `−`, `0`; the view and size are saved per Score View.
+A change of either keeps the bar that was in view in view. Until justification
+(`engraving-polish` 3.1) lands, a page holds ragged systems.
+
 ### Several staves, several parts
 
 Every part is drawn, top to bottom in score order, and every staff of each
@@ -283,7 +301,6 @@ shows. That list is the reason a first pass is an acceptable thing to ship:
 | **A staff with no pitches** | A percussion or tablature staff is left out and named, and the rest of its part, and every other part, is drawn. |
 | **Bars only some parts have** | Parts are drawn as far as they all go; any further bars are counted. |
 | **Brackets for groups of parts** | `<part-group>` is not imported, so a choir's parts are joined at the left but not bracketed. |
-| **Page presentation** | Continuous vertical scroll only. Navigation is #33. |
 | **Volta brackets, D.C./D.S. jumps** | `Measure::repeats` carries them uninterpreted. Repeat barlines *are* drawn. |
 | **A tie across a system break** | Both ends are placed before either is drawn; when they land on different systems the tie is reported. |
 | **Cancelling naturals at a key change** | A key change to no accidentals draws an empty signature. |

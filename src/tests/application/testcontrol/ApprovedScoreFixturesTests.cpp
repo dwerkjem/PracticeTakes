@@ -96,8 +96,9 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
     CHECK(
         naming == std::set<std::string>{
                       "score-import-clean", "score-import-diagnostics", "score-import-in-progress",
-                      "score-view-grand-staff", "score-view-notation", "score-view-notation-large",
-                      "score-view-sample"});
+                      "score-view-grand-staff", "score-view-horizontal", "score-view-notation",
+                      "score-view-notation-large", "score-view-page", "score-view-sample",
+                      "score-view-vertical"});
 }
 
 // The invariant this started as was "a state naming a score opens nothing
