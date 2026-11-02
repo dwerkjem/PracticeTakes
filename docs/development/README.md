@@ -50,6 +50,7 @@ broader music-practice and digital-audio workstation application.
   artifact signing
 - [SOPS secrets](operations/SECRETS.md) — encrypted secret mirrors, synchronization, and conflict resolution
 - [Merging](operations/MERGING.md) — the merge drivers and Git configuration this repository expects, and how to bypass them
+- [Rules on `main`](operations/MAIN_BRANCH_RULES.md) — the checks a pull request needs, which pull requests merge themselves, and the token the release and clang-tidy workflows push with
 - [Feedback service](operations/FEEDBACK.md) — the in-app feedback contract and endpoint configuration
 - [Feedback email dispatch](operations/EMAIL_DISPATCH.md) — how queued feedback becomes email, activating it on Cloudflare, and the administrative status and dispatch routes
 
