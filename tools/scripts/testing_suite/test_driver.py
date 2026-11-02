@@ -8,6 +8,7 @@ here -- which are about waiting, not about windows.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -77,6 +78,55 @@ class ReplyTimeoutTests(unittest.TestCase):
             talking.send("status", timeout=10)
 
         self.assertNotIn("not responding", str(raised.exception))
+
+
+class LaunchTests(unittest.TestCase):
+    """Which program starts, and what is said when it dies."""
+
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+
+    def script(self, folder: Path, body: str) -> Path:
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / "PracticeTakes"
+        path.write_text(f"#!/bin/sh\n{body}\n")
+        path.chmod(0o755)
+
+        return path
+
+    def test_a_relative_path_launches_the_build_beside_it_not_one_on_path(self) -> None:
+        """`./PracticeTakes` lost its `./` and launched an installed release
+        build with no control channel, so every attended question failed."""
+        self.script(self.root / "bundle", ANSWERS)
+        self.script(self.root / "installed", "exit 3")
+
+        previous = os.getcwd()
+        os.chdir(self.root / "bundle")
+        self.addCleanup(os.chdir, previous)
+        original_path = os.environ.get("PATH", "")
+        os.environ["PATH"] = f"{self.root / 'installed'}{os.pathsep}{original_path}"
+        self.addCleanup(os.environ.__setitem__, "PATH", original_path)
+
+        made = driver.ApplicationDriver(Path("./PracticeTakes"))
+        made.start()
+        self.addCleanup(made.stop)
+
+        self.assertTrue(made.executable.is_absolute())
+        self.assertTrue(made.send("status", timeout=5).success)
+
+    def test_an_application_that_dies_says_why(self) -> None:
+        made = driver.ApplicationDriver(
+            self.script(self.root, "echo 'ALSA: cannot open capture device' >&2; exit 1")
+        )
+        made.start()
+        self.addCleanup(made.stop)
+
+        with self.assertRaises(driver.ChannelError) as raised:
+            made.send("status", timeout=5)
+
+        self.assertIn("cannot open capture device", str(raised.exception))
 
 
 class WaitForInputTests(unittest.TestCase):

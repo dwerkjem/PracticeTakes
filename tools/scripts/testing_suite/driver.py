@@ -20,6 +20,7 @@ import os
 from pathlib import Path
 import queue
 import subprocess
+import tempfile
 import threading
 import time
 
@@ -91,7 +92,14 @@ class ApplicationDriver:
         extra_arguments: tuple[str, ...] = (),
         display: str = "",
     ) -> None:
-        self.executable = executable
+        # Absolute, always. `Path("./PracticeTakes")` is "PracticeTakes", and a
+        # bare name is looked up on PATH rather than in the current directory,
+        # so a relative path launched whatever Practice Takes was installed --
+        # a release build with no control channel -- instead of the build
+        # sitting next to the caller. Every question then failed as
+        # "unreachable", on a machine where the right build was one directory
+        # away.
+        self.executable = Path(executable).absolute()
         self.extra_arguments = extra_arguments
         # Which X screen this application opens on. Empty means "inherit", which
         # is right for one application at a time. It stops being right the
@@ -111,6 +119,7 @@ class ApplicationDriver:
         # held for that surface rather than for the whole run.
         self.decline_audio_input = True
         self._process: subprocess.Popen[str] | None = None
+        self._error_log = None
 
     def _environment(self) -> dict[str, str] | None:
         if not self.display:
@@ -125,6 +134,7 @@ class ApplicationDriver:
                 f"-DPRACTICE_TAKES_ENABLE_TEST_CONTROL=ON first."
             )
 
+        self._error_log = tempfile.TemporaryFile()
         self._process = subprocess.Popen(
             [
                 str(self.executable),
@@ -140,7 +150,8 @@ class ApplicationDriver:
             ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
+            # Kept rather than discarded, so an application that dies says why.
+            stderr=self._error_log,
             text=True,
             bufsize=1,
             env=self._environment(),
@@ -230,6 +241,24 @@ class ApplicationDriver:
                 except OSError:
                     pass
 
+    def _last_errors(self, lines: int = 8) -> str:
+        """The end of what the application wrote to stderr, as a suffix."""
+        log = self._error_log
+
+        if log is None:
+            return ""
+
+        try:
+            log.flush()
+            log.seek(0)
+            text = log.read().decode("utf-8", "replace")
+        except (OSError, ValueError):
+            return ""
+
+        tail = [line for line in text.splitlines() if line.strip()][-lines:]
+
+        return ("\n  It said:\n    " + "\n    ".join(tail)) if tail else ""
+
     def send(self, command: str, timeout: float | None = None) -> Reply:
         """Send one command and read its reply, or say that none came."""
         process = self._process
@@ -238,7 +267,7 @@ class ApplicationDriver:
             raise ChannelError("The control channel is not open.")
 
         if process.poll() is not None:
-            raise ChannelError("The application exited.")
+            raise ChannelError("The application exited." + self._last_errors())
 
         process.stdin.write(command + "\n")
         process.stdin.flush()
@@ -265,6 +294,7 @@ class ApplicationDriver:
             if line is None:
                 raise ChannelError(
                     f"The application closed the channel while answering '{command}'."
+                    + self._last_errors()
                 )
 
             lines.append(line)
