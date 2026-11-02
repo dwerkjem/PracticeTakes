@@ -608,6 +608,35 @@ SURFACES: tuple[Surface, ...] = (
     # enough to read in milliseconds; the seconds here are slack for a loaded
     # machine, and an in-progress capture is obviously wrong in the review grid
     # rather than subtly wrong.
+    # A score being imported: the moment between choosing a file and its
+    # report. Held by the state rather than waited for, since a small file is
+    # read in milliseconds and would otherwise only ever be photographed by
+    # accident.
+    Surface(
+        state="score-import-in-progress",
+        title="The score import window while a score is being read",
+        area="score",
+        modes=frozenset({FULL}),
+        window_title=SCORE_IMPORT_WINDOW,
+        warmup_seconds=1.0,
+        extras=(
+            Question(
+                "names-the-file",
+                "Does it say which file is being read -- Mahler - Die zwei blauen Augen.mxl?",
+            ),
+            Question(
+                "reads-as-in-progress",
+                "Is it plainly an import still in progress, rather than a finished report "
+                "with nothing in it?",
+            ),
+            Question(
+                "progress-becomes-the-report",
+                "Open the sample score from File: does this window appear straight away and "
+                "then turn into the import report, without a second window?",
+                behavioural=True,
+            ),
+        ),
+    ),
     Surface(
         state="score-import-diagnostics",
         title="The score import summary, with diagnostics",
@@ -871,6 +900,7 @@ SURFACES: tuple[Surface, ...] = (
         title="The score view drawing a staff, with room to spare",
         tools=("score-view",),
         presentation="floating",
+        window_title="Score View",
         area="score",
         modes=frozenset({FULL}),
         warmup_seconds=3.0,
@@ -1114,6 +1144,15 @@ def validate() -> list[str]:
             problems.append(f"Duplicate surface: state '{surface.state}', title '{surface.title}'.")
 
         seen.add(key)
+
+        # A floating tool is a second top-level window. Without its title the
+        # harness measures and photographs whichever of the application's
+        # windows it finds first -- which is how the floating score view came to
+        # report the main window "stuck" at one size for every small geometry.
+        if surface.presentation == "floating" and not surface.window_title:
+            problems.append(
+                f"'{surface.title}' shows a floating window but does not name it in window_title."
+            )
 
         ids = [question.id for question in questions_for(surface)]
 

@@ -144,6 +144,11 @@ void MainComponent::startScoreImport(const juce::File& file)
 
     // Shown before the import finishes, so a large file does not look like a
     // command that did nothing.
+    showScoreImportProgress(file);
+}
+
+void MainComponent::showScoreImportProgress(const juce::File& file)
+{
     showScoreImportWindow();
     scoreImportWindow->showProgress(file.getFileName());
 }

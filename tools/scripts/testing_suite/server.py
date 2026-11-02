@@ -24,7 +24,9 @@ from urllib.parse import parse_qs, urlparse
 
 import freshness
 import history as history_module
+import display as display_module
 import launcher as launcher_module
+import remote as remote_module
 import restart as restart_module
 import review
 import runner as runner_module
@@ -34,6 +36,12 @@ from store import Store
 
 WEB_ROOT = Path(__file__).resolve().parent / "web"
 HOST = "127.0.0.1"
+
+# Why "open in app" and "attend" do nothing on a page opened remotely.
+REMOTE_LAUNCH_REFUSAL = (
+    "Opening the application is only available on the machine running the hub: "
+    "it opens a window on that machine's screen, which a remote page cannot see."
+)
 
 # Content types are chosen from this table rather than guessed, so nothing a
 # request supplies can reach a response header.
@@ -144,6 +152,7 @@ class ReviewSession:
             "kinds": list(suites_module.KINDS),
             "builds": runner_module.build_overview(),
             "display": runner_module.display_available(),
+            "virtual_display": display_module.is_available(),
             "stale_server": freshness.suite_staleness_warning(SOURCES_LOADED_AT),
             "boot": BOOT_ID,
             "job": self.job.status(),
@@ -268,7 +277,31 @@ class ReviewHandler(BaseHTTPRequestHandler):
 
     # --- Routes -------------------------------------------------------------
 
+    def _is_remote(self) -> bool:
+        return self.session.guard.is_remote(self.headers)
+
+    def _overview(self) -> dict:
+        """The session, plus whether the page asking is on another device.
+
+        Per request rather than per session: one hub can be open on this
+        machine and remotely at once, and only the remote page loses the
+        controls that act on this machine's screen.
+        """
+        return {**self.session.overview(), "remote": self._is_remote()}
+
+    def _refused(self, method: str) -> bool:
+        """Answer 403 and say why, when the guard turns a request away."""
+        reason = self.session.guard.refusal(method, self.headers)
+
+        if reason:
+            self._send_json({"error": reason}, status=403)
+
+        return bool(reason)
+
     def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler's name
+        if self._refused("GET"):
+            return
+
         # A review is a long session over a store another process may be
         # writing. One request that hits something unreadable should say so and
         # leave the rest of the page working, rather than printing a traceback
@@ -279,6 +312,9 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self._send_json({"error": f"{type(error).__name__}: {error}"}, status=500)
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler's name
+        if self._refused("POST"):
+            return
+
         try:
             self._post()
         except Exception as error:  # noqa: BLE001 - the last line before a dead request
@@ -296,12 +332,12 @@ class ReviewHandler(BaseHTTPRequestHandler):
             if run_id is None:
                 # Nothing captured yet. Not an error: it is the first thing that
                 # happens to anyone, and the page has a button for it.
-                self._send_json({"empty": True, **self.session.overview()})
+                self._send_json({"empty": True, **self._overview()})
             else:
                 self._send_json({"empty": False, **review.run_view(self.store, run_id),
-                                 **self.session.overview()})
+                                 **self._overview()})
         elif parsed.path == "/api/session":
-            self._send_json(self.session.overview())
+            self._send_json(self._overview())
         elif parsed.path == "/api/job":
             self._send_json(self.session.job.status())
         elif parsed.path == "/api/history":
@@ -441,6 +477,16 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self.session.select(None)
             self._send_json(self.session.job.status())
         elif parsed.path == "/api/launch":
+            if self._is_remote():
+                # The application opens on this machine's display, where a
+                # person on another device cannot see it or answer anything
+                # about it. Refused here, not only hidden in the page.
+                self._send_json(
+                    {"error": REMOTE_LAUNCH_REFUSAL}, status=403
+                )
+
+                return
+
             if self.session.job.running:
                 # Two instances would fight over the audio device, and a capture
                 # pass has a very definite opinion about which window is which.
@@ -471,7 +517,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self._send_json(history_module.sync(self.store))
         elif parsed.path == "/api/select":
             self.session.select(payload.get("run_id"))
-            self._send_json(self.session.overview())
+            self._send_json(self._overview())
         elif parsed.path == "/api/score":
             problems = review.score(
                 self.store,
@@ -549,15 +595,23 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "not found"}, status=404)
 
 
-def serve(store: Store, run_id: int | None = None, port: int = 8730) -> ThreadingHTTPServer:
+def serve(
+    store: Store, run_id: int | None = None, port: int = 8730, remote_hostname: str = ""
+) -> ThreadingHTTPServer:
     """The hub's server. The caller owns its lifetime.
 
     `run_id` may be None: an empty store is how this looks the first time, and
     the page offers to run something rather than refusing to open.
+
+    Always bound to 127.0.0.1. `remote_hostname` is the name a Cloudflare
+    Tunnel delivers requests under when the hub is opened remotely; see
+    `remote.py`. Without it, only this machine's own names are answered.
     """
     session = ReviewSession(store, run_id)
     handler = type("BoundReviewHandler", (ReviewHandler,), {"session": session})
     httpd = ThreadingHTTPServer((HOST, port), handler)
+    # The port actually bound, which is not `port` when that is 0.
+    session.guard = remote_module.RequestGuard(httpd.server_address[1], remote_hostname)  # type: ignore[attr-defined]
     httpd.session = session  # type: ignore[attr-defined]
 
     return httpd

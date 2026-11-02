@@ -249,7 +249,9 @@ SUITES: tuple[Suite, ...] = (
         label="UI golden images",
         kind=INTERFACE,
         description="Reference screenshots and fresh-launch timings against them.",
-        command=("tools/scripts/quality/ui-validation/run-ui-golden.zsh",),
+        # The build the hub made, passed in: the script's own default is
+        # build/bin/, which the hub never builds into, so it failed at once.
+        command=("tools/scripts/quality/ui-validation/run-ui-golden.zsh", "{PracticeTakes}"),
         needs=("PracticeTakes",),
         needs_display=True,
     ),

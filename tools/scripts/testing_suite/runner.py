@@ -412,7 +412,29 @@ def build_overview() -> list[dict]:
 
 
 def display_available() -> bool:
+    """Whether the hub was started inside a desktop session."""
     return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+
+
+def display_plan(suite_id: str, desktop: bool, xvfb: bool) -> str:
+    """Where a suite that needs a display will get one.
+
+    "desktop" when the hub has one; "own" for the capture pass, which starts
+    its own Xvfb screens and never needed the desktop; "virtual" for any other
+    such suite when Xvfb can stand in; "" when there is nothing to run on.
+
+    A hub started outside the desktop session -- from SSH, a plain terminal, or
+    to be used remotely -- has no DISPLAY even on a machine with a screen. It
+    used to skip every UI suite as "no display", including capture, which runs
+    on a virtual screen either way.
+    """
+    if desktop:
+        return "desktop"
+
+    if not xvfb:
+        return ""
+
+    return "own" if suite_id == "ui-capture" else "virtual"
 
 
 def missing_program(command: str) -> str:
@@ -948,11 +970,49 @@ class Job:
         if suite is None:
             return
 
-        if suite.needs_display and not display_available():
-            self._record(suite.id, state="skipped", message="no display available")
-            self._say(f"{suite.label}: skipped, no display", percent=ceiling)
+        where = (
+            display_plan(suite.id, display_available(), display_module.is_available())
+            if suite.needs_display
+            else "desktop"
+        )
+
+        if not where:
+            self._record(
+                suite.id, state="skipped", message="no display available, and Xvfb is not installed"
+            )
+            self._say(f"{suite.label}: skipped, no display and no Xvfb", percent=ceiling)
 
             return
+
+        if where == "virtual":
+            # A private screen for this suite alone, named to its process rather
+            # than published: the hub serves other requests while it runs.
+            with display_module.virtual_display(publish=False) as screen:
+                self._say(
+                    f"{suite.label}: no desktop display, so on a virtual one ({screen})",
+                    percent=floor,
+                )
+                self._run_suite_on(suite, run_id=run_id, mode=mode, resolutions=resolutions,
+                                   themes=themes, floor=floor, ceiling=ceiling,
+                                   display={"DISPLAY": screen})
+
+            return
+
+        self._run_suite_on(suite, run_id=run_id, mode=mode, resolutions=resolutions,
+                           themes=themes, floor=floor, ceiling=ceiling, display={})
+
+    def _run_suite_on(
+        self,
+        suite: suites_module.Suite,
+        *,
+        run_id: int,
+        mode: str,
+        resolutions: tuple[str, ...],
+        themes: tuple[str, ...],
+        floor: int,
+        ceiling: int,
+        display: dict[str, str],
+    ) -> None:
 
         self._record(suite.id, state="running")
         self._say(f"running {suite.label}", state=RUNNING, percent=floor)
@@ -1015,7 +1075,7 @@ class Job:
             working_directory=REPOSITORY_ROOT / suite.working_directory,
             capture=output,
             sanitised=False,
-            environment=dict(suite.environment),
+            environment={**dict(suite.environment), **display},
         )
 
         # Before anything is written down. A killed process exits non-zero, and
