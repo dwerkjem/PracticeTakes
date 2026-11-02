@@ -18,7 +18,12 @@ MidiInputService::MidiInputService()
     // "Connected" to a subscription that had died with the old device. JUCE
     // delivers this on the message thread, as reconcileDevice requires. The
     // timer stays as the fallback for a backend that announces nothing.
-    deviceListConnection = juce::MidiDeviceListConnection::make([this] { reconcileDevice(); });
+    deviceListConnection = juce::MidiDeviceListConnection::make(
+        [this]
+        {
+            deviceListChanges.fetch_add(1, std::memory_order_relaxed);
+            reconcileDevice();
+        });
 }
 
 MidiInputService::~MidiInputService()
@@ -196,6 +201,11 @@ std::uint64_t MidiInputService::receivedEventCount() const noexcept
     return eventsReceived.load(std::memory_order_relaxed);
 }
 
+std::uint64_t MidiInputService::deviceListGeneration() const noexcept
+{
+    return deviceListChanges.load(std::memory_order_relaxed);
+}
+
 std::vector<MidiRecoveryPolicy::DeviceListing> MidiInputService::presentDevices()
 {
     std::vector<MidiRecoveryPolicy::DeviceListing> present;
@@ -275,7 +285,11 @@ void MidiInputService::reconcileDevice()
 
         // The keyboard is where its name now is, so the selection follows it
         // there; saving settings records the new identifier.
-        chosenIdentifier = target;
+        if (chosenIdentifier != target)
+        {
+            chosenIdentifier = target;
+            deviceListChanges.fetch_add(1, std::memory_order_relaxed);
+        }
     }
 }
 
