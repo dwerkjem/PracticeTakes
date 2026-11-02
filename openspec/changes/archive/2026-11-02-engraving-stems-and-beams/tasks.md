@@ -106,14 +106,18 @@ Settled inputs, from `design.md` § Decisions:
 - [x] 7.5 Captured `score-view-notation` headlessly and looked at it, which is
       what found 5.2. Bar 1's eighths and bar 3's sixteenths beam, the second
       beam stacks clear of the first, and every bar meets its stems flush.
-- [ ] 7.6 **Not done.** No reference image shows a *partial* beam: nothing in
-      the fixture is a lone sixteenth among eighths, and widening the fixture
-      would move every count in `ApprovedScoreFixturesTests`. `drawBeam`
-      branches on nothing a stub changes — a partial beam is the same filled
-      quad between two x values — so the picture of the full beams is a picture
-      of that code path, and where a stub is placed is pinned in
-      `BeamGeometryTests`. Someone adding a dotted-eighth figure to the fixture
-      should pin it then.
+- [x] 7.6 A reference image of a *partial* beam. Not added to the fixture --
+      widening it would move every count in `ApprovedScoreFixturesTests` -- but
+      found in the shipped sample instead: Mahler's bar 2 is a dotted eighth and
+      a sixteenth in the voice and in both piano staves, so `score-view-sample`
+      shows backward stubs above the notes on the treble staves and below them
+      on the bass. Run 64 captured it in every geometry and theme and every
+      question on it passed review; the stubs were looked at enlarged, and each
+      hangs back from its group's last stem. `ScoreLayoutCorpusTests` now pins
+      that the sample's opening system still carries a backward stub in each
+      stem direction, so the reference image cannot quietly stop being a
+      picture of one. Checked against two mutations -- stubs pointing forwards,
+      and no stubs at all -- and both fail it.
 
 ## 8. Documentation
 
