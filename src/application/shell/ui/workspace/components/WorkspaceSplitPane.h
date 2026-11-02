@@ -73,7 +73,7 @@ class WorkspaceSplitPane final : public juce::Component
         juce::LookAndFeel& lookAndFeelToUse,
         std::function<void(double)> ratioChanged = {})
         : firstChild(&firstPane), secondChild(&secondPane), vertical(isVertical),
-          onRatioChanged(std::move(ratioChanged))
+          ratio(std::clamp(initialRatio, 0.1, 0.9)), onRatioChanged(std::move(ratioChanged))
     {
         addAndMakeVisible(firstPane);
         addAndMakeVisible(secondPane);
@@ -86,7 +86,6 @@ class WorkspaceSplitPane final : public juce::Component
         // half the width -- while that nested split needed rather more, and the
         // overflow came out at the right edge as a tool nobody could see. The
         // flat minimum is why three docked tools misbehaved and two never did.
-        const auto ratio = std::clamp(initialRatio, 0.1, 0.9);
         layoutManager.setItemLayout(0, minimumForChild(firstChild), -1.0, -ratio);
         layoutManager.setItemLayout(1, dividerThickness, dividerThickness, dividerThickness);
         layoutManager.setItemLayout(2, minimumForChild(secondChild), -1.0, -(1.0 - ratio));
@@ -188,15 +187,60 @@ class WorkspaceSplitPane final : public juce::Component
         return minimumVerticalPaneSize;
     }
 
+    // The smallest width and height this split can be given, if it and every
+    // split inside it may lay out either way round. What a parent deciding
+    // whether to stack needs to know: a nested side-by-side pair that would
+    // stack itself needs one pane's width, not two.
+    [[nodiscard]] int flexibleMinimumWidth() const
+    {
+        const auto first = flexibleMinimumWidthOf(firstChild);
+        const auto second = flexibleMinimumWidthOf(secondChild);
+
+        return std::min(first + dividerThickness + second, std::max(first, second));
+    }
+
+    [[nodiscard]] int flexibleMinimumHeight() const
+    {
+        const auto first = flexibleMinimumHeightOf(firstChild);
+        const auto second = flexibleMinimumHeightOf(secondChild);
+
+        return std::min(first + dividerThickness + second, std::max(first, second));
+    }
+
     void resized() override
     {
-        juce::Component* components[]{firstChild, divider.get(), secondChild};
-        layoutManager.layOutComponents(
-            components, 3, 0, 0, getWidth(), getHeight(), vertical, true);
+        // The arrangement the user made, whenever it fits -- laid out exactly
+        // as it always was. Only a split that has run out of room along its own
+        // axis does anything else.
+        if (fitsAsArranged())
+        {
+            divider->setVisible(true);
+            juce::Component* components[]{firstChild, divider.get(), secondChild};
+            layoutManager.layOutComponents(
+                components, 3, 0, 0, getWidth(), getHeight(), vertical, true);
+
+            return;
+        }
+
+        // Turned the other way when that fits: side by side becomes stacked in
+        // a tall, narrow window, and back again when it widens. Otherwise kept
+        // the way it was and shared out, smaller than each pane would like but
+        // all of it inside the split. Either way the divider is put away: it
+        // drags along the arranged axis, and the arrangement it moves is the
+        // one that comes back.
+        divider->setVisible(false);
+        layOutByRatio(fitsTurned() ? !vertical : vertical);
     }
 
     [[nodiscard]] double currentRatio() const noexcept
     {
+        // Out of the arranged layout the divider is not where the panes are,
+        // so the ratio is the one kept for when it comes back.
+        if (!divider->isVisible())
+        {
+            return ratio;
+        }
+
         const auto availableSize = availableSplitSize();
         if (availableSize <= 0)
         {
@@ -244,8 +288,96 @@ class WorkspaceSplitPane final : public juce::Component
         return std::max(0, (vertical ? getHeight() : getWidth()) - dividerThickness);
     }
 
+    // Whether the layout manager can place both children along the arranged
+    // axis without either going below what it needs -- the case where it
+    // overflowed the split instead.
+    [[nodiscard]] bool fitsAsArranged() const
+    {
+        const auto along = vertical ? getHeight() : getWidth();
+        const auto across = vertical ? getWidth() : getHeight();
+        const auto needAcross =
+            vertical ? std::max(minimumWidthOf(firstChild), minimumWidthOf(secondChild))
+                     : std::max(minimumHeightOf(firstChild), minimumHeightOf(secondChild));
+
+        return along >=
+                   minimumForChild(firstChild) + dividerThickness + minimumForChild(secondChild) &&
+               across >= needAcross;
+    }
+
+    // Whether the children fit laid out across the arranged axis instead,
+    // counting on nested splits to turn as well where they need to.
+    [[nodiscard]] bool fitsTurned() const
+    {
+        const auto turnedVertical = !vertical;
+        const auto along = turnedVertical ? getHeight() : getWidth();
+        const auto across = turnedVertical ? getWidth() : getHeight();
+        const auto alongOf = [turnedVertical](juce::Component* child)
+        { return turnedVertical ? flexibleMinimumHeightOf(child) : flexibleMinimumWidthOf(child); };
+        const auto acrossOf = [turnedVertical](juce::Component* child)
+        { return turnedVertical ? flexibleMinimumWidthOf(child) : flexibleMinimumHeightOf(child); };
+
+        return along >= alongOf(firstChild) + dividerThickness + alongOf(secondChild) &&
+               across >= std::max(acrossOf(firstChild), acrossOf(secondChild));
+    }
+
+    // Both children along `alongVertical`, split at the kept ratio: each given
+    // what it needs where there is room for both, and the ratio's share of
+    // whatever there is where there is not.
+    void layOutByRatio(bool alongVertical)
+    {
+        const auto total = alongVertical ? getHeight() : getWidth();
+        const auto available = std::max(0, total - dividerThickness);
+        const auto needs = [alongVertical](juce::Component* child)
+        { return alongVertical ? flexibleMinimumHeightOf(child) : flexibleMinimumWidthOf(child); };
+        const auto firstNeeds = needs(firstChild);
+        const auto secondNeeds = needs(secondChild);
+
+        auto firstSize = juce::roundToInt(static_cast<double>(available) * ratio);
+        if (firstNeeds + secondNeeds <= available)
+        {
+            firstSize = std::clamp(firstSize, firstNeeds, available - secondNeeds);
+        }
+        firstSize = std::clamp(firstSize, 0, available);
+
+        const auto secondStart = firstSize + dividerThickness;
+        const auto secondSize = std::max(0, total - secondStart);
+
+        if (alongVertical)
+        {
+            firstChild->setBounds(0, 0, getWidth(), firstSize);
+            secondChild->setBounds(0, secondStart, getWidth(), secondSize);
+        }
+        else
+        {
+            firstChild->setBounds(0, 0, firstSize, getHeight());
+            secondChild->setBounds(secondStart, 0, secondSize, getHeight());
+        }
+    }
+
+    [[nodiscard]] static int flexibleMinimumWidthOf(juce::Component* child)
+    {
+        if (const auto* split = dynamic_cast<const WorkspaceSplitPane*>(child))
+        {
+            return split->flexibleMinimumWidth();
+        }
+
+        return minimumWidthOf(child);
+    }
+
+    [[nodiscard]] static int flexibleMinimumHeightOf(juce::Component* child)
+    {
+        if (const auto* split = dynamic_cast<const WorkspaceSplitPane*>(child))
+        {
+            return split->flexibleMinimumHeight();
+        }
+
+        return minimumHeightOf(child);
+    }
+
     void reportCurrentRatio()
     {
+        ratio = currentRatio();
+
         if (onRatioChanged)
         {
             onRatioChanged(currentRatio());
@@ -255,6 +387,11 @@ class WorkspaceSplitPane final : public juce::Component
     juce::Component* firstChild;
     juce::Component* secondChild;
     bool vertical;
+
+    // Where the divider is, as a share of the split. Kept apart from the layout
+    // manager so a split that has stacked for want of room, where the divider
+    // is put away, still knows where to put it when the room comes back.
+    double ratio;
     std::function<void(double)> onRatioChanged;
     juce::StretchableLayoutManager layoutManager;
     std::unique_ptr<ReportingResizerBar> divider;

@@ -26,6 +26,21 @@ class SurfaceListTests(unittest.TestCase):
         """Run before a session starts, so a malformed list fails immediately."""
         self.assertEqual(surfaces.validate(), [])
 
+    def test_a_floating_surface_must_name_its_window(self) -> None:
+        """Otherwise the harness measures whichever window it finds first."""
+        unnamed = surfaces.Surface(
+            state="tuner-floating",
+            title="A floating window nobody named",
+            tools=("tuner",),
+            presentation="floating",
+            modes=frozenset({surfaces.FULL}),
+        )
+        original = surfaces.SURFACES
+        surfaces.SURFACES = (*original, unnamed)
+        self.addCleanup(setattr, surfaces, "SURFACES", original)
+
+        self.assertTrue(any("window_title" in problem for problem in surfaces.validate()))
+
     def test_quick_mode_is_a_strict_subset_of_full(self) -> None:
         """Otherwise 'quick' stops meaning 'less than full'."""
         quick = {s.title for s in surfaces.surfaces_for_mode(surfaces.QUICK)}

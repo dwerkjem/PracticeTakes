@@ -197,6 +197,11 @@ class MainComponent final
     // an import is already running -- see ScoreImportJob::start.
     void startScoreImport(const juce::File& file);
 
+    // The import window saying `file` is being read: what every import shows
+    // until its result arrives. Separate so a capture can show that moment
+    // and hold it, which a real import of a small file passes in milliseconds.
+    void showScoreImportProgress(const juce::File& file);
+
     // Deliver a finished import: the summary is shown, and a successful score
     // becomes the current one. Runs on the message thread.
     void finishScoreImport(const score::musicxml::MusicXmlImportResult& result);

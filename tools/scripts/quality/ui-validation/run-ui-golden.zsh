@@ -13,7 +13,10 @@ readonly golden_dir=$evidence_dir/goldens
 readonly launch_dir=$evidence_dir/launch-validation
 readonly workflow_dir=$evidence_dir/workflows
 readonly manifest=$evidence_dir/manifest.txt
-readonly app=$repository_root/build/bin/PracticeTakes
+# The application under test. The first argument when given -- the testing
+# suite's hub passes the build it made, which lives in build-tc/ rather than
+# build/ -- otherwise the ordinary build.
+readonly app=${1:-$repository_root/build/bin/PracticeTakes}
 readonly capture=$validation_root/xwindow_capture
 readonly pointer=$validation_root/pointer_control
 readonly window_control=$validation_root/window_control
@@ -28,7 +31,7 @@ readonly constrained_height=600
 readonly settings_relative_path=.config/PracticeTakes/PracticeTakes.settings
 
 if [[ ! -x "$app" ]]; then
-    print -u2 -- "Build Practice Takes before running visual validation"
+    print -u2 -- "Build Practice Takes before running visual validation (looked for $app)"
     exit 1
 fi
 if pgrep -x PracticeTakes >/dev/null 2>&1; then

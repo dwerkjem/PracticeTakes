@@ -9,6 +9,8 @@ rather than a ten-minute build.
 
 from __future__ import annotations
 
+import contextlib
+
 from pathlib import Path
 import sys
 import tempfile
@@ -33,6 +35,21 @@ PROVENANCE = {
     "display": "2560x1440",
     "attributes": {},
 }
+
+
+class DisplayPlanTests(unittest.TestCase):
+    def test_where_a_display_suite_gets_its_screen(self) -> None:
+        plan = runner_module.display_plan
+
+        self.assertEqual(plan("smoke", desktop=True, xvfb=True), "desktop")
+        self.assertEqual(plan("smoke", desktop=True, xvfb=False), "desktop")
+        self.assertEqual(plan("smoke", desktop=False, xvfb=True), "virtual")
+        self.assertEqual(plan("ui-golden", desktop=False, xvfb=True), "virtual")
+        # Capture starts its own screens, so it neither needs the desktop nor
+        # wants a screen started for it.
+        self.assertEqual(plan("ui-capture", desktop=False, xvfb=True), "own")
+        self.assertEqual(plan("smoke", desktop=False, xvfb=False), "")
+        self.assertEqual(plan("ui-capture", desktop=False, xvfb=False), "")
 
 
 class SuiteListTests(unittest.TestCase):
@@ -251,15 +268,56 @@ class JobTests(unittest.TestCase):
         self.assertEqual(len(measurements), 1)
         self.assertEqual(measurements[0]["metric"], "pitch detector")
 
+    def without_desktop(self, *, xvfb: bool) -> list[str]:
+        """No DISPLAY for the hub; Xvfb present or not. Returns screens started."""
+        started: list[str] = []
+
+        @contextlib.contextmanager
+        def fake_virtual_display(*args, publish: bool = True, **kwargs):
+            # Never published: the hub serves other requests while a suite runs.
+            self.assertFalse(publish)
+            started.append(":97")
+            yield ":97"
+
+        for owner, name, value in (
+            (runner_module, "display_available", lambda: False),
+            (runner_module.display_module, "is_available", lambda: xvfb),
+            (runner_module.display_module, "virtual_display", fake_virtual_display),
+        ):
+            self.addCleanup(setattr, owner, name, getattr(owner, name))
+            setattr(owner, name, value)
+
+        return started
+
     def test_a_display_suite_is_skipped_rather_than_failed_without_one(self) -> None:
-        original = runner_module.display_available
-        runner_module.display_available = lambda: False
-        self.addCleanup(setattr, runner_module, "display_available", original)
+        self.without_desktop(xvfb=False)
 
         status = self.run_job(["smoke"])
 
         self.assertEqual(status["results"]["smoke"]["state"], "skipped")
+        self.assertIn("Xvfb", status["results"]["smoke"]["message"])
         self.assertEqual(status["state"], runner_module.FINISHED)
+
+    def test_a_display_suite_runs_on_a_virtual_screen_without_a_desktop(self) -> None:
+        """A hub started outside the desktop session -- over SSH, or for remote
+        use -- has no DISPLAY on a machine that has a screen. It used to skip
+        every UI suite; with Xvfb it runs them on a private screen instead."""
+        started = self.without_desktop(xvfb=True)
+
+        status = self.run_job(["smoke"])
+
+        self.assertEqual(started, [":97"])
+        self.assertEqual(status["results"]["smoke"]["state"], "passed")
+        self.assertEqual(self.environments[-1].get("DISPLAY"), ":97")
+
+    def test_a_suite_with_a_desktop_display_keeps_it(self) -> None:
+        original = runner_module.display_available
+        runner_module.display_available = lambda: True
+        self.addCleanup(setattr, runner_module, "display_available", original)
+
+        self.run_job(["smoke"])
+
+        self.assertNotIn("DISPLAY", self.environments[-1])
 
     def test_a_missing_program_is_unavailable_rather_than_failed(self) -> None:
         """`npm` not installed is not a failing test — the suite never ran."""
