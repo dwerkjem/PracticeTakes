@@ -283,6 +283,16 @@ const std::vector<ApprovedWindowState>& states()
          false, "", false,
          "The score view drawing a piano part as a braced grand staff, both hands aligned", 0.0, "",
          "grand-staff-sample.musicxml", false},
+        // The sample the application ships, opened the way the File menu and
+        // the empty-window button open it: written out of the executable, then
+        // imported. The one score state whose input is not a committed fixture
+        // but the bytes a user actually gets.
+        {"score-view-sample", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view showing the sample score the application ships: a Mahler song for "
+         "voice and piano",
+         0.0, "", bundledSampleFixtureName(), false},
     };
 
     return approved;
@@ -299,6 +309,7 @@ const std::vector<ApprovedClickTarget>& targets()
         {"settings-button", "Opens the settings menu"},
         {"help-button", "Opens the help menu"},
         {"microphone-button", "Toggles the global microphone mute"},
+        {"open-sample-button", "Opens the sample score from the empty window"},
         {"hamburger-button", "Opens the collapsed menu in a narrow window"},
         {"fullscreen-button", "Toggles fullscreen"},
     };
@@ -349,6 +360,15 @@ const std::string& approvedScoreFixtureDirectory()
     static const std::string directory{"src/tests/resources/harness-scores"};
 
     return directory;
+}
+
+const std::string& bundledSampleFixtureName()
+{
+    // Not a file name, so it can never collide with one in the fixture
+    // directory: a state naming it gets the shipped sample instead.
+    static const std::string name{"<bundled sample>"};
+
+    return name;
 }
 
 const std::vector<std::string>& approvedThemeNames()

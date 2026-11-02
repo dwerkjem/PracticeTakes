@@ -6,6 +6,7 @@
 
 #include "../../../testcontrol/TestControlClicker.h"
 #include "../../ui/feedback/FeedbackWindow.h"
+#include "../../ui/score/BundledSampleScore.h"
 #include "../../ui/score/ScoreImportWindow.h"
 #include "../../ui/settings/SettingsWindow.h"
 
@@ -19,6 +20,14 @@ namespace
 // compiled away without PRACTICE_TAKES_ENABLE_TEST_CONTROL.
 [[nodiscard]] juce::File scoreFixtureFile(const std::string& fixture)
 {
+    // The shipped sample, through the same install step the menu item uses. A
+    // failed install returns a default File, which the caller already treats
+    // as a missing fixture.
+    if (fixture == testcontrol::bundledSampleFixtureName())
+    {
+        return bundled_sample::installBundledSampleScore();
+    }
+
     return juce::File(PRACTICE_TAKES_SOURCE_DIR)
         .getChildFile(juce::String(testcontrol::approvedScoreFixtureDirectory()))
         .getChildFile(juce::String(fixture));

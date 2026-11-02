@@ -67,7 +67,11 @@ class ScoreGlyphPainter
         const engraving::System& system,
         double originX,
         double originY) const;
-    void drawBrace(const engraving::System& system, double originX, double originY) const;
+    void drawBrace(
+        const engraving::System& system,
+        const engraving::StaffGroup& group,
+        double originX,
+        double originY) const;
     void drawClef(const engraving::ClefGlyph& glyph, double originX, double originY) const;
     void drawTie(const engraving::TieGlyph& glyph, double originX, double originY) const;
 

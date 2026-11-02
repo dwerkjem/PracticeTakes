@@ -1,16 +1,18 @@
 #include "../../MainComponent.h"
 
+#include "BundledSampleScore.h"
 #include "ScoreImportWindow.h"
 
 namespace
 {
-// The File menu holds one item. `design.md` § Open Questions records why it is
-// not being filled out speculatively: the menu's second item should be a
-// command someone needs, not a slot filled because a menu with one item looks
-// empty.
+// The File menu. `design.md` § Open Questions records why it is not filled out
+// speculatively: each item should be a command someone needs, not a slot filled
+// because a short menu looks empty. The second is the sample score, for the
+// person who has just installed the application and has no MusicXML file yet.
 constexpr int openScoreMenuItemId = 1;
+constexpr int openSampleScoreMenuItemId = 2;
 
-constexpr int fileMenuWidth = 220;
+constexpr int fileMenuWidth = 320;
 
 // Offered together rather than as separate filters. The importer decides what a
 // file is by its content, not its extension, so a chooser stricter than the
@@ -30,6 +32,7 @@ void MainComponent::showFileMenu()
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
     menu.addItem(openScoreMenuItemId, "Open score...");
+    menu.addItem(openSampleScoreMenuItemId, bundled_sample::menuLabel());
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(
@@ -44,6 +47,10 @@ void MainComponent::showFileMenu()
             if (selectedItemId == openScoreMenuItemId)
             {
                 safeThis->openScore();
+            }
+            else if (selectedItemId == openSampleScoreMenuItemId)
+            {
+                safeThis->openSampleScore();
             }
         });
 }
@@ -76,6 +83,30 @@ void MainComponent::openScore()
 
             safeThis->startScoreImport(chosen);
         });
+}
+
+void MainComponent::openSampleScore()
+{
+    // A few kilobytes, written only when the copy on disk is missing or
+    // differs, so doing it here on the message thread costs less than the
+    // chooser the other route opens.
+    const juce::File sample = bundled_sample::installBundledSampleScore();
+
+    if (sample == juce::File())
+    {
+        // Said, not swallowed: a button that does nothing when clicked is the
+        // failure this command exists to prevent for a new user.
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::MessageBoxIconType::WarningIcon, "The sample score could not be opened",
+            "Practice Takes could not write the sample score to " +
+                bundled_sample::defaultFolder().getFullPathName() +
+                ". Check that the folder can be written to, or open a MusicXML file of "
+                "your own with File > Open score.");
+
+        return;
+    }
+
+    startScoreImport(sample);
 }
 
 void MainComponent::startScoreImport(const juce::File& file)

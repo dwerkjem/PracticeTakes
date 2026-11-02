@@ -60,7 +60,9 @@ TEST_CASE("every state's score fixture is on disk", "[testcontrol][approved][sco
     // "missing fixture" without either is the least useful way to learn this.
     for (const ApprovedWindowState& state : approvedWindowStates())
     {
-        if (state.scoreFixture.empty())
+        // Not a file in the directory: the shipped sample, whose own tests
+        // cover that it is there and imports.
+        if (state.scoreFixture.empty() || state.scoreFixture == bundledSampleFixtureName())
         {
             continue;
         }
@@ -93,7 +95,7 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
     CHECK(
         naming == std::set<std::string>{
                       "score-import-clean", "score-import-diagnostics", "score-view-grand-staff",
-                      "score-view-notation", "score-view-notation-large"});
+                      "score-view-notation", "score-view-notation-large", "score-view-sample"});
 }
 
 // The invariant this started as was "a state naming a score opens nothing
@@ -420,7 +422,7 @@ TEST_CASE("report what the summary window will show for each fixture", "[.harnes
     // without building the application or taking a screenshot.
     for (const ApprovedWindowState& state : approvedWindowStates())
     {
-        if (state.scoreFixture.empty())
+        if (state.scoreFixture.empty() || state.scoreFixture == bundledSampleFixtureName())
         {
             continue;
         }

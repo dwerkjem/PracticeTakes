@@ -182,6 +182,15 @@ juce_add_binary_data(PracticeTakesFonts
         "${PRACTICE_TAKES_FONT_DIRECTORY}/Bravura.otf"
 )
 
+# The sample score, embedded so a first launch has a real score to show without
+# the user owning a MusicXML file. A CC0 transcription of a public-domain song;
+# its provenance, and why it is this one, are in tools/packaging/samples.
+juce_add_binary_data(PracticeTakesSamples
+    HEADER_NAME PracticeTakesSamples.h
+    NAMESPACE PracticeTakesSamples
+    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tools/packaging/samples/mahler-die-zwei-blauen-augen.mxl"
+)
+
 # The space-free binary name is what the Debian package, the NSIS installer,
 # and the tooling scripts under tools/scripts/ all expect. Apple is deliberately
 # excluded: juce_add_gui_app names both the bundle and its executable after
@@ -251,6 +260,7 @@ target_link_libraries(PracticeTakes
     PRIVATE
         PracticeTakesIcon
         PracticeTakesFonts
+        PracticeTakesSamples
         juce::juce_audio_utils
         juce::juce_dsp
         juce::juce_gui_extra
@@ -297,6 +307,7 @@ if(BUILD_TESTING)
         PRIVATE
             Catch2::Catch2WithMain
             PracticeTakesFonts
+            PracticeTakesSamples
             juce::juce_audio_devices
             juce::juce_data_structures
             juce::juce_dsp

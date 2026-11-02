@@ -163,6 +163,12 @@ struct ApprovedClickTarget
 // fixture exists resolves it exactly as the application does.
 [[nodiscard]] const std::string& approvedScoreFixtureDirectory();
 
+// The `scoreFixture` that means "the sample score the application ships"
+// rather than a file in that directory. The shell writes the sample out exactly
+// as File > Open sample score does and imports that, so the picture is of the
+// bytes a user gets.
+[[nodiscard]] const std::string& bundledSampleFixtureName();
+
 // Every state the application will enter on request.
 [[nodiscard]] const std::vector<ApprovedWindowState>& approvedWindowStates();
 

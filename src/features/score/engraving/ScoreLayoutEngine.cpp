@@ -700,6 +700,8 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
 
     for (const MeasurePlan* plan : staves)
     {
+        measureDuration = std::max(measureDuration, plan->source->nominalDuration);
+
         for (const PlacedEvent& placed : plan->events)
         {
             measureDuration = std::max(measureDuration, score::endOf(*placed.event));
@@ -751,18 +753,21 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
 
     for (MeasurePlan* plan : staves)
     {
+        // Each staff's own measure: on a grand staff every staff shares one, but
+        // each part has its own, with its own directions and its own length.
+        const score::Measure& own = *plan->source;
+
         plan->contentWidth = contentWidth;
 
         // A measure whose only content is a rest covering it centres that rest,
         // which is the convention and is what makes an empty bar legible.
         if (plan->events.size() == 1 && plan->events.front().isRest &&
-            plan->events.front().event->duration >= measure.nominalDuration &&
-            measure.nominalDuration > 0)
+            plan->events.front().event->duration >= own.nominalDuration && own.nominalDuration > 0)
         {
             plan->events.front().localX = contentWidth * 0.5;
         }
 
-        for (const score::Direction& direction : measure.directions)
+        for (const score::Direction& direction : own.directions)
         {
             if (direction.staff != plan->staff)
             {
@@ -1175,25 +1180,49 @@ void assignStaff(System& system, const GlyphCounts& before, int staff)
     assignStaffFrom(system.texts, before.texts, staff);
 }
 
-// Names of the parts this pass is not drawing, as a readable list.
-[[nodiscard]] std::string otherPartNames(const std::vector<score::Part>& parts)
+// A tempo mark is the whole score's, and is engraved once, above the top staff.
+// Exporters write it into every part, so with several parts drawn it would
+// otherwise appear over each of them. Marks from below the first part are moved
+// to the top staff, and dropped where the top staff already has the same mark at
+// the same place. The first part's own staves are left alone, so a part drawn
+// on its own is exactly as it was.
+void liftTempoMarksToTop(System& system, int lastStaffOfFirstPart)
 {
-    std::string listed;
+    std::vector<TextGlyph> kept;
+    kept.reserve(system.texts.size());
 
-    for (std::size_t index = 1; index < parts.size(); ++index)
+    for (const TextGlyph& text : system.texts)
     {
-        const score::Part& part = parts.at(index);
-        const std::string name = part.name.empty() ? part.id : part.name;
-
-        if (!listed.empty())
+        if (text.role != TextRole::tempo || text.staff <= lastStaffOfFirstPart)
         {
-            listed += index + 1 == parts.size() ? " and " : ", ";
+            kept.push_back(text);
         }
-
-        listed += name;
     }
 
-    return listed;
+    for (const TextGlyph& text : system.texts)
+    {
+        if (text.role != TextRole::tempo || text.staff <= lastStaffOfFirstPart)
+        {
+            continue;
+        }
+
+        const bool alreadyShown = std::any_of(
+            kept.begin(), kept.end(),
+            [&text](const TextGlyph& other)
+            {
+                return other.role == TextRole::tempo && other.text == text.text &&
+                       std::abs(other.x - text.x) < 1.0e-9;
+            });
+
+        if (!alreadyShown)
+        {
+            TextGlyph lifted = text;
+            lifted.staff = 0;
+            kept.push_back(lifted);
+        }
+    }
+
+    system.texts = std::move(kept);
 }
 
 // Walk the part once, resolving the clef, key and time in force at each
@@ -1344,85 +1373,157 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         return layout;
     }
 
-    const score::Part& part = score->parts.front();
+    // Every part is drawn, each on its own staves, stacked top to bottom in
+    // score order. A score of one part reads exactly as it did when only the
+    // first part was drawn: every sentence below names "this part" then, and
+    // the part's own name only when there are several to tell apart.
+    const bool severalParts = score->parts.size() > 1;
 
-    layout.partName = part.name.empty() ? part.id : part.name;
+    const auto nameOf = [](const score::Part& part)
+    { return part.name.empty() ? part.id : part.name; };
 
-    if (score->parts.size() > 1)
+    struct DrawnPart
     {
-        notices.add(
-            "Only the first part is shown. Not shown: " + otherPartNames(score->parts) + ".");
+        const score::Part* part = nullptr;
+        std::vector<int> staves;
+    };
+
+    std::vector<DrawnPart> drawnParts;
+
+    for (const score::Part& part : score->parts)
+    {
+        const std::string subject = severalParts ? nameOf(part) : "This part";
+        const std::string object = severalParts ? nameOf(part) : "this part";
+
+        // Every staff of the part that names pitches. A staff in a clef without
+        // pitches -- percussion inside an otherwise pitched part -- is left out
+        // and said so, and the part is left out only when no staff can be drawn.
+        const int staffCount = std::max(1, part.staffCount);
+        std::vector<int> drawnStaves;
+        std::vector<std::string> omittedStaves;
+
+        for (int staff = 1; staff <= staffCount; ++staff)
+        {
+            const score::Clef opening = openingClef(part, staff);
+
+            if (isPitchedClef(opening))
+            {
+                drawnStaves.push_back(staff);
+            }
+            else
+            {
+                omittedStaves.push_back(unpitchedClefDescription(opening.sign));
+            }
+        }
+
+        if (drawnStaves.empty())
+        {
+            notices.add(
+                subject + " is written in " + unpitchedClefDescription(openingClef(part, 1).sign) +
+                ", which has no pitches to place on a staff, so it " +
+                (severalParts ? "is not shown." : "cannot be shown."));
+
+            continue;
+        }
+
+        for (const std::string& description : omittedStaves)
+        {
+            std::string notice = "One staff of ";
+            notice += object;
+            notice += " is written in ";
+            notice += description;
+            notice += ", which has no pitches to place on a staff, so it is not shown.";
+            notices.add(std::move(notice));
+        }
+
+        if (part.measures.empty() || !holdsAnyEvent(part))
+        {
+            notices.add(subject + " has no notes or rests to show.");
+
+            continue;
+        }
+
+        drawnParts.push_back(DrawnPart{&part, std::move(drawnStaves)});
     }
 
-    // Every staff of the part that names pitches. A staff in a clef without
-    // pitches -- percussion inside an otherwise pitched part -- is left out and
-    // said so, and the part is refused only when no staff can be drawn at all.
-    const int staffCount = std::max(1, part.staffCount);
-    std::vector<int> drawnStaves;
-    std::vector<std::string> omittedStaves;
-
-    for (int staff = 1; staff <= staffCount; ++staff)
-    {
-        const score::Clef opening = openingClef(part, staff);
-
-        if (isPitchedClef(opening))
-        {
-            drawnStaves.push_back(staff);
-        }
-        else
-        {
-            omittedStaves.push_back(unpitchedClefDescription(opening.sign));
-        }
-    }
-
-    if (drawnStaves.empty())
+    if (drawnParts.empty())
     {
         layout.outcome = LayoutOutcome::nothingToDraw;
-        notices.add(
-            "This part is written in " + unpitchedClefDescription(openingClef(part, 1).sign) +
-            ", which has no pitches to place on a staff, so it cannot be shown.");
         layout.notices = notices.take();
 
         return layout;
     }
 
-    for (const std::string& description : omittedStaves)
+    for (const DrawnPart& drawn : drawnParts)
     {
-        notices.add(
-            "One staff of this part is written in " + description +
-            ", which has no pitches to place on a staff, so it is not shown.");
-    }
+        if (!layout.partName.empty())
+        {
+            layout.partName += ", ";
+        }
 
-    if (part.measures.empty() || !holdsAnyEvent(part))
-    {
-        layout.outcome = LayoutOutcome::nothingToDraw;
-        notices.add("This part has no notes or rests to show.");
-        layout.notices = notices.take();
-
-        return layout;
+        layout.partName += nameOf(*drawn.part);
     }
 
     const bool anyUncommonClef = std::any_of(
-        drawnStaves.begin(), drawnStaves.end(),
-        [&part](int staff) { return !keySignatureIsConventional(openingClef(part, staff)); });
+        drawnParts.begin(), drawnParts.end(),
+        [](const DrawnPart& drawn)
+        {
+            return std::any_of(
+                drawn.staves.begin(), drawn.staves.end(), [&drawn](int staff)
+                { return !keySignatureIsConventional(openingClef(*drawn.part, staff)); });
+        });
 
     if (anyUncommonClef)
     {
-        notices.add("This part's clef sits on an uncommon line, so compare its key signature "
-                    "with the printed music.");
+        notices.add(
+            severalParts ? "A clef in this score sits on an uncommon line, so compare its key "
+                           "signature with the printed music."
+                         : "This part's clef sits on an uncommon line, so compare its key "
+                           "signature with the printed music.");
+    }
+
+    // Parts are written measure for measure, so they almost always agree on
+    // how many there are. Where one runs longer, the bars only it has cannot be
+    // lined up with anything, and are reported rather than drawn ragged.
+    std::size_t measureCount = drawnParts.front().part->measures.size();
+    std::size_t longest = measureCount;
+
+    for (const DrawnPart& drawn : drawnParts)
+    {
+        measureCount = std::min(measureCount, drawn.part->measures.size());
+        longest = std::max(longest, drawn.part->measures.size());
+    }
+
+    if (longest > measureCount)
+    {
+        notices.add(
+            "Not shown: " + pluralised(longest - measureCount, "bar") +
+            " at the end that only some parts have.");
     }
 
     // Each staff planned vertically on its own, then every measure spaced across
     // all of them at once -- see spaceMeasure for why that order is the point.
+    // `partOfStaff` says which drawn part each planned staff belongs to.
     std::vector<std::vector<MeasurePlan>> plansByStaff;
-    plansByStaff.reserve(drawnStaves.size());
+    std::vector<std::size_t> partOfStaff;
+    std::vector<int> partVerses(drawnParts.size(), 0);
 
-    for (const int staff : drawnStaves)
+    for (std::size_t partIndex = 0; partIndex < drawnParts.size(); ++partIndex)
     {
-        plansByStaff.push_back(planPart(part, staff, options, notices, layout.lyricVerseCount));
-    }
+        const DrawnPart& drawn = drawnParts.at(partIndex);
 
-    const std::size_t measureCount = part.measures.size();
+        for (const int staff : drawn.staves)
+        {
+            plansByStaff.push_back(
+                planPart(*drawn.part, staff, options, notices, partVerses.at(partIndex)));
+            plansByStaff.back().erase(
+                plansByStaff.back().begin() + static_cast<std::ptrdiff_t>(measureCount),
+                plansByStaff.back().end());
+            partOfStaff.push_back(partIndex);
+        }
+
+        layout.lyricVerseCount = std::max(layout.lyricVerseCount, partVerses.at(partIndex));
+    }
 
     for (std::size_t measure = 0; measure < measureCount; ++measure)
     {
@@ -1442,16 +1543,19 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     // actually drawn, rather than by each staff's pass counting the others'.
     std::size_t notDrawn = 0;
 
-    for (const score::Measure& measure : part.measures)
+    for (const DrawnPart& drawn : drawnParts)
     {
-        for (const score::Voice& voice : measure.voices)
+        for (const score::Measure& measure : drawn.part->measures)
         {
-            for (const score::ScoreEvent& event : voice.events)
+            for (const score::Voice& voice : measure.voices)
             {
-                if (std::find(drawnStaves.begin(), drawnStaves.end(), event.staff) ==
-                    drawnStaves.end())
+                for (const score::ScoreEvent& event : voice.events)
                 {
-                    ++notDrawn;
+                    if (std::find(drawn.staves.begin(), drawn.staves.end(), event.staff) ==
+                        drawn.staves.end())
+                    {
+                        ++notDrawn;
+                    }
                 }
             }
         }
@@ -1465,9 +1569,32 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
             " on a staff this view does not show.");
     }
 
+    // Which staves each part spans, for the painter's braces and barlines, and
+    // the lyric rows below each staff: a part's lyrics hang below its own
+    // staves and push down only the part beneath it.
+    std::vector<StaffGroup> staffGroups;
+    std::vector<int> staffVerses;
+
+    for (std::size_t staff = 0; staff < partOfStaff.size(); ++staff)
+    {
+        const std::size_t partIndex = partOfStaff.at(staff);
+        const int index = static_cast<int>(staff);
+
+        if (staff == 0 || partOfStaff.at(staff - 1) != partIndex)
+        {
+            staffGroups.push_back(StaffGroup{index, index});
+        }
+
+        staffGroups.back().lastStaff = index;
+        staffVerses.push_back(partVerses.at(partIndex));
+    }
+
     // A braced system reserves room at its start for the brace and the barline
-    // that joins the staves. Nothing for a single staff, so its x is unchanged.
-    const bool braced = plansByStaff.size() > 1;
+    // that joins the staves. Nothing without a brace, so a single staff -- and a
+    // choir of single-staff parts -- keeps its x unchanged.
+    const bool braced = std::any_of(
+        staffGroups.begin(), staffGroups.end(),
+        [](const StaffGroup& group) { return group.lastStaff > group.firstStaff; });
     const double braceRoom = braced ? options.braceWidth : 0.0;
 
     // A measure's header is as wide as its widest staff's: when only the lower
@@ -1523,19 +1650,25 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     // Each staff after the first starts below the previous one's bottom line,
     // past the gap between them and the upper staff's lyric rows. A piano
     // part's dynamics hang below the right hand, so they fall in that gap.
-    const double lyricRows = static_cast<double>(layout.lyricVerseCount) * options.lyricRowHeight;
+    const auto lyricRowsBelow = [&staffVerses, &options](std::size_t staff)
+    { return static_cast<double>(staffVerses.at(staff)) * options.lyricRowHeight; };
+
     std::vector<double> staffOffsets{0.0};
 
     for (std::size_t staff = 1; staff < plansByStaff.size(); ++staff)
     {
         staffOffsets.push_back(
-            staffOffsets.back() + staffHeightInSpaces + options.interStaffGap + lyricRows);
+            staffOffsets.back() + staffHeightInSpaces + options.interStaffGap +
+            lyricRowsBelow(staff - 1));
     }
 
-    const double systemHeight = options.spaceAboveStaff + staffOffsets.back() +
-                                staffHeightInSpaces + lyricRows + options.spaceBelowStaff;
+    const double systemHeight =
+        options.spaceAboveStaff + staffOffsets.back() + staffHeightInSpaces +
+        lyricRowsBelow(plansByStaff.size() - 1) + options.spaceBelowStaff;
 
-    NotePlacementMap placements;
+    // One map per part: a NoteRef addresses a note within its own part, so two
+    // parts' first notes have the same ref.
+    std::vector<NotePlacementMap> placements(drawnParts.size());
 
     layout.systems.reserve(packed.size());
 
@@ -1549,6 +1682,8 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         system.firstMeasureIndex = plansByStaff.front().at(measures.front()).index;
         system.lastMeasureIndex = plansByStaff.front().at(measures.back()).index;
         system.staffOffsets = staffOffsets;
+        system.staffGroups = staffGroups;
+        system.staffLyricVerses = staffVerses;
         system.staffStartX = braceRoom;
 
         double x = braceRoom;
@@ -1579,7 +1714,8 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
 
                 barlineX = emitMeasure(
                     system, systemIndex, plansByStaff.at(staff).at(measure), startsSystem,
-                    isLastMeasure, options, placements, x, contentStart, static_cast<int>(staff));
+                    isLastMeasure, options, placements.at(partOfStaff.at(staff)), x, contentStart,
+                    static_cast<int>(staff));
 
                 assignStaff(system, before, static_cast<int>(staff));
             }
@@ -1588,6 +1724,8 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         }
 
         system.width = x;
+
+        liftTempoMarksToTop(system, staffGroups.front().lastStaff);
 
         layout.systems.push_back(std::move(system));
     }
@@ -1598,9 +1736,11 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     // note it leaves.
     std::size_t tiesAcrossSystems = 0;
 
-    for (const std::vector<MeasurePlan>& plans : plansByStaff)
+    for (std::size_t staff = 0; staff < plansByStaff.size(); ++staff)
     {
-        for (const MeasurePlan& plan : plans)
+        const NotePlacementMap& partPlacements = placements.at(partOfStaff.at(staff));
+
+        for (const MeasurePlan& plan : plansByStaff.at(staff))
         {
             for (const PlacedEvent& placed : plan.events)
             {
@@ -1618,10 +1758,10 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
                         continue;
                     }
 
-                    const auto start = placements.find(note.ref);
-                    const auto end = placements.find(*modelNote.tiedTo);
+                    const auto start = partPlacements.find(note.ref);
+                    const auto end = partPlacements.find(*modelNote.tiedTo);
 
-                    if (start == placements.end() || end == placements.end())
+                    if (start == partPlacements.end() || end == partPlacements.end())
                     {
                         continue;
                     }

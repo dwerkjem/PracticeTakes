@@ -55,10 +55,11 @@ parity test and a test assertion reads as a position you can count off a staff.
 
 `layOutScore(score, options)` in `ScoreLayoutEngine.cpp`:
 
-1. **Walk the part**, tracking the clef, key and time in force, and placing each
-   measure's events in measure-local coordinates. Vertical positions and
-   accidentals are decided here, because the accidental rule runs in reading
-   order across every voice of the staff.
+1. **Walk each staff of each part**, tracking the clef, key and time in force,
+   and placing each measure's events in measure-local coordinates. Vertical
+   positions and accidentals are decided here, because the accidental rule runs
+   in reading order across every voice of the staff. Then **space each measure
+   across every staff at once**, so a beat lands at one x on all of them.
 2. **Pack measures into systems** at `options.availableWidth`. Clef and key
    repeat at every system start; a time signature does not. At least one measure
    per system, however wide it is.
@@ -207,6 +208,25 @@ beams, ledger lines, rests, ties,
 barlines including repeats and the final double bar, lyrics with hyphens, tempo
 marks, dynamics, and printed bar numbers at system starts.
 
+### Several staves, several parts
+
+Every part is drawn, top to bottom in score order, and every staff of each
+part: a song is a voice over a braced piano. Each staff is planned on its own
+and then spaced with all the others (`spaceMeasure`), which is what keeps the
+beats lined up across a dense part and a sparse one. Spaced part by part, a run
+of sixteenths drifts right of the half notes under it.
+
+`System::staffGroups` records which staves are which part's. The painter draws
+one line joining every staff at the start of the system, a brace on any part
+with more than one staff, and each barline through one part's staves at a time,
+so a voice's bars read as its own above the piano's. A part's lyric rows push
+down only the staves below it (`System::staffLyricVerses`). A tempo mark is
+drawn once, over the top staff, however many parts the file wrote it into.
+
+A single part lays out exactly as it did when only the first part was drawn.
+That was checked by dumping every glyph of every part of every test score, laid
+out on its own at three widths, before and after the change: no difference.
+
 ## What is not drawn, and why
 
 Every one of these produces a sentence in `ScoreLayout::notices`, which the tool
@@ -220,8 +240,9 @@ shows. That list is the reason a first pass is an acceptable thing to ship:
 | **Beamed grace notes** | A run of grace notes is conventionally beamed and is drawn with flags. Reported when it happens. |
 | **Beams across a barline or a system break** | A group is resolved per measure, so neither can arise. The cross-staff diagnostic stands. |
 | **Tuplet brackets and numbers** | A tuplet's notes beam correctly, because the arithmetic works out; nothing names the ratio on the page. |
-| **More than one part** | The first part is drawn and the rest are named. Part selection is #33. |
-| **More than one staff of a part** | The first staff is drawn, and events on the others are counted. The braced grand staff is #200, which this change unblocks. |
+| **A staff with no pitches** | A percussion or tablature staff is left out and named, and the rest of its part, and every other part, is drawn. |
+| **Bars only some parts have** | Parts are drawn as far as they all go; any further bars are counted. |
+| **Brackets for groups of parts** | `<part-group>` is not imported, so a choir's parts are joined at the left but not bracketed. |
 | **Page presentation** | Continuous vertical scroll only. Navigation is #33. |
 | **Volta brackets, D.C./D.S. jumps** | `Measure::repeats` carries them uninterpreted. Repeat barlines *are* drawn. |
 | **A tie across a system break** | Both ends are placed before either is drawn; when they land on different systems the tie is reported. |
