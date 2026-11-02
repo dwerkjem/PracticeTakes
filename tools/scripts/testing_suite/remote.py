@@ -387,6 +387,12 @@ class RequestGuard:
     def local_hosts(self) -> set[str]:
         return {f"127.0.0.1:{self.port}", f"localhost:{self.port}"}
 
+    def is_remote(self, headers) -> bool:
+        """Whether this request came through the tunnel, not from this machine."""
+        host = (headers.get("Host") or "").strip().lower()
+
+        return bool(self.remote_hostname) and host == self.remote_hostname.lower()
+
     def refusal(self, method: str, headers) -> str:
         """Why this request is refused, or "" to let it through."""
         host = (headers.get("Host") or "").strip().lower()

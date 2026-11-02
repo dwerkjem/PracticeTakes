@@ -94,8 +94,8 @@ class GuardTests(unittest.TestCase):
         )
 
 
-class GuardedServerTests(unittest.TestCase):
-    """The same rules, through a real server: the guard has to be consulted."""
+class ServerCase(unittest.TestCase):
+    """A real hub server on port 0, and a way to send it exact headers."""
 
     def setUp(self) -> None:
         self.directory = tempfile.TemporaryDirectory()
@@ -111,6 +111,11 @@ class GuardedServerTests(unittest.TestCase):
         self.directory.cleanup()
 
     def status(self, method: str, path: str, headers: dict[str, str], body: str | None = None) -> int:
+        return self.request(method, path, headers, body)[0]
+
+    def request(
+        self, method: str, path: str, headers: dict[str, str], body: str | None = None
+    ) -> tuple[int, dict]:
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
         connection.putrequest(method, path, skip_host=True)
 
@@ -120,10 +125,19 @@ class GuardedServerTests(unittest.TestCase):
         data = (body or "").encode("utf-8")
         connection.putheader("Content-Length", str(len(data)))
         connection.endheaders(data)
-        status = connection.getresponse().status
+        response = connection.getresponse()
+        status, raw = response.status, response.read()
         connection.close()
 
-        return status
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except ValueError:
+            payload = {}
+
+        return status, payload if isinstance(payload, dict) else {}
+
+class GuardedServerTests(ServerCase):
+    """The same rules, through a real server: the guard has to be consulted."""
 
     def test_local_requests_are_answered(self) -> None:
         self.assertEqual(self.status("GET", "/", {"Host": f"127.0.0.1:{self.port}"}), 200)
@@ -143,6 +157,42 @@ class GuardedServerTests(unittest.TestCase):
         signed = {"Host": HOSTNAME, "Cf-Access-Jwt-Assertion": "token", "Origin": "https://evil.example"}
 
         self.assertEqual(self.status("POST", "/api/stop-run", signed, "{}"), 403)
+
+
+class OpenInAppTests(ServerCase):
+    """Opening the application puts a window on this machine's screen.
+
+    A remote page cannot see it, so the server refuses the launch however the
+    request was made, and tells the page it is remote so it can leave the
+    controls out.
+    """
+
+    remote = {"Host": HOSTNAME, "Cf-Access-Jwt-Assertion": "token", "Origin": f"https://{HOSTNAME}"}
+
+    def local(self) -> dict[str, str]:
+        return {"Host": f"127.0.0.1:{self.port}", "Origin": f"http://127.0.0.1:{self.port}"}
+
+    def test_a_remote_page_cannot_open_the_application(self) -> None:
+        status, payload = self.request("POST", "/api/launch", self.remote, json.dumps({"state": "empty"}))
+
+        self.assertEqual(status, 403)
+        self.assertIn("only available on the machine running the hub", payload["error"])
+
+    def test_the_local_page_is_not_refused_for_being_remote(self) -> None:
+        # No state is named, so the launcher itself declines -- but not with
+        # the remote refusal, which is all this is checking.
+        status, payload = self.request("POST", "/api/launch", self.local(), "{}")
+
+        self.assertNotIn("only available on the machine running the hub", payload.get("error", ""))
+        self.assertNotEqual(status, 403)
+
+    def test_the_page_is_told_whether_it_is_remote(self) -> None:
+        self.assertIs(self.request("GET", "/api/session", self.remote)[1]["remote"], True)
+        self.assertIs(self.request("GET", "/api/session", self.local())[1]["remote"], False)
+        self.assertIs(self.request("GET", "/api/run", self.remote)[1]["remote"], True)
+
+    def test_closing_an_open_application_is_still_allowed(self) -> None:
+        self.assertEqual(self.status("POST", "/api/launch/close", self.remote, "{}"), 200)
 
 
 class ConfigTests(unittest.TestCase):

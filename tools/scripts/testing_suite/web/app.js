@@ -20,6 +20,10 @@ const state = {
   lastClicked: null,
   polling: null,
   zoomed: null,
+  // True when this page was opened through the tunnel from another device.
+  // The application can only open on the hub machine's screen, so the
+  // controls that open it are left out here; the server refuses them too.
+  remote: false,
   // Previews default to large: the grid exists so you can see what is being
   // reviewed, and a thumbnail you have to squint at defeats the whole thing.
   size: window.localStorage.getItem("preview-size") || "large",
@@ -497,7 +501,7 @@ function renderCard(capture) {
     // They were rendered with no controls at all, which reads as "not your
     // job" — and the job was to run a separate command, find the surface
     // again, and answer there.
-    if (question.attended) {
+    if (question.attended && !state.remote) {
       const attend = document.createElement("button");
       attend.type = "button";
       attend.className = "attend";
@@ -562,17 +566,20 @@ function renderCard(capture) {
   }
 
   // The answer to anything a screenshot cannot settle: open the real
-  // application on this exact surface, palette, and size.
-  const open = document.createElement("button");
-  open.type = "button";
-  open.className = "open-in-app";
-  open.textContent = "open in app";
-  open.title = `Launch ${capture.state} in ${capture.theme}, ${capture.geometry} size`;
-  open.addEventListener("click", (event) => {
-    event.stopPropagation();
-    openInApp(capture);
-  });
-  card.appendChild(open);
+  // application on this exact surface, palette, and size. Not offered on a
+  // remote page: the window would open on a screen nobody there can see.
+  if (!state.remote) {
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "open-in-app";
+    open.textContent = "open in app";
+    open.title = `Launch ${capture.state} in ${capture.theme}, ${capture.geometry} size`;
+    open.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openInApp(capture);
+    });
+    card.appendChild(open);
+  }
 
   const comment = document.createElement("button");
   comment.type = "button";
@@ -613,7 +620,9 @@ function renderGrid(view) {
 
   element("outstanding").textContent = outstanding.length
     ? `${outstanding.length} unanswered (${attended} need the application open — ` +
-      "press “attend” on one to launch it). " +
+      (state.remote
+        ? "answer those at the machine running the hub). "
+        : "press “attend” on one to launch it). ") +
       "The run exports as incomplete until they are answered."
     : "Everything is scored.";
 
@@ -1289,6 +1298,8 @@ document.querySelectorAll("button.size").forEach((button) => {
 // --- Opening the application -----------------------------------------------
 
 async function openInApp(capture) {
+  if (state.remote) return;
+
   const banner = element("launch-banner");
   banner.hidden = false;
   banner.textContent = `Opening ${capture.surface} …`;
@@ -1801,6 +1812,8 @@ async function reload() {
   const scroll = window.scrollY;
   const { data } = await api("/api/run");
   state.data = data;
+  state.remote = Boolean(data.remote);
+  element("zoom-open").hidden = state.remote;
 
   renderStaleServer(data);
   renderBuilds(data);

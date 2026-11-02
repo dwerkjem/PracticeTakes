@@ -36,6 +36,12 @@ from store import Store
 WEB_ROOT = Path(__file__).resolve().parent / "web"
 HOST = "127.0.0.1"
 
+# Why "open in app" and "attend" do nothing on a page opened remotely.
+REMOTE_LAUNCH_REFUSAL = (
+    "Opening the application is only available on the machine running the hub: "
+    "it opens a window on that machine's screen, which a remote page cannot see."
+)
+
 # Content types are chosen from this table rather than guessed, so nothing a
 # request supplies can reach a response header.
 CONTENT_TYPES = {
@@ -269,6 +275,18 @@ class ReviewHandler(BaseHTTPRequestHandler):
 
     # --- Routes -------------------------------------------------------------
 
+    def _is_remote(self) -> bool:
+        return self.session.guard.is_remote(self.headers)
+
+    def _overview(self) -> dict:
+        """The session, plus whether the page asking is on another device.
+
+        Per request rather than per session: one hub can be open on this
+        machine and remotely at once, and only the remote page loses the
+        controls that act on this machine's screen.
+        """
+        return {**self.session.overview(), "remote": self._is_remote()}
+
     def _refused(self, method: str) -> bool:
         """Answer 403 and say why, when the guard turns a request away."""
         reason = self.session.guard.refusal(method, self.headers)
@@ -312,12 +330,12 @@ class ReviewHandler(BaseHTTPRequestHandler):
             if run_id is None:
                 # Nothing captured yet. Not an error: it is the first thing that
                 # happens to anyone, and the page has a button for it.
-                self._send_json({"empty": True, **self.session.overview()})
+                self._send_json({"empty": True, **self._overview()})
             else:
                 self._send_json({"empty": False, **review.run_view(self.store, run_id),
-                                 **self.session.overview()})
+                                 **self._overview()})
         elif parsed.path == "/api/session":
-            self._send_json(self.session.overview())
+            self._send_json(self._overview())
         elif parsed.path == "/api/job":
             self._send_json(self.session.job.status())
         elif parsed.path == "/api/history":
@@ -457,6 +475,16 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self.session.select(None)
             self._send_json(self.session.job.status())
         elif parsed.path == "/api/launch":
+            if self._is_remote():
+                # The application opens on this machine's display, where a
+                # person on another device cannot see it or answer anything
+                # about it. Refused here, not only hidden in the page.
+                self._send_json(
+                    {"error": REMOTE_LAUNCH_REFUSAL}, status=403
+                )
+
+                return
+
             if self.session.job.running:
                 # Two instances would fight over the audio device, and a capture
                 # pass has a very definite opinion about which window is which.
@@ -487,7 +515,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
             self._send_json(history_module.sync(self.store))
         elif parsed.path == "/api/select":
             self.session.select(payload.get("run_id"))
-            self._send_json(self.session.overview())
+            self._send_json(self._overview())
         elif parsed.path == "/api/score":
             problems = review.score(
                 self.store,

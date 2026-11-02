@@ -159,8 +159,14 @@ any route runs:
 - **Anything that changes state must come from the hub's own page.** A POST is
   refused if its Origin is any other site.
 
-The attended pass is still local only: it puts a live application in front of
-the person answering, and that person has to be at the machine.
+**Opening the application is local only.** "Open in app", the zoom view's
+open button, and "attend" all start Practice Takes on the hub machine's screen,
+which a remote page cannot see. So a page opened remotely leaves those controls
+out, and the server refuses `/api/launch` for any request that came through the
+tunnel, whatever the page does. Closing an application that is already open is
+still allowed. The attended pass (`test-suite attend`) is local for the same
+reason: it puts a live application in front of the person answering, and that
+person has to be at the machine.
 
 ## Capture
 
