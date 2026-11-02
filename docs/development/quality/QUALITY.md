@@ -82,10 +82,11 @@ The workflow:
 3. Configures `build/compile_commands.json`.
 4. Builds `PracticeTakes` once so JUCE creates `JuceHeader.h` and other generated files required by the compiler commands.
 5. Recursively discovers every `.cpp`/`.h` file under `src/` with `find` (all real source files live at least one directory below `src/`, so a plain `src/*.cpp` glob never matches) and fails loudly if discovery finds zero files.
-6. Runs `clang-tidy --fix` against the discovered implementation files.
-7. Runs `clang-format` over the resulting source and header edits.
-8. Rebuilds and runs clang-tidy without fixes, failing when compilation or blocking findings remain.
-9. Commits and pushes changed files under `src/` back to `main` as `github-actions[bot]`.
+6. Runs clang-tidy without fixes, in parallel, to see whether there is anything to fix. Every pull request already passes the same check, so this usually finds nothing, and steps 7 and 9 are then skipped.
+7. Only if step 6 found something: runs `clang-tidy --fix` on the discovered implementation files, one file at a time (see `run_clang_tidy.py` for why fixes can't run in parallel). This pass takes about 20 minutes, which is why it no longer runs on every push.
+8. Runs `clang-format` over the source and header files.
+9. Only if step 6 found something: rebuilds and runs clang-tidy again without fixes, failing when compilation or blocking findings remain. Otherwise it only rebuilds.
+10. Commits and pushes changed files under `src/` back to `main` as `github-actions[bot]`.
 
 The workflow ignores pushes made by `github-actions[bot]`, preventing its own fix commit from starting another auto-fix cycle.
 
