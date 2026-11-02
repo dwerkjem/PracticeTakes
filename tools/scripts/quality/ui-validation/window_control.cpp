@@ -28,6 +28,92 @@ bool sendWindowState(Display* display, Window window, long action)
                SubstructureRedirectMask | SubstructureNotifyMask, &event) != 0;
 }
 
+// Whether an EWMH window manager is running: one sets _NET_SUPPORTING_WM_CHECK
+// on the root window. A private Xvfb screen -- which the testing suite uses when
+// it has no desktop display -- has none, and a _NET_WM_STATE request there is
+// a message nobody reads.
+bool windowManagerRunning(Display* display)
+{
+    const Atom check = XInternAtom(display, "_NET_SUPPORTING_WM_CHECK", True);
+    if (check == None)
+    {
+        return false;
+    }
+
+    Atom type = None;
+    int format = 0;
+    unsigned long items = 0;
+    unsigned long remaining = 0;
+    unsigned char* data = nullptr;
+    const auto status = XGetWindowProperty(
+        display, DefaultRootWindow(display), check, 0, 1, False, XA_WINDOW, &type, &format, &items,
+        &remaining, &data);
+    const auto running = status == Success && type == XA_WINDOW && items == 1;
+    if (data != nullptr)
+    {
+        XFree(data);
+    }
+    return running;
+}
+
+// Where a window was before this tool maximised it without a window manager,
+// so "restore" can put it back. Kept on the window itself, because each call is
+// a separate process.
+Atom restoreGeometryAtom(Display* display)
+{
+    return XInternAtom(display, "_PRACTICE_TAKES_RESTORE_GEOMETRY", False);
+}
+
+// What a window manager would do for _NET_WM_STATE_MAXIMIZED, done directly:
+// remember the geometry, then fill the screen.
+bool maximizeWithoutWindowManager(Display* display, Window window)
+{
+    XWindowAttributes attributes{};
+    if (XGetWindowAttributes(display, window, &attributes) == 0)
+    {
+        return false;
+    }
+
+    const long saved[4] = {attributes.x, attributes.y, attributes.width, attributes.height};
+    XChangeProperty(
+        display, window, restoreGeometryAtom(display), XA_CARDINAL, 32, PropModeReplace,
+        reinterpret_cast<const unsigned char*>(saved), 4);
+
+    const auto screen = DefaultScreen(display);
+    return XMoveResizeWindow(
+               display, window, 0, 0, static_cast<unsigned int>(DisplayWidth(display, screen)),
+               static_cast<unsigned int>(DisplayHeight(display, screen))) != 0;
+}
+
+bool restoreWithoutWindowManager(Display* display, Window window)
+{
+    Atom type = None;
+    int format = 0;
+    unsigned long items = 0;
+    unsigned long remaining = 0;
+    unsigned char* data = nullptr;
+    const auto status = XGetWindowProperty(
+        display, window, restoreGeometryAtom(display), 0, 4, True, XA_CARDINAL, &type, &format,
+        &items, &remaining, &data);
+    if (status != Success || data == nullptr || items != 4)
+    {
+        if (data != nullptr)
+        {
+            XFree(data);
+        }
+        // Never maximised by this tool: nothing to restore.
+        return false;
+    }
+
+    const auto* saved = reinterpret_cast<const long*>(data);
+    const auto moved =
+        XMoveResizeWindow(
+            display, window, static_cast<int>(saved[0]), static_cast<int>(saved[1]),
+            static_cast<unsigned int>(saved[2]), static_cast<unsigned int>(saved[3])) != 0;
+    XFree(data);
+    return moved;
+}
+
 bool activateWindow(Display* display, Window window)
 {
     XEvent event{};
@@ -103,11 +189,14 @@ int main(int argc, char** argv)
     }
     else if (action == "maximize")
     {
-        sent = activateWindow(display, *window) && sendWindowState(display, *window, 1);
+        sent = windowManagerRunning(display)
+                   ? activateWindow(display, *window) && sendWindowState(display, *window, 1)
+                   : maximizeWithoutWindowManager(display, *window);
     }
     else if (action == "restore")
     {
-        sent = sendWindowState(display, *window, 0);
+        sent = windowManagerRunning(display) ? sendWindowState(display, *window, 0)
+                                             : restoreWithoutWindowManager(display, *window);
     }
     else if (action == "resize")
     {

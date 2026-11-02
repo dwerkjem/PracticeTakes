@@ -871,6 +871,7 @@ SURFACES: tuple[Surface, ...] = (
         title="The score view drawing a staff, with room to spare",
         tools=("score-view",),
         presentation="floating",
+        window_title="Score View",
         area="score",
         modes=frozenset({FULL}),
         warmup_seconds=3.0,
@@ -1114,6 +1115,15 @@ def validate() -> list[str]:
             problems.append(f"Duplicate surface: state '{surface.state}', title '{surface.title}'.")
 
         seen.add(key)
+
+        # A floating tool is a second top-level window. Without its title the
+        # harness measures and photographs whichever of the application's
+        # windows it finds first -- which is how the floating score view came to
+        # report the main window "stuck" at one size for every small geometry.
+        if surface.presentation == "floating" and not surface.window_title:
+            problems.append(
+                f"'{surface.title}' shows a floating window but does not name it in window_title."
+            )
 
         ids = [question.id for question in questions_for(surface)]
 
