@@ -1,7 +1,9 @@
 # every-part Specification
 
 ## Purpose
-TBD - created by archiving change every-part. Update Purpose after archive.
+How the Score View draws every part of a score rather than the first alone:
+each part's staves in one system, barlines broken between parts, a brace per
+multi-staff part, and each part's lyrics under its own staff.
 ## Requirements
 ### Requirement: Every part is drawn
 The score view SHALL draw every part of the score in each system, top to bottom

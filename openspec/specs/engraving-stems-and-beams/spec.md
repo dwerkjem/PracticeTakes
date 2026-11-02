@@ -1,5 +1,11 @@
-## ADDED Requirements
+# engraving-stems-and-beams Specification
 
+## Purpose
+How the Score View beams notes shorter than a quarter: groups chosen from the
+time signature so the beaming states the metre, one stem direction per group,
+straight beams over stems long enough to read, and a partial beam where a beam
+level has no neighbour.
+## Requirements
 ### Requirement: Notes shorter than a quarter are drawn with beams where they group
 The application SHALL join the stems of notes that belong to one beam group
 with beams, and SHALL draw a flag on every note shorter than a quarter that no
@@ -125,18 +131,3 @@ successive onsets, so a flagged note cannot touch what follows it.
 - **THEN** the distance between their noteheads is at least the notehead width
   plus the flag width, whatever the configured minimum slot width says
 
-## MODIFIED Requirements
-
-### Requirement: What is not drawn is reported
-The layout SHALL carry a sentence for every construct in the open score it does
-not draw. Beaming SHALL no longer be among them; what remains of it SHALL be.
-
-#### Scenario: Beaming is no longer a gap
-- **WHEN** a score holding runs of eighths is drawn
-- **THEN** the layout does not report that eighths are drawn with flags rather
-  than beamed
-
-#### Scenario: A run of grace notes
-- **WHEN** two or more grace notes fall together
-- **THEN** they are drawn with flags and the layout reports that grace notes are
-  not beamed

@@ -298,3 +298,56 @@ TEST_CASE("a corpus score lays out the same way twice", "[score][engraving][corp
         }
     }
 }
+
+// The sample a first launch opens is also the one reference image of a partial
+// beam: its bar 2 is a dotted eighth and a sixteenth in the voice and in both
+// piano staves, so the sixteenth's second beam is a stub hanging back from the
+// group's last stem -- above the notes on the treble staves, below them on the
+// bass. `score-view-sample` photographs that, and this pins that the picture
+// keeps showing it. `BeamGeometryTests` owns where a stub is placed; this only
+// says the reference image is still a picture of one, in both directions.
+TEST_CASE(
+    "the shipped sample's opening system shows partial beams both ways up",
+    "[score][engraving][corpus][sample]")
+{
+    const juce::File file =
+        corpusDirectory().getChildFile("mahler-4-die-zwei-blauen-augen-von-meinem-schatz.mxl");
+    REQUIRE(file.existsAsFile());
+
+    const MusicXmlImportResult result = importMusicXmlFile(file);
+    REQUIRE(result.score != nullptr);
+
+    engraving::LayoutOptions options;
+    options.availableWidth = 110.0;
+
+    const engraving::ScoreLayout layout = engraving::layOutScore(result.score, options);
+    REQUIRE(layout.outcome == engraving::LayoutOutcome::laidOut);
+    REQUIRE_FALSE(layout.systems.empty());
+
+    const engraving::System& opening = layout.systems.front();
+
+    // A stub that ends where a full level-1 beam on the same staff ends is the
+    // backward hook on the group's last stem -- the dotted-eighth figure.
+    const auto hangsBackFromGroup = [&opening](const engraving::BeamGlyph& stub)
+    {
+        return std::any_of(
+            opening.beams.begin(), opening.beams.end(),
+            [&stub](const engraving::BeamGlyph& full)
+            {
+                return !full.partial && full.level == 1 && full.staff == stub.staff &&
+                       full.up == stub.up && std::abs(full.endX - stub.endX) < 0.001;
+            });
+    };
+
+    const auto backwardStubs = [&opening, &hangsBackFromGroup](bool up)
+    {
+        return std::count_if(
+            opening.beams.begin(), opening.beams.end(),
+            [up, &hangsBackFromGroup](const engraving::BeamGlyph& beam) {
+                return beam.partial && beam.level == 2 && beam.up == up && hangsBackFromGroup(beam);
+            });
+    };
+
+    CHECK(backwardStubs(true) > 0);
+    CHECK(backwardStubs(false) > 0);
+}
