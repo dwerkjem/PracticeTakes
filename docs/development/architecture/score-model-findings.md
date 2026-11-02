@@ -228,7 +228,7 @@ someone approves it.
 the one that most needs width. The reference image for `all-tools-docked` is now
 a picture of the bug with a renderer in it.
 
-### 10. A dynamic marking is read correctly and reported as unread
+### 10. A dynamic marking is read correctly and reported as unread — *fixed*
 
 Found by `score-notation-renderer`, and the only finding here that is a defect
 in the importer rather than a shape in the model.
@@ -259,6 +259,19 @@ children of a `<dynamics>` element in `countUnrecognisedElements`. Deliberately
 "'The importer changed' is not a reason to edit this file, it is a reason to look
 at the diff." That diff belongs to a change about the importer.
 
+**Fixed** by `importer-dynamics-diagnostics`, which took the second route:
+`countUnrecognisedElements` now passes over a marking `isDynamicMarking`
+accepts, but only under `<direction-type><dynamics>` — the one place the measure
+reader reads it from. A marking under a note's `<notations>`, and an
+`<other-dynamics>` text dynamic, are still dropped and so still reported. The
+first route would have been wrong for exactly that reason: a name in
+`knownElements` is exempt wherever it appears.
+
+Nineteen rows of `expectations.txt` changed, and the diff was looked at: for
+every one, the drop equals the number of distinct markings the file writes as a
+direction and nowhere else, counted from the files independently of the
+importer. The seventeen rows that did not change write no dynamics that way.
+
 ### 11. `<part-group>` is still dropped, and #200 will need it
 
 Recorded on #32 when #31 landed, and still true: which parts brace together on
@@ -274,9 +287,8 @@ hypothetical.
 
 Findings 2, 3, 4, 5 and 6 belong under #13 as issues against the score model.
 Finding 8 is a documentation and test issue, 9 is evidence on the existing #150,
-10 is an issue against the importer under #31, and 11 is a prerequisite to note
-on #200.
+and 11 is a prerequisite to note on #200.
 
-Findings 1 and 7 are done: 1 by `score-target-note-tool`, which added
-`score::spelledName`, and 7 by `score-notation-renderer`, which could not have
-been verified at all without it.
+Findings 1, 7 and 10 are done: 1 by `score-target-note-tool`, which added
+`score::spelledName`, 7 by `score-notation-renderer`, which could not have
+been verified at all without it, and 10 by `importer-dynamics-diagnostics`.

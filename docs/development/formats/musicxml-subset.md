@@ -122,6 +122,9 @@ Everything here reaches the model and is covered by tests.
   quarter notes per minute, dots included, so "dotted quarter = 60" is 90.
 - Dynamics, as directions attached to a part, measure, and position — notation,
   not playback velocity.
+  Only a marking written as a direction (`<direction-type><dynamics>`) is read;
+  one under a note's `<notations>`, and an `<other-dynamics>` text dynamic, are
+  dropped with a diagnostic.
 - Repeat barlines, ending (volta) numbers, and repeat counts, **captured but
   never interpreted**. The model is as-written: measures appear once, in source
   order, and nothing expands a repeat into a playback order.
