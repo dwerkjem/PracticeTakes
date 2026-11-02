@@ -2,9 +2,6 @@ name: Services quality check
 
 on:
   pull_request:
-    paths:
-      - "src/services/**"
-      - ".github/workflows/services-check.yml"
   push:
     branches:
       - main
@@ -16,8 +13,27 @@ permissions:
   contents: read
 
 jobs:
+  # Always runs, so the jobs below always report and can be required by
+  # main's ruleset. They skip when the pull request touches nothing here.
+  # The list is what `on.pull_request.paths` used to carry, and must stay
+  # in step with `on.push.paths`.
+  changes:
+    name: Decide whether this check applies
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/changed-paths.yml
+    with:
+      paths: |
+        src/services/**
+        .github/workflows/services-check.yml
+
   services-quality:
     name: Type-check and test services
+    needs: changes
+    # Runs unless the decision is exactly "false", so a failed decision
+    # runs the check rather than skipping it.
+    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     runs-on: ubuntu-24.04
 
     steps:
@@ -48,6 +64,10 @@ jobs:
   # without failing the job above.
   container-build:
     name: Build feedback-intake container
+    needs: changes
+    # Runs unless the decision is exactly "false", so a failed decision
+    # runs the check rather than skipping it.
+    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     runs-on: ubuntu-24.04
 
     steps:

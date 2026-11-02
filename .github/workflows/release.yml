@@ -47,6 +47,16 @@ jobs:
   # commit, with no release-affecting file changed since.
   manual-verification:
     name: Manual verification gate
+    # The dispatch path pushes its release commit and tag with a token, and a
+    # token's push starts workflows where GitHub Actions' own would not -- so
+    # that tag push would start a second, tag-triggered release of the same
+    # version, which would build everything and then fail to create a release
+    # that already exists. The dispatch run publishes it; the tag run stands
+    # down for any commit the dispatch path made. A tag a person pushes onto
+    # any other commit still releases it.
+    if: >-
+      ${{ github.event_name != 'push' ||
+          !startsWith(github.event.head_commit.message, 'chore(release): ') }}
     runs-on: ubuntu-24.04
 
     steps:
@@ -193,11 +203,26 @@ jobs:
       source_sha: ${{ steps.source.outputs.source_sha }}
 
     steps:
+      # Pushes to main go through the ruleset on main, which requires checks a
+      # brand-new commit cannot have yet. GitHub Actions cannot be exempted
+      # from a ruleset on a personal repository, so the push is made with a
+      # fine-grained token of the repository's admin, who is. See
+      # docs/development/operations/MAIN_BRANCH_RULES.md.
+      - name: Require the main push token
+        env:
+          MAIN_PUSH_TOKEN: ${{ secrets.MAIN_PUSH_TOKEN }}
+        run: |
+          if [[ -z "${MAIN_PUSH_TOKEN}" ]]; then
+            echo "::error::The MAIN_PUSH_TOKEN secret is not set, so this cannot push to main. See docs/development/operations/MAIN_BRANCH_RULES.md."
+            exit 1
+          fi
+
       - name: Check out selected release source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           ref: ${{ needs.prepare.outputs.source_sha }}
+          token: ${{ secrets.MAIN_PUSH_TOKEN }}
 
       - name: Commit version and tag
         if: ${{ github.event_name == 'workflow_dispatch' }}

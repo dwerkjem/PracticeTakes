@@ -26,15 +26,34 @@ concurrency:
 jobs:
   clang-tidy:
     name: Fix and lint merged C++
-    if: ${{ github.actor != 'github-actions[bot]' }}
+    # Its own fix commits are pushed with a token, which starts workflows where
+    # GitHub Actions' own push would not, so they are recognised by message too.
+    if: >-
+      ${{ github.actor != 'github-actions[bot]' &&
+          !startsWith(github.event.head_commit.message, 'chore: apply clang-tidy automatic fixes') }}
     runs-on: ubuntu-24.04
 
     steps:
+      # Pushes to main go through the ruleset on main, which requires checks a
+      # brand-new commit cannot have yet. GitHub Actions cannot be exempted
+      # from a ruleset on a personal repository, so the push is made with a
+      # fine-grained token of the repository's admin, who is. See
+      # docs/development/operations/MAIN_BRANCH_RULES.md.
+      - name: Require the main push token
+        env:
+          MAIN_PUSH_TOKEN: ${{ secrets.MAIN_PUSH_TOKEN }}
+        run: |
+          if [[ -z "${MAIN_PUSH_TOKEN}" ]]; then
+            echo "::error::The MAIN_PUSH_TOKEN secret is not set, so this cannot push to main. See docs/development/operations/MAIN_BRANCH_RULES.md."
+            exit 1
+          fi
+
       - name: Check out main
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ secrets.MAIN_PUSH_TOKEN }}
 
       - name: Install analysis dependencies
         run: |
