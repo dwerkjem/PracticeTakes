@@ -114,8 +114,12 @@ fixed below. This is why the section exists.
       nothing**. Latent until every capture worker became device-free. Fixed
       and covered by a test; the recapture shows the amber "Mic muted" badge,
       "Microphone muted." and an empty graph.
-- [ ] 5.4 Run a full parallel capture sweep and confirm no worker reports
+- [x] 5.4 Run a full parallel capture sweep and confirm no worker reports
       contention, and that the duplicate-capture check flags nothing new.
+      **Clean.** Full mode, four workers, from `main` at c8227e0: 254
+      captured, 0 failed, no worker stopped and none reported the input
+      device. The duplicate check raised 8 "identical to" notices, every one
+      already present in the full verification run 64 -- nothing new.
 
 ## 6. Prove the bug is gone
 
@@ -133,6 +137,7 @@ fixed below. This is why the section exists.
       A single instance was checked the same way: without the flag it holds
       `pcmC3D0c`, with it only `seq` -- the MIDI sequencer, which owns its own
       `juce::MidiInput` and is correctly untouched.
-- [ ] 6.2 Record the result on #176 and close it, noting that the alternative —
+- [x] 6.2 Record the result on #176 and close it, noting that the alternative —
       documenting single-instance ownership as intended — was considered and
-      rejected because the contended device was never used.
+      rejected because the contended device was never used. Recorded on #176,
+      which was already closed.
