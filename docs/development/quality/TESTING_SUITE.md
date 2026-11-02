@@ -544,7 +544,7 @@ run whose failures carry no notes still exports.
 | Name | Size | Why |
 |---|---|---|
 | `default` | 1280×800 | what most people open it at |
-| `constrained` | 800×600 | below the 900px threshold at which the title bar collapses to the hamburger menu |
+| `constrained` | 800×600 | below the 900px threshold at which the control strip collapses its menus into the Menu button |
 | `tiny` | 640×480 | smaller than a window manager would let a user drag it — the size at which a docked tool has to choose what to drop |
 | `maximised` | the display | where a layout stretches empty space instead of showing more |
 

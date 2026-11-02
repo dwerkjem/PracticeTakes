@@ -4,21 +4,27 @@
 
 #include <functional>
 
+// The application's own control strip, along the top of the window's content:
+// the menu buttons (or the collapsed Menu below 900 px), the microphone, and
+// fullscreen.
+//
+// It used to be the window's title bar as well, drawing the title and its own
+// minimise and close buttons and dragging the window. The window now uses the
+// operating system's title bar for all of that, so this is only the strip of
+// controls the operating system has no equivalent for. The name stays, because
+// test-control code and comments name it.
 class MainTitleBar final : public juce::Component
 {
   public:
     MainTitleBar(
-        const juce::String& windowTitle,
         juce::TextButton& file,
         juce::TextButton& settings,
         juce::TextButton& tools,
         juce::TextButton& help,
         juce::TextButton& microphone,
-        std::function<void()> minimiseHandler,
-        std::function<void()> fullscreenHandler,
-        std::function<void()> closeHandler)
-        : title(windowTitle), fileButton(file), settingsButton(settings), toolsButton(tools),
-          helpButton(help), microphoneButton(microphone), onFullscreen(std::move(fullscreenHandler))
+        std::function<void()> fullscreenHandler)
+        : fileButton(file), settingsButton(settings), toolsButton(tools), helpButton(help),
+          microphoneButton(microphone), onFullscreen(std::move(fullscreenHandler))
     {
         for (auto* button :
              {&fileButton, &settingsButton, &toolsButton, &helpButton, &microphoneButton})
@@ -40,20 +46,10 @@ class MainTitleBar final : public juce::Component
         hamburgerButton.onClick = [this] { showCollapsedMenu(); };
         addChildComponent(hamburgerButton);
 
-        minimiseButton.setButtonText("-");
-        minimiseButton.setTooltip("Minimise window");
-        minimiseButton.onClick = std::move(minimiseHandler);
-        addAndMakeVisible(minimiseButton);
-
         fullscreenButton.setTooltip("Enter fullscreen (F11)");
         fullscreenButton.setComponentID("fullscreen-button");
         fullscreenButton.onClick = onFullscreen;
         addAndMakeVisible(fullscreenButton);
-
-        closeButton.setButtonText("X");
-        closeButton.setTooltip("Close Practice Takes");
-        closeButton.onClick = std::move(closeHandler);
-        addAndMakeVisible(closeButton);
 
         setFullscreen(false);
     }
@@ -69,9 +65,6 @@ class MainTitleBar final : public juce::Component
     {
         const auto background = findColour(juce::ResizableWindow::backgroundColourId);
         graphics.fillAll(background.darker(0.2f));
-        graphics.setColour(findColour(juce::Label::textColourId));
-        graphics.setFont(juce::FontOptions(14.0f, juce::Font::bold));
-        graphics.drawText(title, titleBounds, juce::Justification::centredLeft, true);
         graphics.setColour(findColour(juce::ComboBox::outlineColourId));
         graphics.drawHorizontalLine(getHeight() - 1, 0.0f, static_cast<float>(getWidth()));
     }
@@ -83,11 +76,7 @@ class MainTitleBar final : public juce::Component
         constexpr int gap = 4;
         constexpr int windowButtonWidth = 76;
 
-        closeButton.setBounds(bounds.removeFromRight(38));
-        bounds.removeFromRight(gap);
         fullscreenButton.setBounds(bounds.removeFromRight(windowButtonWidth));
-        bounds.removeFromRight(gap);
-        minimiseButton.setBounds(bounds.removeFromRight(38));
         bounds.removeFromRight(gap);
 
         const auto useCollapsedMenu = getWidth() < 900;
@@ -115,33 +104,6 @@ class MainTitleBar final : public juce::Component
             toolsButton.setBounds(bounds.removeFromLeft(menuWidth));
             bounds.removeFromLeft(gap);
             helpButton.setBounds(bounds.removeFromLeft(menuWidth));
-            bounds.removeFromLeft(12);
-        }
-        titleBounds = bounds;
-    }
-
-    void mouseDown(const juce::MouseEvent& event) override
-    {
-        if (auto* window = findParentComponentOfClass<juce::DocumentWindow>())
-        {
-            windowDragger.startDraggingComponent(window, event);
-        }
-    }
-
-    void mouseDrag(const juce::MouseEvent& event) override
-    {
-        if (auto* window = findParentComponentOfClass<juce::DocumentWindow>();
-            window != nullptr && !window->isFullScreen() && !window->isKioskMode())
-        {
-            windowDragger.dragComponent(window, event, nullptr);
-        }
-    }
-
-    void mouseDoubleClick(const juce::MouseEvent&) override
-    {
-        if (onFullscreen)
-        {
-            onFullscreen();
         }
     }
 
@@ -198,17 +160,12 @@ class MainTitleBar final : public juce::Component
             });
     }
 
-    juce::String title;
     juce::TextButton& fileButton;
     juce::TextButton& settingsButton;
     juce::TextButton& toolsButton;
     juce::TextButton& helpButton;
     juce::TextButton& microphoneButton;
     juce::TextButton hamburgerButton;
-    juce::TextButton minimiseButton;
     juce::TextButton fullscreenButton;
-    juce::TextButton closeButton;
-    juce::Rectangle<int> titleBounds;
-    juce::ComponentDragger windowDragger;
     std::function<void()> onFullscreen;
 };

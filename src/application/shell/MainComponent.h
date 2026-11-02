@@ -54,11 +54,11 @@ class MainComponent final
     void paint(juce::Graphics& graphics) override;
     void paintOverChildren(juce::Graphics& graphics) override;
     void resized() override;
-    [[nodiscard]] std::unique_ptr<MainTitleBar> createTitleBar(
-        const juce::String& title,
-        std::function<void()> minimiseHandler,
-        std::function<void()> fullscreenHandler,
-        std::function<void()> closeHandler);
+    // The application's control strip -- menus, microphone, fullscreen -- for
+    // the window to place above this component. The window's title, minimise,
+    // maximise and close come from the operating system's title bar.
+    [[nodiscard]] std::unique_ptr<MainTitleBar>
+    createTitleBar(std::function<void()> fullscreenHandler);
     [[nodiscard]] AppSettings::FullscreenMode fullscreenMode() const noexcept;
     void restoreLoadedWorkspace();
     void initialiseAudioAfterLaunch();
