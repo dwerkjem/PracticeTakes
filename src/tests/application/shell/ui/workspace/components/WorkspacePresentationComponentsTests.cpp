@@ -162,3 +162,117 @@ TEST_CASE(
 
     CHECK(sideBySide.minimumForChild(&tabsB) == WorkspaceSplitPane::minimumHorizontalPaneSize);
 }
+
+// --- Running out of room along the split ------------------------------------
+//
+// Found by the capture pass's "slim" size, 340x780: two tools side by side need
+// 368px, so the second was laid out past the right edge and a third never
+// appeared. A split that does not fit along its own axis but would fit across
+// it stacks instead, and goes back when the room returns; one that fits neither
+// way shares what there is. Either way, nothing is outside the split.
+
+namespace
+{
+// `leaf`'s bounds in `root`'s coordinates, through any splits in between.
+[[nodiscard]] juce::Rectangle<int> boundsIn(juce::Component& root, juce::Component& leaf)
+{
+    return root.getLocalArea(&leaf, leaf.getLocalBounds());
+}
+
+void requireInside(juce::Component& root, std::initializer_list<juce::Component*> leaves)
+{
+    for (auto* leaf : leaves)
+    {
+        const auto bounds = boundsIn(root, *leaf);
+        INFO("leaf at " << bounds.toString() << " in " << root.getLocalBounds().toString());
+        CHECK_FALSE(bounds.isEmpty());
+        CHECK(root.getLocalBounds().contains(bounds));
+    }
+}
+} // namespace
+
+TEST_CASE("side-by-side panes stack when the split is too narrow for them", "[workspace][sizing]")
+{
+    juce::Component first;
+    juce::Component second;
+    juce::LookAndFeel_V4 lookAndFeel;
+    WorkspaceSplitPane pane(first, second, false, 0.5, lookAndFeel);
+
+    pane.setBounds(0, 0, 304, 730);
+
+    requireInside(pane, {&first, &second});
+    CHECK(first.getBottom() <= second.getY());
+    CHECK(first.getWidth() == 304);
+    CHECK(second.getWidth() == 304);
+}
+
+TEST_CASE("three side-by-side tools all fit a slim window", "[workspace][sizing]")
+{
+    juce::Component tuner;
+    juce::Component spectrogram;
+    juce::Component harmonics;
+    juce::LookAndFeel_V4 lookAndFeel;
+    WorkspaceSplitPane inner(spectrogram, harmonics, false, 0.5, lookAndFeel);
+    WorkspaceSplitPane outer(tuner, inner, false, 1.0 / 3.0, lookAndFeel);
+
+    outer.setBounds(0, 0, 304, 730);
+
+    requireInside(outer, {&tuner, &spectrogram, &harmonics});
+
+    // Stacked, each across the whole width, none on top of another.
+    const auto a = boundsIn(outer, tuner);
+    const auto b = boundsIn(outer, spectrogram);
+    const auto c = boundsIn(outer, harmonics);
+    CHECK(a.getBottom() <= b.getY());
+    CHECK(b.getBottom() <= c.getY());
+    CHECK(a.getWidth() == 304);
+    CHECK(c.getWidth() == 304);
+}
+
+TEST_CASE("panes go back side by side when the room returns", "[workspace][sizing]")
+{
+    juce::Component first;
+    juce::Component second;
+    juce::LookAndFeel_V4 lookAndFeel;
+    WorkspaceSplitPane pane(first, second, false, 0.65, lookAndFeel);
+
+    pane.setBounds(0, 0, 304, 730);
+
+    // Asked while stacked -- a workspace saved now must not record a divider
+    // position worked out from where the panes happen to be.
+    CHECK(pane.currentRatio() == Catch::Approx(0.65).margin(0.01));
+
+    pane.setBounds(0, 0, 1600, 600);
+
+    CHECK(first.getRight() <= second.getX());
+    CHECK(first.getY() == second.getY());
+    // The divider's place is kept through the detour, not reset.
+    CHECK(pane.currentRatio() == Catch::Approx(0.65).margin(0.01));
+}
+
+TEST_CASE("panes that fit neither way share what there is", "[workspace][sizing]")
+{
+    juce::Component first;
+    juce::Component second;
+    juce::LookAndFeel_V4 lookAndFeel;
+    WorkspaceSplitPane pane(first, second, false, 0.5, lookAndFeel);
+
+    // Too narrow for two panes side by side, too short for two stacked.
+    pane.setBounds(0, 0, 300, 100);
+
+    requireInside(pane, {&first, &second});
+    CHECK(first.getRight() <= second.getX());
+}
+
+TEST_CASE("a split with room lays out exactly as it always did", "[workspace][sizing]")
+{
+    juce::Component first;
+    juce::Component second;
+    juce::LookAndFeel_V4 lookAndFeel;
+    WorkspaceSplitPane pane(first, second, false, 0.5, lookAndFeel);
+
+    pane.setBounds(0, 0, 1000, 600);
+
+    CHECK(first.getBounds() == juce::Rectangle<int>(0, 0, 496, 600));
+    CHECK(second.getBounds() == juce::Rectangle<int>(504, 0, 496, 600));
+}
