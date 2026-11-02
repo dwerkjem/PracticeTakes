@@ -343,6 +343,28 @@ class Tunnel:
             self.directory = None
 
 
+def stop_on_signals(install: Callable[[int, object], object] = signal.signal) -> None:
+    """Make SIGTERM, SIGHUP and SIGINT end the hub the way Ctrl-C does.
+
+    The tunnel is stopped by the hub's own shutdown, which runs on
+    KeyboardInterrupt. Python only raises that for SIGINT, and not even for
+    SIGINT when the hub was started in the background, where it inherits the
+    signal ignored. `kill`, a closed terminal, or a service manager stopping the
+    hub would otherwise end it with the tunnel still running -- connected,
+    pointing at a port nothing is listening on, and blocking the next start
+    until it is found.
+    """
+
+    def interrupt(signum: int, frame: object) -> None:
+        raise KeyboardInterrupt
+
+    for name in ("SIGTERM", "SIGHUP", "SIGINT"):
+        number = getattr(signal, name, None)
+
+        if number is not None:
+            install(number, interrupt)
+
+
 @dataclass(frozen=True)
 class RequestGuard:
     """Which requests the hub answers, decided before any route runs.

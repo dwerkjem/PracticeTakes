@@ -335,6 +335,22 @@ class TunnelTests(unittest.TestCase):
             self.assertEqual(remote.orphaned_tunnels(tunnel_id, proc), [10])
 
 
+class SignalTests(unittest.TestCase):
+    def test_every_way_of_stopping_the_hub_runs_its_shutdown(self) -> None:
+        """Otherwise `kill` or a closed terminal leaves the tunnel running."""
+        installed: dict[int, object] = {}
+
+        remote.stop_on_signals(lambda number, handler: installed.__setitem__(number, handler))
+
+        self.assertEqual(
+            set(installed), {remote.signal.SIGTERM, remote.signal.SIGHUP, remote.signal.SIGINT}
+        )
+
+        for handler in installed.values():
+            with self.assertRaises(KeyboardInterrupt):
+                handler(remote.signal.SIGTERM, None)
+
+
 class RestartTests(unittest.TestCase):
     def test_a_restart_stays_remote(self) -> None:
         command = restart.restart_command("/py", ["test-suite", "hub", "--remote"])

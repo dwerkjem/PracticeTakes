@@ -499,6 +499,7 @@ def command_hub(arguments) -> int:
         # cannot start stops the hub rather than leaving it local-only while
         # the person who asked for it is somewhere else.
         tunnel = remote_module.Tunnel(remote_config, arguments.port)
+        remote_module.stop_on_signals()
 
         try:
             print(tunnel.start())

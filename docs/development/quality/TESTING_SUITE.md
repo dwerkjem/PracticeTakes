@@ -110,7 +110,8 @@ dashboard:
 
 - **A Cloudflare Tunnel** carries requests from the address to the hub's
   127.0.0.1 port. The hub starts it as a child process and stops it when the hub
-  stops, so the address answers only while that hub is running. An in-place
+  stops, however the hub stops: Ctrl-C, `kill`, or a closed terminal. The
+  address therefore answers only while that hub is running. An in-place
   restart from the page keeps the same tunnel.
 - **Cloudflare Access** puts its sign-in in front of the address and admits one
   email, `ADMIN_EMAIL`, the same identity the feedback dashboard admits.
