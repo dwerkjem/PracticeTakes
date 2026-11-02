@@ -4,6 +4,7 @@
 #include "BeamGrouping.h"
 #include "KeySignatureLayout.h"
 #include "MeasureAccidentals.h"
+#include "PartNames.h"
 
 #include <algorithm>
 #include <cmath>
@@ -1597,6 +1598,60 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         [](const StaffGroup& group) { return group.lastStaff > group.firstStaff; });
     const double braceRoom = braced ? options.braceWidth : 0.0;
 
+    // Each part's name, beside its staves, when there is more than one part to
+    // tell apart: in full on the first system, shortened on every one after,
+    // where the reader already knows which staff is which. Room for them comes
+    // off the width the music has, so later systems -- with shorter names --
+    // hold more of it.
+    const bool nameParts = drawnParts.size() > 1;
+    std::vector<std::string> fullNames;
+    std::vector<std::string> shortNames;
+
+    for (const StaffGroup& group : staffGroups)
+    {
+        const score::Part& part =
+            *drawnParts.at(partOfStaff.at(static_cast<std::size_t>(group.firstStaff))).part;
+
+        fullNames.push_back(displayedPartName(part.name));
+        shortNames.push_back(abbreviatedPartName(part.name, part.abbreviation));
+    }
+
+    const auto nameRoomFor = [nameParts, &options](const std::vector<std::string>& names)
+    {
+        if (!nameParts)
+        {
+            return 0.0;
+        }
+
+        std::size_t longest = 0;
+
+        for (const std::string& name : names)
+        {
+            // Characters, not bytes: "Klavier" and "Stimme für Gesang" are
+            // measured by what is drawn.
+            const auto characters = static_cast<std::size_t>(std::count_if(
+                name.begin(), name.end(),
+                [](char byte) { return (static_cast<unsigned char>(byte) & 0xC0U) != 0x80U; }));
+
+            longest = std::max(longest, characters);
+        }
+
+        if (longest == 0)
+        {
+            return 0.0;
+        }
+
+        return std::min(
+                   static_cast<double>(longest) * options.partNameCharacterWidth,
+                   options.maximumPartNameWidth) +
+               options.partNameGap;
+    };
+
+    const double firstNameRoom = nameRoomFor(fullNames);
+    const double laterNameRoom = nameRoomFor(shortNames);
+    const auto nameRoomOf = [firstNameRoom, laterNameRoom](std::size_t systemIndex)
+    { return systemIndex == 0 ? firstNameRoom : laterNameRoom; };
+
     // A measure's header is as wide as its widest staff's: when only the lower
     // staff changes clef, the upper still has to start its music where the
     // lower does.
@@ -1618,7 +1673,10 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     // overflowing is more honest than dropping it.
     std::vector<std::vector<std::size_t>> packed;
     double cursor = 0.0;
-    const double available = options.availableWidth - braceRoom;
+
+    // What a system has for its music once its names and brace have their room.
+    const auto availableFor = [&options, braceRoom, &nameRoomOf](std::size_t systemIndex)
+    { return options.availableWidth - braceRoom - nameRoomOf(systemIndex); };
 
     for (std::size_t index = 0; index < measureCount; ++index)
     {
@@ -1629,7 +1687,7 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
 
         const double width = headerWidthAt(index, wouldStartSystem) + contentWidth;
 
-        if (!wouldStartSystem && cursor + width > available)
+        if (!wouldStartSystem && cursor + width > availableFor(packed.size() - 1))
         {
             packed.emplace_back();
             cursor = headerWidthAt(index, true) + contentWidth;
@@ -1684,9 +1742,25 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         system.staffOffsets = staffOffsets;
         system.staffGroups = staffGroups;
         system.staffLyricVerses = staffVerses;
-        system.staffStartX = braceRoom;
+        const double nameRoom = nameRoomOf(systemIndex);
+        system.staffStartX = nameRoom + braceRoom;
 
-        double x = braceRoom;
+        if (nameRoom > 0.0)
+        {
+            const std::vector<std::string>& names = systemIndex == 0 ? fullNames : shortNames;
+
+            for (std::size_t group = 0; group < staffGroups.size(); ++group)
+            {
+                if (!names.at(group).empty())
+                {
+                    system.partNames.push_back(PartNameGlyph{
+                        names.at(group), nameRoom - options.partNameGap,
+                        staffGroups.at(group).firstStaff, staffGroups.at(group).lastStaff});
+                }
+            }
+        }
+
+        double x = system.staffStartX;
 
         for (std::size_t slot = 0; slot < measures.size(); ++slot)
         {

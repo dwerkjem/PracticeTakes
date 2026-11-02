@@ -99,6 +99,13 @@ class ScoreGlyphPainter
 
     void drawLyric(const engraving::LyricGlyph& glyph, double originX, double originY) const;
 
+    // A part's name, right-aligned at its `rightX` and centred across its staves.
+    void drawPartName(
+        const engraving::PartNameGlyph& glyph,
+        const engraving::System& system,
+        double originX,
+        double originY) const;
+
     void
     drawText(const engraving::TextGlyph& glyph, double originX, double originY, int lyricVerseCount)
         const;

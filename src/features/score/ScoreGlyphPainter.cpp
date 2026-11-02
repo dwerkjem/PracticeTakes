@@ -633,6 +633,39 @@ void ScoreGlyphPainter::drawText(
         justification);
 }
 
+void ScoreGlyphPainter::drawPartName(
+    const engraving::PartNameGlyph& glyph,
+    const engraving::System& system,
+    double originX,
+    double originY) const
+{
+    const auto offsetOf = [&system](int staff)
+    {
+        const auto index = static_cast<std::size_t>(std::max(0, staff));
+
+        return index < system.staffOffsets.size() ? system.staffOffsets.at(index) : 0.0;
+    };
+
+    const double top = offsetOf(glyph.firstStaff);
+    const double bottom = offsetOf(glyph.lastStaff) + engraving::staffHeightInSpaces;
+    const double size = 1.4;
+
+    graphics.setColour(palette.notation);
+    graphics.setFont(juce::FontOptions(px(size)));
+
+    // The layout estimated the width from the name's length. Fitted rather than
+    // trusted, so a name wider than its estimate is squeezed a little, and
+    // then cut with an ellipsis, rather than running into the brace.
+    graphics.drawFittedText(
+        juce::String::fromUTF8(glyph.text.c_str()),
+        juce::Rectangle<float>(
+            static_cast<float>(originX),
+            static_cast<float>(originY + px(((top + bottom) * 0.5) - size)), px(glyph.rightX),
+            px(size * 2.0))
+            .toNearestInt(),
+        juce::Justification::centredRight, 1, 0.7f);
+}
+
 void ScoreGlyphPainter::drawSystem(
     const engraving::System& system,
     double originX,
@@ -651,6 +684,11 @@ void ScoreGlyphPainter::drawSystem(
     };
 
     drawStaffLines(system, originX, originY);
+
+    for (const engraving::PartNameGlyph& glyph : system.partNames)
+    {
+        drawPartName(glyph, system, originX, originY);
+    }
 
     if (system.staffOffsets.size() > 1)
     {
