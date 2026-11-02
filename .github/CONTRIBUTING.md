@@ -74,6 +74,20 @@ proposal, design, specs, and task list before implementation. See
 [Design and architecture review checklist § When to write more than a
 checklist pass](../docs/development/architecture/ARCHITECTURE_QA.md) for the criteria.
 
+### Keep work in progress small
+
+- **At most three OpenSpec changes in implementation at once.** A change is in
+  implementation once any of its tasks is checked off. Finish or archive one
+  before starting work on a fourth. Writing a proposal ahead of time is fine;
+  starting to build it is what counts.
+- **Archive a change as soon as its last task is checked off.** A finished
+  change left in `openspec/changes/` reads as unfinished work, and its
+  requirements stay out of `openspec/specs/` until it is archived.
+- **Don't let one blocked task hold a change open.** If the only tasks left
+  need something this workflow can't supply, such as real hardware or a
+  release, move them to an issue labelled `status:ready-for-human`, link it
+  from `tasks.md`, and archive the change.
+
 ## Pull requests
 
 - Follow the pull request template's checklist.

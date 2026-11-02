@@ -340,6 +340,11 @@ against it — they can drift (`docs/development/quality/QA_STRATEGY.md` area 12
   through an OpenSpec proposal in `openspec/changes/` first — see
   `docs/development/architecture/ARCHITECTURE_QA.md § When to write more than a checklist
   pass`.
+- Keep work in progress small: at most three OpenSpec changes in
+  implementation at once, archive a change as soon as its last task is done,
+  and move a task blocked on hardware to a `status:ready-for-human` issue
+  instead of leaving the change open. See `.github/CONTRIBUTING.md § Keep work
+  in progress small`.
 - The [architecture map](https://dwerkjem.github.io/PracticeTakes/) is a
   generated, browsable graph of the whole repo — useful for finding where a
   change belongs before starting.
