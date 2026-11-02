@@ -141,3 +141,35 @@ TEST_CASE("nothing resolves when the chosen device is absent", "[midi][recovery]
     CHECK_FALSE(resolveSelectedDevice("129-0", "Piano", {}).has_value());
     CHECK_FALSE(resolveSelectedDevice("129-0", "Piano", {{"128-0", "Other"}}).has_value());
 }
+
+// Re-opening after the device list changed.
+//
+// A keyboard unplugged and replugged comes back under the same identifier, so
+// "open and present" cannot tell it from one that never left, while the open
+// input is subscribed to a port that died with the old device. Once the list
+// has settled, a change re-opens it.
+
+TEST_CASE("a settled list change re-opens the selected device", "[midi][recovery]")
+{
+    CHECK(MidiRecoveryPolicy::shouldReopenAfterListChange(true, true, true));
+}
+
+TEST_CASE("nothing is re-opened without a list change", "[midi][recovery]")
+{
+    for (const bool isOpen : {false, true})
+    {
+        for (const bool isPresent : {false, true})
+        {
+            CHECK_FALSE(MidiRecoveryPolicy::shouldReopenAfterListChange(false, isOpen, isPresent));
+        }
+    }
+}
+
+TEST_CASE("a list change re-opens only what is open and present", "[midi][recovery]")
+{
+    // Not open: the ordinary open path handles it. Not present: there is
+    // nothing to re-open, and the close path handles what is left.
+    CHECK_FALSE(MidiRecoveryPolicy::shouldReopenAfterListChange(true, false, true));
+    CHECK_FALSE(MidiRecoveryPolicy::shouldReopenAfterListChange(true, true, false));
+    CHECK_FALSE(MidiRecoveryPolicy::shouldReopenAfterListChange(true, false, false));
+}

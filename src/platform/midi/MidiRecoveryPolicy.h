@@ -48,6 +48,23 @@ shouldClose(bool isSomethingOpen, bool openDeviceIsSelected, bool openDeviceIsPr
     return !openDeviceIsSelected || !openDeviceIsPresent;
 }
 
+// Whether what is open should be closed and opened afresh because the system's
+// device list changed since it was opened.
+//
+// A device unplugged and replugged comes back under the same identifier, so
+// "present and open" cannot tell it from one that never left -- and the open
+// input may be subscribed to a port that died with the old device, or one that
+// was not ready when it was subscribed to. Any settled change to the list
+// therefore re-opens the selected device if it is open and present. Found on a
+// real USB keyboard, where only choosing it again by hand brought it back.
+[[nodiscard]] constexpr bool shouldReopenAfterListChange(
+    bool listChanged,
+    bool isSelectedDeviceOpen,
+    bool isSelectedDevicePresent) noexcept
+{
+    return listChanged && isSelectedDeviceOpen && isSelectedDevicePresent;
+}
+
 // A device as enumerated: the identifier the backend opens it by, and the name
 // it shows. Plain strings, so the choice below is checkable without a backend.
 struct DeviceListing
