@@ -10,22 +10,20 @@ works as it always did. Nothing else is.
 
 ## Which pull requests merge themselves
 
-Auto-merge is switched on per pull request, not for the repository. The agent
-switches it on when a pull request is one of:
+All of them. The agent puts every pull request it opens on auto-merge as soon
+as it is opened, Dependabot's included, and nobody has to say "merge". The
+required checks below are the whole gate, so a check that matters belongs in
+that list rather than in someone's head.
 
-- tests only, documentation only, or OpenSpec bookkeeping (ticking tasks,
-  archiving a finished change, syncing specs);
-- a bug fix that comes with a test which fails without the fix.
+What CI cannot see still merges, so a pull request whose change can only be
+confirmed by hand — a MIDI keyboard, a microphone, how something looks — says
+in its description what was and was not verified, and the agent says the same
+when it reports the pull request. Following it up is a new change, not a held
+merge.
 
-It is left for a person to merge when it is:
-
-- a change someone would notice using the application: interface, sound, MIDI
-  or device behaviour — passing CI does not show it works on real hardware;
-- a change to CI or the release workflows — a workflow change can pass its own
-  checks and still be wrong;
-- a dependency bump;
-- a new OpenSpec proposal, or a change to a design;
-- anything a person has said needs their eyes.
+An open pull request opened before a workflow change may be missing a check
+that is now required, and will wait for it forever. Bringing `main` into its
+branch (or asking Dependabot to rebase) makes the current workflows report.
 
 ## The required checks
 
