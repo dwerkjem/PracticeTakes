@@ -15,17 +15,24 @@ MidiInputService::MidiInputService()
     // A change to the device list is noted here and acted on once the list has
     // been quiet for `deviceListSettleTicks` -- never in this callback.
     //
-    // Reacting at once was tried, and unplugging a real USB keyboard with the
-    // application open then hung the kernel: its port deletion
-    // (snd_seq_midisynth_remove -> port_delete) waited forever on a reference
-    // to the keyboard's port, and USB stopped enumerating until a reboot. The
-    // same unplug without the application did not hang. JUCE raises this from
-    // ALSA's announcement port while the port is still being torn down, and
-    // closing the input here unsubscribed from it mid-teardown -- the likeliest
-    // trigger, and the one thing the application can stop doing. Waiting until
-    // the list settles lets the kernel finish first. A replug inside the window restarts the wait,
-    // and the settled reconcile re-opens the keyboard, so a quick replug still recovers -- the case
-    // the scan alone missed. JUCE delivers this on the message thread, as the timer runs.
+    // Reacting at once failed on a real USB keyboard (a Donner DDP-200 MK2 on
+    // Debian): after an unplug and replug, short or long, the panel said
+    // Connected and no event arrived, until the keyboard was chosen again by
+    // hand. ALSA announces a USB keyboard's sequencer port while the kernel is
+    // still bringing the device up, and subscribing at that moment does not
+    // take -- JUCE ignores the failed subscription, so the input looks open and
+    // is deaf. A virtual keyboard never shows this: a user-space port is ready
+    // the moment it exists. Acting only once the list has settled lets the
+    // kernel finish first, and the settled reconcile opens the keyboard afresh
+    // (MidiRecoveryPolicy::shouldReopenAfterListChange), so a replug inside the
+    // window still recovers. JUCE delivers this on the message thread, as the
+    // timer runs.
+    //
+    // Separately, unplugging a subscribed keyboard hung the kernel on Debian's
+    // 6.1.180-1 and 6.1.187-1 -- a stable-kernel bug that leaks a reference on
+    // the keyboard's port per delivered event, fixed in 6.1.188 ("ALSA: seq: Fix
+    // port lock leak in deliver_to_subscribers()"). Nothing here can avoid that
+    // one; any subscriber triggers it.
     deviceListConnection = juce::MidiDeviceListConnection::make(
         [this]
         {

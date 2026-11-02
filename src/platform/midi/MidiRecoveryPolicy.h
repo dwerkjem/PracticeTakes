@@ -53,12 +53,10 @@ shouldClose(bool isSomethingOpen, bool openDeviceIsSelected, bool openDeviceIsPr
 //
 // A device unplugged and replugged comes back under the same identifier, so
 // "present and open" cannot tell it from one that never left -- and the open
-// input is subscribed to a port that died with the old device. Any change to
-// the list therefore re-opens the selected device if it is open and present.
-// The service asks this only once the list has stopped changing: acting at once,
-// while the kernel was still tearing a USB keyboard's port down, coincided with
-// the kernel's teardown hanging on real hardware (a Donner DDP-200 MK2 on
-// Debian, 2026-11-02). See MidiInputService's constructor.
+// input may be subscribed to a port that died with the old device, or one that
+// was not ready when it was subscribed to. Any settled change to the list
+// therefore re-opens the selected device if it is open and present. Found on a
+// real USB keyboard, where only choosing it again by hand brought it back.
 [[nodiscard]] constexpr bool shouldReopenAfterListChange(
     bool listChanged,
     bool isSelectedDeviceOpen,
