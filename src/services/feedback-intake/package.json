@@ -23,6 +23,6 @@
     "wrangler": "4.152.0"
   },
   "dependencies": {
-    "jose": "^6.2.12"
+    "jose": "^6.2.14"
   }
 }
