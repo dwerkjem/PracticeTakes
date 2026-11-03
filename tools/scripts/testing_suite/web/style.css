@@ -653,6 +653,9 @@ button:hover { border-color: var(--accent); }
    selection bar stays pinned under the header, as on a desktop. */
 #multi-toggle.active { border-color: var(--accent); color: var(--accent); }
 
+/* Hidden by the attribute first, for the reason #stale-server gives; and off
+   altogether on a wide screen, where the toolbar itself stays in view. */
+#selection-bar[hidden] { display: none; }
 #selection-bar { display: none; }
 
 @media (max-width: 760px), (pointer: coarse) {
