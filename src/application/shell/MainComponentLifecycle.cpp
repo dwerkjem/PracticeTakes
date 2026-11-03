@@ -157,15 +157,11 @@ void MainComponent::configureTopButtons()
     openSampleButton.setComponentID("open-sample-button");
 }
 
-std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(
-    const juce::String& title,
-    std::function<void()> minimiseHandler,
-    std::function<void()> fullscreenHandler,
-    std::function<void()> closeHandler)
+std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(std::function<void()> fullscreenHandler)
 {
     return std::make_unique<MainTitleBar>(
-        title, fileButton, settingsButton, toolsButton, helpButton, microphoneButton,
-        std::move(minimiseHandler), std::move(fullscreenHandler), std::move(closeHandler));
+        fileButton, settingsButton, toolsButton, helpButton, microphoneButton,
+        std::move(fullscreenHandler));
 }
 
 AppSettings::FullscreenMode MainComponent::fullscreenMode() const noexcept

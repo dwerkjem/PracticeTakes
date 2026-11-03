@@ -145,6 +145,63 @@ class PracticeTakesApplication final : public juce::JUCEApplication
     }
 
   private:
+    // What the window shows: the application's control strip along the top and
+    // MainComponent below it. The window's own title bar is the operating
+    // system's, so the strip is part of the content rather than drawn over a
+    // title bar of its own.
+    //
+    // The strip holds references to buttons MainComponent owns, so it is
+    // declared after MainComponent and therefore destroyed first.
+    class WindowFrame final : public juce::Component
+    {
+      public:
+        static constexpr int stripHeight = 42;
+
+        WindowFrame(
+            std::unique_ptr<MainComponent> mainToOwn,
+            std::unique_ptr<MainTitleBar> stripToOwn)
+            : main(std::move(mainToOwn)), strip(std::move(stripToOwn))
+        {
+            addAndMakeVisible(*main);
+            addAndMakeVisible(*strip);
+
+            // As tall as the main component asked to be, plus the strip, so the
+            // window opens with the same room for the workspace as before.
+            setSize(main->getWidth(), main->getHeight() + stripHeight);
+        }
+
+        // In kiosk fullscreen the strip appears only while the pointer is at
+        // the top edge, and floats over the workspace rather than pushing it
+        // down each time it shows.
+        void setStripOverlays(bool shouldOverlay)
+        {
+            stripOverlays = shouldOverlay;
+            resized();
+        }
+
+        void resized() override
+        {
+            juce::Rectangle<int> bounds = getLocalBounds();
+
+            strip->setBounds(bounds.withHeight(stripHeight));
+
+            if (strip->isVisible() && !stripOverlays)
+            {
+                bounds.removeFromTop(stripHeight);
+            }
+
+            main->setBounds(bounds);
+            strip->toFront(false);
+        }
+
+      private:
+        std::unique_ptr<MainComponent> main;
+        std::unique_ptr<MainTitleBar> strip;
+        bool stripOverlays = false;
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WindowFrame)
+    };
+
     // The top-level window owns MainComponent and therefore all shared audio,
     // settings, warning, and tool-window state.
     class MainWindow final : public juce::DocumentWindow, private juce::Timer
@@ -162,20 +219,19 @@ class PracticeTakesApplication final : public juce::JUCEApplication
                   juce::Colour::fromRGB(18, 20, 27),
                   juce::DocumentWindow::allButtons)
         {
-            setUsingNativeTitleBar(false);
+            // The operating system's own title bar: its title, its minimise,
+            // maximise and close, its dragging and its resizing, which look and
+            // behave as every other window on the desktop does. The
+            // application's controls sit in a strip at the top of the content.
+            setUsingNativeTitleBar(true);
 
-            content = new MainComponent(muteMicrophoneForSession, declineAudioInput);
-            setContentOwned(content, true);
-
-            auto customTitleBar = content->createTitleBar(
-                title, [this] { setMinimised(true); }, [this] { toggleFullscreen(); },
-                [this] { closeButtonPressed(); });
-            setTitleBarHeight(42);
-            setTitleBarButtonsRequired(0, false);
-            titleBar = std::move(customTitleBar);
-            juce::Component::addAndMakeVisible(titleBar.get());
-            // Use a resizable border so every window edge and corner can be
-            // dragged, even though the application supplies its own title bar.
+            auto ownedContent =
+                std::make_unique<MainComponent>(muteMicrophoneForSession, declineAudioInput);
+            content = ownedContent.get();
+            auto controlStrip = content->createTitleBar([this] { toggleFullscreen(); });
+            titleBar = controlStrip.get();
+            frame = new WindowFrame(std::move(ownedContent), std::move(controlStrip));
+            setContentOwned(frame, true);
             setResizable(true, false);
             setResizeLimits(980, 600, 3200, 2200);
             centreWithSize(getWidth(), getHeight());
@@ -212,16 +268,6 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         void closeButtonPressed() override
         {
             juce::JUCEApplication::getInstance()->systemRequestedQuit();
-        }
-
-        void resized() override
-        {
-            DocumentWindow::resized();
-            if (titleBar != nullptr)
-            {
-                titleBar->setBounds(0, 0, getWidth(), getTitleBarHeight());
-                titleBar->toFront(false);
-            }
         }
 
         bool keyPressed(const juce::KeyPress& key) override
@@ -316,6 +362,16 @@ class PracticeTakesApplication final : public juce::JUCEApplication
                     !shouldBeFullscreen ||
                     activeFullscreenMode == AppSettings::FullscreenMode::normal);
             }
+
+            // The strip may have been hidden or shown, so the content below it
+            // takes the room it left or gives it back -- except in kiosk mode,
+            // where it floats over the content.
+            if (frame != nullptr)
+            {
+                frame->setStripOverlays(
+                    shouldBeFullscreen &&
+                    activeFullscreenMode == AppSettings::FullscreenMode::kiosk);
+            }
         }
 
         void timerCallback() override
@@ -330,7 +386,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             const auto pointerIsInside = getLocalBounds().contains(pointer);
             constexpr int revealDistance = 5;
             constexpr int hideDistanceBelowTitleBar = 10;
-            const auto visibleLimit = getTitleBarHeight() + hideDistanceBelowTitleBar;
+            const auto visibleLimit = WindowFrame::stripHeight + hideDistanceBelowTitleBar;
             const auto shouldShow =
                 pointerIsInside &&
                 (titleBar->isVisible() ? pointer.y <= visibleLimit : pointer.y <= revealDistance);
@@ -429,8 +485,10 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         std::unique_ptr<testcontrol::TestControlChannel> testControlChannel;
 #endif
 
+        // Owned by the window's content, the frame: borrowed here.
         MainComponent* content = nullptr;
-        std::unique_ptr<MainTitleBar> titleBar;
+        MainTitleBar* titleBar = nullptr;
+        WindowFrame* frame = nullptr;
         AppSettings::FullscreenMode activeFullscreenMode = AppSettings::FullscreenMode::normal;
         bool fullscreenActive = false;
     };
