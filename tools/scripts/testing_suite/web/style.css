@@ -645,3 +645,63 @@ button:hover { border-color: var(--accent); }
 .comment-delete:hover {
   opacity: 1;
 }
+
+
+/* --- Phones and narrow windows ------------------------------------------ */
+/* Reviewing from a phone, through the tunnel: one card to a row, controls that
+   wrap rather than run off the side, and buttons a finger can hit. The
+   selection bar stays pinned under the header, as on a desktop. */
+#multi-toggle.active { border-color: var(--accent); color: var(--accent); }
+
+#selection-bar { display: none; }
+
+@media (max-width: 760px), (pointer: coarse) {
+  button,
+  select { min-height: 40px; padding: 6px 12px; }
+
+  #tabs button { padding: 6px 14px; }
+
+  /* The header and the full toolbar together were half a phone's screen,
+     pinned over the grid. Both scroll away here; the selection bar below is
+     what stays. */
+  header { position: static; }
+
+  #toolbar { position: static; margin: 0 -10px 10px; gap: 6px; box-shadow: none; }
+
+  #selection-bar:not([hidden]) {
+    display: flex;
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    z-index: 6;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(10, 11, 14, 0.55);
+  }
+
+  #selection-bar-count { flex: 1; }
+
+  /* Room for the bar, so it never covers the last card's buttons. */
+  #grid { padding-bottom: 80px; }
+
+  #outstanding { position: static; }
+
+  .captures,
+  .captures.dense,
+  .captures.medium,
+  .captures.large { --card-width: 100%; }
+
+  .card { padding: 10px; }
+
+  /* The hint about shift-click describes a key a phone does not have. */
+  #toolbar .muted.small { display: none; }
+
+  #zoom-bar { flex-wrap: wrap; gap: 6px; }
+
+  #bulk-sheet { width: calc(100vw - 24px); max-height: calc(100vh - 24px); overflow: auto; }
+}

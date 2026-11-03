@@ -456,6 +456,9 @@ so an approval never silently covers captures you did not look at.
 | Shift-click | Select a range |
 | Ctrl/Cmd-click | Add or remove one |
 | Drag across the grid | Band-select |
+| `select several` | Clicks and taps add or remove one, like Ctrl/Cmd-click |
+| On a touchscreen: tap a card or its image | Add or remove it; the first tap turns `select several` on |
+| On a touchscreen: press and hold a card | Select the range from the last card tapped |
 | Click a tag button | Apply it to the whole selection |
 | Shift-click a tag button | Remove it from the whole selection |
 | `+ tag` | Add a tag to the vocabulary, immediately usable |
@@ -467,6 +470,11 @@ so an approval never silently covers captures you did not look at.
 | `comment` | Free text on that one image |
 | P / F / S | Score an axis; a fail asks for a reason, which is optional |
 | Pass/Fail/Skip selected | Score every selected image at once |
+
+From a phone, through the tunnel, the grid is one card to a row and the buttons
+are sized for a finger. The header and toolbar scroll away with the page, and a
+bar along the bottom of the screen holds the selection count, `none` and
+`Bulk edit…` while anything is selected.
 
 Resolutions of one surface sit beside one another, which is the comparison the
 whole workflow exists for — a problem like "too much information in too small an
