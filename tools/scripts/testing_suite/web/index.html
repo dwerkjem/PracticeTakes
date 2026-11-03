@@ -78,6 +78,11 @@
         <span id="selection-count">nothing selected</span>
         <button type="button" id="select-all">select all</button>
         <button type="button" id="select-none">none</button>
+        <!-- Tap-to-toggle selection, for a touchscreen, which has no ctrl or
+             shift. Turns itself on with the first tap; long-press selects a
+             range. -->
+        <button type="button" id="multi-toggle" aria-pressed="false"
+                title="Each click or tap adds or removes one capture. On a touchscreen, press and hold to select a range.">select several</button>
 
         <span class="divider"></span>
         <button type="button" id="approve-shown" class="primary">Approve all shown</button>
@@ -195,6 +200,15 @@
       </div>
       <div id="zoom-verdicts"></div>
       <img id="zoom-image" alt="" />
+    </div>
+
+    <!-- On a phone the full toolbar scrolls away with the page, so the part of
+         it that acts on a selection stays within reach of a thumb here. Shown
+         only while something is selected. -->
+    <div id="selection-bar" hidden>
+      <span id="selection-bar-count"></span>
+      <button type="button" id="selection-bar-none">none</button>
+      <button type="button" id="selection-bar-edit" class="primary">Bulk edit…</button>
     </div>
 
     <div id="rubber-band" hidden></div>

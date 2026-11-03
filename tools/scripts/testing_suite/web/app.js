@@ -18,6 +18,13 @@ const state = {
   order: [],          // capture ids, in the order they are rendered
   selected: new Set(),
   lastClicked: null,
+  // "Select several": a plain click or tap adds or removes a capture instead
+  // of replacing the selection. The touch equivalent of ctrl-click, which a
+  // phone has no key for. Switched on by the first touch, and remembered.
+  multi: window.localStorage.getItem("multi-select") === "on",
+  // What the last pointer was -- "touch", "pen" or "mouse" -- so a tap can be
+  // told from a click. Click events do not reliably say so themselves.
+  lastPointer: "mouse",
   polling: null,
   zoomed: null,
   // True when this page was opened through the tunnel from another device.
@@ -476,6 +483,14 @@ function renderCard(capture) {
     image.alt = `${capture.surface} at ${capture.geometry}`;
     image.addEventListener("click", (event) => {
       event.stopPropagation();
+
+      // On a phone the image is most of the card, so while selecting several
+      // a tap on it selects; zooming is for when the mode is off.
+      if (state.multi || state.lastPointer === "touch") {
+        selectFrom(capture.id, event);
+        return;
+      }
+
       zoom(capture);
     });
     card.appendChild(image);
@@ -593,7 +608,17 @@ function renderCard(capture) {
   });
   card.appendChild(comment);
 
-  card.addEventListener("click", (event) => selectFrom(capture.id, event));
+  card.addEventListener("click", (event) => {
+    // The click that ends a long press would otherwise toggle the card the
+    // press just range-selected.
+    if (card.dataset.longPressed === "yes") {
+      delete card.dataset.longPressed;
+      return;
+    }
+
+    selectFrom(capture.id, event);
+  });
+  attachLongPress(card, capture.id);
 
   return card;
 }
@@ -974,6 +999,12 @@ function paintSelection() {
   // an empty selection is four things that do nothing, and the one that matters
   // is harder to find among them.
   element("bulk-edit").hidden = count < 2;
+
+  // The phone's copy of the same controls. CSS keeps it off wider screens,
+  // where the toolbar itself stays in view.
+  element("selection-bar").hidden = count === 0;
+  element("selection-bar-count").textContent = `${count} selected`;
+  element("selection-bar-edit").hidden = count < 2;
 }
 
 async function commentOnSelected() {
@@ -999,14 +1030,81 @@ async function commentOnSelected() {
   await reload();
 }
 
-function selectFrom(id, event) {
-  if (event.shiftKey && state.lastClicked !== null) {
+function setMulti(on) {
+  state.multi = on;
+  window.localStorage.setItem("multi-select", on ? "on" : "off");
+
+  const toggle = element("multi-toggle");
+  toggle.classList.toggle("active", on);
+  toggle.setAttribute("aria-pressed", on ? "true" : "false");
+  toggle.textContent = on ? "selecting several ✓" : "select several";
+}
+
+function selectRange(id) {
+  if (state.lastClicked === null) {
+    state.selected.add(id);
+  } else {
     const from = state.order.indexOf(state.lastClicked);
     const to = state.order.indexOf(id);
     const [start, end] = from < to ? [from, to] : [to, from];
 
     for (let index = start; index <= end; index += 1) state.selected.add(state.order[index]);
-  } else if (event.ctrlKey || event.metaKey) {
+  }
+
+  state.lastClicked = id;
+  paintSelection();
+}
+
+// A press held on a card for half a second selects everything from the last
+// one tapped to this one: shift-click, for a screen with no shift key.
+function attachLongPress(card, id) {
+  let timer = null;
+  let start = null;
+
+  const cancel = () => {
+    window.clearTimeout(timer);
+    timer = null;
+    start = null;
+  };
+
+  card.addEventListener("pointerdown", (event) => {
+    if (event.pointerType !== "touch" || event.target.closest("button")) return;
+
+    start = { x: event.clientX, y: event.clientY };
+    timer = window.setTimeout(() => {
+      timer = null;
+      card.dataset.longPressed = "yes";
+
+      if (!state.multi) setMulti(true);
+
+      selectRange(id);
+
+      if (navigator.vibrate) navigator.vibrate(15);
+    }, 500);
+  });
+
+  // A finger that moves is scrolling, not pressing.
+  card.addEventListener("pointermove", (event) => {
+    if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 10) cancel();
+  });
+  card.addEventListener("pointerup", cancel);
+  card.addEventListener("pointercancel", cancel);
+
+  // Without this a long press also opens the browser's menu for the image.
+  card.addEventListener("contextmenu", (event) => {
+    if (state.lastPointer === "touch") event.preventDefault();
+  });
+}
+
+function selectFrom(id, event) {
+  // The first tap from a finger turns "select several" on: on a touchscreen
+  // that is the only way to build a selection at all.
+  if (state.lastPointer === "touch" && !state.multi) setMulti(true);
+
+  if (event.shiftKey && state.lastClicked !== null) {
+    selectRange(id);
+    return;
+  } else if (event.ctrlKey || event.metaKey || state.multi) {
     if (state.selected.has(id)) state.selected.delete(id);
     else state.selected.add(id);
   } else {
@@ -1284,6 +1382,22 @@ element("select-none").addEventListener("click", () => {
   state.selected.clear();
   paintSelection();
 });
+
+element("multi-toggle").addEventListener("click", () => setMulti(!state.multi));
+element("selection-bar-none").addEventListener("click", () => element("select-none").click());
+element("selection-bar-edit").addEventListener("click", () => element("bulk-edit").click());
+
+// Captured before anything else sees the event, so every click handler can
+// ask what kind of pointer produced it.
+document.addEventListener(
+  "pointerdown",
+  (event) => {
+    state.lastPointer = event.pointerType || "mouse";
+  },
+  true,
+);
+
+setMulti(state.multi);
 
 function applySize(size) {
   state.size = size;
