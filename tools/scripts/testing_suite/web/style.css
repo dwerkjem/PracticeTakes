@@ -29,7 +29,7 @@ header {
   z-index: 5;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
-  padding: 10px 16px;
+  padding: 6px 14px;
 }
 
 header .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -192,9 +192,9 @@ button.size.active { border-color: var(--accent); color: var(--accent); }
   z-index: 4;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  margin: -8px -10px 10px;
+  gap: 6px;
+  padding: 5px 8px;
+  margin: -8px -10px 8px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -659,17 +659,34 @@ button:hover { border-color: var(--accent); }
 #selection-bar { display: none; }
 
 @media (max-width: 760px), (pointer: coarse) {
+  /* Still a finger's width, without each button being a row of its own. */
   button,
-  select { min-height: 40px; padding: 6px 12px; }
-
-  #tabs button { padding: 6px 14px; }
+  select { min-height: 34px; padding: 4px 10px; }
 
   /* The header and the full toolbar together were half a phone's screen,
      pinned over the grid. Both scroll away here; the selection bar below is
-     what stays. */
-  header { position: static; }
+     what stays. The header drops its title and run summary -- the run picker
+     already says which run this is -- so the tabs and picker share one line. */
+  header { position: static; padding: 6px 8px; }
+  header .row { gap: 6px; }
+  header .row > strong,
+  #run-summary { display: none; }
+  #tabs button { padding: 4px 10px; }
+  #run-picker { max-width: 100%; }
 
-  #toolbar { position: static; margin: 0 -10px 10px; gap: 6px; box-shadow: none; }
+  /* One row that scrolls sideways, instead of wrapping into five. */
+  #toolbar {
+    position: static;
+    margin: 0 -10px 8px;
+    gap: 6px;
+    box-shadow: none;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  #toolbar > * { flex: none; }
 
   #selection-bar:not([hidden]) {
     display: flex;
@@ -679,8 +696,8 @@ button:hover { border-color: var(--accent); }
     bottom: calc(8px + env(safe-area-inset-bottom, 0px));
     z-index: 6;
     align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
+    gap: 6px;
+    padding: 4px 8px;
     background: var(--panel);
     border: 1px solid var(--accent);
     border-radius: 10px;
@@ -690,7 +707,7 @@ button:hover { border-color: var(--accent); }
   #selection-bar-count { flex: 1; }
 
   /* Room for the bar, so it never covers the last card's buttons. */
-  #grid { padding-bottom: 80px; }
+  #grid { padding-bottom: 60px; }
 
   #outstanding { position: static; }
 
