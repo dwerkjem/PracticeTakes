@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import re
 from pathlib import Path
 import sys
 import tempfile
@@ -404,6 +405,45 @@ class ServerTests(SuiteTestCase):
                 status, _ = self.request("GET", path)
 
                 self.assertEqual(status, 200)
+
+    def test_the_page_names_its_script_by_its_contents(self) -> None:
+        """A cache between here and the phone must not keep running an old script."""
+        connection = http.client.HTTPConnection(server_module.HOST, self.port, timeout=5)
+        connection.request("GET", "/")
+        response = connection.getresponse()
+        markup = response.read().decode("utf-8")
+        connection.close()
+
+        self.assertEqual(response.getheader("Cache-Control"), "no-store")
+
+        for name in server_module.STAMPED_ASSETS:
+            with self.subTest(asset=name):
+                self.assertRegex(markup, rf'"/web/{re.escape(name)}\?v=[0-9a-f]{{12}}"')
+
+                stamped = re.search(rf'"(/web/{re.escape(name)}\?v=[0-9a-f]+)"', markup).group(1)
+                status, _ = self.request("GET", stamped)
+                self.assertEqual(status, 200)
+
+    def test_a_changed_script_is_a_changed_url(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            script = Path(folder) / "app.js"
+            markup = '<script src="/web/app.js"></script>'
+
+            script.write_text("// one\n")
+            before = server_module.stamped_index(markup, {"app.js": script})
+            script.write_text("// two\n")
+            after = server_module.stamped_index(markup, {"app.js": script})
+
+        self.assertNotEqual(before, after)
+
+    def test_the_page_files_are_not_kept_by_a_cache(self) -> None:
+        connection = http.client.HTTPConnection(server_module.HOST, self.port, timeout=5)
+        connection.request("GET", "/web/app.js")
+        response = connection.getresponse()
+        response.read()
+        connection.close()
+
+        self.assertEqual(response.getheader("Cache-Control"), "no-store")
 
     def test_content_types_come_from_a_table_not_from_the_request(self) -> None:
         """A guessed type is a response header built from a user-supplied value."""

@@ -16,6 +16,7 @@ Standard library only.
 
 from __future__ import annotations
 
+import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
@@ -75,6 +76,33 @@ def web_assets(root: Path = WEB_ROOT) -> dict[str, Path]:
 
 
 WEB_FILES = web_assets()
+
+# The page's own script and stylesheet, which index.html names with a hash of
+# their contents. `web/` is re-read on every request so an edit goes live
+# without a restart, but a cache between here and the browser defeats that:
+# Cloudflare keeps a `.js` or `.css` file it was given no Cache-Control for,
+# and a phone went on running a fixed bug through the tunnel for that reason.
+# A changed file is a changed URL, so no cache can hold the old one.
+STAMPED_ASSETS = ("app.js", "style.css")
+
+
+def stamped_index(markup: str, assets: dict[str, Path]) -> str:
+    """index.html with each page asset's URL carrying a hash of its contents."""
+    for name in STAMPED_ASSETS:
+        path = assets.get(name)
+
+        if path is None:
+            continue
+
+        try:
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+        except OSError:
+            continue
+
+        for attribute in ("src", "href"):
+            markup = markup.replace(f'{attribute}="/web/{name}"', f'{attribute}="/web/{name}?v={digest}"')
+
+    return markup
 
 # What the suite's code looked like when this process imported it. Read at
 # import rather than passed in, so it is stamped at the one moment that is
@@ -210,7 +238,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _send_file(self, path: Path, status: int = 200) -> None:
+    def _send_file(self, path: Path, status: int = 200, *, no_store: bool = False) -> None:
         """Send a file this server chose — never one a request named directly."""
         try:
             body = path.read_bytes()
@@ -224,6 +252,26 @@ class ReviewHandler(BaseHTTPRequestHandler):
             "Content-Type", CONTENT_TYPES.get(path.suffix, "application/octet-stream")
         )
         self.send_header("Content-Length", str(len(body)))
+        if no_store:
+            # The page's own files are small, the hub is one person's, and a
+            # cached script is a fixed bug still running. See STAMPED_ASSETS.
+            self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _send_index(self) -> None:
+        try:
+            markup = WEB_FILES["index.html"].read_text(encoding="utf-8")
+        except OSError:
+            self._send_json({"error": "index.html is not readable"}, status=404)
+
+            return
+
+        body = stamped_index(markup, WEB_FILES).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", CONTENT_TYPES[".html"])
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
 
@@ -325,7 +373,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
         query = parse_qs(parsed.query)
 
         if parsed.path in ("/", "/index.html"):
-            self._send_file(WEB_FILES["index.html"])
+            self._send_index()
         elif parsed.path == "/api/run":
             run_id = self.run_id
 
@@ -369,7 +417,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
             if asset is None:
                 self._send_json({"error": "not found"}, status=404)
             else:
-                self._send_file(asset)
+                self._send_file(asset, no_store=True)
         else:
             self._send_json({"error": "not found"}, status=404)
 
