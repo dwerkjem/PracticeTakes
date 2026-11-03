@@ -1041,11 +1041,15 @@ function setMulti(on) {
 }
 
 function selectRange(id) {
-  if (state.lastClicked === null) {
+  const from = state.lastClicked === null ? -1 : state.order.indexOf(state.lastClicked);
+  const to = state.order.indexOf(id);
+
+  // The card last tapped may no longer be on screen -- a filter or a reload
+  // since -- and indexOf then answers -1, which would walk the range from
+  // state.order[-1] and put `undefined` in the selection.
+  if (from < 0 || to < 0) {
     state.selected.add(id);
   } else {
-    const from = state.order.indexOf(state.lastClicked);
-    const to = state.order.indexOf(id);
     const [start, end] = from < to ? [from, to] : [to, from];
 
     for (let index = start; index <= end; index += 1) state.selected.add(state.order[index]);
