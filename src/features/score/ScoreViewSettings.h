@@ -41,7 +41,7 @@ struct Settings
     std::size_t sizeStep = defaultSizeStep;
 
     // The parts this Score View does not draw, by id and name together (see
-    // openspec/changes/score-part-selection/design.md decisions 1 and 2).
+    // openspec/changes/archive/2026-11-06-score-part-selection/design.md decisions 1 and 2).
     // Empty, the default, draws every part.
     std::vector<engraving::PartKey> hiddenParts;
 

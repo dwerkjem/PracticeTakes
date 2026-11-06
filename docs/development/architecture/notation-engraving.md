@@ -367,7 +367,7 @@ because a tempo is the whole score's and exporters often write it into one part.
 A selection that would leave nothing to draw is ignored. `drawablePartsOf` lists
 what a selection chooses among, so the Score View's Parts menu and the layout
 use one test. The choice itself is the Score View's, saved in its settings; see
-`openspec/changes/score-part-selection/design.md`.
+`openspec/changes/archive/2026-11-06-score-part-selection/design.md`.
 
 ### Several staves, several parts
 

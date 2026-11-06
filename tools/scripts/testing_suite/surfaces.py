@@ -1004,7 +1004,7 @@ SURFACES: tuple[Surface, ...] = (
         ),
     ),
     # The song with its voice hidden from the Parts menu
-    # (openspec/changes/score-part-selection).
+    # (openspec/changes/archive/2026-11-06-score-part-selection).
     Surface(
         state="score-view-part-hidden",
         title="The score view with a part hidden",
