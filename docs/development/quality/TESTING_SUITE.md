@@ -324,6 +324,17 @@ Practice Takes is open, and what makes the workers interchangeable — none hold
 anything another needs, so any worker captures any surface and there is no
 routing of tone surfaces towards whoever can hear.
 
+**Measured beside an open application** ([#180](https://github.com/dwerkjem/PracticeTakes/issues/180)).
+With Practice Takes running normally on one screen, a sequential capture took
+4 of 4 surfaces in 15 s, a parallel capture took the whole full-mode plan (51
+surfaces) across 4 workers in 27 s with none failed, and a capture on the same
+screen as the open application photographed its own window. The open
+application was left as it was. So a run no longer warns you to close the
+application you are working in. It warns only when the plan includes a surface
+that opens a real device, below, and names that surface. Measured in a
+container with no audio hardware: that the open application holds a real
+microphone while this happens is the one part a person has to see.
+
 The flag is separate from `--test-control` on purpose: driving the control
 channel against a real microphone by hand stays possible.
 
