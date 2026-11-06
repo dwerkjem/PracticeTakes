@@ -161,7 +161,13 @@ decision 1.
 - [ ] 4.1 Recapture `score-view-engraving`, `score-view-notation` and
       `score-view-notation-large` at the end of each tier, and retake their
       references deliberately rather than discovering them as failures.
-- [ ] 4.2 If `score-library` has landed first, bump its preview-cache version:
-      justification changes every preview.
-- [ ] 4.3 Update `notation-engraving.md` for every placement decision that moved
-      from the painter to the layout.
+      Recaptured headless after every step (scratch runs). Retaking the
+      references is a reviewer's approval in the testing suite, so it waits for
+      the maintainer.
+- [x] 4.2 If `score-library` has landed first, bump its preview-cache version:
+      justification changes every preview. It has not landed, so there is no
+      cache to bump; `score-library`'s own cache version starts after this.
+- [x] 4.3 Update `notation-engraving.md` for every placement decision that moved
+      from the painter to the layout. Done in the same commit as each one:
+      accidentals, seconds, split ties, ending brackets, chord ledger lines,
+      justification, the indent, multi-measure rests and structural breaks.
