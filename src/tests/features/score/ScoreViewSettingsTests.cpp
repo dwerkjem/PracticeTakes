@@ -97,3 +97,47 @@ TEST_CASE("the catalog restores what the Score View saves", "[score][view-settin
     REQUIRE(definition != nullptr);
     CHECK(definition->settingsVersion == std::optional<int>(settingsVersion));
 }
+
+// Hidden parts (score-part-selection, design.md decision 6).
+TEST_CASE("hidden parts survive a round trip", "[score][view-settings][part-selection]")
+{
+    Settings saved{ViewMode::page, defaultSizeStep};
+    saved.hiddenParts = {
+        {"P1", "Voice"},
+        // Every character the payload uses as a separator, and the escape.
+        {"P2", "Alto: 1st, solo; =100% loud"},
+        {"P3", ""}};
+
+    CHECK(decode(encode(saved)) == saved);
+}
+
+TEST_CASE(
+    "hidden parts are written by id and escaped name",
+    "[score][view-settings][part-selection]")
+{
+    Settings saved{ViewMode::horizontal, 6};
+    saved.hiddenParts = {{"P1", "Voice"}, {"P3", "Alto, 2"}};
+
+    CHECK(encode(saved).data == "view=horizontal;size=9.4;hidden=P1:Voice,P3:Alto%2C 2");
+}
+
+TEST_CASE("nothing hidden writes nothing extra", "[score][view-settings][part-selection]")
+{
+    // So a payload saved before parts could be hidden is exactly what a Score
+    // View with nothing hidden writes now.
+    CHECK(encode(Settings{ViewMode::page, defaultSizeStep}).data == "view=page;size=7");
+    CHECK(decode({settingsVersion, "view=page;size=7"}).hiddenParts.empty());
+}
+
+TEST_CASE(
+    "an unreadable hidden entry is skipped and the rest kept",
+    "[score][view-settings][part-selection]")
+{
+    const Settings settings = decode(
+        {settingsVersion,
+         "view=vertical;hidden=P1:Voice,:NoId,NoColon,P4:Bad%4,P5:Bad%ZZ,P6:Tenor"});
+
+    CHECK(settings.view == ViewMode::vertical);
+    CHECK(
+        settings.hiddenParts == std::vector<engraving::PartKey>{{"P1", "Voice"}, {"P6", "Tenor"}});
+}

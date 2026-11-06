@@ -1,11 +1,13 @@
 #pragma once
 
 #include "../../application/tools/ToolSettingsPayload.h"
+#include "engraving/ScoreLayout.h"
 
 #include <array>
 #include <cstddef>
 #include <optional>
 #include <string_view>
+#include <vector>
 
 // What a Score View remembers about itself, and how it is saved (no JUCE
 // dependency). See decisions 4 and 5 of
@@ -38,6 +40,11 @@ struct Settings
     ViewMode view = ViewMode::page;
     std::size_t sizeStep = defaultSizeStep;
 
+    // The parts this Score View does not draw, by id and name together (see
+    // openspec/changes/score-part-selection/design.md decisions 1 and 2).
+    // Empty, the default, draws every part.
+    std::vector<engraving::PartKey> hiddenParts;
+
     bool operator==(const Settings&) const = default;
 };
 
@@ -52,7 +59,11 @@ struct Settings
 // must equal.
 inline constexpr int settingsVersion = 1;
 
-// "view=page;size=7" -- the view by name and the size in pixels per space.
+// "view=page;size=7" -- the view by name and the size in pixels per space --
+// then, when any part is hidden, ";hidden=P1:Voice,P3:Alto". A part's id is an
+// XML name and never holds `:` `,` `;` or `=`; its name can, so the name is
+// percent-encoded for those and `%`. A version without hidden parts ignores the
+// key, which is why adding it did not need a new `settingsVersion`.
 [[nodiscard]] ToolSettingsPayload encode(const Settings& settings);
 
 // Anything the payload does not say, or says in a way that cannot be read,

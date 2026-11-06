@@ -1960,8 +1960,40 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
 
     std::vector<DrawnPart> drawnParts;
 
+    // Which parts the reader hid -- unless that is every part this pass could
+    // draw, in which case the selection is ignored (score-part-selection
+    // design.md decision 2): an empty page is never the answer.
+    const auto hiddenByChoice = [&options](const score::Part& part)
+    {
+        return std::find(
+                   options.hiddenParts.begin(), options.hiddenParts.end(),
+                   PartKey{part.id, part.name}) != options.hiddenParts.end();
+    };
+
+    const bool anyShown = std::any_of(
+        score->parts.begin(), score->parts.end(),
+        [&hiddenByChoice](const score::Part& part)
+        {
+            bool anyPitchedStaff = false;
+
+            for (int staff = 1; staff <= std::max(1, part.staffCount); ++staff)
+            {
+                anyPitchedStaff = anyPitchedStaff || isPitchedClef(openingClef(part, staff));
+            }
+
+            // The same test the loop below applies to decide a part is drawn.
+            return !hiddenByChoice(part) && anyPitchedStaff && !part.measures.empty() &&
+                   holdsAnyEvent(part);
+        });
+
     for (const score::Part& part : score->parts)
     {
+        // Before any notice: a hidden part says nothing about itself.
+        if (anyShown && hiddenByChoice(part))
+        {
+            continue;
+        }
+
         const std::string subject = severalParts ? nameOf(part) : "This part";
         const std::string object = severalParts ? nameOf(part) : "this part";
 

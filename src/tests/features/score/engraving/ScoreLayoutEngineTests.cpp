@@ -3802,3 +3802,157 @@ TEST_CASE(
     REQUIRE(tempo != nullptr);
     CHECK(tempo->y + options.textBandHeight <= jump.y - options.textClearance + 1.0e-9);
 }
+
+// --- Hidden parts (score-part-selection, design.md decisions 2 and 3) ---
+namespace
+{
+// A voice and a piano, eight bars each, with a tempo mark on both -- exporters
+// write it into every part -- and the voice holding a percussion-clef staff it
+// would otherwise report.
+[[nodiscard]] std::shared_ptr<const score::Score> voiceAndPiano()
+{
+    const auto partOf = [](std::string id, std::string name, score::Pitch onPitch)
+    {
+        score::Part part;
+        part.id = std::move(id);
+        part.name = std::move(name);
+
+        for (std::size_t index = 0; index < 8; ++index)
+        {
+            score::Measure measure = measureOf(
+                index, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, onPitch)})}, index == 0);
+
+            if (index == 0)
+            {
+                measure.directions = {
+                    score::Direction{score::DirectionKind::tempo, 0, 1, "Andante", 72.0}};
+            }
+
+            part.measures.push_back(measure);
+        }
+
+        return part;
+    };
+
+    auto built = std::make_shared<score::Score>();
+    built->metadata.workTitle = "A Song";
+    built->parts = {
+        partOf("P1", "Voice", pitch(score::Step::e, 0, 5)),
+        partOf("P2", "Piano", pitch(score::Step::c, 0, 4))};
+
+    return built;
+}
+
+[[nodiscard]] LayoutOptions hiding(std::vector<PartKey> parts, double width = 150.0)
+{
+    LayoutOptions options;
+    options.availableWidth = width;
+    options.hiddenParts = std::move(parts);
+
+    return options;
+}
+} // namespace
+
+TEST_CASE("a hidden part is not drawn at all", "[score][engraving][layout][part-selection]")
+{
+    const ScoreLayout both = layOutScore(voiceAndPiano(), hiding({}));
+    const ScoreLayout piano = layOutScore(voiceAndPiano(), hiding({{"P1", "Voice"}}));
+
+    REQUIRE(both.systems.front().staffOffsets.size() == 2);
+    REQUIRE(piano.systems.front().staffOffsets.size() == 1);
+
+    // Only the piano is named, in the title and beside the staff.
+    CHECK(both.partName == "Voice, Piano");
+    CHECK(piano.partName == "Piano");
+    REQUIRE(piano.systems.front().partNames.size() == 1);
+    CHECK(piano.systems.front().partNames.front().text == "Piano");
+
+    // Every notehead left is the piano's middle C.
+    for (const System& system : piano.systems)
+    {
+        for (const NoteheadGlyph& head : system.noteheads)
+        {
+            CHECK(head.position == bottomLineSteps + 2);
+        }
+    }
+
+    // The tempo mark is drawn once, above the piano, now the top part.
+    std::size_t tempos = 0;
+
+    for (const TextGlyph& text : piano.systems.front().texts)
+    {
+        tempos += text.role == TextRole::tempo ? 1 : 0;
+    }
+
+    CHECK(tempos == 1);
+}
+
+TEST_CASE(
+    "the parts shown lay out as a score of only them",
+    "[score][engraving][layout][part-selection]")
+{
+    // The piano with the voice hidden is laid out number for number as a score
+    // that never had a voice, apart from the part list it came from.
+    auto pianoOnly = std::make_shared<score::Score>(*voiceAndPiano());
+    pianoOnly->parts.erase(pianoOnly->parts.begin());
+
+    const ScoreLayout hidden = layOutScore(voiceAndPiano(), hiding({{"P1", "Voice"}}));
+    const ScoreLayout alone = layOutScore(pianoOnly, hiding({}));
+
+    REQUIRE(hidden.systems.size() == alone.systems.size());
+    CHECK(hidden.totalHeight == alone.totalHeight);
+
+    for (std::size_t index = 0; index < hidden.systems.size(); ++index)
+    {
+        const System& left = hidden.systems.at(index);
+        const System& right = alone.systems.at(index);
+
+        CHECK(left.firstMeasureIndex == right.firstMeasureIndex);
+        CHECK(left.lastMeasureIndex == right.lastMeasureIndex);
+        REQUIRE(left.noteheads.size() == right.noteheads.size());
+
+        for (std::size_t head = 0; head < left.noteheads.size(); ++head)
+        {
+            CHECK(left.noteheads.at(head).x == right.noteheads.at(head).x);
+        }
+    }
+}
+
+TEST_CASE("a hidden part reports nothing", "[score][engraving][layout][part-selection]")
+{
+    // A voice with nothing in it would say so; hidden, it is silent.
+    auto score = std::make_shared<score::Score>(*voiceAndPiano());
+
+    for (score::Measure& measure : score->parts.front().measures)
+    {
+        measure.voices.clear();
+    }
+
+    const ScoreLayout shown = layOutScore(score, hiding({}));
+    const ScoreLayout hidden = layOutScore(score, hiding({{"P1", "Voice"}}));
+
+    CHECK(anyNoticeContains(shown, "Voice"));
+    CHECK_FALSE(anyNoticeContains(hidden, "Voice"));
+}
+
+TEST_CASE("hiding every part shows every part", "[score][engraving][layout][part-selection]")
+{
+    const ScoreLayout layout =
+        layOutScore(voiceAndPiano(), hiding({{"P1", "Voice"}, {"P2", "Piano"}}));
+
+    CHECK(layout.partName == "Voice, Piano");
+    CHECK(layout.systems.front().staffOffsets.size() == 2);
+}
+
+TEST_CASE(
+    "a selection hides a part only by its id and its name",
+    "[score][engraving][layout][part-selection]")
+{
+    // Another score's P2 was called "Alto": this score's P2, the piano, stays.
+    const ScoreLayout otherScore = layOutScore(voiceAndPiano(), hiding({{"P2", "Alto"}}));
+    // And a part named Piano under another id is not this piano either.
+    const ScoreLayout otherId = layOutScore(voiceAndPiano(), hiding({{"P9", "Piano"}}));
+
+    CHECK(otherScore.partName == "Voice, Piano");
+    CHECK(otherId.partName == "Voice, Piano");
+}

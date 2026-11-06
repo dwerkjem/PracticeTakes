@@ -524,6 +524,18 @@ enum class LayoutOutcome
     laidOut
 };
 
+// A part, named the way a saved selection names it: by its MusicXML id and its
+// name together (score-part-selection design.md decision 2). Exporters number
+// parts P1, P2... in every file, so an id alone would match the wrong part of
+// the next score opened.
+struct PartKey
+{
+    std::string id;
+    std::string name;
+
+    bool operator==(const PartKey&) const = default;
+};
+
 // The spacing decisions, in staff spaces, gathered so that each is one number a
 // reader can find rather than a literal in the middle of the engine.
 //
@@ -535,6 +547,12 @@ struct LayoutOptions
 {
     // What the layout has to fit into. Systems break at this width.
     double availableWidth = 120.0;
+
+    // Parts the reader has chosen not to see. A part matching one -- id and name
+    // both -- is left out before anything else looks at it, so the rest lay out
+    // as if the score held only them, and it reports nothing. When nothing
+    // drawable would be left, this is ignored and every part is drawn.
+    std::vector<PartKey> hiddenParts;
 
     // Staff spaces of horizontal room per quarter note of music.
     double durationStretchPerQuarter = 7.0;

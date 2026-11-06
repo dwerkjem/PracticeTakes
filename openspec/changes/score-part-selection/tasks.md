@@ -4,12 +4,12 @@ contract next; the Score View last, where they meet.
 
 ## 1. The layout draws only the parts shown
 
-- [ ] 1.1 `PartKey` (`id`, `name`) and `LayoutOptions::hiddenParts`, a list of
+- [x] 1.1 `PartKey` (`id`, `name`) and `LayoutOptions::hiddenParts`, a list of
       them (design.md decision 3).
-- [ ] 1.2 `layOutScore` skips a part whose id and name both match, where it
+- [x] 1.2 `layOutScore` skips a part whose id and name both match, where it
       builds `drawnParts` and before any notice about that part. If no
       drawable part would be left, the filter is ignored (decision 2).
-- [ ] 1.3 Tests: a hidden part has no staves, names or glyphs, and the rest
+- [x] 1.3 Tests: a hidden part has no staves, names or glyphs, and the rest
       re-break as a score without it; a hidden part's notices are silent; the
       tempo mark is drawn above the new top part; hiding every part shows every
       part; a matching id with another name hides nothing; `partName` lists only
@@ -17,10 +17,10 @@ contract next; the Score View last, where they meet.
 
 ## 2. The selection is remembered
 
-- [ ] 2.1 `score_view::Settings::hiddenParts`, and `hidden=` in the payload,
+- [x] 2.1 `score_view::Settings::hiddenParts`, and `hidden=` in the payload,
       with names percent-encoded for `:` `,` `;` `=` and `%` (decision 6).
       `settingsVersion` stays 1.
-- [ ] 2.2 Tests: round trip, including a name holding each reserved character;
+- [x] 2.2 Tests: round trip, including a name holding each reserved character;
       an unreadable entry skipped and the rest kept; a payload from before this
       change decoding to nothing hidden.
 

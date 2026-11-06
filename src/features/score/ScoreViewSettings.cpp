@@ -1,5 +1,6 @@
 #include "ScoreViewSettings.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <string>
@@ -69,6 +70,112 @@ namespace
 
     return value;
 }
+// A part's name, made safe to sit between the payload's separators.
+[[nodiscard]] std::string escapeName(std::string_view name)
+{
+    static constexpr std::string_view reserved = ":,;=%";
+    static constexpr std::string_view hex = "0123456789ABCDEF";
+
+    std::string escaped;
+
+    for (const char character : name)
+    {
+        if (reserved.find(character) == std::string_view::npos)
+        {
+            escaped.push_back(character);
+            continue;
+        }
+
+        const auto byte = static_cast<unsigned char>(character);
+        escaped.push_back('%');
+        escaped.push_back(hex.at(byte >> 4U));
+        escaped.push_back(hex.at(byte & 0x0FU));
+    }
+
+    return escaped;
+}
+
+// The other way. Nothing for a malformed escape, so the entry is skipped
+// rather than read as a different name.
+[[nodiscard]] std::optional<std::string> unescapeName(std::string_view escaped)
+{
+    const auto digit = [](char character) -> int
+    {
+        if (character >= '0' && character <= '9')
+        {
+            return character - '0';
+        }
+
+        if (character >= 'A' && character <= 'F')
+        {
+            return character - 'A' + 10;
+        }
+
+        if (character >= 'a' && character <= 'f')
+        {
+            return character - 'a' + 10;
+        }
+
+        return -1;
+    };
+
+    std::string name;
+
+    for (std::size_t index = 0; index < escaped.size(); ++index)
+    {
+        if (escaped.at(index) != '%')
+        {
+            name.push_back(escaped.at(index));
+            continue;
+        }
+
+        // A percent needs two hex digits after it.
+        if (index + 2 >= escaped.size())
+        {
+            return std::nullopt;
+        }
+
+        const int high = digit(escaped.at(index + 1));
+        const int low = digit(escaped.at(index + 2));
+
+        if (high < 0 || low < 0)
+        {
+            return std::nullopt;
+        }
+
+        name.push_back(static_cast<char>((high << 4) | low));
+        index += 2;
+    }
+
+    return name;
+}
+
+// "P1:Voice,P3:Alto" into its parts. An entry with no id, no colon or a bad
+// escape is skipped and the rest kept, as for every other field.
+[[nodiscard]] std::vector<engraving::PartKey> parseHiddenParts(std::string_view value)
+{
+    std::vector<engraving::PartKey> parts;
+    std::size_t start = 0;
+
+    while (start <= value.size())
+    {
+        const std::size_t end = std::min(value.find(',', start), value.size());
+        const std::string_view entry = value.substr(start, end - start);
+        const std::size_t colon = entry.find(':');
+
+        if (colon != std::string_view::npos && colon > 0)
+        {
+            if (std::optional<std::string> name = unescapeName(entry.substr(colon + 1)))
+            {
+                parts.push_back(engraving::PartKey{std::string(entry.substr(0, colon)), *name});
+            }
+        }
+
+        start = end + 1;
+    }
+
+    return parts;
+}
 } // namespace
 
 std::size_t nearestSizeStep(double pixelsPerSpace)
@@ -135,6 +242,20 @@ ToolSettingsPayload encode(const Settings& settings)
     data += ";size=";
     data += formatSize(sizeLadder.at(step));
 
+    if (!settings.hiddenParts.empty())
+    {
+        data += ";hidden=";
+
+        for (std::size_t index = 0; index < settings.hiddenParts.size(); ++index)
+        {
+            const engraving::PartKey& part = settings.hiddenParts.at(index);
+            data += index == 0 ? "" : ",";
+            data += part.id;
+            data += ':';
+            data += escapeName(part.name);
+        }
+    }
+
     return {settingsVersion, data};
 }
 
@@ -167,6 +288,10 @@ Settings decode(const ToolSettingsPayload& payload)
                 {
                     settings.view = *view;
                 }
+            }
+            else if (key == "hidden")
+            {
+                settings.hiddenParts = parseHiddenParts(value);
             }
             else if (key == "size")
             {
