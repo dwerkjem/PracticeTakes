@@ -167,12 +167,13 @@ decision 1.
 
 ## 4. Verification and close-out
 
-- [ ] 4.1 Recapture `score-view-engraving`, `score-view-notation` and
+- [x] 4.1 Recapture `score-view-engraving`, `score-view-notation` and
       `score-view-notation-large` at the end of each tier, and retake their
       references deliberately rather than discovering them as failures.
       Recaptured headless after every step (scratch runs). Retaking the
-      references is a reviewer's approval in the testing suite, so it waits for
-      the maintainer.
+      references is a reviewer's approval in the testing suite, so it moved to
+      #284 (`status:ready-for-human`) and the change was archived without it,
+      as CONTRIBUTING says.
 - [x] 4.2 If `score-library` has landed first, bump its preview-cache version:
       justification changes every preview. It has not landed, so there is no
       cache to bump; `score-library`'s own cache version starts after this.
