@@ -20,6 +20,12 @@ constexpr double ledgerLineThickness = 0.16;
 constexpr double thinBarlineThickness = 0.16;
 constexpr double thickBarlineThickness = 0.5;
 
+// An ending bracket's lines, from Bravura's engraving defaults, and how far its
+// hooks drop. The hook length is the layout's room for the bracket, which the
+// layout keeps as `voltaHookLength`; the painter draws the shape it reserved.
+constexpr double voltaLineThickness = 0.16;
+constexpr double voltaHookLength = engraving::LayoutOptions{}.voltaHookLength;
+
 // How far a ledger line reaches past each side of its notehead, and how far on
 // the side an accidental stands: shortened there, as Gould prescribes, so the
 // sign does not sit on the end of the line.
@@ -622,6 +628,55 @@ void ScoreGlyphPainter::drawText(const engraving::TextGlyph& glyph, double origi
         justification);
 }
 
+void ScoreGlyphPainter::drawVolta(
+    const engraving::VoltaGlyph& glyph,
+    double originX,
+    double originY) const
+{
+    if (glyph.endX <= glyph.startX)
+    {
+        return;
+    }
+
+    graphics.setColour(palette.notation);
+
+    const auto line = [&](double left, double top, double width, double height)
+    {
+        graphics.fillRect(juce::Rectangle<float>(
+            static_cast<float>(originX) + px(left), static_cast<float>(originY) + px(top),
+            px(width), px(height)));
+    };
+
+    // The line, and a hook down from each end that has one, all at the
+    // weight Bravura gives an ending's lines.
+    line(glyph.startX, glyph.y, glyph.endX - glyph.startX, voltaLineThickness);
+
+    if (glyph.hookAtStart)
+    {
+        line(glyph.startX, glyph.y, voltaLineThickness, voltaHookLength);
+    }
+
+    if (glyph.hookAtEnd)
+    {
+        line(glyph.endX - voltaLineThickness, glyph.y, voltaLineThickness, voltaHookLength);
+    }
+
+    if (glyph.label.empty())
+    {
+        return;
+    }
+
+    // Under the line, just inside the hook.
+    graphics.setFont(juce::FontOptions(px(1.2), juce::Font::bold));
+    graphics.drawText(
+        juce::String(glyph.label),
+        juce::Rectangle<float>(
+            static_cast<float>(originX + px(glyph.startX + 0.4)),
+            static_cast<float>(originY + px(glyph.y + 0.15)),
+            px(std::max(1.0, glyph.endX - glyph.startX - 0.6)), px(1.4)),
+        juce::Justification::centredLeft, false);
+}
+
 void ScoreGlyphPainter::drawPartName(
     const engraving::PartNameGlyph& glyph,
     const engraving::System& system,
@@ -752,6 +807,11 @@ void ScoreGlyphPainter::drawSystem(const engraving::System& system, double origi
     for (const engraving::TextGlyph& glyph : system.texts)
     {
         drawText(glyph, originX, staffOrigin(glyph.staff));
+    }
+
+    for (const engraving::VoltaGlyph& glyph : system.voltas)
+    {
+        drawVolta(glyph, originX, staffOrigin(0));
     }
 }
 

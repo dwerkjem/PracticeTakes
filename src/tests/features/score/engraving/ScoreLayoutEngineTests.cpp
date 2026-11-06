@@ -915,9 +915,10 @@ TEST_CASE("repeat barlines are drawn from the measure's markings", "[score][engr
         barlines.begin(), barlines.end(),
         [](const BarlineGlyph& glyph) { return glyph.kind == BarlineKind::repeatEnd; }));
 
-    // The markings this pass carries but does not draw say so, rather than
-    // being dropped on the floor.
-    CHECK(anyNoticeContains(layout, "endings"));
+    // The ending is drawn now, so nothing reports it; the jump is not yet, and
+    // says so rather than being dropped on the floor.
+    CHECK_FALSE(anyNoticeContains(layout, "endings"));
+    CHECK(layout.systems.front().voltas.size() == 1);
     CHECK(anyNoticeContains(layout, "D.C., D.S., Fine and Coda"));
 }
 
@@ -2996,4 +2997,182 @@ TEST_CASE(
         graceHead->accidentalX +
             (accidentalMetricsFor(AccidentalKind::sharp).width * graceNoteScale) <
         graceHead->x);
+}
+
+// --- Ending brackets (engraving-polish tier 1, design.md decision 8) ---
+namespace
+{
+// One bar of a whole-note B4, with the ending numbers and repeat it is given.
+[[nodiscard]] score::Measure endingBar(std::size_t index, std::vector<int> numbers, bool repeatEnd)
+{
+    score::Measure measure = measureOf(
+        index, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::b, 0, 4))})},
+        index == 0);
+    measure.repeats.endingNumbers = std::move(numbers);
+    measure.repeats.repeatEnd = repeatEnd;
+
+    return measure;
+}
+
+[[nodiscard]] std::vector<VoltaGlyph> voltasOf(const ScoreLayout& layout)
+{
+    std::vector<VoltaGlyph> all;
+
+    for (const System& system : layout.systems)
+    {
+        all.insert(all.end(), system.voltas.begin(), system.voltas.end());
+    }
+
+    return all;
+}
+} // namespace
+
+TEST_CASE(
+    "a first and a second ending are two brackets, the first closed",
+    "[score][engraving][layout][voltas]")
+{
+    const ScoreLayout layout = layOutScore(
+        scoreOf({endingBar(0, {}, false), endingBar(1, {1}, true), endingBar(2, {2}, false)}),
+        wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const std::vector<VoltaGlyph>& voltas = layout.systems.front().voltas;
+
+    REQUIRE(voltas.size() == 2);
+
+    CHECK(voltas.at(0).label == "1.");
+    CHECK(voltas.at(0).hookAtStart);
+    CHECK(voltas.at(0).hookAtEnd);
+
+    CHECK(voltas.at(1).label == "2.");
+    CHECK(voltas.at(1).hookAtStart);
+    CHECK_FALSE(voltas.at(1).hookAtEnd);
+
+    // Side by side, the first over bar 2 and the second over bar 3.
+    CHECK(voltas.at(0).endX < voltas.at(1).startX);
+    CHECK(voltas.at(0).startX > 0.0);
+
+    // Nothing left to report.
+    CHECK_FALSE(anyNoticeContains(layout, "endings"));
+}
+
+TEST_CASE("a shared ending is one bracket labelled with both", "[score][engraving][layout][voltas]")
+{
+    const ScoreLayout layout =
+        layOutScore(scoreOf({endingBar(0, {}, false), endingBar(1, {1, 2}, true)}), wideOptions());
+
+    const std::vector<VoltaGlyph> voltas = voltasOf(layout);
+
+    REQUIRE(voltas.size() == 1);
+    CHECK(voltas.front().label == "1. 2.");
+}
+
+TEST_CASE(
+    "an ending over several bars is one bracket, open without a repeat",
+    "[score][engraving][layout][voltas]")
+{
+    const ScoreLayout layout = layOutScore(
+        scoreOf(
+            {endingBar(0, {}, false), endingBar(1, {2}, false), endingBar(2, {2}, false),
+             endingBar(3, {}, false)}),
+        wideOptions());
+
+    const std::vector<VoltaGlyph> voltas = voltasOf(layout);
+
+    REQUIRE(voltas.size() == 1);
+    CHECK(voltas.front().label == "2.");
+    CHECK_FALSE(voltas.front().hookAtEnd);
+}
+
+TEST_CASE(
+    "two runs with the same number are split at a repeat barline",
+    "[score][engraving][layout][voltas]")
+{
+    // Unusual, but a repeat sends the reader back: whatever follows it starts a
+    // new bracket rather than extending the one that closed.
+    const ScoreLayout layout = layOutScore(
+        scoreOf({endingBar(0, {}, false), endingBar(1, {1}, true), endingBar(2, {1}, false)}),
+        wideOptions());
+
+    CHECK(voltasOf(layout).size() == 2);
+}
+
+TEST_CASE(
+    "an ending across a system break continues without its label",
+    "[score][engraving][layout][voltas]")
+{
+    std::vector<score::Measure> measures{endingBar(0, {}, false)};
+
+    for (std::size_t index = 1; index < 8; ++index)
+    {
+        measures.push_back(endingBar(index, {1}, index == 7));
+    }
+
+    LayoutOptions narrow;
+    narrow.availableWidth = 75.0;
+
+    const ScoreLayout layout = layOutScore(scoreOf(measures), narrow);
+
+    REQUIRE(layout.systems.size() > 1);
+
+    const System& first = layout.systems.at(0);
+    const System& second = layout.systems.at(1);
+
+    REQUIRE(first.voltas.size() == 1);
+    REQUIRE(second.voltas.size() == 1);
+
+    // Labelled and hooked where it begins, left open at the break.
+    CHECK(first.voltas.front().label == "1.");
+    CHECK(first.voltas.front().hookAtStart);
+    CHECK_FALSE(first.voltas.front().hookAtEnd);
+    CHECK(first.voltas.front().endX <= first.width);
+
+    // Carried on with no label and no opening hook, after the new system's
+    // clef and key.
+    CHECK(second.voltas.front().label.empty());
+    CHECK_FALSE(second.voltas.front().hookAtStart);
+    CHECK(second.voltas.front().startX > second.headerEndX);
+}
+
+TEST_CASE(
+    "an ending bracket clears the notes and puts the tempo above it",
+    "[score][engraving][layout][voltas][text-placement]")
+{
+    // G6, four ledger lines up, under a first ending with a tempo mark.
+    score::Measure bar = measureOf(
+        0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 6))})}, true);
+    bar.repeats.endingNumbers = {1};
+    bar.repeats.repeatEnd = true;
+    bar.directions = {score::Direction{score::DirectionKind::tempo, 0, 1, "Andante", 72.0}};
+
+    const LayoutOptions options = wideOptions();
+    const ScoreLayout layout = layOutScore(scoreOf({bar}), options);
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.voltas.size() == 1);
+
+    const VoltaGlyph& volta = system.voltas.front();
+    const double headTop = spacesBelowTopLine(system.noteheads.front().position) - 0.5;
+
+    // The hooks hang down from the line and stop clear of the note.
+    CHECK(volta.y + options.voltaHookLength <= headTop - options.textClearance + 1.0e-9);
+
+    // And the tempo mark sits above the bracket, not through it.
+    const TextGlyph* tempo = firstTextOf(system, TextRole::tempo);
+    REQUIRE(tempo != nullptr);
+    CHECK(tempo->y + options.textBandHeight <= volta.y - options.textClearance + 1.0e-9);
+
+    // A system with nothing in the way keeps the bracket at its usual height.
+    score::Measure low = measureOf(
+        0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::b, 0, 4))})}, true);
+    low.repeats.endingNumbers = {1};
+
+    const ScoreLayout plain = layOutScore(scoreOf({low}), options);
+
+    REQUIRE(plain.systems.front().voltas.size() == 1);
+    CHECK(plain.systems.front().voltas.front().y == Approx(-options.voltaAboveStaff));
 }

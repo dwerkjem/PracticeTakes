@@ -250,6 +250,21 @@ beams, ledger lines, rests, ties,
 barlines including repeats and the final double bar, lyrics with hyphens, tempo
 marks, dynamics, and printed bar numbers at system starts.
 
+### Ending brackets
+
+A first, second or shared ending is a `VoltaGlyph`: a run of consecutive
+measures with the same non-empty `endingNumbers`, labelled as written ("1.",
+"1. 2."). A run ends at a measure that closes on a repeat barline, and that
+end gets a hook down; any other end is left open. The model has no `stop` or
+`discontinue`, so the barline is what says which. A run split by a system break
+continues on the next system with no label and no opening hook, starting after
+the new system's clef and key.
+
+Brackets are drawn once per system, above the top staff, because an ending
+belongs to the whole score. Their line sits `voltaAboveStaff` over the top line,
+or higher when a note's ledger lines would meet the hooks. The top staff's
+tempo marks and measure numbers then go above the bracket.
+
 ### Text is placed clear of the notes
 
 Lyrics, dynamics, tempo marks and measure numbers are placed by the layout, not
@@ -342,7 +357,7 @@ shows. That list is the reason a first pass is an acceptable thing to ship:
 | **A staff with no pitches** | A percussion or tablature staff is left out and named, and the rest of its part, and every other part, is drawn. |
 | **Bars only some parts have** | Parts are drawn as far as they all go; any further bars are counted. |
 | **Brackets for groups of parts** | `<part-group>` is not imported, so a choir's parts are joined at the left but not bracketed. |
-| **Volta brackets, D.C./D.S. jumps** | `Measure::repeats` carries them uninterpreted. Repeat barlines *are* drawn. |
+| **D.C./D.S. jumps, Segno and Coda** | `RepeatMarkings::jumps` is never filled by the importer, so there is nothing to draw; a model that does carry one is reported. Repeat barlines and ending brackets *are* drawn. |
 | **Cancelling naturals at a key change** | A key change to no accidentals draws an empty signature. |
 | **Slurs, articulations, ornaments, hairpins, fingering** | Mostly not in the model, by invariant 10 or by the supported subset. |
 

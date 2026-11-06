@@ -650,4 +650,12 @@ TEST_CASE("the engraving fixture holds what its picture is about", "[testcontrol
     REQUIRE(layout.systems.at(1).ties.size() == 1);
     CHECK_FALSE(layout.systems.at(0).ties.front().fromSystemStart);
     CHECK(layout.systems.at(1).ties.front().fromSystemStart);
+
+    // Bars 7 and 8, on the second system: "1." closed at the repeat, "2." open.
+    const std::vector<engraving::VoltaGlyph>& voltas = layout.systems.at(1).voltas;
+    REQUIRE(voltas.size() == 2);
+    CHECK(voltas.at(0).label == "1.");
+    CHECK(voltas.at(0).hookAtEnd);
+    CHECK(voltas.at(1).label == "2.");
+    CHECK_FALSE(voltas.at(1).hookAtEnd);
 }

@@ -266,6 +266,31 @@ struct TieGlyph
     bool fromSystemStart = false;
 };
 
+// A first, second or shared ending: a bracket over the measures it covers,
+// labelled with their ending numbers (design.md decision 8). Drawn once per
+// system above the top staff, like a tempo mark, because an ending belongs to
+// the whole score and not to one part.
+struct VoltaGlyph
+{
+    double startX = 0.0;
+    double endX = 0.0;
+
+    // "1.", or "1. 2." for a shared ending. Empty on the system a bracket
+    // continues onto: the label is written once, where the ending begins.
+    std::string label;
+
+    // The hooks that turn down at each end. A bracket begins with one, except
+    // where it continues from the system before. It ends with one when its
+    // last measure closes on a repeat barline -- the first ending, which goes
+    // back -- and is left open otherwise.
+    bool hookAtStart = true;
+    bool hookAtEnd = false;
+
+    // The bracket's line, in staff spaces below the top staff's top line --
+    // negative, since it is above. Placed by the layout clear of the notes.
+    double y = 0.0;
+};
+
 struct LyricGlyph
 {
     double x = 0.0;
@@ -371,6 +396,7 @@ struct System
     std::vector<RestGlyph> rests;
     std::vector<BarlineGlyph> barlines;
     std::vector<TieGlyph> ties;
+    std::vector<VoltaGlyph> voltas;
     std::vector<LyricGlyph> lyrics;
     std::vector<TextGlyph> texts;
 
@@ -550,6 +576,13 @@ struct LayoutOptions
 
     // How much higher a measure number sits than a tempo mark beside it.
     double measureNumberAboveTempo = 1.3;
+
+    // An ending bracket: how far above the top line its line sits when nothing
+    // is in the way, and how far its hooks hang down from it. The label sits
+    // under the line, inside the hook, so the hook length is also the room the
+    // bracket needs. Tempo marks and measure numbers go above a bracket.
+    double voltaAboveStaff = 2.8;
+    double voltaHookLength = 1.6;
 
     // How tall a line of text is, for clearing it.
     double textBandHeight = 1.7;

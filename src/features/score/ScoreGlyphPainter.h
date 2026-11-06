@@ -106,6 +106,10 @@ class ScoreGlyphPainter
 
     void drawText(const engraving::TextGlyph& glyph, double originX, double originY) const;
 
+    // An ending bracket: its line, the hooks it has, and its label under the
+    // line at its start.
+    void drawVolta(const engraving::VoltaGlyph& glyph, double originX, double originY) const;
+
     void fillInSpaces(
         const juce::Path& pathInSpaces,
         double originX,

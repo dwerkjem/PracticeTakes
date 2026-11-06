@@ -69,10 +69,10 @@ decision 1.
 
 ### Voltas and jumps
 
-- [ ] 1.12 Derive volta brackets from runs of consecutive measures sharing a
+- [x] 1.12 Derive volta brackets from runs of consecutive measures sharing a
       non-empty `endingNumbers`; label as written; closed when the run ends on a
       repeat barline, open otherwise (design.md decision 8).
-- [ ] 1.13 A run across a system break continues without repeating its label.
+- [x] 1.13 A run across a system break continues without repeating its label.
 - [ ] 1.14 Jump marks: `Segno` and `Coda` as SMuFL signs at the measure start;
       any other string as text right-aligned at the measure end; an
       unrecognised string drawn as text rather than dropped.
@@ -80,10 +80,13 @@ decision 1.
       today (see 0.1), so this needs `<segno>`, `<coda>` and jump `<words>` /
       `<sound dalsegno|dacapo|tocoda|fine>` read into it before there is
       anything to draw.
-- [ ] 1.15 Remove the ending and jump notices.
+- [ ] 1.15 Remove the ending and jump notices. The ending notice is gone, with
+      1.12; the jump notice stays until 1.14 can draw something.
 - [ ] 1.16 Tests: `1.` then `2.` as two brackets; `1. 2.` as one; closed against
       a repeat barline and open without one; a bracket across a break; Segno,
-      Coda, and an unrecognised jump string.
+      Coda, and an unrecognised jump string. The ending cases are in
+      `ScoreLayoutEngineTests` (`[voltas]`), with a bracket clearing a high
+      note and the tempo mark going above it; the jump cases wait on 1.14.
 
 ## 2. Tier 2 — collisions
 

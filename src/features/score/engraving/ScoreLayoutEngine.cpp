@@ -1351,6 +1351,85 @@ struct StaffExtent
     return extents;
 }
 
+// "1." for a first ending, "1. 2." for one shared by both, as written.
+[[nodiscard]] std::string voltaLabelFor(const std::vector<int>& numbers)
+{
+    std::string label;
+
+    for (const int number : numbers)
+    {
+        if (!label.empty())
+        {
+            label += ' ';
+        }
+
+        label += std::to_string(number) + '.';
+    }
+
+    return label;
+}
+
+// Where one measure sits on its system, for the ending brackets drawn over it.
+struct MeasureSpan
+{
+    const score::Measure* measure = nullptr;
+    double startX = 0.0;
+    double endX = 0.0;
+};
+
+// Ending brackets for one system (design.md decision 8). A bracket is a run of
+// consecutive measures sharing the same non-empty ending numbers, and it ends at
+// a measure that closes on a repeat barline even if the next has the same
+// numbers. `before` is the measure just ahead of this system, if any, so a run
+// that started there continues here without a second label.
+void addVoltas(System& system, const std::vector<MeasureSpan>& spans, const score::Measure* before)
+{
+    // Inset from the barlines either side, so a hook does not sit on one.
+    constexpr double barlineInset = 0.25;
+
+    const auto continues = [](const score::Measure* previous, const score::Measure& next)
+    {
+        return previous != nullptr && !previous->repeats.repeatEnd &&
+               previous->repeats.endingNumbers == next.repeats.endingNumbers;
+    };
+
+    std::size_t index = 0;
+
+    while (index < spans.size())
+    {
+        const score::Measure& first = *spans.at(index).measure;
+
+        if (first.repeats.endingNumbers.empty())
+        {
+            ++index;
+            continue;
+        }
+
+        const score::Measure* previous = index == 0 ? before : spans.at(index - 1).measure;
+        const bool carriedOver = index == 0 && continues(previous, first);
+
+        std::size_t last = index;
+
+        while (last + 1 < spans.size() && !spans.at(last).measure->repeats.repeatEnd &&
+               spans.at(last + 1).measure->repeats.endingNumbers == first.repeats.endingNumbers)
+        {
+            ++last;
+        }
+
+        VoltaGlyph volta;
+        volta.startX = (index == 0 ? std::max(spans.at(index).startX, system.headerEndX)
+                                   : spans.at(index).startX) +
+                       barlineInset;
+        volta.endX = spans.at(last).endX - barlineInset;
+        volta.label = carriedOver ? std::string{} : voltaLabelFor(first.repeats.endingNumbers);
+        volta.hookAtStart = !carriedOver;
+        volta.hookAtEnd = spans.at(last).measure->repeats.repeatEnd;
+        system.voltas.push_back(volta);
+
+        index = last + 1;
+    }
+}
+
 // Puts every line of text on its band, clear of the notes, then stacks the
 // staves and systems by what they now hold (design decision 6).
 //
@@ -1401,6 +1480,26 @@ void placeTextAndStaves(ScoreLayout& layout, const LayoutOptions& options)
 
         // How far each staff's contents reach once its text is placed.
         std::vector<StaffExtent> reach = notes;
+
+        // Ending brackets sit nearest the top staff, one line for the whole
+        // system, with their hooks clear of its notes. The top staff's other
+        // text goes above them, so a tempo mark or a measure number is never
+        // written through a bracket.
+        if (!system.voltas.empty())
+        {
+            const double lineY = std::min(
+                -options.voltaAboveStaff,
+                notes.front().top - options.textClearance - options.voltaHookLength);
+
+            for (VoltaGlyph& volta : system.voltas)
+            {
+                volta.y = lineY;
+            }
+
+            reach.front().include(lineY);
+            aboveBase.front() =
+                std::min(aboveBase.front(), lineY - options.textClearance - options.textBandHeight);
+        }
 
         for (LyricGlyph& lyric : system.lyrics)
         {
@@ -1590,11 +1689,6 @@ void liftTempoMarksToTop(System& system, int lastStaffOfFirstPart)
         plan.clef = clef;
         plan.key = key;
         plan.time = time;
-
-        if (!measure.repeats.endingNumbers.empty())
-        {
-            notices.add("First and second endings are not marked yet.");
-        }
 
         if (!measure.repeats.jumps.empty())
         {
@@ -2051,6 +2145,7 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         }
 
         double x = system.staffStartX;
+        std::vector<MeasureSpan> spans;
 
         for (std::size_t slot = 0; slot < measures.size(); ++slot)
         {
@@ -2092,10 +2187,15 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
                 assignStaff(system, before, static_cast<int>(staff));
             }
 
+            spans.push_back(MeasureSpan{plansByStaff.front().at(measure).source, x, barlineX});
             x = barlineX;
         }
 
         system.width = x;
+
+        addVoltas(
+            system, spans,
+            measures.front() == 0 ? nullptr : plansByStaff.front().at(measures.front() - 1).source);
 
         liftTempoMarksToTop(system, staffGroups.front().lastStaff);
 
