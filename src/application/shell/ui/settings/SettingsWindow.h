@@ -685,9 +685,12 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 presetLabel.setText("Practice preset", juce::dontSendNotification);
                 addAndMakeVisible(presetLabel);
-                presetBox.addItem("Voice practice", static_cast<int>(AppDefaults::Preset::voice));
-                presetBox.addItem(
-                    "General instrument", static_cast<int>(AppDefaults::Preset::generalInstrument));
+                for (const AppDefaults::PresetDefinition& preset : AppDefaults::presets)
+                {
+                    presetBox.addItem(
+                        juce::String(preset.label.data(), preset.label.size()),
+                        static_cast<int>(preset.id));
+                }
                 presetBox.setTextWhenNothingSelected("Choose a preset");
                 presetBox.onChange = [this]
                 {

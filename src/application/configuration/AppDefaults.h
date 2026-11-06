@@ -3,6 +3,9 @@
 #include "../../platform/midi/MidiMessageTranslation.h"
 #include "../theme/ThemeType.h"
 
+#include <array>
+#include <string_view>
+
 namespace AppDefaults
 {
 inline constexpr int schemaVersion = 6;
@@ -47,19 +50,49 @@ struct TunerSettings
     double graphDurationSeconds;
 };
 
+// The general-instrument values, which are also the tuner's defaults.
+inline constexpr TunerSettings generalInstrumentTuner{
+    Tuner::displayMode,         Tuner::easing,        Tuner::averaging,
+    Tuner::noteSwitchSemitones, Tuner::dropoutFrames, Tuner::graphDurationSeconds};
+
+// A practice preset, declared once: its identity, the name the Settings window
+// offers it under, and the tuner controls it applies. The Settings window
+// builds its preset list from this table, so a new preset is one entry here
+// and nothing in the shell -- the pattern `ToolDefinition` set for tools.
+struct PresetDefinition
+{
+    Preset id;
+    std::string_view label;
+    TunerSettings tuner;
+};
+
+// In the order the Settings window lists them. An id is also the preset's
+// ComboBox item id, which JUCE reserves 0 of, so ids start at 1.
+inline constexpr std::array presets{
+    PresetDefinition{
+        Preset::voice,
+        "Voice practice",
+        {Tuner::displayMode, 0.25, 7.0, 0.45, 7.0, 30.0}},
+    PresetDefinition{Preset::generalInstrument, "General instrument", generalInstrumentTuner},
+};
+
 [[nodiscard]] constexpr TunerSettings tunerPreset(Preset preset)
 {
-    if (preset == Preset::voice)
+    for (const PresetDefinition& definition : presets)
     {
-        return {Tuner::displayMode, 0.25, 7.0, 0.45, 7.0, 30.0};
+        if (definition.id == preset)
+        {
+            return definition.tuner;
+        }
     }
 
-    return {Tuner::displayMode,         Tuner::easing,        Tuner::averaging,
-            Tuner::noteSwitchSemitones, Tuner::dropoutFrames, Tuner::graphDurationSeconds};
+    // An id from nowhere -- a ComboBox item this table did not add -- applies
+    // the defaults, as the code before the table did for anything not voice.
+    return generalInstrumentTuner;
 }
 
 [[nodiscard]] constexpr TunerSettings tunerDefaults()
 {
-    return tunerPreset(Preset::generalInstrument);
+    return generalInstrumentTuner;
 }
 } // namespace AppDefaults
