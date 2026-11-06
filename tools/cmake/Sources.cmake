@@ -271,6 +271,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/theme/ThemeContrastTests.cpp
     src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
     src/tests/features/analysis/tuner/PitchTrackerTests.cpp
+    src/tests/features/analysis/tuner/TunerSettingsCodecTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
     src/tests/features/score/TargetNoteSelectionTests.cpp
     src/tests/features/score/MusicFontTests.cpp

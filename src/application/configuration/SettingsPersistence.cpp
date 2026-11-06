@@ -144,7 +144,10 @@ loadValidWindowBounds(const juce::PropertySet& properties, const char* key)
 [[nodiscard]] int loadDisplayMode(const juce::PropertySet& properties)
 {
     const auto value = properties.getIntValue(tunerDisplayModeKey, AppDefaults::Tuner::displayMode);
-    return value >= 1 && value <= 3 ? value : AppDefaults::Tuner::displayMode;
+    return value >= AppDefaults::tunerDisplayModeMinimum &&
+                   value <= AppDefaults::tunerDisplayModeMaximum
+               ? value
+               : AppDefaults::Tuner::displayMode;
 }
 
 [[nodiscard]] WorkspaceCatalog
@@ -233,15 +236,21 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
     result.state.midiInputDeviceIdentifier = properties.getValue(midiInputDeviceIdentifierKey);
     result.state.midiInputDeviceName = properties.getValue(midiInputDeviceNameKey);
     result.state.midiPedalDownThreshold = loadPedalDownThreshold(properties);
+    // The pre-workspace keys, read against the ranges in the tuner's schema.
+    const auto tunerValue =
+        [&properties](const char* key, double AppDefaults::TunerSettings::*member)
+    {
+        const AppDefaults::TunerNumberField& field = AppDefaults::tunerField(member);
+        return boundedValue(
+            properties, key, AppDefaults::tunerDefaults().*member, field.minimum, field.maximum);
+    };
     result.state.tuner = {
         loadDisplayMode(properties),
-        boundedValue(properties, tunerEasingKey, AppDefaults::Tuner::easing, 0.02, 1.0),
-        boundedValue(properties, tunerAveragingKey, AppDefaults::Tuner::averaging, 1.0, 15.0),
-        boundedValue(
-            properties, tunerThresholdKey, AppDefaults::Tuner::noteSwitchSemitones, 0.1, 1.5),
-        boundedValue(properties, tunerDropoutKey, AppDefaults::Tuner::dropoutFrames, 1.0, 20.0),
-        boundedValue(
-            properties, tunerDurationKey, AppDefaults::Tuner::graphDurationSeconds, 5.0, 60.0)};
+        tunerValue(tunerEasingKey, &AppDefaults::TunerSettings::easing),
+        tunerValue(tunerAveragingKey, &AppDefaults::TunerSettings::averaging),
+        tunerValue(tunerThresholdKey, &AppDefaults::TunerSettings::noteSwitchSemitones),
+        tunerValue(tunerDropoutKey, &AppDefaults::TunerSettings::dropoutFrames),
+        tunerValue(tunerDurationKey, &AppDefaults::TunerSettings::graphDurationSeconds)};
     result.state.fullscreenMode = loadFullscreenMode(properties);
 
     if (!isCurrentSchema)

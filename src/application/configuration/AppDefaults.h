@@ -50,6 +50,46 @@ struct TunerSettings
     double graphDurationSeconds;
 };
 
+// The tuner's settings schema: for each numeric setting, the name it is stored
+// under in a workspace payload and the range every reader accepts and the
+// tuner's slider offers. Declared once because three places read it -- the
+// workspace codec, the legacy settings migration and the tuner's own controls
+// -- and each used to spell the ranges out for itself.
+struct TunerNumberField
+{
+    std::string_view key;
+    double TunerSettings::*member;
+    double minimum;
+    double maximum;
+    double step;
+};
+
+inline constexpr int tunerDisplayModeMinimum = 1;
+inline constexpr int tunerDisplayModeMaximum = 3;
+
+// In payload order: a workspace payload lists its fields in this order.
+inline constexpr std::array tunerNumberFields{
+    TunerNumberField{"easing", &TunerSettings::easing, 0.02, 1.0, 0.01},
+    TunerNumberField{"averaging", &TunerSettings::averaging, 1.0, 15.0, 1.0},
+    TunerNumberField{"noteSwitchSemitones", &TunerSettings::noteSwitchSemitones, 0.1, 1.5, 0.05},
+    TunerNumberField{"dropoutFrames", &TunerSettings::dropoutFrames, 1.0, 20.0, 1.0},
+    TunerNumberField{"graphDurationSeconds", &TunerSettings::graphDurationSeconds, 5.0, 60.0, 1.0},
+};
+
+// The schema entry for one setting. Every member of TunerSettings but
+// displayMode has one, which AppDefaultsTests checks.
+[[nodiscard]] constexpr const TunerNumberField& tunerField(double TunerSettings::*member)
+{
+    for (const TunerNumberField& field : tunerNumberFields)
+    {
+        if (field.member == member)
+        {
+            return field;
+        }
+    }
+    return tunerNumberFields.front();
+}
+
 // The general-instrument values, which are also the tuner's defaults.
 inline constexpr TunerSettings generalInstrumentTuner{
     Tuner::displayMode,         Tuner::easing,        Tuner::averaging,
