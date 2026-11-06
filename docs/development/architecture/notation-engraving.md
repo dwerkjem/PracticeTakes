@@ -354,6 +354,21 @@ strip and Ctrl/Cmd `+`, `−`, `0`; the view and size are saved per Score View.
 A change of either keeps the bar that was in view in view. Until justification
 (`engraving-polish` 3.1) lands, a page holds ragged systems.
 
+### Parts the reader hid
+
+`LayoutOptions::hiddenParts` names parts not to draw, by MusicXML id *and* name
+together, since exporters number parts `P1`, `P2`... in every file. A matching
+part is left out where `layOutScore` chooses its drawn parts, before any notice
+about it, so everything that follows the drawn parts follows the parts shown:
+staff groups and braces, part names, the tempo mark over the top part, and
+`ScoreLayout::partName`. The rest lay out exactly as a score that never had it.
+A tempo mark written only in a hidden part is lent to the top staff shown,
+because a tempo is the whole score's and exporters often write it into one part.
+A selection that would leave nothing to draw is ignored. `drawablePartsOf` lists
+what a selection chooses among, so the Score View's Parts menu and the layout
+use one test. The choice itself is the Score View's, saved in its settings; see
+`openspec/changes/score-part-selection/design.md`.
+
 ### Several staves, several parts
 
 Every part is drawn, top to bottom in score order, and every staff of each

@@ -77,6 +77,13 @@ reader asked not to see it. Everything listed in Context then follows without
 being touched. The layout stays a function of the score and its options, so
 its tests need no Score View.
 
+**Found while implementing: a tempo can live in a hidden part.** Exporters
+often write the tempo into one part only; the shipped sample puts "Alla
+Marcia" in the voice. Hiding that part hid the score's tempo too. So a hidden
+part's tempo marks are lent to the top staff shown, unless that staff already
+has a tempo at the same moment. Dynamics are not lent: they belong to the part
+they are written in.
+
 ### 4. The menu contract grows a submenu and a disabled entry
 
 `MenuEntry` gains `bool enabled = true` and `std::vector<MenuEntry> submenu`.
@@ -86,8 +93,12 @@ An entry with a submenu is a heading and its own action is unused.
 id, so a nested entry's action is found the way a flat one's is. Every other
 tool's entries are flat and enabled, and are unaffected.
 
-The numbering is a pure function of the entry tree, so it lives in the
-JUCE-free workspace menu model beside the existing numbering, with tests there.
+The numbering is a pure function of the entry tree, in
+`application/tools/ToolMenuEntries.h` beside `ToolComponent`. It is not in the
+JUCE-free workspace menu model this first said: `MenuEntry` holds a
+`juce::String` and a `std::function`, so its tree is not JUCE-free to begin
+with. The button and the lookup share one walk, so they cannot disagree about
+the order.
 
 ### 5. The submenu appears only when there is a choice
 

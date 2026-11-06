@@ -1003,6 +1003,46 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The song with its voice hidden from the Parts menu
+    # (openspec/changes/score-part-selection).
+    Surface(
+        state="score-view-part-hidden",
+        title="The score view with a part hidden",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "only-the-piano",
+                "Is only the piano drawn -- two braced staves, no voice staff above them -- "
+                "and does the title strip name only Piano?",
+            ),
+            Question(
+                "piano-fills-the-lines",
+                "Do the piano's lines run the full width with more bars on each than when "
+                "the voice is shown, rather than leaving a gap where the voice was?",
+            ),
+            Question(
+                "tempo-and-name-on-the-piano",
+                "Is the tempo mark (Alla Marcia) written above the piano, and is the piano "
+                "named beside its staves on the first line?",
+            ),
+            Question(
+                "parts-menu",
+                "Open the ... menu, then Parts: is Voice unticked and Piano ticked and greyed "
+                "out? Tick Voice: does it come back with the same bar still in view?",
+                behavioural=True,
+            ),
+            Question(
+                "parts-remembered",
+                "Hide the voice again and restart the application: is the voice still hidden "
+                "in this Score View?",
+                behavioural=True,
+            ),
+        ),
+    ),
     Surface(
         state="score-view-vertical",
         title="The score view in Vertical scroll",

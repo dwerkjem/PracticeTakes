@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "ScoreLayout.h"
 #include "platform/score/Score.h"
@@ -24,4 +25,10 @@ namespace engraving
 // silently. See proposal.md § Out of scope for the list and the reasons.
 [[nodiscard]] ScoreLayout
 layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOptions& options);
+
+// The parts `layOutScore` could draw, in score order: those with at least one
+// staff that names pitches and something in them. What a choice of parts to
+// hide is a choice among, so the Score View's menu and the layout's "is
+// anything left" test agree by construction.
+[[nodiscard]] std::vector<PartKey> drawablePartsOf(const score::Score& score);
 } // namespace engraving

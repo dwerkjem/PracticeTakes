@@ -309,6 +309,15 @@ const std::vector<ApprovedWindowState>& states()
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "The score view in Page view: the sample score on its first page", 0.0,
          "page", bundledSampleFixtureName(), false},
+        // The song with its voice hidden, from the Score View's Parts menu: the
+        // piano alone, laid out as a piano score. The view is a settings
+        // payload rather than a bare name, which is how a state reaches a
+        // choice beyond the view.
+        {"score-view-part-hidden", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view with the sample's voice hidden: the piano alone, in Page view", 0.0,
+         "view=page;hidden=P1:Voice", bundledSampleFixtureName(), false},
         {"score-view-vertical", Tools{"score-view"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false,

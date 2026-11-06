@@ -83,6 +83,7 @@ class ScoreViewComponent final : public ToolComponent, private juce::Timer
         int height = 0;
         score_view::ViewMode view = score_view::ViewMode::page;
         std::size_t sizeStep = score_view::defaultSizeStep;
+        std::vector<engraving::PartKey> hiddenParts;
 
         bool operator==(const LayoutKey&) const = default;
     };
@@ -105,6 +106,14 @@ class ScoreViewComponent final : public ToolComponent, private juce::Timer
 
     void setView(score_view::ViewMode view);
     void setSizeStep(std::size_t step);
+
+    // Hide a part that is shown, or show one that is hidden, keeping the bar
+    // in view (score-part-selection design.md decision 7).
+    void togglePart(const engraving::PartKey& part);
+
+    // The "Parts" submenu, or nothing when the open score has one drawable
+    // part and so nothing to choose between (decision 5).
+    [[nodiscard]] std::optional<MenuEntry> partsMenuEntry();
     void turnToPage(std::size_t page);
 
     // The first measure index on screen, and putting one back on screen.

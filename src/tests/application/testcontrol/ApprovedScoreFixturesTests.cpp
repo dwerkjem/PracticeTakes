@@ -10,6 +10,7 @@
 
 #include "application/shell/ui/score/ScoreImportSummary.h"
 #include "application/testcontrol/ApprovedWindowStates.h"
+#include "features/score/ScoreViewSettings.h"
 #include "features/score/engraving/ScoreLayoutEngine.h"
 #include "platform/score/musicxml/MusicXmlImporter.h"
 
@@ -97,8 +98,8 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
         naming == std::set<std::string>{
                       "score-import-clean", "score-import-diagnostics", "score-import-in-progress",
                       "score-view-engraving", "score-view-grand-staff", "score-view-horizontal",
-                      "score-view-notation", "score-view-notation-large", "score-view-page",
-                      "score-view-sample", "score-view-vertical"});
+                      "score-view-notation", "score-view-part-hidden", "score-view-notation-large",
+                      "score-view-page", "score-view-sample", "score-view-vertical"});
 }
 
 // The invariant this started as was "a state naming a score opens nothing
@@ -696,4 +697,55 @@ TEST_CASE("the engraving fixture holds what its picture is about", "[testcontrol
         CHECK(notice.find("endings") == std::string::npos);
         CHECK(notice.find("line of music onto the next") == std::string::npos);
     }
+}
+
+// The part-hidden surface names the shipped sample with its voice hidden, by a
+// settings payload. Pinned through the codec and the layout against the corpus
+// copy of the same song, so a payload that stops hiding the voice -- a renamed
+// part, a codec change -- fails a build rather than photographing both parts.
+TEST_CASE(
+    "the part-hidden state hides the sample's voice",
+    "[testcontrol][approved][score][part-selection]")
+{
+    const auto state = std::find_if(
+        approvedWindowStates().begin(), approvedWindowStates().end(),
+        [](const ApprovedWindowState& candidate)
+        { return candidate.id == "score-view-part-hidden"; });
+
+    REQUIRE(state != approvedWindowStates().end());
+    CHECK(state->scoreFixture == bundledSampleFixtureName());
+
+    const score_view::Settings settings =
+        score_view::decode({score_view::settingsVersion, state->toolView});
+
+    CHECK(settings.view == score_view::ViewMode::page);
+    REQUIRE(settings.hiddenParts.size() == 1);
+
+    const juce::File song =
+        juce::File(PRACTICE_TAKES_SOURCE_DIR)
+            .getChildFile("src/tests/resources/musicxml/"
+                          "mahler-4-die-zwei-blauen-augen-von-meinem-schatz.mxl");
+    REQUIRE(song.existsAsFile());
+
+    const MusicXmlImportResult result = importMusicXmlFile(song);
+    REQUIRE(result.score != nullptr);
+
+    engraving::LayoutOptions options;
+    options.hiddenParts = settings.hiddenParts;
+
+    const engraving::ScoreLayout layout = engraving::layOutScore(result.score, options);
+
+    REQUIRE(layout.outcome == engraving::LayoutOutcome::laidOut);
+    CHECK(layout.partName == "Piano");
+
+    // The piano's two staves, braced, and nothing else.
+    CHECK(layout.systems.front().staffOffsets.size() == 2);
+
+    // "Alla Marcia" is written in the voice alone, and still reaches the piano.
+    const auto tempo = std::find_if(
+        layout.systems.front().texts.begin(), layout.systems.front().texts.end(),
+        [](const engraving::TextGlyph& text) { return text.role == engraving::TextRole::tempo; });
+
+    REQUIRE(tempo != layout.systems.front().texts.end());
+    CHECK(tempo->text.find("Alla Marcia") != std::string::npos);
 }

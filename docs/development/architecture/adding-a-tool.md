@@ -73,6 +73,16 @@ declare a `settingsVersion`, and must check the version it is handed rather than
 trusting it — see `TunerComponent` and `TunerSettingsCodec` for the pattern of
 keeping the format with the tool that understands it.
 
+A tool may add its own entries to its options menu (the `...` button) through
+`optionsMenuEntries()`, a list of `ToolComponent::MenuEntry`: a label, an action
+and a tick, shown above the shell's own items. An entry can also be disabled
+(`enabled = false`), shown but not choosable, or be a heading whose `submenu`
+holds more entries; the Score View's "Parts" is both. The shell numbers the
+choosable entries depth-first (`application/tools/ToolMenuEntries.h`) and asks
+the tool for its entries again when one is chosen, so entries built from the
+tool's own state never run a stale action. An entry that sets neither field
+behaves as entries always have.
+
 Reach shared services only through `ToolServices`. A `src/features/*` tool must
 never reach into the shell or into another tool.
 

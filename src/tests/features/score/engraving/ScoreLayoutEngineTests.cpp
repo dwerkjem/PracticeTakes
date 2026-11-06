@@ -3956,3 +3956,33 @@ TEST_CASE(
     CHECK(otherScore.partName == "Voice, Piano");
     CHECK(otherId.partName == "Voice, Piano");
 }
+
+TEST_CASE(
+    "a tempo written only in a hidden part is drawn above the parts shown",
+    "[score][engraving][layout][part-selection]")
+{
+    // The shipped sample writes "Alla Marcia" into the voice alone. Hide the
+    // voice and the piano still needs its tempo: it is the whole score's.
+    auto score = std::make_shared<score::Score>(*voiceAndPiano());
+    score->parts.at(1).measures.front().directions.clear();
+
+    const ScoreLayout layout = layOutScore(score, hiding({{"P1", "Voice"}}));
+
+    REQUIRE(layout.partName == "Piano");
+
+    const TextGlyph* tempo = firstTextOf(layout.systems.front(), TextRole::tempo);
+    REQUIRE(tempo != nullptr);
+    CHECK(tempo->text.find("Andante") != std::string::npos);
+
+    // And it is lent, not doubled: the piano's own mark at the same moment
+    // wins when it has one.
+    const ScoreLayout both = layOutScore(voiceAndPiano(), hiding({{"P1", "Voice"}}));
+    std::size_t tempos = 0;
+
+    for (const TextGlyph& text : both.systems.front().texts)
+    {
+        tempos += text.role == TextRole::tempo ? 1 : 0;
+    }
+
+    CHECK(tempos == 1);
+}

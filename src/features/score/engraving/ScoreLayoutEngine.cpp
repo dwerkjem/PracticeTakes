@@ -103,6 +103,11 @@ struct MeasurePlan
     int staff = 1;
     const score::Measure* source = nullptr;
 
+    // Tempo marks lent to this staff by a part the reader hid. A tempo is the
+    // whole score's, and an exporter often writes it into one part only, so
+    // hiding that part must not hide the tempo with it (score-part-selection).
+    std::vector<score::Direction> borrowedTempos;
+
     score::Clef clef;
     score::KeySignature key;
     score::TimeSignature time;
@@ -873,7 +878,11 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
             plan->events.front().anchorX = contentWidth * 0.5;
         }
 
-        for (const score::Direction& direction : own.directions)
+        std::vector<score::Direction> directions = own.directions;
+        directions.insert(
+            directions.end(), plan->borrowedTempos.begin(), plan->borrowedTempos.end());
+
+        for (const score::Direction& direction : directions)
         {
             if (direction.staff != plan->staff)
             {
@@ -1919,6 +1928,29 @@ void liftTempoMarksToTop(System& system, int lastStaffOfFirstPart)
 }
 } // namespace
 
+std::vector<PartKey> drawablePartsOf(const score::Score& score)
+{
+    std::vector<PartKey> drawable;
+
+    for (const score::Part& part : score.parts)
+    {
+        bool anyPitchedStaff = false;
+
+        for (int staff = 1; staff <= std::max(1, part.staffCount); ++staff)
+        {
+            anyPitchedStaff = anyPitchedStaff || isPitchedClef(openingClef(part, staff));
+        }
+
+        // The same tests `layOutScore` applies to decide a part is drawn.
+        if (anyPitchedStaff && !part.measures.empty() && holdsAnyEvent(part))
+        {
+            drawable.push_back(PartKey{part.id, part.name});
+        }
+    }
+
+    return drawable;
+}
+
 ScoreLayout
 layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOptions& options)
 {
@@ -1970,27 +2002,24 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
                    PartKey{part.id, part.name}) != options.hiddenParts.end();
     };
 
+    const std::vector<PartKey> drawable = drawablePartsOf(*score);
     const bool anyShown = std::any_of(
-        score->parts.begin(), score->parts.end(),
-        [&hiddenByChoice](const score::Part& part)
+        drawable.begin(), drawable.end(),
+        [&options](const PartKey& key)
         {
-            bool anyPitchedStaff = false;
-
-            for (int staff = 1; staff <= std::max(1, part.staffCount); ++staff)
-            {
-                anyPitchedStaff = anyPitchedStaff || isPitchedClef(openingClef(part, staff));
-            }
-
-            // The same test the loop below applies to decide a part is drawn.
-            return !hiddenByChoice(part) && anyPitchedStaff && !part.measures.empty() &&
-                   holdsAnyEvent(part);
+            return std::find(options.hiddenParts.begin(), options.hiddenParts.end(), key) ==
+                   options.hiddenParts.end();
         });
+
+    std::vector<const score::Part*> hiddenParts;
 
     for (const score::Part& part : score->parts)
     {
         // Before any notice: a hidden part says nothing about itself.
         if (anyShown && hiddenByChoice(part))
         {
+            hiddenParts.push_back(&part);
+
             continue;
         }
 
@@ -2125,6 +2154,41 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         }
 
         layout.lyricVerseCount = std::max(layout.lyricVerseCount, partVerses.at(partIndex));
+    }
+
+    // A hidden part's tempo marks go to the top staff shown, where a tempo is
+    // drawn anyway, unless that staff already has one at the same moment.
+    for (const score::Part* hidden : hiddenParts)
+    {
+        for (std::size_t measure = 0; measure < measureCount && measure < hidden->measures.size();
+             ++measure)
+        {
+            MeasurePlan& top = plansByStaff.front().at(measure);
+
+            for (const score::Direction& direction : hidden->measures.at(measure).directions)
+            {
+                if (direction.kind != score::DirectionKind::tempo)
+                {
+                    continue;
+                }
+
+                const auto sameMoment = [&direction](const score::Direction& other) {
+                    return other.kind == score::DirectionKind::tempo &&
+                           other.onset == direction.onset;
+                };
+
+                if (std::any_of(
+                        top.source->directions.begin(), top.source->directions.end(), sameMoment) ||
+                    std::any_of(top.borrowedTempos.begin(), top.borrowedTempos.end(), sameMoment))
+                {
+                    continue;
+                }
+
+                score::Direction lent = direction;
+                lent.staff = top.staff;
+                top.borrowedTempos.push_back(lent);
+            }
+        }
     }
 
     for (std::size_t measure = 0; measure < measureCount; ++measure)
