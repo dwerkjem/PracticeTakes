@@ -354,10 +354,17 @@ shown even where the file marks it `print-object="no"`, as the bundled sample
 does: telling the staves apart is the point of drawing every part. The room
 names take is reserved before the brace and comes off the width the music has,
 estimated from the name's length because the engine has no font; the painter
-fits the text into that room rather than trusting the estimate. A solo score is
-not labelled.
+fits the text into that room rather than trusting the estimate.
 
-A single part lays out exactly as it did when only the first part was drawn.
+The first system is **indented** by at least `firstSystemIndent`, with the full
+names set in the indent (design.md decision 11), so where a piece begins is
+plain. That includes a solo score, which is named there and nowhere else: after
+the first system a single line needs no label and starts at the margin. A score
+of several parts keeps its short names on later systems, because telling the
+staves apart is still the point. A name too long for the indent widens it.
+
+Before the indent, a single part laid out exactly as it did when only the first
+part was drawn.
 That was checked by dumping every glyph of every part of every test score, laid
 out on its own at three widths, before and after the change: no difference.
 

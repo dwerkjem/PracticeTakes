@@ -590,6 +590,13 @@ struct LayoutOptions
     // Between the end of a name and the brace or staves it names.
     double partNameGap = 1.0;
 
+    // How far the first system is indented, with the part's name set in it
+    // (design.md decision 11): the convention that marks where a piece begins.
+    // A name too long for the indent widens it. Every later system starts at
+    // the margin, past only the short names a score of several parts needs to
+    // tell its staves apart.
+    double firstSystemIndent = 5.0;
+
     // Room per lyric verse, below the staff and above the dynamics.
     double lyricRowHeight = 1.8;
 

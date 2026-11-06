@@ -2066,11 +2066,11 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         [](const StaffGroup& group) { return group.lastStaff > group.firstStaff; });
     const double braceRoom = braced ? options.braceWidth : 0.0;
 
-    // Each part's name, beside its staves, when there is more than one part to
-    // tell apart: in full on the first system, shortened on every one after,
-    // where the reader already knows which staff is which. Room for them comes
-    // off the width the music has, so later systems -- with shorter names --
-    // hold more of it.
+    // Each part's name, beside its staves: in full on the first system, set in
+    // its indent even for a single part, and shortened on every system after
+    // when there is more than one part to tell apart -- a solo line needs no
+    // label once the reader is under way. Room for them comes off the width
+    // the music has, so later systems -- with shorter names -- hold more of it.
     const bool nameParts = drawnParts.size() > 1;
     std::vector<std::string> fullNames;
     std::vector<std::string> shortNames;
@@ -2084,9 +2084,9 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         shortNames.push_back(abbreviatedPartName(part.name, part.abbreviation));
     }
 
-    const auto nameRoomFor = [nameParts, &options](const std::vector<std::string>& names)
+    const auto nameRoomFor = [&options](const std::vector<std::string>& names, bool named)
     {
-        if (!nameParts)
+        if (!named)
         {
             return 0.0;
         }
@@ -2115,8 +2115,8 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
                options.partNameGap;
     };
 
-    const double firstNameRoom = nameRoomFor(fullNames);
-    const double laterNameRoom = nameRoomFor(shortNames);
+    const double firstNameRoom = std::max(options.firstSystemIndent, nameRoomFor(fullNames, true));
+    const double laterNameRoom = nameRoomFor(shortNames, nameParts);
     const auto nameRoomOf = [firstNameRoom, laterNameRoom](std::size_t systemIndex)
     { return systemIndex == 0 ? firstNameRoom : laterNameRoom; };
 

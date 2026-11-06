@@ -135,8 +135,12 @@ decision 1.
       belong to rather than stretching away from it (`PlacedEvent::anchorX`),
       and a system that already overflows is not squeezed.
 - [x] 3.2 A determinism test: same score, same width, identical numbers.
-- [ ] 3.3 `LayoutOptions::firstSystemIndent`, taken from system 0's width when
-      packing, with the part name set in it.
+- [x] 3.3 `LayoutOptions::firstSystemIndent`, taken from system 0's width when
+      packing, with the part name set in it. A solo score is now named there,
+      which it was not before. A score of several parts keeps its short names on
+      later systems, so "every later system starts at the margin" reads as
+      "past nothing but the names needed to tell its staves apart". A name
+      longer than the indent widens it.
 - [ ] 3.4 Multi-measure rests: two or more consecutive whole-bar-rest measures
       with no clef, key or time change, repeat, ending, jump or direction,
       condensed to one H-bar with its count. Measure index ranges still cover

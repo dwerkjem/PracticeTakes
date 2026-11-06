@@ -144,6 +144,19 @@ scoreOf(std::vector<score::Measure> measures, int staffCount = 1)
     return options;
 }
 
+// Where a single, unbraced staff's first system starts: past the first-system
+// indent, or the part's name if that is longer -- "Soprano", which `scoreOf`
+// gives every part -- and nothing else, since there is no brace.
+[[nodiscard]] double unbracedFirstSystemStart()
+{
+    const LayoutOptions options;
+    const double nameRoom =
+        (static_cast<double>(std::string("Soprano").size()) * options.partNameCharacterWidth) +
+        options.partNameGap;
+
+    return std::max(options.firstSystemIndent, nameRoom);
+}
+
 [[nodiscard]] bool anyNoticeContains(const ScoreLayout& layout, const std::string& fragment)
 {
     return std::any_of(
@@ -1938,7 +1951,7 @@ TEST_CASE(
     REQUIRE(layout.outcome == LayoutOutcome::laidOut);
     REQUIRE(layout.systems.size() == 1);
     CHECK(layout.systems.front().staffOffsets.size() == 1);
-    CHECK(layout.systems.front().staffStartX == 0.0);
+    CHECK(layout.systems.front().staffStartX == Approx(unbracedFirstSystemStart()));
 
     CHECK(anyNoticeContains(layout, "One staff of this part is written in a percussion clef"));
     CHECK(anyNoticeContains(layout, "Not shown: 1 note or rest"));
@@ -1996,7 +2009,7 @@ TEST_CASE(
     const System& system = layout.systems.front();
 
     CHECK(system.staffOffsets == std::vector<double>{0.0});
-    CHECK(system.staffStartX == 0.0);
+    CHECK(system.staffStartX == Approx(unbracedFirstSystemStart()));
 
     for (const NoteheadGlyph& head : system.noteheads)
     {
@@ -2414,21 +2427,65 @@ TEST_CASE(
     }
 }
 
-TEST_CASE("a solo score is not labelled", "[score][engraving][layout][part-names]")
+TEST_CASE(
+    "a solo score is named on its first system only",
+    "[score][engraving][layout][part-names]")
 {
-    const ScoreLayout layout = layOutScore(
-        scoreOf({measureOf(
-            0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))})},
-            true)}),
-        wideOptions());
+    // The name is set in the first system's indent, as for any score; after
+    // that a single line needs no label and starts at the margin.
+    std::vector<score::Measure> measures;
+
+    for (std::size_t index = 0; index < 8; ++index)
+    {
+        measures.push_back(measureOf(
+            index, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))})},
+            index == 0));
+    }
+
+    LayoutOptions narrow;
+    narrow.availableWidth = 75.0;
+
+    const ScoreLayout layout = layOutScore(scoreOf(measures), narrow);
 
     REQUIRE(layout.outcome == LayoutOutcome::laidOut);
+    REQUIRE(layout.systems.size() > 1);
 
-    for (const System& system : layout.systems)
+    const System& first = layout.systems.front();
+
+    REQUIRE(first.partNames.size() == 1);
+    CHECK(first.partNames.front().text == "Soprano");
+    CHECK(first.staffStartX >= narrow.firstSystemIndent);
+
+    for (std::size_t index = 1; index < layout.systems.size(); ++index)
     {
-        CHECK(system.partNames.empty());
-        CHECK(system.staffStartX == 0.0);
+        CHECK(layout.systems.at(index).partNames.empty());
+        CHECK(layout.systems.at(index).staffStartX == 0.0);
     }
+}
+
+TEST_CASE("the first system is indented", "[score][engraving][layout][part-names]")
+{
+    // A name shorter than the indent leaves the indent as it is.
+    score::Part part;
+    part.id = "P1";
+    part.name = "Fl.";
+    part.measures = {measureOf(
+        0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))})}, true)};
+
+    auto built = std::make_shared<score::Score>();
+    built->parts = {part};
+
+    const LayoutOptions options = wideOptions();
+    const ScoreLayout layout = layOutScore(built, options);
+
+    REQUIRE(layout.systems.size() == 1);
+    CHECK(layout.systems.front().staffStartX == Approx(options.firstSystemIndent));
+
+    // And the name is right-aligned in it, clear of the staff.
+    REQUIRE(layout.systems.front().partNames.size() == 1);
+    CHECK(
+        layout.systems.front().partNames.front().rightX ==
+        Approx(options.firstSystemIndent - options.partNameGap));
 }
 
 TEST_CASE("a part with no name is left unlabelled", "[score][engraving][layout][part-names]")
@@ -2552,7 +2609,7 @@ TEST_CASE(
 {
     // D3 under a treble staff: four ledger lines below it.
     LayoutOptions options;
-    options.availableWidth = 70.0;
+    options.availableWidth = 80.0;
 
     const ScoreLayout layout = layOutScore(sungBars(10, pitch(score::Step::d, 0, 3)), options);
 
