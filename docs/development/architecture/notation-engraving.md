@@ -65,6 +65,11 @@ parity test and a test assertion reads as a position you can count off a staff.
    per system, however wide it is.
 3. **Emit glyphs** with absolute x, recording where every notehead landed.
 4. **Resolve ties**, which need both ends placed before either can be drawn.
+   A tie whose ends land on different systems is drawn as two halves: from its
+   note to the end of the system, then from just after the next system's clef
+   and key (`System::headerEndX`) to the note it ties into. Both bow away from the stem of the note the tie leaves, so they read
+   as one tie. The second half sets `TieGlyph::fromSystemStart`, which tells
+   the painter it starts at its x rather than after a notehead.
 
 ### The pieces each rule lives in
 
@@ -338,7 +343,6 @@ shows. That list is the reason a first pass is an acceptable thing to ship:
 | **Bars only some parts have** | Parts are drawn as far as they all go; any further bars are counted. |
 | **Brackets for groups of parts** | `<part-group>` is not imported, so a choir's parts are joined at the left but not bracketed. |
 | **Volta brackets, D.C./D.S. jumps** | `Measure::repeats` carries them uninterpreted. Repeat barlines *are* drawn. |
-| **A tie across a system break** | Both ends are placed before either is drawn; when they land on different systems the tie is reported. |
 | **Cancelling naturals at a key change** | A key change to no accidentals draws an empty signature. |
 | **Slurs, articulations, ornaments, hairpins, fingering** | Mostly not in the model, by invariant 10 or by the supported subset. |
 

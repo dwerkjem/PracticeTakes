@@ -484,7 +484,9 @@ void ScoreGlyphPainter::drawTie(const engraving::TieGlyph& glyph, double originX
     const double noteheadWidth =
         static_cast<double>(font.bounds(smufl::Glyph::noteheadBlack).getRight());
 
-    const double startX = glyph.startX + noteheadWidth;
+    // A tie leaves the right edge of its notehead -- unless it is the second
+    // half of one split by a system break, which starts where the layout says.
+    const double startX = glyph.fromSystemStart ? glyph.startX : glyph.startX + noteheadWidth;
     const double endX = glyph.endX;
 
     if (endX <= startX)

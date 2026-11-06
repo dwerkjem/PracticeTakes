@@ -590,16 +590,19 @@ TEST_CASE("a tie becomes a curve between its two noteheads", "[score][engraving]
     CHECK(system.noteheads.at(1).accidental == AccidentalKind::none);
 }
 
-TEST_CASE("a tie split across two systems is reported, not drawn", "[score][engraving][layout]")
+namespace
+{
+// Eight whole-note B4s, each tied to the next, so wherever a break falls one
+// tie crosses it. `stepUp` puts them a step higher, above the middle line, so
+// their stems point down and the ties bow upward.
+[[nodiscard]] std::shared_ptr<const score::Score> tiedBars(score::Pitch onPitch)
 {
     std::vector<score::Measure> measures;
 
     for (std::size_t index = 0; index < 8; ++index)
     {
-        score::ScoreEvent event = noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::b, 0, 4));
+        score::ScoreEvent event = noteAt(0, ticksPerQuarterNote * 4, onPitch);
 
-        // Tie every bar to the next, so wherever the break falls one tie
-        // crosses it.
         if (index + 1 < 8)
         {
             event.notes.front().tiedTo = score::NoteRef{index + 1, 0, 0, 0};
@@ -613,13 +616,155 @@ TEST_CASE("a tie split across two systems is reported, not drawn", "[score][engr
         measures.push_back(measureOf(index, {voiceOf(1, {event})}, index == 0));
     }
 
+    return scoreOf(measures);
+}
+
+[[nodiscard]] LayoutOptions narrowForTies()
+{
     LayoutOptions narrow;
     narrow.availableWidth = 75.0;
 
-    const ScoreLayout layout = layOutScore(scoreOf(measures), narrow);
+    return narrow;
+}
+
+[[nodiscard]] const NoteheadGlyph& headOfMeasure(const System& system, std::size_t measureIndex)
+{
+    const auto found = std::find_if(
+        system.noteheads.begin(), system.noteheads.end(), [measureIndex](const NoteheadGlyph& head)
+        { return head.source.measureIndex == measureIndex; });
+
+    REQUIRE(found != system.noteheads.end());
+
+    return *found;
+}
+} // namespace
+
+TEST_CASE("a tie across a system break is drawn as two halves", "[score][engraving][layout][ties]")
+{
+    const ScoreLayout layout = layOutScore(tiedBars(pitch(score::Step::b, 0, 4)), narrowForTies());
 
     REQUIRE(layout.systems.size() > 1);
-    CHECK(anyNoticeContains(layout, "from one line of music onto the next"));
+
+    const System& first = layout.systems.at(0);
+    const System& second = layout.systems.at(1);
+
+    // Seven ties, one per pair of bars: every one of them drawn somewhere, and
+    // the one that crosses the break drawn twice, as a half on each side.
+    std::size_t glyphs = 0;
+
+    for (const System& system : layout.systems)
+    {
+        glyphs += system.ties.size();
+    }
+
+    CHECK(glyphs == 7 + (layout.systems.size() - 1));
+
+    // The first half leaves the last note of the first system and runs to that
+    // system's end, stopping short of the barline.
+    const NoteheadGlyph& leaving = headOfMeasure(first, first.lastMeasureIndex);
+    const TieGlyph& outgoing = first.ties.back();
+
+    CHECK_FALSE(outgoing.fromSystemStart);
+    CHECK(outgoing.startX == leaving.x);
+    CHECK(outgoing.endX > leaving.x);
+    CHECK(outgoing.endX < first.width);
+
+    // The second half starts just after the next system's header -- not at
+    // the lead-in before the first note, which left it a tick 0.8 space long --
+    // and arrives at the first note on it.
+    const NoteheadGlyph& arriving = headOfMeasure(second, second.firstMeasureIndex);
+    const auto incoming = std::find_if(
+        second.ties.begin(), second.ties.end(),
+        [](const TieGlyph& tie) { return tie.fromSystemStart; });
+
+    REQUIRE(incoming != second.ties.end());
+    CHECK(incoming->startX > second.headerEndX);
+    CHECK(incoming->startX < second.headerEndX + 0.5);
+    CHECK(incoming->endX == arriving.x);
+    CHECK(incoming->position == arriving.position);
+
+    // Nothing left to report.
+    CHECK_FALSE(anyNoticeContains(layout, "from one line of music onto the next"));
+}
+
+TEST_CASE(
+    "a tie's second half starts after the next system's clef and key",
+    "[score][engraving][layout][ties]")
+{
+    // A key signature, so the header is more than a clef.
+    std::vector<score::Measure> measures;
+
+    for (std::size_t index = 0; index < 8; ++index)
+    {
+        score::ScoreEvent event = noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::b, 0, 4));
+
+        if (index + 1 < 8)
+        {
+            event.notes.front().tiedTo = score::NoteRef{index + 1, 0, 0, 0};
+        }
+
+        if (index > 0)
+        {
+            event.notes.front().tiedFrom = score::NoteRef{index - 1, 0, 0, 0};
+        }
+
+        score::Measure measure = measureOf(index, {voiceOf(1, {event})}, index == 0);
+
+        if (index == 0)
+        {
+            measure.attributes.key = score::KeySignature{3, "major"};
+        }
+
+        measures.push_back(measure);
+    }
+
+    const ScoreLayout layout = layOutScore(scoreOf(measures), narrowForTies());
+
+    REQUIRE(layout.systems.size() > 1);
+
+    const System& second = layout.systems.at(1);
+    const auto incoming = std::find_if(
+        second.ties.begin(), second.ties.end(),
+        [](const TieGlyph& tie) { return tie.fromSystemStart; });
+
+    REQUIRE(incoming != second.ties.end());
+    REQUIRE(second.keyAccidentals.size() == 3);
+    REQUIRE(second.clefs.size() == 1);
+
+    const LayoutOptions options = narrowForTies();
+
+    CHECK(incoming->startX > second.clefs.front().x + options.clefWidth);
+    CHECK(incoming->startX > second.keyAccidentals.back().x + options.keyAccidentalWidth);
+}
+
+TEST_CASE("both halves of a split tie bow the same way", "[score][engraving][layout][ties]")
+{
+    // Under the middle line a note's stem would point up and its tie bows
+    // below; above the line, the other way. A whole note draws no stem but
+    // still has a direction, and it is the one the tie reads. Either way the
+    // two halves agree, because they are one tie.
+    struct Case
+    {
+        score::Pitch onPitch;
+        bool bowsAbove;
+    };
+
+    for (const Case& tieCase :
+         {Case{pitch(score::Step::g, 0, 4), false}, Case{pitch(score::Step::d, 0, 5), true}})
+    {
+        const ScoreLayout layout = layOutScore(tiedBars(tieCase.onPitch), narrowForTies());
+
+        REQUIRE(layout.systems.size() > 1);
+
+        const TieGlyph& outgoing = layout.systems.at(0).ties.back();
+        const auto incoming = std::find_if(
+            layout.systems.at(1).ties.begin(), layout.systems.at(1).ties.end(),
+            [](const TieGlyph& tie) { return tie.fromSystemStart; });
+
+        REQUIRE(incoming != layout.systems.at(1).ties.end());
+        CHECK(outgoing.above == tieCase.bowsAbove);
+        CHECK(incoming->above == tieCase.bowsAbove);
+    }
 }
 
 TEST_CASE("lyrics are carried through to the layout", "[score][engraving][layout]")

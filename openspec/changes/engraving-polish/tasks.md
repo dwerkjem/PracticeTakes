@@ -56,12 +56,16 @@ decision 1.
 
 ### Ties across a break
 
-- [ ] 1.9 A tie whose ends fall on different systems is emitted as two halves:
+- [x] 1.9 A tie whose ends fall on different systems is emitted as two halves:
       note to system end, and next system's content start to note.
-- [ ] 1.10 Remove the `tiesAcrossSystems` notice — there is nothing left to
+- [x] 1.10 Remove the `tiesAcrossSystems` notice — there is nothing left to
       report.
-- [ ] 1.11 Tests: the two halves land on the two systems, curve the same way,
-      and the second starts after the next system's clef and key.
+- [x] 1.11 Tests: the two halves land on the two systems, curve the same way,
+      and the second starts after the next system's clef and key. The second
+      half is flagged `TieGlyph::fromSystemStart`, so the painter starts it at
+      its x rather than after a notehead; where the header ends is a new
+      `System::headerEndX`. Starting the half at the music's lead-in instead
+      left a tick 0.8 space long on a capture, too short to read as a tie.
 
 ### Voltas and jumps
 

@@ -304,8 +304,8 @@ TEST_CASE("the notation fixture holds what its picture is about", "[testcontrol]
 
     // Wide enough for the whole fixture on one system, so that this case is
     // about what the fixture holds rather than about where the systems break.
-    // A tie whose two notes land on different systems is not drawn, which is
-    // the layout's own documented behaviour and has its own test.
+    // A tie whose two notes land on different systems is drawn as two halves,
+    // which would count twice here; that has its own tests.
     engraving::LayoutOptions options;
     options.availableWidth = 400.0;
 
@@ -644,4 +644,10 @@ TEST_CASE("the engraving fixture holds what its picture is about", "[testcontrol
     REQUIRE(layout.systems.size() >= 2);
 
     CHECK(layout.systems.front().lastMeasureIndex == 3);
+
+    // And the tie is drawn across it, as a half on each system.
+    REQUIRE(layout.systems.at(0).ties.size() == 1);
+    REQUIRE(layout.systems.at(1).ties.size() == 1);
+    CHECK_FALSE(layout.systems.at(0).ties.front().fromSystemStart);
+    CHECK(layout.systems.at(1).ties.front().fromSystemStart);
 }

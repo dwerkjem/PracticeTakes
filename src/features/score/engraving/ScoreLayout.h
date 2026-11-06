@@ -257,6 +257,13 @@ struct TieGlyph
     // the staff is. Last, and defaulted, so every existing initialiser still
     // describes a glyph on the only staff a single-staff system has.
     int staff = 0;
+
+    // The second half of a tie split by a system break: it starts at `startX`
+    // itself, after the new system's clef and key, rather than after a
+    // notehead, because there is no notehead there to leave from. The first
+    // half needs no flag -- it leaves its note as any tie does and runs to the
+    // system's end.
+    bool fromSystemStart = false;
 };
 
 struct LyricGlyph
@@ -366,6 +373,10 @@ struct System
     std::vector<TieGlyph> ties;
     std::vector<LyricGlyph> lyrics;
     std::vector<TextGlyph> texts;
+
+    // Where the clef, key and any time signature that open the system end. A
+    // tie carried over from the system before starts just after it.
+    double headerEndX = 0.0;
 
     // The measures this system holds, as indices into the part. Inclusive.
     std::size_t firstMeasureIndex = 0;

@@ -29,6 +29,14 @@ constexpr double contentLeadIn = 0.8;
 // Room a repeat barline takes at the start of a measure.
 constexpr double repeatBarlineWidth = 1.3;
 
+// How far short of the system's end the first half of a split tie stops, so it
+// does not run into the barline.
+constexpr double tieHalfEndInset = 0.4;
+
+// How far after the next system's header the second half starts, so it does
+// not touch the last sign of the key signature.
+constexpr double tieHalfStartGap = 0.3;
+
 // One note of one event, already positioned vertically.
 struct PlacedNote
 {
@@ -2062,6 +2070,14 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
                     contentStartFor(plansByStaff.at(staff).at(measure), startsSystem, x, options));
             }
 
+            if (startsSystem)
+            {
+                // A system always opens with at least a clef, so the content
+                // start is the header's end plus the gap after a header and the
+                // lead-in; take both back off.
+                system.headerEndX = contentStart - contentLeadIn - headerGap;
+            }
+
             double barlineX = x;
 
             for (std::size_t staff = 0; staff < plansByStaff.size(); ++staff)
@@ -2086,12 +2102,12 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         layout.systems.push_back(std::move(system));
     }
 
-    // Ties, once every notehead has a system and an x. A tie whose two ends
-    // landed on different systems is reported rather than drawn as a curve
-    // running the wrong way across the page. Each is drawn on the staff of the
-    // note it leaves.
-    std::size_t tiesAcrossSystems = 0;
-
+    // Ties, once every notehead has a system and an x. Each is drawn on the
+    // staff of the note it leaves, bowing away from that note's stem. A tie
+    // whose ends landed on different systems is drawn as two halves (design.md
+    // decision 5): from its note to the end of the system, then from just
+    // after the next system's clef and key to the note it ties into. Both halves bow the same way,
+    // so they read as one tie.
     for (std::size_t staff = 0; staff < plansByStaff.size(); ++staff)
     {
         const NotePlacementMap& partPlacements = placements.at(partOfStaff.at(staff));
@@ -2122,29 +2138,36 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
                         continue;
                     }
 
-                    if (start->second.systemIndex != end->second.systemIndex)
+                    const NotePlacement& from = start->second;
+                    const NotePlacement& to = end->second;
+                    const bool above = !from.stemUp;
+
+                    if (from.systemIndex == to.systemIndex)
                     {
-                        ++tiesAcrossSystems;
+                        TieGlyph tie{from.x, to.x, from.position, above};
+                        tie.staff = from.staff;
+                        layout.systems.at(from.systemIndex).ties.push_back(tie);
 
                         continue;
                     }
 
-                    TieGlyph tie{
-                        start->second.x, end->second.x, start->second.position,
-                        !start->second.stemUp};
-                    tie.staff = start->second.staff;
+                    System& leaving = layout.systems.at(from.systemIndex);
+                    System& arriving = layout.systems.at(to.systemIndex);
 
-                    layout.systems.at(start->second.systemIndex).ties.push_back(tie);
+                    TieGlyph first{from.x, leaving.width - tieHalfEndInset, from.position, above};
+                    first.staff = from.staff;
+                    leaving.ties.push_back(first);
+
+                    // On the arriving system's copy of the staff: the same staff
+                    // of the same part, which is the note's own.
+                    TieGlyph second{
+                        arriving.headerEndX + tieHalfStartGap, to.x, to.position, above};
+                    second.staff = to.staff;
+                    second.fromSystemStart = true;
+                    arriving.ties.push_back(second);
                 }
             }
         }
-    }
-
-    if (tiesAcrossSystems > 0)
-    {
-        notices.add(
-            "Not shown: " + pluralised(tiesAcrossSystems, "tie") +
-            " that run from one line of music onto the next.");
     }
 
     const bool anyBeam = std::any_of(
