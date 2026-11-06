@@ -128,11 +128,13 @@ decision 1.
 
 ## 3. Tier 3 — appearance
 
-- [ ] 3.1 Justification: every system but the last stretched to
+- [x] 3.1 Justification: every system but the last stretched to
       `availableWidth`, by scaling the gaps between slots in proportion; headers
       keep their width. Applied while emitting, before ties, voltas and text
-      read any x.
-- [ ] 3.2 A determinism test: same score, same width, identical numbers.
+      read any x. A grace note and an accidental move with the onset they
+      belong to rather than stretching away from it (`PlacedEvent::anchorX`),
+      and a system that already overflows is not squeezed.
+- [x] 3.2 A determinism test: same score, same width, identical numbers.
 - [ ] 3.3 `LayoutOptions::firstSystemIndent`, taken from system 0's width when
       packing, with the part name set in it.
 - [ ] 3.4 Multi-measure rests: two or more consecutive whole-bar-rest measures

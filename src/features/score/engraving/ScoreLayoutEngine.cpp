@@ -65,6 +65,12 @@ struct PlacedEvent
     // Relative to the start of the measure's content, in staff spaces.
     double localX = 0.0;
 
+    // The x of the onset this event hangs from: its own for a main note, the
+    // note it leads into for a grace note. Justification stretches the gaps
+    // between onsets and moves each event with its onset, so a grace note and
+    // an accidental keep their distance from the note they belong to.
+    double anchorX = 0.0;
+
     std::optional<WrittenNoteValue> value;
 
     std::vector<PlacedNote> notes;
@@ -767,6 +773,7 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
             for (const std::size_t eventIndex : slot.mainEvents)
             {
                 plan.events.at(eventIndex).localX = x;
+                plan.events.at(eventIndex).anchorX = x;
             }
 
             // Grace notes sit immediately before the beat they lead into, left
@@ -781,6 +788,7 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
             {
                 const double graceX = graceCursor - options.graceNoteWidth;
                 plan.events.at(slot.graceEvents.at(graceIndex)).localX = graceX;
+                plan.events.at(slot.graceEvents.at(graceIndex)).anchorX = x;
                 graceCursor = graceX - slot.graceReach.at(graceIndex);
             }
         }
@@ -857,6 +865,7 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
             plan->events.front().event->duration >= own.nominalDuration && own.nominalDuration > 0)
         {
             plan->events.front().localX = contentWidth * 0.5;
+            plan->events.front().anchorX = contentWidth * 0.5;
         }
 
         for (const score::Direction& direction : own.directions)
@@ -1092,10 +1101,16 @@ double emitMeasure(
     NotePlacementMap& placements,
     double startX,
     double contentStart,
-    int staffIndex)
+    int staffIndex,
+    double stretch)
 {
     const bool firstStaff = staffIndex == 0;
     double cursor = startX;
+
+    // Where an event goes once the measure is justified: its onset's x
+    // stretched, and its own offset from that onset kept as it was.
+    const auto xOf = [contentStart, stretch](const PlacedEvent& placed)
+    { return contentStart + placed.localX + (placed.anchorX * (stretch - 1.0)); };
 
     if (plan.repeatStart)
     {
@@ -1147,7 +1162,7 @@ double emitMeasure(
 
     for (const PlacedEvent& placed : plan.events)
     {
-        const double x = contentStart + placed.localX;
+        const double x = xOf(placed);
 
         if (!placed.value.has_value())
         {
@@ -1264,7 +1279,7 @@ double emitMeasure(
         for (const score::LyricSyllable& syllable : placed.event->lyrics)
         {
             system.lyrics.push_back(LyricGlyph{
-                contentStart + placed.localX, syllable.verse, syllable.text,
+                xOf(placed), syllable.verse, syllable.text,
                 syllable.position == score::SyllabicPosition::begin ||
                     syllable.position == score::SyllabicPosition::middle,
                 syllable.extend});
@@ -1273,10 +1288,10 @@ double emitMeasure(
 
     for (const TextGlyph& text : plan.texts)
     {
-        system.texts.push_back(TextGlyph{contentStart + text.x, text.text, text.role});
+        system.texts.push_back(TextGlyph{contentStart + (text.x * stretch), text.text, text.role});
     }
 
-    const double barlineX = contentStart + plan.contentWidth;
+    const double barlineX = contentStart + (plan.contentWidth * stretch);
 
     if (firstStaff)
     {
@@ -2209,6 +2224,33 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
             }
         }
 
+        // Justification (design.md decision 10): every system but the last is
+        // stretched to the width it has, by scaling the room inside its
+        // measures. Headers keep their width -- a clef stretched is a clef
+        // misdrawn -- and a system is never squeezed, so one that overflows
+        // with a single wide bar stays as it is.
+        double stretch = 1.0;
+
+        if (systemIndex + 1 < packed.size())
+        {
+            double natural = 0.0;
+            double content = 0.0;
+
+            for (std::size_t slot = 0; slot < measures.size(); ++slot)
+            {
+                const double width = plansByStaff.front().at(measures.at(slot)).contentWidth;
+                natural += headerWidthAt(measures.at(slot), slot == 0) + width;
+                content += width;
+            }
+
+            const double spare = availableFor(systemIndex) - natural;
+
+            if (spare > 0.0 && content > 0.0)
+            {
+                stretch = (content + spare) / content;
+            }
+        }
+
         double x = system.staffStartX;
         std::vector<MeasureSpan> spans;
 
@@ -2247,7 +2289,7 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
                 barlineX = emitMeasure(
                     system, systemIndex, plansByStaff.at(staff).at(measure), startsSystem,
                     isLastMeasure, options, placements.at(partOfStaff.at(staff)), x, contentStart,
-                    static_cast<int>(staff));
+                    static_cast<int>(staff), stretch);
 
                 assignStaff(system, before, static_cast<int>(staff));
             }

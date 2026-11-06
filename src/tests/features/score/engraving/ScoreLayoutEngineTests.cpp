@@ -3262,3 +3262,153 @@ TEST_CASE(
         line.rightX ==
         Approx(head.x + noteheadWidthFor(NoteheadKind::whole) + options.ledgerLineExtension));
 }
+
+// --- Justification (engraving-polish tier 3, design.md decision 10) ---
+namespace
+{
+// Ten bars of four quarters, with a grace note into the third beat of bar 1 and
+// a key signature, so a case can look at headers and at grace spacing.
+[[nodiscard]] std::shared_ptr<const score::Score> tenBarsWithAGrace()
+{
+    std::vector<score::Measure> measures;
+
+    for (std::size_t index = 0; index < 10; ++index)
+    {
+        std::vector<score::ScoreEvent> events =
+            runOf(4, ticksPerQuarterNote, pitch(score::Step::a, 0, 4));
+
+        if (index == 0)
+        {
+            score::ScoreEvent grace;
+            grace.kind = score::EventKind::note;
+            grace.onset = ticksPerQuarterNote * 2;
+            grace.duration = 0;
+            grace.isGrace = true;
+            grace.notes = notesOf({pitch(score::Step::c, 0, 5)});
+            events.insert(events.begin() + 2, grace);
+        }
+
+        score::Measure measure = measureOf(index, {voiceOf(1, events)}, index == 0);
+
+        if (index == 0)
+        {
+            measure.attributes.key = score::KeySignature{2, "major"};
+        }
+
+        measures.push_back(measure);
+    }
+
+    return scoreOf(measures);
+}
+} // namespace
+
+TEST_CASE(
+    "every full system is justified to the width, the last is not",
+    "[score][engraving][layout][justification]")
+{
+    LayoutOptions options;
+    options.availableWidth = 90.0;
+
+    const ScoreLayout layout = layOutScore(tenBarsWithAGrace(), options);
+
+    REQUIRE(layout.systems.size() > 2);
+
+    for (std::size_t index = 0; index + 1 < layout.systems.size(); ++index)
+    {
+        INFO("system " << index);
+        CHECK(layout.systems.at(index).width == Approx(options.availableWidth));
+    }
+
+    CHECK(layout.systems.back().width < options.availableWidth);
+}
+
+TEST_CASE("justification never stretches a header", "[score][engraving][layout][justification]")
+{
+    LayoutOptions options;
+    options.availableWidth = 90.0;
+
+    const ScoreLayout layout = layOutScore(tenBarsWithAGrace(), options);
+    const System& first = layout.systems.front();
+
+    REQUIRE(first.clefs.size() == 1);
+    REQUIRE(first.keyAccidentals.size() == 2);
+
+    // Clef, then the key one accidental-width apart, exactly as unstretched.
+    CHECK(first.keyAccidentals.at(0).x == Approx(first.clefs.front().x + options.clefWidth));
+    CHECK(
+        first.keyAccidentals.at(1).x - first.keyAccidentals.at(0).x ==
+        Approx(options.keyAccidentalWidth));
+}
+
+TEST_CASE(
+    "a grace note keeps its distance from its note when stretched",
+    "[score][engraving][layout][justification]")
+{
+    // The same bar justified and not: on one long system it is the last system
+    // and is left alone.
+    LayoutOptions narrow;
+    narrow.availableWidth = 90.0;
+    LayoutOptions wide;
+    wide.availableWidth = 1000.0;
+
+    const auto graceGap = [](const ScoreLayout& layout)
+    {
+        const System& system = layout.systems.front();
+        const auto grace = std::find_if(
+            system.noteheads.begin(), system.noteheads.end(),
+            [](const NoteheadGlyph& head) { return head.isGrace; });
+        REQUIRE(grace != system.noteheads.end());
+
+        const auto main = std::find_if(
+            system.noteheads.begin(), system.noteheads.end(),
+            [](const NoteheadGlyph& head) {
+                return !head.isGrace && head.source.measureIndex == 0 &&
+                       head.source.eventIndex == 3;
+            });
+        REQUIRE(main != system.noteheads.end());
+
+        return main->x - grace->x;
+    };
+
+    const ScoreLayout justified = layOutScore(tenBarsWithAGrace(), narrow);
+    const ScoreLayout natural = layOutScore(tenBarsWithAGrace(), wide);
+
+    REQUIRE(justified.systems.size() > 1);
+    REQUIRE(natural.systems.size() == 1);
+
+    CHECK(graceGap(justified) == Approx(graceGap(natural)));
+}
+
+TEST_CASE(
+    "the same score at the same width justifies identically",
+    "[score][engraving][layout][justification]")
+{
+    LayoutOptions options;
+    options.availableWidth = 90.0;
+
+    const ScoreLayout first = layOutScore(tenBarsWithAGrace(), options);
+    const ScoreLayout second = layOutScore(tenBarsWithAGrace(), options);
+
+    REQUIRE(first.systems.size() == second.systems.size());
+
+    for (std::size_t index = 0; index < first.systems.size(); ++index)
+    {
+        const System& left = first.systems.at(index);
+        const System& right = second.systems.at(index);
+
+        CHECK(left.width == right.width);
+        REQUIRE(left.noteheads.size() == right.noteheads.size());
+
+        for (std::size_t head = 0; head < left.noteheads.size(); ++head)
+        {
+            CHECK(left.noteheads.at(head).x == right.noteheads.at(head).x);
+        }
+
+        REQUIRE(left.barlines.size() == right.barlines.size());
+
+        for (std::size_t barline = 0; barline < left.barlines.size(); ++barline)
+        {
+            CHECK(left.barlines.at(barline).x == right.barlines.at(barline).x);
+        }
+    }
+}

@@ -192,6 +192,15 @@ Real engraving spaces notes non-linearly and resolves collisions. Not doing that
 is deliberate: proportional spacing is predictable, is one line of arithmetic,
 and is right often enough to read. Replacing it later is one function.
 
+Every system but the last is then **justified** to `availableWidth`: one
+stretch factor per system, the room it has over the room its measures' music
+needs, applied to the space inside each measure and never to a header. Each
+event remembers the onset it hangs from (`anchorX`): onsets move apart, and a
+grace note or an accidental keeps its distance from the note it belongs to. A
+system is never squeezed, so a lone bar wider than the view stays as wide as it
+is. The last system is left at its natural width, which is what a reader
+expects of the end of a piece.
+
 ### Stems
 
 With one voice, by pitch: up below the middle line, down on it and above. With
