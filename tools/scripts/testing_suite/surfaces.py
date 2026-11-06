@@ -847,6 +847,60 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The fixture the engraving-polish change is checked against. Captured
+    # before any of that change landed, so each question below starts out
+    # answered "no" and the reference is retaken, deliberately, at the end of
+    # each tier that changes it (tasks 4.1). Bar by bar, like the grand staff.
+    Surface(
+        state="score-view-engraving",
+        title="The score view drawing the engraving fixture",
+        tools=("score-view",),
+        presentation="docked",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "chord-accidentals-stack",
+                "Bar 1 opens with a three-note chord with a sharp on every note: are the "
+                "sharps in columns, none overlapping another, each level with its own note?",
+            ),
+            Question(
+                "seconds-either-side-of-the-stem",
+                "Bar 1's second chord has its stem up and bar 2's two chords have theirs down: "
+                "in each, are the two notes a step apart on opposite sides of the stem, both "
+                "touching it -- the upper note to the right when the stem is up, the lower "
+                "note to the left when it is down?",
+            ),
+            Question(
+                "accidental-on-its-own-note",
+                "In those same three chords, is every sharp clear of both noteheads and "
+                "plainly in front of the note it belongs to, rather than inside the other "
+                "note?",
+            ),
+            Question(
+                "tie-across-the-break",
+                "The last note of bar 4 is tied to the first of bar 5, across the end of the "
+                "line: is the tie drawn on both lines -- leaving the note at the end of one "
+                "and arriving at the note at the start of the next?",
+            ),
+            Question(
+                "endings-bracketed",
+                "Are bars 7 and 8 under brackets labelled 1. and 2., the first closed at the "
+                "repeat sign and the second left open?",
+            ),
+            Question(
+                "lyrics-below-ledger-lines",
+                "In bar 3 the notes hang below the staff on ledger lines: are the lyrics under "
+                "them clear of every ledger line and notehead?",
+            ),
+            Question(
+                "nothing-collides",
+                "Do any two symbols overlap anywhere -- an accidental, notehead, stem, ledger "
+                "line, lyric or barline?",
+            ),
+        ),
+    ),
     # The score the application ships, opened the way a first launch opens it.
     # Real exporter output with far more in it than the hand-written fixtures,
     # so this is the picture that shows what the renderer does with an actual

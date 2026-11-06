@@ -96,9 +96,9 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
     CHECK(
         naming == std::set<std::string>{
                       "score-import-clean", "score-import-diagnostics", "score-import-in-progress",
-                      "score-view-grand-staff", "score-view-horizontal", "score-view-notation",
-                      "score-view-notation-large", "score-view-page", "score-view-sample",
-                      "score-view-vertical"});
+                      "score-view-engraving", "score-view-grand-staff", "score-view-horizontal",
+                      "score-view-notation", "score-view-notation-large", "score-view-page",
+                      "score-view-sample", "score-view-vertical"});
 }
 
 // The invariant this started as was "a state naming a score opens nothing
@@ -536,4 +536,112 @@ TEST_CASE(
         INFO(notice);
         CHECK(notice.find("staff") == std::string::npos);
     }
+}
+
+// The fixture for the engraving-polish surface. Pinned through the importer and
+// the layout like the two above, so that it losing the case a later tier is
+// checked against fails a build instead of quietly turning that tier's
+// before-and-after pictures into pictures of something else.
+TEST_CASE("the engraving fixture holds what its picture is about", "[testcontrol][approved][score]")
+{
+    const MusicXmlImportResult result = importFixture("engraving-polish.musicxml");
+
+    CHECK(result.status == MusicXmlImportStatus::imported);
+
+    for (const Diagnostic& diagnostic : result.diagnostics)
+    {
+        INFO(
+            "unexpected diagnostic on <"
+            << diagnostic.elementName << "> in bar "
+            << diagnostic.location.measureNumber.value_or("-") << ": " << diagnostic.message);
+        CHECK(false);
+    }
+
+    REQUIRE(result.score != nullptr);
+    REQUIRE(result.score->parts.size() == 1);
+
+    const Part& part = result.score->parts.front();
+    CHECK(part.name == "Voice");
+    REQUIRE(part.measures.size() == 13);
+
+    const auto eventsOf = [&part](std::size_t measureIndex)
+    { return part.measures.at(measureIndex).voices.front().events; };
+
+    const auto sharps = [](const ScoreEvent& event)
+    {
+        return std::count_if(
+            event.notes.begin(), event.notes.end(),
+            [](const Note& note) { return note.written.alter == 1; });
+    };
+
+    // Bar 1: a triad with a sharp on every note, then a second whose upper,
+    // shifted note is the sharp one.
+    REQUIRE(eventsOf(0).size() == 2);
+    CHECK(eventsOf(0).at(0).notes.size() == 3);
+    CHECK(sharps(eventsOf(0).at(0)) == 3);
+    CHECK(eventsOf(0).at(1).notes.size() == 2);
+    CHECK(sharps(eventsOf(0).at(1)) == 1);
+
+    // Bar 2: two seconds above the middle line, so both take down stems.
+    REQUIRE(eventsOf(1).size() == 2);
+    CHECK(eventsOf(1).at(0).notes.size() == 2);
+    CHECK(eventsOf(1).at(1).notes.size() == 2);
+
+    // Bars 4 to 5: one tie, between them.
+    std::size_t ties = 0;
+
+    for (std::size_t index = 0; index < part.measures.size(); ++index)
+    {
+        for (const ScoreEvent& event : eventsOf(index))
+        {
+            for (const Note& note : event.notes)
+            {
+                if (note.tiedTo.has_value())
+                {
+                    ++ties;
+                    CHECK(index == 3);
+                }
+            }
+        }
+    }
+
+    CHECK(ties == 1);
+
+    // Bars 6 to 8: a repeat whose first ending is closed by it, then a second.
+    CHECK(part.measures.at(5).repeats.repeatStart);
+    CHECK(part.measures.at(6).repeats.repeatEnd);
+    CHECK(part.measures.at(6).repeats.endingNumbers == std::vector<int>{1});
+    CHECK(part.measures.at(7).repeats.endingNumbers == std::vector<int>{2});
+    CHECK_FALSE(part.measures.at(7).repeats.repeatEnd);
+
+    // Bars 9 to 12: a whole-bar rest each.
+    for (std::size_t index = 8; index < 12; ++index)
+    {
+        INFO("bar " << index + 1);
+        REQUIRE(eventsOf(index).size() == 1);
+        CHECK_FALSE(isPitched(eventsOf(index).front()));
+    }
+
+    // The Segno in bar 3 and the "D.S. al Coda" in bar 13 are in the file and
+    // not in the model: the importer reads neither into `jumps`. Pinned as it
+    // is, so that the importer starting to read them is noticed here -- and
+    // this fixture's picture retaken -- rather than discovered in a capture.
+    for (const Measure& measure : part.measures)
+    {
+        CHECK(measure.repeats.jumps.empty());
+    }
+
+    // At about the docked view's width, the first system ends after bar 4, so
+    // the tie leaves one system and arrives on the next. That is the case the
+    // surface exists to show; a width that no longer breaks there would make
+    // the picture of it a picture of an ordinary tie.
+    engraving::LayoutOptions options;
+    options.availableWidth = 150.0;
+
+    const engraving::ScoreLayout layout = engraving::layOutScore(result.score, options);
+
+    REQUIRE(layout.outcome == engraving::LayoutOutcome::laidOut);
+    REQUIRE(layout.systems.size() >= 2);
+
+    CHECK(layout.systems.front().lastMeasureIndex == 3);
 }

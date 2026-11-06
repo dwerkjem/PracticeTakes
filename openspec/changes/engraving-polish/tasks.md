@@ -5,13 +5,19 @@ decision 1.
 
 ## 0. The fixture everything below is checked against
 
-- [ ] 0.1 A harness score, `engraving-polish.musicxml`, under
+- [x] 0.1 A harness score, `engraving-polish.musicxml`, under
       `src/tests/resources/harness-scores/`: a chord with a sharp on every note,
       a second under an up stem and under a down stem, a tie that crosses a
       system break at the default width, a `1.` and `2.` ending with a repeat
       barline, a Segno and a "D.S. al Coda", lyrics under notes with ledger
-      lines, and four bars of rest in a row.
-- [ ] 0.2 An approved state that opens it in the score view, and a capture
+      lines, and four bars of rest in a row. Pinned in
+      `ApprovedScoreFixturesTests`, including that the first system ends after
+      bar 4 at the docked width, which is what makes the tie cross a break.
+      **The Segno and "D.S. al Coda" do not reach the model**: the importer
+      recognises `<segno>` and reads nothing from it, keeps `<words>` only as a
+      tempo mark's text, and nothing fills `RepeatMarkings::jumps`. Pinned as
+      empty, so the importer starting to read them is noticed. See 1.14.
+- [x] 0.2 An approved state that opens it in the score view, and a capture
       surface, `score-view-engraving`, in `surfaces.py`. Captured before any
       change below, so every later tier has a picture to compare against.
 
@@ -59,6 +65,10 @@ decision 1.
 - [ ] 1.14 Jump marks: `Segno` and `Coda` as SMuFL signs at the measure start;
       any other string as text right-aligned at the measure end; an
       unrecognised string drawn as text rather than dropped.
+      **Blocked on the importer first**: nothing fills `RepeatMarkings::jumps`
+      today (see 0.1), so this needs `<segno>`, `<coda>` and jump `<words>` /
+      `<sound dalsegno|dacapo|tocoda|fine>` read into it before there is
+      anything to draw.
 - [ ] 1.15 Remove the ending and jump notices.
 - [ ] 1.16 Tests: `1.` then `2.` as two brackets; `1. 2.` as one; closed against
       a repeat barline and open without one; a bracket across a break; Segno,

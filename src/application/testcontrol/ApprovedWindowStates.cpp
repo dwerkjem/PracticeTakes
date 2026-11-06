@@ -283,6 +283,16 @@ const std::vector<ApprovedWindowState>& states()
          false, "", false,
          "The score view drawing a piano part as a braced grand staff, both hands aligned", 0.0, "",
          "grand-staff-sample.musicxml", false},
+        // The fixture the engraving-polish change is checked against: stacked
+        // accidentals, seconds on both sides of a stem, a tie across a system
+        // break, endings and a run of rests. Captured before any of it was
+        // fixed, so each tier of that change has a picture to compare with.
+        {"score-view-engraving", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view drawing the engraving fixture: chord accidentals, seconds, a tie "
+         "across a system break, first and second endings and four bars of rest",
+         0.0, "", "engraving-polish.musicxml", false},
         // The sample the application ships, opened the way the File menu and
         // the empty-window button open it: written out of the executable, then
         // imported. The one score state whose input is not a committed fixture
