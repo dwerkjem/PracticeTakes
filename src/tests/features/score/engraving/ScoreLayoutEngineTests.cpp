@@ -3609,3 +3609,98 @@ TEST_CASE("bars condense only where every staff rests", "[score][engraving][layo
     CHECK(rests.at(0).count == 2);
     CHECK(rests.at(0).staff != rests.at(1).staff);
 }
+
+// --- Structural system breaks (engraving-polish tier 3, design.md decision 13) ---
+namespace
+{
+// Twelve equal bars, so where a system breaks depends only on the width.
+[[nodiscard]] std::vector<score::Measure> twelveEqualBars()
+{
+    std::vector<score::Measure> measures;
+
+    for (std::size_t index = 0; index < 12; ++index)
+    {
+        measures.push_back(noteBar(index));
+    }
+
+    return measures;
+}
+
+[[nodiscard]] std::size_t firstBreakAfter(const std::vector<score::Measure>& measures, double width)
+{
+    LayoutOptions options;
+    options.availableWidth = width;
+
+    const ScoreLayout layout = layOutScore(scoreOf(measures), options);
+    REQUIRE(layout.systems.size() > 1);
+
+    return layout.systems.front().lastMeasureIndex;
+}
+} // namespace
+
+TEST_CASE(
+    "a system break moves back one bar to a repeat barline",
+    "[score][engraving][layout][breaks]")
+{
+    constexpr double width = 200.0;
+    const std::size_t natural = firstBreakAfter(twelveEqualBars(), width);
+
+    // Enough bars on the line that losing one leaves it three quarters full.
+    REQUIRE(natural >= 4);
+
+    std::vector<score::Measure> measures = twelveEqualBars();
+    measures.at(natural - 1).repeats.repeatEnd = true;
+
+    CHECK(firstBreakAfter(measures, width) == natural - 1);
+}
+
+TEST_CASE(
+    "a system break moves back one bar to the end of an ending",
+    "[score][engraving][layout][breaks]")
+{
+    constexpr double width = 200.0;
+    const std::size_t natural = firstBreakAfter(twelveEqualBars(), width);
+
+    REQUIRE(natural >= 4);
+
+    std::vector<score::Measure> measures = twelveEqualBars();
+    measures.at(natural - 1).repeats.endingNumbers = {2};
+
+    CHECK(firstBreakAfter(measures, width) == natural - 1);
+}
+
+TEST_CASE(
+    "a system break does not move back if it would leave the line under three quarters",
+    "[score][engraving][layout][breaks]")
+{
+    // Narrow enough for two or three bars a line: moving the break back one
+    // bar would leave a line at most two thirds full, which looks worse than a
+    // break in an ordinary place.
+    constexpr double width = 80.0;
+    const std::size_t natural = firstBreakAfter(twelveEqualBars(), width);
+
+    REQUIRE(natural >= 1);
+    REQUIRE(natural <= 2);
+
+    std::vector<score::Measure> measures = twelveEqualBars();
+    measures.at(natural - 1).repeats.repeatEnd = true;
+
+    CHECK(firstBreakAfter(measures, width) == natural);
+}
+
+TEST_CASE(
+    "a break already at a repeat barline stays where it is",
+    "[score][engraving][layout][breaks]")
+{
+    constexpr double width = 200.0;
+    const std::size_t natural = firstBreakAfter(twelveEqualBars(), width);
+
+    std::vector<score::Measure> measures = twelveEqualBars();
+    measures.at(natural).repeats.repeatEnd = true;
+    measures.at(natural - 1).repeats.endingNumbers = {1};
+    measures.at(natural).repeats.endingNumbers = {1};
+
+    // The fill already breaks after a repeat; the ending one bar back does not
+    // end there (its run continues), so nothing moves.
+    CHECK(firstBreakAfter(measures, width) == natural);
+}

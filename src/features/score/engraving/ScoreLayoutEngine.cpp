@@ -29,6 +29,10 @@ constexpr double contentLeadIn = 0.8;
 // Room a repeat barline takes at the start of a measure.
 constexpr double repeatBarlineWidth = 1.3;
 
+// How full a system has to be, of the width it has, for a break to move back
+// one bar to a repeat barline or the end of an ending (design.md decision 13).
+constexpr double structuralBreakMinimumFill = 0.75;
+
 // How far short of the system's end the first half of a split tie stops, so it
 // does not run into the barline.
 constexpr double tieHalfEndInset = 0.4;
@@ -2226,6 +2230,35 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     const auto availableFor = [&options, braceRoom, &nameRoomOf](std::size_t systemIndex)
     { return options.availableWidth - braceRoom - nameRoomOf(systemIndex); };
 
+    // Whether a system may end after this laid-out measure at a structural
+    // place (design.md decision 13): on a repeat barline either side of the
+    // break, or where an ending's bracket ends.
+    const auto structuralAfter = [&plansByStaff, &barsAt, measureCount](std::size_t measure)
+    {
+        const std::size_t last = measure + static_cast<std::size_t>(barsAt.at(measure)) - 1;
+        const MeasurePlan& here = plansByStaff.front().at(last);
+
+        if (here.repeatEnd)
+        {
+            return true;
+        }
+
+        if (last + 1 >= measureCount)
+        {
+            return false;
+        }
+
+        const MeasurePlan& next = plansByStaff.front().at(last + 1);
+        const std::vector<int>& ending = here.source->repeats.endingNumbers;
+
+        return next.repeatStart ||
+               (!ending.empty() && next.source->repeats.endingNumbers != ending);
+    };
+
+    // The widths of the measures on the system being filled, parallel to
+    // `packed.back()`, so one can be moved on to the next system.
+    std::vector<double> widthsOnSystem;
+
     for (std::size_t index = 0; index < measureCount;
          index += static_cast<std::size_t>(barsAt.at(index)))
     {
@@ -2238,20 +2271,60 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
 
         if (!wouldStartSystem && cursor + width > availableFor(packed.size() - 1))
         {
-            packed.emplace_back();
-            cursor = headerWidthAt(index, true) + contentWidth;
-        }
-        else
-        {
-            if (packed.empty())
+            // The fill would break before this measure. If that is an ordinary
+            // place and the bar before is a structural one, break there
+            // instead -- as long as what is left is three quarters full.
+            std::vector<std::size_t> carried;
+            std::vector<std::size_t>& filling = packed.back();
+
+            if (filling.size() >= 2 && !structuralAfter(filling.back()) &&
+                structuralAfter(filling.at(filling.size() - 2)) &&
+                cursor - widthsOnSystem.back() >=
+                    structuralBreakMinimumFill * availableFor(packed.size() - 1))
             {
-                packed.emplace_back();
+                carried.push_back(filling.back());
+                filling.pop_back();
             }
 
-            cursor += width;
+            packed.emplace_back();
+            widthsOnSystem.clear();
+            cursor = 0.0;
+
+            for (const std::size_t moved : carried)
+            {
+                const double movedWidth =
+                    headerWidthAt(moved, packed.back().empty()) + widthOfBar(moved);
+                packed.back().push_back(moved);
+                widthsOnSystem.push_back(movedWidth);
+                cursor += movedWidth;
+            }
+
+            // A measure carried over and this one may not fit together; then
+            // this one starts a system of its own, as the greedy fill would.
+            if (!packed.back().empty() && cursor + headerWidthAt(index, false) + contentWidth >
+                                              availableFor(packed.size() - 1))
+            {
+                packed.emplace_back();
+                widthsOnSystem.clear();
+                cursor = 0.0;
+            }
+
+            const double placed = headerWidthAt(index, packed.back().empty()) + contentWidth;
+            packed.back().push_back(index);
+            widthsOnSystem.push_back(placed);
+            cursor += placed;
+
+            continue;
         }
 
+        if (packed.empty())
+        {
+            packed.emplace_back();
+        }
+
+        cursor += width;
         packed.back().push_back(index);
+        widthsOnSystem.push_back(width);
     }
 
     // Each staff after the first starts below the previous one's bottom line,

@@ -62,7 +62,11 @@ parity test and a test assertion reads as a position you can count off a staff.
    across every staff at once**, so a beat lands at one x on all of them.
 2. **Pack measures into systems** at `options.availableWidth`. Clef and key
    repeat at every system start; a time signature does not. At least one measure
-   per system, however wide it is.
+   per system, however wide it is. When the fill would break in an ordinary
+   place and the bar before is a structural one — a repeat barline either side
+   of the break, or the end of an ending's bracket — the break moves back to it,
+   provided the line it leaves is still three quarters full. Nothing subtler:
+   a break at a phrase needs judgement this layer does not have.
 3. **Emit glyphs** with absolute x, recording where every notehead landed.
 4. **Resolve ties**, which need both ends placed before either can be drawn.
    A tie whose ends land on different systems is drawn as two halves: from its

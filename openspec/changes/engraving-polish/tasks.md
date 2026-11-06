@@ -145,13 +145,16 @@ decision 1.
       with no clef, key or time change, repeat, ending, jump or direction,
       condensed to one H-bar with its count. Measure index ranges still cover
       the condensed bars.
-- [ ] 3.5 Structural breaks: prefer a break at a repeat barline or the end of a
+- [x] 3.5 Structural breaks: prefer a break at a repeat barline or the end of a
       volta run within the last two measures that fit, if the system left is at
       least 75% full.
-- [ ] 3.6 Tests for each: a full system ends at `availableWidth` and the last
+- [x] 3.6 Tests for each: a full system ends at `availableWidth` and the last
       does not; the indent; a rest run broken by a key change; a break moved
       back one bar to a repeat barline, and not moved when it would leave a
-      system under 75%.
+      system under 75%. Also: a break moved back to the end of an ending, a
+      break already after a repeat left alone, a run of rests broken by a
+      direction, a run that condenses only where every staff rests, and a
+      grace note's gap unchanged by justification.
 
 ## 4. Verification and close-out
 
