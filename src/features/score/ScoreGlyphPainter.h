@@ -111,6 +111,10 @@ class ScoreGlyphPainter
     void
     drawMultiRest(const engraving::MultiRestGlyph& glyph, double originX, double originY) const;
 
+    // A jump mark: a Segno or Coda sign scaled to the jump row's height, or
+    // the instruction's text right-aligned at the end of its measure.
+    void drawJump(const engraving::JumpGlyph& glyph, double originX, double originY) const;
+
     // An ending bracket: its line, the hooks it has, and its label under the
     // line at its start.
     void drawVolta(const engraving::VoltaGlyph& glyph, double originX, double originY) const;

@@ -929,11 +929,11 @@ TEST_CASE("repeat barlines are drawn from the measure's markings", "[score][engr
         barlines.begin(), barlines.end(),
         [](const BarlineGlyph& glyph) { return glyph.kind == BarlineKind::repeatEnd; }));
 
-    // The ending is drawn now, so nothing reports it; the jump is not yet, and
-    // says so rather than being dropped on the floor.
+    // The ending and the jump are both drawn now, so nothing reports either.
     CHECK_FALSE(anyNoticeContains(layout, "endings"));
+    CHECK_FALSE(anyNoticeContains(layout, "D.C., D.S., Fine and Coda"));
     CHECK(layout.systems.front().voltas.size() == 1);
-    CHECK(anyNoticeContains(layout, "D.C., D.S., Fine and Coda"));
+    CHECK(layout.systems.front().jumps.size() == 1);
 }
 
 TEST_CASE("every notehead names the note it came from", "[score][engraving][layout]")
@@ -3703,4 +3703,102 @@ TEST_CASE(
     // The fill already breaks after a repeat; the ending one bar back does not
     // end there (its run continues), so nothing moves.
     CHECK(firstBreakAfter(measures, width) == natural);
+}
+
+// --- Jump marks (engraving-polish tier 1, design.md decision 9) ---
+namespace
+{
+[[nodiscard]] score::Measure jumpBar(std::size_t index, std::vector<std::string> jumps)
+{
+    score::Measure measure = noteBar(index);
+    measure.repeats.jumps = std::move(jumps);
+
+    return measure;
+}
+
+[[nodiscard]] std::pair<double, double> barSpan(const System& system, std::size_t barline)
+{
+    const double start = barline == 0 ? 0.0 : system.barlines.at(barline - 1).x;
+
+    return {start, system.barlines.at(barline).x};
+}
+} // namespace
+
+TEST_CASE(
+    "a segno and a coda are signs at the start of their bars",
+    "[score][engraving][layout][jumps]")
+{
+    const ScoreLayout layout = layOutScore(
+        scoreOf({noteBar(0), jumpBar(1, {"Segno"}), jumpBar(2, {"Coda"})}), wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.jumps.size() == 2);
+    CHECK(system.jumps.at(0).sign == JumpSign::segno);
+    CHECK(system.jumps.at(1).sign == JumpSign::coda);
+
+    // Just after each bar's opening barline.
+    const auto [secondStart, secondEnd] = barSpan(system, 1);
+    CHECK(system.jumps.at(0).x > secondStart);
+    CHECK(system.jumps.at(0).x < secondStart + 1.0);
+    CHECK(system.jumps.at(1).x > secondEnd);
+}
+
+TEST_CASE("a jump instruction is text at the end of its bar", "[score][engraving][layout][jumps]")
+{
+    const ScoreLayout layout =
+        layOutScore(scoreOf({noteBar(0), jumpBar(1, {"D.S. al Coda"})}), wideOptions());
+
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.jumps.size() == 1);
+
+    const JumpGlyph& jump = system.jumps.front();
+    const auto [start, end] = barSpan(system, 1);
+
+    CHECK(jump.sign == JumpSign::none);
+    CHECK(jump.text == "D.S. al Coda");
+
+    // Its right edge, just inside the closing barline.
+    CHECK(jump.x < end);
+    CHECK(jump.x > end - 1.0);
+    CHECK(jump.x > start);
+}
+
+TEST_CASE("an unrecognised jump is drawn as text", "[score][engraving][layout][jumps]")
+{
+    // Nothing here knows "vom Anfang", and it is drawn anyway: a jump the
+    // reader cannot see sends them the wrong way.
+    const ScoreLayout layout =
+        layOutScore(scoreOf({noteBar(0), jumpBar(1, {"vom Anfang"})}), wideOptions());
+
+    REQUIRE(layout.systems.front().jumps.size() == 1);
+    CHECK(layout.systems.front().jumps.front().text == "vom Anfang");
+    CHECK(layout.systems.front().jumps.front().sign == JumpSign::none);
+    CHECK_FALSE(anyNoticeContains(layout, "D.C., D.S., Fine and Coda"));
+}
+
+TEST_CASE(
+    "jump marks sit above the staff, with the tempo above them",
+    "[score][engraving][layout][jumps][text-placement]")
+{
+    score::Measure bar = jumpBar(0, {"Segno"});
+    bar.directions = {score::Direction{score::DirectionKind::tempo, 0, 1, "Andante", 72.0}};
+
+    const LayoutOptions options = wideOptions();
+    const ScoreLayout layout = layOutScore(scoreOf({bar}), options);
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.jumps.size() == 1);
+
+    const JumpGlyph& jump = system.jumps.front();
+
+    // Above the staff, its whole row clear of the top line.
+    CHECK(jump.y + options.jumpSignHeight <= 0.0);
+
+    const TextGlyph* tempo = firstTextOf(system, TextRole::tempo);
+    REQUIRE(tempo != nullptr);
+    CHECK(tempo->y + options.textBandHeight <= jump.y - options.textClearance + 1.0e-9);
 }

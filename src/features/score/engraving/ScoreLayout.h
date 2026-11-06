@@ -327,6 +327,35 @@ struct MultiRestGlyph
     int staff = 0;
 };
 
+// A jump instruction (design.md decision 9). A Segno or Coda is its sign, at
+// the start of its measure; anything else -- "D.S. al Coda", "Fine", "To Coda",
+// or a string nothing here recognises -- is its text, right-aligned at the end
+// of its measure, where an instruction that takes effect after the bar goes.
+// Drawn once per system above the top staff, like an ending.
+enum class JumpSign
+{
+    none,
+    segno,
+    coda
+};
+
+struct JumpGlyph
+{
+    // The sign's left edge, or the right edge the text is aligned to.
+    double x = 0.0;
+
+    // The text as written. Kept for a sign too, so a caller can tell what the
+    // file said.
+    std::string text;
+
+    JumpSign sign = JumpSign::none;
+
+    // The top of the jump row, in staff spaces below the top staff's top line.
+    // A sign is drawn `jumpSignHeight` tall with its foot at the row's bottom;
+    // text sits at the top of the row.
+    double y = 0.0;
+};
+
 struct LyricGlyph
 {
     double x = 0.0;
@@ -435,6 +464,7 @@ struct System
     std::vector<BarlineGlyph> barlines;
     std::vector<TieGlyph> ties;
     std::vector<VoltaGlyph> voltas;
+    std::vector<JumpGlyph> jumps;
     std::vector<LyricGlyph> lyrics;
     std::vector<TextGlyph> texts;
 
@@ -638,6 +668,11 @@ struct LayoutOptions
     // bracket needs. Tempo marks and measure numbers go above a bracket.
     double voltaAboveStaff = 2.8;
     double voltaHookLength = 1.6;
+
+    // How tall a Segno or Coda sign is drawn. Bravura's are three to four
+    // spaces tall at full size, which is more than a line of text; the jump row
+    // is this tall, and tempo marks and measure numbers go above it.
+    double jumpSignHeight = 2.2;
 
     // How tall a line of text is, for clearing it.
     double textBandHeight = 1.7;

@@ -8,6 +8,7 @@
 #include "PartNames.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <map>
 #include <optional>
@@ -1502,6 +1503,50 @@ struct MeasureSpan
     double endX = 0.0;
 };
 
+// Jump marks for one system (design.md decision 9). "Segno" and "Coda", as
+// written in any case, are their signs at the measure's start; every other
+// string is text at its end. An unrecognised string is drawn rather than
+// dropped, because a jump the reader cannot see sends them the wrong way.
+void addJumps(System& system, const std::vector<MeasureSpan>& spans)
+{
+    constexpr double barlineInset = 0.3;
+
+    const auto lowered = [](std::string text)
+    {
+        std::transform(
+            text.begin(), text.end(), text.begin(), [](char character)
+            { return static_cast<char>(std::tolower(static_cast<unsigned char>(character))); });
+
+        return text;
+    };
+
+    for (std::size_t index = 0; index < spans.size(); ++index)
+    {
+        const MeasureSpan& span = spans.at(index);
+
+        for (const std::string& written : span.measure->repeats.jumps)
+        {
+            JumpGlyph jump;
+            jump.text = written;
+
+            const std::string key = lowered(written);
+
+            if (key == "segno" || key == "coda")
+            {
+                jump.sign = key == "segno" ? JumpSign::segno : JumpSign::coda;
+                jump.x = (index == 0 ? std::max(span.startX, system.headerEndX) : span.startX) +
+                         barlineInset;
+            }
+            else
+            {
+                jump.x = span.endX - barlineInset;
+            }
+
+            system.jumps.push_back(jump);
+        }
+    }
+}
+
 // Ending brackets for one system (design.md decision 8). A bracket is a run of
 // consecutive measures sharing the same non-empty ending numbers, and it ends at
 // a measure that closes on a repeat barline even if the next has the same
@@ -1624,6 +1669,22 @@ void placeTextAndStaves(ScoreLayout& layout, const LayoutOptions& options)
             reach.front().include(lineY);
             aboveBase.front() =
                 std::min(aboveBase.front(), lineY - options.textClearance - options.textBandHeight);
+        }
+
+        // Jump marks on a row of their own, where the top staff's text row
+        // would be, grown to a sign's height; that text then goes above them.
+        if (!system.jumps.empty())
+        {
+            const double rowTop =
+                aboveBase.front() - (options.jumpSignHeight - options.textBandHeight);
+
+            for (JumpGlyph& jump : system.jumps)
+            {
+                jump.y = rowTop;
+            }
+
+            reach.front().include(rowTop);
+            aboveBase.front() = rowTop - options.textClearance - options.textBandHeight;
         }
 
         for (LyricGlyph& lyric : system.lyrics)
@@ -1814,11 +1875,6 @@ void liftTempoMarksToTop(System& system, int lastStaffOfFirstPart)
         plan.clef = clef;
         plan.key = key;
         plan.time = time;
-
-        if (!measure.repeats.jumps.empty())
-        {
-            notices.add("Navigation marks such as D.C., D.S., Fine and Coda are not shown yet.");
-        }
 
         planMeasure(plan, measure, staff, options, notices, lyricVerseCount);
 
@@ -2457,6 +2513,8 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         }
 
         system.width = x;
+
+        addJumps(system, spans);
 
         addVoltas(
             system, spans,

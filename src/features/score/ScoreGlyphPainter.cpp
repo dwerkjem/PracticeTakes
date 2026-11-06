@@ -632,6 +632,47 @@ void ScoreGlyphPainter::drawMultiRest(
     }
 }
 
+void ScoreGlyphPainter::drawJump(const engraving::JumpGlyph& glyph, double originX, double originY)
+    const
+{
+    const double rowHeight = engraving::LayoutOptions{}.jumpSignHeight;
+
+    if (glyph.sign != engraving::JumpSign::none)
+    {
+        const smufl::Glyph sign =
+            glyph.sign == engraving::JumpSign::segno ? smufl::Glyph::segno : smufl::Glyph::coda;
+        const juce::Rectangle<float> bounds = font.bounds(sign);
+
+        if (bounds.getHeight() <= 0.0f)
+        {
+            return;
+        }
+
+        // Scaled to the row, with its foot on the row's bottom.
+        const double scale = rowHeight / static_cast<double>(bounds.getHeight());
+        const double baseline =
+            glyph.y + rowHeight - (static_cast<double>(bounds.getBottom()) * scale);
+
+        drawGlyph(sign, glyph.x, baseline, originX, originY, palette.notation, scale);
+
+        return;
+    }
+
+    // Right-aligned at the end of its bar, on the row's bottom like the signs.
+    constexpr double textHeight = 1.7;
+    constexpr double maximumWidth = 16.0;
+
+    graphics.setColour(palette.notation);
+    graphics.setFont(juce::FontOptions(px(1.4), juce::Font::bold | juce::Font::italic));
+    graphics.drawText(
+        juce::String(glyph.text),
+        juce::Rectangle<float>(
+            static_cast<float>(originX + px(glyph.x - maximumWidth)),
+            static_cast<float>(originY + px(glyph.y + rowHeight - textHeight)), px(maximumWidth),
+            px(textHeight)),
+        juce::Justification::centredRight, false);
+}
+
 void ScoreGlyphPainter::drawVolta(
     const engraving::VoltaGlyph& glyph,
     double originX,
@@ -834,6 +875,11 @@ void ScoreGlyphPainter::drawSystem(const engraving::System& system, double origi
     for (const engraving::VoltaGlyph& glyph : system.voltas)
     {
         drawVolta(glyph, originX, staffOrigin(0));
+    }
+
+    for (const engraving::JumpGlyph& glyph : system.jumps)
+    {
+        drawJump(glyph, originX, staffOrigin(0));
     }
 }
 

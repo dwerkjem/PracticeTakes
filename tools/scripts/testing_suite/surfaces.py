@@ -890,6 +890,11 @@ SURFACES: tuple[Surface, ...] = (
                 "repeat sign and the second left open?",
             ),
             Question(
+                "jumps-shown",
+                "Is there a segno sign above the start of bar 3, and \"D.S. al Coda\" above "
+                "the end of the last bar, both clear of the notes and of any other text?",
+            ),
+            Question(
                 "rests-condensed",
                 "Are bars 9 to 12 drawn as one bar holding a thick horizontal bar with a 4 "
                 "above the staff, rather than as four bars of rest?",

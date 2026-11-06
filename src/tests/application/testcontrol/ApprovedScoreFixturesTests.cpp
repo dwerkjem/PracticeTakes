@@ -674,4 +674,26 @@ TEST_CASE("the engraving fixture holds what its picture is about", "[testcontrol
 
     REQUIRE(condensed.size() == 1);
     CHECK(condensed.front().count == 4);
+
+    // The Segno drawn as its sign, the D.S. as its text.
+    std::vector<engraving::JumpGlyph> jumps;
+
+    for (const engraving::System& system : layout.systems)
+    {
+        jumps.insert(jumps.end(), system.jumps.begin(), system.jumps.end());
+    }
+
+    REQUIRE(jumps.size() == 2);
+    CHECK(jumps.at(0).sign == engraving::JumpSign::segno);
+    CHECK(jumps.at(1).sign == engraving::JumpSign::none);
+    CHECK(jumps.at(1).text == "D.S. al Coda");
+
+    // Nothing in the fixture is left unreported or unread.
+    for (const std::string& notice : layout.notices)
+    {
+        INFO(notice);
+        CHECK(notice.find("D.C., D.S.") == std::string::npos);
+        CHECK(notice.find("endings") == std::string::npos);
+        CHECK(notice.find("line of music onto the next") == std::string::npos);
+    }
 }

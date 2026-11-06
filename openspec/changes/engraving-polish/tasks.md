@@ -73,23 +73,29 @@ decision 1.
       non-empty `endingNumbers`; label as written; closed when the run ends on a
       repeat barline, open otherwise (design.md decision 8).
 - [x] 1.13 A run across a system break continues without repeating its label.
-- [ ] 1.14 Jump marks: `Segno` and `Coda` as SMuFL signs at the measure start;
+- [x] 1.14 Jump marks: `Segno` and `Coda` as SMuFL signs at the measure start;
       any other string as text right-aligned at the measure end; an
       unrecognised string drawn as text rather than dropped.
       Needs 1.14a first: nothing filled `RepeatMarkings::jumps` (see 0.1).
+      Bravura's signs are three to four spaces tall at full size, so they are
+      drawn at `jumpSignHeight` on a row of their own, with tempo marks and
+      measure numbers above it.
 - [x] 1.14a The importer reads jumps into `RepeatMarkings::jumps`, as written:
       `<segno/>` as "Segno", `<coda/>` as "Coda", and `<words>` that read as a
       jump (D.S., D.C., Da Capo, Dal Segno, To Coda, Fine, Coda) or come with a
       `<sound dalsegno|dacapo|tocoda|fine>`. Such words stop being taken as a
       tempo mark's text. `musicxml-subset.md` says so. Added by the maintainer's
       decision to keep jump marks in this change rather than split them out.
-- [ ] 1.15 Remove the ending and jump notices. The ending notice is gone, with
-      1.12; the jump notice stays until 1.14 can draw something.
-- [ ] 1.16 Tests: `1.` then `2.` as two brackets; `1. 2.` as one; closed against
+- [x] 1.15 Remove the ending and jump notices. The ending notice went with
+      1.12, the jump notice with 1.14.
+- [x] 1.16 Tests: `1.` then `2.` as two brackets; `1. 2.` as one; closed against
       a repeat barline and open without one; a bracket across a break; Segno,
       Coda, and an unrecognised jump string. The ending cases are in
       `ScoreLayoutEngineTests` (`[voltas]`), with a bracket clearing a high
-      note and the tempo mark going above it; the jump cases wait on 1.14.
+      note and the tempo mark going above it. The jump cases are `[jumps]`:
+      Segno and Coda as signs at their bars' starts, "D.S. al Coda" at its
+      bar's end, an unrecognised string drawn as text, and the tempo above the
+      jump row; the importer's are in `MusicXmlAttributeTests`.
 
 ## 2. Tier 2 — collisions
 

@@ -274,6 +274,17 @@ beams, ledger lines, rests, ties,
 barlines including repeats and the final double bar, lyrics with hyphens, tempo
 marks, dynamics, and printed bar numbers at system starts.
 
+### Jump marks
+
+A jump (`RepeatMarkings::jumps`, as written) is a `JumpGlyph`. "Segno" and
+"Coda" are their SMuFL signs at the start of the measure, scaled to
+`jumpSignHeight`; anything else is text right-aligned at the measure's end,
+where an instruction that takes effect after the bar goes. A string nothing
+here recognises is still drawn, as text: a jump the reader cannot see sends
+them the wrong way. Jumps take a row of their own above the top staff, above
+any ending bracket, and the top staff's tempo marks and measure numbers go
+above them. What the importer counts as a jump is in `musicxml-subset.md`.
+
 ### Multi-measure rests
 
 Two or more bars in a row in which every drawn staff holds a whole-bar rest and
@@ -399,7 +410,6 @@ shows. That list is the reason a first pass is an acceptable thing to ship:
 | **A staff with no pitches** | A percussion or tablature staff is left out and named, and the rest of its part, and every other part, is drawn. |
 | **Bars only some parts have** | Parts are drawn as far as they all go; any further bars are counted. |
 | **Brackets for groups of parts** | `<part-group>` is not imported, so a choir's parts are joined at the left but not bracketed. |
-| **D.C./D.S. jumps, Segno and Coda** | `RepeatMarkings::jumps` is never filled by the importer, so there is nothing to draw; a model that does carry one is reported. Repeat barlines and ending brackets *are* drawn. |
 | **Cancelling naturals at a key change** | A key change to no accidentals draws an empty signature. |
 | **Slurs, articulations, ornaments, hairpins, fingering** | Mostly not in the model, by invariant 10 or by the supported subset. |
 
