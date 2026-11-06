@@ -337,6 +337,7 @@ TEST_CASE("the notation fixture holds what its picture is about", "[testcontrol]
     for (const engraving::System& system : layout.systems)
     {
         noteheads += system.noteheads.size();
+        ledgered += system.ledgerLines.size();
         rests += system.rests.size();
         ties += system.ties.size();
         clefs += system.clefs.size();
@@ -347,7 +348,6 @@ TEST_CASE("the notation fixture holds what its picture is about", "[testcontrol]
         {
             graceNotes += glyph.isGrace ? 1 : 0;
             dottedNotes += glyph.dots > 0 ? 1 : 0;
-            ledgered += (glyph.ledger.above + glyph.ledger.below) > 0 ? 1 : 0;
 
             if (glyph.accidental != engraving::AccidentalKind::none)
             {

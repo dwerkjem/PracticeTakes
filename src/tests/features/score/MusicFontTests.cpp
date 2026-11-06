@@ -86,6 +86,23 @@ TEST_CASE("the layout's notehead is the font's notehead", "[score][typeface]")
         Approx(fixture.font.bounds(Glyph::noteheadBlack).getRight()).margin(0.01));
 }
 
+TEST_CASE("the layout's notehead widths are the font's", "[score][typeface]")
+{
+    // The layout ends each ledger line past the notehead drawn on it, and a
+    // whole note is wider than a black one. A table narrower than the font
+    // leaves the head hanging off its line.
+    const MusicFontUnderTest fixture;
+
+    for (const engraving::NoteheadKind kind :
+         {engraving::NoteheadKind::breve, engraving::NoteheadKind::whole,
+          engraving::NoteheadKind::half, engraving::NoteheadKind::filled})
+    {
+        const juce::Rectangle<float> bounds = fixture.font.bounds(smufl::noteheadFor(kind));
+
+        CHECK(engraving::noteheadWidthFor(kind) == Approx(bounds.getRight()).margin(0.02));
+    }
+}
+
 TEST_CASE("the layout's accidentals are the font's accidentals", "[score][typeface]")
 {
     // The layout stacks a chord's accidentals into columns using its own table

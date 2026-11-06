@@ -30,6 +30,27 @@ enum class NoteheadKind
     filled
 };
 
+// How wide each head is drawn, in staff spaces: Bravura's. A whole note is wider
+// than a black one, and its ledger lines are too, so the layout -- which now
+// decides where a ledger line ends -- has to know. MusicFontTests checks this
+// against the font. A black and a half head are `LayoutOptions::noteheadWidth`
+// wide, which stems are placed by.
+[[nodiscard]] constexpr double noteheadWidthFor(NoteheadKind kind) noexcept
+{
+    switch (kind)
+    {
+    case NoteheadKind::breve:
+        return 2.396;
+    case NoteheadKind::whole:
+        return 1.688;
+    case NoteheadKind::half:
+    case NoteheadKind::filled:
+        return 1.18;
+    }
+
+    return 1.18;
+}
+
 // A written note value, independent of dots.
 enum class WrittenValue
 {

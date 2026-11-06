@@ -1008,6 +1008,72 @@ using NotePlacementMap = std::map<score::NoteRef, NotePlacement, NoteRefLess>;
     return cursor + contentLeadIn;
 }
 
+// The ledger lines one event needs, shared across its notes (design.md
+// decision 7). A note at or beyond a ledger line's position needs that line, so
+// each line spans every note that needs it, and no line is drawn twice.
+void emitLedgerLines(
+    System& system,
+    const PlacedEvent& placed,
+    double x,
+    NoteheadKind head,
+    const LayoutOptions& options)
+{
+    const double scale = placed.event->isGrace ? graceNoteScale : 1.0;
+    const double width = noteheadWidthFor(head) * scale;
+    const double extension = options.ledgerLineExtension * scale;
+    const double besideAccidental = options.ledgerLineExtensionBesideAccidental * scale;
+
+    StaffSteps highest = topLineSteps;
+    StaffSteps lowest = bottomLineSteps;
+
+    for (const PlacedNote& note : placed.notes)
+    {
+        highest = std::min(highest, note.position);
+        lowest = std::max(lowest, note.position);
+    }
+
+    const auto lineAt = [&](StaffSteps position, bool above)
+    {
+        LedgerLineGlyph line;
+        line.position = position;
+        line.isGrace = placed.event->isGrace;
+
+        bool any = false;
+
+        for (const PlacedNote& note : placed.notes)
+        {
+            if (above ? note.position > position : note.position < position)
+            {
+                continue;
+            }
+
+            const double left =
+                x + note.xOffset -
+                (note.accidental == AccidentalKind::none ? extension : besideAccidental);
+            const double right = x + note.xOffset + width + extension;
+
+            line.leftX = any ? std::min(line.leftX, left) : left;
+            line.rightX = any ? std::max(line.rightX, right) : right;
+            any = true;
+        }
+
+        if (any)
+        {
+            system.ledgerLines.push_back(line);
+        }
+    };
+
+    for (StaffSteps position = topLineSteps - 2; position >= highest; position -= 2)
+    {
+        lineAt(position, true);
+    }
+
+    for (StaffSteps position = bottomLineSteps + 2; position <= lowest; position += 2)
+    {
+        lineAt(position, false);
+    }
+}
+
 // Lay one staff's glyphs for one measure into a system, starting at `startX`,
 // and return the x its barline sits at.
 //
@@ -1101,14 +1167,8 @@ double emitMeasure(
         for (const PlacedNote& note : placed.notes)
         {
             NoteheadGlyph glyph{
-                note.ref,
-                x + note.xOffset,
-                note.position,
-                noteheadFor(value.value),
-                note.accidental,
-                value.dots,
-                ledgerLinesFor(note.position),
-                placed.event->isGrace};
+                note.ref,        x + note.xOffset, note.position,        noteheadFor(value.value),
+                note.accidental, value.dots,       placed.event->isGrace};
             glyph.accidentalX = x + note.accidentalOffset;
             system.noteheads.push_back(glyph);
 
@@ -1117,6 +1177,8 @@ double emitMeasure(
                 NotePlacement{
                     systemIndex, x + note.xOffset, note.position, placed.stemUp, staffIndex});
         }
+
+        emitLedgerLines(system, placed, x, noteheadFor(value.value), options);
 
         if (!hasStem(value.value) || placed.notes.empty())
         {
@@ -1235,6 +1297,7 @@ struct GlyphCounts
     std::size_t keyAccidentals = 0;
     std::size_t timeSignatures = 0;
     std::size_t noteheads = 0;
+    std::size_t ledgerLines = 0;
     std::size_t stems = 0;
     std::size_t beams = 0;
     std::size_t rests = 0;
@@ -1246,8 +1309,9 @@ struct GlyphCounts
 {
     return GlyphCounts{
         system.clefs.size(),     system.keyAccidentals.size(), system.timeSignatures.size(),
-        system.noteheads.size(), system.stems.size(),          system.beams.size(),
-        system.rests.size(),     system.lyrics.size(),         system.texts.size()};
+        system.noteheads.size(), system.ledgerLines.size(),    system.stems.size(),
+        system.beams.size(),     system.rests.size(),          system.lyrics.size(),
+        system.texts.size()};
 }
 
 template <typename Glyphs> void assignStaffFrom(Glyphs& glyphs, std::size_t from, int staff)
@@ -1273,6 +1337,7 @@ void assignStaff(System& system, const GlyphCounts& before, int staff)
     assignStaffFrom(system.keyAccidentals, before.keyAccidentals, staff);
     assignStaffFrom(system.timeSignatures, before.timeSignatures, staff);
     assignStaffFrom(system.noteheads, before.noteheads, staff);
+    assignStaffFrom(system.ledgerLines, before.ledgerLines, staff);
     assignStaffFrom(system.stems, before.stems, staff);
     assignStaffFrom(system.beams, before.beams, staff);
     assignStaffFrom(system.rests, before.rests, staff);

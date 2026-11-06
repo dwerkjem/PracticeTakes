@@ -116,11 +116,15 @@ decision 1.
 
 ### Ledger lines
 
-- [ ] 2.6 Ledger lines emitted per event column: one line per staff position any
+- [x] 2.6 Ledger lines emitted per event column: one line per staff position any
       note of the chord needs, spanning the union of their extents. Retire
       `NoteheadGlyph::ledger`.
-- [ ] 2.7 Tests: two notes above the staff share their lines; a shifted note
-      extends the line under it rather than gaining a second one.
+- [x] 2.7 Tests: two notes above the staff share their lines; a shifted note
+      extends the line under it rather than gaining a second one. Also: a line
+      is shortened beside an accidental, and a whole note's line is as wide as
+      a whole note -- which needed a table of notehead widths in `NoteValue.h`,
+      pinned to Bravura in `MusicFontTests`, since the painter no longer
+      measures the head it draws a line under.
 
 ## 3. Tier 3 — appearance
 

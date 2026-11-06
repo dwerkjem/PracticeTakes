@@ -461,8 +461,9 @@ TEST_CASE("a clef change is drawn and moves the notes after it", "[score][engrav
     // bass staff.
     CHECK(system.noteheads.at(0).position == bottomLineSteps + 2);
     CHECK(system.noteheads.at(1).position == topLineSteps - 2);
-    CHECK(system.noteheads.at(0).ledger.below == 1);
-    CHECK(system.noteheads.at(1).ledger.above == 1);
+    REQUIRE(system.ledgerLines.size() == 2);
+    CHECK(system.ledgerLines.at(0).position == bottomLineSteps + 2);
+    CHECK(system.ledgerLines.at(1).position == topLineSteps - 2);
 }
 
 TEST_CASE("measures break into systems at the available width", "[score][engraving][layout]")
@@ -3175,4 +3176,89 @@ TEST_CASE(
 
     REQUIRE(plain.systems.front().voltas.size() == 1);
     CHECK(plain.systems.front().voltas.front().y == Approx(-options.voltaAboveStaff));
+}
+
+// --- Ledger lines belong to a chord (engraving-polish tier 2, decision 7) ---
+
+TEST_CASE(
+    "two notes above the staff share their ledger lines",
+    "[score][engraving][layout][ledger]")
+{
+    // C6 and E6: C6 needs two lines above a treble staff, E6 three. The two they
+    // both need are drawn once each, and the third only for E6.
+    const System system = onlySystemOf({chordAt(
+        0, ticksPerQuarterNote * 2, {pitch(score::Step::c, 0, 6), pitch(score::Step::e, 0, 6)})});
+
+    REQUIRE(system.ledgerLines.size() == 3);
+
+    std::vector<StaffSteps> positions;
+
+    for (const LedgerLineGlyph& line : system.ledgerLines)
+    {
+        positions.push_back(line.position);
+    }
+
+    std::sort(positions.begin(), positions.end());
+    CHECK(positions == std::vector<StaffSteps>{-6, -4, -2});
+}
+
+TEST_CASE(
+    "a note pushed across the stem lengthens the line under it",
+    "[score][engraving][layout][ledger]")
+{
+    // A5 and B5 under a down stem: both above the staff's top line, a second
+    // apart, so the lower one, A5, moves left. A5 sits on the first ledger line
+    // above and B5 just above it, so both need that line -- drawn once, from
+    // past A5's left edge to past B5's right edge.
+    const LayoutOptions options;
+    const System system = onlySystemOf({chordAt(
+        0, ticksPerQuarterNote * 2, {pitch(score::Step::a, 0, 5), pitch(score::Step::b, 0, 5)})});
+
+    const NoteheadGlyph& a = headAt(system, -2);
+    const NoteheadGlyph& b = headAt(system, -3);
+
+    REQUIRE(a.x < b.x);
+    REQUIRE(system.ledgerLines.size() == 1);
+
+    const LedgerLineGlyph& line = system.ledgerLines.front();
+
+    CHECK(line.position == -2);
+    CHECK(line.leftX == Approx(a.x - options.ledgerLineExtension));
+    CHECK(line.rightX == Approx(b.x + options.noteheadWidth + options.ledgerLineExtension));
+}
+
+TEST_CASE("a ledger line is shortened beside an accidental", "[score][engraving][layout][ledger]")
+{
+    const LayoutOptions options;
+    const System system =
+        onlySystemOf({noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 1, 4))});
+
+    const NoteheadGlyph& head = headAt(system, 10);
+
+    REQUIRE(head.accidental == AccidentalKind::sharp);
+    REQUIRE(system.ledgerLines.size() == 1);
+    CHECK(
+        system.ledgerLines.front().leftX ==
+        Approx(head.x - options.ledgerLineExtensionBesideAccidental));
+
+    // The sign ends before the line begins.
+    CHECK(rightEdgeOfAccidental(head) < system.ledgerLines.front().leftX);
+}
+
+TEST_CASE(
+    "a whole note's ledger line is as wide as a whole note",
+    "[score][engraving][layout][ledger]")
+{
+    const LayoutOptions options;
+    const System system =
+        onlySystemOf({noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 0, 4))});
+
+    REQUIRE(system.ledgerLines.size() == 1);
+
+    const LedgerLineGlyph& line = system.ledgerLines.front();
+    const NoteheadGlyph& head = headAt(system, 10);
+
+    CHECK(
+        line.rightX ==
+        Approx(head.x + noteheadWidthFor(NoteheadKind::whole) + options.ledgerLineExtension));
 }

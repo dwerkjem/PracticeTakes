@@ -160,6 +160,17 @@ that push, then the stack's width, then each grace note with its own — so a
 single sharp no longer reserves the room of three, and three columns get the
 room of three.
 
+### Ledger lines belong to the chord
+
+A ledger line is a `LedgerLineGlyph` of its own, emitted per event rather than
+per notehead: one line at each position beyond the staff that any of the
+chord's notes needs, spanning every notehead that needs it. Two notes above the
+staff share their lines, and a note pushed across the stem by a second
+lengthens the line it sits on instead of getting one beside it. A line reaches
+`ledgerLineExtension` past the noteheads on it, or the shorter
+`ledgerLineExtensionBesideAccidental` on the side an accidental stands, as Gould
+prescribes, so the sign does not sit on the line's end.
+
 ### Seconds cross the stem
 
 Two notes a second apart in one chord cannot share an x, so one crosses the
@@ -387,12 +398,13 @@ reach the outer edges of their stems in the layout rather than in the painter.
 the same way, because the layout stacks signs by it and the painter draws them
 where the layout put them.
 
-Some placement rules are the painter's, not the font's. A ledger line is
-shortened on the side an accidental stands, as Gould prescribes, so the sign
-does not sit on the line's end. A rest is centred on the layout's x. A time
-signature's two numbers are centred on each other. Where an accidental goes is
-**not** one of them any more: `NoteheadGlyph::accidentalX` is the layout's, for
-the reason above.
+Some placement rules are the painter's, not the font's. A rest is centred on
+the layout's x. A time signature's two numbers are centred on each other. Where
+an accidental goes and where a ledger line ends are **not** among them any more:
+both depend on the rest of the chord, so `NoteheadGlyph::accidentalX` and
+`System::ledgerLines` are the layout's, for the reasons above. `NoteValue.h`'s
+table of notehead widths, which a whole note's longer ledger line is measured
+by, is pinned to the font like the others.
 
 ## Verifying it
 

@@ -61,8 +61,6 @@ struct NoteheadGlyph
     // Augmentation dots, drawn to the right.
     int dots = 0;
 
-    LedgerLines ledger;
-
     // Drawn smaller, and took no horizontal time of its own.
     bool isGrace = false;
 
@@ -77,6 +75,28 @@ struct NoteheadGlyph
     // against each other into columns (design.md decision 3), and the painter
     // sees one notehead at a time. Meaningless when `accidental` is `none`.
     double accidentalX = 0.0;
+};
+
+// One ledger line, for every note of one chord that needs it (design.md
+// decision 7). Two notes above the staff share their lines rather than each
+// drawing its own, and a note pushed across the stem by a second lengthens the
+// line it sits on rather than getting a second one beside it.
+struct LedgerLineGlyph
+{
+    // The line's ends, in staff spaces from the system's left edge: past the
+    // outermost noteheads that use it by the ledger extension, and shorter on
+    // the side where an accidental stands, so the sign does not sit on the end
+    // of the line.
+    double leftX = 0.0;
+    double rightX = 0.0;
+
+    // A staff position beyond the staff, on a line: -2, -4, ... above and 10,
+    // 12, ... below.
+    StaffSteps position = 0;
+
+    bool isGrace = false;
+
+    int staff = 0;
 };
 
 // Grace notes are drawn at this fraction of full size: the convention for cue
@@ -391,6 +411,7 @@ struct System
     std::vector<KeyAccidentalGlyph> keyAccidentals;
     std::vector<TimeSignatureGlyph> timeSignatures;
     std::vector<NoteheadGlyph> noteheads;
+    std::vector<LedgerLineGlyph> ledgerLines;
     std::vector<StemGlyph> stems;
     std::vector<BeamGlyph> beams;
     std::vector<RestGlyph> rests;
@@ -481,6 +502,12 @@ struct LayoutOptions
     // another stands off it or cuts into it.
     double noteheadWidth = 1.18;
     double graceNoteWidth = 1.7;
+
+    // How far a ledger line reaches past each side of the noteheads on it, and
+    // how far on the side an accidental stands: shortened there, as Gould
+    // prescribes, so the sign does not sit on the line's end.
+    double ledgerLineExtension = 0.4;
+    double ledgerLineExtensionBesideAccidental = 0.1;
 
     // A chord's accidentals, stacked in columns to the left of its leftmost
     // notehead (design.md decision 3). The gap is between the nearest column

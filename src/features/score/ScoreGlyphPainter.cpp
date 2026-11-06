@@ -26,12 +26,6 @@ constexpr double thickBarlineThickness = 0.5;
 constexpr double voltaLineThickness = 0.16;
 constexpr double voltaHookLength = engraving::LayoutOptions{}.voltaHookLength;
 
-// How far a ledger line reaches past each side of its notehead, and how far on
-// the side an accidental stands: shortened there, as Gould prescribes, so the
-// sign does not sit on the end of the line.
-constexpr double ledgerLineExtension = 0.4;
-constexpr double ledgerLineExtensionBesideAccidental = 0.1;
-
 // The gap between the thin and thick lines of a final or repeat barline, and
 // between a repeat's dots and its thin line.
 constexpr double thinThickBarlineSeparation = 0.4;
@@ -207,46 +201,9 @@ void ScoreGlyphPainter::drawNotehead(
     const juce::Rectangle<float> headBounds = font.bounds(head);
 
     const double headWidth = static_cast<double>(headBounds.getWidth()) * scale;
-    const double centreX = glyph.x + (static_cast<double>(headBounds.getCentreX()) * scale);
     const double y = yForSteps(glyph.position);
 
-    // Ledger lines first, so a notehead sits on top of them rather than being
-    // cut by one.
-    //
-    // At their **own** staff positions rather than at offsets from the note: a
-    // ledger line continues the staff's own lines, so they are at -2, -4, ...
-    // above and 10, 12, ... below, whatever the note sits on. A note on the
-    // first one is *on* it; a note in the space beyond it is a half space past
-    // it and still needs only that one. Centred on the notehead actually drawn,
-    // because a whole note is wider than a black one and its ledger lines are
-    // too.
     graphics.setColour(colour);
-
-    const double leftExtension =
-        (glyph.accidental == engraving::AccidentalKind::none
-             ? ledgerLineExtension
-             : ledgerLineExtensionBesideAccidental) *
-        scale;
-    const double ledgerLeft = centreX - (headWidth * 0.5) - leftExtension;
-    const double ledgerRight = centreX + (headWidth * 0.5) + (ledgerLineExtension * scale);
-
-    const auto ledgerAt = [&](StaffSteps steps)
-    {
-        graphics.fillRect(juce::Rectangle<float>(
-            static_cast<float>(originX) + px(ledgerLeft),
-            static_cast<float>(originY) + px(yForSteps(steps)) - (px(ledgerLineThickness) * 0.5f),
-            px(ledgerRight - ledgerLeft), px(ledgerLineThickness)));
-    };
-
-    for (int above = 1; above <= glyph.ledger.above; ++above)
-    {
-        ledgerAt(engraving::topLineSteps - (above * 2));
-    }
-
-    for (int below = 1; below <= glyph.ledger.below; ++below)
-    {
-        ledgerAt(engraving::bottomLineSteps + (below * 2));
-    }
 
     // SMuFL puts a notehead's origin at its left edge, on the line or space it
     // sits on -- which is exactly what the layout's x and staff position are.
@@ -787,6 +744,19 @@ void ScoreGlyphPainter::drawSystem(const engraving::System& system, double origi
     for (const engraving::BeamGlyph& glyph : system.beams)
     {
         drawBeam(glyph, originX, staffOrigin(glyph.staff));
+    }
+
+    // Ledger lines before the noteheads, so a head sits on its line rather than
+    // being cut by it. Where each one ends is the layout's: a chord's notes
+    // share theirs.
+    for (const engraving::LedgerLineGlyph& glyph : system.ledgerLines)
+    {
+        graphics.setColour(glyph.isGrace ? palette.muted : palette.notation);
+        graphics.fillRect(juce::Rectangle<float>(
+            static_cast<float>(originX) + px(glyph.leftX),
+            static_cast<float>(staffOrigin(glyph.staff)) + px(yForSteps(glyph.position)) -
+                (px(ledgerLineThickness) * 0.5f),
+            px(glyph.rightX - glyph.leftX), px(ledgerLineThickness)));
     }
 
     for (const engraving::NoteheadGlyph& glyph : system.noteheads)
