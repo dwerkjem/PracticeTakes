@@ -1017,6 +1017,32 @@ using NotePlacementMap = std::map<score::NoteRef, NotePlacement, NoteRefLess>;
     return cursor + contentLeadIn;
 }
 
+// Whether one staff's measure is a bar of rest a multi-measure rest may absorb
+// (design.md decision 12): a whole-bar rest and nothing else, with nothing a
+// reader needs to see on it -- no clef, key or time change, no repeat, ending
+// or jump, and no direction. Any of those is drawn on its own bar, and so
+// breaks the run, because condensing it would hide it.
+[[nodiscard]] bool isEmptyBar(const MeasurePlan& plan)
+{
+    const score::Measure& measure = *plan.source;
+
+    if (plan.clefChangesHere || plan.keyChangesHere || plan.timeChangesHere || plan.repeatStart ||
+        plan.repeatEnd || !measure.repeats.endingNumbers.empty() ||
+        !measure.repeats.jumps.empty() || !measure.directions.empty() ||
+        measure.nominalDuration <= 0 || plan.events.empty())
+    {
+        return false;
+    }
+
+    return std::all_of(
+        plan.events.begin(), plan.events.end(),
+        [&measure](const PlacedEvent& placed)
+        {
+            return placed.isRest && !placed.event->isGrace &&
+                   placed.event->duration >= measure.nominalDuration;
+        });
+}
+
 // The ledger lines one event needs, shared across its notes (design.md
 // decision 7). A note at or beyond a ledger line's position needs that line, so
 // each line spans every note that needs it, and no line is drawn twice.
@@ -1102,8 +1128,16 @@ double emitMeasure(
     double startX,
     double contentStart,
     int staffIndex,
-    double stretch)
+    double stretch,
+    int condensedBars)
 {
+    // A multi-measure rest draws none of its first bar's own events -- a whole
+    // rest -- and stands in a bar of its own width.
+    static const std::vector<PlacedEvent> noEvents;
+    const bool condensed = condensedBars > 1;
+    const std::vector<PlacedEvent>& events = condensed ? noEvents : plan.events;
+    const double contentWidth = condensed ? options.multiMeasureRestWidth : plan.contentWidth;
+
     const bool firstStaff = staffIndex == 0;
     double cursor = startX;
 
@@ -1160,7 +1194,7 @@ double emitMeasure(
     std::vector<std::vector<std::size_t>> beamStemIndices(plan.beamGroups.size());
     std::vector<bool> beamGroupPointsUp(plan.beamGroups.size(), true);
 
-    for (const PlacedEvent& placed : plan.events)
+    for (const PlacedEvent& placed : events)
     {
         const double x = xOf(placed);
 
@@ -1274,7 +1308,7 @@ double emitMeasure(
         }
     }
 
-    for (const PlacedEvent& placed : plan.events)
+    for (const PlacedEvent& placed : events)
     {
         for (const score::LyricSyllable& syllable : placed.event->lyrics)
         {
@@ -1291,7 +1325,12 @@ double emitMeasure(
         system.texts.push_back(TextGlyph{contentStart + (text.x * stretch), text.text, text.role});
     }
 
-    const double barlineX = contentStart + (plan.contentWidth * stretch);
+    const double barlineX = contentStart + (contentWidth * stretch);
+
+    if (condensed)
+    {
+        system.multiRests.push_back(MultiRestGlyph{contentStart, barlineX, condensedBars});
+    }
 
     if (firstStaff)
     {
@@ -1316,6 +1355,7 @@ struct GlyphCounts
     std::size_t stems = 0;
     std::size_t beams = 0;
     std::size_t rests = 0;
+    std::size_t multiRests = 0;
     std::size_t lyrics = 0;
     std::size_t texts = 0;
 };
@@ -1325,8 +1365,8 @@ struct GlyphCounts
     return GlyphCounts{
         system.clefs.size(),     system.keyAccidentals.size(), system.timeSignatures.size(),
         system.noteheads.size(), system.ledgerLines.size(),    system.stems.size(),
-        system.beams.size(),     system.rests.size(),          system.lyrics.size(),
-        system.texts.size()};
+        system.beams.size(),     system.rests.size(),          system.multiRests.size(),
+        system.lyrics.size(),    system.texts.size()};
 }
 
 template <typename Glyphs> void assignStaffFrom(Glyphs& glyphs, std::size_t from, int staff)
@@ -1356,6 +1396,7 @@ void assignStaff(System& system, const GlyphCounts& before, int staff)
     assignStaffFrom(system.stems, before.stems, staff);
     assignStaffFrom(system.beams, before.beams, staff);
     assignStaffFrom(system.rests, before.rests, staff);
+    assignStaffFrom(system.multiRests, before.multiRests, staff);
     assignStaffFrom(system.lyrics, before.lyrics, staff);
     assignStaffFrom(system.texts, before.texts, staff);
 }
@@ -2136,6 +2177,45 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         return widest;
     };
 
+    // Runs of empty bars, condensed into one multi-measure rest each. The run
+    // is laid out as its first bar, and `barsAt` says how many bars each laid
+    // out measure stands for: 1 almost everywhere.
+    std::vector<int> barsAt(measureCount, 1);
+
+    const auto emptyEverywhere = [&plansByStaff](std::size_t measure)
+    {
+        return std::all_of(
+            plansByStaff.begin(), plansByStaff.end(),
+            [measure](const std::vector<MeasurePlan>& plans)
+            { return isEmptyBar(plans.at(measure)); });
+    };
+
+    for (std::size_t index = 0; index < measureCount;)
+    {
+        std::size_t end = index;
+
+        while (end < measureCount && emptyEverywhere(end))
+        {
+            ++end;
+        }
+
+        if (end - index >= 2)
+        {
+            barsAt.at(index) = static_cast<int>(end - index);
+            index = end;
+        }
+        else
+        {
+            index = std::max(end, index + 1);
+        }
+    }
+
+    const auto widthOfBar = [&plansByStaff, &barsAt, &options](std::size_t measure)
+    {
+        return barsAt.at(measure) > 1 ? options.multiMeasureRestWidth
+                                      : plansByStaff.front().at(measure).contentWidth;
+    };
+
     // Pack measures into systems. At least one measure per system, however
     // wide it is: a bar that does not fit anywhere has to go somewhere, and
     // overflowing is more honest than dropping it.
@@ -2146,10 +2226,11 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     const auto availableFor = [&options, braceRoom, &nameRoomOf](std::size_t systemIndex)
     { return options.availableWidth - braceRoom - nameRoomOf(systemIndex); };
 
-    for (std::size_t index = 0; index < measureCount; ++index)
+    for (std::size_t index = 0; index < measureCount;
+         index += static_cast<std::size_t>(barsAt.at(index)))
     {
         // The same on every staff: spaceMeasure gives a measure one width.
-        const double contentWidth = plansByStaff.front().at(index).contentWidth;
+        const double contentWidth = widthOfBar(index);
 
         const bool wouldStartSystem = packed.empty() || packed.back().empty();
 
@@ -2202,7 +2283,10 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         // decided once its text is placed: see placeTextAndStaves.
         System system;
         system.firstMeasureIndex = plansByStaff.front().at(measures.front()).index;
-        system.lastMeasureIndex = plansByStaff.front().at(measures.back()).index;
+        system.lastMeasureIndex =
+            plansByStaff.front()
+                .at(measures.back() + static_cast<std::size_t>(barsAt.at(measures.back())) - 1)
+                .index;
         system.staffOffsets = staffOffsets;
         system.staffGroups = staffGroups;
         system.staffLyricVerses = staffVerses;
@@ -2238,7 +2322,7 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
 
             for (std::size_t slot = 0; slot < measures.size(); ++slot)
             {
-                const double width = plansByStaff.front().at(measures.at(slot)).contentWidth;
+                const double width = widthOfBar(measures.at(slot));
                 natural += headerWidthAt(measures.at(slot), slot == 0) + width;
                 content += width;
             }
@@ -2258,7 +2342,8 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         {
             const std::size_t measure = measures.at(slot);
             const bool startsSystem = slot == 0;
-            const bool isLastMeasure = measure + 1 == measureCount;
+            const int bars = barsAt.at(measure);
+            const bool isLastMeasure = measure + static_cast<std::size_t>(bars) == measureCount;
 
             // Every staff's music starts where the latest-starting staff's does.
             // For a single staff this is its own start, exactly as before.
@@ -2289,7 +2374,7 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
                 barlineX = emitMeasure(
                     system, systemIndex, plansByStaff.at(staff).at(measure), startsSystem,
                     isLastMeasure, options, placements.at(partOfStaff.at(staff)), x, contentStart,
-                    static_cast<int>(staff), stretch);
+                    static_cast<int>(staff), stretch, bars);
 
                 assignStaff(system, before, static_cast<int>(staff));
             }

@@ -311,6 +311,22 @@ struct VoltaGlyph
     double y = 0.0;
 };
 
+// Two or more bars of rest in a row, condensed into one (design.md decision
+// 12): an H-bar across the bar with the count over the staff. Drawn on every
+// staff, since a run is only condensed when every staff rests.
+struct MultiRestGlyph
+{
+    // The bar it stands in, from just after its opening barline to its closing
+    // one; the painter insets the H-bar inside this.
+    double startX = 0.0;
+    double endX = 0.0;
+
+    // How many bars it stands for.
+    int count = 0;
+
+    int staff = 0;
+};
+
 struct LyricGlyph
 {
     double x = 0.0;
@@ -415,6 +431,7 @@ struct System
     std::vector<StemGlyph> stems;
     std::vector<BeamGlyph> beams;
     std::vector<RestGlyph> rests;
+    std::vector<MultiRestGlyph> multiRests;
     std::vector<BarlineGlyph> barlines;
     std::vector<TieGlyph> ties;
     std::vector<VoltaGlyph> voltas;
@@ -531,6 +548,10 @@ struct LayoutOptions
 
     // Room after the last onset of a measure, before its barline.
     double measureTrailingWidth = 1.8;
+
+    // How wide a multi-measure rest's bar is, whatever it stands for: a run of
+    // eight empty bars takes the room of one.
+    double multiMeasureRestWidth = 14.0;
 
     // Room a flag needs to the right of an up stem. The floor between two
     // onsets has to clear a notehead and a flag together, or a flagged eighth

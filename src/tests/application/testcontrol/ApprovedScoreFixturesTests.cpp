@@ -658,4 +658,15 @@ TEST_CASE("the engraving fixture holds what its picture is about", "[testcontrol
     CHECK(voltas.at(0).hookAtEnd);
     CHECK(voltas.at(1).label == "2.");
     CHECK_FALSE(voltas.at(1).hookAtEnd);
+
+    // Bars 9-12, one multi-measure rest of four.
+    std::vector<engraving::MultiRestGlyph> condensed;
+
+    for (const engraving::System& system : layout.systems)
+    {
+        condensed.insert(condensed.end(), system.multiRests.begin(), system.multiRests.end());
+    }
+
+    REQUIRE(condensed.size() == 1);
+    CHECK(condensed.front().count == 4);
 }

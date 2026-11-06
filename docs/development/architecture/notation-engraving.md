@@ -270,6 +270,17 @@ beams, ledger lines, rests, ties,
 barlines including repeats and the final double bar, lyrics with hyphens, tempo
 marks, dynamics, and printed bar numbers at system starts.
 
+### Multi-measure rests
+
+Two or more bars in a row in which every drawn staff holds a whole-bar rest and
+nothing else are condensed into one `MultiRestGlyph`: an H-bar on the middle
+line, serifed at each end, with the count over the staff in time-signature
+digits. A bar with a clef, key or time change, a repeat, an ending, a jump or a
+direction is never absorbed, because condensing it would hide what is on it,
+so it breaks the run. The run is packed and drawn as its first bar, at
+`multiMeasureRestWidth` whatever it stands for, and its system's measure range
+still covers every bar in it.
+
 ### Ending brackets
 
 A first, second or shared ending is a `VoltaGlyph`: a run of consecutive

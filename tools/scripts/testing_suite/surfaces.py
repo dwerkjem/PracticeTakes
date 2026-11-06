@@ -890,6 +890,11 @@ SURFACES: tuple[Surface, ...] = (
                 "repeat sign and the second left open?",
             ),
             Question(
+                "rests-condensed",
+                "Are bars 9 to 12 drawn as one bar holding a thick horizontal bar with a 4 "
+                "above the staff, rather than as four bars of rest?",
+            ),
+            Question(
                 "lyrics-below-ledger-lines",
                 "In bar 3 the notes hang below the staff on ledger lines: are the lyrics under "
                 "them clear of every ledger line and notehead?",

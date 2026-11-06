@@ -3469,3 +3469,143 @@ TEST_CASE(
         }
     }
 }
+
+// --- Multi-measure rests (engraving-polish tier 3, design.md decision 12) ---
+namespace
+{
+[[nodiscard]] score::Measure restBar(std::size_t index)
+{
+    return measureOf(index, {voiceOf(1, {restAt(0, ticksPerQuarterNote * 4)})}, index == 0);
+}
+
+[[nodiscard]] score::Measure noteBar(std::size_t index)
+{
+    return measureOf(
+        index, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::b, 0, 4))})},
+        index == 0);
+}
+
+[[nodiscard]] std::vector<MultiRestGlyph> multiRestsOf(const ScoreLayout& layout)
+{
+    std::vector<MultiRestGlyph> all;
+
+    for (const System& system : layout.systems)
+    {
+        all.insert(all.end(), system.multiRests.begin(), system.multiRests.end());
+    }
+
+    return all;
+}
+} // namespace
+
+TEST_CASE(
+    "consecutive empty bars are drawn as one multi-measure rest",
+    "[score][engraving][layout][multirest]")
+{
+    const ScoreLayout layout = layOutScore(
+        scoreOf({noteBar(0), restBar(1), restBar(2), restBar(3), restBar(4), noteBar(5)}),
+        wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+    const std::vector<MultiRestGlyph> rests = multiRestsOf(layout);
+
+    REQUIRE(rests.size() == 1);
+    CHECK(rests.front().count == 4);
+
+    // No whole rests drawn for the bars it stands for.
+    CHECK(system.rests.empty());
+
+    // One barline per drawn bar: the note bar, the condensed one, the last.
+    CHECK(system.barlines.size() == 3);
+
+    // The system still says it holds every bar.
+    CHECK(system.firstMeasureIndex == 0);
+    CHECK(system.lastMeasureIndex == 5);
+
+    // As wide as the option, whatever it stands for.
+    CHECK(
+        rests.front().endX - rests.front().startX == Approx(LayoutOptions{}.multiMeasureRestWidth));
+}
+
+TEST_CASE("a single empty bar is left as it is", "[score][engraving][layout][multirest]")
+{
+    const ScoreLayout layout =
+        layOutScore(scoreOf({noteBar(0), restBar(1), noteBar(2)}), wideOptions());
+
+    CHECK(multiRestsOf(layout).empty());
+    CHECK(layout.systems.front().rests.size() == 1);
+}
+
+TEST_CASE("a key change breaks a run of rests", "[score][engraving][layout][multirest]")
+{
+    // Bars 2-3 and 5-6 are runs; bar 4 changes key, which has to be seen, so
+    // it is drawn on its own and the run either side of it is two runs.
+    std::vector<score::Measure> measures{
+        noteBar(0), restBar(1), restBar(2), restBar(3), restBar(4), restBar(5), noteBar(6)};
+    measures.at(3).attributes.key = score::KeySignature{1, "major"};
+
+    const ScoreLayout layout = layOutScore(scoreOf(measures), wideOptions());
+    const std::vector<MultiRestGlyph> rests = multiRestsOf(layout);
+
+    REQUIRE(rests.size() == 2);
+    CHECK(rests.at(0).count == 2);
+    CHECK(rests.at(1).count == 2);
+
+    // The changed bar itself, a whole rest under its new key.
+    CHECK(layout.systems.front().rests.size() == 1);
+}
+
+TEST_CASE("a direction keeps its bar out of a run", "[score][engraving][layout][multirest]")
+{
+    std::vector<score::Measure> measures{
+        noteBar(0), restBar(1), restBar(2), restBar(3), noteBar(4)};
+    measures.at(2).directions = {score::Direction{score::DirectionKind::dynamic, 0, 1, "p", {}}};
+
+    const ScoreLayout layout = layOutScore(scoreOf(measures), wideOptions());
+
+    // Bar 2 rests, bar 3 carries the dynamic, bar 4 rests: no two empty bars
+    // in a row.
+    CHECK(multiRestsOf(layout).empty());
+}
+
+TEST_CASE("bars condense only where every staff rests", "[score][engraving][layout][multirest]")
+{
+    // A piano part: the right hand rests for three bars, the left hand plays
+    // in the middle one.
+    const auto bar = [](std::size_t index, bool leftHandPlays)
+    {
+        score::Voice right = voiceOf(1, {restAt(0, ticksPerQuarterNote * 4)});
+        right.events.front().staff = 1;
+
+        score::ScoreEvent left =
+            leftHandPlays ? noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 0, 3))
+                          : restAt(0, ticksPerQuarterNote * 4);
+        left.staff = 2;
+
+        score::Measure measure = measureOf(index, {right, voiceOf(5, {left})});
+
+        if (index == 0)
+        {
+            measure.attributes.clefs = {score::Clef{"G", 2, 0, 1}, score::Clef{"F", 4, 0, 2}};
+            measure.attributes.key = score::KeySignature{0, "major"};
+            measure.attributes.time = score::TimeSignature{4, 4};
+        }
+
+        return measure;
+    };
+
+    const ScoreLayout playing = layOutScore(
+        scoreOf({bar(0, true), bar(1, false), bar(2, true), bar(3, false)}, 2), wideOptions());
+    const ScoreLayout resting = layOutScore(
+        scoreOf({bar(0, true), bar(1, false), bar(2, false), bar(3, true)}, 2), wideOptions());
+
+    CHECK(multiRestsOf(playing).empty());
+
+    // Both staves draw the condensed bar.
+    const std::vector<MultiRestGlyph> rests = multiRestsOf(resting);
+    REQUIRE(rests.size() == 2);
+    CHECK(rests.at(0).count == 2);
+    CHECK(rests.at(0).staff != rests.at(1).staff);
+}

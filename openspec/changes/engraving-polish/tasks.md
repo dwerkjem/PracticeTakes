@@ -141,7 +141,7 @@ decision 1.
       later systems, so "every later system starts at the margin" reads as
       "past nothing but the names needed to tell its staves apart". A name
       longer than the indent widens it.
-- [ ] 3.4 Multi-measure rests: two or more consecutive whole-bar-rest measures
+- [x] 3.4 Multi-measure rests: two or more consecutive whole-bar-rest measures
       with no clef, key or time change, repeat, ending, jump or direction,
       condensed to one H-bar with its count. Measure index ranges still cover
       the condensed bars.

@@ -585,6 +585,53 @@ void ScoreGlyphPainter::drawText(const engraving::TextGlyph& glyph, double origi
         justification);
 }
 
+void ScoreGlyphPainter::drawMultiRest(
+    const engraving::MultiRestGlyph& glyph,
+    double originX,
+    double originY) const
+{
+    // Inset from the barlines so the serifs stand clear of them, as Gould
+    // draws it: a thick bar on the middle line, and a thin upright at each end
+    // from the second line to the fourth.
+    constexpr double inset = 1.2;
+    constexpr double barThickness = 0.8;
+    constexpr double serifThickness = 0.16;
+
+    const double left = glyph.startX + inset;
+    const double right = glyph.endX - inset;
+
+    if (right <= left)
+    {
+        return;
+    }
+
+    graphics.setColour(palette.notation);
+
+    const auto box = [&](double x, double top, double width, double height)
+    {
+        graphics.fillRect(juce::Rectangle<float>(
+            static_cast<float>(originX) + px(x), static_cast<float>(originY) + px(top), px(width),
+            px(height)));
+    };
+
+    const double middle = yForSteps(engraving::middleLineSteps);
+
+    box(left, middle - (barThickness * 0.5), right - left, barThickness);
+    box(left, yForSteps(2), serifThickness, yForSteps(6) - yForSteps(2));
+    box(right - serifThickness, yForSteps(2), serifThickness, yForSteps(6) - yForSteps(2));
+
+    // The count, in a time signature's digits, centred over the bar and
+    // standing a space and a half above the staff.
+    const std::vector<smufl::Glyph> digits = smufl::timeSignatureDigits(glyph.count);
+    double x = ((glyph.startX + glyph.endX) * 0.5) - (runWidth(font, digits) * 0.5);
+
+    for (const smufl::Glyph digit : digits)
+    {
+        drawGlyph(digit, x, -1.5, originX, originY, palette.notation);
+        x += static_cast<double>(font.bounds(digit).getRight());
+    }
+}
+
 void ScoreGlyphPainter::drawVolta(
     const engraving::VoltaGlyph& glyph,
     double originX,
@@ -777,6 +824,11 @@ void ScoreGlyphPainter::drawSystem(const engraving::System& system, double origi
     for (const engraving::TextGlyph& glyph : system.texts)
     {
         drawText(glyph, originX, staffOrigin(glyph.staff));
+    }
+
+    for (const engraving::MultiRestGlyph& glyph : system.multiRests)
+    {
+        drawMultiRest(glyph, originX, staffOrigin(glyph.staff));
     }
 
     for (const engraving::VoltaGlyph& glyph : system.voltas)
