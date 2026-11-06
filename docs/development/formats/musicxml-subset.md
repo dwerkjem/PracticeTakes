@@ -128,6 +128,13 @@ Everything here reaches the model and is covered by tests.
 - Repeat barlines, ending (volta) numbers, and repeat counts, **captured but
   never interpreted**. The model is as-written: measures appear once, in source
   order, and nothing expands a repeat into a playback order.
+- Jumps, into `RepeatMarkings::jumps`, as written and equally uninterpreted: a
+  `<segno/>` as "Segno", a `<coda/>` as "Coda", and `<words>` that are a jump
+  instruction. Words count as one when a `<sound>` beside them carries
+  `dalsegno`, `dacapo`, `tocoda` or `fine`, or when they read as one —
+  "D.S.", "D.C.", "Da Capo", "Dal Segno", "To Coda", "Fine" or "Coda", matched
+  ignoring case, dots and spaces. Such words are not also taken as a tempo
+  mark's text. A segno or coda inside a `<barline>` is not read.
 
 ### Lyrics
 

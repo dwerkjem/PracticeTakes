@@ -11,7 +11,7 @@ takes a reference image of the result.
 | `diagnostic-import.musicxml` | `importedWithDiagnostics` | All three severity groups at once, and six unrecognised elements sharing one message |
 | `notation-sample.musicxml` | `imported`, no diagnostics | A staff, in the Score View tool: key signature, accidentals in and out of the key, a rest, a grace note, dots, flags, a tie across a barline, a clef change, a chord, repeat barlines and lyrics |
 | `grand-staff-sample.musicxml` | `imported`, no diagnostics | A piano part on a braced grand staff, in the Score View tool: both hands on the beat, a sharp in one hand moving the other with it, a left-hand note between the right hand's, a clef change on the lower staff alone, and a tie |
-| `engraving-polish.musicxml` | `imported`, no diagnostics | What the `engraving-polish` change fixes, captured before it did: a chord with a sharp on every note, seconds under an up and a down stem, a tie across a system break, first and second endings, lyrics under ledger lines, and four bars of rest. Its Segno and "D.S. al Coda" are dropped by the importer without a diagnostic; the file's comment says why they are there anyway |
+| `engraving-polish.musicxml` | `imported`, no diagnostics | What the `engraving-polish` change fixes, captured before it did: a chord with a sharp on every note, seconds under an up and a down stem, a tie across a system break, first and second endings, lyrics under ledger lines, and four bars of rest. and a Segno and a "D.S. al Coda" |
 
 The first two are pictures of the **import summary window**. The other
 three are pictures of a **tool**, which the two before it could not be: the only way to get

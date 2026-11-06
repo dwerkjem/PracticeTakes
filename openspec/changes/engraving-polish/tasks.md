@@ -76,10 +76,13 @@ decision 1.
 - [ ] 1.14 Jump marks: `Segno` and `Coda` as SMuFL signs at the measure start;
       any other string as text right-aligned at the measure end; an
       unrecognised string drawn as text rather than dropped.
-      **Blocked on the importer first**: nothing fills `RepeatMarkings::jumps`
-      today (see 0.1), so this needs `<segno>`, `<coda>` and jump `<words>` /
-      `<sound dalsegno|dacapo|tocoda|fine>` read into it before there is
-      anything to draw.
+      Needs 1.14a first: nothing filled `RepeatMarkings::jumps` (see 0.1).
+- [x] 1.14a The importer reads jumps into `RepeatMarkings::jumps`, as written:
+      `<segno/>` as "Segno", `<coda/>` as "Coda", and `<words>` that read as a
+      jump (D.S., D.C., Da Capo, Dal Segno, To Coda, Fine, Coda) or come with a
+      `<sound dalsegno|dacapo|tocoda|fine>`. Such words stop being taken as a
+      tempo mark's text. `musicxml-subset.md` says so. Added by the maintainer's
+      decision to keep jump marks in this change rather than split them out.
 - [ ] 1.15 Remove the ending and jump notices. The ending notice is gone, with
       1.12; the jump notice stays until 1.14 can draw something.
 - [ ] 1.16 Tests: `1.` then `2.` as two brackets; `1. 2.` as one; closed against

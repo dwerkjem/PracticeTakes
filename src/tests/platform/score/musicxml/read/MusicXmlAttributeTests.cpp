@@ -396,3 +396,91 @@ TEST_CASE(
     CHECK(part.measures[1].repeats.endingNumbers[0] == 1);
     CHECK(part.measures[1].repeats.endingNumbers[1] == 2);
 }
+
+// Jumps: kept as written, in reading order, and never interpreted -- the same
+// rule as repeats (decision 3). Before this nothing filled `jumps`, and a
+// Segno or a "D.S. al Coda" was read and silently dropped.
+TEST_CASE("segno and coda signs are read as jumps", "[score][musicxml][attributes][jumps]")
+{
+    const std::string body =
+        measure(
+            "1", attributes(1, 4, 4) + tempoDirection("          <segno/>\n") + note("C", 5, 4)) +
+        measure("2", tempoDirection("          <coda/>\n") + note("D", 5, 4));
+
+    const MusicXmlImportResult result = importMusicXmlDocument(scoreDocument(body));
+
+    REQUIRE(result.status == MusicXmlImportStatus::imported);
+
+    const Part& part = result.score->parts.front();
+
+    CHECK(part.measures[0].repeats.jumps == std::vector<std::string>{"Segno"});
+    CHECK(part.measures[1].repeats.jumps == std::vector<std::string>{"Coda"});
+}
+
+TEST_CASE(
+    "jump instructions written as words are read as jumps, as written",
+    "[score][musicxml][attributes][jumps]")
+{
+    for (const std::string& written :
+         {std::string{"D.S. al Coda"}, std::string{"D. C. al Fine"}, std::string{"Da Capo"},
+          std::string{"To Coda"}, std::string{"Fine"}, std::string{"DS al Fine"}})
+    {
+        INFO(written);
+
+        const std::string body = measure(
+            "1",
+            attributes(1, 4, 4) + tempoDirection("          <words>" + written + "</words>\n") +
+                note("C", 5, 4));
+
+        const auto score = importOrFail(scoreDocument(body));
+        const Measure& first = score->parts.front().measures.front();
+
+        CHECK(first.repeats.jumps == std::vector<std::string>{written});
+
+        // And not mistaken for a tempo mark's text.
+        CHECK(directionOfKind(first, DirectionKind::tempo) == nullptr);
+    }
+}
+
+TEST_CASE(
+    "a sound element's jump attribute makes any words a jump",
+    "[score][musicxml][attributes][jumps]")
+{
+    // Words an exporter wrote in its own language; the attribute says what
+    // they mean.
+    const std::string direction =
+        "      <direction placement=\"above\">\n"
+        "        <direction-type><words>vom Anfang</words></direction-type>\n"
+        "        <sound dacapo=\"yes\"/>\n"
+        "      </direction>\n";
+    const std::string body = measure("1", attributes(1, 4, 4) + direction + note("C", 5, 4));
+
+    const auto score = importOrFail(scoreDocument(body));
+
+    CHECK(
+        score->parts.front().measures.front().repeats.jumps ==
+        std::vector<std::string>{"vom Anfang"});
+}
+
+TEST_CASE(
+    "ordinary words are not jumps, and a tempo keeps its words",
+    "[score][musicxml][attributes][jumps]")
+{
+    const std::string expression = tempoDirection("          <words>dolce</words>\n");
+    const std::string tempo =
+        "      <direction placement=\"above\">\n"
+        "        <direction-type><words>Allegro</words></direction-type>\n"
+        "        <sound tempo=\"120\"/>\n"
+        "      </direction>\n";
+    const std::string body =
+        measure("1", attributes(1, 4, 4) + expression + tempo + note("C", 5, 4));
+
+    const auto score = importOrFail(scoreDocument(body));
+    const Measure& first = score->parts.front().measures.front();
+
+    CHECK(first.repeats.jumps.empty());
+
+    const Direction* marking = directionOfKind(first, DirectionKind::tempo);
+    REQUIRE(marking != nullptr);
+    CHECK(marking->text == "Allegro");
+}

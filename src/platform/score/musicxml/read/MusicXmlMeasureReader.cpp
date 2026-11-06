@@ -436,6 +436,32 @@ void readNote(
     ++context.eventCount;
 }
 
+// Whether a direction's words are a jump instruction rather than an expression
+// or a tempo: "D.S. al Coda", "D.C. al Fine", "Da Capo", "Dal Segno", "To Coda",
+// "Fine", "Coda". Matched loosely on case, dots and spacing, because exporters
+// write "D.S.", "D. S." and "DS" for the same thing, and narrowly on words, so
+// "dolce" or "con fuoco" is never taken for one.
+[[nodiscard]] bool isJumpText(const std::string& text)
+{
+    std::string squeezed;
+
+    for (const char character : text)
+    {
+        const auto byte = static_cast<unsigned char>(character);
+
+        if (std::isspace(byte) == 0 && character != '.')
+        {
+            squeezed.push_back(static_cast<char>(std::tolower(byte)));
+        }
+    }
+
+    const auto startsWith = [&squeezed](const std::string& prefix)
+    { return squeezed.rfind(prefix, 0) == 0; };
+
+    return startsWith("ds") || startsWith("dc") || startsWith("dacapo") || startsWith("dalsegno") ||
+           startsWith("tocoda") || squeezed == "fine" || squeezed == "coda";
+}
+
 void readDirection(
     const XmlNode& directionNode,
     ReadContext& context,
@@ -463,10 +489,36 @@ void readDirection(
     std::optional<double> metronomeTempo;
     std::string tempoText;
 
+    // A `<sound>` naming a jump makes the direction's words that jump, whatever
+    // they say: the attribute is the file's own statement of what they mean.
+    const XmlNode* soundNode = findChild(directionNode, "sound");
+    const bool soundIsJump =
+        soundNode != nullptr &&
+        (!attributeValue(*soundNode, "dalsegno").empty() ||
+         !attributeValue(*soundNode, "dacapo").empty() ||
+         !attributeValue(*soundNode, "tocoda").empty() ||
+         !attributeValue(*soundNode, "fine").empty());
+
     for (const XmlNode* directionType : findChildren(directionNode, "direction-type"))
     {
         for (const XmlNode& child : directionType->children)
         {
+            // Jumps, kept as written (decision 3: captured, never interpreted).
+            // A segno or coda sign is named; words are kept as they read.
+            if (child.name == "segno" || child.name == "coda")
+            {
+                measure.repeats.jumps.push_back(child.name == "segno" ? "Segno" : "Coda");
+
+                continue;
+            }
+
+            if (child.name == "words" && (soundIsJump || isJumpText(child.value)))
+            {
+                measure.repeats.jumps.push_back(child.value);
+
+                continue;
+            }
+
             if (child.name == "dynamics")
             {
                 for (const XmlNode& marking : child.children)
@@ -510,7 +562,7 @@ void readDirection(
 
     std::optional<double> soundTempo;
 
-    if (const XmlNode* sound = findChild(directionNode, "sound"); sound != nullptr)
+    if (const XmlNode* sound = soundNode; sound != nullptr)
     {
         if (const std::optional<double> tempo = parseDecimal(attributeValue(*sound, "tempo"));
             tempo.has_value() && *tempo > 0.0)

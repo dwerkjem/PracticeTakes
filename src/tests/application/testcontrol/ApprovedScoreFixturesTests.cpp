@@ -622,13 +622,18 @@ TEST_CASE("the engraving fixture holds what its picture is about", "[testcontrol
         CHECK_FALSE(isPitched(eventsOf(index).front()));
     }
 
-    // The Segno in bar 3 and the "D.S. al Coda" in bar 13 are in the file and
-    // not in the model: the importer reads neither into `jumps`. Pinned as it
-    // is, so that the importer starting to read them is noticed here -- and
-    // this fixture's picture retaken -- rather than discovered in a capture.
-    for (const Measure& measure : part.measures)
+    // Bar 3's Segno and bar 13's "D.S. al Coda", read into the model as
+    // written, and nothing else anywhere.
+    for (std::size_t index = 0; index < part.measures.size(); ++index)
     {
-        CHECK(measure.repeats.jumps.empty());
+        INFO("bar " << index + 1);
+
+        const std::vector<std::string> expected =
+            index == 2    ? std::vector<std::string>{"Segno"}
+            : index == 12 ? std::vector<std::string>{"D.S. al Coda"}
+                          : std::vector<std::string>{};
+
+        CHECK(part.measures.at(index).repeats.jumps == expected);
     }
 
     // At about the docked view's width, the first system ends after bar 4, so

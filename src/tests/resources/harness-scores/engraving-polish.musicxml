@@ -25,13 +25,9 @@
   made only of elements the importer recognises, so it imports with no
   diagnostics and the picture is of the renderer rather than of a report.
 
-  **The Segno and "D.S. al Coda" are read and dropped by the importer today,
-  without a diagnostic.** `<segno>` is a known element that nothing reads, and
-  `<words>` is kept only as a tempo mark's text, so neither reaches
-  `RepeatMarkings::jumps` -- which nothing fills. They are here because the
-  fixture is meant to hold them once tasks 1.14 and its importer half land;
-  until then the picture shows bar 3 and bar 13 without them, and
-  ApprovedScoreFixturesTests pins that gap rather than hiding it.
+  The Segno and "D.S. al Coda" were read and dropped by the importer when this
+  file was written, without a diagnostic; engraving-polish task 1.14a made the
+  importer read them into `RepeatMarkings::jumps`, and 1.14 draws them.
 
   No dynamic, for the reason notation-sample.musicxml gives.
 
