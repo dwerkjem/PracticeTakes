@@ -1,6 +1,8 @@
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include "application/shell/ui/workspace/model/WorkspaceBuiltIns.h"
+#include "features/analysis/tuner/TunerSettingsCodec.h"
 
 TEST_CASE("Pitch Practice is the immutable tuner fallback", "[workspace][built-ins]")
 {
@@ -85,4 +87,30 @@ TEST_CASE("the built-in catalog contains each immutable workspace once", "[works
     CHECK(all[3].id == "performance-preparation");
     CHECK(WorkspaceBuiltIns::find("pitch-practice") == &all[0]);
     CHECK(WorkspaceBuiltIns::find("missing") == nullptr);
+}
+TEST_CASE("Built-in workspaces carry the practice presets' tuner values", "[workspace][built-ins]")
+{
+    // The shell stores tool settings as opaque payloads, so the built-ins spell
+    // the presets out as JSON rather than reading AppDefaults::presets. Nothing
+    // else ties the two: change a preset and its workspace would keep the old
+    // numbers, applying one tuning from Settings and another from the
+    // workspace menu.
+    const auto check = [](const ToolSettingsPayload& payload, AppDefaults::Preset preset)
+    {
+        const auto decoded = TunerSettingsCodec::decode(payload);
+        REQUIRE(decoded.has_value());
+
+        const AppDefaults::TunerSettings expected = AppDefaults::tunerPreset(preset);
+        CHECK(decoded->displayMode == expected.displayMode);
+        CHECK(decoded->easing == Catch::Approx(expected.easing));
+        CHECK(decoded->averaging == Catch::Approx(expected.averaging));
+        CHECK(decoded->noteSwitchSemitones == Catch::Approx(expected.noteSwitchSemitones));
+        CHECK(decoded->dropoutFrames == Catch::Approx(expected.dropoutFrames));
+        CHECK(decoded->graphDurationSeconds == Catch::Approx(expected.graphDurationSeconds));
+    };
+
+    check(
+        WorkspaceBuiltIns::generalInstrumentTunerSettings(),
+        AppDefaults::Preset::generalInstrument);
+    check(WorkspaceBuiltIns::voiceTunerSettings(), AppDefaults::Preset::voice);
 }
