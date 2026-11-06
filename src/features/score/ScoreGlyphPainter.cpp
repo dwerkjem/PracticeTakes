@@ -36,18 +36,14 @@ constexpr double repeatDotSeparation = 0.16;
 constexpr double tieEndpointThickness = 0.1;
 constexpr double tieMidpointThickness = 0.22;
 
-// Room between an accidental and the notehead it modifies.
-constexpr double accidentalGap = 0.2;
-
 // Room between a notehead and its first augmentation dot, and from one dot to
 // the next.
 constexpr double dotGap = 0.24;
 constexpr double dotPitch = 0.56;
 
-// Grace notes are drawn at this fraction of full size: the convention for cue
-// and grace notation, small enough to read as not taking time and large
-// enough to read at all.
-constexpr double graceScale = 0.66;
+// The layout's, because it places a grace note's accidental and so has to know
+// how small the painter draws one.
+constexpr double graceScale = engraving::graceNoteScale;
 
 // Where a clef's sign begins inside the room the layout reserved for it.
 constexpr double clefLeadIn = 0.4;
@@ -252,13 +248,9 @@ void ScoreGlyphPainter::drawNotehead(
 
     if (const std::optional<smufl::Glyph> sign = smufl::accidentalFor(glyph.accidental))
     {
-        // Right-aligned a small gap before the notehead. The signs differ in
-        // width -- a double flat is nearly twice a natural -- so it is their
-        // right edges that line up, not their origins.
-        const double right = glyph.x - (accidentalGap * scale);
-        const double left = right - (static_cast<double>(font.bounds(*sign).getRight()) * scale);
-
-        drawGlyph(*sign, left, y, originX, originY, colour, scale);
+        // Where the layout put it: a chord's signs are stacked against each
+        // other into columns, which one notehead at a time cannot do.
+        drawGlyph(*sign, glyph.accidentalX, y, originX, originY, colour, scale);
     }
 
     // Augmentation dots go in a space, never on a line, so a dot on a

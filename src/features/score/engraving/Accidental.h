@@ -53,6 +53,44 @@ enum class AccidentalKind
     return AccidentalKind::doubleFlat;
 }
 
+// How much room a sign takes, in staff spaces, measured from its origin: SMuFL
+// puts an accidental's origin at its left edge, on the line or space of the
+// note it modifies. `above` and `below` are how far it reaches up and down from
+// there -- a flat's stem rises well above its note and barely drops below it,
+// which is why a flat over a sharp can share a column a sixth apart and a sharp
+// over a flat cannot.
+//
+// This is what lets the layout stack a chord's accidentals and stay font-free.
+// MusicFontTests checks every row against the embedded Bravura, the same way it
+// pins `noteheadWidth`, so a font change cannot quietly leave the two apart.
+struct AccidentalMetrics
+{
+    double width = 0.0;
+    double above = 0.0;
+    double below = 0.0;
+};
+
+[[nodiscard]] constexpr AccidentalMetrics accidentalMetricsFor(AccidentalKind kind) noexcept
+{
+    switch (kind)
+    {
+    case AccidentalKind::none:
+        return {};
+    case AccidentalKind::natural:
+        return {0.672, 1.364, 1.34};
+    case AccidentalKind::sharp:
+        return {0.996, 1.4, 1.392};
+    case AccidentalKind::flat:
+        return {0.904, 1.756, 0.7};
+    case AccidentalKind::doubleSharp:
+        return {0.988, 0.508, 0.5};
+    case AccidentalKind::doubleFlat:
+        return {1.644, 1.748, 0.7};
+    }
+
+    return {};
+}
+
 [[nodiscard]] inline std::string nameOf(AccidentalKind kind)
 {
     switch (kind)

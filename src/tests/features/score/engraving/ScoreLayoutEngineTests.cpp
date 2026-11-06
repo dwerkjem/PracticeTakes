@@ -11,6 +11,7 @@
 #include <vector>
 
 using namespace engraving;
+using Catch::Approx;
 using score::Tick;
 using score::ticksPerQuarterNote;
 using testing::score::notesOf;
@@ -2474,6 +2475,34 @@ TEST_CASE("a high note pushes the tempo line up", "[score][engraving][layout][te
 }
 
 TEST_CASE(
+    "a flat's stem above a high note pushes the tempo line too",
+    "[score][engraving][layout][text-placement]")
+{
+    // E-flat 6: the flat's stem rises 1.756 spaces above the note, well past
+    // the notehead's half space, and past the space and a half every sign used
+    // to be assumed to reach. The text clears the stem's tip, as measured by the
+    // same table the accidentals are stacked by.
+    score::Measure bar =
+        measureOf(0, {voiceOf(1, {sungWhole(pitch(score::Step::e, -1, 6), "la")})}, true);
+    bar.directions = {score::Direction{score::DirectionKind::tempo, 0, 1, "Andante", 72.0}};
+
+    const LayoutOptions options = wideOptions();
+    const System& system = layOutScore(scoreOf({bar}), options).systems.front();
+
+    const TextGlyph* tempo = firstTextOf(system, TextRole::tempo);
+    REQUIRE(tempo != nullptr);
+
+    REQUIRE(system.noteheads.size() == 1);
+    const NoteheadGlyph& head = system.noteheads.front();
+    REQUIRE(head.accidental == AccidentalKind::flat);
+
+    const double stemTip =
+        spacesBelowTopLine(head.position) - accidentalMetricsFor(AccidentalKind::flat).above;
+
+    CHECK(tempo->y + options.textBandHeight <= stemTip - options.textClearance + 1.0e-9);
+}
+
+TEST_CASE(
     "the dynamics move with the lyric rows above them",
     "[score][engraving][layout][text-placement]")
 {
@@ -2589,4 +2618,234 @@ TEST_CASE(
             CHECK(system.bandTop == Catch::Approx(layout.systems.at(index - 1).bandBottom));
         }
     }
+}
+
+// --- Accidentals and seconds (engraving-polish tier 1) ---
+//
+// The stacking rule itself is pinned in AccidentalStackingTests; these check
+// that the layout hands it the right chord and puts the result on the page:
+// signs left of the chord's leftmost head, seconds on the side away from the
+// stem, and a slot as wide as what it holds.
+namespace
+{
+[[nodiscard]] score::ScoreEvent
+chordAt(Tick onset, Tick duration, std::initializer_list<score::Pitch> pitches)
+{
+    score::ScoreEvent chord;
+    chord.kind = score::EventKind::chord;
+    chord.onset = onset;
+    chord.duration = duration;
+    chord.notes = notesOf(pitches);
+
+    return chord;
+}
+
+[[nodiscard]] const NoteheadGlyph& headAt(const System& system, StaffSteps position)
+{
+    const auto found = std::find_if(
+        system.noteheads.begin(), system.noteheads.end(), [position](const NoteheadGlyph& head)
+        { return head.position == position && !head.isGrace; });
+
+    REQUIRE(found != system.noteheads.end());
+
+    return *found;
+}
+
+[[nodiscard]] double rightEdgeOfAccidental(const NoteheadGlyph& head)
+{
+    return head.accidentalX + accidentalMetricsFor(head.accidental).width;
+}
+
+[[nodiscard]] System onlySystemOf(std::vector<score::ScoreEvent> events)
+{
+    const ScoreLayout layout =
+        layOutScore(scoreOf({measureOf(0, {voiceOf(1, std::move(events))}, true)}), wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    return layout.systems.front();
+}
+} // namespace
+
+TEST_CASE("one sharp stands a gap before its notehead", "[score][engraving][layout][accidentals]")
+{
+    const LayoutOptions options;
+    const System system =
+        onlySystemOf({noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::f, 1, 4))});
+
+    const NoteheadGlyph& head = headAt(system, 7);
+
+    REQUIRE(head.accidental == AccidentalKind::sharp);
+    CHECK(rightEdgeOfAccidental(head) == Approx(head.x - options.accidentalGap));
+}
+
+TEST_CASE(
+    "a triad with a sharp on every note puts its signs in three columns",
+    "[score][engraving][layout][accidentals]")
+{
+    const LayoutOptions options;
+    const System system = onlySystemOf({chordAt(
+        0, ticksPerQuarterNote * 4,
+        {pitch(score::Step::c, 1, 4), pitch(score::Step::e, 1, 4), pitch(score::Step::g, 1, 4)})});
+
+    const NoteheadGlyph& c = headAt(system, 10);
+    const NoteheadGlyph& e = headAt(system, 8);
+    const NoteheadGlyph& g = headAt(system, 6);
+
+    // The top sign against the chord, the bottom one next, the middle one
+    // furthest out (AccidentalStackingTests has why).
+    CHECK(rightEdgeOfAccidental(g) == Approx(g.x - options.accidentalGap));
+    CHECK(rightEdgeOfAccidental(c) < g.accidentalX);
+    CHECK(rightEdgeOfAccidental(e) < c.accidentalX);
+
+    // And the bar made room for all three: the leftmost sign is still after
+    // the time signature, rather than drawn over it.
+    const TimeSignatureGlyph& time = system.timeSignatures.front();
+    CHECK(e.accidentalX > time.x + options.timeSignatureWidth);
+}
+
+TEST_CASE(
+    "a second under an up stem moves its upper note right",
+    "[score][engraving][layout][accidentals]")
+{
+    // A4 and B-sharp 4: below the middle line, so the stem is up. The upper
+    // note crosses it, and its sharp is drawn before the chord, not inside the
+    // A it was pushed away from.
+    const LayoutOptions options;
+    const System system = onlySystemOf({chordAt(
+        0, ticksPerQuarterNote * 2, {pitch(score::Step::a, 0, 4), pitch(score::Step::b, 1, 4)})});
+
+    const NoteheadGlyph& lower = headAt(system, 5);
+    const NoteheadGlyph& upper = headAt(system, 4);
+
+    REQUIRE(system.stems.size() == 1);
+    REQUIRE(system.stems.front().up);
+
+    CHECK(upper.x == Approx(lower.x + options.noteheadWidth));
+    CHECK(upper.accidental == AccidentalKind::sharp);
+    CHECK(rightEdgeOfAccidental(upper) == Approx(lower.x - options.accidentalGap));
+}
+
+TEST_CASE(
+    "a second under a down stem moves its lower note left",
+    "[score][engraving][layout][accidentals]")
+{
+    // C5 and D5, above the middle line, so the stem is down. The note the stem
+    // attaches to -- the upper one -- stays on the stem's right; the lower one
+    // crosses to its left. Until now it always went right, which put it on the
+    // wrong side of a down stem and the stem through the other head.
+    const LayoutOptions options;
+    const System system = onlySystemOf({chordAt(
+        0, ticksPerQuarterNote * 2, {pitch(score::Step::c, 0, 5), pitch(score::Step::d, 0, 5)})});
+
+    const NoteheadGlyph& lower = headAt(system, 3);
+    const NoteheadGlyph& upper = headAt(system, 2);
+
+    REQUIRE(system.stems.size() == 1);
+
+    const StemGlyph& stem = system.stems.front();
+
+    REQUIRE_FALSE(stem.up);
+    CHECK(lower.x == Approx(upper.x - options.noteheadWidth));
+
+    // The stem is on the upper note's left edge, flush, which is where the
+    // lower note's right edge now is too.
+    CHECK(stem.x - (stem.thickness * 0.5) == Approx(upper.x));
+    CHECK(lower.x + options.noteheadWidth == Approx(upper.x));
+}
+
+TEST_CASE(
+    "a sharp on the note a down stem pushed left is clear of both heads",
+    "[score][engraving][layout][accidentals]")
+{
+    // F-sharp 5 under G5: the F-sharp moves left, so its sharp goes left of it,
+    // not left of the G.
+    const LayoutOptions options;
+    const System system = onlySystemOf({chordAt(
+        0, ticksPerQuarterNote * 2, {pitch(score::Step::f, 1, 5), pitch(score::Step::g, 0, 5)})});
+
+    // F5 is the top line, G5 the space above it.
+    const NoteheadGlyph& shifted = headAt(system, 0);
+    const NoteheadGlyph& stays = headAt(system, -1);
+
+    REQUIRE(shifted.x < stays.x);
+    CHECK(rightEdgeOfAccidental(shifted) == Approx(shifted.x - options.accidentalGap));
+}
+
+TEST_CASE(
+    "a sharp on the note that stays is pushed out by the one that moved",
+    "[score][engraving][layout][accidentals]")
+{
+    // C5 under D-sharp 5: the C moves left of the down stem, and the D's sharp
+    // has to clear the C as well as the D. Measured from the leftmost head.
+    const LayoutOptions options;
+    const System system = onlySystemOf({chordAt(
+        0, ticksPerQuarterNote * 2, {pitch(score::Step::c, 0, 5), pitch(score::Step::d, 1, 5)})});
+
+    const NoteheadGlyph& shifted = headAt(system, 3);
+    const NoteheadGlyph& stays = headAt(system, 2);
+
+    REQUIRE(stays.accidental == AccidentalKind::sharp);
+    CHECK(rightEdgeOfAccidental(stays) == Approx(shifted.x - options.accidentalGap));
+}
+
+TEST_CASE(
+    "a note pushed left of its stem does not run into the note before it",
+    "[score][engraving][layout][accidentals]")
+{
+    // The slot reserves the head's crossing as well as its accidentals, so the
+    // shifted note keeps the same distance from the note before it that an
+    // unshifted one would.
+    const LayoutOptions options;
+    const System shifted = onlySystemOf(
+        {noteAt(0, ticksPerQuarterNote / 4, pitch(score::Step::c, 0, 5)),
+         chordAt(
+             ticksPerQuarterNote / 4, ticksPerQuarterNote,
+             {pitch(score::Step::c, 0, 5), pitch(score::Step::d, 0, 5)})});
+
+    std::vector<NoteheadGlyph> heads = shifted.noteheads;
+    std::sort(
+        heads.begin(), heads.end(),
+        [](const NoteheadGlyph& lhs, const NoteheadGlyph& rhs) { return lhs.x < rhs.x; });
+
+    REQUIRE(heads.size() == 3);
+
+    // First the lone C, then the chord's shifted C, then its D.
+    CHECK(heads.at(1).x - (heads.at(0).x + options.noteheadWidth) >= options.flagWidth - 1e-9);
+}
+
+TEST_CASE(
+    "a grace note and its sharp stand before the main note's sharp",
+    "[score][engraving][layout][accidentals]")
+{
+    score::ScoreEvent grace;
+    grace.kind = score::EventKind::note;
+    grace.onset = 0;
+    grace.duration = 0;
+    grace.isGrace = true;
+    grace.notes = notesOf({pitch(score::Step::g, 1, 4)});
+
+    const System system =
+        onlySystemOf({grace, noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::f, 1, 4))});
+
+    const auto graceHead = std::find_if(
+        system.noteheads.begin(), system.noteheads.end(),
+        [](const NoteheadGlyph& head) { return head.isGrace; });
+
+    REQUIRE(graceHead != system.noteheads.end());
+
+    const NoteheadGlyph& main = headAt(system, 7);
+
+    REQUIRE(graceHead->accidental == AccidentalKind::sharp);
+    REQUIRE(main.accidental == AccidentalKind::sharp);
+
+    // The grace note's head, drawn at grace size, ends before the main note's
+    // sharp begins; the grace note's own sharp, at grace size, ends before the
+    // grace head.
+    const LayoutOptions options;
+    CHECK(graceHead->x + (options.noteheadWidth * graceNoteScale) < main.accidentalX);
+    CHECK(
+        graceHead->accidentalX +
+            (accidentalMetricsFor(AccidentalKind::sharp).width * graceNoteScale) <
+        graceHead->x);
 }

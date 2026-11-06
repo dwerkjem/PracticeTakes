@@ -77,7 +77,8 @@ parity test and a test assertion reads as a position you can count off a staff.
 | `BeamGeometry.{h,cpp}` | Where a group's beams go, and how long each stem under them is. |
 | `KeySignatureLayout.{h,cpp}` | Where a key signature's accidentals sit, per clef. |
 | `MeasureAccidentals.{h,cpp}` | Which notes need an accidental drawn. |
-| `Accidental.h` | The accidental signs, shared by the two above. |
+| `AccidentalStacking.{h,cpp}` | Where a chord's accidentals go: columns to the left of its leftmost notehead. |
+| `Accidental.h` | The accidental signs and how much room each takes, shared by the three above. |
 | `PartNames.{h,cpp}` | What a part is called beside its staves, and its short form. |
 | `ScoreLayout.h` | The glyph types, the system, and the spacing options. |
 
@@ -127,6 +128,41 @@ the note that was struck.
 
 `MeasureAccidentals` is constructed per measure, so "reset at the barline" is a
 lifetime rather than a method somebody has to remember to call.
+
+### A chord's accidentals stack in columns
+
+*Where* a sign goes is the layout's too, because it depends on the chord's
+other signs and the painter sees one notehead at a time. `stackAccidentals`
+takes every sign at one onset on one staff — every voice, since their heads
+share an x — and places them the conventional way: top to bottom, alternately
+from the outside in, each in the rightmost column it clears, a new column
+opening to the left when none will have it. A column is as wide as its widest
+sign and its signs are right-aligned in it, a gap (`accidentalGap`) before the
+chord and a smaller one (`accidentalColumnGap`) between columns.
+
+"Clears" is box against box, from a table of widths and heights per sign in
+`Accidental.h` that `MusicFontTests` pins to Bravura, with
+`accidentalVerticalClearance` between them. Nothing interlocks. Sharps and
+naturals look as if they could — their uprights are staggered — but
+right-aligned in Bravura the upper sign's right upright runs straight into the
+lower one's a fifth apart, so a triad with a sharp on every note takes three
+columns, and two sharps share one from a seventh. The clearance is what keeps
+two flats a sixth apart from meeting stem to stem.
+
+Columns start at the chord's **leftmost** notehead, so a note pushed left of a
+down stem pushes the signs out with it. A slot reserves exactly what it holds —
+that push, then the stack's width, then each grace note with its own — so a
+single sharp no longer reserves the room of three, and three columns get the
+room of three.
+
+### Seconds cross the stem
+
+Two notes a second apart in one chord cannot share an x, so one crosses the
+stem. The note the stem attaches to stays put: with the stem up the walk starts
+at the bottom and the upper note of a second moves right; with it down the walk
+starts at the top and the lower note moves left. A cluster alternates rather
+than marching off to one side. Decided after stem direction, since a beam group
+or a second voice can overrule a chord's own.
 
 ### Spacing
 
@@ -328,11 +364,16 @@ half its thickness and its outer edge sits flush with the notehead. Beam ends
 reach the outer edges of their stems in the layout rather than in the painter.
 `MusicFontTests` checks the notehead width against the font.
 
-Some placement rules are the painter's, not the font's. An accidental is
-right-aligned before its notehead, and a ledger line is shortened on that side,
-as Gould prescribes, so the sign does not sit on the line's end. A rest is
-centred on the layout's x. A time signature's two numbers are centred on each
-other.
+`Accidental.h`'s table of sign widths and heights is checked against the font
+the same way, because the layout stacks signs by it and the painter draws them
+where the layout put them.
+
+Some placement rules are the painter's, not the font's. A ledger line is
+shortened on the side an accidental stands, as Gould prescribes, so the sign
+does not sit on the line's end. A rest is centred on the layout's x. A time
+signature's two numbers are centred on each other. Where an accidental goes is
+**not** one of them any more: `NoteheadGlyph::accidentalX` is the layout's, for
+the reason above.
 
 ## Verifying it
 

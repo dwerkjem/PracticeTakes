@@ -129,6 +129,7 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/TargetNoteComponent.cpp
     src/features/score/TargetNoteComponent.h
     src/features/score/TargetNoteSelection.cpp
+    src/features/score/engraving/AccidentalStacking.cpp
     src/features/score/engraving/BeamGeometry.cpp
     src/features/score/engraving/BeamGrouping.cpp
     src/features/score/engraving/KeySignatureLayout.cpp
@@ -140,6 +141,8 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/StaffPosition.cpp
     src/features/score/TargetNoteSelection.h
     src/features/score/engraving/Accidental.h
+    src/features/score/engraving/AccidentalStacking.cpp
+    src/features/score/engraving/AccidentalStacking.h
     src/features/score/engraving/BeamGeometry.cpp
     src/features/score/engraving/BeamGeometry.h
     src/features/score/engraving/BeamGrouping.cpp
@@ -271,6 +274,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/score/MusicFontTests.cpp
     src/tests/features/score/ScoreViewSettingsTests.cpp
     src/tests/features/score/SmuflGlyphsTests.cpp
+    src/tests/features/score/engraving/AccidentalStackingTests.cpp
     src/tests/features/score/engraving/BeamGeometryTests.cpp
     src/tests/features/score/engraving/BeamGroupingTests.cpp
     src/tests/features/score/engraving/KeySignatureLayoutTests.cpp
@@ -330,6 +334,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/features/score/ScoreViewSettings.cpp
     src/features/score/SmuflGlyphs.cpp
     src/features/score/TargetNoteSelection.cpp
+    src/features/score/engraving/AccidentalStacking.cpp
     src/features/score/engraving/BeamGeometry.cpp
     src/features/score/engraving/BeamGrouping.cpp
     src/features/score/engraving/KeySignatureLayout.cpp

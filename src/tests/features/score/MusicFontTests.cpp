@@ -5,6 +5,7 @@
 #include "features/score/engraving/ScoreLayout.h"
 
 #include <cmath>
+#include <optional>
 
 // The embedded music font, checked against what the layout assumes of it.
 //
@@ -83,6 +84,42 @@ TEST_CASE("the layout's notehead is the font's notehead", "[score][typeface]")
     CHECK(
         engraving::LayoutOptions{}.noteheadWidth ==
         Approx(fixture.font.bounds(Glyph::noteheadBlack).getRight()).margin(0.01));
+}
+
+TEST_CASE("the layout's accidentals are the font's accidentals", "[score][typeface]")
+{
+    // The layout stacks a chord's accidentals into columns using its own table
+    // of widths and heights, and the painter draws each sign where the layout
+    // put it. A table wider than the font leaves gaps; one narrower overlaps a
+    // sign with the one beside it, and a height that is short lets two signs in
+    // one column touch. Margin as for the notehead: SMuFL publishes three
+    // decimal places and the outline's own bounds round differently.
+    const MusicFontUnderTest fixture;
+
+    for (const engraving::AccidentalKind kind :
+         {engraving::AccidentalKind::natural, engraving::AccidentalKind::sharp,
+          engraving::AccidentalKind::flat, engraving::AccidentalKind::doubleSharp,
+          engraving::AccidentalKind::doubleFlat})
+    {
+        INFO(engraving::nameOf(kind));
+
+        const std::optional<Glyph> sign = smufl::accidentalFor(kind);
+        REQUIRE(sign.has_value());
+
+        const juce::Rectangle<float> bounds = fixture.font.bounds(*sign);
+        const engraving::AccidentalMetrics metrics = engraving::accidentalMetricsFor(kind);
+
+        // Origin at the left edge, which is what makes `accidentalX` the
+        // sign's left edge.
+        CHECK(bounds.getX() == Approx(0.0).margin(0.02));
+
+        CHECK(metrics.width == Approx(bounds.getRight()).margin(0.02));
+
+        // Staff spaces grow downwards in the font as on the page, so the part
+        // above the origin is the negative part.
+        CHECK(metrics.above == Approx(-bounds.getY()).margin(0.02));
+        CHECK(metrics.below == Approx(bounds.getBottom()).margin(0.02));
+    }
 }
 
 TEST_CASE("glyphs keep SMuFL's origins", "[score][typeface]")

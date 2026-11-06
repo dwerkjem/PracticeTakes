@@ -1,5 +1,6 @@
 #include "ScoreLayoutEngine.h"
 
+#include "AccidentalStacking.h"
 #include "BeamGeometry.h"
 #include "BeamGrouping.h"
 #include "KeySignatureLayout.h"
@@ -35,11 +36,16 @@ struct PlacedNote
     StaffSteps position = 0;
     AccidentalKind accidental = AccidentalKind::none;
 
-    // Nudged right when the note sits a second away from its neighbour in the
-    // same chord, which is the one case two noteheads would otherwise overlap.
+    // Moved across the stem when the note sits a second away from its
+    // neighbour in the same chord, which is the one case two noteheads would
+    // otherwise overlap: right of an up stem, left of a down one.
     double xOffset = 0.0;
 
     bool startsTie = false;
+
+    // Where the accidental's left edge goes, relative to the event's x. Set by
+    // `spaceMeasure` once the chord's signs have been stacked.
+    double accidentalOffset = 0.0;
 };
 
 struct PlacedEvent
@@ -215,39 +221,54 @@ struct EventInMeasure
     }
 }
 
-// Horizontal offsets for the notes of one chord. Two notes a second apart
-// cannot share an x, so the upper of the pair moves one notehead to the right --
-// on either stem side, because a first pass that chose the correct side per
-// stem direction would be guessing at the rest of the collision problem too.
-void offsetSeconds(std::vector<PlacedNote>& notes, double noteheadWidth)
+// Horizontal offsets for the notes of one chord (design.md decision 4). Two
+// notes a second apart cannot share an x, so one of them crosses the stem.
+//
+// Which one depends on the stem. With the stem up the noteheads hang to its
+// left, and the walk starts at the bottom note, the one the stem attaches to:
+// the *upper* note of a second moves right, across the stem. With the stem
+// down they hang to its right, the walk starts at the top note, and the *lower*
+// note moves left. Either way the note the stem attaches to stays put, which is
+// what keeps the stem on the chord's own side.
+//
+// Run after stem direction is resolved, which is the whole reason it is not
+// done as the notes are read.
+void offsetSeconds(std::vector<PlacedNote>& notes, double noteheadWidth, bool stemUp)
 {
     if (notes.size() < 2)
     {
         return;
     }
 
-    std::vector<PlacedNote*> byPosition;
-    byPosition.reserve(notes.size());
+    std::vector<PlacedNote*> fromStemEnd;
+    fromStemEnd.reserve(notes.size());
 
     for (PlacedNote& note : notes)
     {
-        byPosition.push_back(&note);
+        note.xOffset = 0.0;
+        fromStemEnd.push_back(&note);
     }
 
-    std::sort(
-        byPosition.begin(), byPosition.end(),
-        [](const PlacedNote* lhs, const PlacedNote* rhs) { return lhs->position > rhs->position; });
+    // A larger position is lower on the staff. Up stems walk from the bottom,
+    // down stems from the top.
+    std::stable_sort(
+        fromStemEnd.begin(), fromStemEnd.end(),
+        [stemUp](const PlacedNote* lhs, const PlacedNote* rhs)
+        { return stemUp ? lhs->position > rhs->position : lhs->position < rhs->position; });
 
-    for (std::size_t index = 1; index < byPosition.size(); ++index)
+    const double shift = stemUp ? noteheadWidth : -noteheadWidth;
+
+    for (std::size_t index = 1; index < fromStemEnd.size(); ++index)
     {
-        const StaffSteps gap = byPosition.at(index - 1)->position - byPosition.at(index)->position;
+        const PlacedNote& previous = *fromStemEnd.at(index - 1);
+        PlacedNote& note = *fromStemEnd.at(index);
 
         // A second is one half space. Only shift when the previous note is not
         // itself already shifted, so a cluster alternates rather than marching
-        // off to the right.
-        if (gap == 1 && byPosition.at(index - 1)->xOffset == 0.0)
+        // off to one side.
+        if (std::abs(previous.position - note.position) == 1 && previous.xOffset == 0.0)
         {
-            byPosition.at(index)->xOffset = noteheadWidth;
+            note.xOffset = shift;
         }
     }
 }
@@ -410,7 +431,52 @@ struct Slot
     double x = 0.0;
     std::vector<std::size_t> graceEvents;
     std::vector<std::size_t> mainEvents;
+
+    // How far the main chord reaches left of its own x: a notehead pushed left
+    // of a down stem, then its accidentals. The grace notes go left of that.
+    double mainReach = 0.0;
+
+    // Parallel to `graceEvents`: how far each grace note's own accidentals
+    // reach left of it.
+    std::vector<double> graceReach;
 };
+
+// Stack the accidentals of these events, which share one x, and record where
+// each sign went on its note. Returns how far the result reaches left of that
+// x: the chord's leftmost notehead, then the stack's width.
+//
+// Every event at one onset on one staff is one chord for this purpose, whatever
+// voice it is in. Two voices' heads share the slot's x, so their signs would
+// collide exactly as one chord's would.
+double placeAccidentals(
+    MeasurePlan& plan,
+    const std::vector<std::size_t>& eventIndices,
+    const LayoutOptions& options,
+    double scale)
+{
+    double chordLeft = 0.0;
+    std::vector<AccidentalToStack> signs;
+    std::vector<PlacedNote*> owners;
+
+    for (const std::size_t eventIndex : eventIndices)
+    {
+        for (PlacedNote& note : plan.events.at(eventIndex).notes)
+        {
+            chordLeft = std::min(chordLeft, note.xOffset);
+            signs.push_back(AccidentalToStack{note.position, note.accidental});
+            owners.push_back(&note);
+        }
+    }
+
+    const AccidentalStack stack = stackAccidentals(signs, options, scale);
+
+    for (std::size_t index = 0; index < owners.size(); ++index)
+    {
+        owners.at(index)->accidentalOffset = chordLeft + stack.x.at(index);
+    }
+
+    return -chordLeft + stack.width;
+}
 
 // Place one staff's events in one measure vertically: positions and
 // accidentals, because the accidental state machine runs in reading order
@@ -492,8 +558,6 @@ void planMeasure(
                 note.tiedTo.has_value()});
         }
 
-        offsetSeconds(placed.notes, options.noteheadWidth);
-
         for (const score::LyricSyllable& syllable : event.lyrics)
         {
             lyricVerseCount = std::max(lyricVerseCount, syllable.verse);
@@ -558,15 +622,23 @@ void planMeasure(
             }
         }
     }
+
+    // Last, because which note of a second moves depends on where the stem
+    // ended up -- and a beam group or a second voice can overrule a chord's
+    // own direction.
+    for (PlacedEvent& placed : plan.events)
+    {
+        offsetSeconds(placed.notes, options.noteheadWidth, placed.stemUp);
+    }
 }
 
 // Place one measure horizontally, across every staff drawn.
 //
 // Each staff's slots are built exactly as a lone staff's always were -- the
-// same loop, so a slot's room comes out the same, including the order-
-// dependent way grace notes add room and an accidental takes the larger. Then
-// one shared slot is made per onset any staff has, needing the most room any
-// staff needs there, and every staff places its events from those.
+// same loop, so a slot's room comes out the same: what its chord's stacked
+// accidentals and any grace notes before it use. Then one shared slot is made
+// per onset any staff has, needing the most room any staff needs there, and
+// every staff places its events from those.
 //
 // That sharing is the whole of a grand staff's alignment. Spaced separately,
 // each staff would be correct on its own and still disagree with the other
@@ -580,7 +652,7 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
     std::vector<std::vector<Slot>> slotsByStaff;
     slotsByStaff.reserve(staves.size());
 
-    for (const MeasurePlan* plan : staves)
+    for (MeasurePlan* plan : staves)
     {
         std::vector<Slot> slots;
 
@@ -591,7 +663,7 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
 
             if (slots.empty() || slots.back().onset != onset)
             {
-                slots.push_back(Slot{onset, 0.0, 0.0, {}, {}});
+                slots.push_back(Slot{onset, 0.0, 0.0, {}, {}, 0.0, {}});
             }
 
             Slot& slot = slots.back();
@@ -599,20 +671,28 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
             if (placed.event->isGrace)
             {
                 slot.graceEvents.push_back(index);
-                slot.leftPad += options.graceNoteWidth;
             }
             else
             {
                 slot.mainEvents.push_back(index);
             }
+        }
 
-            const bool anyAccidental = std::any_of(
-                placed.notes.begin(), placed.notes.end(),
-                [](const PlacedNote& note) { return note.accidental != AccidentalKind::none; });
+        // The room a slot needs is what it holds, right to left: the main
+        // chord's reach -- a head pushed left of its stem, then its stacked
+        // accidentals -- and then each grace note with its own. With no
+        // accidentals and no seconds this is the grace notes alone, as it
+        // always was.
+        for (Slot& slot : slots)
+        {
+            slot.mainReach = placeAccidentals(*plan, slot.mainEvents, options, 1.0);
+            slot.leftPad = slot.mainReach;
 
-            if (anyAccidental)
+            for (const std::size_t graceIndex : slot.graceEvents)
             {
-                slot.leftPad = std::max(slot.leftPad, options.accidentalWidth);
+                const double reach = placeAccidentals(*plan, {graceIndex}, options, graceNoteScale);
+                slot.graceReach.push_back(reach);
+                slot.leftPad += options.graceNoteWidth + reach;
             }
         }
 
@@ -681,16 +761,19 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
                 plan.events.at(eventIndex).localX = x;
             }
 
-            // Grace notes sit immediately before the beat they lead into, in
-            // the room reserved for them, and take no time of their own. Their
-            // count is this staff's own: another staff's grace notes made the
-            // shared slot wider, not this staff's grace notes further apart.
-            const std::size_t graceCount = slot.graceEvents.size();
+            // Grace notes sit immediately before the beat they lead into, left
+            // of anything the main chord reaches out with, and take no time of
+            // their own. Their room is this staff's own: another staff's grace
+            // notes made the shared slot wider, not this staff's grace notes
+            // further apart. Placed right to left, so each one's accidentals
+            // push the grace notes before it out rather than into it.
+            double graceCursor = x - slot.mainReach;
 
-            for (std::size_t graceIndex = 0; graceIndex < graceCount; ++graceIndex)
+            for (std::size_t graceIndex = slot.graceEvents.size(); graceIndex-- > 0;)
             {
-                plan.events.at(slot.graceEvents.at(graceIndex)).localX =
-                    x - (static_cast<double>(graceCount - graceIndex) * options.graceNoteWidth);
+                const double graceX = graceCursor - options.graceNoteWidth;
+                plan.events.at(slot.graceEvents.at(graceIndex)).localX = graceX;
+                graceCursor = graceX - slot.graceReach.at(graceIndex);
             }
         }
     }
@@ -1009,9 +1092,17 @@ double emitMeasure(
 
         for (const PlacedNote& note : placed.notes)
         {
-            system.noteheads.push_back(NoteheadGlyph{
-                note.ref, x + note.xOffset, note.position, noteheadFor(value.value),
-                note.accidental, value.dots, ledgerLinesFor(note.position), placed.event->isGrace});
+            NoteheadGlyph glyph{
+                note.ref,
+                x + note.xOffset,
+                note.position,
+                noteheadFor(value.value),
+                note.accidental,
+                value.dots,
+                ledgerLinesFor(note.position),
+                placed.event->isGrace};
+            glyph.accidentalX = x + note.accidentalOffset;
+            system.noteheads.push_back(glyph);
 
             placements.emplace(
                 note.ref,
@@ -1217,18 +1308,19 @@ struct StaffExtent
         return extents.at(std::min(index, extents.size() - 1));
     };
 
-    // Half a space each side of a notehead's centre; an accidental reaches a
-    // space and a half, which covers a flat's stem above and a sharp's below.
+    // Half a space each side of a notehead's centre, or as far as its
+    // accidental reaches, from the same table the stacking uses: a flat's stem
+    // rises nearly two spaces and barely drops below the note.
     constexpr double headReach = 0.5;
-    constexpr double accidentalReach = 1.5;
 
     for (const NoteheadGlyph& head : system.noteheads)
     {
         const double y = spacesBelowTopLine(head.position);
-        const double reach = head.accidental == AccidentalKind::none ? headReach : accidentalReach;
+        const AccidentalMetrics sign = accidentalMetricsFor(head.accidental);
+        const double scale = head.isGrace ? graceNoteScale : 1.0;
 
-        on(head.staff).include(y - reach);
-        on(head.staff).include(y + reach);
+        on(head.staff).include(y - std::max(headReach, sign.above * scale));
+        on(head.staff).include(y + std::max(headReach, sign.below * scale));
     }
 
     for (const StemGlyph& stem : system.stems)

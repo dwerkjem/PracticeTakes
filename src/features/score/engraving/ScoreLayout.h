@@ -71,7 +71,19 @@ struct NoteheadGlyph
     // the staff is. Last, and defaulted, so every existing initialiser still
     // describes a glyph on the only staff a single-staff system has.
     int staff = 0;
+
+    // Where the accidental's left edge goes, which is its SMuFL origin. Decided
+    // here rather than by the painter because a chord's signs are stacked
+    // against each other into columns (design.md decision 3), and the painter
+    // sees one notehead at a time. Meaningless when `accidental` is `none`.
+    double accidentalX = 0.0;
 };
+
+// Grace notes are drawn at this fraction of full size: the convention for cue
+// and grace notation, small enough to read as not taking time and large enough
+// to read at all. Here rather than in the painter because the layout places a
+// grace note's accidental, and has to know how wide the painter will draw it.
+inline constexpr double graceNoteScale = 0.66;
 
 // A stem, with its flags. One per event that has one -- a chord's notes share
 // a stem, which is why this is not a field on the notehead.
@@ -431,8 +443,24 @@ struct LayoutOptions
     // the font, because a stem placed by one width against a notehead drawn at
     // another stands off it or cuts into it.
     double noteheadWidth = 1.18;
-    double accidentalWidth = 1.4;
     double graceNoteWidth = 1.7;
+
+    // A chord's accidentals, stacked in columns to the left of its leftmost
+    // notehead (design.md decision 3). The gap is between the nearest column
+    // and that notehead; the column gap is between one column and the next.
+    // A slot reserves the width its stack actually uses, so these are the
+    // whole of how much room an accidental takes.
+    double accidentalGap = 0.2;
+    double accidentalColumnGap = 0.12;
+
+    // The least room between two signs sharing a column, top of one to bottom
+    // of the other. Boxes alone would let two flats a sixth apart meet stem to
+    // stem, which reads as one long stem with two bowls. Sharps and naturals
+    // are *not* allowed to interlock: in Bravura their uprights line up when
+    // right-aligned, and a fifth apart the upper sign's stem runs straight into
+    // the lower one's, so a triad's three sharps take three columns.
+    double accidentalVerticalClearance = 0.1;
+
     double clefWidth = 3.6;
     double keyAccidentalWidth = 1.1;
     double timeSignatureWidth = 2.8;

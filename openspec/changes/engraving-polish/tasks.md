@@ -25,26 +25,33 @@ decision 1.
 
 ### Accidentals and seconds
 
-- [ ] 1.1 An accidental metrics table in staff spaces — width, and vertical
+- [x] 1.1 An accidental metrics table in staff spaces — width, and vertical
       extent above and below the sign's position, per `AccidentalKind` — so the
       layout can stack signs and stay font-free.
-- [ ] 1.2 A test pinning that table to Bravura's bounds, beside the existing
+- [x] 1.2 A test pinning that table to Bravura's bounds, beside the existing
       `noteheadWidth` check in `MusicFontTests`.
-- [ ] 1.3 `NoteheadGlyph::accidentalX`, decided by the layout. The painter draws
+- [x] 1.3 `NoteheadGlyph::accidentalX`, decided by the layout. The painter draws
       the sign there and stops right-aligning it itself.
-- [ ] 1.4 Column stacking for a chord's accidentals: top to bottom, placed
+- [x] 1.4 Column stacking for a chord's accidentals: top to bottom, placed
       alternately from the outside in, each in the rightmost column it clears
       (design.md decision 3).
-- [ ] 1.5 A slot's `leftPad` is the width the stack used, replacing the constant
+- [x] 1.5 A slot's `leftPad` is the width the stack used, replacing the constant
       `accidentalWidth`.
-- [ ] 1.6 `offsetSeconds` takes the stem direction: with the stem up the upper
+- [x] 1.6 `offsetSeconds` takes the stem direction: with the stem up the upper
       note of a second moves right, with it down the lower note moves left.
       Moved after stem direction is resolved.
-- [ ] 1.7 Tests, by named case: one sharp; a C-major triad with a sharp on every
+- [x] 1.7 Tests, by named case: one sharp; a C-major triad with a sharp on every
       note in two columns; a cluster needing three; a sharp on the shifted note
       of a second, clear of the other head; a second under a down stem, with the
-      upper note attached to its stem.
-- [ ] 1.8 Move the accidental rule in `notation-engraving.md` from the painter's
+      upper note attached to its stem. **The triad takes three columns, not
+      two**: sharing one on an interlock allowance put the outer sharps'
+      uprights into each other on a render, so "clears" is box against box
+      (design.md decision 3, last paragraphs), which the spec's "at least two
+      columns" allows. A chord spanning a seventh is the two-column case
+      instead. The stacking rule is its own unit, `AccidentalStacking`, tested
+      directly in `AccidentalStackingTests`; the layout cases are in
+      `ScoreLayoutEngineTests`.
+- [x] 1.8 Move the accidental rule in `notation-engraving.md` from the painter's
       list to the layout's, in the same commit as the code.
 
 ### Ties across a break
