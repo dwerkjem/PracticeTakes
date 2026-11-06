@@ -2487,7 +2487,10 @@ TEST_CASE(
     bar.directions = {score::Direction{score::DirectionKind::tempo, 0, 1, "Andante", 72.0}};
 
     const LayoutOptions options = wideOptions();
-    const System& system = layOutScore(scoreOf({bar}), options).systems.front();
+    const ScoreLayout layout = layOutScore(scoreOf({bar}), options);
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
 
     const TextGlyph* tempo = firstTextOf(system, TextRole::tempo);
     REQUIRE(tempo != nullptr);
