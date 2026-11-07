@@ -14,8 +14,9 @@
 // about each state into one generated file, and the harness reads that.
 //
 // The file is committed, so the harness and its tests read it without a C++
-// build, and ApprovedStatesManifestTests fails when it is stale. Regenerate it
-// with `cmake --build build --target approved-states-manifest`.
+// build. Each local build of PracticeTakesTests rewrites it when the list has
+// changed; under CI it is only checked, by ApprovedStatesManifestTests. The
+// `approved-states-manifest` target writes it on demand. See CMakeLists.txt.
 //
 // JUCE-free: plain JSON, written by hand so that the bytes are the same on every
 // platform and every run.

@@ -200,9 +200,8 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   live application. The two flags are separate so the channel can still be
   driven against a real device by hand. The approved states are written out to
   `docs/contracts/testcontrol/approved-states.json`, which the harness reads
-  rather than restating them; after changing a state, run
-  `cmake --build build --target approved-states-manifest` (a test fails until
-  you do).
+  rather than restating them. Building `PracticeTakesTests` locally
+  regenerates it; commit it with the state change (CI only checks it).
   See `docs/development/quality/TESTING_SUITE.md`.
 - `src/features` — user-facing tools: `analysis/{tuner,spectrogram,harmonics}`,
   `score` (the Target Note tool, which reads one note as text, and the Score

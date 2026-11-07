@@ -10,8 +10,8 @@ facts out a second time and nothing kept the two lists equal: it filed
 `all-tools-docked` under four tools while the application opened five.
 
 The file is committed, so the harness and its tests read it without a C++
-build. ApprovedStatesManifestTests fails when it is stale; regenerate it with
-`cmake --build build --target approved-states-manifest`.
+build. A local build of PracticeTakesTests rewrites it whenever the list
+changes; under CI, ApprovedStatesManifestTests fails when it is stale.
 
 Standard library only.
 """

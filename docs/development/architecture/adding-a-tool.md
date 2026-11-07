@@ -108,9 +108,8 @@ of which fail a test if you skip them:
 3. **A surface in `tools/scripts/testing_suite/surfaces.py`**, naming the state
    and the questions a reviewer should answer about the picture. Only the state
    and the questions: which tools it opens, how, and in which window come from
-   the generated approved-states manifest, so after steps 1 and 2 run
-   `cmake --build build --target approved-states-manifest` (a test fails until
-   you do). Nothing enforces the surface itself: skip it and the tool is simply
+   the generated approved-states manifest, which building `PracticeTakesTests`
+   rewrites after steps 1 and 2; commit it with them. Nothing enforces the surface itself: skip it and the tool is simply
    never photographed.
 
 `the built-in catalog declares every shipped tool` also pins the number of
@@ -174,8 +173,8 @@ first. Do not move that declaration.
 - [ ] An approved state in `src/application/testcontrol/ApprovedWindowStates.cpp`
       names the tool, so it can be manually verified.
 - [ ] `all-tools-docked` includes the tool.
-- [ ] `docs/contracts/testcontrol/approved-states.json` regenerated
-      (`cmake --build build --target approved-states-manifest`).
+- [ ] `docs/contracts/testcontrol/approved-states.json` committed with the
+      state change (a local test build regenerates it).
 - [ ] The tool count in `ToolCatalogTests` bumped.
 - [ ] A surface in `tools/scripts/testing_suite/surfaces.py` names the state, so
       the tool is actually photographed.

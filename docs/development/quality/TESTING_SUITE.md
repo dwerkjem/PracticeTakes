@@ -616,7 +616,13 @@ application opened five. Now:
 - `surfaces.validate()` reports a surface that names a state the application
   does not have, or that contradicts what the manifest says about one.
 
-Regenerate the file after changing a state:
+Nobody regenerates it by hand. A local build of `PracticeTakesTests` rewrites
+it whenever the list has changed, so a changed state shows up in `git status`
+beside the edit that caused it; commit the two together. Under CI (any
+environment with `CI` set) the build leaves the file alone and the test above
+does the checking, because regenerating there would let an uncommitted manifest
+pass. A tree configured with `-DPRACTICE_TAKES_REGENERATE_APPROVED_STATES=OFF`
+can still write it on demand:
 
 ```bash
 cmake --build build --target approved-states-manifest

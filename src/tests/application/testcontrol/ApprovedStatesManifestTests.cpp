@@ -40,7 +40,8 @@ TEST_CASE("the committed approved-states manifest is up to date", "[testcontrol]
     // added, removed or changed without regenerating would leave the harness
     // planning captures of a list the application no longer has.
     INFO(
-        "Regenerate with: cmake --build build --target approved-states-manifest  ("
+        "A local build of PracticeTakesTests regenerates it; commit the result. Or run: "
+        "cmake --build build --target approved-states-manifest  ("
         << approvedStatesManifestPath() << ")");
 
     REQUIRE(committedManifest().existsAsFile());
@@ -108,9 +109,16 @@ TEST_CASE("each state names the window it is a picture of", "[testcontrol][manif
 
 TEST_CASE("Write the approved-states manifest", "[.write-approved-states]")
 {
-    // Hidden: run only by the approved-states-manifest build target, which is
-    // how the committed file is regenerated.
+    // Hidden: run after each local build of this binary, and by the
+    // approved-states-manifest target. Writes only when the text changed, so
+    // an unchanged list leaves the file's timestamp alone.
+    const std::string generated = approvedStatesManifestJson();
+    if (committedManifest().existsAsFile() && committedText() == generated)
+    {
+        SUCCEED("Already up to date.");
+        return;
+    }
+
     REQUIRE(committedManifest().getParentDirectory().createDirectory());
-    REQUIRE(committedManifest().replaceWithText(
-        juce::String(approvedStatesManifestJson()), false, false, "\n"));
+    REQUIRE(committedManifest().replaceWithText(juce::String(generated), false, false, "\n"));
 }

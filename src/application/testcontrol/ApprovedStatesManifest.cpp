@@ -211,8 +211,8 @@ std::string approvedStatesManifestJson()
     std::string out = "{\n";
     out += "  \"generated\": " +
            quoted("By ApprovedStatesManifest from src/application/testcontrol/"
-                  "ApprovedWindowStates.cpp. Do not edit: run `cmake --build build --target "
-                  "approved-states-manifest`.") +
+                  "ApprovedWindowStates.cpp. Do not edit: a local build of PracticeTakesTests "
+                  "rewrites it.") +
            ",\n";
     out += "  \"themes\": " + stringArray(approvedThemeNames()) + ",\n";
     out += "  \"geometries\": " + stringArray(approvedGeometryNames()) + ",\n";

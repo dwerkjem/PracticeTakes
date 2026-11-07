@@ -1,5 +1,5 @@
 {
-  "generated": "By ApprovedStatesManifest from src/application/testcontrol/ApprovedWindowStates.cpp. Do not edit: run `cmake --build build --target approved-states-manifest`.",
+  "generated": "By ApprovedStatesManifest from src/application/testcontrol/ApprovedWindowStates.cpp. Do not edit: a local build of PracticeTakesTests rewrites it.",
   "themes": ["dark", "light"],
   "geometries": ["normal", "narrow", "tiny", "maximised", "fullscreen", "slim", "squat"],
   "clickTargets": [
