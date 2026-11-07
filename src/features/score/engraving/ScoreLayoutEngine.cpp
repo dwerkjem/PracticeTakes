@@ -1,5 +1,6 @@
 #include "ScoreLayoutEngine.h"
 
+#include "AccidentalStacking.h"
 #include "BeamGeometry.h"
 #include "BeamGrouping.h"
 #include "KeySignatureLayout.h"
@@ -7,6 +8,7 @@
 #include "PartNames.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <map>
 #include <optional>
@@ -28,6 +30,18 @@ constexpr double contentLeadIn = 0.8;
 // Room a repeat barline takes at the start of a measure.
 constexpr double repeatBarlineWidth = 1.3;
 
+// How full a system has to be, of the width it has, for a break to move back
+// one bar to a repeat barline or the end of an ending (design.md decision 13).
+constexpr double structuralBreakMinimumFill = 0.75;
+
+// How far short of the system's end the first half of a split tie stops, so it
+// does not run into the barline.
+constexpr double tieHalfEndInset = 0.4;
+
+// How far after the next system's header the second half starts, so it does
+// not touch the last sign of the key signature.
+constexpr double tieHalfStartGap = 0.3;
+
 // One note of one event, already positioned vertically.
 struct PlacedNote
 {
@@ -35,11 +49,16 @@ struct PlacedNote
     StaffSteps position = 0;
     AccidentalKind accidental = AccidentalKind::none;
 
-    // Nudged right when the note sits a second away from its neighbour in the
-    // same chord, which is the one case two noteheads would otherwise overlap.
+    // Moved across the stem when the note sits a second away from its
+    // neighbour in the same chord, which is the one case two noteheads would
+    // otherwise overlap: right of an up stem, left of a down one.
     double xOffset = 0.0;
 
     bool startsTie = false;
+
+    // Where the accidental's left edge goes, relative to the event's x. Set by
+    // `spaceMeasure` once the chord's signs have been stacked.
+    double accidentalOffset = 0.0;
 };
 
 struct PlacedEvent
@@ -50,6 +69,12 @@ struct PlacedEvent
 
     // Relative to the start of the measure's content, in staff spaces.
     double localX = 0.0;
+
+    // The x of the onset this event hangs from: its own for a main note, the
+    // note it leads into for a grace note. Justification stretches the gaps
+    // between onsets and moves each event with its onset, so a grace note and
+    // an accidental keep their distance from the note they belong to.
+    double anchorX = 0.0;
 
     std::optional<WrittenNoteValue> value;
 
@@ -77,6 +102,11 @@ struct MeasurePlan
     // has been planned, across all of them at once, and needs both.
     int staff = 1;
     const score::Measure* source = nullptr;
+
+    // Tempo marks lent to this staff by a part the reader hid. A tempo is the
+    // whole score's, and an exporter often writes it into one part only, so
+    // hiding that part must not hide the tempo with it (score-part-selection).
+    std::vector<score::Direction> borrowedTempos;
 
     score::Clef clef;
     score::KeySignature key;
@@ -215,39 +245,54 @@ struct EventInMeasure
     }
 }
 
-// Horizontal offsets for the notes of one chord. Two notes a second apart
-// cannot share an x, so the upper of the pair moves one notehead to the right --
-// on either stem side, because a first pass that chose the correct side per
-// stem direction would be guessing at the rest of the collision problem too.
-void offsetSeconds(std::vector<PlacedNote>& notes, double noteheadWidth)
+// Horizontal offsets for the notes of one chord (design.md decision 4). Two
+// notes a second apart cannot share an x, so one of them crosses the stem.
+//
+// Which one depends on the stem. With the stem up the noteheads hang to its
+// left, and the walk starts at the bottom note, the one the stem attaches to:
+// the *upper* note of a second moves right, across the stem. With the stem
+// down they hang to its right, the walk starts at the top note, and the *lower*
+// note moves left. Either way the note the stem attaches to stays put, which is
+// what keeps the stem on the chord's own side.
+//
+// Run after stem direction is resolved, which is the whole reason it is not
+// done as the notes are read.
+void offsetSeconds(std::vector<PlacedNote>& notes, double noteheadWidth, bool stemUp)
 {
     if (notes.size() < 2)
     {
         return;
     }
 
-    std::vector<PlacedNote*> byPosition;
-    byPosition.reserve(notes.size());
+    std::vector<PlacedNote*> fromStemEnd;
+    fromStemEnd.reserve(notes.size());
 
     for (PlacedNote& note : notes)
     {
-        byPosition.push_back(&note);
+        note.xOffset = 0.0;
+        fromStemEnd.push_back(&note);
     }
 
-    std::sort(
-        byPosition.begin(), byPosition.end(),
-        [](const PlacedNote* lhs, const PlacedNote* rhs) { return lhs->position > rhs->position; });
+    // A larger position is lower on the staff. Up stems walk from the bottom,
+    // down stems from the top.
+    std::stable_sort(
+        fromStemEnd.begin(), fromStemEnd.end(),
+        [stemUp](const PlacedNote* lhs, const PlacedNote* rhs)
+        { return stemUp ? lhs->position > rhs->position : lhs->position < rhs->position; });
 
-    for (std::size_t index = 1; index < byPosition.size(); ++index)
+    const double shift = stemUp ? noteheadWidth : -noteheadWidth;
+
+    for (std::size_t index = 1; index < fromStemEnd.size(); ++index)
     {
-        const StaffSteps gap = byPosition.at(index - 1)->position - byPosition.at(index)->position;
+        const PlacedNote& previous = *fromStemEnd.at(index - 1);
+        PlacedNote& note = *fromStemEnd.at(index);
 
         // A second is one half space. Only shift when the previous note is not
         // itself already shifted, so a cluster alternates rather than marching
-        // off to the right.
-        if (gap == 1 && byPosition.at(index - 1)->xOffset == 0.0)
+        // off to one side.
+        if (std::abs(previous.position - note.position) == 1 && previous.xOffset == 0.0)
         {
-            byPosition.at(index)->xOffset = noteheadWidth;
+            note.xOffset = shift;
         }
     }
 }
@@ -410,7 +455,52 @@ struct Slot
     double x = 0.0;
     std::vector<std::size_t> graceEvents;
     std::vector<std::size_t> mainEvents;
+
+    // How far the main chord reaches left of its own x: a notehead pushed left
+    // of a down stem, then its accidentals. The grace notes go left of that.
+    double mainReach = 0.0;
+
+    // Parallel to `graceEvents`: how far each grace note's own accidentals
+    // reach left of it.
+    std::vector<double> graceReach;
 };
+
+// Stack the accidentals of these events, which share one x, and record where
+// each sign went on its note. Returns how far the result reaches left of that
+// x: the chord's leftmost notehead, then the stack's width.
+//
+// Every event at one onset on one staff is one chord for this purpose, whatever
+// voice it is in. Two voices' heads share the slot's x, so their signs would
+// collide exactly as one chord's would.
+double placeAccidentals(
+    MeasurePlan& plan,
+    const std::vector<std::size_t>& eventIndices,
+    const LayoutOptions& options,
+    double scale)
+{
+    double chordLeft = 0.0;
+    std::vector<AccidentalToStack> signs;
+    std::vector<PlacedNote*> owners;
+
+    for (const std::size_t eventIndex : eventIndices)
+    {
+        for (PlacedNote& note : plan.events.at(eventIndex).notes)
+        {
+            chordLeft = std::min(chordLeft, note.xOffset);
+            signs.push_back(AccidentalToStack{note.position, note.accidental});
+            owners.push_back(&note);
+        }
+    }
+
+    const AccidentalStack stack = stackAccidentals(signs, options, scale);
+
+    for (std::size_t index = 0; index < owners.size(); ++index)
+    {
+        owners.at(index)->accidentalOffset = chordLeft + stack.x.at(index);
+    }
+
+    return -chordLeft + stack.width;
+}
 
 // Place one staff's events in one measure vertically: positions and
 // accidentals, because the accidental state machine runs in reading order
@@ -492,8 +582,6 @@ void planMeasure(
                 note.tiedTo.has_value()});
         }
 
-        offsetSeconds(placed.notes, options.noteheadWidth);
-
         for (const score::LyricSyllable& syllable : event.lyrics)
         {
             lyricVerseCount = std::max(lyricVerseCount, syllable.verse);
@@ -558,15 +646,23 @@ void planMeasure(
             }
         }
     }
+
+    // Last, because which note of a second moves depends on where the stem
+    // ended up -- and a beam group or a second voice can overrule a chord's
+    // own direction.
+    for (PlacedEvent& placed : plan.events)
+    {
+        offsetSeconds(placed.notes, options.noteheadWidth, placed.stemUp);
+    }
 }
 
 // Place one measure horizontally, across every staff drawn.
 //
 // Each staff's slots are built exactly as a lone staff's always were -- the
-// same loop, so a slot's room comes out the same, including the order-
-// dependent way grace notes add room and an accidental takes the larger. Then
-// one shared slot is made per onset any staff has, needing the most room any
-// staff needs there, and every staff places its events from those.
+// same loop, so a slot's room comes out the same: what its chord's stacked
+// accidentals and any grace notes before it use. Then one shared slot is made
+// per onset any staff has, needing the most room any staff needs there, and
+// every staff places its events from those.
 //
 // That sharing is the whole of a grand staff's alignment. Spaced separately,
 // each staff would be correct on its own and still disagree with the other
@@ -580,7 +676,7 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
     std::vector<std::vector<Slot>> slotsByStaff;
     slotsByStaff.reserve(staves.size());
 
-    for (const MeasurePlan* plan : staves)
+    for (MeasurePlan* plan : staves)
     {
         std::vector<Slot> slots;
 
@@ -591,7 +687,7 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
 
             if (slots.empty() || slots.back().onset != onset)
             {
-                slots.push_back(Slot{onset, 0.0, 0.0, {}, {}});
+                slots.push_back(Slot{onset, 0.0, 0.0, {}, {}, 0.0, {}});
             }
 
             Slot& slot = slots.back();
@@ -599,20 +695,28 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
             if (placed.event->isGrace)
             {
                 slot.graceEvents.push_back(index);
-                slot.leftPad += options.graceNoteWidth;
             }
             else
             {
                 slot.mainEvents.push_back(index);
             }
+        }
 
-            const bool anyAccidental = std::any_of(
-                placed.notes.begin(), placed.notes.end(),
-                [](const PlacedNote& note) { return note.accidental != AccidentalKind::none; });
+        // The room a slot needs is what it holds, right to left: the main
+        // chord's reach -- a head pushed left of its stem, then its stacked
+        // accidentals -- and then each grace note with its own. With no
+        // accidentals and no seconds this is the grace notes alone, as it
+        // always was.
+        for (Slot& slot : slots)
+        {
+            slot.mainReach = placeAccidentals(*plan, slot.mainEvents, options, 1.0);
+            slot.leftPad = slot.mainReach;
 
-            if (anyAccidental)
+            for (const std::size_t graceIndex : slot.graceEvents)
             {
-                slot.leftPad = std::max(slot.leftPad, options.accidentalWidth);
+                const double reach = placeAccidentals(*plan, {graceIndex}, options, graceNoteScale);
+                slot.graceReach.push_back(reach);
+                slot.leftPad += options.graceNoteWidth + reach;
             }
         }
 
@@ -679,18 +783,23 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
             for (const std::size_t eventIndex : slot.mainEvents)
             {
                 plan.events.at(eventIndex).localX = x;
+                plan.events.at(eventIndex).anchorX = x;
             }
 
-            // Grace notes sit immediately before the beat they lead into, in
-            // the room reserved for them, and take no time of their own. Their
-            // count is this staff's own: another staff's grace notes made the
-            // shared slot wider, not this staff's grace notes further apart.
-            const std::size_t graceCount = slot.graceEvents.size();
+            // Grace notes sit immediately before the beat they lead into, left
+            // of anything the main chord reaches out with, and take no time of
+            // their own. Their room is this staff's own: another staff's grace
+            // notes made the shared slot wider, not this staff's grace notes
+            // further apart. Placed right to left, so each one's accidentals
+            // push the grace notes before it out rather than into it.
+            double graceCursor = x - slot.mainReach;
 
-            for (std::size_t graceIndex = 0; graceIndex < graceCount; ++graceIndex)
+            for (std::size_t graceIndex = slot.graceEvents.size(); graceIndex-- > 0;)
             {
-                plan.events.at(slot.graceEvents.at(graceIndex)).localX =
-                    x - (static_cast<double>(graceCount - graceIndex) * options.graceNoteWidth);
+                const double graceX = graceCursor - options.graceNoteWidth;
+                plan.events.at(slot.graceEvents.at(graceIndex)).localX = graceX;
+                plan.events.at(slot.graceEvents.at(graceIndex)).anchorX = x;
+                graceCursor = graceX - slot.graceReach.at(graceIndex);
             }
         }
     }
@@ -766,9 +875,14 @@ void spaceMeasure(const std::vector<MeasurePlan*>& staves, const LayoutOptions& 
             plan->events.front().event->duration >= own.nominalDuration && own.nominalDuration > 0)
         {
             plan->events.front().localX = contentWidth * 0.5;
+            plan->events.front().anchorX = contentWidth * 0.5;
         }
 
-        for (const score::Direction& direction : own.directions)
+        std::vector<score::Direction> directions = own.directions;
+        directions.insert(
+            directions.end(), plan->borrowedTempos.begin(), plan->borrowedTempos.end());
+
+        for (const score::Direction& direction : directions)
         {
             if (direction.staff != plan->staff)
             {
@@ -917,6 +1031,98 @@ using NotePlacementMap = std::map<score::NoteRef, NotePlacement, NoteRefLess>;
     return cursor + contentLeadIn;
 }
 
+// Whether one staff's measure is a bar of rest a multi-measure rest may absorb
+// (design.md decision 12): a whole-bar rest and nothing else, with nothing a
+// reader needs to see on it -- no clef, key or time change, no repeat, ending
+// or jump, and no direction. Any of those is drawn on its own bar, and so
+// breaks the run, because condensing it would hide it.
+[[nodiscard]] bool isEmptyBar(const MeasurePlan& plan)
+{
+    const score::Measure& measure = *plan.source;
+
+    if (plan.clefChangesHere || plan.keyChangesHere || plan.timeChangesHere || plan.repeatStart ||
+        plan.repeatEnd || !measure.repeats.endingNumbers.empty() ||
+        !measure.repeats.jumps.empty() || !measure.directions.empty() ||
+        measure.nominalDuration <= 0 || plan.events.empty())
+    {
+        return false;
+    }
+
+    return std::all_of(
+        plan.events.begin(), plan.events.end(),
+        [&measure](const PlacedEvent& placed)
+        {
+            return placed.isRest && !placed.event->isGrace &&
+                   placed.event->duration >= measure.nominalDuration;
+        });
+}
+
+// The ledger lines one event needs, shared across its notes (design.md
+// decision 7). A note at or beyond a ledger line's position needs that line, so
+// each line spans every note that needs it, and no line is drawn twice.
+void emitLedgerLines(
+    System& system,
+    const PlacedEvent& placed,
+    double x,
+    NoteheadKind head,
+    const LayoutOptions& options)
+{
+    const double scale = placed.event->isGrace ? graceNoteScale : 1.0;
+    const double width = noteheadWidthFor(head) * scale;
+    const double extension = options.ledgerLineExtension * scale;
+    const double besideAccidental = options.ledgerLineExtensionBesideAccidental * scale;
+
+    StaffSteps highest = topLineSteps;
+    StaffSteps lowest = bottomLineSteps;
+
+    for (const PlacedNote& note : placed.notes)
+    {
+        highest = std::min(highest, note.position);
+        lowest = std::max(lowest, note.position);
+    }
+
+    const auto lineAt = [&](StaffSteps position, bool above)
+    {
+        LedgerLineGlyph line;
+        line.position = position;
+        line.isGrace = placed.event->isGrace;
+
+        bool any = false;
+
+        for (const PlacedNote& note : placed.notes)
+        {
+            if (above ? note.position > position : note.position < position)
+            {
+                continue;
+            }
+
+            const double left =
+                x + note.xOffset -
+                (note.accidental == AccidentalKind::none ? extension : besideAccidental);
+            const double right = x + note.xOffset + width + extension;
+
+            line.leftX = any ? std::min(line.leftX, left) : left;
+            line.rightX = any ? std::max(line.rightX, right) : right;
+            any = true;
+        }
+
+        if (any)
+        {
+            system.ledgerLines.push_back(line);
+        }
+    };
+
+    for (StaffSteps position = topLineSteps - 2; position >= highest; position -= 2)
+    {
+        lineAt(position, true);
+    }
+
+    for (StaffSteps position = bottomLineSteps + 2; position <= lowest; position += 2)
+    {
+        lineAt(position, false);
+    }
+}
+
 // Lay one staff's glyphs for one measure into a system, starting at `startX`,
 // and return the x its barline sits at.
 //
@@ -935,10 +1141,24 @@ double emitMeasure(
     NotePlacementMap& placements,
     double startX,
     double contentStart,
-    int staffIndex)
+    int staffIndex,
+    double stretch,
+    int condensedBars)
 {
+    // A multi-measure rest draws none of its first bar's own events -- a whole
+    // rest -- and stands in a bar of its own width.
+    static const std::vector<PlacedEvent> noEvents;
+    const bool condensed = condensedBars > 1;
+    const std::vector<PlacedEvent>& events = condensed ? noEvents : plan.events;
+    const double contentWidth = condensed ? options.multiMeasureRestWidth : plan.contentWidth;
+
     const bool firstStaff = staffIndex == 0;
     double cursor = startX;
+
+    // Where an event goes once the measure is justified: its onset's x
+    // stretched, and its own offset from that onset kept as it was.
+    const auto xOf = [contentStart, stretch](const PlacedEvent& placed)
+    { return contentStart + placed.localX + (placed.anchorX * (stretch - 1.0)); };
 
     if (plan.repeatStart)
     {
@@ -988,9 +1208,9 @@ double emitMeasure(
     std::vector<std::vector<std::size_t>> beamStemIndices(plan.beamGroups.size());
     std::vector<bool> beamGroupPointsUp(plan.beamGroups.size(), true);
 
-    for (const PlacedEvent& placed : plan.events)
+    for (const PlacedEvent& placed : events)
     {
-        const double x = contentStart + placed.localX;
+        const double x = xOf(placed);
 
         if (!placed.value.has_value())
         {
@@ -1009,15 +1229,19 @@ double emitMeasure(
 
         for (const PlacedNote& note : placed.notes)
         {
-            system.noteheads.push_back(NoteheadGlyph{
-                note.ref, x + note.xOffset, note.position, noteheadFor(value.value),
-                note.accidental, value.dots, ledgerLinesFor(note.position), placed.event->isGrace});
+            NoteheadGlyph glyph{
+                note.ref,        x + note.xOffset, note.position,        noteheadFor(value.value),
+                note.accidental, value.dots,       placed.event->isGrace};
+            glyph.accidentalX = x + note.accidentalOffset;
+            system.noteheads.push_back(glyph);
 
             placements.emplace(
                 note.ref,
                 NotePlacement{
                     systemIndex, x + note.xOffset, note.position, placed.stemUp, staffIndex});
         }
+
+        emitLedgerLines(system, placed, x, noteheadFor(value.value), options);
 
         if (!hasStem(value.value) || placed.notes.empty())
         {
@@ -1098,12 +1322,12 @@ double emitMeasure(
         }
     }
 
-    for (const PlacedEvent& placed : plan.events)
+    for (const PlacedEvent& placed : events)
     {
         for (const score::LyricSyllable& syllable : placed.event->lyrics)
         {
             system.lyrics.push_back(LyricGlyph{
-                contentStart + placed.localX, syllable.verse, syllable.text,
+                xOf(placed), syllable.verse, syllable.text,
                 syllable.position == score::SyllabicPosition::begin ||
                     syllable.position == score::SyllabicPosition::middle,
                 syllable.extend});
@@ -1112,10 +1336,15 @@ double emitMeasure(
 
     for (const TextGlyph& text : plan.texts)
     {
-        system.texts.push_back(TextGlyph{contentStart + text.x, text.text, text.role});
+        system.texts.push_back(TextGlyph{contentStart + (text.x * stretch), text.text, text.role});
     }
 
-    const double barlineX = contentStart + plan.contentWidth;
+    const double barlineX = contentStart + (contentWidth * stretch);
+
+    if (condensed)
+    {
+        system.multiRests.push_back(MultiRestGlyph{contentStart, barlineX, condensedBars});
+    }
 
     if (firstStaff)
     {
@@ -1136,9 +1365,11 @@ struct GlyphCounts
     std::size_t keyAccidentals = 0;
     std::size_t timeSignatures = 0;
     std::size_t noteheads = 0;
+    std::size_t ledgerLines = 0;
     std::size_t stems = 0;
     std::size_t beams = 0;
     std::size_t rests = 0;
+    std::size_t multiRests = 0;
     std::size_t lyrics = 0;
     std::size_t texts = 0;
 };
@@ -1147,8 +1378,9 @@ struct GlyphCounts
 {
     return GlyphCounts{
         system.clefs.size(),     system.keyAccidentals.size(), system.timeSignatures.size(),
-        system.noteheads.size(), system.stems.size(),          system.beams.size(),
-        system.rests.size(),     system.lyrics.size(),         system.texts.size()};
+        system.noteheads.size(), system.ledgerLines.size(),    system.stems.size(),
+        system.beams.size(),     system.rests.size(),          system.multiRests.size(),
+        system.lyrics.size(),    system.texts.size()};
 }
 
 template <typename Glyphs> void assignStaffFrom(Glyphs& glyphs, std::size_t from, int staff)
@@ -1174,9 +1406,11 @@ void assignStaff(System& system, const GlyphCounts& before, int staff)
     assignStaffFrom(system.keyAccidentals, before.keyAccidentals, staff);
     assignStaffFrom(system.timeSignatures, before.timeSignatures, staff);
     assignStaffFrom(system.noteheads, before.noteheads, staff);
+    assignStaffFrom(system.ledgerLines, before.ledgerLines, staff);
     assignStaffFrom(system.stems, before.stems, staff);
     assignStaffFrom(system.beams, before.beams, staff);
     assignStaffFrom(system.rests, before.rests, staff);
+    assignStaffFrom(system.multiRests, before.multiRests, staff);
     assignStaffFrom(system.lyrics, before.lyrics, staff);
     assignStaffFrom(system.texts, before.texts, staff);
 }
@@ -1217,18 +1451,19 @@ struct StaffExtent
         return extents.at(std::min(index, extents.size() - 1));
     };
 
-    // Half a space each side of a notehead's centre; an accidental reaches a
-    // space and a half, which covers a flat's stem above and a sharp's below.
+    // Half a space each side of a notehead's centre, or as far as its
+    // accidental reaches, from the same table the stacking uses: a flat's stem
+    // rises nearly two spaces and barely drops below the note.
     constexpr double headReach = 0.5;
-    constexpr double accidentalReach = 1.5;
 
     for (const NoteheadGlyph& head : system.noteheads)
     {
         const double y = spacesBelowTopLine(head.position);
-        const double reach = head.accidental == AccidentalKind::none ? headReach : accidentalReach;
+        const AccidentalMetrics sign = accidentalMetricsFor(head.accidental);
+        const double scale = head.isGrace ? graceNoteScale : 1.0;
 
-        on(head.staff).include(y - reach);
-        on(head.staff).include(y + reach);
+        on(head.staff).include(y - std::max(headReach, sign.above * scale));
+        on(head.staff).include(y + std::max(headReach, sign.below * scale));
     }
 
     for (const StemGlyph& stem : system.stems)
@@ -1249,6 +1484,129 @@ struct StaffExtent
     }
 
     return extents;
+}
+
+// "1." for a first ending, "1. 2." for one shared by both, as written.
+[[nodiscard]] std::string voltaLabelFor(const std::vector<int>& numbers)
+{
+    std::string label;
+
+    for (const int number : numbers)
+    {
+        if (!label.empty())
+        {
+            label += ' ';
+        }
+
+        label += std::to_string(number) + '.';
+    }
+
+    return label;
+}
+
+// Where one measure sits on its system, for the ending brackets drawn over it.
+struct MeasureSpan
+{
+    const score::Measure* measure = nullptr;
+    double startX = 0.0;
+    double endX = 0.0;
+};
+
+// Jump marks for one system (design.md decision 9). "Segno" and "Coda", as
+// written in any case, are their signs at the measure's start; every other
+// string is text at its end. An unrecognised string is drawn rather than
+// dropped, because a jump the reader cannot see sends them the wrong way.
+void addJumps(System& system, const std::vector<MeasureSpan>& spans)
+{
+    constexpr double barlineInset = 0.3;
+
+    const auto lowered = [](std::string text)
+    {
+        std::transform(
+            text.begin(), text.end(), text.begin(), [](char character)
+            { return static_cast<char>(std::tolower(static_cast<unsigned char>(character))); });
+
+        return text;
+    };
+
+    for (std::size_t index = 0; index < spans.size(); ++index)
+    {
+        const MeasureSpan& span = spans.at(index);
+
+        for (const std::string& written : span.measure->repeats.jumps)
+        {
+            JumpGlyph jump;
+            jump.text = written;
+
+            const std::string key = lowered(written);
+
+            if (key == "segno" || key == "coda")
+            {
+                jump.sign = key == "segno" ? JumpSign::segno : JumpSign::coda;
+                jump.x = (index == 0 ? std::max(span.startX, system.headerEndX) : span.startX) +
+                         barlineInset;
+            }
+            else
+            {
+                jump.x = span.endX - barlineInset;
+            }
+
+            system.jumps.push_back(jump);
+        }
+    }
+}
+
+// Ending brackets for one system (design.md decision 8). A bracket is a run of
+// consecutive measures sharing the same non-empty ending numbers, and it ends at
+// a measure that closes on a repeat barline even if the next has the same
+// numbers. `before` is the measure just ahead of this system, if any, so a run
+// that started there continues here without a second label.
+void addVoltas(System& system, const std::vector<MeasureSpan>& spans, const score::Measure* before)
+{
+    // Inset from the barlines either side, so a hook does not sit on one.
+    constexpr double barlineInset = 0.25;
+
+    const auto continues = [](const score::Measure* previous, const score::Measure& next)
+    {
+        return previous != nullptr && !previous->repeats.repeatEnd &&
+               previous->repeats.endingNumbers == next.repeats.endingNumbers;
+    };
+
+    std::size_t index = 0;
+
+    while (index < spans.size())
+    {
+        const score::Measure& first = *spans.at(index).measure;
+
+        if (first.repeats.endingNumbers.empty())
+        {
+            ++index;
+            continue;
+        }
+
+        const score::Measure* previous = index == 0 ? before : spans.at(index - 1).measure;
+        const bool carriedOver = index == 0 && continues(previous, first);
+
+        std::size_t last = index;
+
+        while (last + 1 < spans.size() && !spans.at(last).measure->repeats.repeatEnd &&
+               spans.at(last + 1).measure->repeats.endingNumbers == first.repeats.endingNumbers)
+        {
+            ++last;
+        }
+
+        VoltaGlyph volta;
+        volta.startX = (index == 0 ? std::max(spans.at(index).startX, system.headerEndX)
+                                   : spans.at(index).startX) +
+                       barlineInset;
+        volta.endX = spans.at(last).endX - barlineInset;
+        volta.label = carriedOver ? std::string{} : voltaLabelFor(first.repeats.endingNumbers);
+        volta.hookAtStart = !carriedOver;
+        volta.hookAtEnd = spans.at(last).measure->repeats.repeatEnd;
+        system.voltas.push_back(volta);
+
+        index = last + 1;
+    }
 }
 
 // Puts every line of text on its band, clear of the notes, then stacks the
@@ -1301,6 +1659,42 @@ void placeTextAndStaves(ScoreLayout& layout, const LayoutOptions& options)
 
         // How far each staff's contents reach once its text is placed.
         std::vector<StaffExtent> reach = notes;
+
+        // Ending brackets sit nearest the top staff, one line for the whole
+        // system, with their hooks clear of its notes. The top staff's other
+        // text goes above them, so a tempo mark or a measure number is never
+        // written through a bracket.
+        if (!system.voltas.empty())
+        {
+            const double lineY = std::min(
+                -options.voltaAboveStaff,
+                notes.front().top - options.textClearance - options.voltaHookLength);
+
+            for (VoltaGlyph& volta : system.voltas)
+            {
+                volta.y = lineY;
+            }
+
+            reach.front().include(lineY);
+            aboveBase.front() =
+                std::min(aboveBase.front(), lineY - options.textClearance - options.textBandHeight);
+        }
+
+        // Jump marks on a row of their own, where the top staff's text row
+        // would be, grown to a sign's height; that text then goes above them.
+        if (!system.jumps.empty())
+        {
+            const double rowTop =
+                aboveBase.front() - (options.jumpSignHeight - options.textBandHeight);
+
+            for (JumpGlyph& jump : system.jumps)
+            {
+                jump.y = rowTop;
+            }
+
+            reach.front().include(rowTop);
+            aboveBase.front() = rowTop - options.textClearance - options.textBandHeight;
+        }
 
         for (LyricGlyph& lyric : system.lyrics)
         {
@@ -1491,16 +1885,6 @@ void liftTempoMarksToTop(System& system, int lastStaffOfFirstPart)
         plan.key = key;
         plan.time = time;
 
-        if (!measure.repeats.endingNumbers.empty())
-        {
-            notices.add("First and second endings are not marked yet.");
-        }
-
-        if (!measure.repeats.jumps.empty())
-        {
-            notices.add("Navigation marks such as D.C., D.S., Fine and Coda are not shown yet.");
-        }
-
         planMeasure(plan, measure, staff, options, notices, lyricVerseCount);
 
         plans.push_back(std::move(plan));
@@ -1544,6 +1928,29 @@ void liftTempoMarksToTop(System& system, int lastStaffOfFirstPart)
 }
 } // namespace
 
+std::vector<PartKey> drawablePartsOf(const score::Score& score)
+{
+    std::vector<PartKey> drawable;
+
+    for (const score::Part& part : score.parts)
+    {
+        bool anyPitchedStaff = false;
+
+        for (int staff = 1; staff <= std::max(1, part.staffCount); ++staff)
+        {
+            anyPitchedStaff = anyPitchedStaff || isPitchedClef(openingClef(part, staff));
+        }
+
+        // The same tests `layOutScore` applies to decide a part is drawn.
+        if (anyPitchedStaff && !part.measures.empty() && holdsAnyEvent(part))
+        {
+            drawable.push_back(PartKey{part.id, part.name});
+        }
+    }
+
+    return drawable;
+}
+
 ScoreLayout
 layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOptions& options)
 {
@@ -1585,8 +1992,37 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
 
     std::vector<DrawnPart> drawnParts;
 
+    // Which parts the reader hid -- unless that is every part this pass could
+    // draw, in which case the selection is ignored (score-part-selection
+    // design.md decision 2): an empty page is never the answer.
+    const auto hiddenByChoice = [&options](const score::Part& part)
+    {
+        return std::find(
+                   options.hiddenParts.begin(), options.hiddenParts.end(),
+                   PartKey{part.id, part.name}) != options.hiddenParts.end();
+    };
+
+    const std::vector<PartKey> drawable = drawablePartsOf(*score);
+    const bool anyShown = std::any_of(
+        drawable.begin(), drawable.end(),
+        [&options](const PartKey& key)
+        {
+            return std::find(options.hiddenParts.begin(), options.hiddenParts.end(), key) ==
+                   options.hiddenParts.end();
+        });
+
+    std::vector<const score::Part*> hiddenParts;
+
     for (const score::Part& part : score->parts)
     {
+        // Before any notice: a hidden part says nothing about itself.
+        if (anyShown && hiddenByChoice(part))
+        {
+            hiddenParts.push_back(&part);
+
+            continue;
+        }
+
         const std::string subject = severalParts ? nameOf(part) : "This part";
         const std::string object = severalParts ? nameOf(part) : "this part";
 
@@ -1720,6 +2156,41 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         layout.lyricVerseCount = std::max(layout.lyricVerseCount, partVerses.at(partIndex));
     }
 
+    // A hidden part's tempo marks go to the top staff shown, where a tempo is
+    // drawn anyway, unless that staff already has one at the same moment.
+    for (const score::Part* hidden : hiddenParts)
+    {
+        for (std::size_t measure = 0; measure < measureCount && measure < hidden->measures.size();
+             ++measure)
+        {
+            MeasurePlan& top = plansByStaff.front().at(measure);
+
+            for (const score::Direction& direction : hidden->measures.at(measure).directions)
+            {
+                if (direction.kind != score::DirectionKind::tempo)
+                {
+                    continue;
+                }
+
+                const auto sameMoment = [&direction](const score::Direction& other) {
+                    return other.kind == score::DirectionKind::tempo &&
+                           other.onset == direction.onset;
+                };
+
+                if (std::any_of(
+                        top.source->directions.begin(), top.source->directions.end(), sameMoment) ||
+                    std::any_of(top.borrowedTempos.begin(), top.borrowedTempos.end(), sameMoment))
+                {
+                    continue;
+                }
+
+                score::Direction lent = direction;
+                lent.staff = top.staff;
+                top.borrowedTempos.push_back(lent);
+            }
+        }
+    }
+
     for (std::size_t measure = 0; measure < measureCount; ++measure)
     {
         std::vector<MeasurePlan*> column;
@@ -1792,11 +2263,11 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         [](const StaffGroup& group) { return group.lastStaff > group.firstStaff; });
     const double braceRoom = braced ? options.braceWidth : 0.0;
 
-    // Each part's name, beside its staves, when there is more than one part to
-    // tell apart: in full on the first system, shortened on every one after,
-    // where the reader already knows which staff is which. Room for them comes
-    // off the width the music has, so later systems -- with shorter names --
-    // hold more of it.
+    // Each part's name, beside its staves: in full on the first system, set in
+    // its indent even for a single part, and shortened on every system after
+    // when there is more than one part to tell apart -- a solo line needs no
+    // label once the reader is under way. Room for them comes off the width
+    // the music has, so later systems -- with shorter names -- hold more of it.
     const bool nameParts = drawnParts.size() > 1;
     std::vector<std::string> fullNames;
     std::vector<std::string> shortNames;
@@ -1810,9 +2281,9 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         shortNames.push_back(abbreviatedPartName(part.name, part.abbreviation));
     }
 
-    const auto nameRoomFor = [nameParts, &options](const std::vector<std::string>& names)
+    const auto nameRoomFor = [&options](const std::vector<std::string>& names, bool named)
     {
-        if (!nameParts)
+        if (!named)
         {
             return 0.0;
         }
@@ -1841,8 +2312,8 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
                options.partNameGap;
     };
 
-    const double firstNameRoom = nameRoomFor(fullNames);
-    const double laterNameRoom = nameRoomFor(shortNames);
+    const double firstNameRoom = std::max(options.firstSystemIndent, nameRoomFor(fullNames, true));
+    const double laterNameRoom = nameRoomFor(shortNames, nameParts);
     const auto nameRoomOf = [firstNameRoom, laterNameRoom](std::size_t systemIndex)
     { return systemIndex == 0 ? firstNameRoom : laterNameRoom; };
 
@@ -1862,6 +2333,45 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         return widest;
     };
 
+    // Runs of empty bars, condensed into one multi-measure rest each. The run
+    // is laid out as its first bar, and `barsAt` says how many bars each laid
+    // out measure stands for: 1 almost everywhere.
+    std::vector<int> barsAt(measureCount, 1);
+
+    const auto emptyEverywhere = [&plansByStaff](std::size_t measure)
+    {
+        return std::all_of(
+            plansByStaff.begin(), plansByStaff.end(),
+            [measure](const std::vector<MeasurePlan>& plans)
+            { return isEmptyBar(plans.at(measure)); });
+    };
+
+    for (std::size_t index = 0; index < measureCount;)
+    {
+        std::size_t end = index;
+
+        while (end < measureCount && emptyEverywhere(end))
+        {
+            ++end;
+        }
+
+        if (end - index >= 2)
+        {
+            barsAt.at(index) = static_cast<int>(end - index);
+            index = end;
+        }
+        else
+        {
+            index = std::max(end, index + 1);
+        }
+    }
+
+    const auto widthOfBar = [&plansByStaff, &barsAt, &options](std::size_t measure)
+    {
+        return barsAt.at(measure) > 1 ? options.multiMeasureRestWidth
+                                      : plansByStaff.front().at(measure).contentWidth;
+    };
+
     // Pack measures into systems. At least one measure per system, however
     // wide it is: a bar that does not fit anywhere has to go somewhere, and
     // overflowing is more honest than dropping it.
@@ -1872,10 +2382,40 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     const auto availableFor = [&options, braceRoom, &nameRoomOf](std::size_t systemIndex)
     { return options.availableWidth - braceRoom - nameRoomOf(systemIndex); };
 
-    for (std::size_t index = 0; index < measureCount; ++index)
+    // Whether a system may end after this laid-out measure at a structural
+    // place (design.md decision 13): on a repeat barline either side of the
+    // break, or where an ending's bracket ends.
+    const auto structuralAfter = [&plansByStaff, &barsAt, measureCount](std::size_t measure)
+    {
+        const std::size_t last = measure + static_cast<std::size_t>(barsAt.at(measure)) - 1;
+        const MeasurePlan& here = plansByStaff.front().at(last);
+
+        if (here.repeatEnd)
+        {
+            return true;
+        }
+
+        if (last + 1 >= measureCount)
+        {
+            return false;
+        }
+
+        const MeasurePlan& next = plansByStaff.front().at(last + 1);
+        const std::vector<int>& ending = here.source->repeats.endingNumbers;
+
+        return next.repeatStart ||
+               (!ending.empty() && next.source->repeats.endingNumbers != ending);
+    };
+
+    // The widths of the measures on the system being filled, parallel to
+    // `packed.back()`, so one can be moved on to the next system.
+    std::vector<double> widthsOnSystem;
+
+    for (std::size_t index = 0; index < measureCount;
+         index += static_cast<std::size_t>(barsAt.at(index)))
     {
         // The same on every staff: spaceMeasure gives a measure one width.
-        const double contentWidth = plansByStaff.front().at(index).contentWidth;
+        const double contentWidth = widthOfBar(index);
 
         const bool wouldStartSystem = packed.empty() || packed.back().empty();
 
@@ -1883,20 +2423,60 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
 
         if (!wouldStartSystem && cursor + width > availableFor(packed.size() - 1))
         {
-            packed.emplace_back();
-            cursor = headerWidthAt(index, true) + contentWidth;
-        }
-        else
-        {
-            if (packed.empty())
+            // The fill would break before this measure. If that is an ordinary
+            // place and the bar before is a structural one, break there
+            // instead -- as long as what is left is three quarters full.
+            std::vector<std::size_t> carried;
+            std::vector<std::size_t>& filling = packed.back();
+
+            if (filling.size() >= 2 && !structuralAfter(filling.back()) &&
+                structuralAfter(filling.at(filling.size() - 2)) &&
+                cursor - widthsOnSystem.back() >=
+                    structuralBreakMinimumFill * availableFor(packed.size() - 1))
             {
-                packed.emplace_back();
+                carried.push_back(filling.back());
+                filling.pop_back();
             }
 
-            cursor += width;
+            packed.emplace_back();
+            widthsOnSystem.clear();
+            cursor = 0.0;
+
+            for (const std::size_t moved : carried)
+            {
+                const double movedWidth =
+                    headerWidthAt(moved, packed.back().empty()) + widthOfBar(moved);
+                packed.back().push_back(moved);
+                widthsOnSystem.push_back(movedWidth);
+                cursor += movedWidth;
+            }
+
+            // A measure carried over and this one may not fit together; then
+            // this one starts a system of its own, as the greedy fill would.
+            if (!packed.back().empty() && cursor + headerWidthAt(index, false) + contentWidth >
+                                              availableFor(packed.size() - 1))
+            {
+                packed.emplace_back();
+                widthsOnSystem.clear();
+                cursor = 0.0;
+            }
+
+            const double placed = headerWidthAt(index, packed.back().empty()) + contentWidth;
+            packed.back().push_back(index);
+            widthsOnSystem.push_back(placed);
+            cursor += placed;
+
+            continue;
         }
 
+        if (packed.empty())
+        {
+            packed.emplace_back();
+        }
+
+        cursor += width;
         packed.back().push_back(index);
+        widthsOnSystem.push_back(width);
     }
 
     // Each staff after the first starts below the previous one's bottom line,
@@ -1928,7 +2508,10 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
         // decided once its text is placed: see placeTextAndStaves.
         System system;
         system.firstMeasureIndex = plansByStaff.front().at(measures.front()).index;
-        system.lastMeasureIndex = plansByStaff.front().at(measures.back()).index;
+        system.lastMeasureIndex =
+            plansByStaff.front()
+                .at(measures.back() + static_cast<std::size_t>(barsAt.at(measures.back())) - 1)
+                .index;
         system.staffOffsets = staffOffsets;
         system.staffGroups = staffGroups;
         system.staffLyricVerses = staffVerses;
@@ -1950,13 +2533,42 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
             }
         }
 
+        // Justification (design.md decision 10): every system but the last is
+        // stretched to the width it has, by scaling the room inside its
+        // measures. Headers keep their width -- a clef stretched is a clef
+        // misdrawn -- and a system is never squeezed, so one that overflows
+        // with a single wide bar stays as it is.
+        double stretch = 1.0;
+
+        if (systemIndex + 1 < packed.size())
+        {
+            double natural = 0.0;
+            double content = 0.0;
+
+            for (std::size_t slot = 0; slot < measures.size(); ++slot)
+            {
+                const double width = widthOfBar(measures.at(slot));
+                natural += headerWidthAt(measures.at(slot), slot == 0) + width;
+                content += width;
+            }
+
+            const double spare = availableFor(systemIndex) - natural;
+
+            if (spare > 0.0 && content > 0.0)
+            {
+                stretch = (content + spare) / content;
+            }
+        }
+
         double x = system.staffStartX;
+        std::vector<MeasureSpan> spans;
 
         for (std::size_t slot = 0; slot < measures.size(); ++slot)
         {
             const std::size_t measure = measures.at(slot);
             const bool startsSystem = slot == 0;
-            const bool isLastMeasure = measure + 1 == measureCount;
+            const int bars = barsAt.at(measure);
+            const bool isLastMeasure = measure + static_cast<std::size_t>(bars) == measureCount;
 
             // Every staff's music starts where the latest-starting staff's does.
             // For a single staff this is its own start, exactly as before.
@@ -1970,6 +2582,14 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
                     contentStartFor(plansByStaff.at(staff).at(measure), startsSystem, x, options));
             }
 
+            if (startsSystem)
+            {
+                // A system always opens with at least a clef, so the content
+                // start is the header's end plus the gap after a header and the
+                // lead-in; take both back off.
+                system.headerEndX = contentStart - contentLeadIn - headerGap;
+            }
+
             double barlineX = x;
 
             for (std::size_t staff = 0; staff < plansByStaff.size(); ++staff)
@@ -1979,27 +2599,34 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
                 barlineX = emitMeasure(
                     system, systemIndex, plansByStaff.at(staff).at(measure), startsSystem,
                     isLastMeasure, options, placements.at(partOfStaff.at(staff)), x, contentStart,
-                    static_cast<int>(staff));
+                    static_cast<int>(staff), stretch, bars);
 
                 assignStaff(system, before, static_cast<int>(staff));
             }
 
+            spans.push_back(MeasureSpan{plansByStaff.front().at(measure).source, x, barlineX});
             x = barlineX;
         }
 
         system.width = x;
+
+        addJumps(system, spans);
+
+        addVoltas(
+            system, spans,
+            measures.front() == 0 ? nullptr : plansByStaff.front().at(measures.front() - 1).source);
 
         liftTempoMarksToTop(system, staffGroups.front().lastStaff);
 
         layout.systems.push_back(std::move(system));
     }
 
-    // Ties, once every notehead has a system and an x. A tie whose two ends
-    // landed on different systems is reported rather than drawn as a curve
-    // running the wrong way across the page. Each is drawn on the staff of the
-    // note it leaves.
-    std::size_t tiesAcrossSystems = 0;
-
+    // Ties, once every notehead has a system and an x. Each is drawn on the
+    // staff of the note it leaves, bowing away from that note's stem. A tie
+    // whose ends landed on different systems is drawn as two halves (design.md
+    // decision 5): from its note to the end of the system, then from just
+    // after the next system's clef and key to the note it ties into. Both halves bow the same way,
+    // so they read as one tie.
     for (std::size_t staff = 0; staff < plansByStaff.size(); ++staff)
     {
         const NotePlacementMap& partPlacements = placements.at(partOfStaff.at(staff));
@@ -2030,29 +2657,36 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
                         continue;
                     }
 
-                    if (start->second.systemIndex != end->second.systemIndex)
+                    const NotePlacement& from = start->second;
+                    const NotePlacement& to = end->second;
+                    const bool above = !from.stemUp;
+
+                    if (from.systemIndex == to.systemIndex)
                     {
-                        ++tiesAcrossSystems;
+                        TieGlyph tie{from.x, to.x, from.position, above};
+                        tie.staff = from.staff;
+                        layout.systems.at(from.systemIndex).ties.push_back(tie);
 
                         continue;
                     }
 
-                    TieGlyph tie{
-                        start->second.x, end->second.x, start->second.position,
-                        !start->second.stemUp};
-                    tie.staff = start->second.staff;
+                    System& leaving = layout.systems.at(from.systemIndex);
+                    System& arriving = layout.systems.at(to.systemIndex);
 
-                    layout.systems.at(start->second.systemIndex).ties.push_back(tie);
+                    TieGlyph first{from.x, leaving.width - tieHalfEndInset, from.position, above};
+                    first.staff = from.staff;
+                    leaving.ties.push_back(first);
+
+                    // On the arriving system's copy of the staff: the same staff
+                    // of the same part, which is the note's own.
+                    TieGlyph second{
+                        arriving.headerEndX + tieHalfStartGap, to.x, to.position, above};
+                    second.staff = to.staff;
+                    second.fromSystemStart = true;
+                    arriving.ties.push_back(second);
                 }
             }
         }
-    }
-
-    if (tiesAcrossSystems > 0)
-    {
-        notices.add(
-            "Not shown: " + pluralised(tiesAcrossSystems, "tie") +
-            " that run from one line of music onto the next.");
     }
 
     const bool anyBeam = std::any_of(

@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include "application/tools/ToolComponent.h"
+#include "application/tools/ToolMenuEntries.h"
 
 #include <functional>
 #include <utility>
@@ -50,12 +51,31 @@ class ToolOptionsButton final : public juce::TextButton
         // usually opened for, while the shell's three are the same everywhere.
         auto entries = toolEntries ? toolEntries() : std::vector<ToolComponent::MenuEntry>{};
 
-        for (std::size_t index = 0; index < entries.size(); ++index)
+        // Depth-first, numbering only what can be chosen -- the same order
+        // `tool_menu::entryNumbered` finds them in.
+        int nextNumber = firstToolEntry;
+
+        const auto addLevel =
+            [&nextNumber](
+                juce::PopupMenu& into, const std::vector<ToolComponent::MenuEntry>& level,
+                const auto& self) -> void
         {
-            menu.addItem(
-                firstToolEntry + static_cast<int>(index), entries[index].label, true,
-                entries[index].ticked);
-        }
+            for (const ToolComponent::MenuEntry& entry : level)
+            {
+                if (entry.submenu.empty())
+                {
+                    into.addItem(nextNumber++, entry.label, entry.enabled, entry.ticked);
+
+                    continue;
+                }
+
+                juce::PopupMenu sub;
+                self(sub, entry.submenu, self);
+                into.addSubMenu(entry.label, sub, entry.enabled);
+            }
+        };
+
+        addLevel(menu, entries, addLevel);
 
         if (!entries.empty())
         {
@@ -101,11 +121,16 @@ class ToolOptionsButton final : public juce::TextButton
                     // must not have a stale action run against it.
                     auto current = safeThis->toolEntries ? safeThis->toolEntries()
                                                          : std::vector<ToolComponent::MenuEntry>{};
-                    const auto index = static_cast<std::size_t>(selectedItemId - firstToolEntry);
+                    const auto number = static_cast<std::size_t>(selectedItemId - firstToolEntry);
 
-                    if (index < current.size())
+                    // A disabled entry cannot be chosen from the menu; checked
+                    // again here because the entries were re-asked, and the
+                    // state that disabled it may have changed since.
+                    if (const ToolComponent::MenuEntry* entry =
+                            tool_menu::entryNumbered(current, number);
+                        entry != nullptr && entry->enabled)
                     {
-                        action = current[index].action;
+                        action = entry->action;
                     }
                 }
 

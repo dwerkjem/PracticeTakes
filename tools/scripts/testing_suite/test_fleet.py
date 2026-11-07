@@ -139,23 +139,37 @@ class FleetTests(unittest.TestCase):
 
 
 class ContentionMessageTests(unittest.TestCase):
+    DEVICE = ("settings-audio-device",)
+
     def test_nothing_running_says_nothing(self) -> None:
-        self.assertEqual(fleet_module.contention_warning(set()), "")
+        self.assertEqual(fleet_module.contention_warning(set(), self.DEVICE), "")
+
+    def test_a_plan_opening_no_device_says_nothing(self) -> None:
+        """#180: a worker opens no input device, so an open application costs a
+        plan without the device surface nothing, and warning about it told
+        people to close the application they were working in for no reason."""
+        self.assertEqual(fleet_module.contention_warning({4242}), "")
+        self.assertEqual(fleet_module.contention_warning({4242}, ()), "")
 
     def test_the_message_names_what_is_running_and_what_it_costs(self) -> None:
-        message = fleet_module.contention_warning({4242})
+        message = fleet_module.contention_warning({4242}, self.DEVICE)
 
         self.assertIn("4242", message)
         self.assertIn("input device", message)
+        self.assertIn("settings-audio-device", message)
+        self.assertIn("Every other surface opens no device", message)
 
     def test_it_promises_not_to_close_them(self) -> None:
         """Said explicitly, because a tool that might close your editor is a
         tool you run differently."""
-        self.assertIn("nothing here will", fleet_module.contention_warning({1, 2}))
+        self.assertIn(
+            "Nothing here will close them",
+            fleet_module.contention_warning({1, 2}, self.DEVICE),
+        )
 
     def test_it_counts_correctly(self) -> None:
-        self.assertIn("instance is", fleet_module.contention_warning({1}))
-        self.assertIn("instances are", fleet_module.contention_warning({1, 2}))
+        self.assertIn("instance is", fleet_module.contention_warning({1}, self.DEVICE))
+        self.assertIn("instances are", fleet_module.contention_warning({1, 2}, self.DEVICE))
 
 
 

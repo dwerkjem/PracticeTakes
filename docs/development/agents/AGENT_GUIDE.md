@@ -198,7 +198,10 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   opens no input device and the generated tone is its only signal — one process
   at a time can hold the microphone, and a capture run must not take it from a
   live application. The two flags are separate so the channel can still be
-  driven against a real device by hand.
+  driven against a real device by hand. The approved states are written out to
+  `docs/contracts/testcontrol/approved-states.json`, which the harness reads
+  rather than restating them. Building `PracticeTakesTests` locally
+  regenerates it; commit it with the state change (CI only checks it).
   See `docs/development/quality/TESTING_SUITE.md`.
 - `src/features` — user-facing tools: `analysis/{tuner,spectrogram,harmonics}`,
   `score` (the Target Note tool, which reads one note as text, and the Score
@@ -357,6 +360,79 @@ against it — they can drift (`docs/development/quality/QA_STRATEGY.md` area 12
   for C++ changes under `src/**`/`src/tests/**`; `npm run check && npm run test`
   from `src/services/` for `src/services/**`; `python tools/scripts/run_tests.py` for
   `tools/scripts/**`.
+
+## Working autonomously (the default)
+
+The maintainer's standing instruction: **keep going until you need their
+feedback or a human's hands.** Finishing a step is not a reason to stop and
+report. Don't ask "shall I continue?", and don't wait for approval between
+tasks that are already specified. This applies in every session, whoever
+started it.
+
+### What to work on, in order
+
+1. Whatever the session's request names.
+2. When that is done, the next unchecked task in an OpenSpec change already in
+   implementation (`openspec/changes/*/tasks.md` with at least one task
+   checked). Take the tasks in the file's order; its tiers are ordered on
+   purpose.
+3. When no change in implementation has a task left that an agent can do, the
+   highest-priority open issue labelled `status:ready-for-agent`. Respect the
+   work-in-progress limit in `.github/CONTRIBUTING.md`: never start a fourth
+   change in implementation.
+
+Starting a *proposal* that isn't written yet is the maintainer's call: write one
+only when a request asks for it, or an issue marked ready for an agent says it
+needs one first.
+
+### How to carry each piece of work
+
+- Build, test, and for anything visual capture it with the testing suite
+  (`uv run test-suite capture --headless --scratch --surfaces …`). Read the
+  picture before calling the work done.
+- Tick the task in `tasks.md` in the same commit as the code. Record anything
+  you decided that the task didn't say, with the reason, in the change's
+  `design.md` or beside the task.
+- Commit in reviewable steps, push to the session's branch, and open a **draft**
+  pull request. Watch it. A red check or a review comment on your own PR is
+  work you do at once, not something to report and wait on.
+- Archive a change as soon as its last agent-doable task is done, moving any
+  hardware-only task to a `status:ready-for-human` issue, as CONTRIBUTING says.
+- Then pick the next piece of work from the list above, in the same session.
+
+### When to stop and ask
+
+Only for these:
+
+- **A decision that is genuinely the maintainer's**: the spec and design don't
+  settle it, and either answer changes what ships. Examples: a user-visible
+  behaviour with no stated preference, a change of scope, dropping or
+  reordering a task in a change, or an architecture choice
+  `ARCHITECTURE_QA.md` says needs a proposal. A sensible default you can
+  justify and record is **not** such a decision. Make the call, write down why,
+  and mention it in the PR.
+- **Something only a person can do**: real hardware (a microphone, a MIDI
+  keyboard, a sustain pedal), a credential, an account setting, a release.
+- **Being stuck**: the same failure after a real attempt at its root cause, or
+  a blocker outside the repository.
+- **Nothing left**: no agent-doable task in any change in implementation and
+  no `status:ready-for-agent` issue.
+
+When you stop, say exactly what you need and what you did up to that point, in
+one message. Batch questions rather than asking one per turn. Then carry on with
+any other work that doesn't depend on the answer.
+
+### What autonomy never covers
+
+These need the maintainer's own ask, every time, whatever this section says:
+
+- Merging, approving, or marking a pull request ready for review.
+- Pushing to `main`, rewriting shared history, or deleting branches, tags,
+  releases or issues.
+- Anything outside this repository: other repositories, publishing, external
+  services.
+- Lifting a hard constraint above: the repository root, the audio-thread
+  boundary, or the ownership model.
 
 ## Agent skills
 

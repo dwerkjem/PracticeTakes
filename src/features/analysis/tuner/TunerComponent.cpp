@@ -81,13 +81,23 @@ TunerComponent::TunerComponent(
     modeChooser = std::make_unique<ModeChooser>(displayModeLabel, displayModeBox);
     addAndMakeVisible(*modeChooser);
 
-    configureSlider(easingSlider, 0.02, 1.0, 0.01, AppDefaults::Tuner::easing, "");
-    configureSlider(averagingSlider, 1.0, 15.0, 1.0, AppDefaults::Tuner::averaging, " samples");
-    configureSlider(
-        thresholdSlider, 0.1, 1.5, 0.05, AppDefaults::Tuner::noteSwitchSemitones, " st");
-    configureSlider(dropoutSlider, 1.0, 20.0, 1.0, AppDefaults::Tuner::dropoutFrames, " frames");
-    configureSlider(
-        durationSlider, 5.0, 60.0, 1.0, AppDefaults::Tuner::graphDurationSeconds, " sec");
+    // Range, step and starting value from the tuner's settings schema, which
+    // the codec that restores these sliders validates against too.
+    const auto configureFromSchema =
+        [this](
+            juce::Slider& slider, double AppDefaults::TunerSettings::*member,
+            const juce::String& suffix)
+    {
+        const AppDefaults::TunerNumberField& field = AppDefaults::tunerField(member);
+        configureSlider(
+            slider, field.minimum, field.maximum, field.step, AppDefaults::tunerDefaults().*member,
+            suffix);
+    };
+    configureFromSchema(easingSlider, &AppDefaults::TunerSettings::easing, "");
+    configureFromSchema(averagingSlider, &AppDefaults::TunerSettings::averaging, " samples");
+    configureFromSchema(thresholdSlider, &AppDefaults::TunerSettings::noteSwitchSemitones, " st");
+    configureFromSchema(dropoutSlider, &AppDefaults::TunerSettings::dropoutFrames, " frames");
+    configureFromSchema(durationSlider, &AppDefaults::TunerSettings::graphDurationSeconds, " sec");
 
     clearGraphButton.onClick = [this]
     {

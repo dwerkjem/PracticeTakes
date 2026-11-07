@@ -73,6 +73,16 @@ declare a `settingsVersion`, and must check the version it is handed rather than
 trusting it — see `TunerComponent` and `TunerSettingsCodec` for the pattern of
 keeping the format with the tool that understands it.
 
+A tool may add its own entries to its options menu (the `...` button) through
+`optionsMenuEntries()`, a list of `ToolComponent::MenuEntry`: a label, an action
+and a tick, shown above the shell's own items. An entry can also be disabled
+(`enabled = false`), shown but not choosable, or be a heading whose `submenu`
+holds more entries; the Score View's "Parts" is both. The shell numbers the
+choosable entries depth-first (`application/tools/ToolMenuEntries.h`) and asks
+the tool for its entries again when one is chosen, so entries built from the
+tool's own state never run a stale action. An entry that sets neither field
+behaves as entries always have.
+
 Reach shared services only through `ToolServices`. A `src/features/*` tool must
 never reach into the shell or into another tool.
 
@@ -96,8 +106,11 @@ of which fail a test if you skip them:
    `every tool can be open at once` compares that state against the catalog, so
    it fails otherwise.
 3. **A surface in `tools/scripts/testing_suite/surfaces.py`**, naming the state
-   and the questions a reviewer should answer about the picture. Nothing
-   enforces this one: skip it and the tool is simply never photographed.
+   and the questions a reviewer should answer about the picture. Only the state
+   and the questions: which tools it opens, how, and in which window come from
+   the generated approved-states manifest, which building `PracticeTakesTests`
+   rewrites after steps 1 and 2; commit it with them. Nothing enforces the surface itself: skip it and the tool is simply
+   never photographed.
 
 `the built-in catalog declares every shipped tool` also pins the number of
 tools. Bumping it is deliberate — it is what makes adding a tool to the roster
@@ -160,6 +173,8 @@ first. Do not move that declaration.
 - [ ] An approved state in `src/application/testcontrol/ApprovedWindowStates.cpp`
       names the tool, so it can be manually verified.
 - [ ] `all-tools-docked` includes the tool.
+- [ ] `docs/contracts/testcontrol/approved-states.json` committed with the
+      state change (a local test build regenerates it).
 - [ ] The tool count in `ToolCatalogTests` bumped.
 - [ ] A surface in `tools/scripts/testing_suite/surfaces.py` names the state, so
       the tool is actually photographed.

@@ -61,8 +61,6 @@ struct NoteheadGlyph
     // Augmentation dots, drawn to the right.
     int dots = 0;
 
-    LedgerLines ledger;
-
     // Drawn smaller, and took no horizontal time of its own.
     bool isGrace = false;
 
@@ -71,7 +69,41 @@ struct NoteheadGlyph
     // the staff is. Last, and defaulted, so every existing initialiser still
     // describes a glyph on the only staff a single-staff system has.
     int staff = 0;
+
+    // Where the accidental's left edge goes, which is its SMuFL origin. Decided
+    // here rather than by the painter because a chord's signs are stacked
+    // against each other into columns (design.md decision 3), and the painter
+    // sees one notehead at a time. Meaningless when `accidental` is `none`.
+    double accidentalX = 0.0;
 };
+
+// One ledger line, for every note of one chord that needs it (design.md
+// decision 7). Two notes above the staff share their lines rather than each
+// drawing its own, and a note pushed across the stem by a second lengthens the
+// line it sits on rather than getting a second one beside it.
+struct LedgerLineGlyph
+{
+    // The line's ends, in staff spaces from the system's left edge: past the
+    // outermost noteheads that use it by the ledger extension, and shorter on
+    // the side where an accidental stands, so the sign does not sit on the end
+    // of the line.
+    double leftX = 0.0;
+    double rightX = 0.0;
+
+    // A staff position beyond the staff, on a line: -2, -4, ... above and 10,
+    // 12, ... below.
+    StaffSteps position = 0;
+
+    bool isGrace = false;
+
+    int staff = 0;
+};
+
+// Grace notes are drawn at this fraction of full size: the convention for cue
+// and grace notation, small enough to read as not taking time and large enough
+// to read at all. Here rather than in the painter because the layout places a
+// grace note's accidental, and has to know how wide the painter will draw it.
+inline constexpr double graceNoteScale = 0.66;
 
 // A stem, with its flags. One per event that has one -- a chord's notes share
 // a stem, which is why this is not a field on the notehead.
@@ -245,6 +277,83 @@ struct TieGlyph
     // the staff is. Last, and defaulted, so every existing initialiser still
     // describes a glyph on the only staff a single-staff system has.
     int staff = 0;
+
+    // The second half of a tie split by a system break: it starts at `startX`
+    // itself, after the new system's clef and key, rather than after a
+    // notehead, because there is no notehead there to leave from. The first
+    // half needs no flag -- it leaves its note as any tie does and runs to the
+    // system's end.
+    bool fromSystemStart = false;
+};
+
+// A first, second or shared ending: a bracket over the measures it covers,
+// labelled with their ending numbers (design.md decision 8). Drawn once per
+// system above the top staff, like a tempo mark, because an ending belongs to
+// the whole score and not to one part.
+struct VoltaGlyph
+{
+    double startX = 0.0;
+    double endX = 0.0;
+
+    // "1.", or "1. 2." for a shared ending. Empty on the system a bracket
+    // continues onto: the label is written once, where the ending begins.
+    std::string label;
+
+    // The hooks that turn down at each end. A bracket begins with one, except
+    // where it continues from the system before. It ends with one when its
+    // last measure closes on a repeat barline -- the first ending, which goes
+    // back -- and is left open otherwise.
+    bool hookAtStart = true;
+    bool hookAtEnd = false;
+
+    // The bracket's line, in staff spaces below the top staff's top line --
+    // negative, since it is above. Placed by the layout clear of the notes.
+    double y = 0.0;
+};
+
+// Two or more bars of rest in a row, condensed into one (design.md decision
+// 12): an H-bar across the bar with the count over the staff. Drawn on every
+// staff, since a run is only condensed when every staff rests.
+struct MultiRestGlyph
+{
+    // The bar it stands in, from just after its opening barline to its closing
+    // one; the painter insets the H-bar inside this.
+    double startX = 0.0;
+    double endX = 0.0;
+
+    // How many bars it stands for.
+    int count = 0;
+
+    int staff = 0;
+};
+
+// A jump instruction (design.md decision 9). A Segno or Coda is its sign, at
+// the start of its measure; anything else -- "D.S. al Coda", "Fine", "To Coda",
+// or a string nothing here recognises -- is its text, right-aligned at the end
+// of its measure, where an instruction that takes effect after the bar goes.
+// Drawn once per system above the top staff, like an ending.
+enum class JumpSign
+{
+    none,
+    segno,
+    coda
+};
+
+struct JumpGlyph
+{
+    // The sign's left edge, or the right edge the text is aligned to.
+    double x = 0.0;
+
+    // The text as written. Kept for a sign too, so a caller can tell what the
+    // file said.
+    std::string text;
+
+    JumpSign sign = JumpSign::none;
+
+    // The top of the jump row, in staff spaces below the top staff's top line.
+    // A sign is drawn `jumpSignHeight` tall with its foot at the row's bottom;
+    // text sits at the top of the row.
+    double y = 0.0;
 };
 
 struct LyricGlyph
@@ -347,13 +456,21 @@ struct System
     std::vector<KeyAccidentalGlyph> keyAccidentals;
     std::vector<TimeSignatureGlyph> timeSignatures;
     std::vector<NoteheadGlyph> noteheads;
+    std::vector<LedgerLineGlyph> ledgerLines;
     std::vector<StemGlyph> stems;
     std::vector<BeamGlyph> beams;
     std::vector<RestGlyph> rests;
+    std::vector<MultiRestGlyph> multiRests;
     std::vector<BarlineGlyph> barlines;
     std::vector<TieGlyph> ties;
+    std::vector<VoltaGlyph> voltas;
+    std::vector<JumpGlyph> jumps;
     std::vector<LyricGlyph> lyrics;
     std::vector<TextGlyph> texts;
+
+    // Where the clef, key and any time signature that open the system end. A
+    // tie carried over from the system before starts just after it.
+    double headerEndX = 0.0;
 
     // The measures this system holds, as indices into the part. Inclusive.
     std::size_t firstMeasureIndex = 0;
@@ -407,6 +524,18 @@ enum class LayoutOutcome
     laidOut
 };
 
+// A part, named the way a saved selection names it: by its MusicXML id and its
+// name together (score-part-selection design.md decision 2). Exporters number
+// parts P1, P2... in every file, so an id alone would match the wrong part of
+// the next score opened.
+struct PartKey
+{
+    std::string id;
+    std::string name;
+
+    bool operator==(const PartKey&) const = default;
+};
+
 // The spacing decisions, in staff spaces, gathered so that each is one number a
 // reader can find rather than a literal in the middle of the engine.
 //
@@ -418,6 +547,12 @@ struct LayoutOptions
 {
     // What the layout has to fit into. Systems break at this width.
     double availableWidth = 120.0;
+
+    // Parts the reader has chosen not to see. A part matching one -- id and name
+    // both -- is left out before anything else looks at it, so the rest lay out
+    // as if the score held only them, and it reports nothing. When nothing
+    // drawable would be left, this is ignored and every part is drawn.
+    std::vector<PartKey> hiddenParts;
 
     // Staff spaces of horizontal room per quarter note of music.
     double durationStretchPerQuarter = 7.0;
@@ -431,14 +566,40 @@ struct LayoutOptions
     // the font, because a stem placed by one width against a notehead drawn at
     // another stands off it or cuts into it.
     double noteheadWidth = 1.18;
-    double accidentalWidth = 1.4;
     double graceNoteWidth = 1.7;
+
+    // How far a ledger line reaches past each side of the noteheads on it, and
+    // how far on the side an accidental stands: shortened there, as Gould
+    // prescribes, so the sign does not sit on the line's end.
+    double ledgerLineExtension = 0.4;
+    double ledgerLineExtensionBesideAccidental = 0.1;
+
+    // A chord's accidentals, stacked in columns to the left of its leftmost
+    // notehead (design.md decision 3). The gap is between the nearest column
+    // and that notehead; the column gap is between one column and the next.
+    // A slot reserves the width its stack actually uses, so these are the
+    // whole of how much room an accidental takes.
+    double accidentalGap = 0.2;
+    double accidentalColumnGap = 0.12;
+
+    // The least room between two signs sharing a column, top of one to bottom
+    // of the other. Boxes alone would let two flats a sixth apart meet stem to
+    // stem, which reads as one long stem with two bowls. Sharps and naturals
+    // are *not* allowed to interlock: in Bravura their uprights line up when
+    // right-aligned, and a fifth apart the upper sign's stem runs straight into
+    // the lower one's, so a triad's three sharps take three columns.
+    double accidentalVerticalClearance = 0.1;
+
     double clefWidth = 3.6;
     double keyAccidentalWidth = 1.1;
     double timeSignatureWidth = 2.8;
 
     // Room after the last onset of a measure, before its barline.
     double measureTrailingWidth = 1.8;
+
+    // How wide a multi-measure rest's bar is, whatever it stands for: a run of
+    // eight empty bars takes the room of one.
+    double multiMeasureRestWidth = 14.0;
 
     // Room a flag needs to the right of an up stem. The floor between two
     // onsets has to clear a notehead and a flag together, or a flagged eighth
@@ -498,6 +659,13 @@ struct LayoutOptions
     // Between the end of a name and the brace or staves it names.
     double partNameGap = 1.0;
 
+    // How far the first system is indented, with the part's name set in it
+    // (design.md decision 11): the convention that marks where a piece begins.
+    // A name too long for the indent widens it. Every later system starts at
+    // the margin, past only the short names a score of several parts needs to
+    // tell its staves apart.
+    double firstSystemIndent = 5.0;
+
     // Room per lyric verse, below the staff and above the dynamics.
     double lyricRowHeight = 1.8;
 
@@ -511,6 +679,18 @@ struct LayoutOptions
 
     // How much higher a measure number sits than a tempo mark beside it.
     double measureNumberAboveTempo = 1.3;
+
+    // An ending bracket: how far above the top line its line sits when nothing
+    // is in the way, and how far its hooks hang down from it. The label sits
+    // under the line, inside the hook, so the hook length is also the room the
+    // bracket needs. Tempo marks and measure numbers go above a bracket.
+    double voltaAboveStaff = 2.8;
+    double voltaHookLength = 1.6;
+
+    // How tall a Segno or Coda sign is drawn. Bravura's are three to four
+    // spaces tall at full size, which is more than a line of text; the jump row
+    // is this tall, and tempo marks and measure numbers go above it.
+    double jumpSignHeight = 2.2;
 
     // How tall a line of text is, for clearing it.
     double textBandHeight = 1.7;

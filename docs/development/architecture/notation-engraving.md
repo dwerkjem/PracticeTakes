@@ -62,9 +62,18 @@ parity test and a test assertion reads as a position you can count off a staff.
    across every staff at once**, so a beat lands at one x on all of them.
 2. **Pack measures into systems** at `options.availableWidth`. Clef and key
    repeat at every system start; a time signature does not. At least one measure
-   per system, however wide it is.
+   per system, however wide it is. When the fill would break in an ordinary
+   place and the bar before is a structural one — a repeat barline either side
+   of the break, or the end of an ending's bracket — the break moves back to it,
+   provided the line it leaves is still three quarters full. Nothing subtler:
+   a break at a phrase needs judgement this layer does not have.
 3. **Emit glyphs** with absolute x, recording where every notehead landed.
 4. **Resolve ties**, which need both ends placed before either can be drawn.
+   A tie whose ends land on different systems is drawn as two halves: from its
+   note to the end of the system, then from just after the next system's clef
+   and key (`System::headerEndX`) to the note it ties into. Both bow away from the stem of the note the tie leaves, so they read
+   as one tie. The second half sets `TieGlyph::fromSystemStart`, which tells
+   the painter it starts at its x rather than after a notehead.
 
 ### The pieces each rule lives in
 
@@ -77,7 +86,8 @@ parity test and a test assertion reads as a position you can count off a staff.
 | `BeamGeometry.{h,cpp}` | Where a group's beams go, and how long each stem under them is. |
 | `KeySignatureLayout.{h,cpp}` | Where a key signature's accidentals sit, per clef. |
 | `MeasureAccidentals.{h,cpp}` | Which notes need an accidental drawn. |
-| `Accidental.h` | The accidental signs, shared by the two above. |
+| `AccidentalStacking.{h,cpp}` | Where a chord's accidentals go: columns to the left of its leftmost notehead. |
+| `Accidental.h` | The accidental signs and how much room each takes, shared by the three above. |
 | `PartNames.{h,cpp}` | What a part is called beside its staves, and its short form. |
 | `ScoreLayout.h` | The glyph types, the system, and the spacing options. |
 
@@ -128,6 +138,52 @@ the note that was struck.
 `MeasureAccidentals` is constructed per measure, so "reset at the barline" is a
 lifetime rather than a method somebody has to remember to call.
 
+### A chord's accidentals stack in columns
+
+*Where* a sign goes is the layout's too, because it depends on the chord's
+other signs and the painter sees one notehead at a time. `stackAccidentals`
+takes every sign at one onset on one staff — every voice, since their heads
+share an x — and places them the conventional way: top to bottom, alternately
+from the outside in, each in the rightmost column it clears, a new column
+opening to the left when none will have it. A column is as wide as its widest
+sign and its signs are right-aligned in it, a gap (`accidentalGap`) before the
+chord and a smaller one (`accidentalColumnGap`) between columns.
+
+"Clears" is box against box, from a table of widths and heights per sign in
+`Accidental.h` that `MusicFontTests` pins to Bravura, with
+`accidentalVerticalClearance` between them. Nothing interlocks. Sharps and
+naturals look as if they could — their uprights are staggered — but
+right-aligned in Bravura the upper sign's right upright runs straight into the
+lower one's a fifth apart, so a triad with a sharp on every note takes three
+columns, and two sharps share one from a seventh. The clearance is what keeps
+two flats a sixth apart from meeting stem to stem.
+
+Columns start at the chord's **leftmost** notehead, so a note pushed left of a
+down stem pushes the signs out with it. A slot reserves exactly what it holds —
+that push, then the stack's width, then each grace note with its own — so a
+single sharp no longer reserves the room of three, and three columns get the
+room of three.
+
+### Ledger lines belong to the chord
+
+A ledger line is a `LedgerLineGlyph` of its own, emitted per event rather than
+per notehead: one line at each position beyond the staff that any of the
+chord's notes needs, spanning every notehead that needs it. Two notes above the
+staff share their lines, and a note pushed across the stem by a second
+lengthens the line it sits on instead of getting one beside it. A line reaches
+`ledgerLineExtension` past the noteheads on it, or the shorter
+`ledgerLineExtensionBesideAccidental` on the side an accidental stands, as Gould
+prescribes, so the sign does not sit on the line's end.
+
+### Seconds cross the stem
+
+Two notes a second apart in one chord cannot share an x, so one crosses the
+stem. The note the stem attaches to stays put: with the stem up the walk starts
+at the bottom and the upper note of a second moves right; with it down the walk
+starts at the top and the lower note moves left. A cluster alternates rather
+than marching off to one side. Decided after stem direction, since a beam group
+or a second voice can overrule a chord's own.
+
 ### Spacing
 
 Proportional to duration, with a floor: `durationStretchPerQuarter` staff spaces
@@ -139,6 +195,15 @@ that rest is centred in it.
 Real engraving spaces notes non-linearly and resolves collisions. Not doing that
 is deliberate: proportional spacing is predictable, is one line of arithmetic,
 and is right often enough to read. Replacing it later is one function.
+
+Every system but the last is then **justified** to `availableWidth`: one
+stretch factor per system, the room it has over the room its measures' music
+needs, applied to the space inside each measure and never to a header. Each
+event remembers the onset it hangs from (`anchorX`): onsets move apart, and a
+grace note or an accidental keeps its distance from the note it belongs to. A
+system is never squeezed, so a lone bar wider than the view stays as wide as it
+is. The last system is left at its natural width, which is what a reader
+expects of the end of a piece.
 
 ### Stems
 
@@ -209,6 +274,43 @@ beams, ledger lines, rests, ties,
 barlines including repeats and the final double bar, lyrics with hyphens, tempo
 marks, dynamics, and printed bar numbers at system starts.
 
+### Jump marks
+
+A jump (`RepeatMarkings::jumps`, as written) is a `JumpGlyph`. "Segno" and
+"Coda" are their SMuFL signs at the start of the measure, scaled to
+`jumpSignHeight`; anything else is text right-aligned at the measure's end,
+where an instruction that takes effect after the bar goes. A string nothing
+here recognises is still drawn, as text: a jump the reader cannot see sends
+them the wrong way. Jumps take a row of their own above the top staff, above
+any ending bracket, and the top staff's tempo marks and measure numbers go
+above them. What the importer counts as a jump is in `musicxml-subset.md`.
+
+### Multi-measure rests
+
+Two or more bars in a row in which every drawn staff holds a whole-bar rest and
+nothing else are condensed into one `MultiRestGlyph`: an H-bar on the middle
+line, serifed at each end, with the count over the staff in time-signature
+digits. A bar with a clef, key or time change, a repeat, an ending, a jump or a
+direction is never absorbed, because condensing it would hide what is on it,
+so it breaks the run. The run is packed and drawn as its first bar, at
+`multiMeasureRestWidth` whatever it stands for, and its system's measure range
+still covers every bar in it.
+
+### Ending brackets
+
+A first, second or shared ending is a `VoltaGlyph`: a run of consecutive
+measures with the same non-empty `endingNumbers`, labelled as written ("1.",
+"1. 2."). A run ends at a measure that closes on a repeat barline, and that
+end gets a hook down; any other end is left open. The model has no `stop` or
+`discontinue`, so the barline is what says which. A run split by a system break
+continues on the next system with no label and no opening hook, starting after
+the new system's clef and key.
+
+Brackets are drawn once per system, above the top staff, because an ending
+belongs to the whole score. Their line sits `voltaAboveStaff` over the top line,
+or higher when a note's ledger lines would meet the hooks. The top staff's
+tempo marks and measure numbers then go above the bracket.
+
 ### Text is placed clear of the notes
 
 Lyrics, dynamics, tempo marks and measure numbers are placed by the layout, not
@@ -252,6 +354,21 @@ strip and Ctrl/Cmd `+`, `−`, `0`; the view and size are saved per Score View.
 A change of either keeps the bar that was in view in view. Until justification
 (`engraving-polish` 3.1) lands, a page holds ragged systems.
 
+### Parts the reader hid
+
+`LayoutOptions::hiddenParts` names parts not to draw, by MusicXML id *and* name
+together, since exporters number parts `P1`, `P2`... in every file. A matching
+part is left out where `layOutScore` chooses its drawn parts, before any notice
+about it, so everything that follows the drawn parts follows the parts shown:
+staff groups and braces, part names, the tempo mark over the top part, and
+`ScoreLayout::partName`. The rest lay out exactly as a score that never had it.
+A tempo mark written only in a hidden part is lent to the top staff shown,
+because a tempo is the whole score's and exporters often write it into one part.
+A selection that would leave nothing to draw is ignored. `drawablePartsOf` lists
+what a selection chooses among, so the Score View's Parts menu and the layout
+use one test. The choice itself is the Score View's, saved in its settings; see
+`openspec/changes/archive/2026-11-06-score-part-selection/design.md`.
+
 ### Several staves, several parts
 
 Every part is drawn, top to bottom in score order, and every staff of each
@@ -278,10 +395,17 @@ shown even where the file marks it `print-object="no"`, as the bundled sample
 does: telling the staves apart is the point of drawing every part. The room
 names take is reserved before the brace and comes off the width the music has,
 estimated from the name's length because the engine has no font; the painter
-fits the text into that room rather than trusting the estimate. A solo score is
-not labelled.
+fits the text into that room rather than trusting the estimate.
 
-A single part lays out exactly as it did when only the first part was drawn.
+The first system is **indented** by at least `firstSystemIndent`, with the full
+names set in the indent (design.md decision 11), so where a piece begins is
+plain. That includes a solo score, which is named there and nowhere else: after
+the first system a single line needs no label and starts at the margin. A score
+of several parts keeps its short names on later systems, because telling the
+staves apart is still the point. A name too long for the indent widens it.
+
+Before the indent, a single part laid out exactly as it did when only the first
+part was drawn.
 That was checked by dumping every glyph of every part of every test score, laid
 out on its own at three widths, before and after the change: no difference.
 
@@ -301,8 +425,6 @@ shows. That list is the reason a first pass is an acceptable thing to ship:
 | **A staff with no pitches** | A percussion or tablature staff is left out and named, and the rest of its part, and every other part, is drawn. |
 | **Bars only some parts have** | Parts are drawn as far as they all go; any further bars are counted. |
 | **Brackets for groups of parts** | `<part-group>` is not imported, so a choir's parts are joined at the left but not bracketed. |
-| **Volta brackets, D.C./D.S. jumps** | `Measure::repeats` carries them uninterpreted. Repeat barlines *are* drawn. |
-| **A tie across a system break** | Both ends are placed before either is drawn; when they land on different systems the tie is reported. |
 | **Cancelling naturals at a key change** | A key change to no accidentals draws an empty signature. |
 | **Slurs, articulations, ornaments, hairpins, fingering** | Mostly not in the model, by invariant 10 or by the supported subset. |
 
@@ -328,11 +450,17 @@ half its thickness and its outer edge sits flush with the notehead. Beam ends
 reach the outer edges of their stems in the layout rather than in the painter.
 `MusicFontTests` checks the notehead width against the font.
 
-Some placement rules are the painter's, not the font's. An accidental is
-right-aligned before its notehead, and a ledger line is shortened on that side,
-as Gould prescribes, so the sign does not sit on the line's end. A rest is
-centred on the layout's x. A time signature's two numbers are centred on each
-other.
+`Accidental.h`'s table of sign widths and heights is checked against the font
+the same way, because the layout stacks signs by it and the painter draws them
+where the layout put them.
+
+Some placement rules are the painter's, not the font's. A rest is centred on
+the layout's x. A time signature's two numbers are centred on each other. Where
+an accidental goes and where a ledger line ends are **not** among them any more:
+both depend on the rest of the chord, so `NoteheadGlyph::accidentalX` and
+`System::ledgerLines` are the layout's, for the reasons above. `NoteValue.h`'s
+table of notehead widths, which a whole note's longer ledger line is measured
+by, is pinned to the font like the others.
 
 ## Verifying it
 

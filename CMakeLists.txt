@@ -279,6 +279,43 @@ if(BUILD_TESTING)
         ${PRACTICE_TAKES_TEST_SOURCES}
     )
 
+    # docs/contracts/testcontrol/approved-states.json is the list of approved
+    # window states the capture harness reads, generated from
+    # ApprovedWindowStates.cpp. See
+    # src/application/testcontrol/ApprovedStatesManifest.h.
+    #
+    # Locally every build of PracticeTakesTests rewrites it, so a changed state
+    # shows up in `git status` beside the change that caused it. Under CI it is
+    # left alone, and ApprovedStatesManifestTests compares the committed file
+    # with what the list generates: regenerating there would make a manifest
+    # nobody committed pass. The file is only written when its text changes.
+    if(DEFINED ENV{CI})
+        set(PRACTICE_TAKES_REGENERATE_DEFAULT OFF)
+    else()
+        set(PRACTICE_TAKES_REGENERATE_DEFAULT ON)
+    endif()
+    option(PRACTICE_TAKES_REGENERATE_APPROVED_STATES
+        "Rewrite docs/contracts/testcontrol/approved-states.json after each test build"
+        ${PRACTICE_TAKES_REGENERATE_DEFAULT})
+
+    if(PRACTICE_TAKES_REGENERATE_APPROVED_STATES AND NOT CMAKE_CROSSCOMPILING)
+        add_custom_command(TARGET PracticeTakesTests POST_BUILD
+            COMMAND PracticeTakesTests "[.write-approved-states]" --verbosity quiet
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            COMMENT "Regenerating docs/contracts/testcontrol/approved-states.json"
+            VERBATIM
+        )
+    endif()
+
+    # The same, on demand, for a tree configured with regeneration off.
+    add_custom_target(approved-states-manifest
+        COMMAND PracticeTakesTests "[.write-approved-states]" --verbosity quiet
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMENT "Writing docs/contracts/testcontrol/approved-states.json"
+        VERBATIM
+    )
+    add_dependencies(approved-states-manifest PracticeTakesTests)
+
     # src/tests/ mirrors src/, so a test's path says which source file it covers.
     # Both roots are on the include path: "platform/score/Score.h" resolves
     # against src/, and shared fixtures such as "support/BenchmarkFakes.h"

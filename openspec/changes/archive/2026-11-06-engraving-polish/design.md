@@ -105,6 +105,21 @@ The slot's `leftPad` becomes the width the stack actually used, replacing the
 constant `accidentalWidth`, so a chord with three columns of accidentals gets
 three columns of room and a single sharp does not reserve three.
 
+**What "clears" means, decided while implementing.** Box against box from the
+metrics table, with a small vertical clearance (`accidentalVerticalClearance`,
+0.1 space) and no interlocking. An allowance letting sharps and naturals overlap
+their boxes by a space — enough to put a triad's outer sharps, a fifth apart, in
+one column — was tried first and rejected on a render: right-aligned in Bravura,
+the upper sign's right upright runs into the lower one's. So a triad with a
+sharp on every note takes three columns (top nearest, bottom next, middle
+furthest), which the spec's "at least two columns, none overlapping" allows,
+and two sharps share a column from a seventh. The clearance is for flats, whose
+boxes clear a sixth apart by under a twentieth of a space and meet stem to stem.
+
+Every event at one onset on one staff is one stack, whatever its voice: two
+voices' heads share the slot's x, so their signs would collide exactly as one
+chord's would. A grace note is stacked on its own, at grace size.
+
 ### 4. A second moves to the side away from the stem
 
 With the stem up, noteheads hang left of the stem and the *upper* note of a
@@ -214,7 +229,7 @@ produce breaks that are confidently wrong.
 
 - **Layout tests**, JUCE-free, in `src/tests/features/score/engraving/`: one per
   decision, by named case — a C-major triad with a sharp on every note stacks in
-  two columns; a second under a down stem moves left; a tie across a break emits
+  three columns, and a chord spanning a seventh in two (decision 3); a second under a down stem moves left; a tie across a break emits
   two halves on two systems; a `1. 2.` bracket over two bars closed by a repeat
   barline; a low C under a lyric moves the lyric down and only that system's.
 - **A determinism test** for justification: the same score at the same width

@@ -51,6 +51,8 @@ const std::vector<Glyph>& allGlyphs()
         Glyph::accidentalSharp,
         Glyph::accidentalDoubleSharp,
         Glyph::accidentalDoubleFlat,
+        Glyph::segno,
+        Glyph::coda,
         Glyph::restDoubleWhole,
         Glyph::restWhole,
         Glyph::restHalf,

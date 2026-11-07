@@ -280,11 +280,14 @@ def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
     images_at = image_directory(store, run_id)
     fleet = fleet_module.Fleet()
 
-    # Said before anything starts. An application somebody else is running holds
-    # the input device, and a worker that cannot open one comes up, draws a
-    # window, and never replies -- which reads as a broken build rather than as
-    # a busy machine.
-    warning = fleet_module.contention_warning(fleet.foreign())
+    # Said before anything starts, and only when it applies. An application
+    # somebody else is running may hold the input device, which only the
+    # surfaces that open one contend for: every other worker opens none (#176),
+    # and #180 measured them capturing normally beside an open application.
+    needing_device = tuple(
+        dict.fromkeys(surface.state for surface, _, _ in plan if surface.needs_input_device)
+    )
+    warning = fleet_module.contention_warning(fleet.foreign(), needing_device)
 
     if warning:
         print(warning, file=sys.stderr)
@@ -926,7 +929,8 @@ def build_parser() -> argparse.ArgumentParser:
         "answering and its share was recorded as failures. They open no device "
         "now (#176), so that limit is gone; the one surface that still needs a "
         "real device takes it under the audio gate, for that surface only. "
-        "Higher counts are untested rather than known good.",
+        "Four workers took the whole full-mode plan with none failed, with "
+        "another Practice Takes open (#180); counts above that are untested.",
     )
     capture_parser.add_argument("--build-config", default="", help="How the build under test was configured.")
     capture_parser.add_argument("--audio-device", default="", help="The input device in use.")

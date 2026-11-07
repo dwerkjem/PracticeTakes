@@ -11,6 +11,7 @@
 #include <vector>
 
 using namespace engraving;
+using Catch::Approx;
 using score::Tick;
 using score::ticksPerQuarterNote;
 using testing::score::notesOf;
@@ -141,6 +142,19 @@ scoreOf(std::vector<score::Measure> measures, int staffCount = 1)
     options.availableWidth = 400.0;
 
     return options;
+}
+
+// Where a single, unbraced staff's first system starts: past the first-system
+// indent, or the part's name if that is longer -- "Soprano", which `scoreOf`
+// gives every part -- and nothing else, since there is no brace.
+[[nodiscard]] double unbracedFirstSystemStart()
+{
+    const LayoutOptions options;
+    const double nameRoom =
+        (static_cast<double>(std::string("Soprano").size()) * options.partNameCharacterWidth) +
+        options.partNameGap;
+
+    return std::max(options.firstSystemIndent, nameRoom);
 }
 
 [[nodiscard]] bool anyNoticeContains(const ScoreLayout& layout, const std::string& fragment)
@@ -460,8 +474,9 @@ TEST_CASE("a clef change is drawn and moves the notes after it", "[score][engrav
     // bass staff.
     CHECK(system.noteheads.at(0).position == bottomLineSteps + 2);
     CHECK(system.noteheads.at(1).position == topLineSteps - 2);
-    CHECK(system.noteheads.at(0).ledger.below == 1);
-    CHECK(system.noteheads.at(1).ledger.above == 1);
+    REQUIRE(system.ledgerLines.size() == 2);
+    CHECK(system.ledgerLines.at(0).position == bottomLineSteps + 2);
+    CHECK(system.ledgerLines.at(1).position == topLineSteps - 2);
 }
 
 TEST_CASE("measures break into systems at the available width", "[score][engraving][layout]")
@@ -589,16 +604,19 @@ TEST_CASE("a tie becomes a curve between its two noteheads", "[score][engraving]
     CHECK(system.noteheads.at(1).accidental == AccidentalKind::none);
 }
 
-TEST_CASE("a tie split across two systems is reported, not drawn", "[score][engraving][layout]")
+namespace
+{
+// Eight whole-note B4s, each tied to the next, so wherever a break falls one
+// tie crosses it. `stepUp` puts them a step higher, above the middle line, so
+// their stems point down and the ties bow upward.
+[[nodiscard]] std::shared_ptr<const score::Score> tiedBars(score::Pitch onPitch)
 {
     std::vector<score::Measure> measures;
 
     for (std::size_t index = 0; index < 8; ++index)
     {
-        score::ScoreEvent event = noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::b, 0, 4));
+        score::ScoreEvent event = noteAt(0, ticksPerQuarterNote * 4, onPitch);
 
-        // Tie every bar to the next, so wherever the break falls one tie
-        // crosses it.
         if (index + 1 < 8)
         {
             event.notes.front().tiedTo = score::NoteRef{index + 1, 0, 0, 0};
@@ -612,13 +630,155 @@ TEST_CASE("a tie split across two systems is reported, not drawn", "[score][engr
         measures.push_back(measureOf(index, {voiceOf(1, {event})}, index == 0));
     }
 
+    return scoreOf(measures);
+}
+
+[[nodiscard]] LayoutOptions narrowForTies()
+{
     LayoutOptions narrow;
     narrow.availableWidth = 75.0;
 
-    const ScoreLayout layout = layOutScore(scoreOf(measures), narrow);
+    return narrow;
+}
+
+[[nodiscard]] const NoteheadGlyph& headOfMeasure(const System& system, std::size_t measureIndex)
+{
+    const auto found = std::find_if(
+        system.noteheads.begin(), system.noteheads.end(), [measureIndex](const NoteheadGlyph& head)
+        { return head.source.measureIndex == measureIndex; });
+
+    REQUIRE(found != system.noteheads.end());
+
+    return *found;
+}
+} // namespace
+
+TEST_CASE("a tie across a system break is drawn as two halves", "[score][engraving][layout][ties]")
+{
+    const ScoreLayout layout = layOutScore(tiedBars(pitch(score::Step::b, 0, 4)), narrowForTies());
 
     REQUIRE(layout.systems.size() > 1);
-    CHECK(anyNoticeContains(layout, "from one line of music onto the next"));
+
+    const System& first = layout.systems.at(0);
+    const System& second = layout.systems.at(1);
+
+    // Seven ties, one per pair of bars: every one of them drawn somewhere, and
+    // the one that crosses the break drawn twice, as a half on each side.
+    std::size_t glyphs = 0;
+
+    for (const System& system : layout.systems)
+    {
+        glyphs += system.ties.size();
+    }
+
+    CHECK(glyphs == 7 + (layout.systems.size() - 1));
+
+    // The first half leaves the last note of the first system and runs to that
+    // system's end, stopping short of the barline.
+    const NoteheadGlyph& leaving = headOfMeasure(first, first.lastMeasureIndex);
+    const TieGlyph& outgoing = first.ties.back();
+
+    CHECK_FALSE(outgoing.fromSystemStart);
+    CHECK(outgoing.startX == leaving.x);
+    CHECK(outgoing.endX > leaving.x);
+    CHECK(outgoing.endX < first.width);
+
+    // The second half starts just after the next system's header -- not at
+    // the lead-in before the first note, which left it a tick 0.8 space long --
+    // and arrives at the first note on it.
+    const NoteheadGlyph& arriving = headOfMeasure(second, second.firstMeasureIndex);
+    const auto incoming = std::find_if(
+        second.ties.begin(), second.ties.end(),
+        [](const TieGlyph& tie) { return tie.fromSystemStart; });
+
+    REQUIRE(incoming != second.ties.end());
+    CHECK(incoming->startX > second.headerEndX);
+    CHECK(incoming->startX < second.headerEndX + 0.5);
+    CHECK(incoming->endX == arriving.x);
+    CHECK(incoming->position == arriving.position);
+
+    // Nothing left to report.
+    CHECK_FALSE(anyNoticeContains(layout, "from one line of music onto the next"));
+}
+
+TEST_CASE(
+    "a tie's second half starts after the next system's clef and key",
+    "[score][engraving][layout][ties]")
+{
+    // A key signature, so the header is more than a clef.
+    std::vector<score::Measure> measures;
+
+    for (std::size_t index = 0; index < 8; ++index)
+    {
+        score::ScoreEvent event = noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::b, 0, 4));
+
+        if (index + 1 < 8)
+        {
+            event.notes.front().tiedTo = score::NoteRef{index + 1, 0, 0, 0};
+        }
+
+        if (index > 0)
+        {
+            event.notes.front().tiedFrom = score::NoteRef{index - 1, 0, 0, 0};
+        }
+
+        score::Measure measure = measureOf(index, {voiceOf(1, {event})}, index == 0);
+
+        if (index == 0)
+        {
+            measure.attributes.key = score::KeySignature{3, "major"};
+        }
+
+        measures.push_back(measure);
+    }
+
+    const ScoreLayout layout = layOutScore(scoreOf(measures), narrowForTies());
+
+    REQUIRE(layout.systems.size() > 1);
+
+    const System& second = layout.systems.at(1);
+    const auto incoming = std::find_if(
+        second.ties.begin(), second.ties.end(),
+        [](const TieGlyph& tie) { return tie.fromSystemStart; });
+
+    REQUIRE(incoming != second.ties.end());
+    REQUIRE(second.keyAccidentals.size() == 3);
+    REQUIRE(second.clefs.size() == 1);
+
+    const LayoutOptions options = narrowForTies();
+
+    CHECK(incoming->startX > second.clefs.front().x + options.clefWidth);
+    CHECK(incoming->startX > second.keyAccidentals.back().x + options.keyAccidentalWidth);
+}
+
+TEST_CASE("both halves of a split tie bow the same way", "[score][engraving][layout][ties]")
+{
+    // Under the middle line a note's stem would point up and its tie bows
+    // below; above the line, the other way. A whole note draws no stem but
+    // still has a direction, and it is the one the tie reads. Either way the
+    // two halves agree, because they are one tie.
+    struct Case
+    {
+        score::Pitch onPitch;
+        bool bowsAbove;
+    };
+
+    for (const Case& tieCase :
+         {Case{pitch(score::Step::g, 0, 4), false}, Case{pitch(score::Step::d, 0, 5), true}})
+    {
+        const ScoreLayout layout = layOutScore(tiedBars(tieCase.onPitch), narrowForTies());
+
+        REQUIRE(layout.systems.size() > 1);
+
+        const TieGlyph& outgoing = layout.systems.at(0).ties.back();
+        const auto incoming = std::find_if(
+            layout.systems.at(1).ties.begin(), layout.systems.at(1).ties.end(),
+            [](const TieGlyph& tie) { return tie.fromSystemStart; });
+
+        REQUIRE(incoming != layout.systems.at(1).ties.end());
+        CHECK(outgoing.above == tieCase.bowsAbove);
+        CHECK(incoming->above == tieCase.bowsAbove);
+    }
 }
 
 TEST_CASE("lyrics are carried through to the layout", "[score][engraving][layout]")
@@ -769,10 +929,11 @@ TEST_CASE("repeat barlines are drawn from the measure's markings", "[score][engr
         barlines.begin(), barlines.end(),
         [](const BarlineGlyph& glyph) { return glyph.kind == BarlineKind::repeatEnd; }));
 
-    // The markings this pass carries but does not draw say so, rather than
-    // being dropped on the floor.
-    CHECK(anyNoticeContains(layout, "endings"));
-    CHECK(anyNoticeContains(layout, "D.C., D.S., Fine and Coda"));
+    // The ending and the jump are both drawn now, so nothing reports either.
+    CHECK_FALSE(anyNoticeContains(layout, "endings"));
+    CHECK_FALSE(anyNoticeContains(layout, "D.C., D.S., Fine and Coda"));
+    CHECK(layout.systems.front().voltas.size() == 1);
+    CHECK(layout.systems.front().jumps.size() == 1);
 }
 
 TEST_CASE("every notehead names the note it came from", "[score][engraving][layout]")
@@ -1790,7 +1951,7 @@ TEST_CASE(
     REQUIRE(layout.outcome == LayoutOutcome::laidOut);
     REQUIRE(layout.systems.size() == 1);
     CHECK(layout.systems.front().staffOffsets.size() == 1);
-    CHECK(layout.systems.front().staffStartX == 0.0);
+    CHECK(layout.systems.front().staffStartX == Approx(unbracedFirstSystemStart()));
 
     CHECK(anyNoticeContains(layout, "One staff of this part is written in a percussion clef"));
     CHECK(anyNoticeContains(layout, "Not shown: 1 note or rest"));
@@ -1848,7 +2009,7 @@ TEST_CASE(
     const System& system = layout.systems.front();
 
     CHECK(system.staffOffsets == std::vector<double>{0.0});
-    CHECK(system.staffStartX == 0.0);
+    CHECK(system.staffStartX == Approx(unbracedFirstSystemStart()));
 
     for (const NoteheadGlyph& head : system.noteheads)
     {
@@ -2266,21 +2427,65 @@ TEST_CASE(
     }
 }
 
-TEST_CASE("a solo score is not labelled", "[score][engraving][layout][part-names]")
+TEST_CASE(
+    "a solo score is named on its first system only",
+    "[score][engraving][layout][part-names]")
 {
-    const ScoreLayout layout = layOutScore(
-        scoreOf({measureOf(
-            0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))})},
-            true)}),
-        wideOptions());
+    // The name is set in the first system's indent, as for any score; after
+    // that a single line needs no label and starts at the margin.
+    std::vector<score::Measure> measures;
+
+    for (std::size_t index = 0; index < 8; ++index)
+    {
+        measures.push_back(measureOf(
+            index, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))})},
+            index == 0));
+    }
+
+    LayoutOptions narrow;
+    narrow.availableWidth = 75.0;
+
+    const ScoreLayout layout = layOutScore(scoreOf(measures), narrow);
 
     REQUIRE(layout.outcome == LayoutOutcome::laidOut);
+    REQUIRE(layout.systems.size() > 1);
 
-    for (const System& system : layout.systems)
+    const System& first = layout.systems.front();
+
+    REQUIRE(first.partNames.size() == 1);
+    CHECK(first.partNames.front().text == "Soprano");
+    CHECK(first.staffStartX >= narrow.firstSystemIndent);
+
+    for (std::size_t index = 1; index < layout.systems.size(); ++index)
     {
-        CHECK(system.partNames.empty());
-        CHECK(system.staffStartX == 0.0);
+        CHECK(layout.systems.at(index).partNames.empty());
+        CHECK(layout.systems.at(index).staffStartX == 0.0);
     }
+}
+
+TEST_CASE("the first system is indented", "[score][engraving][layout][part-names]")
+{
+    // A name shorter than the indent leaves the indent as it is.
+    score::Part part;
+    part.id = "P1";
+    part.name = "Fl.";
+    part.measures = {measureOf(
+        0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 4))})}, true)};
+
+    auto built = std::make_shared<score::Score>();
+    built->parts = {part};
+
+    const LayoutOptions options = wideOptions();
+    const ScoreLayout layout = layOutScore(built, options);
+
+    REQUIRE(layout.systems.size() == 1);
+    CHECK(layout.systems.front().staffStartX == Approx(options.firstSystemIndent));
+
+    // And the name is right-aligned in it, clear of the staff.
+    REQUIRE(layout.systems.front().partNames.size() == 1);
+    CHECK(
+        layout.systems.front().partNames.front().rightX ==
+        Approx(options.firstSystemIndent - options.partNameGap));
 }
 
 TEST_CASE("a part with no name is left unlabelled", "[score][engraving][layout][part-names]")
@@ -2404,7 +2609,7 @@ TEST_CASE(
 {
     // D3 under a treble staff: four ledger lines below it.
     LayoutOptions options;
-    options.availableWidth = 70.0;
+    options.availableWidth = 80.0;
 
     const ScoreLayout layout = layOutScore(sungBars(10, pitch(score::Step::d, 0, 3)), options);
 
@@ -2471,6 +2676,37 @@ TEST_CASE("a high note pushes the tempo line up", "[score][engraving][layout][te
 
     // The system starts low enough that the raised text is still on it.
     CHECK(system.topOfStaff + tempo->y >= 0.0);
+}
+
+TEST_CASE(
+    "a flat's stem above a high note pushes the tempo line too",
+    "[score][engraving][layout][text-placement]")
+{
+    // E-flat 6: the flat's stem rises 1.756 spaces above the note, well past
+    // the notehead's half space, and past the space and a half every sign used
+    // to be assumed to reach. The text clears the stem's tip, as measured by the
+    // same table the accidentals are stacked by.
+    score::Measure bar =
+        measureOf(0, {voiceOf(1, {sungWhole(pitch(score::Step::e, -1, 6), "la")})}, true);
+    bar.directions = {score::Direction{score::DirectionKind::tempo, 0, 1, "Andante", 72.0}};
+
+    const LayoutOptions options = wideOptions();
+    const ScoreLayout layout = layOutScore(scoreOf({bar}), options);
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    const TextGlyph* tempo = firstTextOf(system, TextRole::tempo);
+    REQUIRE(tempo != nullptr);
+
+    REQUIRE(system.noteheads.size() == 1);
+    const NoteheadGlyph& head = system.noteheads.front();
+    REQUIRE(head.accidental == AccidentalKind::flat);
+
+    const double stemTip =
+        spacesBelowTopLine(head.position) - accidentalMetricsFor(AccidentalKind::flat).above;
+
+    CHECK(tempo->y + options.textBandHeight <= stemTip - options.textClearance + 1.0e-9);
 }
 
 TEST_CASE(
@@ -2589,4 +2825,1164 @@ TEST_CASE(
             CHECK(system.bandTop == Catch::Approx(layout.systems.at(index - 1).bandBottom));
         }
     }
+}
+
+// --- Accidentals and seconds (engraving-polish tier 1) ---
+//
+// The stacking rule itself is pinned in AccidentalStackingTests; these check
+// that the layout hands it the right chord and puts the result on the page:
+// signs left of the chord's leftmost head, seconds on the side away from the
+// stem, and a slot as wide as what it holds.
+namespace
+{
+[[nodiscard]] score::ScoreEvent
+chordAt(Tick onset, Tick duration, std::initializer_list<score::Pitch> pitches)
+{
+    score::ScoreEvent chord;
+    chord.kind = score::EventKind::chord;
+    chord.onset = onset;
+    chord.duration = duration;
+    chord.notes = notesOf(pitches);
+
+    return chord;
+}
+
+[[nodiscard]] const NoteheadGlyph& headAt(const System& system, StaffSteps position)
+{
+    const auto found = std::find_if(
+        system.noteheads.begin(), system.noteheads.end(), [position](const NoteheadGlyph& head)
+        { return head.position == position && !head.isGrace; });
+
+    REQUIRE(found != system.noteheads.end());
+
+    return *found;
+}
+
+[[nodiscard]] double rightEdgeOfAccidental(const NoteheadGlyph& head)
+{
+    return head.accidentalX + accidentalMetricsFor(head.accidental).width;
+}
+
+[[nodiscard]] System onlySystemOf(std::vector<score::ScoreEvent> events)
+{
+    const ScoreLayout layout =
+        layOutScore(scoreOf({measureOf(0, {voiceOf(1, std::move(events))}, true)}), wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    return layout.systems.front();
+}
+} // namespace
+
+TEST_CASE("one sharp stands a gap before its notehead", "[score][engraving][layout][accidentals]")
+{
+    const LayoutOptions options;
+    const System system =
+        onlySystemOf({noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::f, 1, 4))});
+
+    const NoteheadGlyph& head = headAt(system, 7);
+
+    REQUIRE(head.accidental == AccidentalKind::sharp);
+    CHECK(rightEdgeOfAccidental(head) == Approx(head.x - options.accidentalGap));
+}
+
+TEST_CASE(
+    "a triad with a sharp on every note puts its signs in three columns",
+    "[score][engraving][layout][accidentals]")
+{
+    const LayoutOptions options;
+    const System system = onlySystemOf({chordAt(
+        0, ticksPerQuarterNote * 4,
+        {pitch(score::Step::c, 1, 4), pitch(score::Step::e, 1, 4), pitch(score::Step::g, 1, 4)})});
+
+    const NoteheadGlyph& c = headAt(system, 10);
+    const NoteheadGlyph& e = headAt(system, 8);
+    const NoteheadGlyph& g = headAt(system, 6);
+
+    // The top sign against the chord, the bottom one next, the middle one
+    // furthest out (AccidentalStackingTests has why).
+    CHECK(rightEdgeOfAccidental(g) == Approx(g.x - options.accidentalGap));
+    CHECK(rightEdgeOfAccidental(c) < g.accidentalX);
+    CHECK(rightEdgeOfAccidental(e) < c.accidentalX);
+
+    // And the bar made room for all three: the leftmost sign is still after
+    // the time signature, rather than drawn over it.
+    const TimeSignatureGlyph& time = system.timeSignatures.front();
+    CHECK(e.accidentalX > time.x + options.timeSignatureWidth);
+}
+
+TEST_CASE(
+    "a second under an up stem moves its upper note right",
+    "[score][engraving][layout][accidentals]")
+{
+    // A4 and B-sharp 4: below the middle line, so the stem is up. The upper
+    // note crosses it, and its sharp is drawn before the chord, not inside the
+    // A it was pushed away from.
+    const LayoutOptions options;
+    const System system = onlySystemOf({chordAt(
+        0, ticksPerQuarterNote * 2, {pitch(score::Step::a, 0, 4), pitch(score::Step::b, 1, 4)})});
+
+    const NoteheadGlyph& lower = headAt(system, 5);
+    const NoteheadGlyph& upper = headAt(system, 4);
+
+    REQUIRE(system.stems.size() == 1);
+    REQUIRE(system.stems.front().up);
+
+    CHECK(upper.x == Approx(lower.x + options.noteheadWidth));
+    CHECK(upper.accidental == AccidentalKind::sharp);
+    CHECK(rightEdgeOfAccidental(upper) == Approx(lower.x - options.accidentalGap));
+}
+
+TEST_CASE(
+    "a second under a down stem moves its lower note left",
+    "[score][engraving][layout][accidentals]")
+{
+    // C5 and D5, above the middle line, so the stem is down. The note the stem
+    // attaches to -- the upper one -- stays on the stem's right; the lower one
+    // crosses to its left. Until now it always went right, which put it on the
+    // wrong side of a down stem and the stem through the other head.
+    const LayoutOptions options;
+    const System system = onlySystemOf({chordAt(
+        0, ticksPerQuarterNote * 2, {pitch(score::Step::c, 0, 5), pitch(score::Step::d, 0, 5)})});
+
+    const NoteheadGlyph& lower = headAt(system, 3);
+    const NoteheadGlyph& upper = headAt(system, 2);
+
+    REQUIRE(system.stems.size() == 1);
+
+    const StemGlyph& stem = system.stems.front();
+
+    REQUIRE_FALSE(stem.up);
+    CHECK(lower.x == Approx(upper.x - options.noteheadWidth));
+
+    // The stem is on the upper note's left edge, flush, which is where the
+    // lower note's right edge now is too.
+    CHECK(stem.x - (stem.thickness * 0.5) == Approx(upper.x));
+    CHECK(lower.x + options.noteheadWidth == Approx(upper.x));
+}
+
+TEST_CASE(
+    "a sharp on the note a down stem pushed left is clear of both heads",
+    "[score][engraving][layout][accidentals]")
+{
+    // F-sharp 5 under G5: the F-sharp moves left, so its sharp goes left of it,
+    // not left of the G.
+    const LayoutOptions options;
+    const System system = onlySystemOf({chordAt(
+        0, ticksPerQuarterNote * 2, {pitch(score::Step::f, 1, 5), pitch(score::Step::g, 0, 5)})});
+
+    // F5 is the top line, G5 the space above it.
+    const NoteheadGlyph& shifted = headAt(system, 0);
+    const NoteheadGlyph& stays = headAt(system, -1);
+
+    REQUIRE(shifted.x < stays.x);
+    CHECK(rightEdgeOfAccidental(shifted) == Approx(shifted.x - options.accidentalGap));
+}
+
+TEST_CASE(
+    "a sharp on the note that stays is pushed out by the one that moved",
+    "[score][engraving][layout][accidentals]")
+{
+    // C5 under D-sharp 5: the C moves left of the down stem, and the D's sharp
+    // has to clear the C as well as the D. Measured from the leftmost head.
+    const LayoutOptions options;
+    const System system = onlySystemOf({chordAt(
+        0, ticksPerQuarterNote * 2, {pitch(score::Step::c, 0, 5), pitch(score::Step::d, 1, 5)})});
+
+    const NoteheadGlyph& shifted = headAt(system, 3);
+    const NoteheadGlyph& stays = headAt(system, 2);
+
+    REQUIRE(stays.accidental == AccidentalKind::sharp);
+    CHECK(rightEdgeOfAccidental(stays) == Approx(shifted.x - options.accidentalGap));
+}
+
+TEST_CASE(
+    "a note pushed left of its stem does not run into the note before it",
+    "[score][engraving][layout][accidentals]")
+{
+    // The slot reserves the head's crossing as well as its accidentals, so the
+    // shifted note keeps the same distance from the note before it that an
+    // unshifted one would.
+    const LayoutOptions options;
+    const System shifted = onlySystemOf(
+        {noteAt(0, ticksPerQuarterNote / 4, pitch(score::Step::c, 0, 5)),
+         chordAt(
+             ticksPerQuarterNote / 4, ticksPerQuarterNote,
+             {pitch(score::Step::c, 0, 5), pitch(score::Step::d, 0, 5)})});
+
+    std::vector<NoteheadGlyph> heads = shifted.noteheads;
+    std::sort(
+        heads.begin(), heads.end(),
+        [](const NoteheadGlyph& lhs, const NoteheadGlyph& rhs) { return lhs.x < rhs.x; });
+
+    REQUIRE(heads.size() == 3);
+
+    // First the lone C, then the chord's shifted C, then its D.
+    CHECK(heads.at(1).x - (heads.at(0).x + options.noteheadWidth) >= options.flagWidth - 1e-9);
+}
+
+TEST_CASE(
+    "a grace note and its sharp stand before the main note's sharp",
+    "[score][engraving][layout][accidentals]")
+{
+    score::ScoreEvent grace;
+    grace.kind = score::EventKind::note;
+    grace.onset = 0;
+    grace.duration = 0;
+    grace.isGrace = true;
+    grace.notes = notesOf({pitch(score::Step::g, 1, 4)});
+
+    const System system =
+        onlySystemOf({grace, noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::f, 1, 4))});
+
+    const auto graceHead = std::find_if(
+        system.noteheads.begin(), system.noteheads.end(),
+        [](const NoteheadGlyph& head) { return head.isGrace; });
+
+    REQUIRE(graceHead != system.noteheads.end());
+
+    const NoteheadGlyph& main = headAt(system, 7);
+
+    REQUIRE(graceHead->accidental == AccidentalKind::sharp);
+    REQUIRE(main.accidental == AccidentalKind::sharp);
+
+    // The grace note's head, drawn at grace size, ends before the main note's
+    // sharp begins; the grace note's own sharp, at grace size, ends before the
+    // grace head.
+    const LayoutOptions options;
+    CHECK(graceHead->x + (options.noteheadWidth * graceNoteScale) < main.accidentalX);
+    CHECK(
+        graceHead->accidentalX +
+            (accidentalMetricsFor(AccidentalKind::sharp).width * graceNoteScale) <
+        graceHead->x);
+}
+
+// --- Ending brackets (engraving-polish tier 1, design.md decision 8) ---
+namespace
+{
+// One bar of a whole-note B4, with the ending numbers and repeat it is given.
+[[nodiscard]] score::Measure endingBar(std::size_t index, std::vector<int> numbers, bool repeatEnd)
+{
+    score::Measure measure = measureOf(
+        index, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::b, 0, 4))})},
+        index == 0);
+    measure.repeats.endingNumbers = std::move(numbers);
+    measure.repeats.repeatEnd = repeatEnd;
+
+    return measure;
+}
+
+[[nodiscard]] std::vector<VoltaGlyph> voltasOf(const ScoreLayout& layout)
+{
+    std::vector<VoltaGlyph> all;
+
+    for (const System& system : layout.systems)
+    {
+        all.insert(all.end(), system.voltas.begin(), system.voltas.end());
+    }
+
+    return all;
+}
+} // namespace
+
+TEST_CASE(
+    "a first and a second ending are two brackets, the first closed",
+    "[score][engraving][layout][voltas]")
+{
+    const ScoreLayout layout = layOutScore(
+        scoreOf({endingBar(0, {}, false), endingBar(1, {1}, true), endingBar(2, {2}, false)}),
+        wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const std::vector<VoltaGlyph>& voltas = layout.systems.front().voltas;
+
+    REQUIRE(voltas.size() == 2);
+
+    CHECK(voltas.at(0).label == "1.");
+    CHECK(voltas.at(0).hookAtStart);
+    CHECK(voltas.at(0).hookAtEnd);
+
+    CHECK(voltas.at(1).label == "2.");
+    CHECK(voltas.at(1).hookAtStart);
+    CHECK_FALSE(voltas.at(1).hookAtEnd);
+
+    // Side by side, the first over bar 2 and the second over bar 3.
+    CHECK(voltas.at(0).endX < voltas.at(1).startX);
+    CHECK(voltas.at(0).startX > 0.0);
+
+    // Nothing left to report.
+    CHECK_FALSE(anyNoticeContains(layout, "endings"));
+}
+
+TEST_CASE("a shared ending is one bracket labelled with both", "[score][engraving][layout][voltas]")
+{
+    const ScoreLayout layout =
+        layOutScore(scoreOf({endingBar(0, {}, false), endingBar(1, {1, 2}, true)}), wideOptions());
+
+    const std::vector<VoltaGlyph> voltas = voltasOf(layout);
+
+    REQUIRE(voltas.size() == 1);
+    CHECK(voltas.front().label == "1. 2.");
+}
+
+TEST_CASE(
+    "an ending over several bars is one bracket, open without a repeat",
+    "[score][engraving][layout][voltas]")
+{
+    const ScoreLayout layout = layOutScore(
+        scoreOf(
+            {endingBar(0, {}, false), endingBar(1, {2}, false), endingBar(2, {2}, false),
+             endingBar(3, {}, false)}),
+        wideOptions());
+
+    const std::vector<VoltaGlyph> voltas = voltasOf(layout);
+
+    REQUIRE(voltas.size() == 1);
+    CHECK(voltas.front().label == "2.");
+    CHECK_FALSE(voltas.front().hookAtEnd);
+}
+
+TEST_CASE(
+    "two runs with the same number are split at a repeat barline",
+    "[score][engraving][layout][voltas]")
+{
+    // Unusual, but a repeat sends the reader back: whatever follows it starts a
+    // new bracket rather than extending the one that closed.
+    const ScoreLayout layout = layOutScore(
+        scoreOf({endingBar(0, {}, false), endingBar(1, {1}, true), endingBar(2, {1}, false)}),
+        wideOptions());
+
+    CHECK(voltasOf(layout).size() == 2);
+}
+
+TEST_CASE(
+    "an ending across a system break continues without its label",
+    "[score][engraving][layout][voltas]")
+{
+    std::vector<score::Measure> measures{endingBar(0, {}, false)};
+
+    for (std::size_t index = 1; index < 8; ++index)
+    {
+        measures.push_back(endingBar(index, {1}, index == 7));
+    }
+
+    LayoutOptions narrow;
+    narrow.availableWidth = 75.0;
+
+    const ScoreLayout layout = layOutScore(scoreOf(measures), narrow);
+
+    REQUIRE(layout.systems.size() > 1);
+
+    const System& first = layout.systems.at(0);
+    const System& second = layout.systems.at(1);
+
+    REQUIRE(first.voltas.size() == 1);
+    REQUIRE(second.voltas.size() == 1);
+
+    // Labelled and hooked where it begins, left open at the break.
+    CHECK(first.voltas.front().label == "1.");
+    CHECK(first.voltas.front().hookAtStart);
+    CHECK_FALSE(first.voltas.front().hookAtEnd);
+    CHECK(first.voltas.front().endX <= first.width);
+
+    // Carried on with no label and no opening hook, after the new system's
+    // clef and key.
+    CHECK(second.voltas.front().label.empty());
+    CHECK_FALSE(second.voltas.front().hookAtStart);
+    CHECK(second.voltas.front().startX > second.headerEndX);
+}
+
+TEST_CASE(
+    "an ending bracket clears the notes and puts the tempo above it",
+    "[score][engraving][layout][voltas][text-placement]")
+{
+    // G6, four ledger lines up, under a first ending with a tempo mark.
+    score::Measure bar = measureOf(
+        0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::g, 0, 6))})}, true);
+    bar.repeats.endingNumbers = {1};
+    bar.repeats.repeatEnd = true;
+    bar.directions = {score::Direction{score::DirectionKind::tempo, 0, 1, "Andante", 72.0}};
+
+    const LayoutOptions options = wideOptions();
+    const ScoreLayout layout = layOutScore(scoreOf({bar}), options);
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.voltas.size() == 1);
+
+    const VoltaGlyph& volta = system.voltas.front();
+    const double headTop = spacesBelowTopLine(system.noteheads.front().position) - 0.5;
+
+    // The hooks hang down from the line and stop clear of the note.
+    CHECK(volta.y + options.voltaHookLength <= headTop - options.textClearance + 1.0e-9);
+
+    // And the tempo mark sits above the bracket, not through it.
+    const TextGlyph* tempo = firstTextOf(system, TextRole::tempo);
+    REQUIRE(tempo != nullptr);
+    CHECK(tempo->y + options.textBandHeight <= volta.y - options.textClearance + 1.0e-9);
+
+    // A system with nothing in the way keeps the bracket at its usual height.
+    score::Measure low = measureOf(
+        0, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::b, 0, 4))})}, true);
+    low.repeats.endingNumbers = {1};
+
+    const ScoreLayout plain = layOutScore(scoreOf({low}), options);
+
+    REQUIRE(plain.systems.front().voltas.size() == 1);
+    CHECK(plain.systems.front().voltas.front().y == Approx(-options.voltaAboveStaff));
+}
+
+// --- Ledger lines belong to a chord (engraving-polish tier 2, decision 7) ---
+
+TEST_CASE(
+    "two notes above the staff share their ledger lines",
+    "[score][engraving][layout][ledger]")
+{
+    // C6 and E6: C6 needs two lines above a treble staff, E6 three. The two they
+    // both need are drawn once each, and the third only for E6.
+    const System system = onlySystemOf({chordAt(
+        0, ticksPerQuarterNote * 2, {pitch(score::Step::c, 0, 6), pitch(score::Step::e, 0, 6)})});
+
+    REQUIRE(system.ledgerLines.size() == 3);
+
+    std::vector<StaffSteps> positions;
+
+    for (const LedgerLineGlyph& line : system.ledgerLines)
+    {
+        positions.push_back(line.position);
+    }
+
+    std::sort(positions.begin(), positions.end());
+    CHECK(positions == std::vector<StaffSteps>{-6, -4, -2});
+}
+
+TEST_CASE(
+    "a note pushed across the stem lengthens the line under it",
+    "[score][engraving][layout][ledger]")
+{
+    // A5 and B5 under a down stem: both above the staff's top line, a second
+    // apart, so the lower one, A5, moves left. A5 sits on the first ledger line
+    // above and B5 just above it, so both need that line -- drawn once, from
+    // past A5's left edge to past B5's right edge.
+    const LayoutOptions options;
+    const System system = onlySystemOf({chordAt(
+        0, ticksPerQuarterNote * 2, {pitch(score::Step::a, 0, 5), pitch(score::Step::b, 0, 5)})});
+
+    const NoteheadGlyph& a = headAt(system, -2);
+    const NoteheadGlyph& b = headAt(system, -3);
+
+    REQUIRE(a.x < b.x);
+    REQUIRE(system.ledgerLines.size() == 1);
+
+    const LedgerLineGlyph& line = system.ledgerLines.front();
+
+    CHECK(line.position == -2);
+    CHECK(line.leftX == Approx(a.x - options.ledgerLineExtension));
+    CHECK(line.rightX == Approx(b.x + options.noteheadWidth + options.ledgerLineExtension));
+}
+
+TEST_CASE("a ledger line is shortened beside an accidental", "[score][engraving][layout][ledger]")
+{
+    const LayoutOptions options;
+    const System system =
+        onlySystemOf({noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 1, 4))});
+
+    const NoteheadGlyph& head = headAt(system, 10);
+
+    REQUIRE(head.accidental == AccidentalKind::sharp);
+    REQUIRE(system.ledgerLines.size() == 1);
+    CHECK(
+        system.ledgerLines.front().leftX ==
+        Approx(head.x - options.ledgerLineExtensionBesideAccidental));
+
+    // The sign ends before the line begins.
+    CHECK(rightEdgeOfAccidental(head) < system.ledgerLines.front().leftX);
+}
+
+TEST_CASE(
+    "a whole note's ledger line is as wide as a whole note",
+    "[score][engraving][layout][ledger]")
+{
+    const LayoutOptions options;
+    const System system =
+        onlySystemOf({noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 0, 4))});
+
+    REQUIRE(system.ledgerLines.size() == 1);
+
+    const LedgerLineGlyph& line = system.ledgerLines.front();
+    const NoteheadGlyph& head = headAt(system, 10);
+
+    CHECK(
+        line.rightX ==
+        Approx(head.x + noteheadWidthFor(NoteheadKind::whole) + options.ledgerLineExtension));
+}
+
+// --- Justification (engraving-polish tier 3, design.md decision 10) ---
+namespace
+{
+// Ten bars of four quarters, with a grace note into the third beat of bar 1 and
+// a key signature, so a case can look at headers and at grace spacing.
+[[nodiscard]] std::shared_ptr<const score::Score> tenBarsWithAGrace()
+{
+    std::vector<score::Measure> measures;
+
+    for (std::size_t index = 0; index < 10; ++index)
+    {
+        std::vector<score::ScoreEvent> events =
+            runOf(4, ticksPerQuarterNote, pitch(score::Step::a, 0, 4));
+
+        if (index == 0)
+        {
+            score::ScoreEvent grace;
+            grace.kind = score::EventKind::note;
+            grace.onset = ticksPerQuarterNote * 2;
+            grace.duration = 0;
+            grace.isGrace = true;
+            grace.notes = notesOf({pitch(score::Step::c, 0, 5)});
+            events.insert(events.begin() + 2, grace);
+        }
+
+        score::Measure measure = measureOf(index, {voiceOf(1, events)}, index == 0);
+
+        if (index == 0)
+        {
+            measure.attributes.key = score::KeySignature{2, "major"};
+        }
+
+        measures.push_back(measure);
+    }
+
+    return scoreOf(measures);
+}
+} // namespace
+
+TEST_CASE(
+    "every full system is justified to the width, the last is not",
+    "[score][engraving][layout][justification]")
+{
+    LayoutOptions options;
+    options.availableWidth = 90.0;
+
+    const ScoreLayout layout = layOutScore(tenBarsWithAGrace(), options);
+
+    REQUIRE(layout.systems.size() > 2);
+
+    for (std::size_t index = 0; index + 1 < layout.systems.size(); ++index)
+    {
+        INFO("system " << index);
+        CHECK(layout.systems.at(index).width == Approx(options.availableWidth));
+    }
+
+    CHECK(layout.systems.back().width < options.availableWidth);
+}
+
+TEST_CASE("justification never stretches a header", "[score][engraving][layout][justification]")
+{
+    LayoutOptions options;
+    options.availableWidth = 90.0;
+
+    const ScoreLayout layout = layOutScore(tenBarsWithAGrace(), options);
+    const System& first = layout.systems.front();
+
+    REQUIRE(first.clefs.size() == 1);
+    REQUIRE(first.keyAccidentals.size() == 2);
+
+    // Clef, then the key one accidental-width apart, exactly as unstretched.
+    CHECK(first.keyAccidentals.at(0).x == Approx(first.clefs.front().x + options.clefWidth));
+    CHECK(
+        first.keyAccidentals.at(1).x - first.keyAccidentals.at(0).x ==
+        Approx(options.keyAccidentalWidth));
+}
+
+TEST_CASE(
+    "a grace note keeps its distance from its note when stretched",
+    "[score][engraving][layout][justification]")
+{
+    // The same bar justified and not: on one long system it is the last system
+    // and is left alone.
+    LayoutOptions narrow;
+    narrow.availableWidth = 90.0;
+    LayoutOptions wide;
+    wide.availableWidth = 1000.0;
+
+    const auto graceGap = [](const ScoreLayout& layout)
+    {
+        const System& system = layout.systems.front();
+        const auto grace = std::find_if(
+            system.noteheads.begin(), system.noteheads.end(),
+            [](const NoteheadGlyph& head) { return head.isGrace; });
+        REQUIRE(grace != system.noteheads.end());
+
+        const auto main = std::find_if(
+            system.noteheads.begin(), system.noteheads.end(),
+            [](const NoteheadGlyph& head) {
+                return !head.isGrace && head.source.measureIndex == 0 &&
+                       head.source.eventIndex == 3;
+            });
+        REQUIRE(main != system.noteheads.end());
+
+        return main->x - grace->x;
+    };
+
+    const ScoreLayout justified = layOutScore(tenBarsWithAGrace(), narrow);
+    const ScoreLayout natural = layOutScore(tenBarsWithAGrace(), wide);
+
+    REQUIRE(justified.systems.size() > 1);
+    REQUIRE(natural.systems.size() == 1);
+
+    CHECK(graceGap(justified) == Approx(graceGap(natural)));
+}
+
+TEST_CASE(
+    "the same score at the same width justifies identically",
+    "[score][engraving][layout][justification]")
+{
+    LayoutOptions options;
+    options.availableWidth = 90.0;
+
+    const ScoreLayout first = layOutScore(tenBarsWithAGrace(), options);
+    const ScoreLayout second = layOutScore(tenBarsWithAGrace(), options);
+
+    REQUIRE(first.systems.size() == second.systems.size());
+
+    for (std::size_t index = 0; index < first.systems.size(); ++index)
+    {
+        const System& left = first.systems.at(index);
+        const System& right = second.systems.at(index);
+
+        CHECK(left.width == right.width);
+        REQUIRE(left.noteheads.size() == right.noteheads.size());
+
+        for (std::size_t head = 0; head < left.noteheads.size(); ++head)
+        {
+            CHECK(left.noteheads.at(head).x == right.noteheads.at(head).x);
+        }
+
+        REQUIRE(left.barlines.size() == right.barlines.size());
+
+        for (std::size_t barline = 0; barline < left.barlines.size(); ++barline)
+        {
+            CHECK(left.barlines.at(barline).x == right.barlines.at(barline).x);
+        }
+    }
+}
+
+// --- Multi-measure rests (engraving-polish tier 3, design.md decision 12) ---
+namespace
+{
+[[nodiscard]] score::Measure restBar(std::size_t index)
+{
+    return measureOf(index, {voiceOf(1, {restAt(0, ticksPerQuarterNote * 4)})}, index == 0);
+}
+
+[[nodiscard]] score::Measure noteBar(std::size_t index)
+{
+    return measureOf(
+        index, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::b, 0, 4))})},
+        index == 0);
+}
+
+[[nodiscard]] std::vector<MultiRestGlyph> multiRestsOf(const ScoreLayout& layout)
+{
+    std::vector<MultiRestGlyph> all;
+
+    for (const System& system : layout.systems)
+    {
+        all.insert(all.end(), system.multiRests.begin(), system.multiRests.end());
+    }
+
+    return all;
+}
+} // namespace
+
+TEST_CASE(
+    "consecutive empty bars are drawn as one multi-measure rest",
+    "[score][engraving][layout][multirest]")
+{
+    const ScoreLayout layout = layOutScore(
+        scoreOf({noteBar(0), restBar(1), restBar(2), restBar(3), restBar(4), noteBar(5)}),
+        wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+    const std::vector<MultiRestGlyph> rests = multiRestsOf(layout);
+
+    REQUIRE(rests.size() == 1);
+    CHECK(rests.front().count == 4);
+
+    // No whole rests drawn for the bars it stands for.
+    CHECK(system.rests.empty());
+
+    // One barline per drawn bar: the note bar, the condensed one, the last.
+    CHECK(system.barlines.size() == 3);
+
+    // The system still says it holds every bar.
+    CHECK(system.firstMeasureIndex == 0);
+    CHECK(system.lastMeasureIndex == 5);
+
+    // As wide as the option, whatever it stands for.
+    CHECK(
+        rests.front().endX - rests.front().startX == Approx(LayoutOptions{}.multiMeasureRestWidth));
+}
+
+TEST_CASE("a single empty bar is left as it is", "[score][engraving][layout][multirest]")
+{
+    const ScoreLayout layout =
+        layOutScore(scoreOf({noteBar(0), restBar(1), noteBar(2)}), wideOptions());
+
+    CHECK(multiRestsOf(layout).empty());
+    CHECK(layout.systems.front().rests.size() == 1);
+}
+
+TEST_CASE("a key change breaks a run of rests", "[score][engraving][layout][multirest]")
+{
+    // Bars 2-3 and 5-6 are runs; bar 4 changes key, which has to be seen, so
+    // it is drawn on its own and the run either side of it is two runs.
+    std::vector<score::Measure> measures{
+        noteBar(0), restBar(1), restBar(2), restBar(3), restBar(4), restBar(5), noteBar(6)};
+    measures.at(3).attributes.key = score::KeySignature{1, "major"};
+
+    const ScoreLayout layout = layOutScore(scoreOf(measures), wideOptions());
+    const std::vector<MultiRestGlyph> rests = multiRestsOf(layout);
+
+    REQUIRE(rests.size() == 2);
+    CHECK(rests.at(0).count == 2);
+    CHECK(rests.at(1).count == 2);
+
+    // The changed bar itself, a whole rest under its new key.
+    CHECK(layout.systems.front().rests.size() == 1);
+}
+
+TEST_CASE("a direction keeps its bar out of a run", "[score][engraving][layout][multirest]")
+{
+    std::vector<score::Measure> measures{
+        noteBar(0), restBar(1), restBar(2), restBar(3), noteBar(4)};
+    measures.at(2).directions = {score::Direction{score::DirectionKind::dynamic, 0, 1, "p", {}}};
+
+    const ScoreLayout layout = layOutScore(scoreOf(measures), wideOptions());
+
+    // Bar 2 rests, bar 3 carries the dynamic, bar 4 rests: no two empty bars
+    // in a row.
+    CHECK(multiRestsOf(layout).empty());
+}
+
+TEST_CASE("bars condense only where every staff rests", "[score][engraving][layout][multirest]")
+{
+    // A piano part: the right hand rests for three bars, the left hand plays
+    // in the middle one.
+    const auto bar = [](std::size_t index, bool leftHandPlays)
+    {
+        score::Voice right = voiceOf(1, {restAt(0, ticksPerQuarterNote * 4)});
+        right.events.front().staff = 1;
+
+        score::ScoreEvent left =
+            leftHandPlays ? noteAt(0, ticksPerQuarterNote * 4, pitch(score::Step::c, 0, 3))
+                          : restAt(0, ticksPerQuarterNote * 4);
+        left.staff = 2;
+
+        score::Measure measure = measureOf(index, {right, voiceOf(5, {left})});
+
+        if (index == 0)
+        {
+            measure.attributes.clefs = {score::Clef{"G", 2, 0, 1}, score::Clef{"F", 4, 0, 2}};
+            measure.attributes.key = score::KeySignature{0, "major"};
+            measure.attributes.time = score::TimeSignature{4, 4};
+        }
+
+        return measure;
+    };
+
+    const ScoreLayout playing = layOutScore(
+        scoreOf({bar(0, true), bar(1, false), bar(2, true), bar(3, false)}, 2), wideOptions());
+    const ScoreLayout resting = layOutScore(
+        scoreOf({bar(0, true), bar(1, false), bar(2, false), bar(3, true)}, 2), wideOptions());
+
+    CHECK(multiRestsOf(playing).empty());
+
+    // Both staves draw the condensed bar.
+    const std::vector<MultiRestGlyph> rests = multiRestsOf(resting);
+    REQUIRE(rests.size() == 2);
+    CHECK(rests.at(0).count == 2);
+    CHECK(rests.at(0).staff != rests.at(1).staff);
+}
+
+// --- Structural system breaks (engraving-polish tier 3, design.md decision 13) ---
+namespace
+{
+// Twelve equal bars, so where a system breaks depends only on the width.
+[[nodiscard]] std::vector<score::Measure> twelveEqualBars()
+{
+    std::vector<score::Measure> measures;
+
+    for (std::size_t index = 0; index < 12; ++index)
+    {
+        measures.push_back(noteBar(index));
+    }
+
+    return measures;
+}
+
+[[nodiscard]] std::size_t firstBreakAfter(const std::vector<score::Measure>& measures, double width)
+{
+    LayoutOptions options;
+    options.availableWidth = width;
+
+    const ScoreLayout layout = layOutScore(scoreOf(measures), options);
+    REQUIRE(layout.systems.size() > 1);
+
+    return layout.systems.front().lastMeasureIndex;
+}
+} // namespace
+
+TEST_CASE(
+    "a system break moves back one bar to a repeat barline",
+    "[score][engraving][layout][breaks]")
+{
+    constexpr double width = 200.0;
+    const std::size_t natural = firstBreakAfter(twelveEqualBars(), width);
+
+    // Enough bars on the line that losing one leaves it three quarters full.
+    REQUIRE(natural >= 4);
+
+    std::vector<score::Measure> measures = twelveEqualBars();
+    measures.at(natural - 1).repeats.repeatEnd = true;
+
+    CHECK(firstBreakAfter(measures, width) == natural - 1);
+}
+
+TEST_CASE(
+    "a system break moves back one bar to the end of an ending",
+    "[score][engraving][layout][breaks]")
+{
+    constexpr double width = 200.0;
+    const std::size_t natural = firstBreakAfter(twelveEqualBars(), width);
+
+    REQUIRE(natural >= 4);
+
+    std::vector<score::Measure> measures = twelveEqualBars();
+    measures.at(natural - 1).repeats.endingNumbers = {2};
+
+    CHECK(firstBreakAfter(measures, width) == natural - 1);
+}
+
+TEST_CASE(
+    "a system break does not move back if it would leave the line under three quarters",
+    "[score][engraving][layout][breaks]")
+{
+    // Narrow enough for two or three bars a line: moving the break back one
+    // bar would leave a line at most two thirds full, which looks worse than a
+    // break in an ordinary place.
+    constexpr double width = 80.0;
+    const std::size_t natural = firstBreakAfter(twelveEqualBars(), width);
+
+    REQUIRE(natural >= 1);
+    REQUIRE(natural <= 2);
+
+    std::vector<score::Measure> measures = twelveEqualBars();
+    measures.at(natural - 1).repeats.repeatEnd = true;
+
+    CHECK(firstBreakAfter(measures, width) == natural);
+}
+
+TEST_CASE(
+    "a break already at a repeat barline stays where it is",
+    "[score][engraving][layout][breaks]")
+{
+    constexpr double width = 200.0;
+    const std::size_t natural = firstBreakAfter(twelveEqualBars(), width);
+
+    std::vector<score::Measure> measures = twelveEqualBars();
+    measures.at(natural).repeats.repeatEnd = true;
+    measures.at(natural - 1).repeats.endingNumbers = {1};
+    measures.at(natural).repeats.endingNumbers = {1};
+
+    // The fill already breaks after a repeat; the ending one bar back does not
+    // end there (its run continues), so nothing moves.
+    CHECK(firstBreakAfter(measures, width) == natural);
+}
+
+// --- Jump marks (engraving-polish tier 1, design.md decision 9) ---
+namespace
+{
+[[nodiscard]] score::Measure jumpBar(std::size_t index, std::vector<std::string> jumps)
+{
+    score::Measure measure = noteBar(index);
+    measure.repeats.jumps = std::move(jumps);
+
+    return measure;
+}
+
+[[nodiscard]] std::pair<double, double> barSpan(const System& system, std::size_t barline)
+{
+    const double start = barline == 0 ? 0.0 : system.barlines.at(barline - 1).x;
+
+    return {start, system.barlines.at(barline).x};
+}
+} // namespace
+
+TEST_CASE(
+    "a segno and a coda are signs at the start of their bars",
+    "[score][engraving][layout][jumps]")
+{
+    const ScoreLayout layout = layOutScore(
+        scoreOf({noteBar(0), jumpBar(1, {"Segno"}), jumpBar(2, {"Coda"})}), wideOptions());
+
+    REQUIRE(layout.systems.size() == 1);
+
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.jumps.size() == 2);
+    CHECK(system.jumps.at(0).sign == JumpSign::segno);
+    CHECK(system.jumps.at(1).sign == JumpSign::coda);
+
+    // Just after each bar's opening barline.
+    const auto [secondStart, secondEnd] = barSpan(system, 1);
+    CHECK(system.jumps.at(0).x > secondStart);
+    CHECK(system.jumps.at(0).x < secondStart + 1.0);
+    CHECK(system.jumps.at(1).x > secondEnd);
+}
+
+TEST_CASE("a jump instruction is text at the end of its bar", "[score][engraving][layout][jumps]")
+{
+    const ScoreLayout layout =
+        layOutScore(scoreOf({noteBar(0), jumpBar(1, {"D.S. al Coda"})}), wideOptions());
+
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.jumps.size() == 1);
+
+    const JumpGlyph& jump = system.jumps.front();
+    const auto [start, end] = barSpan(system, 1);
+
+    CHECK(jump.sign == JumpSign::none);
+    CHECK(jump.text == "D.S. al Coda");
+
+    // Its right edge, just inside the closing barline.
+    CHECK(jump.x < end);
+    CHECK(jump.x > end - 1.0);
+    CHECK(jump.x > start);
+}
+
+TEST_CASE("an unrecognised jump is drawn as text", "[score][engraving][layout][jumps]")
+{
+    // Nothing here knows "vom Anfang", and it is drawn anyway: a jump the
+    // reader cannot see sends them the wrong way.
+    const ScoreLayout layout =
+        layOutScore(scoreOf({noteBar(0), jumpBar(1, {"vom Anfang"})}), wideOptions());
+
+    REQUIRE(layout.systems.front().jumps.size() == 1);
+    CHECK(layout.systems.front().jumps.front().text == "vom Anfang");
+    CHECK(layout.systems.front().jumps.front().sign == JumpSign::none);
+    CHECK_FALSE(anyNoticeContains(layout, "D.C., D.S., Fine and Coda"));
+}
+
+TEST_CASE(
+    "jump marks sit above the staff, with the tempo above them",
+    "[score][engraving][layout][jumps][text-placement]")
+{
+    score::Measure bar = jumpBar(0, {"Segno"});
+    bar.directions = {score::Direction{score::DirectionKind::tempo, 0, 1, "Andante", 72.0}};
+
+    const LayoutOptions options = wideOptions();
+    const ScoreLayout layout = layOutScore(scoreOf({bar}), options);
+    const System& system = layout.systems.front();
+
+    REQUIRE(system.jumps.size() == 1);
+
+    const JumpGlyph& jump = system.jumps.front();
+
+    // Above the staff, its whole row clear of the top line.
+    CHECK(jump.y + options.jumpSignHeight <= 0.0);
+
+    const TextGlyph* tempo = firstTextOf(system, TextRole::tempo);
+    REQUIRE(tempo != nullptr);
+    CHECK(tempo->y + options.textBandHeight <= jump.y - options.textClearance + 1.0e-9);
+}
+
+// --- Hidden parts (score-part-selection, design.md decisions 2 and 3) ---
+namespace
+{
+// A voice and a piano, eight bars each, with a tempo mark on both -- exporters
+// write it into every part -- and the voice holding a percussion-clef staff it
+// would otherwise report.
+[[nodiscard]] std::shared_ptr<const score::Score> voiceAndPiano()
+{
+    const auto partOf = [](std::string id, std::string name, score::Pitch onPitch)
+    {
+        score::Part part;
+        part.id = std::move(id);
+        part.name = std::move(name);
+
+        for (std::size_t index = 0; index < 8; ++index)
+        {
+            score::Measure measure = measureOf(
+                index, {voiceOf(1, {noteAt(0, ticksPerQuarterNote * 4, onPitch)})}, index == 0);
+
+            if (index == 0)
+            {
+                measure.directions = {
+                    score::Direction{score::DirectionKind::tempo, 0, 1, "Andante", 72.0}};
+            }
+
+            part.measures.push_back(measure);
+        }
+
+        return part;
+    };
+
+    auto built = std::make_shared<score::Score>();
+    built->metadata.workTitle = "A Song";
+    built->parts = {
+        partOf("P1", "Voice", pitch(score::Step::e, 0, 5)),
+        partOf("P2", "Piano", pitch(score::Step::c, 0, 4))};
+
+    return built;
+}
+
+[[nodiscard]] LayoutOptions hiding(std::vector<PartKey> parts, double width = 150.0)
+{
+    LayoutOptions options;
+    options.availableWidth = width;
+    options.hiddenParts = std::move(parts);
+
+    return options;
+}
+} // namespace
+
+TEST_CASE("a hidden part is not drawn at all", "[score][engraving][layout][part-selection]")
+{
+    const ScoreLayout both = layOutScore(voiceAndPiano(), hiding({}));
+    const ScoreLayout piano = layOutScore(voiceAndPiano(), hiding({{"P1", "Voice"}}));
+
+    REQUIRE(both.systems.front().staffOffsets.size() == 2);
+    REQUIRE(piano.systems.front().staffOffsets.size() == 1);
+
+    // Only the piano is named, in the title and beside the staff.
+    CHECK(both.partName == "Voice, Piano");
+    CHECK(piano.partName == "Piano");
+    REQUIRE(piano.systems.front().partNames.size() == 1);
+    CHECK(piano.systems.front().partNames.front().text == "Piano");
+
+    // Every notehead left is the piano's middle C.
+    for (const System& system : piano.systems)
+    {
+        for (const NoteheadGlyph& head : system.noteheads)
+        {
+            CHECK(head.position == bottomLineSteps + 2);
+        }
+    }
+
+    // The tempo mark is drawn once, above the piano, now the top part.
+    std::size_t tempos = 0;
+
+    for (const TextGlyph& text : piano.systems.front().texts)
+    {
+        tempos += text.role == TextRole::tempo ? 1 : 0;
+    }
+
+    CHECK(tempos == 1);
+}
+
+TEST_CASE(
+    "the parts shown lay out as a score of only them",
+    "[score][engraving][layout][part-selection]")
+{
+    // The piano with the voice hidden is laid out number for number as a score
+    // that never had a voice, apart from the part list it came from.
+    auto pianoOnly = std::make_shared<score::Score>(*voiceAndPiano());
+    pianoOnly->parts.erase(pianoOnly->parts.begin());
+
+    const ScoreLayout hidden = layOutScore(voiceAndPiano(), hiding({{"P1", "Voice"}}));
+    const ScoreLayout alone = layOutScore(pianoOnly, hiding({}));
+
+    REQUIRE(hidden.systems.size() == alone.systems.size());
+    CHECK(hidden.totalHeight == alone.totalHeight);
+
+    for (std::size_t index = 0; index < hidden.systems.size(); ++index)
+    {
+        const System& left = hidden.systems.at(index);
+        const System& right = alone.systems.at(index);
+
+        CHECK(left.firstMeasureIndex == right.firstMeasureIndex);
+        CHECK(left.lastMeasureIndex == right.lastMeasureIndex);
+        REQUIRE(left.noteheads.size() == right.noteheads.size());
+
+        for (std::size_t head = 0; head < left.noteheads.size(); ++head)
+        {
+            CHECK(left.noteheads.at(head).x == right.noteheads.at(head).x);
+        }
+    }
+}
+
+TEST_CASE("a hidden part reports nothing", "[score][engraving][layout][part-selection]")
+{
+    // A voice with nothing in it would say so; hidden, it is silent.
+    auto score = std::make_shared<score::Score>(*voiceAndPiano());
+
+    for (score::Measure& measure : score->parts.front().measures)
+    {
+        measure.voices.clear();
+    }
+
+    const ScoreLayout shown = layOutScore(score, hiding({}));
+    const ScoreLayout hidden = layOutScore(score, hiding({{"P1", "Voice"}}));
+
+    CHECK(anyNoticeContains(shown, "Voice"));
+    CHECK_FALSE(anyNoticeContains(hidden, "Voice"));
+}
+
+TEST_CASE("hiding every part shows every part", "[score][engraving][layout][part-selection]")
+{
+    const ScoreLayout layout =
+        layOutScore(voiceAndPiano(), hiding({{"P1", "Voice"}, {"P2", "Piano"}}));
+
+    CHECK(layout.partName == "Voice, Piano");
+    CHECK(layout.systems.front().staffOffsets.size() == 2);
+}
+
+TEST_CASE(
+    "a selection hides a part only by its id and its name",
+    "[score][engraving][layout][part-selection]")
+{
+    // Another score's P2 was called "Alto": this score's P2, the piano, stays.
+    const ScoreLayout otherScore = layOutScore(voiceAndPiano(), hiding({{"P2", "Alto"}}));
+    // And a part named Piano under another id is not this piano either.
+    const ScoreLayout otherId = layOutScore(voiceAndPiano(), hiding({{"P9", "Piano"}}));
+
+    CHECK(otherScore.partName == "Voice, Piano");
+    CHECK(otherId.partName == "Voice, Piano");
+}
+
+TEST_CASE(
+    "a tempo written only in a hidden part is drawn above the parts shown",
+    "[score][engraving][layout][part-selection]")
+{
+    // The shipped sample writes "Alla Marcia" into the voice alone. Hide the
+    // voice and the piano still needs its tempo: it is the whole score's.
+    auto score = std::make_shared<score::Score>(*voiceAndPiano());
+    score->parts.at(1).measures.front().directions.clear();
+
+    const ScoreLayout layout = layOutScore(score, hiding({{"P1", "Voice"}}));
+
+    REQUIRE(layout.partName == "Piano");
+
+    const TextGlyph* tempo = firstTextOf(layout.systems.front(), TextRole::tempo);
+    REQUIRE(tempo != nullptr);
+    CHECK(tempo->text.find("Andante") != std::string::npos);
+
+    // And it is lent, not doubled: the piano's own mark at the same moment
+    // wins when it has one.
+    const ScoreLayout both = layOutScore(voiceAndPiano(), hiding({{"P1", "Voice"}}));
+    std::size_t tempos = 0;
+
+    for (const TextGlyph& text : both.systems.front().texts)
+    {
+        tempos += text.role == TextRole::tempo ? 1 : 0;
+    }
+
+    CHECK(tempos == 1);
 }

@@ -20,11 +20,11 @@ constexpr double ledgerLineThickness = 0.16;
 constexpr double thinBarlineThickness = 0.16;
 constexpr double thickBarlineThickness = 0.5;
 
-// How far a ledger line reaches past each side of its notehead, and how far on
-// the side an accidental stands: shortened there, as Gould prescribes, so the
-// sign does not sit on the end of the line.
-constexpr double ledgerLineExtension = 0.4;
-constexpr double ledgerLineExtensionBesideAccidental = 0.1;
+// An ending bracket's lines, from Bravura's engraving defaults, and how far its
+// hooks drop. The hook length is the layout's room for the bracket, which the
+// layout keeps as `voltaHookLength`; the painter draws the shape it reserved.
+constexpr double voltaLineThickness = 0.16;
+constexpr double voltaHookLength = engraving::LayoutOptions{}.voltaHookLength;
 
 // The gap between the thin and thick lines of a final or repeat barline, and
 // between a repeat's dots and its thin line.
@@ -36,18 +36,14 @@ constexpr double repeatDotSeparation = 0.16;
 constexpr double tieEndpointThickness = 0.1;
 constexpr double tieMidpointThickness = 0.22;
 
-// Room between an accidental and the notehead it modifies.
-constexpr double accidentalGap = 0.2;
-
 // Room between a notehead and its first augmentation dot, and from one dot to
 // the next.
 constexpr double dotGap = 0.24;
 constexpr double dotPitch = 0.56;
 
-// Grace notes are drawn at this fraction of full size: the convention for cue
-// and grace notation, small enough to read as not taking time and large
-// enough to read at all.
-constexpr double graceScale = 0.66;
+// The layout's, because it places a grace note's accidental and so has to know
+// how small the painter draws one.
+constexpr double graceScale = engraving::graceNoteScale;
 
 // Where a clef's sign begins inside the room the layout reserved for it.
 constexpr double clefLeadIn = 0.4;
@@ -205,46 +201,9 @@ void ScoreGlyphPainter::drawNotehead(
     const juce::Rectangle<float> headBounds = font.bounds(head);
 
     const double headWidth = static_cast<double>(headBounds.getWidth()) * scale;
-    const double centreX = glyph.x + (static_cast<double>(headBounds.getCentreX()) * scale);
     const double y = yForSteps(glyph.position);
 
-    // Ledger lines first, so a notehead sits on top of them rather than being
-    // cut by one.
-    //
-    // At their **own** staff positions rather than at offsets from the note: a
-    // ledger line continues the staff's own lines, so they are at -2, -4, ...
-    // above and 10, 12, ... below, whatever the note sits on. A note on the
-    // first one is *on* it; a note in the space beyond it is a half space past
-    // it and still needs only that one. Centred on the notehead actually drawn,
-    // because a whole note is wider than a black one and its ledger lines are
-    // too.
     graphics.setColour(colour);
-
-    const double leftExtension =
-        (glyph.accidental == engraving::AccidentalKind::none
-             ? ledgerLineExtension
-             : ledgerLineExtensionBesideAccidental) *
-        scale;
-    const double ledgerLeft = centreX - (headWidth * 0.5) - leftExtension;
-    const double ledgerRight = centreX + (headWidth * 0.5) + (ledgerLineExtension * scale);
-
-    const auto ledgerAt = [&](StaffSteps steps)
-    {
-        graphics.fillRect(juce::Rectangle<float>(
-            static_cast<float>(originX) + px(ledgerLeft),
-            static_cast<float>(originY) + px(yForSteps(steps)) - (px(ledgerLineThickness) * 0.5f),
-            px(ledgerRight - ledgerLeft), px(ledgerLineThickness)));
-    };
-
-    for (int above = 1; above <= glyph.ledger.above; ++above)
-    {
-        ledgerAt(engraving::topLineSteps - (above * 2));
-    }
-
-    for (int below = 1; below <= glyph.ledger.below; ++below)
-    {
-        ledgerAt(engraving::bottomLineSteps + (below * 2));
-    }
 
     // SMuFL puts a notehead's origin at its left edge, on the line or space it
     // sits on -- which is exactly what the layout's x and staff position are.
@@ -252,13 +211,9 @@ void ScoreGlyphPainter::drawNotehead(
 
     if (const std::optional<smufl::Glyph> sign = smufl::accidentalFor(glyph.accidental))
     {
-        // Right-aligned a small gap before the notehead. The signs differ in
-        // width -- a double flat is nearly twice a natural -- so it is their
-        // right edges that line up, not their origins.
-        const double right = glyph.x - (accidentalGap * scale);
-        const double left = right - (static_cast<double>(font.bounds(*sign).getRight()) * scale);
-
-        drawGlyph(*sign, left, y, originX, originY, colour, scale);
+        // Where the layout put it: a chord's signs are stacked against each
+        // other into columns, which one notehead at a time cannot do.
+        drawGlyph(*sign, glyph.accidentalX, y, originX, originY, colour, scale);
     }
 
     // Augmentation dots go in a space, never on a line, so a dot on a
@@ -492,7 +447,9 @@ void ScoreGlyphPainter::drawTie(const engraving::TieGlyph& glyph, double originX
     const double noteheadWidth =
         static_cast<double>(font.bounds(smufl::Glyph::noteheadBlack).getRight());
 
-    const double startX = glyph.startX + noteheadWidth;
+    // A tie leaves the right edge of its notehead -- unless it is the second
+    // half of one split by a system break, which starts where the layout says.
+    const double startX = glyph.fromSystemStart ? glyph.startX : glyph.startX + noteheadWidth;
     const double endX = glyph.endX;
 
     if (endX <= startX)
@@ -628,6 +585,143 @@ void ScoreGlyphPainter::drawText(const engraving::TextGlyph& glyph, double origi
         justification);
 }
 
+void ScoreGlyphPainter::drawMultiRest(
+    const engraving::MultiRestGlyph& glyph,
+    double originX,
+    double originY) const
+{
+    // Inset from the barlines so the serifs stand clear of them, as Gould
+    // draws it: a thick bar on the middle line, and a thin upright at each end
+    // from the second line to the fourth.
+    constexpr double inset = 1.2;
+    constexpr double barThickness = 0.8;
+    constexpr double serifThickness = 0.16;
+
+    const double left = glyph.startX + inset;
+    const double right = glyph.endX - inset;
+
+    if (right <= left)
+    {
+        return;
+    }
+
+    graphics.setColour(palette.notation);
+
+    const auto box = [&](double x, double top, double width, double height)
+    {
+        graphics.fillRect(juce::Rectangle<float>(
+            static_cast<float>(originX) + px(x), static_cast<float>(originY) + px(top), px(width),
+            px(height)));
+    };
+
+    const double middle = yForSteps(engraving::middleLineSteps);
+
+    box(left, middle - (barThickness * 0.5), right - left, barThickness);
+    box(left, yForSteps(2), serifThickness, yForSteps(6) - yForSteps(2));
+    box(right - serifThickness, yForSteps(2), serifThickness, yForSteps(6) - yForSteps(2));
+
+    // The count, in a time signature's digits, centred over the bar and
+    // standing a space and a half above the staff.
+    const std::vector<smufl::Glyph> digits = smufl::timeSignatureDigits(glyph.count);
+    double x = ((glyph.startX + glyph.endX) * 0.5) - (runWidth(font, digits) * 0.5);
+
+    for (const smufl::Glyph digit : digits)
+    {
+        drawGlyph(digit, x, -1.5, originX, originY, palette.notation);
+        x += static_cast<double>(font.bounds(digit).getRight());
+    }
+}
+
+void ScoreGlyphPainter::drawJump(const engraving::JumpGlyph& glyph, double originX, double originY)
+    const
+{
+    const double rowHeight = engraving::LayoutOptions{}.jumpSignHeight;
+
+    if (glyph.sign != engraving::JumpSign::none)
+    {
+        const smufl::Glyph sign =
+            glyph.sign == engraving::JumpSign::segno ? smufl::Glyph::segno : smufl::Glyph::coda;
+        const juce::Rectangle<float> bounds = font.bounds(sign);
+
+        if (bounds.getHeight() <= 0.0f)
+        {
+            return;
+        }
+
+        // Scaled to the row, with its foot on the row's bottom.
+        const double scale = rowHeight / static_cast<double>(bounds.getHeight());
+        const double baseline =
+            glyph.y + rowHeight - (static_cast<double>(bounds.getBottom()) * scale);
+
+        drawGlyph(sign, glyph.x, baseline, originX, originY, palette.notation, scale);
+
+        return;
+    }
+
+    // Right-aligned at the end of its bar, on the row's bottom like the signs.
+    constexpr double textHeight = 1.7;
+    constexpr double maximumWidth = 16.0;
+
+    graphics.setColour(palette.notation);
+    graphics.setFont(juce::FontOptions(px(1.4), juce::Font::bold | juce::Font::italic));
+    graphics.drawText(
+        juce::String(glyph.text),
+        juce::Rectangle<float>(
+            static_cast<float>(originX + px(glyph.x - maximumWidth)),
+            static_cast<float>(originY + px(glyph.y + rowHeight - textHeight)), px(maximumWidth),
+            px(textHeight)),
+        juce::Justification::centredRight, false);
+}
+
+void ScoreGlyphPainter::drawVolta(
+    const engraving::VoltaGlyph& glyph,
+    double originX,
+    double originY) const
+{
+    if (glyph.endX <= glyph.startX)
+    {
+        return;
+    }
+
+    graphics.setColour(palette.notation);
+
+    const auto line = [&](double left, double top, double width, double height)
+    {
+        graphics.fillRect(juce::Rectangle<float>(
+            static_cast<float>(originX) + px(left), static_cast<float>(originY) + px(top),
+            px(width), px(height)));
+    };
+
+    // The line, and a hook down from each end that has one, all at the
+    // weight Bravura gives an ending's lines.
+    line(glyph.startX, glyph.y, glyph.endX - glyph.startX, voltaLineThickness);
+
+    if (glyph.hookAtStart)
+    {
+        line(glyph.startX, glyph.y, voltaLineThickness, voltaHookLength);
+    }
+
+    if (glyph.hookAtEnd)
+    {
+        line(glyph.endX - voltaLineThickness, glyph.y, voltaLineThickness, voltaHookLength);
+    }
+
+    if (glyph.label.empty())
+    {
+        return;
+    }
+
+    // Under the line, just inside the hook.
+    graphics.setFont(juce::FontOptions(px(1.2), juce::Font::bold));
+    graphics.drawText(
+        juce::String(glyph.label),
+        juce::Rectangle<float>(
+            static_cast<float>(originX + px(glyph.startX + 0.4)),
+            static_cast<float>(originY + px(glyph.y + 0.15)),
+            px(std::max(1.0, glyph.endX - glyph.startX - 0.6)), px(1.4)),
+        juce::Justification::centredLeft, false);
+}
+
 void ScoreGlyphPainter::drawPartName(
     const engraving::PartNameGlyph& glyph,
     const engraving::System& system,
@@ -740,6 +834,19 @@ void ScoreGlyphPainter::drawSystem(const engraving::System& system, double origi
         drawBeam(glyph, originX, staffOrigin(glyph.staff));
     }
 
+    // Ledger lines before the noteheads, so a head sits on its line rather than
+    // being cut by it. Where each one ends is the layout's: a chord's notes
+    // share theirs.
+    for (const engraving::LedgerLineGlyph& glyph : system.ledgerLines)
+    {
+        graphics.setColour(glyph.isGrace ? palette.muted : palette.notation);
+        graphics.fillRect(juce::Rectangle<float>(
+            static_cast<float>(originX) + px(glyph.leftX),
+            static_cast<float>(staffOrigin(glyph.staff)) + px(yForSteps(glyph.position)) -
+                (px(ledgerLineThickness) * 0.5f),
+            px(glyph.rightX - glyph.leftX), px(ledgerLineThickness)));
+    }
+
     for (const engraving::NoteheadGlyph& glyph : system.noteheads)
     {
         drawNotehead(glyph, originX, staffOrigin(glyph.staff));
@@ -758,6 +865,21 @@ void ScoreGlyphPainter::drawSystem(const engraving::System& system, double origi
     for (const engraving::TextGlyph& glyph : system.texts)
     {
         drawText(glyph, originX, staffOrigin(glyph.staff));
+    }
+
+    for (const engraving::MultiRestGlyph& glyph : system.multiRests)
+    {
+        drawMultiRest(glyph, originX, staffOrigin(glyph.staff));
+    }
+
+    for (const engraving::VoltaGlyph& glyph : system.voltas)
+    {
+        drawVolta(glyph, originX, staffOrigin(0));
+    }
+
+    for (const engraving::JumpGlyph& glyph : system.jumps)
+    {
+        drawJump(glyph, originX, staffOrigin(0));
     }
 }
 

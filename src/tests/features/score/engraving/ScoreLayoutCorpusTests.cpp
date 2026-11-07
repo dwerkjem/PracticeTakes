@@ -134,12 +134,20 @@ TEST_CASE("every corpus score lays out", "[score][engraving][corpus]")
                 CHECK(glyph.position > -60);
                 CHECK(glyph.position < 60);
 
-                CHECK(glyph.ledger.above >= 0);
-                CHECK(glyph.ledger.below >= 0);
-                CHECK_FALSE((glyph.ledger.above > 0 && glyph.ledger.below > 0));
-
                 CHECK(glyph.dots >= 0);
                 CHECK(glyph.dots <= 2);
+            }
+
+            for (const engraving::LedgerLineGlyph& glyph : system.ledgerLines)
+            {
+                // Beyond the staff, on a line rather than in a space, and with
+                // some length to it.
+                CHECK(
+                    (glyph.position < engraving::topLineSteps ||
+                     glyph.position > engraving::bottomLineSteps));
+                CHECK(glyph.position % 2 == 0);
+                CHECK(isFinite(glyph.leftX));
+                CHECK(glyph.leftX < glyph.rightX);
             }
 
             for (const engraving::StemGlyph& glyph : system.stems)

@@ -45,11 +45,12 @@ ToolSettingsPayload encode(const AppDefaults::TunerSettings& settings)
 {
     auto* object = new juce::DynamicObject;
     object->setProperty("displayMode", settings.displayMode);
-    object->setProperty("easing", settings.easing);
-    object->setProperty("averaging", settings.averaging);
-    object->setProperty("noteSwitchSemitones", settings.noteSwitchSemitones);
-    object->setProperty("dropoutFrames", settings.dropoutFrames);
-    object->setProperty("graphDurationSeconds", settings.graphDurationSeconds);
+    for (const AppDefaults::TunerNumberField& field : AppDefaults::tunerNumberFields)
+    {
+        object->setProperty(
+            juce::Identifier(juce::String(field.key.data(), field.key.size())),
+            settings.*field.member);
+    }
     return {1, juce::JSON::toString(juce::var(object)).toStdString()};
 }
 
@@ -66,19 +67,27 @@ std::optional<AppDefaults::TunerSettings> decode(const std::optional<ToolSetting
         return std::nullopt;
     }
 
-    const auto displayMode = boundedPayloadInteger(decoded["displayMode"], 1, 3);
-    const auto easing = boundedPayloadNumber(decoded["easing"], 0.02, 1.0);
-    const auto averaging = boundedPayloadNumber(decoded["averaging"], 1.0, 15.0);
-    const auto noteSwitch = boundedPayloadNumber(decoded["noteSwitchSemitones"], 0.1, 1.5);
-    const auto dropout = boundedPayloadNumber(decoded["dropoutFrames"], 1.0, 20.0);
-    const auto duration = boundedPayloadNumber(decoded["graphDurationSeconds"], 5.0, 60.0);
-    if (!displayMode.has_value() || !easing.has_value() || !averaging.has_value() ||
-        !noteSwitch.has_value() || !dropout.has_value() || !duration.has_value())
+    const auto displayMode = boundedPayloadInteger(
+        decoded["displayMode"], AppDefaults::tunerDisplayModeMinimum,
+        AppDefaults::tunerDisplayModeMaximum);
+    if (!displayMode.has_value())
     {
         return std::nullopt;
     }
 
-    return AppDefaults::TunerSettings{
-        *displayMode, *easing, *averaging, *noteSwitch, *dropout, *duration};
+    AppDefaults::TunerSettings settings = AppDefaults::tunerDefaults();
+    settings.displayMode = *displayMode;
+    for (const AppDefaults::TunerNumberField& field : AppDefaults::tunerNumberFields)
+    {
+        const auto value = boundedPayloadNumber(
+            decoded[juce::Identifier(juce::String(field.key.data(), field.key.size()))],
+            field.minimum, field.maximum);
+        if (!value.has_value())
+        {
+            return std::nullopt;
+        }
+        settings.*field.member = *value;
+    }
+    return settings;
 }
 } // namespace TunerSettingsCodec

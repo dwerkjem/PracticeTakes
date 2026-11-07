@@ -3,6 +3,9 @@
 #include "../../platform/midi/MidiMessageTranslation.h"
 #include "../theme/ThemeType.h"
 
+#include <array>
+#include <string_view>
+
 namespace AppDefaults
 {
 inline constexpr int schemaVersion = 6;
@@ -47,19 +50,89 @@ struct TunerSettings
     double graphDurationSeconds;
 };
 
+// The tuner's settings schema: for each numeric setting, the name it is stored
+// under in a workspace payload and the range every reader accepts and the
+// tuner's slider offers. Declared once because three places read it -- the
+// workspace codec, the legacy settings migration and the tuner's own controls
+// -- and each used to spell the ranges out for itself.
+struct TunerNumberField
+{
+    std::string_view key;
+    double TunerSettings::*member;
+    double minimum;
+    double maximum;
+    double step;
+};
+
+inline constexpr int tunerDisplayModeMinimum = 1;
+inline constexpr int tunerDisplayModeMaximum = 3;
+
+// In payload order: a workspace payload lists its fields in this order.
+inline constexpr std::array tunerNumberFields{
+    TunerNumberField{"easing", &TunerSettings::easing, 0.02, 1.0, 0.01},
+    TunerNumberField{"averaging", &TunerSettings::averaging, 1.0, 15.0, 1.0},
+    TunerNumberField{"noteSwitchSemitones", &TunerSettings::noteSwitchSemitones, 0.1, 1.5, 0.05},
+    TunerNumberField{"dropoutFrames", &TunerSettings::dropoutFrames, 1.0, 20.0, 1.0},
+    TunerNumberField{"graphDurationSeconds", &TunerSettings::graphDurationSeconds, 5.0, 60.0, 1.0},
+};
+
+// The schema entry for one setting. Every member of TunerSettings but
+// displayMode has one, which AppDefaultsTests checks.
+[[nodiscard]] constexpr const TunerNumberField& tunerField(double TunerSettings::*member)
+{
+    for (const TunerNumberField& field : tunerNumberFields)
+    {
+        if (field.member == member)
+        {
+            return field;
+        }
+    }
+    return tunerNumberFields.front();
+}
+
+// The general-instrument values, which are also the tuner's defaults.
+inline constexpr TunerSettings generalInstrumentTuner{
+    Tuner::displayMode,         Tuner::easing,        Tuner::averaging,
+    Tuner::noteSwitchSemitones, Tuner::dropoutFrames, Tuner::graphDurationSeconds};
+
+// A practice preset, declared once: its identity, the name the Settings window
+// offers it under, and the tuner controls it applies. The Settings window
+// builds its preset list from this table, so a new preset is one entry here
+// and nothing in the shell -- the pattern `ToolDefinition` set for tools.
+struct PresetDefinition
+{
+    Preset id;
+    std::string_view label;
+    TunerSettings tuner;
+};
+
+// In the order the Settings window lists them. An id is also the preset's
+// ComboBox item id, which JUCE reserves 0 of, so ids start at 1.
+inline constexpr std::array presets{
+    PresetDefinition{
+        Preset::voice,
+        "Voice practice",
+        {Tuner::displayMode, 0.25, 7.0, 0.45, 7.0, 30.0}},
+    PresetDefinition{Preset::generalInstrument, "General instrument", generalInstrumentTuner},
+};
+
 [[nodiscard]] constexpr TunerSettings tunerPreset(Preset preset)
 {
-    if (preset == Preset::voice)
+    for (const PresetDefinition& definition : presets)
     {
-        return {Tuner::displayMode, 0.25, 7.0, 0.45, 7.0, 30.0};
+        if (definition.id == preset)
+        {
+            return definition.tuner;
+        }
     }
 
-    return {Tuner::displayMode,         Tuner::easing,        Tuner::averaging,
-            Tuner::noteSwitchSemitones, Tuner::dropoutFrames, Tuner::graphDurationSeconds};
+    // An id from nowhere -- a ComboBox item this table did not add -- applies
+    // the defaults, as the code before the table did for anything not voice.
+    return generalInstrumentTuner;
 }
 
 [[nodiscard]] constexpr TunerSettings tunerDefaults()
 {
-    return tunerPreset(Preset::generalInstrument);
+    return generalInstrumentTuner;
 }
 } // namespace AppDefaults

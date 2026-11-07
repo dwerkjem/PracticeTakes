@@ -51,6 +51,7 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/ui/score/ScoreImportSummary.cpp
     src/application/shell/ui/score/ScoreImportSummary.h
     src/application/shell/ui/score/ScoreImportWindow.h
+    src/application/shell/ui/ShellWindowTitles.h
     src/application/shell/ui/settings/MainComponentSettings.cpp
     src/application/shell/ui/settings/SettingsWindow.h
     src/application/shell/ui/workspace/components/DockedToolPanel.h
@@ -98,6 +99,7 @@ set(PRACTICE_TAKES_SOURCES
     src/application/tools/BuiltInTools.h
     src/application/tools/ToolCatalog.h
     src/application/tools/ToolComponent.h
+    src/application/tools/ToolMenuEntries.h
     src/application/tools/ToolInstanceAllocator.h
     src/application/tools/ToolInstanceId.h
     src/application/tools/ToolRegistry.h
@@ -129,6 +131,7 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/TargetNoteComponent.cpp
     src/features/score/TargetNoteComponent.h
     src/features/score/TargetNoteSelection.cpp
+    src/features/score/engraving/AccidentalStacking.cpp
     src/features/score/engraving/BeamGeometry.cpp
     src/features/score/engraving/BeamGrouping.cpp
     src/features/score/engraving/KeySignatureLayout.cpp
@@ -140,6 +143,8 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/StaffPosition.cpp
     src/features/score/TargetNoteSelection.h
     src/features/score/engraving/Accidental.h
+    src/features/score/engraving/AccidentalStacking.cpp
+    src/features/score/engraving/AccidentalStacking.h
     src/features/score/engraving/BeamGeometry.cpp
     src/features/score/engraving/BeamGeometry.h
     src/features/score/engraving/BeamGrouping.cpp
@@ -254,10 +259,12 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
     src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp
     src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp
+    src/tests/application/testcontrol/ApprovedStatesManifestTests.cpp
     src/tests/application/theme/AppLookAndFeelTests.cpp
     src/tests/application/tools/CompactPresentationTests.cpp
     src/tests/application/tools/ToolCatalogTests.cpp
     src/tests/application/tools/ToolLifecycleTests.cpp
+    src/tests/application/tools/ToolMenuEntriesTests.cpp
     src/tests/application/tools/UnknownToolIntegrationTests.cpp
     src/tests/application/tools/ToolInstanceIdTests.cpp
     src/tests/application/testcontrol/TestControlClickerTests.cpp
@@ -266,11 +273,13 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/theme/ThemeContrastTests.cpp
     src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
     src/tests/features/analysis/tuner/PitchTrackerTests.cpp
+    src/tests/features/analysis/tuner/TunerSettingsCodecTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
     src/tests/features/score/TargetNoteSelectionTests.cpp
     src/tests/features/score/MusicFontTests.cpp
     src/tests/features/score/ScoreViewSettingsTests.cpp
     src/tests/features/score/SmuflGlyphsTests.cpp
+    src/tests/features/score/engraving/AccidentalStackingTests.cpp
     src/tests/features/score/engraving/BeamGeometryTests.cpp
     src/tests/features/score/engraving/BeamGroupingTests.cpp
     src/tests/features/score/engraving/KeySignatureLayoutTests.cpp
@@ -318,6 +327,8 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/application/shell/ui/score/ScoreImportSummary.cpp
     src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
     src/application/testcontrol/ApprovedWindowStates.cpp
+    src/application/testcontrol/ApprovedStatesManifest.cpp
+    src/application/testcontrol/ApprovedStatesManifest.h
     src/application/testcontrol/TestControlClicker.cpp
     src/application/testcontrol/TestControlCommand.cpp
     src/application/testcontrol/TestControlSession.cpp
@@ -330,6 +341,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/features/score/ScoreViewSettings.cpp
     src/features/score/SmuflGlyphs.cpp
     src/features/score/TargetNoteSelection.cpp
+    src/features/score/engraving/AccidentalStacking.cpp
     src/features/score/engraving/BeamGeometry.cpp
     src/features/score/engraving/BeamGrouping.cpp
     src/features/score/engraving/KeySignatureLayout.cpp

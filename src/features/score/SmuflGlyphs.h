@@ -61,6 +61,8 @@ enum class Glyph : char32_t
     timeSig9 = 0xE089,
 
     repeatDot = 0xE044,
+    segno = 0xE047,
+    coda = 0xE048,
 
     augmentationDot = 0xE1E7,
 

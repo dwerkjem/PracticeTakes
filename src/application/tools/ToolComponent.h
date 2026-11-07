@@ -97,6 +97,15 @@ class ToolComponent : public juce::Component
         // say -- so a reader of the menu can tell which one that is without
         // having to already know before opening it.
         bool ticked = false;
+
+        // Shown but not choosable: an option that exists and does not apply
+        // right now, such as hiding the last part still shown.
+        bool enabled = true;
+
+        // When not empty, this entry is a heading for a submenu of these and
+        // its own `action` is never called. Every entry that sets neither of
+        // these last two fields behaves exactly as entries always have.
+        std::vector<MenuEntry> submenu;
     };
 
     [[nodiscard]] virtual std::vector<MenuEntry> optionsMenuEntries()

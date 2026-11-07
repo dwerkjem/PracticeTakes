@@ -27,6 +27,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import approved_states
+
 # The three fixed axes, asked for every surface in this order.
 FIXED_AXES: tuple[Question, ...]  # forward reference, defined below
 
@@ -34,8 +36,10 @@ QUICK = "quick"
 FULL = "full"
 
 # Titles the application gives its other top-level windows, from
-# SettingsWindow.h and FeedbackWindow.h. A capture of one of those surfaces has
-# to name the window or it photographs the main one instead.
+# src/application/shell/ui/ShellWindowTitles.h. A surface does not name its
+# window: the manifest says which window each state shows. These are here for
+# the code and tests that look for one window in particular, and `validate`
+# checks them against the manifest.
 SETTINGS_WINDOW = "Settings"
 FEEDBACK_WINDOW = "Send feedback"
 SCORE_IMPORT_WINDOW = "Score import"
@@ -84,6 +88,33 @@ FIXED_AXES = (
     Question("looks-good", "Does it look well-presented?"),
     Question("works", "Does it work?"),
 )
+
+
+def derived_fields(state_id: str) -> dict:
+    """What the manifest says about a state, in the Surface's own terms.
+
+    A state the application does not declare gets the empty values, so a test
+    can describe a surface of a made-up state; `validate` reports such a state
+    in the real list.
+    """
+    state = approved_states.manifest().find(state_id)
+
+    if state is None:
+        return {"tools": (), "presentation": "", "window_title": "", "fixed_geometry": False}
+
+    if state.presentation == "none":
+        presentation = ""
+    elif state.presentation == "docked" and state.arrangement != "single":
+        presentation = state.arrangement
+    else:
+        presentation = state.presentation
+
+    return {
+        "tools": state.tools,
+        "presentation": presentation,
+        "window_title": state.window_title,
+        "fixed_geometry": state.is_about_its_geometry,
+    }
 
 
 @dataclass(frozen=True)
@@ -135,7 +166,11 @@ class Surface:
     # so destroy the very thing under test -- which is exactly what happened:
     # narrow-window was reported "not narrow" and fullscreen "not fullscreen",
     # because the sweep set them both back to the default size.
-    fixed_geometry: bool = False
+    #
+    # From the manifest when left out, as `tools`, `presentation` and
+    # `window_title` are below: a state at any geometry but the normal one is
+    # about its size.
+    fixed_geometry: bool | None = None
 
     # What this surface is, for filtering a review by it. A grid of a hundred
     # captures is only reviewable if you can ask it for "every settings window
@@ -145,8 +180,13 @@ class Surface:
     #
     # `tools` names what the state opens, `presentation` how they are shown, and
     # `area` what part of the application the surface belongs to.
-    tools: tuple[str, ...] = ()
-    presentation: str = ""
+    #
+    # `tools` and `presentation` come from the manifest when left out, which in
+    # SURFACES they always are. `presentation` is "docked" or "floating", or the
+    # arrangement -- "split" or "tabbed" -- when several tools are docked
+    # together; empty when the state opens no tool.
+    tools: tuple[str, ...] | None = None
+    presentation: str | None = None
     area: str = "workspace"
 
     # Seconds to let the application run before capturing it.
@@ -168,7 +208,21 @@ class Surface:
     # These surfaces are also captured once rather than at every resolution: the
     # geometry command resizes the *main* window, so sweeping would produce the
     # same image under three different labels.
-    window_title: str = ""
+    #
+    # From the manifest, which derives it from what the state opens, when left
+    # out.
+    window_title: str | None = None
+
+    def __post_init__(self) -> None:
+        # Fill in what the application already declares about the state. A
+        # value given explicitly wins, which is how tests describe surfaces of
+        # states the application does not have; `validate` checks no surface in
+        # SURFACES contradicts the manifest.
+        derived = derived_fields(self.state)
+
+        for name, value in derived.items():
+            if getattr(self, name) is None:
+                object.__setattr__(self, name, value)
 
 
 # The surface set. Ordered as a run presents them: cheapest and most
@@ -184,8 +238,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="tuner-docked",
         title="The tuner, docked",
-        tools=("tuner",),
-        presentation="docked",
         modes=frozenset({QUICK, FULL}),
         extras=(
             Question(
@@ -200,7 +252,6 @@ SURFACES: tuple[Surface, ...] = (
         title="The settings window",
         area="settings",
         modes=frozenset({QUICK, FULL}),
-        window_title=SETTINGS_WINDOW,
     ),
     # The tuner is not one surface. It has three ways of drawing the same
     # analysis, an expandable settings panel, and it looks different depending
@@ -211,79 +262,59 @@ SURFACES: tuple[Surface, ...] = (
         state="tuner-in-tune",
         warmup_seconds=2.5,
         title="The tuner, dead in tune",
-        tools=("tuner",),
-        presentation="docked",
         modes=frozenset({QUICK, FULL}),
     ),
     Surface(
         state="tuner-sharp",
         warmup_seconds=2.5,
         title="The tuner, reading sharp",
-        tools=("tuner",),
-        presentation="docked",
         modes=frozenset({FULL}),
     ),
     Surface(
         state="tuner-flat",
         warmup_seconds=2.5,
         title="The tuner, reading flat",
-        tools=("tuner",),
-        presentation="docked",
         modes=frozenset({FULL}),
     ),
     Surface(
         state="tuner-bar",
         warmup_seconds=2.5,
         title="The tuner in its bar view",
-        tools=("tuner",),
-        presentation="docked",
         modes=frozenset({FULL}),
     ),
     Surface(
         state="tuner-meter",
         warmup_seconds=2.5,
         title="The tuner in its meter view",
-        tools=("tuner",),
-        presentation="docked",
         modes=frozenset({FULL}),
     ),
     Surface(
         state="tuner-advanced",
         warmup_seconds=2.5,
         title="The tuner with advanced settings open",
-        tools=("tuner",),
-        presentation="docked",
         modes=frozenset({FULL}),
     ),
     Surface(
         state="spectrogram-tone",
         warmup_seconds=2.5,
         title="The spectrogram with a tone in it",
-        tools=("spectrogram",),
-        presentation="docked",
         modes=frozenset({FULL}),
     ),
     Surface(
         state="harmonics-tone",
         warmup_seconds=2.5,
         title="The analyser reading a sustained pitch",
-        tools=("harmonics",),
-        presentation="docked",
         modes=frozenset({FULL}),
     ),
     Surface(
         state="all-tools-tone",
         warmup_seconds=2.5,
         title="Every tool analysing the same tone",
-        tools=("tuner", "spectrogram", "harmonics"),
-        presentation="split",
         modes=frozenset({FULL}),
     ),
     Surface(
         state="spectrogram-docked",
         title="The spectrogram, docked",
-        tools=("spectrogram",),
-        presentation="docked",
         modes=frozenset({FULL}),
         extras=(
             Question(
@@ -296,8 +327,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="harmonics-docked",
         title="The harmonic analyser, docked",
-        tools=("harmonics",),
-        presentation="docked",
         modes=frozenset({FULL}),
         extras=(
             Question(
@@ -310,10 +339,7 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="tuner-floating",
         title="The tuner in a floating window",
-        tools=("tuner",),
-        presentation="floating",
         modes=frozenset({FULL}),
-        window_title="Tuner",
         extras=(
             Question(
                 "moveable", "Can the floating window be moved and resized?", behavioural=True
@@ -323,24 +349,16 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="spectrogram-floating",
         title="The spectrogram in a floating window",
-        tools=("spectrogram",),
-        presentation="floating",
         modes=frozenset({FULL}),
-        window_title="Spectrogram",
     ),
     Surface(
         state="harmonics-floating",
         title="The harmonic analyser in a floating window",
-        tools=("harmonics",),
-        presentation="floating",
         modes=frozenset({FULL}),
-        window_title="Harmonic Analyzer",
     ),
     Surface(
         state="tuner-harmonics-split",
         title="The tuner and the analyser tiled",
-        tools=("tuner", "harmonics"),
-        presentation="split",
         modes=frozenset({FULL}),
         extras=(
             Question("divider", "Can the divider between the two be dragged?", behavioural=True),
@@ -349,8 +367,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="three-tools-tabbed",
         title="All three tools sharing a tab strip",
-        tools=("tuner", "spectrogram", "harmonics"),
-        presentation="tabbed",
         modes=frozenset({FULL}),
         extras=(
             Question(
@@ -363,8 +379,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="two-tools-split",
         title="Two tools tiled side by side",
-        tools=("tuner", "spectrogram"),
-        presentation="split",
         modes=frozenset({FULL}),
         extras=(
             Question(
@@ -375,8 +389,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="two-tools-tabbed",
         title="Two tools sharing a tab strip",
-        tools=("tuner", "spectrogram"),
-        presentation="tabbed",
         modes=frozenset({FULL}),
         extras=(
             Question(
@@ -387,8 +399,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="all-tools-docked",
         title="Every tool open at once",
-        tools=("tuner", "spectrogram", "harmonics", "target-note"),
-        presentation="split",
         modes=frozenset({FULL}),
         extras=(
             Question(
@@ -401,10 +411,7 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="narrow-window",
         title="A narrow window with the collapsed menu",
-        tools=("tuner",),
-        presentation="docked",
         modes=frozenset({FULL}),
-        fixed_geometry=True,
         extras=(
             Question(
                 "hamburger",
@@ -418,7 +425,6 @@ SURFACES: tuple[Surface, ...] = (
         title="A narrow window with no tool open",
         area="shell",
         modes=frozenset({FULL}),
-        fixed_geometry=True,
         extras=(
             # What a new user sees first, which used to be a blank window with
             # nothing to say a score could be opened. Asked here rather than on
@@ -434,10 +440,7 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="fullscreen",
         title="Fullscreen",
-        tools=("tuner",),
-        presentation="docked",
         modes=frozenset({FULL}),
-        fixed_geometry=True,
         extras=(
             Question("escape", "Does Escape or F11 leave fullscreen?", behavioural=True),
         ),
@@ -445,8 +448,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="microphone-muted",
         title="Global microphone mute engaged",
-        tools=("tuner",),
-        presentation="docked",
         area="audio",
         modes=frozenset({FULL}),
         extras=(
@@ -459,8 +460,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="muted-all-tools",
         title="Every tool at once, microphone muted",
-        tools=("tuner", "spectrogram", "harmonics"),
-        presentation="split",
         area="audio",
         modes=frozenset({FULL}),
         extras=(
@@ -489,7 +488,6 @@ SURFACES: tuple[Surface, ...] = (
         area="settings",
         modes=frozenset({FULL}),
         needs_input_device=True,
-        window_title=SETTINGS_WINDOW,
         instruction="Switch to a different input device, then back.",
         extras=(
             Question(
@@ -510,7 +508,6 @@ SURFACES: tuple[Surface, ...] = (
         title="Settings: MIDI keyboard selection",
         area="settings",
         modes=frozenset({FULL}),
-        window_title=SETTINGS_WINDOW,
         instruction=(
             "If you have a MIDI keyboard, connect it, choose it, and play a few notes "
             "with and without the sustain pedal. If you do not, answer for the "
@@ -538,7 +535,6 @@ SURFACES: tuple[Surface, ...] = (
         title="Settings: appearance and theme",
         area="settings",
         modes=frozenset({FULL}),
-        window_title=SETTINGS_WINDOW,
         instruction="Change the theme, and look at a tool with it applied.",
         extras=(Question(
                 "theme-applies", "Did the theme apply everywhere?", behavioural=True
@@ -549,7 +545,6 @@ SURFACES: tuple[Surface, ...] = (
         title="Settings: import and export round trip",
         area="settings",
         modes=frozenset({FULL}),
-        window_title=SETTINGS_WINDOW,
         instruction=(
             "Export settings to a file, change something, then import the file back."
         ),
@@ -571,29 +566,24 @@ SURFACES: tuple[Surface, ...] = (
         title="Settings: practice presets",
         area="settings",
         modes=frozenset({FULL}),
-        window_title=SETTINGS_WINDOW,
     ),
     Surface(
         state="settings-reset",
         title="Settings: reset and support",
         area="settings",
         modes=frozenset({FULL}),
-        window_title=SETTINGS_WINDOW,
     ),
     Surface(
         state="feedback-over-tool",
         title="The feedback form over a tool in use",
-        tools=("tuner",),
         area="feedback",
         modes=frozenset({FULL}),
-        window_title=FEEDBACK_WINDOW,
     ),
     Surface(
         state="feedback-open",
         title="The feedback form",
         area="feedback",
         modes=frozenset({FULL}),
-        window_title=FEEDBACK_WINDOW,
     ),
     # The score import summary. The only surfaces that depend on a *document*:
     # the window has nothing to show until a file has been read, so the state
@@ -617,7 +607,6 @@ SURFACES: tuple[Surface, ...] = (
         title="The score import window while a score is being read",
         area="score",
         modes=frozenset({FULL}),
-        window_title=SCORE_IMPORT_WINDOW,
         warmup_seconds=1.0,
         extras=(
             Question(
@@ -643,7 +632,6 @@ SURFACES: tuple[Surface, ...] = (
         title="The score import summary, with diagnostics",
         area="score",
         modes=frozenset({FULL}),
-        window_title=SCORE_IMPORT_WINDOW,
         warmup_seconds=3.0,
         extras=(
             Question(
@@ -670,7 +658,6 @@ SURFACES: tuple[Surface, ...] = (
         title="The score import summary for a clean import",
         area="score",
         modes=frozenset({FULL}),
-        window_title=SCORE_IMPORT_WINDOW,
         warmup_seconds=3.0,
         extras=(
             Question(
@@ -697,8 +684,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="target-note-empty",
         title="The target note tool with no score open",
-        tools=("target-note",),
-        presentation="docked",
         area="score",
         modes=frozenset({FULL}),
         extras=(
@@ -712,8 +697,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="score-view-empty",
         title="The score view with no score open",
-        tools=("score-view",),
-        presentation="docked",
         area="score",
         modes=frozenset({FULL}),
         extras=(
@@ -737,8 +720,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="score-view-notation",
         title="The score view drawing a staff",
-        tools=("score-view",),
-        presentation="docked",
         area="score",
         modes=frozenset({FULL}),
         warmup_seconds=3.0,
@@ -810,8 +791,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="score-view-grand-staff",
         title="The score view drawing a piano part as a grand staff",
-        tools=("score-view",),
-        presentation="docked",
         area="score",
         modes=frozenset({FULL}),
         warmup_seconds=3.0,
@@ -847,6 +826,68 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The fixture the engraving-polish change is checked against. Captured
+    # before any of that change landed, so each question below starts out
+    # answered "no" and the reference is retaken, deliberately, at the end of
+    # each tier that changes it (tasks 4.1). Bar by bar, like the grand staff.
+    Surface(
+        state="score-view-engraving",
+        title="The score view drawing the engraving fixture",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "chord-accidentals-stack",
+                "Bar 1 opens with a three-note chord with a sharp on every note: are the "
+                "sharps in columns, none overlapping another, each level with its own note?",
+            ),
+            Question(
+                "seconds-either-side-of-the-stem",
+                "Bar 1's second chord has its stem up and bar 2's two chords have theirs down: "
+                "in each, are the two notes a step apart on opposite sides of the stem, both "
+                "touching it -- the upper note to the right when the stem is up, the lower "
+                "note to the left when it is down?",
+            ),
+            Question(
+                "accidental-on-its-own-note",
+                "In those same three chords, is every sharp clear of both noteheads and "
+                "plainly in front of the note it belongs to, rather than inside the other "
+                "note?",
+            ),
+            Question(
+                "tie-across-the-break",
+                "The last note of bar 4 is tied to the first of bar 5, across the end of the "
+                "line: is the tie drawn on both lines -- leaving the note at the end of one "
+                "and arriving at the note at the start of the next?",
+            ),
+            Question(
+                "endings-bracketed",
+                "Are bars 7 and 8 under brackets labelled 1. and 2., the first closed at the "
+                "repeat sign and the second left open?",
+            ),
+            Question(
+                "jumps-shown",
+                "Is there a segno sign above the start of bar 3, and \"D.S. al Coda\" above "
+                "the end of the last bar, both clear of the notes and of any other text?",
+            ),
+            Question(
+                "rests-condensed",
+                "Are bars 9 to 12 drawn as one bar holding a thick horizontal bar with a 4 "
+                "above the staff, rather than as four bars of rest?",
+            ),
+            Question(
+                "lyrics-below-ledger-lines",
+                "In bar 3 the notes hang below the staff on ledger lines: are the lyrics under "
+                "them clear of every ledger line and notehead?",
+            ),
+            Question(
+                "nothing-collides",
+                "Do any two symbols overlap anywhere -- an accidental, notehead, stem, ledger "
+                "line, lyric or barline?",
+            ),
+        ),
+    ),
     # The score the application ships, opened the way a first launch opens it.
     # Real exporter output with far more in it than the hand-written fixtures,
     # so this is the picture that shows what the renderer does with an actual
@@ -854,8 +895,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="score-view-sample",
         title="The score view showing the sample score",
-        tools=("score-view",),
-        presentation="docked",
         area="score",
         modes=frozenset({FULL}),
         warmup_seconds=4.0,
@@ -909,8 +948,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="score-view-page",
         title="The score view in Page view",
-        tools=("score-view",),
-        presentation="docked",
         area="score",
         modes=frozenset({FULL}),
         warmup_seconds=4.0,
@@ -939,11 +976,47 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The song with its voice hidden from the Parts menu
+    # (openspec/changes/archive/2026-11-06-score-part-selection).
+    Surface(
+        state="score-view-part-hidden",
+        title="The score view with a part hidden",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "only-the-piano",
+                "Is only the piano drawn -- two braced staves, no voice staff above them -- "
+                "and does the title strip name only Piano?",
+            ),
+            Question(
+                "piano-fills-the-lines",
+                "Do the piano's lines run the full width with more bars on each than when "
+                "the voice is shown, rather than leaving a gap where the voice was?",
+            ),
+            Question(
+                "tempo-and-name-on-the-piano",
+                "Is the tempo mark (Alla Marcia) written above the piano, and is the piano "
+                "named beside its staves on the first line?",
+            ),
+            Question(
+                "parts-menu",
+                "Open the ... menu, then Parts: is Voice unticked and Piano ticked and greyed "
+                "out? Tick Voice: does it come back with the same bar still in view?",
+                behavioural=True,
+            ),
+            Question(
+                "parts-remembered",
+                "Hide the voice again and restart the application: is the voice still hidden "
+                "in this Score View?",
+                behavioural=True,
+            ),
+        ),
+    ),
     Surface(
         state="score-view-vertical",
         title="The score view in Vertical scroll",
-        tools=("score-view",),
-        presentation="docked",
         area="score",
         modes=frozenset({FULL}),
         warmup_seconds=4.0,
@@ -970,8 +1043,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="score-view-horizontal",
         title="The score view in Horizontal scroll",
-        tools=("score-view",),
-        presentation="docked",
         area="score",
         modes=frozenset({FULL}),
         warmup_seconds=4.0,
@@ -996,9 +1067,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="score-view-notation-large",
         title="The score view drawing a staff, with room to spare",
-        tools=("score-view",),
-        presentation="floating",
-        window_title="Score View",
         area="score",
         modes=frozenset({FULL}),
         warmup_seconds=3.0,
@@ -1028,8 +1096,6 @@ SURFACES: tuple[Surface, ...] = (
     Surface(
         state="tuner-docked",
         title="Workspace layout after a restart",
-        tools=("tuner",),
-        presentation="docked",
         modes=frozenset({FULL}),
         restart_before=True,
         instruction=(
@@ -1224,9 +1290,39 @@ def validate() -> list[str]:
     for title in sorted(quick - full):
         problems.append(f"'{title}' is in quick mode but not in full mode.")
 
+    manifest = approved_states.manifest()
+
+    # The window titles code and tests look for by name, against the ones the
+    # application declares.
+    declared_titles = {state.window_title for state in manifest.states}
+
+    for title in (SETTINGS_WINDOW, FEEDBACK_WINDOW, SCORE_IMPORT_WINDOW):
+        if title not in declared_titles:
+            problems.append(f"No approved state shows a window titled '{title}'.")
+
+    for theme in THEMES:
+        if theme not in manifest.themes:
+            problems.append(f"The application has no theme named '{theme}'.")
+
     seen: set[tuple[str, str]] = set()
 
     for surface in SURFACES:
+        # Caught here as well as against `list-states` at run time, so a
+        # surface of a state that does not exist fails the unit tests rather
+        # than a capture run.
+        if surface.state and surface.state not in manifest.state_ids:
+            problems.append(
+                f"'{surface.title}' names state '{surface.state}', which the application "
+                "does not approve."
+            )
+        else:
+            for name, value in derived_fields(surface.state).items():
+                if getattr(surface, name) != value:
+                    problems.append(
+                        f"'{surface.title}' says {name} is {getattr(surface, name)!r}; the "
+                        f"application's state says {value!r}."
+                    )
+
         if not surface.title:
             problems.append(f"Surface for state '{surface.state}' has no title.")
 
@@ -1242,15 +1338,6 @@ def validate() -> list[str]:
             problems.append(f"Duplicate surface: state '{surface.state}', title '{surface.title}'.")
 
         seen.add(key)
-
-        # A floating tool is a second top-level window. Without its title the
-        # harness measures and photographs whichever of the application's
-        # windows it finds first -- which is how the floating score view came to
-        # report the main window "stuck" at one size for every small geometry.
-        if surface.presentation == "floating" and not surface.window_title:
-            problems.append(
-                f"'{surface.title}' shows a floating window but does not name it in window_title."
-            )
 
         ids = [question.id for question in questions_for(surface)]
 

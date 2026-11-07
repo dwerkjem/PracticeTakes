@@ -10,6 +10,7 @@
 
 #include "application/shell/ui/score/ScoreImportSummary.h"
 #include "application/testcontrol/ApprovedWindowStates.h"
+#include "features/score/ScoreViewSettings.h"
 #include "features/score/engraving/ScoreLayoutEngine.h"
 #include "platform/score/musicxml/MusicXmlImporter.h"
 
@@ -96,9 +97,9 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
     CHECK(
         naming == std::set<std::string>{
                       "score-import-clean", "score-import-diagnostics", "score-import-in-progress",
-                      "score-view-grand-staff", "score-view-horizontal", "score-view-notation",
-                      "score-view-notation-large", "score-view-page", "score-view-sample",
-                      "score-view-vertical"});
+                      "score-view-engraving", "score-view-grand-staff", "score-view-horizontal",
+                      "score-view-notation", "score-view-part-hidden", "score-view-notation-large",
+                      "score-view-page", "score-view-sample", "score-view-vertical"});
 }
 
 // The invariant this started as was "a state naming a score opens nothing
@@ -304,8 +305,8 @@ TEST_CASE("the notation fixture holds what its picture is about", "[testcontrol]
 
     // Wide enough for the whole fixture on one system, so that this case is
     // about what the fixture holds rather than about where the systems break.
-    // A tie whose two notes land on different systems is not drawn, which is
-    // the layout's own documented behaviour and has its own test.
+    // A tie whose two notes land on different systems is drawn as two halves,
+    // which would count twice here; that has its own tests.
     engraving::LayoutOptions options;
     options.availableWidth = 400.0;
 
@@ -337,6 +338,7 @@ TEST_CASE("the notation fixture holds what its picture is about", "[testcontrol]
     for (const engraving::System& system : layout.systems)
     {
         noteheads += system.noteheads.size();
+        ledgered += system.ledgerLines.size();
         rests += system.rests.size();
         ties += system.ties.size();
         clefs += system.clefs.size();
@@ -347,7 +349,6 @@ TEST_CASE("the notation fixture holds what its picture is about", "[testcontrol]
         {
             graceNotes += glyph.isGrace ? 1 : 0;
             dottedNotes += glyph.dots > 0 ? 1 : 0;
-            ledgered += (glyph.ledger.above + glyph.ledger.below) > 0 ? 1 : 0;
 
             if (glyph.accidental != engraving::AccidentalKind::none)
             {
@@ -536,4 +537,215 @@ TEST_CASE(
         INFO(notice);
         CHECK(notice.find("staff") == std::string::npos);
     }
+}
+
+// The fixture for the engraving-polish surface. Pinned through the importer and
+// the layout like the two above, so that it losing the case a later tier is
+// checked against fails a build instead of quietly turning that tier's
+// before-and-after pictures into pictures of something else.
+TEST_CASE("the engraving fixture holds what its picture is about", "[testcontrol][approved][score]")
+{
+    const MusicXmlImportResult result = importFixture("engraving-polish.musicxml");
+
+    CHECK(result.status == MusicXmlImportStatus::imported);
+
+    for (const Diagnostic& diagnostic : result.diagnostics)
+    {
+        INFO(
+            "unexpected diagnostic on <"
+            << diagnostic.elementName << "> in bar "
+            << diagnostic.location.measureNumber.value_or("-") << ": " << diagnostic.message);
+        CHECK(false);
+    }
+
+    REQUIRE(result.score != nullptr);
+    REQUIRE(result.score->parts.size() == 1);
+
+    const Part& part = result.score->parts.front();
+    CHECK(part.name == "Voice");
+    REQUIRE(part.measures.size() == 13);
+
+    const auto eventsOf = [&part](std::size_t measureIndex)
+    { return part.measures.at(measureIndex).voices.front().events; };
+
+    const auto sharps = [](const ScoreEvent& event)
+    {
+        return std::count_if(
+            event.notes.begin(), event.notes.end(),
+            [](const Note& note) { return note.written.alter == 1; });
+    };
+
+    // Bar 1: a triad with a sharp on every note, then a second whose upper,
+    // shifted note is the sharp one.
+    REQUIRE(eventsOf(0).size() == 2);
+    CHECK(eventsOf(0).at(0).notes.size() == 3);
+    CHECK(sharps(eventsOf(0).at(0)) == 3);
+    CHECK(eventsOf(0).at(1).notes.size() == 2);
+    CHECK(sharps(eventsOf(0).at(1)) == 1);
+
+    // Bar 2: two seconds above the middle line, so both take down stems.
+    REQUIRE(eventsOf(1).size() == 2);
+    CHECK(eventsOf(1).at(0).notes.size() == 2);
+    CHECK(eventsOf(1).at(1).notes.size() == 2);
+
+    // Bars 4 to 5: one tie, between them.
+    std::size_t ties = 0;
+
+    for (std::size_t index = 0; index < part.measures.size(); ++index)
+    {
+        for (const ScoreEvent& event : eventsOf(index))
+        {
+            for (const Note& note : event.notes)
+            {
+                if (note.tiedTo.has_value())
+                {
+                    ++ties;
+                    CHECK(index == 3);
+                }
+            }
+        }
+    }
+
+    CHECK(ties == 1);
+
+    // Bars 6 to 8: a repeat whose first ending is closed by it, then a second.
+    CHECK(part.measures.at(5).repeats.repeatStart);
+    CHECK(part.measures.at(6).repeats.repeatEnd);
+    CHECK(part.measures.at(6).repeats.endingNumbers == std::vector<int>{1});
+    CHECK(part.measures.at(7).repeats.endingNumbers == std::vector<int>{2});
+    CHECK_FALSE(part.measures.at(7).repeats.repeatEnd);
+
+    // Bars 9 to 12: a whole-bar rest each.
+    for (std::size_t index = 8; index < 12; ++index)
+    {
+        INFO("bar " << index + 1);
+        REQUIRE(eventsOf(index).size() == 1);
+        CHECK_FALSE(isPitched(eventsOf(index).front()));
+    }
+
+    // Bar 3's Segno and bar 13's "D.S. al Coda", read into the model as
+    // written, and nothing else anywhere.
+    for (std::size_t index = 0; index < part.measures.size(); ++index)
+    {
+        INFO("bar " << index + 1);
+
+        const std::vector<std::string> expected =
+            index == 2    ? std::vector<std::string>{"Segno"}
+            : index == 12 ? std::vector<std::string>{"D.S. al Coda"}
+                          : std::vector<std::string>{};
+
+        CHECK(part.measures.at(index).repeats.jumps == expected);
+    }
+
+    // At about the docked view's width, the first system ends after bar 4, so
+    // the tie leaves one system and arrives on the next. That is the case the
+    // surface exists to show; a width that no longer breaks there would make
+    // the picture of it a picture of an ordinary tie.
+    engraving::LayoutOptions options;
+    options.availableWidth = 150.0;
+
+    const engraving::ScoreLayout layout = engraving::layOutScore(result.score, options);
+
+    REQUIRE(layout.outcome == engraving::LayoutOutcome::laidOut);
+    REQUIRE(layout.systems.size() >= 2);
+
+    CHECK(layout.systems.front().lastMeasureIndex == 3);
+
+    // And the tie is drawn across it, as a half on each system.
+    REQUIRE(layout.systems.at(0).ties.size() == 1);
+    REQUIRE(layout.systems.at(1).ties.size() == 1);
+    CHECK_FALSE(layout.systems.at(0).ties.front().fromSystemStart);
+    CHECK(layout.systems.at(1).ties.front().fromSystemStart);
+
+    // Bars 7 and 8, on the second system: "1." closed at the repeat, "2." open.
+    const std::vector<engraving::VoltaGlyph>& voltas = layout.systems.at(1).voltas;
+    REQUIRE(voltas.size() == 2);
+    CHECK(voltas.at(0).label == "1.");
+    CHECK(voltas.at(0).hookAtEnd);
+    CHECK(voltas.at(1).label == "2.");
+    CHECK_FALSE(voltas.at(1).hookAtEnd);
+
+    // Bars 9-12, one multi-measure rest of four.
+    std::vector<engraving::MultiRestGlyph> condensed;
+
+    for (const engraving::System& system : layout.systems)
+    {
+        condensed.insert(condensed.end(), system.multiRests.begin(), system.multiRests.end());
+    }
+
+    REQUIRE(condensed.size() == 1);
+    CHECK(condensed.front().count == 4);
+
+    // The Segno drawn as its sign, the D.S. as its text.
+    std::vector<engraving::JumpGlyph> jumps;
+
+    for (const engraving::System& system : layout.systems)
+    {
+        jumps.insert(jumps.end(), system.jumps.begin(), system.jumps.end());
+    }
+
+    REQUIRE(jumps.size() == 2);
+    CHECK(jumps.at(0).sign == engraving::JumpSign::segno);
+    CHECK(jumps.at(1).sign == engraving::JumpSign::none);
+    CHECK(jumps.at(1).text == "D.S. al Coda");
+
+    // Nothing in the fixture is left unreported or unread.
+    for (const std::string& notice : layout.notices)
+    {
+        INFO(notice);
+        CHECK(notice.find("D.C., D.S.") == std::string::npos);
+        CHECK(notice.find("endings") == std::string::npos);
+        CHECK(notice.find("line of music onto the next") == std::string::npos);
+    }
+}
+
+// The part-hidden surface names the shipped sample with its voice hidden, by a
+// settings payload. Pinned through the codec and the layout against the corpus
+// copy of the same song, so a payload that stops hiding the voice -- a renamed
+// part, a codec change -- fails a build rather than photographing both parts.
+TEST_CASE(
+    "the part-hidden state hides the sample's voice",
+    "[testcontrol][approved][score][part-selection]")
+{
+    const auto state = std::find_if(
+        approvedWindowStates().begin(), approvedWindowStates().end(),
+        [](const ApprovedWindowState& candidate)
+        { return candidate.id == "score-view-part-hidden"; });
+
+    REQUIRE(state != approvedWindowStates().end());
+    CHECK(state->scoreFixture == bundledSampleFixtureName());
+
+    const score_view::Settings settings =
+        score_view::decode({score_view::settingsVersion, state->toolView});
+
+    CHECK(settings.view == score_view::ViewMode::page);
+    REQUIRE(settings.hiddenParts.size() == 1);
+
+    const juce::File song =
+        juce::File(PRACTICE_TAKES_SOURCE_DIR)
+            .getChildFile("src/tests/resources/musicxml/"
+                          "mahler-4-die-zwei-blauen-augen-von-meinem-schatz.mxl");
+    REQUIRE(song.existsAsFile());
+
+    const MusicXmlImportResult result = importMusicXmlFile(song);
+    REQUIRE(result.score != nullptr);
+
+    engraving::LayoutOptions options;
+    options.hiddenParts = settings.hiddenParts;
+
+    const engraving::ScoreLayout layout = engraving::layOutScore(result.score, options);
+
+    REQUIRE(layout.outcome == engraving::LayoutOutcome::laidOut);
+    CHECK(layout.partName == "Piano");
+
+    // The piano's two staves, braced, and nothing else.
+    CHECK(layout.systems.front().staffOffsets.size() == 2);
+
+    // "Alla Marcia" is written in the voice alone, and still reaches the piano.
+    const auto tempo = std::find_if(
+        layout.systems.front().texts.begin(), layout.systems.front().texts.end(),
+        [](const engraving::TextGlyph& text) { return text.role == engraving::TextRole::tempo; });
+
+    REQUIRE(tempo != layout.systems.front().texts.end());
+    CHECK(tempo->text.find("Alla Marcia") != std::string::npos);
 }

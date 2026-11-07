@@ -10,11 +10,12 @@ reasonably has Practice Takes open while the suite works.
 So the run keeps the process ids it started. Teardown ends those and nothing
 else, and a report about what is running says which ones were the run's.
 
-The other half of the same fact: an application the run did not start still
-holds the input device, and every worker that tries to open it afterwards
-contends with it. That is worth saying out loud at the start of a run rather
-than discovering as a worker that inexplicably never replied — so this can also
-name the instances a run is competing with, without touching them.
+The other half of the same fact: an application the run did not start may hold
+the input device. Workers open none (#176), so only a surface that asks for a
+real device contends with it, and that is worth saying out loud at the start of
+a run rather than discovering as a capture that never replied -- so this can
+also name the instances such a surface is competing with, without touching
+them. #180 measured everything else capturing normally beside one.
 
 Linux only, by reading `/proc`. The capture pass is Linux-only anyway: it drives
 X utilities compiled against Xlib.
@@ -119,16 +120,26 @@ class Fleet:
         return len(drivers)
 
 
-def contention_warning(foreign: set[int]) -> str:
-    """What to say about instances the run is competing with, or ""."""
-    if not foreign:
+def contention_warning(foreign: set[int], surfaces_needing_device: tuple[str, ...] = ()) -> str:
+    """What to say about instances the run is competing with, or "".
+
+    Only the surfaces that open a real input device can contend with an
+    application somebody else is running. Every other worker opens none
+    (`--no-audio-input`, #176), and #180 measured them capturing normally beside
+    an open application. So the warning is about those surfaces, by name, and
+    says nothing at all when the plan has none.
+    """
+    if not foreign or not surfaces_needing_device:
         return ""
 
+    instances = "instance is" if len(foreign) == 1 else "instances are"
+    holder = "It" if len(foreign) == 1 else "They"
+    names = ", ".join(surfaces_needing_device)
+
     return (
-        f"{len(foreign)} other Practice Takes "
-        f"{'instance is' if len(foreign) == 1 else 'instances are'} already "
-        f"running (pid {', '.join(str(pid) for pid in sorted(foreign))}). "
-        f"They hold the input device, so a worker may come up without one and "
-        f"stop answering; its share goes to the others. Close them for a full "
-        f"speed run — nothing here will."
+        f"{len(foreign)} other Practice Takes {instances} already running "
+        f"(pid {', '.join(str(pid) for pid in sorted(foreign))}). {holder} may hold "
+        f"the input device, which {names} opens, so that capture may wait for it or "
+        f"come up without one. Every other surface opens no device and is "
+        f"unaffected. Nothing here will close them."
     )

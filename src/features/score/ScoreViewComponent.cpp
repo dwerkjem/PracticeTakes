@@ -1,5 +1,6 @@
 #include "ScoreViewComponent.h"
 
+#include "engraving/PartNames.h"
 #include "engraving/ScoreLayoutEngine.h"
 
 #include <algorithm>
@@ -236,7 +237,7 @@ void ScoreViewComponent::relayout(std::optional<std::size_t> keep, bool force)
         return;
     }
 
-    const LayoutKey key{width, height, settings.view, settings.sizeStep};
+    const LayoutKey key{width, height, settings.view, settings.sizeStep, settings.hiddenParts};
 
     if (!force && key == laidOutFor)
     {
@@ -247,6 +248,7 @@ void ScoreViewComponent::relayout(std::optional<std::size_t> keep, bool force)
 
     const double px = pixelsPerSpace();
     engraving::LayoutOptions options;
+    options.hiddenParts = settings.hiddenParts;
 
     switch (settings.view)
     {
@@ -502,6 +504,70 @@ void ScoreViewComponent::setSizeStep(std::size_t step)
     relayout(keep);
 }
 
+void ScoreViewComponent::togglePart(const engraving::PartKey& part)
+{
+    const std::optional<std::size_t> keep = measureInView();
+    std::vector<engraving::PartKey>& hidden = settings.hiddenParts;
+
+    if (const auto found = std::find(hidden.begin(), hidden.end(), part); found != hidden.end())
+    {
+        hidden.erase(found);
+    }
+    else
+    {
+        hidden.push_back(part);
+    }
+
+    relayout(keep);
+}
+
+std::optional<ToolComponent::MenuEntry> ScoreViewComponent::partsMenuEntry()
+{
+    if (renderedScore == nullptr)
+    {
+        return std::nullopt;
+    }
+
+    const std::vector<engraving::PartKey> drawable = engraving::drawablePartsOf(*renderedScore);
+
+    if (drawable.size() < 2)
+    {
+        return std::nullopt;
+    }
+
+    const auto isHidden = [this](const engraving::PartKey& part)
+    {
+        return std::find(settings.hiddenParts.begin(), settings.hiddenParts.end(), part) !=
+               settings.hiddenParts.end();
+    };
+
+    // What the layout actually draws: a selection hiding everything is
+    // ignored there, so it is shown as nothing hidden here (decision 2).
+    const auto hiddenCount =
+        static_cast<std::size_t>(std::count_if(drawable.begin(), drawable.end(), isHidden));
+    const bool selectionApplies = hiddenCount < drawable.size();
+    const std::size_t shownCount =
+        selectionApplies ? drawable.size() - hiddenCount : drawable.size();
+
+    MenuEntry heading{"Parts", {}};
+
+    for (const engraving::PartKey& part : drawable)
+    {
+        const bool shown = !selectionApplies || !isHidden(part);
+
+        MenuEntry entry{
+            juce::String(engraving::displayedPartName(part.name)),
+            [this, part] { togglePart(part); }, shown};
+
+        // The last part shown cannot be hidden: an empty page is never the
+        // answer (decision 5).
+        entry.enabled = !(shown && shownCount == 1);
+        heading.submenu.push_back(std::move(entry));
+    }
+
+    return heading;
+}
+
 void ScoreViewComponent::turnToPage(std::size_t page)
 {
     if (pages.empty())
@@ -692,9 +758,21 @@ void ScoreViewComponent::applySettings(const ToolSettingsPayload& payload)
 
 bool ScoreViewComponent::showView(const juce::String& view)
 {
-    const std::optional<score_view::ViewMode> named = score_view::viewNamed(view.toStdString());
+    // A bare view name, or -- for a state that needs more than a view, such as
+    // a part hidden -- a whole settings payload, told apart by its `=`
+    // (score-part-selection design.md decision 8).
+    score_view::Settings wanted;
 
-    if (!named.has_value())
+    if (view.containsChar('='))
+    {
+        wanted = score_view::decode({score_view::settingsVersion, view.toStdString()});
+    }
+    else if (
+        const std::optional<score_view::ViewMode> named = score_view::viewNamed(view.toStdString()))
+    {
+        wanted.view = *named;
+    }
+    else
     {
         return false;
     }
@@ -703,8 +781,10 @@ bool ScoreViewComponent::showView(const juce::String& view)
     // before: the shell does not reset a tool it is about to put in a named
     // view, and a size left over from the previous state would make the same
     // state photograph two ways.
+    wanted.sizeStep = score_view::defaultSizeStep;
+
     const std::optional<std::size_t> keep = measureInView();
-    settings = score_view::Settings{*named, score_view::defaultSizeStep};
+    settings = wanted;
     relayout(keep);
 
     return true;
@@ -715,7 +795,7 @@ std::vector<ToolComponent::MenuEntry> ScoreViewComponent::optionsMenuEntries()
     const auto viewEntry = [this](const juce::String& label, score_view::ViewMode view)
     { return MenuEntry{label, [this, view] { setView(view); }, settings.view == view}; };
 
-    return {
+    std::vector<MenuEntry> entries{
         viewEntry("Page", score_view::ViewMode::page),
         viewEntry("Vertical scroll", score_view::ViewMode::vertical),
         viewEntry("Horizontal scroll", score_view::ViewMode::horizontal),
@@ -733,6 +813,13 @@ std::vector<ToolComponent::MenuEntry> ScoreViewComponent::optionsMenuEntries()
         MenuEntry{
             "Default size", [this] { setSizeStep(score_view::defaultSizeStep); },
             settings.sizeStep == score_view::defaultSizeStep}};
+
+    if (std::optional<MenuEntry> parts = partsMenuEntry())
+    {
+        entries.push_back(std::move(*parts));
+    }
+
+    return entries;
 }
 
 juce::String ScoreViewComponent::noticeText() const

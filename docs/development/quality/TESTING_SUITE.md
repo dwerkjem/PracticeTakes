@@ -324,6 +324,17 @@ Practice Takes is open, and what makes the workers interchangeable — none hold
 anything another needs, so any worker captures any surface and there is no
 routing of tone surfaces towards whoever can hear.
 
+**Measured beside an open application** ([#180](https://github.com/dwerkjem/PracticeTakes/issues/180)).
+With Practice Takes running normally on one screen, a sequential capture took
+4 of 4 surfaces in 15 s, a parallel capture took the whole full-mode plan (51
+surfaces) across 4 workers in 27 s with none failed, and a capture on the same
+screen as the open application photographed its own window. The open
+application was left as it was. So a run no longer warns you to close the
+application you are working in. It warns only when the plan includes a surface
+that opens a real device, below, and names that surface. Measured in a
+container with no audio hardware: that the open application holds a real
+microphone while this happens is the one part a person has to see.
+
 The flag is separate from `--test-control` on purpose: driving the control
 channel against a real microphone by hand stays possible.
 
@@ -579,6 +590,46 @@ the wrong thing. The vocabulary is closed: it lives in
 `src/application/testcontrol/ApprovedWindowStates.cpp`, and the whole surface
 list is checked against the application's `list-states` before a capture pass
 rather than discovering a mismatch halfway through.
+
+### The approved-states manifest
+
+A surface names its state and its questions, and nothing else about what the
+state shows. The rest comes from
+`docs/contracts/testcontrol/approved-states.json`. That file is generated from
+the application's own list by `ApprovedStatesManifest`, and it records for every
+state:
+- the tools it opens, and whether docked, floating, split or tabbed;
+- its geometry, and so whether it is about its window size;
+- the window it is a picture of: Settings, the feedback form, the score import
+  window, a floating tool's own window, or the main one.
+
+It also lists the themes, geometries and click targets the application accepts.
+`approved_states.py` reads it, and `Surface` fills `tools`, `presentation`,
+`window_title` and `fixed_geometry` from it.
+
+These facts used to be written out a second time in `surfaces.py`, and the two
+lists drifted: the harness filed `all-tools-docked` under four tools while the
+application opened five. Now:
+- the file is committed, so the harness and its tests read it without a C++
+  build;
+- `ApprovedStatesManifestTests` fails when the file is stale;
+- `surfaces.validate()` reports a surface that names a state the application
+  does not have, or that contradicts what the manifest says about one.
+
+Nobody regenerates it by hand. A local build of `PracticeTakesTests` rewrites
+it whenever the list has changed, so a changed state shows up in `git status`
+beside the edit that caused it; commit the two together. Under CI (any
+environment with `CI` set) the build leaves the file alone and the test above
+does the checking, because regenerating there would let an uncommitted manifest
+pass. A tree configured with `-DPRACTICE_TAKES_REGENERATE_APPROVED_STATES=OFF`
+can still write it on demand:
+
+```bash
+cmake --build build --target approved-states-manifest
+```
+
+The shell's window titles live in `src/application/shell/ui/ShellWindowTitles.h`
+so the manifest and the windows read the same strings.
 
 Capture itself reuses the X utilities in `tools/scripts/quality/ui-validation/`
 — `xwindow_capture`, `window_control`, `pointer_control` — compiled on demand.

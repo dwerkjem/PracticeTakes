@@ -283,6 +283,16 @@ const std::vector<ApprovedWindowState>& states()
          false, "", false,
          "The score view drawing a piano part as a braced grand staff, both hands aligned", 0.0, "",
          "grand-staff-sample.musicxml", false},
+        // The fixture the engraving-polish change is checked against: stacked
+        // accidentals, seconds on both sides of a stem, a tie across a system
+        // break, endings and a run of rests. Captured before any of it was
+        // fixed, so each tier of that change has a picture to compare with.
+        {"score-view-engraving", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view drawing the engraving fixture: chord accidentals, seconds, a tie "
+         "across a system break, first and second endings and four bars of rest",
+         0.0, "", "engraving-polish.musicxml", false},
         // The sample the application ships, opened the way the File menu and
         // the empty-window button open it: written out of the executable, then
         // imported. The one score state whose input is not a committed fixture
@@ -299,6 +309,15 @@ const std::vector<ApprovedWindowState>& states()
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "The score view in Page view: the sample score on its first page", 0.0,
          "page", bundledSampleFixtureName(), false},
+        // The song with its voice hidden, from the Score View's Parts menu: the
+        // piano alone, laid out as a piano score. The view is a settings
+        // payload rather than a bare name, which is how a state reaches a
+        // choice beyond the view.
+        {"score-view-part-hidden", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view with the sample's voice hidden: the piano alone, in Page view", 0.0,
+         "view=page;hidden=P1:Voice", bundledSampleFixtureName(), false},
         {"score-view-vertical", Tools{"score-view"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false,
