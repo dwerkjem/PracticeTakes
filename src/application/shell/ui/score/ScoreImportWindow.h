@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../MainComponent.h"
+#include "../ShellWindowTitles.h"
 
 #include "ScoreImportSummary.h"
 
@@ -21,7 +22,10 @@ class MainComponent::ScoreImportWindow final : public juce::DocumentWindow
 {
   public:
     explicit ScoreImportWindow(std::function<void()> closeHandler)
-        : DocumentWindow("Score import", juce::Colours::darkgrey, juce::DocumentWindow::allButtons),
+        : DocumentWindow(
+              juce::String(shellwindows::scoreImport.data(), shellwindows::scoreImport.size()),
+              juce::Colours::darkgrey,
+              juce::DocumentWindow::allButtons),
           onClose(std::move(closeHandler))
     {
         setUsingNativeTitleBar(true);

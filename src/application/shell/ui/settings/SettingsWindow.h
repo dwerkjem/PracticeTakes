@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../MainComponent.h"
+#include "../ShellWindowTitles.h"
 
 #include "../../../../platform/midi/NoteSoundingTracker.h"
 
@@ -946,7 +947,10 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         std::function<void()> resetLayoutHandler,
         std::function<void()> resetAllHandler,
         std::function<void()> closeHandler)
-        : DocumentWindow("Settings", juce::Colours::darkgrey, juce::DocumentWindow::allButtons),
+        : DocumentWindow(
+              juce::String(shellwindows::settings.data(), shellwindows::settings.size()),
+              juce::Colours::darkgrey,
+              juce::DocumentWindow::allButtons),
           onClose(std::move(closeHandler))
     {
         setUsingNativeTitleBar(true);

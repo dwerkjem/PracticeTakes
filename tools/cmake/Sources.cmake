@@ -51,6 +51,7 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/ui/score/ScoreImportSummary.cpp
     src/application/shell/ui/score/ScoreImportSummary.h
     src/application/shell/ui/score/ScoreImportWindow.h
+    src/application/shell/ui/ShellWindowTitles.h
     src/application/shell/ui/settings/MainComponentSettings.cpp
     src/application/shell/ui/settings/SettingsWindow.h
     src/application/shell/ui/workspace/components/DockedToolPanel.h
@@ -258,6 +259,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
     src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp
     src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp
+    src/tests/application/testcontrol/ApprovedStatesManifestTests.cpp
     src/tests/application/theme/AppLookAndFeelTests.cpp
     src/tests/application/tools/CompactPresentationTests.cpp
     src/tests/application/tools/ToolCatalogTests.cpp
@@ -325,6 +327,8 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/application/shell/ui/score/ScoreImportSummary.cpp
     src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
     src/application/testcontrol/ApprovedWindowStates.cpp
+    src/application/testcontrol/ApprovedStatesManifest.cpp
+    src/application/testcontrol/ApprovedStatesManifest.h
     src/application/testcontrol/TestControlClicker.cpp
     src/application/testcontrol/TestControlCommand.cpp
     src/application/testcontrol/TestControlSession.cpp

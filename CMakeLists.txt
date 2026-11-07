@@ -279,6 +279,18 @@ if(BUILD_TESTING)
         ${PRACTICE_TAKES_TEST_SOURCES}
     )
 
+    # Regenerates docs/contracts/testcontrol/approved-states.json, the list of
+    # approved window states the capture harness reads. The file is committed
+    # and ApprovedStatesManifestTests fails when it is stale; this is the one
+    # way to write it. See src/application/testcontrol/ApprovedStatesManifest.h.
+    add_custom_target(approved-states-manifest
+        COMMAND PracticeTakesTests "[.write-approved-states]"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMENT "Writing docs/contracts/testcontrol/approved-states.json"
+        VERBATIM
+    )
+    add_dependencies(approved-states-manifest PracticeTakesTests)
+
     # src/tests/ mirrors src/, so a test's path says which source file it covers.
     # Both roots are on the include path: "platform/score/Score.h" resolves
     # against src/, and shared fixtures such as "support/BenchmarkFakes.h"

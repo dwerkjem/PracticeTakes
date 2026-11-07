@@ -591,6 +591,40 @@ the wrong thing. The vocabulary is closed: it lives in
 list is checked against the application's `list-states` before a capture pass
 rather than discovering a mismatch halfway through.
 
+### The approved-states manifest
+
+A surface names its state and its questions, and nothing else about what the
+state shows. The rest comes from
+`docs/contracts/testcontrol/approved-states.json`. That file is generated from
+the application's own list by `ApprovedStatesManifest`, and it records for every
+state:
+- the tools it opens, and whether docked, floating, split or tabbed;
+- its geometry, and so whether it is about its window size;
+- the window it is a picture of: Settings, the feedback form, the score import
+  window, a floating tool's own window, or the main one.
+
+It also lists the themes, geometries and click targets the application accepts.
+`approved_states.py` reads it, and `Surface` fills `tools`, `presentation`,
+`window_title` and `fixed_geometry` from it.
+
+These facts used to be written out a second time in `surfaces.py`, and the two
+lists drifted: the harness filed `all-tools-docked` under four tools while the
+application opened five. Now:
+- the file is committed, so the harness and its tests read it without a C++
+  build;
+- `ApprovedStatesManifestTests` fails when the file is stale;
+- `surfaces.validate()` reports a surface that names a state the application
+  does not have, or that contradicts what the manifest says about one.
+
+Regenerate the file after changing a state:
+
+```bash
+cmake --build build --target approved-states-manifest
+```
+
+The shell's window titles live in `src/application/shell/ui/ShellWindowTitles.h`
+so the manifest and the windows read the same strings.
+
 Capture itself reuses the X utilities in `tools/scripts/quality/ui-validation/`
 — `xwindow_capture`, `window_control`, `pointer_control` — compiled on demand.
 There is deliberately no second mechanism for driving or for capturing.

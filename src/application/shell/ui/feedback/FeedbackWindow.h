@@ -2,6 +2,7 @@
 
 #include "../../../../features/feedback/FeedbackComponent.h"
 #include "../../MainComponent.h"
+#include "../ShellWindowTitles.h"
 
 #include <functional>
 #include <utility>
@@ -14,7 +15,7 @@ class MainComponent::FeedbackWindow final : public juce::DocumentWindow
         const juce::String& initialContext,
         std::function<void()> closeHandler)
         : DocumentWindow(
-              "Send feedback",
+              juce::String(shellwindows::feedback.data(), shellwindows::feedback.size()),
               juce::Colours::darkgrey,
               juce::DocumentWindow::allButtons),
           onClose(std::move(closeHandler))

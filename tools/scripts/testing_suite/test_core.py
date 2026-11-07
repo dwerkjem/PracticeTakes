@@ -17,6 +17,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import record  # noqa: E402
+import approved_states  # noqa: E402
 import surfaces  # noqa: E402
 from driver import missing_states, parse_reply  # noqa: E402
 
@@ -26,20 +27,72 @@ class SurfaceListTests(unittest.TestCase):
         """Run before a session starts, so a malformed list fails immediately."""
         self.assertEqual(surfaces.validate(), [])
 
-    def test_a_floating_surface_must_name_its_window(self) -> None:
-        """Otherwise the harness measures whichever window it finds first."""
-        unnamed = surfaces.Surface(
+    def test_a_floating_surface_finds_its_window_in_the_manifest(self) -> None:
+        """Otherwise the harness measures whichever window it finds first.
+
+        A surface used to have to name its window; the application now says
+        which window each state shows, so a surface that says nothing gets it.
+        """
+        surface = surfaces.Surface(
             state="tuner-floating",
             title="A floating window nobody named",
-            tools=("tuner",),
-            presentation="floating",
+            modes=frozenset({surfaces.FULL}),
+        )
+
+        self.assertEqual(surface.window_title, "Tuner")
+        self.assertEqual(surface.presentation, "floating")
+        self.assertEqual(surface.tools, ("tuner",))
+
+    def test_a_surface_that_contradicts_the_application_is_reported(self) -> None:
+        """A value written by hand must agree with the state it describes."""
+        contradicting = surfaces.Surface(
+            state="tuner-floating",
+            title="A floating window that claims to be the main one",
+            window_title="",
             modes=frozenset({surfaces.FULL}),
         )
         original = surfaces.SURFACES
-        surfaces.SURFACES = (*original, unnamed)
+        surfaces.SURFACES = (*original, contradicting)
         self.addCleanup(setattr, surfaces, "SURFACES", original)
 
         self.assertTrue(any("window_title" in problem for problem in surfaces.validate()))
+
+    def test_a_surface_of_a_state_the_application_lacks_is_reported(self) -> None:
+        """Caught by the unit tests, before any run asks the application."""
+        missing = surfaces.Surface(
+            state="tuner-upside-down",
+            title="A state nobody approved",
+            modes=frozenset({surfaces.FULL}),
+        )
+        original = surfaces.SURFACES
+        surfaces.SURFACES = (*original, missing)
+        self.addCleanup(setattr, surfaces, "SURFACES", original)
+
+        self.assertTrue(any("tuner-upside-down" in problem for problem in surfaces.validate()))
+
+    def test_every_geometry_the_driver_asks_for_is_one_the_application_has(self) -> None:
+        """An unknown geometry name is refused by the application mid-run."""
+        from driver import GEOMETRY_NAMES
+
+        geometries = approved_states.manifest().geometries
+
+        for sweep_name, application_name in GEOMETRY_NAMES.items():
+            with self.subTest(sweep_name):
+                self.assertIn(application_name, geometries)
+
+        for sweep_name in surfaces.SWEEP_GEOMETRIES:
+            with self.subTest(sweep_name):
+                self.assertIn(sweep_name, GEOMETRY_NAMES)
+
+    def test_the_manifest_lists_every_state_the_surfaces_need(self) -> None:
+        self.assertLessEqual(surfaces.required_states(), approved_states.manifest().state_ids)
+
+    def test_a_manifest_missing_a_field_is_refused_rather_than_guessed(self) -> None:
+        text = approved_states.MANIFEST_PATH.read_text(encoding="utf-8")
+        broken = text.replace('"windowTitle"', '"windowName"', 1)
+
+        with self.assertRaises(KeyError):
+            approved_states.parse(broken)
 
     def test_quick_mode_is_a_strict_subset_of_full(self) -> None:
         """Otherwise 'quick' stops meaning 'less than full'."""

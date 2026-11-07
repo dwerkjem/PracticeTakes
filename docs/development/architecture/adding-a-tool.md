@@ -106,8 +106,12 @@ of which fail a test if you skip them:
    `every tool can be open at once` compares that state against the catalog, so
    it fails otherwise.
 3. **A surface in `tools/scripts/testing_suite/surfaces.py`**, naming the state
-   and the questions a reviewer should answer about the picture. Nothing
-   enforces this one: skip it and the tool is simply never photographed.
+   and the questions a reviewer should answer about the picture. Only the state
+   and the questions: which tools it opens, how, and in which window come from
+   the generated approved-states manifest, so after steps 1 and 2 run
+   `cmake --build build --target approved-states-manifest` (a test fails until
+   you do). Nothing enforces the surface itself: skip it and the tool is simply
+   never photographed.
 
 `the built-in catalog declares every shipped tool` also pins the number of
 tools. Bumping it is deliberate — it is what makes adding a tool to the roster
@@ -170,6 +174,8 @@ first. Do not move that declaration.
 - [ ] An approved state in `src/application/testcontrol/ApprovedWindowStates.cpp`
       names the tool, so it can be manually verified.
 - [ ] `all-tools-docked` includes the tool.
+- [ ] `docs/contracts/testcontrol/approved-states.json` regenerated
+      (`cmake --build build --target approved-states-manifest`).
 - [ ] The tool count in `ToolCatalogTests` bumped.
 - [ ] A surface in `tools/scripts/testing_suite/surfaces.py` names the state, so
       the tool is actually photographed.
