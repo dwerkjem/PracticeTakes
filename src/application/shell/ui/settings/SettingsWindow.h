@@ -762,9 +762,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 std::function<void(AppDefaults::Preset)> presetHandler,
                 transport::PracticeClock& practiceClock,
                 pitch::ReferencePitch& applicationReferencePitch,
+                pitch::CurrentTarget& applicationTarget,
                 std::function<void()> countInHandler)
                 : onPreset(std::move(presetHandler)), clock(practiceClock),
-                  reference(applicationReferencePitch), onCountInChanged(std::move(countInHandler))
+                  reference(applicationReferencePitch), target(applicationTarget),
+                  onCountInChanged(std::move(countInHandler))
             {
                 configureHeading(heading, "Practice");
                 configureDescription(
@@ -834,6 +836,24 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     }
                 };
                 addAndMakeVisible(referenceSlider);
+
+                // Whether opening a score replaces a target the player chose
+                // (target-note-picker decision 4).
+                keepTargetToggle.setComponentID("settings-keep-target");
+                keepTargetToggle.setToggleState(
+                    target.keepChosenWhenScoreOpens, juce::dontSendNotification);
+                keepTargetToggle.setTooltip(
+                    "Off: opening a score aims at its first note. On: a target you chose "
+                    "stays until you choose another");
+                keepTargetToggle.onClick = [this]
+                {
+                    target.keepChosenWhenScoreOpens = keepTargetToggle.getToggleState();
+                    if (onCountInChanged)
+                    {
+                        onCountInChanged();
+                    }
+                };
+                addAndMakeVisible(keepTargetToggle);
             }
 
             void resized() override
@@ -856,6 +876,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 auto referenceRow = bounds.removeFromTop(36);
                 referenceLabel.setBounds(referenceRow.removeFromLeft(150));
                 referenceSlider.setBounds(referenceRow.removeFromLeft(180));
+                bounds.removeFromTop(12);
+                keepTargetToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
             }
 
           private:
@@ -866,11 +888,13 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             std::function<void(AppDefaults::Preset)> onPreset;
             transport::PracticeClock& clock;
             pitch::ReferencePitch& reference;
+            pitch::CurrentTarget& target;
             std::function<void()> onCountInChanged;
             juce::Label countInLabel;
             juce::ComboBox countInBox;
             juce::Label referenceLabel;
             juce::Slider referenceSlider;
+            juce::ToggleButton keepTargetToggle{"Keep my target when a score opens"};
         };
 
         class ResetPanel final : public CategoryPanel
@@ -972,6 +996,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             MidiInputService& midiService,
             transport::PracticeClock& practiceClock,
             pitch::ReferencePitch& referencePitch,
+            pitch::CurrentTarget& currentTarget,
             std::function<void()> clockSettingsHandler,
             int pedalDownThreshold,
             Theme initialTheme,
@@ -998,6 +1023,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                   std::move(presetHandler),
                   practiceClock,
                   referencePitch,
+                  currentTarget,
                   std::move(clockSettingsHandler)),
               resetPanel(
                   std::move(feedbackHandler),
@@ -1092,6 +1118,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         MidiInputService& midiInputService,
         transport::PracticeClock& practiceClock,
         pitch::ReferencePitch& referencePitch,
+        pitch::CurrentTarget& currentTarget,
         std::function<void()> clockSettingsHandler,
         int pedalDownThreshold,
         Theme initialTheme,
@@ -1117,7 +1144,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         setUsingNativeTitleBar(true);
         setContentOwned(
             new Content(
-                audioInputService, midiInputService, practiceClock, referencePitch,
+                audioInputService, midiInputService, practiceClock, referencePitch, currentTarget,
                 std::move(clockSettingsHandler), pedalDownThreshold, initialTheme,
                 std::move(appearanceHandler), std::move(presetHandler),
                 std::move(midiSelectionHandler), std::move(pedalThresholdHandler),

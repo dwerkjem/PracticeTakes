@@ -109,7 +109,7 @@ void MainComponent::showSettings()
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     settingsWindow = std::make_unique<SettingsWindow>(
-        audioInputService, midiInputService, practiceClock, referencePitch,
+        audioInputService, midiInputService, practiceClock, referencePitch, currentTarget,
         [safeThis]
         {
             // The metronome and the count-in are saved as they change, like
