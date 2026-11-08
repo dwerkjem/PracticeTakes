@@ -62,7 +62,7 @@ The forecast is exactly as honest as the ledger.
   decision and its reason in #10. Changing a target is the same.
 - `parse_ledger` refuses duplicates, unknown releases, non-positive sizes and an
   issue both sized and excluded. The tests also check that the committed ledger
-  still totals the 117 estimate-weeks #10 publishes. Change that test when the
+  still totals the 128 estimate-weeks #10 publishes. Change that test when the
   scope is deliberately changed.
 
 ## Where the model's numbers come from

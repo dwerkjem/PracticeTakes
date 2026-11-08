@@ -24,6 +24,9 @@ practice loop underneath is shared.
   - Learning a piece
   - How it was played: *notes and chords* · *length and the pedal* · *touch*
   - Seeing the piece
+- **[Ear training and music theory](#ear-training-and-music-theory)**
+  - Ear training: *singing it back* · *naming what you hear*
+  - Music theory: *learning it* · *in your score*
 - **[Scores and notation](#scores-and-notation)**
   - Opening scores: *formats* · *your library*
   - Reading the score
@@ -32,6 +35,7 @@ practice loop underneath is shared.
   - During a take: *keeping time* · *the take itself* · *guidance while you play*
   - After a take: *note by note* · *the whole take*
   - Across takes
+  - Practice habits
 - **[Recordings and analysis](#recordings-and-analysis)**
   - Recording
   - Analysing a recording
@@ -95,6 +99,7 @@ Live tools for any voice or instrument. No score needed.
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
 | Vocal range | Find your lowest and highest notes, keep them, and see a piece's range against yours | MVP | [#298](https://github.com/dwerkjem/PracticeTakes/issues/298) |
+| Steadiness drill | Hold one note, then see how long it stayed in tune and how far it drifted | Beta 1 | [#303](https://github.com/dwerkjem/PracticeTakes/issues/303) |
 
 ### Singing a piece
 
@@ -134,6 +139,8 @@ Live tools for any voice or instrument. No score needed.
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
 | Hands separately, slower | Loop a passage one hand at a time, below tempo, the other hand muted or played for you | MVP | [#201](https://github.com/dwerkjem/PracticeTakes/issues/201) |
+| Wait mode | The score waits at each note or chord until you play it, with no tempo and no penalty | Beta 1 | [#304](https://github.com/dwerkjem/PracticeTakes/issues/304) |
+| Fingering | The score's own fingering numbers, shown or hidden | Beta 1 | [#305](https://github.com/dwerkjem/PracticeTakes/issues/305) |
 
 ### How it was played
 
@@ -160,6 +167,39 @@ Live tools for any voice or instrument. No score needed.
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
 | Piano roll | A MIDI piece shown as a piano roll as well as notation | Beta 2 | [#35](https://github.com/dwerkjem/PracticeTakes/issues/35) |
+
+## Ear training and music theory
+
+Training what you hear and understand, alongside what you play and sing.
+
+### Ear training
+
+#### Singing it back
+
+| Feature | What it does | Status | Issue |
+|---|---|---|---|
+| Pitch matching | Hear a note, then sing it back; see how close you landed and how fast | Beta 1 | [#301](https://github.com/dwerkjem/PracticeTakes/issues/301) |
+| Interval drills | Sing an interval above or below a note, and hear what you sang beside what was asked | Beta 1 | [#302](https://github.com/dwerkjem/PracticeTakes/issues/302) |
+
+#### Naming what you hear
+
+| Feature | What it does | Status | Issue |
+|---|---|---|---|
+| Ear training by recognition | Name intervals, chords, scales and modes by ear; melodic and rhythmic dictation; chord progressions | After 1.0 | [#309](https://github.com/dwerkjem/PracticeTakes/issues/309) |
+
+### Music theory
+
+#### Learning it
+
+| Feature | What it does | Status | Issue |
+|---|---|---|---|
+| Music theory lessons | From the staff and key signatures to chords and harmony, with exercises answered on a keyboard, a staff, or by singing | After 1.0 | [#310](https://github.com/dwerkjem/PracticeTakes/issues/310) |
+
+#### In your score
+
+| Feature | What it does | Status | Issue |
+|---|---|---|---|
+| Theory in your score | The key, chords, Roman numerals and intervals shown over the piece you're practising | After 1.0 | [#311](https://github.com/dwerkjem/PracticeTakes/issues/311) |
 
 ## Scores and notation
 
@@ -237,9 +277,16 @@ Shared by every instrument.
 
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
+| Tempo ladder | The tempo rises a step after each clean take, up to your goal | Beta | [#306](https://github.com/dwerkjem/PracticeTakes/issues/306) |
 | Compare takes | Keep takes and compare them | Beta | [#53](https://github.com/dwerkjem/PracticeTakes/issues/53) |
 | Retry weak spots | Go straight to the passages that went wrong, and export a report | Beta | [#54](https://github.com/dwerkjem/PracticeTakes/issues/54) |
 | Sessions | Save a score, its takes, layout and practice settings together, and reopen them | Beta 2 | [#39](https://github.com/dwerkjem/PracticeTakes/issues/39) |
+
+### Practice habits
+
+| Feature | What it does | Status | Issue |
+|---|---|---|---|
+| Practice log | How long you practised each day, and on which pieces and drills, kept for you | Beta | [#307](https://github.com/dwerkjem/PracticeTakes/issues/307) |
 
 ## Recordings and analysis
 
@@ -323,16 +370,8 @@ Anything you can look at live, you can look at on a recording
 
 ## Ideas not on the roadmap yet
 
-Suggestions that fit the two lanes but aren't sized or scheduled. Adding one to
-the roadmap moves a date or replaces something of the same size, so each needs a
-decision first.
-
-- **Listening and pitch**
-  - Ear training: pitch matching (hear a note, then sing it); interval drills.
-  - Steadiness: sustain and steadiness drills on one note.
-- **Piano practice**
-  - Learning a piece: wait mode, where the score waits until you play the right
-    notes; a tempo ladder that raises the tempo after each clean take.
-  - Reading: fingering shown from the score.
-- **Practice habits**
-  - A practice log, with how long and what you worked on.
+None right now: every idea suggested so far has an issue and a place above.
+New ones are welcome through **Give feedback on this tool**, or
+[the issue tracker](https://github.com/dwerkjem/PracticeTakes/issues/new/choose).
+Adding one to the roadmap moves a date or replaces something of the same size,
+so each needs a decision first.
