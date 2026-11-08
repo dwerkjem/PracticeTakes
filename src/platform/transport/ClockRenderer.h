@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "../audio/AudioSampleFifo.h"
 #include "../audio/RealtimeRenderer.h"
 #include "../audio/RealtimeSafety.h"
 #include "ClockCommandQueue.h"
@@ -151,6 +152,30 @@ class ClockRenderer final : public RealtimeRenderer
     [[nodiscard]] ClockSnapshot snapshot() const noexcept;
     [[nodiscard]] ClockEventCounts events() const noexcept;
 
+    // --- Recording a take (openspec/changes/takes, design.md decision 1) -----
+    //
+    // While armed, every block the clock plays is copied, with its gain, into
+    // a preallocated FIFO, and a `RecordedBlock` saying where it starts is
+    // pushed beside it. With no input -- muted, or none -- silence is recorded,
+    // so the timeline stays whole. A block that does not fit is not pushed,
+    // samples or stamp, and is counted as an overflow.
+
+    // About five seconds at 48 kHz: the recorder drains it sixty times a
+    // second.
+    static constexpr std::size_t recordingCapacity = 262144;
+    static constexpr std::size_t recordedBlockCapacity = 4096;
+
+    // Message thread. Arming first discards anything left from before.
+    void armRecording();
+    void disarmRecording() noexcept;
+    [[nodiscard]] bool recordingArmed() const noexcept;
+
+    // Message thread: the stamps and the samples, in the order they were
+    // pushed. Read a stamp, then exactly its `frames` samples.
+    [[nodiscard]] bool popRecordedBlock(RecordedBlock& block) noexcept;
+    [[nodiscard]] std::size_t readRecording(float* destination, std::size_t maximum) noexcept;
+    [[nodiscard]] std::uint64_t recordingOverflows() const noexcept;
+
     // --- Audio thread -------------------------------------------------------
 
     void render(RenderBlock& block) noexcept PRACTICE_TAKES_NONBLOCKING override;
@@ -182,6 +207,15 @@ class ClockRenderer final : public RealtimeRenderer
     void
     startClick(RenderBlock& block, int offset, bool accented) noexcept PRACTICE_TAKES_NONBLOCKING;
     void mixVoiceUntil(RenderBlock& block, int offset) noexcept PRACTICE_TAKES_NONBLOCKING;
+    // Copy one span of the block -- `length` frames from `offset`, which start
+    // at clock frame `start` -- into the recording, if one is armed.
+    void recordSpan(
+        const RenderBlock& block,
+        int offset,
+        Frame start,
+        Frame length,
+        bool countIn) noexcept PRACTICE_TAKES_NONBLOCKING;
+
     void publishSnapshot(
         Frame blockStartPosition,
         std::uint64_t blockStartStream,
@@ -195,7 +229,16 @@ class ClockRenderer final : public RealtimeRenderer
     std::atomic<std::uint64_t> published{0};
     std::atomic<std::uint64_t> acknowledged{0};
 
-    SpscQueue<64> commands;
+    SpscQueue<ClockCommand, 64> commands;
+
+    std::unique_ptr<AudioSampleFifo<recordingCapacity>> recording;
+    std::unique_ptr<SpscQueue<RecordedBlock, recordedBlockCapacity>> recordedBlocks;
+    std::atomic<bool> armed{false};
+    std::atomic<std::uint64_t> overflowCount{0};
+
+    // What is recorded while there is no input, so the timeline stays whole.
+    static constexpr std::size_t silenceFrames = 1024;
+    std::array<float, silenceFrames> silence{};
 
     std::atomic<bool> metronomeOn{true};
     std::atomic<float> gain{0.7f};

@@ -9,9 +9,9 @@
 
 ## 2. Recording on the audio thread
 
-- [ ] 2.1 The callback hands the renderer the input the tools get (tone or
+- [x] 2.1 The callback hands the renderer the input the tools get (tone or
       device, after gain, none while muted); the generator too.
-- [ ] 2.2 `ClockRenderer`: arm and disarm, the sample FIFO and block stamps,
+- [x] 2.2 `ClockRenderer`: arm and disarm, the sample FIFO and block stamps,
       and overflow counted. Tests, a `[callback]` case under RealtimeSanitizer,
       and the benchmark re-run.
 

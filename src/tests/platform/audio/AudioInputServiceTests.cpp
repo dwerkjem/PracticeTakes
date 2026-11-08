@@ -1051,3 +1051,36 @@ TEST_CASE("the generator keeps the clock's time when no device is open", "[audio
 
     fixture.service.setRealtimeRenderer(nullptr);
 }
+
+TEST_CASE("the audio callback records a take's input", "[audio][callback][transport][take]")
+{
+    ServiceUnderTest fixture;
+    standUpDevice(fixture.service);
+    PlayingClock clock;
+    clock.renderer.armRecording();
+    fixture.service.setInputGain(2.0f);
+    fixture.service.setRealtimeRenderer(&clock.renderer);
+
+    Buffers buffers;
+    drive(fixture.service, buffers);
+
+    // A muted block is recorded as silence, so the take's timeline has no gap.
+    fixture.service.setMuted(true);
+    drive(fixture.service, buffers);
+
+    fixture.service.setRealtimeRenderer(nullptr);
+
+    transport::RecordedBlock block;
+    std::vector<float> samples(blockSize);
+
+    REQUIRE(clock.renderer.popRecordedBlock(block));
+    CHECK(block.position == 0);
+    CHECK(block.frames == static_cast<std::uint32_t>(blockSize));
+    REQUIRE(clock.renderer.readRecording(samples.data(), samples.size()) == samples.size());
+    CHECK(samples.front() == 1.0f);
+
+    REQUIRE(clock.renderer.popRecordedBlock(block));
+    CHECK(block.position == blockSize);
+    REQUIRE(clock.renderer.readRecording(samples.data(), samples.size()) == samples.size());
+    CHECK(samples.front() == 0.0f);
+}

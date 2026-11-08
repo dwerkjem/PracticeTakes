@@ -442,3 +442,176 @@ TEST_CASE("rendering a block against a full segment table", "[.benchmark][transp
         return left[0];
     };
 }
+
+namespace
+{
+// Every stamp and sample a renderer has recorded, read the way the recorder
+// reads them: a stamp, then exactly its samples.
+struct Drained
+{
+    std::vector<RecordedBlock> blocks;
+    std::vector<float> samples;
+};
+
+[[nodiscard]] Drained drain(ClockRenderer& renderer)
+{
+    Drained drained;
+    RecordedBlock block;
+    while (renderer.popRecordedBlock(block))
+    {
+        drained.blocks.push_back(block);
+        std::vector<float> chunk(block.frames);
+        REQUIRE(renderer.readRecording(chunk.data(), chunk.size()) == block.frames);
+        drained.samples.insert(drained.samples.end(), chunk.begin(), chunk.end());
+    }
+    return drained;
+}
+
+void blockWithInput(Harness& harness, const std::vector<float>& input, float gain = 1.0f)
+{
+    RenderBlock render;
+    render.input = input.data();
+    render.inputGain = gain;
+    render.frames = static_cast<int>(input.size());
+    render.sampleRate = rate;
+    harness.renderer.render(render);
+}
+} // namespace
+
+TEST_CASE("an armed renderer records the input from the count-in on", "[transport][renderer][take]")
+{
+    Harness harness;
+    // 60 bpm 4/4: a one-bar count-in is 176,400 frames.
+    const auto source = scoreOf(4, {4, 4}, 60.0);
+    REQUIRE(harness.renderer.publish(*tableOf(source)));
+    harness.block(64);
+
+    harness.renderer.armRecording();
+    CHECK(harness.renderer.recordingArmed());
+    harness.play(1);
+
+    std::vector<float> input(512);
+    for (std::size_t index = 0; index < input.size(); ++index)
+    {
+        input.at(index) = static_cast<float>(index) / 1000.0f;
+    }
+    blockWithInput(harness, input, 0.5f);
+    blockWithInput(harness, input, 0.5f);
+
+    const Drained drained = drain(harness.renderer);
+    REQUIRE(drained.blocks.size() == 2);
+    CHECK(drained.blocks.at(0).position == -4 * 44100);
+    CHECK(drained.blocks.at(0).countingIn);
+    CHECK(drained.blocks.at(1).position == -4 * 44100 + 512);
+    REQUIRE(drained.samples.size() == 1024);
+
+    // With its gain.
+    CHECK(drained.samples.at(10) == input.at(10) * 0.5f);
+}
+
+TEST_CASE(
+    "recording crosses from the count-in into the music without a gap",
+    "[transport][renderer][take]")
+{
+    Harness harness;
+    const auto source = scoreOf(4, {4, 4}, 60.0);
+    REQUIRE(harness.renderer.publish(*tableOf(source)));
+    harness.block(64);
+    harness.renderer.armRecording();
+    harness.play(1);
+
+    // A block that straddles the count-in's end is two spans.
+    const std::vector<float> input(1000, 0.25f);
+    const int blocks = (4 * 44100) / 1000 + 1;
+    for (int index = 0; index < blocks; ++index)
+    {
+        blockWithInput(harness, input);
+    }
+
+    const Drained drained = drain(harness.renderer);
+    Frame expected = -4 * 44100;
+    bool sawMusic = false;
+    for (const RecordedBlock& block : drained.blocks)
+    {
+        CHECK(block.position == expected);
+        expected += block.frames;
+        sawMusic = sawMusic || !block.countingIn;
+        if (block.position >= 0)
+        {
+            CHECK_FALSE(block.countingIn);
+        }
+    }
+    CHECK(sawMusic);
+    CHECK(drained.samples.size() == static_cast<std::size_t>(blocks) * 1000);
+    CHECK(harness.renderer.recordingOverflows() == 0);
+}
+
+TEST_CASE(
+    "with no input, silence is recorded so the timeline stays whole",
+    "[transport][renderer][take]")
+{
+    Harness harness;
+    const auto source = scoreOf(4, {4, 4}, 120.0);
+    REQUIRE(harness.renderer.publish(*tableOf(source)));
+    harness.block(64);
+    harness.renderer.armRecording();
+    harness.play();
+    harness.block(3000, false);
+
+    const Drained drained = drain(harness.renderer);
+    CHECK(drained.samples.size() == 3000);
+    CHECK(std::all_of(
+        drained.samples.begin(), drained.samples.end(),
+        [](float sample) { return sample == 0.0f; }));
+    CHECK(drained.blocks.front().position == 0);
+}
+
+TEST_CASE("nothing is recorded while disarmed, paused or stopped", "[transport][renderer][take]")
+{
+    Harness harness;
+    const auto source = scoreOf(4, {4, 4}, 120.0);
+    REQUIRE(harness.renderer.publish(*tableOf(source)));
+    harness.play();
+    harness.blocks(4);
+    CHECK(drain(harness.renderer).blocks.empty());
+
+    harness.renderer.armRecording();
+    REQUIRE(harness.renderer.send({ClockCommand::Kind::pause}));
+    harness.blocks(4);
+    CHECK(drain(harness.renderer).blocks.empty());
+
+    harness.play();
+    harness.blocks(2);
+    harness.renderer.disarmRecording();
+    harness.blocks(2);
+    CHECK(drain(harness.renderer).blocks.size() == 2);
+}
+
+TEST_CASE(
+    "a recording nobody drains overflows rather than leaving a gap",
+    "[transport][renderer][take]")
+{
+    Harness harness;
+    const auto source = scoreOf(64, {4, 4}, 120.0);
+    REQUIRE(harness.renderer.publish(*tableOf(source)));
+    harness.block(64);
+    harness.renderer.armRecording();
+    harness.play();
+
+    const std::vector<float> input(4096, 0.1f);
+    const auto fits = ClockRenderer::recordingCapacity / input.size();
+    for (std::size_t index = 0; index < fits + 4; ++index)
+    {
+        blockWithInput(harness, input);
+    }
+
+    CHECK(harness.renderer.recordingOverflows() > 0);
+
+    // What did go in is whole: every stamp has its samples.
+    const Drained drained = drain(harness.renderer);
+    CHECK(drained.samples.size() == drained.blocks.size() * input.size());
+
+    // Arming again starts clean.
+    harness.renderer.armRecording();
+    CHECK(harness.renderer.recordingOverflows() == 0);
+}

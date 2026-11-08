@@ -40,7 +40,10 @@ void synthesiseClick(float* destination, std::size_t frames, double frequency, d
 }
 } // namespace
 
-ClockRenderer::ClockRenderer() : slots(std::make_unique<std::array<Slot, 2>>())
+ClockRenderer::ClockRenderer()
+    : slots(std::make_unique<std::array<Slot, 2>>()),
+      recording(std::make_unique<AudioSampleFifo<recordingCapacity>>()),
+      recordedBlocks(std::make_unique<SpscQueue<RecordedBlock, recordedBlockCapacity>>())
 {
     for (auto& slot : *slots)
     {
@@ -160,6 +163,80 @@ ClockSnapshot ClockRenderer::snapshot() const noexcept
         {
             return result;
         }
+    }
+}
+
+void ClockRenderer::armRecording()
+{
+    // Whatever was left from the last take goes first. Both are drained from
+    // this end, the consumer's, so nothing races the audio thread: it pushes
+    // nothing until `armed` is set below.
+    RecordedBlock stale;
+    while (recordedBlocks->pop(stale))
+    {
+    }
+    recording->discardPending();
+    overflowCount.store(0, std::memory_order_relaxed);
+    armed.store(true, std::memory_order_release);
+}
+
+void ClockRenderer::disarmRecording() noexcept
+{
+    armed.store(false, std::memory_order_release);
+}
+
+bool ClockRenderer::recordingArmed() const noexcept
+{
+    return armed.load(std::memory_order_acquire);
+}
+
+bool ClockRenderer::popRecordedBlock(RecordedBlock& block) noexcept
+{
+    return recordedBlocks->pop(block);
+}
+
+std::size_t ClockRenderer::readRecording(float* destination, std::size_t maximum) noexcept
+{
+    return recording->pop(destination, maximum);
+}
+
+std::uint64_t ClockRenderer::recordingOverflows() const noexcept
+{
+    return overflowCount.load(std::memory_order_acquire);
+}
+
+void ClockRenderer::recordSpan(
+    const RenderBlock& block,
+    int offset,
+    Frame start,
+    Frame length,
+    bool countIn) noexcept PRACTICE_TAKES_NONBLOCKING
+{
+    if (!armed.load(std::memory_order_acquire) || length <= 0)
+    {
+        return;
+    }
+
+    Frame done = 0;
+    while (done < length)
+    {
+        const bool hasInput = block.input != nullptr;
+        const Frame chunk =
+            hasInput ? length - done : std::min<Frame>(length - done, silenceFrames);
+        const float* source = hasInput ? block.input + offset + done : silence.data();
+
+        // The stamp's room is checked first, so samples never go in without
+        // the stamp that places them.
+        if (!recordedBlocks->hasSpace() ||
+            !recording->push(
+                source, static_cast<std::size_t>(chunk), hasInput ? block.inputGain : 1.0f))
+        {
+            overflowCount.fetch_add(1, std::memory_order_release);
+            return;
+        }
+        static_cast<void>(recordedBlocks->push(
+            RecordedBlock{start + done, static_cast<std::uint32_t>(chunk), countIn}));
+        done += chunk;
     }
 }
 
@@ -344,6 +421,7 @@ void ClockRenderer::advance(RenderBlock& block) noexcept PRACTICE_TAKES_NONBLOCK
             // The count-in always sounds: it is how a person knows when to
             // start, whether or not they want the metronome after it.
             const Frame length = std::min(remaining, countIn.targetFrame - position);
+            recordSpan(block, offset, position, length, true);
             Frame cursor = position;
             Click click;
             for (int clicks = 0;
@@ -377,6 +455,7 @@ void ClockRenderer::advance(RenderBlock& block) noexcept PRACTICE_TAKES_NONBLOCK
 
         const Frame boundary = looping ? table.loopEndFrame : table.endFrame;
         const Frame length = std::min(remaining, boundary - position);
+        recordSpan(block, offset, position, length, false);
 
         if (metronome)
         {

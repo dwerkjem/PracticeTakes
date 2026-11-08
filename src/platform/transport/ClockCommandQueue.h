@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 
 #include "../audio/RealtimeSafety.h"
 #include "../score/MusicalTime.h"
@@ -38,14 +39,18 @@ struct ClockCommand
     int countInBars = 0;
 };
 
-template <std::size_t Capacity> class SpscQueue
+// Single producer, single consumer, of any trivially copyable item. Used for
+// commands (message thread to audio thread) and for the blocks a take records
+// (audio thread to message thread), so both ends are annotated non-blocking.
+template <typename Item, std::size_t Capacity> class SpscQueue
 {
+    static_assert(std::is_trivially_copyable_v<Item>);
     static_assert(Capacity >= 2 && (Capacity & (Capacity - 1)) == 0, "a power of two");
     static_assert(std::atomic<std::size_t>::is_always_lock_free);
 
   public:
-    // Message thread. False when full; nothing is written.
-    [[nodiscard]] bool push(const ClockCommand& command) noexcept
+    // The producer. False when full; nothing is written.
+    [[nodiscard]] bool push(const Item& item) noexcept PRACTICE_TAKES_NONBLOCKING
     {
         const std::size_t tail = writeIndex.load(std::memory_order_relaxed);
         const std::size_t head = readIndex.load(std::memory_order_acquire);
@@ -53,13 +58,21 @@ template <std::size_t Capacity> class SpscQueue
         {
             return false;
         }
-        slots[tail & (Capacity - 1)] = command;
+        slots[tail & (Capacity - 1)] = item;
         writeIndex.store(tail + 1, std::memory_order_release);
         return true;
     }
 
-    // Audio thread. False when empty.
-    [[nodiscard]] bool pop(ClockCommand& command) noexcept PRACTICE_TAKES_NONBLOCKING
+    // The producer: whether a push now would succeed.
+    [[nodiscard]] bool hasSpace() const noexcept PRACTICE_TAKES_NONBLOCKING
+    {
+        return writeIndex.load(std::memory_order_relaxed) -
+                   readIndex.load(std::memory_order_acquire) <
+               Capacity;
+    }
+
+    // The consumer. False when empty.
+    [[nodiscard]] bool pop(Item& item) noexcept PRACTICE_TAKES_NONBLOCKING
     {
         const std::size_t head = readIndex.load(std::memory_order_relaxed);
         const std::size_t tail = writeIndex.load(std::memory_order_acquire);
@@ -67,13 +80,13 @@ template <std::size_t Capacity> class SpscQueue
         {
             return false;
         }
-        command = slots[head & (Capacity - 1)];
+        item = slots[head & (Capacity - 1)];
         readIndex.store(head + 1, std::memory_order_release);
         return true;
     }
 
   private:
-    std::array<ClockCommand, Capacity> slots{};
+    std::array<Item, Capacity> slots{};
     std::atomic<std::size_t> writeIndex{0};
     std::atomic<std::size_t> readIndex{0};
 };
