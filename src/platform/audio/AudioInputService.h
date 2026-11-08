@@ -9,6 +9,7 @@
 #include <juce_events/juce_events.h>
 
 #include "AudioSampleFifo.h"
+#include "RealtimeRenderer.h"
 #include "RealtimeSafety.h"
 #include "SyntheticTone.h"
 
@@ -119,6 +120,19 @@ class AudioInputService final
     void setSyntheticTone(float frequencyHz, float amplitude = 0.45f);
     [[nodiscard]] float syntheticTone() const noexcept;
 
+    // The one thing the audio callback renders: the practice clock. Published
+    // with release and read with acquire; replacing or removing it waits until
+    // no callback is running, so a renderer is never destroyed while the audio
+    // thread is inside it -- the same bargain `removeListener` makes. Null
+    // removes it. Message thread only.
+    //
+    // The callback calls it after clearing the output and before the mute
+    // check, so muting the microphone does not silence the metronome. With no
+    // device delivering, the synthetic-input timer calls it instead, with no
+    // output, so the clock keeps time whether or not a device is open.
+    void setRealtimeRenderer(RealtimeRenderer* renderer);
+    [[nodiscard]] RealtimeRenderer* realtimeRenderer() const noexcept;
+
     [[nodiscard]] float inputGain() const noexcept;
     void setInputGain(float gain);
     [[nodiscard]] float inputLevel() const noexcept;
@@ -206,10 +220,21 @@ class AudioInputService final
     };
 
     // Whether the generator should be running, and start or stop it to match.
+    // It runs when nothing else delivers blocks and either a tone is asked for
+    // or a renderer needs blocks to keep time.
     void updateToneSource();
 
-    // One block of generated tone into the analysis path.
-    void renderToneBlock();
+    // One block from the generator: the renderer's, then the tone's, into the
+    // analysis path. Annotated because the renderer it calls is.
+    void renderToneBlock() noexcept PRACTICE_TAKES_NONBLOCKING;
+
+    // Run the renderer on one block, if there is one.
+    void renderRealtime(
+        const float* input,
+        float* const* outputs,
+        int outputChannels,
+        int frames,
+        double sampleRate) noexcept PRACTICE_TAKES_NONBLOCKING;
 
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
     void audioDeviceStopped() override;
@@ -277,6 +302,7 @@ class AudioInputService final
 
     std::atomic<unsigned int> callbacksInProgress{0};
     std::atomic<bool> muted{false};
+    std::atomic<RealtimeRenderer*> renderer{nullptr};
 
     // Held by whichever producer is filling the FIFOs. See `deliverSamples`.
     std::atomic<bool> filling{false};

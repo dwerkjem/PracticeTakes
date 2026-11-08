@@ -176,6 +176,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/audio/AudioSampleFifo.h
     src/platform/audio/PitchDetector.cpp
     src/platform/audio/PitchDetector.h
+    src/platform/audio/RealtimeRenderer.h
     src/platform/audio/SharedPitchAnalysis.cpp
     src/platform/audio/SharedPitchAnalysis.h
     src/platform/audio/SyntheticTone.h
@@ -226,6 +227,10 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/score/musicxml/read/MusicXmlTieResolver.h
     src/platform/score/musicxml/read/MusicXmlValueParsing.cpp
     src/platform/score/musicxml/read/MusicXmlValueParsing.h
+    src/platform/transport/ClockCommandQueue.h
+    src/platform/transport/ClockMath.h
+    src/platform/transport/ClockRenderer.cpp
+    src/platform/transport/ClockRenderer.h
 )
 # The test target is not just the tests: it also compiles the production
 # sources under test, and deliberately only those. A file added here starts
@@ -322,6 +327,8 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/score/musicxml/read/MusicXmlPercussionTests.cpp
     src/tests/platform/score/musicxml/read/MusicXmlTimingTests.cpp
     src/tests/platform/score/musicxml/read/MusicXmlTranspositionTests.cpp
+    src/tests/platform/transport/ClockMathTests.cpp
+    src/tests/platform/transport/ClockRendererTests.cpp
     src/application/configuration/SettingsPersistence.cpp
     src/application/configuration/SettingsTransferCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.cpp
@@ -368,4 +375,5 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/score/musicxml/read/MusicXmlSubset.cpp
     src/platform/score/musicxml/read/MusicXmlTieResolver.cpp
     src/platform/score/musicxml/read/MusicXmlValueParsing.cpp
+    src/platform/transport/ClockRenderer.cpp
 )

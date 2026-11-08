@@ -1,14 +1,14 @@
 ## 1. Timing rules, JUCE-free (src/platform/transport/ClockMath.h)
 
-- [ ] 1.1 `ClockSegment` and `buildSegments(tempoMap, timeSignatures, scale,
+- [x] 1.1 `ClockSegment` and `buildSegments(tempoMap, timeSignatures, scale,
       sampleRate)`: at most 512 segments, and report a truncation.
-- [ ] 1.2 Frame → (bar, beat, accented) and "does a click start inside
+- [x] 1.2 Frame → (bar, beat, accented) and "does a click start inside
       [frame, frame + n)?", by binary search plus one multiply.
-- [ ] 1.3 Tick ↔ frame at a scale, and re-anchoring the position when the scale
+- [x] 1.3 Tick ↔ frame at a scale, and re-anchoring the position when the scale
       changes.
-- [ ] 1.4 The loop: bounds to whole frames, and an exact wrap.
-- [ ] 1.5 The count-in start frame for *n* bars at a point's tempo and meter.
-- [ ] 1.6 Tests in `src/tests/platform/transport/ClockMathTests.cpp`:
+- [x] 1.4 The loop: bounds to whole frames, and an exact wrap.
+- [x] 1.5 The count-in start frame for *n* bars at a point's tempo and meter.
+- [x] 1.6 Tests in `src/tests/platform/transport/ClockMathTests.cpp`:
       - tempo changes to the frame;
       - 7/8;
       - 10,000 wraps at 44.1 kHz with a tempo change inside the loop;
@@ -17,18 +17,18 @@
 
 ## 2. The real-time renderer
 
-- [ ] 2.1 `RealtimeRenderer` and `RenderBlock` (in `src/platform/audio/`).
+- [x] 2.1 `RealtimeRenderer` and `RenderBlock` (in `src/platform/audio/`).
       `AudioInputService::setRealtimeRenderer` publishes with release, and a
       swap waits for `callbacksInProgress`.
-- [ ] 2.2 The callback calls the renderer after clearing the output and before
+- [x] 2.2 The callback calls the renderer after clearing the output and before
       the mute check. `ToneSource` calls it with no output.
-- [ ] 2.3 `ClockRenderer`:
+- [x] 2.3 `ClockRenderer`:
       - two preallocated segment tables and an atomic index with a generation
         echo;
       - two clicks synthesised at construction;
       - a click straddling a block boundary;
       - atomic latches for wraps, seeks and the end of the piece.
-- [ ] 2.4 Drive it through `AudioInputServiceCallbackAccess` in tests, under the
+- [x] 2.4 Drive it through `AudioInputServiceCallbackAccess` in tests, under the
       RealtimeSanitizer job, and add a `[.benchmark]` case for a 512-segment
       table.
 

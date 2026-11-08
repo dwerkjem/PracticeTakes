@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "platform/audio/AudioInputService.h"
+#include "platform/score/Score.h"
+#include "platform/transport/ClockRenderer.h"
 #include "support/AudioInputServiceCallbackAccess.h"
 
 #include <algorithm>
@@ -903,4 +905,149 @@ TEST_CASE("a state-only listener hears a mute", "[audio][consumers]")
 TEST_CASE("there are sixteen sample streams", "[audio][consumers]")
 {
     CHECK(AudioInputService::consumerCapacity() == 16);
+}
+
+namespace
+{
+// A clock ready to play four bars of 4/4 at 120 bpm: a click every 22,050
+// frames, the first at frame 0.
+struct PlayingClock
+{
+    transport::ClockRenderer renderer;
+
+    PlayingClock()
+    {
+        score::Score source;
+        source.tempoMap = score::TempoMap::build({{0, 120.0}});
+        score::Part part;
+        for (int index = 0; index < 4; ++index)
+        {
+            score::Measure measure;
+            measure.index = static_cast<std::size_t>(index);
+            measure.start = static_cast<score::Tick>(index) * score::ticksPerWholeNote;
+            measure.nominalDuration = score::ticksPerWholeNote;
+            part.measures.push_back(std::move(measure));
+        }
+        source.parts.push_back(std::move(part));
+
+        auto table = std::make_unique<transport::ClockTable>();
+        transport::buildTable(*table, source, 100, 44100.0);
+        REQUIRE(renderer.publish(*table));
+        REQUIRE(renderer.send({transport::ClockCommand::Kind::play}));
+    }
+};
+
+// Stands a device up for the callback to run under, so the generator -- which
+// runs whenever a renderer is set and no device is -- never calls the
+// renderer from a second thread while the test drives the callback.
+void standUpDevice(AudioInputService& service)
+{
+    AudioInputServiceCallbackAccess::aboutToStart(service);
+}
+
+[[nodiscard]] bool anySound(const std::vector<float>& samples)
+{
+    return std::any_of(samples.begin(), samples.end(), [](float sample) { return sample != 0.0f; });
+}
+} // namespace
+
+TEST_CASE("the audio callback renders the clock into the output", "[audio][callback][transport]")
+{
+    ServiceUnderTest fixture;
+    standUpDevice(fixture.service);
+    PlayingClock clock;
+    fixture.service.setRealtimeRenderer(&clock.renderer);
+
+    Buffers buffers;
+    drive(fixture.service, buffers);
+
+    // The downbeat's click starts at frame 0, so this block holds its attack;
+    // everything else in the block was cleared first.
+    CHECK(anySound(buffers.output));
+    CHECK(clock.renderer.snapshot().position == blockSize);
+
+    fixture.service.setRealtimeRenderer(nullptr);
+}
+
+TEST_CASE("a muted audio callback still sounds the metronome", "[audio][callback][transport]")
+{
+    ServiceUnderTest fixture;
+    standUpDevice(fixture.service);
+    SilentConsumer consumer;
+    fixture.service.addListener(&consumer);
+    fixture.service.setMuted(true);
+    PlayingClock clock;
+    fixture.service.setRealtimeRenderer(&clock.renderer);
+
+    Buffers buffers;
+    drive(fixture.service, buffers);
+
+    // Mute silences the microphone, not the click.
+    CHECK(anySound(buffers.output));
+    CHECK(fixture.service.availableSamples(&consumer) == 0u);
+
+    fixture.service.setRealtimeRenderer(nullptr);
+    fixture.service.removeListener(&consumer);
+}
+
+TEST_CASE(
+    "the audio callback advances the clock with no output open",
+    "[audio][callback][transport]")
+{
+    ServiceUnderTest fixture;
+    standUpDevice(fixture.service);
+    PlayingClock clock;
+    fixture.service.setRealtimeRenderer(&clock.renderer);
+
+    Buffers buffers;
+    for (int block = 0; block < 10; ++block)
+    {
+        AudioInputServiceCallbackAccess::invoke(
+            fixture.service, buffers.inputChannels(), 1, nullptr, 0, blockSize);
+    }
+
+    CHECK(clock.renderer.snapshot().position == 10 * blockSize);
+
+    fixture.service.setRealtimeRenderer(nullptr);
+}
+
+TEST_CASE(
+    "the audio callback stops calling a renderer once it is removed",
+    "[audio][callback][transport]")
+{
+    ServiceUnderTest fixture;
+    standUpDevice(fixture.service);
+    PlayingClock clock;
+    fixture.service.setRealtimeRenderer(&clock.renderer);
+
+    Buffers buffers;
+    drive(fixture.service, buffers);
+    fixture.service.setRealtimeRenderer(nullptr);
+    CHECK(fixture.service.realtimeRenderer() == nullptr);
+
+    drive(fixture.service, buffers);
+    CHECK(clock.renderer.snapshot().position == blockSize);
+    CHECK_FALSE(anySound(buffers.output));
+}
+
+TEST_CASE("the generator keeps the clock's time when no device is open", "[audio][tone][transport]")
+{
+    ServiceUnderTest fixture;
+    REQUIRE_FALSE(fixture.service.hasUsableInput());
+
+    PlayingClock clock;
+    fixture.service.setRealtimeRenderer(&clock.renderer);
+    REQUIRE(AudioInputServiceCallbackAccess::toneSourceRunning(fixture.service));
+
+    for (auto waited = 0; waited < 3000 && clock.renderer.snapshot().position == 0; waited += 20)
+    {
+        juce::Thread::sleep(20);
+    }
+
+    CHECK(clock.renderer.snapshot().position > 0);
+
+    // Running only to keep time, it is not input: no tone was asked for.
+    CHECK_FALSE(fixture.service.hasUsableInput());
+
+    fixture.service.setRealtimeRenderer(nullptr);
 }
