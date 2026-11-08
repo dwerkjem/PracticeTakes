@@ -1,7 +1,7 @@
 # Re-forecast the roadmap whenever an issue is closed or reopened, and publish
 # the result into the "Live forecast" block of the roadmap issue (#10). When the
-# ledger itself changes on main, re-forecast too, and make the milestones carry
-# the ledger's commitments, titles and descriptions.
+# ledger itself changes on main, re-forecast too, and set each milestone's due
+# date to its commitment. Milestone titles and descriptions are left alone.
 #
 # The commitments in #10 are only worth something if slipping is visible the day
 # it starts, so the forecast is re-run on the event that changes it: work being

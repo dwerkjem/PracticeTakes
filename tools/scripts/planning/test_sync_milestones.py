@@ -86,6 +86,11 @@ class ChangesTests(unittest.TestCase):
             [(4, {"title": "Stage 4 — Beta", "due_on": "2028-05-08T12:00:00Z"})],
         )
 
+    def test_title_and_description_are_left_alone_when_the_ledger_gives_none(self):
+        planned = sm.planned_milestones(ledger([{"number": 4, "releases": ["beta1", "beta"]}]))
+        current = self.current(m4={"title": "Stage 4 — Performance Beta", "description": "old scope"})
+        self.assertEqual(sm.changes(planned, current), [])
+
     def test_a_missing_description_is_filled_in(self):
         current = self.current(m3={"description": None})
         self.assertEqual(sm.changes(self.planned, current), [(3, {"description": "The MVP"})])

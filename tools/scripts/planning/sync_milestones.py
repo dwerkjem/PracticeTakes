@@ -4,8 +4,11 @@
 Each milestone stands for one or more of the ledger's releases. Its due date is
 the commitment of the latest of them, so a milestone always carries the date the
 project is held to, and nobody has to copy that date across by hand when a
-decision recorded in the roadmap issue moves it. The ledger also holds each
-milestone's title and description.
+decision recorded in the roadmap issue moves it.
+
+A milestone's title and description are managed only if its ledger entry gives
+them. Leave them out and the milestone keeps whatever name and description it
+has on GitHub.
 
 The roadmap-forecast workflow runs this when the ledger changes on ``main``, and
 it can be run by hand. It only edits milestones the ledger names, and only the
@@ -32,9 +35,9 @@ LEDGER_PATH = Path(__file__).resolve().parent / "roadmap_ledger.json"
 @dataclass(frozen=True)
 class Milestone:
     number: int
-    title: str
-    description: str
     due: dt.date
+    title: str | None = None  # None: leave GitHub's title alone
+    description: str | None = None  # None: leave GitHub's description alone
 
 
 class MilestoneError(ValueError):
@@ -64,9 +67,9 @@ def planned_milestones(raw: dict) -> list[Milestone]:
         out.append(
             Milestone(
                 number=number,
-                title=str(entry["title"]),
-                description=str(entry.get("description", "")),
                 due=max(commitments[r] for r in releases),
+                title=str(entry["title"]) if "title" in entry else None,
+                description=str(entry["description"]) if "description" in entry else None,
             )
         )
     return out
@@ -93,11 +96,11 @@ def changes(planned: list[Milestone], current: dict[int, dict]) -> list[tuple[in
     for milestone in planned:
         existing = current.get(milestone.number)
         if existing is None:
-            raise MilestoneError(f"milestone {milestone.number} ({milestone.title}) does not exist on GitHub")
+            raise MilestoneError(f"milestone {milestone.number} does not exist on GitHub")
         patch: dict[str, str] = {}
-        if existing.get("title") != milestone.title:
+        if milestone.title is not None and existing.get("title") != milestone.title:
             patch["title"] = milestone.title
-        if (existing.get("description") or "") != milestone.description:
+        if milestone.description is not None and (existing.get("description") or "") != milestone.description:
             patch["description"] = milestone.description
         if (existing.get("due_on") or "")[:10] != milestone.due.isoformat():
             patch["due_on"] = due_on(milestone.due)

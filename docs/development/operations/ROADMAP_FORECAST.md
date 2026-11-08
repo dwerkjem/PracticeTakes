@@ -50,10 +50,9 @@ the next release first.
 
 ## The milestones
 
-The ledger's `milestones` list names each GitHub milestone by number, with its
-title, its description, and the releases it stands for. Stage 4, the Beta,
-stands for Beta 1, Beta 2 and the Beta. A milestone is **due on the commitment
-of the latest release it names**.
+The ledger's `milestones` list names each GitHub milestone by number, with the
+releases it stands for. Stage 4 stands for Beta 1, Beta 2 and the Beta. A
+milestone is **due on the commitment of the latest release it names**.
 
 When a push to `main` changes the ledger, or the workflow is run by hand,
 `sync_milestones.py` compares each named milestone with GitHub and sends only
@@ -61,9 +60,12 @@ the fields that differ. Running it twice changes nothing the second time. It
 never creates or closes a milestone, and leaves milestones the ledger doesn't
 name alone. A number in the ledger that doesn't exist on GitHub fails the run.
 
-So **edit a milestone's title, description or due date in the ledger, not on
-GitHub**: a change made on GitHub is put back the next time the ledger changes.
-Due dates are sent at midday UTC, so they read as the same date from UTC-11 to
+Only the due date is managed by default. A milestone keeps the title and
+description it has on GitHub, unless its ledger entry gives a `title` or
+`description`, in which case that field is kept in step too. So **change a due
+date through the ledger's commitments, not on GitHub**: a due date edited on
+GitHub is put back the next time the ledger changes. Renaming a milestone on
+GitHub is fine. Due dates are sent at midday UTC, so they read as the same date from UTC-11 to
 UTC+11.
 
 ## Keeping the ledger true
