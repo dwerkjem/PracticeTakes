@@ -134,8 +134,6 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/ScoreViewSettings.h
     src/features/score/SmuflGlyphs.cpp
     src/features/score/SmuflGlyphs.h
-    src/features/score/TargetNoteComponent.cpp
-    src/features/score/TargetNoteComponent.h
     src/features/score/engraving/AccidentalStacking.cpp
     src/features/score/engraving/BeamGeometry.cpp
     src/features/score/engraving/BeamGrouping.cpp

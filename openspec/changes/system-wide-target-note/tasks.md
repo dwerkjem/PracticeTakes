@@ -15,7 +15,7 @@
 
 ## 3. The Target Note tool leaves
 
-- [ ] 3.1 Its component, factory and catalog entry go; its ids alias the tuner;
+- [x] 3.1 Its component, factory and catalog entry go; its ids alias the tuner;
       states, `all-tools-docked`, surfaces and the tool count follow; a test that
       a workspace naming `target-note` opens a tuner. "Removing a tool" in
       `adding-a-tool.md`.

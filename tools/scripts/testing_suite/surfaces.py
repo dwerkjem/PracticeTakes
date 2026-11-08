@@ -691,21 +691,6 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
-    # The target note tool's paint routine is Component code: selectTargetNote
-    # is unit tested, what it looks like is not.
-    Surface(
-        state="target-note-empty",
-        title="The target note tool with no score open",
-        area="score",
-        modes=frozenset({FULL}),
-        extras=(
-            Question(
-                "says-what-to-do",
-                "Does it name the command that opens a score, rather than showing an empty "
-                "panel?",
-            ),
-        ),
-    ),
     Surface(
         state="score-view-empty",
         title="The score view with no score open",

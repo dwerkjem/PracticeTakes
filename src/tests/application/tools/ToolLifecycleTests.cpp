@@ -214,7 +214,6 @@ TEST_CASE("the microphone tools are multi-instance and the score tools are not",
     CHECK(catalog.find("spectrogram")->instancePolicy == ToolInstancePolicy::multi);
     CHECK(catalog.find("harmonic-analyzer")->instancePolicy == ToolInstancePolicy::multi);
     CHECK(catalog.find("score-view")->instancePolicy == ToolInstancePolicy::single);
-    CHECK(catalog.find("target-note")->instancePolicy == ToolInstancePolicy::single);
 }
 
 TEST_CASE(
@@ -297,5 +296,4 @@ TEST_CASE("only the tools that run their own FFT read audio samples", "[tools][c
     CHECK(catalog.find("spectrogram")->readsAudioSamples);
     CHECK(catalog.find("harmonic-analyzer")->readsAudioSamples);
     CHECK_FALSE(catalog.find("score-view")->readsAudioSamples);
-    CHECK_FALSE(catalog.find("target-note")->readsAudioSamples);
 }

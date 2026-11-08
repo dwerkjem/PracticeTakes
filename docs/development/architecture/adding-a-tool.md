@@ -117,6 +117,26 @@ of which fail a test if you skip them:
 tools. Bumping it is deliberate — it is what makes adding a tool to the roster
 something a reviewer sees — but it is a fourth edit, so expect it.
 
+## Removing a tool
+
+A tool's id is written into saved workspaces, so it never stops resolving. The
+Target Note tool was the first to go (`system-wide-target-note`), and it set
+the path:
+
+1. **Alias every id it had onto the tool that takes its place**, in that tool's
+   catalog entry: the old id and the old tool's own aliases, permanently. A
+   workspace that named it opens the replacement where the old tool was. Its
+   instance policy now applies to those ids: an alias onto a multi-instance
+   tool opens another instance, rather than dropping a duplicate.
+2. **Remove its catalog entry and factory**, and its component.
+3. **Remove its approved states and surfaces**, take it out of
+   `all-tools-docked`, and bump the pinned tool count down. Regenerate
+   `approved-states.json` by building `PracticeTakesTests`.
+4. **Move anything still worth keeping** to where its new users can reach it.
+   The Target Note tool's selection logic and tests moved to
+   `src/platform/score/`, because the shell uses them now.
+5. **Add a test** that the old ids resolve to the replacement.
+
 ## Instance policy
 
 A **tool** is a kind of tool; an **instance** is one live copy.

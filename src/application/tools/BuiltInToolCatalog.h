@@ -16,7 +16,10 @@
         ToolDefinition{
             "tuner",
             "Tuner",
-            {"pitch-detector"},
+            // The Target Note tool's ids, permanently: its target is shown in
+            // the tuner now (system-wide-target-note decision 5), and a
+            // workspace that names it still opens.
+            {"pitch-detector", "target-note", "score-target", "targetNote"},
             ToolInstancePolicy::multi,
             1,
             {920, 760},
@@ -37,13 +40,6 @@
             std::nullopt,
             {980, 700},
             /* readsAudioSamples */ true},
-        ToolDefinition{
-            "target-note",
-            "Target Note",
-            {"score-target", "targetNote"},
-            ToolInstancePolicy::single,
-            std::nullopt,
-            {560, 340}},
         ToolDefinition{
             "score-view",
             "Score View",

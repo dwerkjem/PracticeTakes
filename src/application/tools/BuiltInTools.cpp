@@ -7,7 +7,6 @@
 #include "../../features/analysis/tuner/TunerComponent.h"
 #include "../../features/review/TakeReviewComponent.h"
 #include "../../features/score/ScoreViewComponent.h"
-#include "../../features/score/TargetNoteComponent.h"
 
 #include <memory>
 
@@ -30,8 +29,6 @@ const ToolRegistry& builtInToolRegistry()
                  return std::make_unique<HarmonicAnalyzerComponent>(
                      services.audio, services.pitchAnalysis);
              }},
-            {"target-note", [](const ToolServices& services)
-             { return std::make_unique<TargetNoteComponent>(services.currentScore); }},
             {"score-view",
              [](const ToolServices& services)
              {
