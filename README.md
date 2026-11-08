@@ -7,9 +7,11 @@ capture of a MIDI keyboard and its sustain pedal.
 
 ![The tuner, spectrogram and harmonic analyzer tiled side by side, all reading the same sung A4](docs/wiki/images/overview.png)
 
-> **Status: early, and not yet a viable product.** The tools below work, but
+> **Status: early, and not yet a viable product.** The tools below work, and
 > what Practice Takes is for — play a piece, then see what went wrong in that
-> take — doesn't exist yet. That is the MVP, committed for **17 May 2027**. The
+> take — now works on a MIDI keyboard. Singing a take, playing one hand at a
+> time and the rest of the practice loop are the MVP, committed for
+> **17 May 2027**. The
 > [roadmap](https://github.com/dwerkjem/PracticeTakes/wiki/Roadmap) has the
 > dates and the [live forecast](https://github.com/dwerkjem/PracticeTakes/issues/10)
 > says whether they're on track.
@@ -49,11 +51,20 @@ marked, the page turning by itself, and a click on any note to start from there.
 **Record** takes it from there: a take from the microphone, a MIDI keyboard or
 both, counted in and on the same timeline as the score.
 
+### See what went wrong
+
+![A piano take under review: its notes marked right, wrong, missed, early or late on the score, and listed beside it](docs/wiki/images/take-review.png)
+
+When a take ends, it is judged against the part it matches best. The Score View
+marks every note right, wrong (with the key you pressed), missed, early or late,
+and every extra key. The **Take Review** lists them in order; click one to go
+straight to that note and play the passage again.
+
 ### Play a MIDI keyboard
 
 Choose a keyboard under **Settings → MIDI** and Practice Takes reads its keys,
-velocities and sustain pedal live, including notes held by the pedal. The MVP
-uses this to judge each take against the score.
+velocities and sustain pedal live, including notes held by the pedal, and each
+take you play on it is judged against the score.
 
 ### Arrange it your way
 

@@ -11,7 +11,7 @@
 
 // What a review shows of a judged take: the part it is judged against, and one
 // row per result in time order (no JUCE dependency).
-// openspec/changes/take-review/design.md, decisions 2 and 4.
+// openspec/changes/archive/2026-11-08-take-review/design.md, decisions 2 and 4.
 namespace evaluation
 {
 // One line of the Take Review tool's list.

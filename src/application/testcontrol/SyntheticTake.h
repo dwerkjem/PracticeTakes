@@ -11,8 +11,8 @@
 #include "../../platform/transport/ClockMath.h"
 
 // A keyboard take of an open score with known mistakes, for the capture
-// harness to review (openspec/changes/take-review/design.md, decision 5). No
-// JUCE dependency.
+// harness to review (no JUCE dependency).
+// openspec/changes/archive/2026-11-08-take-review/design.md, decision 5.
 //
 // Nobody plays the harness's keyboard, so the picture of a review needs a take
 // someone could have played: the part's notes through `bars` bars, at tempo,

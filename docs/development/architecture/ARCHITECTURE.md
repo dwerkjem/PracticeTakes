@@ -269,8 +269,11 @@ archived `takes` change):
 
 ## Evaluation
 
-What a take is judged by lives in `src/platform/evaluation/`. It is
-JUCE-free and runs on the message thread after a take, never during one.
+What a take is judged by lives in `src/platform/evaluation/`. It is JUCE-free
+and runs after a take, never during one: on a worker thread that
+`take::TakeRecorder` starts when a take is kept. The worker reads only the kept
+take, which is immutable. Only what the take covered is judged, from its start
+tick to the frame it stopped at (`attacksInTake`).
 
 - **Onset timing** (the archived `onset-timing` change):
   - the score's expected attacks for one part;
@@ -286,7 +289,17 @@ JUCE-free and runs on the message thread after a take, never during one.
   wrong (keeping what was played), missed, or not judged for pitch when the
   evidence has none: the microphone, until #42. Every played note left over is
   extra, and a pairing with an equally good alternative is marked ambiguous.
-  `judgeNotes(take, part)` runs both. #52 draws the results on the score.
+  `judgeNotes(take, part)` runs both.
+- **Take review** (the archived `take-review` change):
+  - `bestPartFor` judges a take against every part of its score, finding its
+    onsets once, and picks the part with the most correct notes and on-time
+    moments.
+  - `reviewRows` turns a report into the Take Review tool's list.
+  - The recorder holds the review: the take, its part and its report.
+  - The Score View marks it through `engraving/ReviewMarks` (JUCE-free, placed
+    by part and `NoteRef`, as the cursor finds its notes).
+  - The Take Review tool (`src/features/review`) lists it. Both listen for
+    `takesChanged`, so they cannot disagree.
 
 Presentation is not ownership. `DockedToolPanel` and `ToolWindow` hold a tool's
 chrome, never the tool, which is what lets a tool move between docked and

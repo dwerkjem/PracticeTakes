@@ -8,7 +8,7 @@
 #include "ScoreLayout.h"
 
 // Where a take review's marks go on a laid-out score (no JUCE dependency).
-// openspec/changes/take-review/design.md, decision 3.
+// openspec/changes/archive/2026-11-08-take-review/design.md, decision 3.
 //
 // A judged note is found by its part and NoteRef, exactly as the cursor finds
 // what it marks, so its mark sits on its own notehead. An extra note was never

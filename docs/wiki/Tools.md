@@ -101,6 +101,26 @@ there are any (*8 import diagnostics* above). A line at the bottom says where th
 drawing knowingly differs from the file, such as beams regrouped by the time
 signature.
 
+### Marking a take
+
+While a take is under review and its score is open, the Score View marks every
+note of the part it was judged against: right, wrong (with the key played),
+missed, early or late, and a cross above the staff for each extra key. See
+[[Getting Started]] and the Take Review below. **Show take review** in the
+options menu turns the marks off.
+
+## Take Review
+
+The take you just played, judged note by note. It shows:
+- the take and the part it was judged against, each of which you can change;
+- a summary: *158 correct · 7 wrong · 11 missed · 1 extra · 3 early · 4 late*;
+- every result in time order.
+
+Click a result to move the practice clock, and with it the Score View, to that
+note. Before the first take it says how to record one.
+
+![The Take Review beside the Score View: a piano take stopped in bar 8, its notes marked and listed](images/take-review.png)
+
 ## Target Note
 
 Shows one note of the open score as text: its bar, where it starts, how it is

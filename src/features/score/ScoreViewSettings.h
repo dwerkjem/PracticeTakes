@@ -67,7 +67,7 @@ struct Settings
     PageFit pageFit = PageFit::width;
 
     // Whether the take under review is marked on the score
-    // (openspec/changes/take-review/design.md, decision 3).
+    // (openspec/changes/archive/2026-11-08-take-review/design.md, decision 3).
     bool showReview = true;
 
     bool operator==(const Settings&) const = default;

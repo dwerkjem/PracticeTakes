@@ -27,7 +27,8 @@
 // the piece, stopped early, cancelled, or failed with a reason -- keeping every
 // take but a cancelled one for the session. A kept take is reviewed: judged
 // against the part of its score it matches best, on a worker thread, and held
-// for the Score View and the Take Review tool (openspec/changes/take-review).
+// for the Score View and the Take Review tool
+// (openspec/changes/archive/2026-11-08-take-review).
 //
 // Its sources arrive as functions rather than as the services themselves, so it
 // is tested headless with blocks and key events supplied by the test.
@@ -65,7 +66,7 @@ class TakeListener
 };
 
 // A kept take, judged against one part of its score
-// (openspec/changes/take-review/design.md, decision 1).
+// (openspec/changes/archive/2026-11-08-take-review/design.md, decision 1).
 struct TakeReview
 {
     std::shared_ptr<const Take> take;

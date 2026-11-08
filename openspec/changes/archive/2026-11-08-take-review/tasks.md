@@ -18,5 +18,5 @@
 - [x] 4.1 An approved state with a synthetic keyboard take under review (the
       Score View and the Take Review tool side by side), and its capture
       surface. Read the pictures.
-- [ ] 4.2 The wiki (the Take Review tool, reading a review), the Features row,
+- [x] 4.2 The wiki (the Take Review tool, reading a review), the Features row,
       and `ARCHITECTURE.md`.

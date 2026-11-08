@@ -42,8 +42,8 @@
 //
 // The takes arrive the same way, and the take under review is marked on its
 // notes -- right, wrong, missed, early, late, extra -- while its score is the
-// one shown (openspec/changes/take-review, decision 3). Where each mark goes is
-// engraving/ReviewMarks.h; this draws them.
+// one shown (openspec/changes/archive/2026-11-08-take-review, decision 3).
+// Where each mark goes is engraving/ReviewMarks.h; this draws them.
 class ScoreViewComponent final
     : public ToolComponent,
       private juce::Timer,

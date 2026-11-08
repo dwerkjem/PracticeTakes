@@ -13,7 +13,7 @@
 // The Take Review tool: the take under review, the part it is judged against,
 // a summary, and every result in time order. Choosing a result moves the
 // practice clock there, and with it the Score View
-// (openspec/changes/take-review/design.md, decision 4).
+// (openspec/changes/archive/2026-11-08-take-review/design.md, decision 4).
 //
 // It reads no audio. What it shows is the recorder's review, the same one the
 // Score View marks, so the list and the notation cannot disagree; the rows are
