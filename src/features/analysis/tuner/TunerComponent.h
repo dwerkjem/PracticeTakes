@@ -9,8 +9,8 @@
 #include "../../../platform/audio/AudioInputService.h"
 #include "../../../platform/audio/SharedPitchAnalysis.h"
 #include "../../../platform/pitch/CurrentTarget.h"
+#include "../../../platform/pitch/PitchTracker.h"
 #include "../../../platform/pitch/SteadyReading.h"
-#include "PitchTracker.h"
 
 #include <memory>
 #include <optional>

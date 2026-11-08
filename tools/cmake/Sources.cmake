@@ -115,8 +115,6 @@ set(PRACTICE_TAKES_SOURCES
     src/features/analysis/harmonics/HarmonicAnalyzer.h
     src/features/analysis/harmonics/HarmonicAnalyzerComponent.cpp
     src/features/analysis/harmonics/HarmonicAnalyzerComponent.h
-    src/features/analysis/tuner/PitchTracker.cpp
-    src/features/analysis/tuner/PitchTracker.h
     src/features/analysis/tuner/TargetPickerPanel.h
     src/features/analysis/tuner/TunerComponent.cpp
     src/features/analysis/tuner/TunerComponent.h
@@ -211,6 +209,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/midi/NoteSoundingTracker.h
     src/platform/midi/SoundingDurationJudgement.h
     src/platform/pitch/CurrentTarget.h
+    src/platform/pitch/PitchTracker.cpp
+    src/platform/pitch/PitchTracker.h
     src/platform/pitch/ReferencePitch.h
     src/platform/pitch/SteadyReading.h
     src/platform/pitch/TargetChoice.h
@@ -323,7 +323,6 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/testcontrol/TestControlSessionTests.cpp
     src/tests/application/theme/ThemeContrastTests.cpp
     src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
-    src/tests/features/analysis/tuner/PitchTrackerTests.cpp
     src/tests/features/analysis/tuner/TunerSettingsCodecTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
     src/tests/features/score/MusicFontTests.cpp
@@ -358,6 +357,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/midi/NoteSoundingTrackerTests.cpp
     src/tests/platform/midi/SoundingDurationJudgementTests.cpp
     src/tests/platform/pitch/CurrentTargetTests.cpp
+    src/tests/platform/pitch/PitchTrackerTests.cpp
     src/tests/platform/pitch/ReferencePitchTests.cpp
     src/tests/platform/pitch/SteadyReadingTests.cpp
     src/tests/platform/pitch/TargetChoiceTests.cpp
@@ -410,7 +410,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/application/theme/AppLookAndFeel.cpp
     src/application/theme/Theme.cpp
     src/features/analysis/harmonics/HarmonicAnalyzer.cpp
-    src/features/analysis/tuner/PitchTracker.cpp
+    src/platform/pitch/PitchTracker.cpp
     src/features/performance/ApplicationLaunchTimer.cpp
     src/features/score/MusicFont.cpp
     src/features/score/ScoreViewSettings.cpp

@@ -3,7 +3,7 @@
 #include <array>
 #include <string>
 
-#include "../../../platform/pitch/ReferencePitch.h"
+#include "ReferencePitch.h"
 
 // PitchTracker turns the per-frame estimates of PitchDetector into a stable
 // note a human can read.

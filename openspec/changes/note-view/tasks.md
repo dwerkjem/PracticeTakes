@@ -1,6 +1,6 @@
 ## 1. Shared pieces
 
-- [ ] 1.1 `PitchTracker` moves to `src/platform/pitch/`, with its tests; the
+- [x] 1.1 `PitchTracker` moves to `src/platform/pitch/`, with its tests; the
       tuner unchanged.
 - [ ] 1.2 `pitch::staffStepsOf` with treble 8vb; `NoteViewModel` (window, key
       geometry, trail, shading). Tests.
