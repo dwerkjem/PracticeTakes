@@ -2,14 +2,14 @@
 
 - [x] 1.1 `Part::midiProgram` from `<midi-program>`, the subset document, and
       tests.
-- [ ] 1.2 Fetch TinySoundFont and GeneralUser GS at pinned commits; copy the
+- [x] 1.2 Fetch TinySoundFont and GeneralUser GS at pinned commits; copy the
       SoundFont beside the built executable; install rules for every platform;
       `tools/packaging/sounds/README.md` with both licences.
 
 ## 2. Playback, JUCE-free
 
-- [ ] 2.1 `playbackEventsOf` (decision 3). Tests.
-- [ ] 2.2 `PlaybackMix` and its mask (decision 5). Tests.
+- [x] 2.1 `playbackEventsOf` (decision 3). Tests.
+- [x] 2.2 `PlaybackMix` and its mask (decision 5). Tests.
 - [ ] 2.3 `ScoreSynth`: load on a worker, channels and voices up front, render
       bounded. Tests against the real SoundFont.
 - [ ] 2.4 `ClockRenderer`: events in the slot, dispatch, the mask, releases on

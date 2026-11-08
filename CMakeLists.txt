@@ -228,6 +228,7 @@ endif()
 # leaves CMAKE_CURRENT_SOURCE_DIR alone, so the paths stay relative to the
 # repository root.
 include("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/Sources.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/ScorePlayback.cmake")
 
 target_sources(PracticeTakes
     PRIVATE
@@ -241,6 +242,29 @@ target_sources(PracticeTakes
 target_include_directories(PracticeTakes
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+# TinySoundFont is someone else's code: a system include, so its warnings are
+# not ours to fix and clang-tidy does not report them.
+target_include_directories(PracticeTakes SYSTEM
+    PRIVATE
+        "${PRACTICE_TAKES_TSF_INCLUDE_DIR}"
+)
+
+# The SoundFont goes beside the executable, where the shell looks for it -- in
+# the bundle's Resources on macOS -- so a development build plays the score
+# exactly as an installed one does.
+if(APPLE)
+    set(PRACTICE_TAKES_SOUNDS_OUTPUT "$<TARGET_BUNDLE_CONTENT_DIR:PracticeTakes>/Resources/sounds")
+else()
+    set(PRACTICE_TAKES_SOUNDS_OUTPUT "$<TARGET_FILE_DIR:PracticeTakes>/sounds")
+endif()
+add_custom_command(TARGET PracticeTakes POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${PRACTICE_TAKES_SOUNDS_OUTPUT}"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${PRACTICE_TAKES_SOUND_FILES}
+        "${PRACTICE_TAKES_SOUNDS_OUTPUT}"
+    COMMENT "Copying the SoundFont beside the application"
+    VERBATIM
 )
 
 target_compile_definitions(PracticeTakes
@@ -325,6 +349,10 @@ if(BUILD_TESTING)
             "${CMAKE_CURRENT_SOURCE_DIR}/src"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/tests"
     )
+    target_include_directories(PracticeTakesTests SYSTEM
+        PRIVATE
+            "${PRACTICE_TAKES_TSF_INCLUDE_DIR}"
+    )
 
     # The corpus of real MuseScore exports lives on disk rather than in a string
     # literal, following the PRACTICE_TAKES_SOURCE_DIR precedent on the app
@@ -338,6 +366,7 @@ if(BUILD_TESTING)
         PRIVATE
             PRACTICE_TAKES_TEST_RESOURCES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/tests/resources"
             PRACTICE_TAKES_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+            PRACTICE_TAKES_TEST_SOUNDFONT="${PRACTICE_TAKES_SOUNDFONT_FILE}"
     )
 
     target_link_libraries(PracticeTakesTests

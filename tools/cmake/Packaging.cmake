@@ -40,13 +40,26 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         "${CMAKE_CURRENT_SOURCE_DIR}/README.md"
         DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/practice-takes"
     )
+
+    # The SoundFont and its licences, where the shell looks relative to
+    # /usr/bin (score-playback design.md decision 2).
+    install(FILES ${PRACTICE_TAKES_SOUND_FILES}
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/practice-takes/sounds"
+    )
 elseif(WIN32)
     install(FILES
         "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
         "${CMAKE_CURRENT_SOURCE_DIR}/README.md"
         DESTINATION "."
     )
+
+    # Beside the executable, as in a build tree.
+    install(FILES ${PRACTICE_TAKES_SOUND_FILES}
+        DESTINATION "${CMAKE_INSTALL_BINDIR}/sounds"
+    )
 endif()
+# On macOS the bundle already holds them in Contents/Resources/sounds, copied
+# there when it was built.
 
 # Include the MSVC runtime beside the executable so the Windows installer does
 # not require the user to download the Visual C++ redistributable separately.
