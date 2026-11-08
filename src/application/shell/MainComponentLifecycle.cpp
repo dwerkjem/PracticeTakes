@@ -157,6 +157,36 @@ void MainComponent::configureTopButtons()
     openSampleButton.setComponentID("open-sample-button");
 }
 
+take::TakeSources MainComponent::takeSources()
+{
+    // Called while the recorder is being constructed, before the members
+    // after it exist: every function only captures `this` and reads members
+    // declared before the recorder when it is called.
+    take::TakeSources sources;
+    sources.microphoneOpen = [this] { return audioInputService.hasUsableInput(); };
+    sources.microphoneMuted = [this] { return audioInputService.isMuted(); };
+    sources.keyboardOpen = [this]
+    { return midiInputService.connectionState() == MidiInputService::ConnectionState::open; };
+    sources.beginKeyboard = [this]
+    {
+        midiInputService.addConsumer(&takeKeyboard);
+        midiInputService.discardPendingEvents(&takeKeyboard);
+    };
+    sources.endKeyboard = [this] { midiInputService.removeConsumer(&takeKeyboard); };
+    sources.readKeyboard = [this](midi::MidiEvent* destination, std::size_t maximum)
+    { return midiInputService.readEvents(&takeKeyboard, destination, maximum); };
+    sources.latencies = [this]
+    {
+        auto* device = audioInputService.deviceManager().getCurrentAudioDevice();
+        return device != nullptr
+                   ? std::pair<
+                         int,
+                         int>{device->getInputLatencyInSamples(), device->getOutputLatencyInSamples()}
+                   : std::pair<int, int>{0, 0};
+    };
+    return sources;
+}
+
 std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(std::function<void()> fullscreenHandler)
 {
     return std::make_unique<MainTitleBar>(

@@ -5,6 +5,7 @@
 #include "../../platform/audio/AudioInputService.h"
 #include "../../platform/audio/SharedPitchAnalysis.h"
 #include "../../platform/midi/MidiInputService.h"
+#include "../../platform/take/TakeRecorder.h"
 #include "../../platform/transport/PracticeClock.h"
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
@@ -371,6 +372,21 @@ class MainComponent final
     transport::PracticeClock practiceClock{
         [this](RealtimeRenderer* renderer) { audioInputService.setRealtimeRenderer(renderer); },
         scoreImport.currentScoreHolder()};
+
+    // What a take reads the keyboard as: a consumer of its own, registered only
+    // while a take records from the keyboard.
+    struct TakeKeyboardConsumer final : MidiInputService::Consumer
+    {
+    };
+    TakeKeyboardConsumer takeKeyboard;
+
+    // Records takes from the microphone and the keyboard on the practice
+    // clock's timeline (openspec/changes/takes). Declared after the clock, the
+    // MIDI service and the audio service it records from, so it ends a live
+    // take and lets go of them before they go; before the transport strip and
+    // the live tools, which use it.
+    take::TakeRecorder takeRecorder{practiceClock, scoreImport.currentScoreHolder(), takeSources()};
+    [[nodiscard]] take::TakeSources takeSources();
 
     // The clock's controls, which the window's control strip lays out beside
     // the menus. Declared after the clock it listens to, so it stops listening

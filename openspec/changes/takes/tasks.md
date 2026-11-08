@@ -17,11 +17,11 @@
 
 ## 3. The recorder and the lock
 
-- [ ] 3.1 `PracticeClock::lock` and `unlock`. Tests.
-- [ ] 3.2 `TakeRecorder`: start, stop, cancel; following the clock; draining
+- [x] 3.1 `PracticeClock::lock` and `unlock`. Tests.
+- [x] 3.2 `TakeRecorder`: start, stop, cancel; following the clock; draining
       audio and MIDI; failing on a new score, lost sources or overflow; keeping
       takes. Headless tests with blocks driven by the test.
-- [ ] 3.3 Owned by `MainComponent`, in `ToolServices`.
+- [x] 3.3 Owned by `MainComponent`, in `ToolServices`.
 
 ## 4. Controls and verification
 

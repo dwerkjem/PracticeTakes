@@ -122,6 +122,18 @@ class PracticeClock final : private juce::Timer
     // Whether the score had more tempo and meter changes than the clock holds.
     [[nodiscard]] bool truncated() const noexcept;
 
+    // While a take is recorded nothing may change what it is measured against
+    // (openspec/changes/takes, design.md decision 4): locked, seeking, the tempo
+    // scale and the loop are left as they are, and a request to change them is
+    // ignored. Play, pause, stop and the metronome stay free. Message thread.
+    void lock() noexcept;
+    void unlock() noexcept;
+    [[nodiscard]] bool isLocked() const noexcept;
+
+    // The clock's current table, for a take to keep: what turns its frames
+    // into ticks. Null before the first publish.
+    [[nodiscard]] std::shared_ptr<const ClockTable> currentTable() const;
+
     void addListener(ClockListener* listener);
     void removeListener(ClockListener* listener);
 
@@ -164,6 +176,7 @@ class PracticeClock final : private juce::Timer
     Tick loopStart = 0;
     Tick loopEnd = 0;
     int countIn = defaultCountInBars;
+    bool locked = false;
 
     // Commands the queue had no room for, sent again on the next tick.
     std::vector<ClockCommand> unsent;

@@ -234,6 +234,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/take/Take.h
     src/platform/take/TakeAssembler.h
     src/platform/take/TakeLifecycle.h
+    src/platform/take/TakeRecorder.cpp
+    src/platform/take/TakeRecorder.h
     src/platform/transport/ClockCommandQueue.h
     src/platform/transport/ClockMath.h
     src/platform/transport/ClockRenderer.cpp
@@ -340,6 +342,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/score/musicxml/read/MusicXmlTranspositionTests.cpp
     src/tests/platform/take/TakeAssemblerTests.cpp
     src/tests/platform/take/TakeLifecycleTests.cpp
+    src/tests/platform/take/TakeRecorderTests.cpp
     src/tests/platform/transport/ClockMathTests.cpp
     src/tests/platform/transport/ClockRendererTests.cpp
     src/tests/platform/transport/PracticeClockTests.cpp
@@ -392,4 +395,5 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/score/musicxml/read/MusicXmlValueParsing.cpp
     src/platform/transport/ClockRenderer.cpp
     src/platform/transport/PracticeClock.cpp
+    src/platform/take/TakeRecorder.cpp
 )

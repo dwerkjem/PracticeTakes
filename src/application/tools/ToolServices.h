@@ -12,6 +12,11 @@ namespace transport
 class PracticeClock;
 }
 
+namespace take
+{
+class TakeRecorder;
+}
+
 class AudioInputService;
 class SharedPitchAnalysis;
 
@@ -48,6 +53,11 @@ struct ToolServices
     // seek, loop -- because practising a passage is a tool's business; it
     // never owns it.
     transport::PracticeClock& clock;
+
+    // The takes recorded this session, and the one being recorded. A tool may
+    // read them -- #52's review will -- and start or stop one, as the transport
+    // does.
+    take::TakeRecorder& takes;
 
     // The theme a tool should start in. Later changes arrive through
     // ToolComponent::setTheme rather than by re-reading this, because a change
