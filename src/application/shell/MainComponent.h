@@ -5,6 +5,7 @@
 #include "../../platform/audio/AudioInputService.h"
 #include "../../platform/audio/SharedPitchAnalysis.h"
 #include "../../platform/midi/MidiInputService.h"
+#include "../../platform/take/TakeRecorder.h"
 #include "../../platform/transport/PracticeClock.h"
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
@@ -372,11 +373,26 @@ class MainComponent final
         [this](RealtimeRenderer* renderer) { audioInputService.setRealtimeRenderer(renderer); },
         scoreImport.currentScoreHolder()};
 
+    // What a take reads the keyboard as: a consumer of its own, registered only
+    // while a take records from the keyboard.
+    struct TakeKeyboardConsumer final : MidiInputService::Consumer
+    {
+    };
+    TakeKeyboardConsumer takeKeyboard;
+
+    // Records takes from the microphone and the keyboard on the practice
+    // clock's timeline (openspec/changes/archive/2026-11-08-takes). Declared after the clock, the
+    // MIDI service and the audio service it records from, so it ends a live
+    // take and lets go of them before they go; before the transport strip and
+    // the live tools, which use it.
+    take::TakeRecorder takeRecorder{practiceClock, scoreImport.currentScoreHolder(), takeSources()};
+    [[nodiscard]] take::TakeSources takeSources();
+
     // The clock's controls, which the window's control strip lays out beside
     // the menus. Declared after the clock it listens to, so it stops listening
     // before the clock goes. Saving the metronome switch goes through the
     // shell, which owns the settings file.
-    TransportStrip transportStrip{practiceClock, [this] { saveSettings(false); }};
+    TransportStrip transportStrip{practiceClock, takeRecorder, [this] { saveSettings(false); }};
 
     juce::TextButton fileButton{"File"};
 
@@ -467,6 +483,7 @@ class MainComponent final
     // the approved state and cleared by every state that does not ask for it.
     bool testControlPlayClock = false;
     int testControlClockBar = -1;
+    bool testControlRecordTake = false;
     void startClockForTestControl(int attemptsLeft);
 
     // Set the first time a state is applied, and never cleared: this process is

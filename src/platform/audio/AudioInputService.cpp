@@ -577,14 +577,29 @@ void AudioInputService::renderToneBlock() noexcept PRACTICE_TAKES_NONBLOCKING
     const auto frames = static_cast<int>(std::min<double>(
         static_cast<double>(maximumToneBlock), rate * toneBlockMilliseconds / 1000.0));
 
-    // The clock first, with no output: there is no device to hear it on, but
-    // its position has to advance with the samples the tools are being fed.
-    // Before the mute check, as in the device callback.
-    renderRealtime(nullptr, nullptr, 0, frames, rate);
-
     const auto frequency = toneFrequency.load(std::memory_order_acquire);
+    const bool isMuted = muted.load(std::memory_order_relaxed);
+    const auto count = std::min(generatedBlock.size(), static_cast<std::size_t>(frames));
+    const bool toneWanted = frequency > 0.0f && !generatedBlock.empty() && count > 0;
 
-    if (frequency <= 0.0f || generatedBlock.empty())
+    // The tone first, when there is one and the input is not muted, so the
+    // clock is handed what the tools are about to be given: a take records
+    // exactly what they analyse (takes design.md decision 1).
+    if (toneWanted && !isMuted)
+    {
+        tone.render(
+            generatedBlock.data(), count, static_cast<double>(frequency), rate,
+            toneAmplitude.load(std::memory_order_relaxed));
+    }
+
+    // The clock, with no output: there is no device to hear it on, but its
+    // position has to advance with the samples the tools are being fed. It
+    // runs whether or not the input is muted, as in the device callback.
+    renderRealtime(
+        toneWanted && !isMuted ? generatedBlock.data() : nullptr, nullptr, 0,
+        toneWanted && !isMuted ? static_cast<int>(count) : frames, rate);
+
+    if (!toneWanted)
     {
         return;
     }
@@ -600,21 +615,11 @@ void AudioInputService::renderToneBlock() noexcept PRACTICE_TAKES_NONBLOCKING
     // true, so `hasUsableInput()` still reports input and `inputState()` can
     // say `muted` rather than `disconnected`, which are not the same thing to a
     // person.
-    if (muted.load(std::memory_order_relaxed))
+    if (isMuted)
     {
         return;
     }
 
-    const auto count = std::min(generatedBlock.size(), static_cast<std::size_t>(frames));
-
-    if (count == 0)
-    {
-        return;
-    }
-
-    tone.render(
-        generatedBlock.data(), count, static_cast<double>(frequency), rate,
-        toneAmplitude.load(std::memory_order_relaxed));
     deliverSamples(generatedBlock.data(), static_cast<int>(count));
 }
 
@@ -646,29 +651,12 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
         }
     }
 
-    // The clock, after the output is cleared and before the mute check: mute
-    // silences the microphone, not the metronome.
-    if (numSamples > 0 && renderer.load(std::memory_order_relaxed) != nullptr)
-    {
-        const float* deviceInput = nullptr;
-        for (int channel = 0; channel < numInputChannels; ++channel)
-        {
-            if (inputChannelData[channel] != nullptr)
-            {
-                deviceInput = inputChannelData[channel];
-                break;
-            }
-        }
-        renderRealtime(
-            deviceInput, outputChannelData, numOutputChannels, numSamples,
-            currentSampleRate.load(std::memory_order_relaxed));
-    }
-
-    if (numSamples <= 0 || muted.load(std::memory_order_relaxed))
+    if (numSamples <= 0)
     {
         return;
     }
 
+    const bool isMuted = muted.load(std::memory_order_relaxed);
     const float* inputSamples = nullptr;
 
     // A tone replaces the device's input rather than mixing with it, and is
@@ -677,7 +665,12 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
     // the case verification cares about most.
     const auto frequency = toneFrequency.load(std::memory_order_acquire);
 
-    if (frequency > 0.0f && static_cast<std::size_t>(numSamples) <= toneBlock.size())
+    // Nothing is read while muted: mute silences the microphone, and the tone
+    // standing in for it, for the tools and a take alike.
+    const bool toneWanted =
+        frequency > 0.0f && static_cast<std::size_t>(numSamples) <= toneBlock.size();
+
+    if (!isMuted && toneWanted)
     {
         tone.render(
             toneBlock.data(), static_cast<std::size_t>(numSamples), static_cast<double>(frequency),
@@ -686,7 +679,7 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
 
         inputSamples = toneBlock.data();
     }
-    else
+    else if (!isMuted)
     {
         for (int channel = 0; channel < numInputChannels; ++channel)
         {
@@ -696,6 +689,17 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
                 break;
             }
         }
+    }
+
+    // The clock, after the output is cleared and whether or not the input is
+    // muted: mute silences the microphone, not the metronome. It is handed
+    // the input the tools are about to get -- the tone or the device, none
+    // while muted -- so a take records what they analyse (takes decision 1).
+    if (renderer.load(std::memory_order_relaxed) != nullptr)
+    {
+        renderRealtime(
+            inputSamples, outputChannelData, numOutputChannels, numSamples,
+            currentSampleRate.load(std::memory_order_relaxed));
     }
 
     if (inputSamples == nullptr)

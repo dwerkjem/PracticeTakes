@@ -69,23 +69,6 @@ class ClockListener
     virtual void clockChanged(const ClockUpdate& update) = 0;
 };
 
-// The (frame, time) pair the audio callback last published: for placing an
-// event stamped on another thread -- a MIDI note -- on the clock's timeline.
-struct ClockTiming
-{
-    std::uint64_t streamFrame = 0;
-    Frame position = 0;
-    double timeMilliseconds = 0.0;
-    double sampleRate = 0.0;
-
-    // The clock frame at `milliseconds` on the same high-resolution clock, by
-    // the elapsed time since the block began. Meaningful while playing.
-    [[nodiscard]] Frame frameAt(double milliseconds) const noexcept
-    {
-        return position + roundToFrame((milliseconds - timeMilliseconds) * sampleRate / 1000.0);
-    }
-};
-
 class PracticeClock final : private juce::Timer
 {
   public:
@@ -139,6 +122,18 @@ class PracticeClock final : private juce::Timer
     // Whether the score had more tempo and meter changes than the clock holds.
     [[nodiscard]] bool truncated() const noexcept;
 
+    // While a take is recorded nothing may change what it is measured against
+    // (openspec/changes/archive/2026-11-08-takes, design.md decision 4): locked, seeking, the tempo
+    // scale and the loop are left as they are, and a request to change them is
+    // ignored. Play, pause, stop and the metronome stay free. Message thread.
+    void lock() noexcept;
+    void unlock() noexcept;
+    [[nodiscard]] bool isLocked() const noexcept;
+
+    // The clock's current table, for a take to keep: what turns its frames
+    // into ticks. Null before the first publish.
+    [[nodiscard]] std::shared_ptr<const ClockTable> currentTable() const;
+
     void addListener(ClockListener* listener);
     void removeListener(ClockListener* listener);
 
@@ -181,6 +176,7 @@ class PracticeClock final : private juce::Timer
     Tick loopStart = 0;
     Tick loopEnd = 0;
     int countIn = defaultCountInBars;
+    bool locked = false;
 
     // Commands the queue had no room for, sent again on the next tick.
     std::vector<ClockCommand> unsent;

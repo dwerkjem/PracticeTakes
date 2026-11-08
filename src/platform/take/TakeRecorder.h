@@ -1,0 +1,148 @@
+#pragma once
+
+#include <juce_events/juce_events.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "../midi/MidiEvent.h"
+#include "../score/CurrentScore.h"
+#include "../transport/PracticeClock.h"
+#include "Take.h"
+
+// Records takes: the message-thread half of openspec/changes/archive/2026-11-08-takes.
+//
+// It starts a take by locking the practice clock, arming its renderer to record
+// the microphone, and playing with the count-in; follows the clock to move the
+// take through its lifecycle; drains the recorded audio and the keyboard's
+// events onto the take's timeline; and ends the take -- completed at the end of
+// the piece, stopped early, cancelled, or failed with a reason -- keeping every
+// take but a cancelled one for the session.
+//
+// Its sources arrive as functions rather than as the services themselves, so it
+// is tested headless with blocks and key events supplied by the test.
+// MainComponent wires them to AudioInputService and MidiInputService.
+namespace take
+{
+// Where a take's input comes from. Any left empty reads as absent.
+struct TakeSources
+{
+    // An input device is open (or the synthetic tone stands in for one).
+    std::function<bool()> microphoneOpen;
+    std::function<bool()> microphoneMuted;
+
+    // A MIDI keyboard is open.
+    std::function<bool()> keyboardOpen;
+
+    // Start and stop listening to the keyboard, around a take.
+    std::function<void()> beginKeyboard;
+    std::function<void()> endKeyboard;
+
+    // Every keyboard event since the last call, up to `maximum`.
+    std::function<std::size_t(midi::MidiEvent* destination, std::size_t maximum)> readKeyboard;
+
+    // The device's stated input and output latencies, in frames.
+    std::function<std::pair<int, int>()> latencies;
+};
+
+class TakeListener
+{
+  public:
+    virtual ~TakeListener() = default;
+
+    // A take started, changed state, or ended.
+    virtual void takesChanged() = 0;
+};
+
+class TakeRecorder final : private juce::Timer, private transport::ClockListener
+{
+  public:
+    // Takes kept for the session, oldest dropped first (design.md decision 5).
+    static constexpr std::size_t maximumTakes = 50;
+
+    static constexpr int drainRateHz = 30;
+
+    TakeRecorder(
+        transport::PracticeClock& practiceClock,
+        const score::CurrentScore& currentScore,
+        TakeSources sources);
+    ~TakeRecorder() override;
+
+    TakeRecorder(const TakeRecorder&) = delete;
+    TakeRecorder& operator=(const TakeRecorder&) = delete;
+
+    // Why a take cannot start now, in a phrase for the interface; nothing when
+    // it can.
+    [[nodiscard]] std::optional<std::string> whyCannotStart() const;
+
+    // Start a take from where the clock is, counting in. False, changing
+    // nothing, when one cannot start.
+    bool start();
+
+    // End the live take: stopped early (or cancelled, if nothing was played
+    // yet), and stop the clock.
+    void stop();
+
+    // Discard the live take.
+    void cancel();
+
+    [[nodiscard]] bool isRecording() const noexcept;
+
+    // The live take, or null.
+    [[nodiscard]] const Take* current() const noexcept;
+
+    // Every kept take of the session, oldest first.
+    [[nodiscard]] const std::vector<std::shared_ptr<const Take>>& takes() const noexcept;
+
+    // The take that ended most recently, cancelled ones included: what the
+    // transport says about "the last take". Null before the first.
+    [[nodiscard]] const Take* lastEnded() const noexcept;
+
+    void addListener(TakeListener* listener);
+    void removeListener(TakeListener* listener);
+
+    // Drain and check. The timer calls it; a test calls it between blocks.
+    void poll();
+
+  private:
+    void timerCallback() override;
+    void clockChanged(const transport::ClockUpdate& update) override;
+
+    void follow(const transport::ClockUpdate& update);
+    // Move what was recorded onto the live take. False when the audio did not
+    // continue where it left off; the caller ends the take.
+    [[nodiscard]] bool drain();
+    void finish(TakeEvent event, std::string reason = {});
+    void notify();
+
+    [[nodiscard]] bool microphoneUsable() const;
+    [[nodiscard]] bool keyboardUsable() const;
+
+    transport::PracticeClock& clock;
+    const score::CurrentScore& scoreHolder;
+    TakeSources sources;
+
+    std::unique_ptr<Take> live;
+
+    // Whether the clock has been seen running since the take started: before
+    // that, its state is what it was before Record was pressed.
+    bool sawRunning = false;
+
+    // The bar the clock was last seen in while running, for a stopped take.
+    std::int64_t lastBar = 0;
+
+    std::vector<std::shared_ptr<const Take>> kept;
+    std::shared_ptr<const Take> ended;
+    std::uint64_t nextId = 0;
+
+    std::vector<float> scratch;
+    std::vector<midi::MidiEvent> keyBuffer;
+    std::vector<TakeListener*> listeners;
+};
+} // namespace take

@@ -933,6 +933,33 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # A take recording from the tone (takes).
+    Surface(
+        state="take-recording",
+        title="A take being recorded",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=5.0,
+        extras=(
+            Question(
+                "record-in-red",
+                "Does the transport show Finish in red, and a readout saying Recording with a "
+                "time, while the tempo and Loop are greyed out?",
+            ),
+            Question(
+                "take-ends-kept",
+                "Press Finish: does the readout say the take stopped in a bar, with its length, "
+                "and then go back to the bar and beat?",
+                behavioural=True,
+            ),
+            Question(
+                "real-take",
+                "With a real microphone and keyboard: does a take record both, and does muting "
+                "the microphone mid-take keep it going?",
+                behavioural=True,
+            ),
+        ),
+    ),
     # The practice clock playing the sample (practice-clock). The position
     # moves, so a question asks what the transport says rather than which bar.
     Surface(

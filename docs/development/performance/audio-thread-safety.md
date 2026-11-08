@@ -80,14 +80,22 @@ callback. What it does, and why each part is bounded:
   boundary by a read position.
 - **It writes a sequence-locked snapshot and three counters** (seeks, wraps,
   ends) as relaxed atomics, and reads the high-resolution clock once.
+- **While a take records, it copies each played span of the input** into a
+  preallocated 262,144-sample SPSC FIFO, and pushes a stamp of the span's clock
+  frame into a preallocated 4,096-entry SPSC queue (`takes` change). The
+  queue's room is checked before the samples go in, so a sample is never
+  pushed without its stamp. A span that doesn't fit is counted as an overflow
+  rather than waited on. With no input, it copies from a preallocated block of
+  silence. The input is the one the tools get: the tone or the device after
+  mute, chosen before the renderer is called.
 
 Measured by the `[.benchmark]` case "rendering a block against a full segment
 table": a 512-frame block against a full 512-segment table takes about 0.74 µs.
 
 The renderer runs before the mute check, so muting the microphone does not
-silence the metronome. It is driven through the real callback by four
-`[callback]` cases in `AudioInputServiceTests.cpp`, so the Realtime job sees
-it run.
+silence the metronome. It is driven through the real callback by five
+`[callback]` cases in `AudioInputServiceTests.cpp`, recording a take among
+them, so the Realtime job sees it run.
 
 ## How it is enforced
 

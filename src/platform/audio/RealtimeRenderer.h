@@ -17,9 +17,10 @@
 // no blocking call, no I/O, bounded work.
 struct RenderBlock
 {
-    // The device's first input channel, before the input gain is applied, or
-    // null when there is none (no device, or the synthetic tone is standing in
-    // for it). Valid for `frames` samples during the call only.
+    // The input the analysis tools are given this block: the synthetic tone
+    // when one is asked for, otherwise the device's first input channel, before
+    // `inputGain` is applied. Null while the input is muted or when there is
+    // none. Valid for `frames` samples during the call only.
     const float* input = nullptr;
     float inputGain = 1.0f;
 

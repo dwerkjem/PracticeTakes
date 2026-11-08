@@ -82,11 +82,21 @@ void PracticeClock::stop()
 
 void PracticeClock::seek(Tick tick)
 {
+    if (locked)
+    {
+        return;
+    }
+
     send({ClockCommand::Kind::seek, std::max<Tick>(0, tick)});
 }
 
 void PracticeClock::seekToBar(std::int64_t bar)
 {
+    if (locked)
+    {
+        return;
+    }
+
     const auto current = scoreHolder.score();
     if (current == nullptr || current->parts.empty() || current->parts.front().measures.empty())
     {
@@ -101,6 +111,11 @@ void PracticeClock::seekToBar(std::int64_t bar)
 
 void PracticeClock::setScalePercent(int percent)
 {
+    if (locked)
+    {
+        return;
+    }
+
     scale = clampScalePercent(percent);
     refreshTable();
 }
@@ -112,6 +127,11 @@ int PracticeClock::scalePercent() const noexcept
 
 void PracticeClock::setLoopEnabled(bool enabled)
 {
+    if (locked)
+    {
+        return;
+    }
+
     looping = enabled;
     refreshTable();
 }
@@ -123,6 +143,11 @@ bool PracticeClock::loopEnabled() const noexcept
 
 void PracticeClock::setLoopRegion(Tick start, Tick end)
 {
+    if (locked)
+    {
+        return;
+    }
+
     loopStart = std::max<Tick>(0, std::min(start, end));
     loopEnd = std::max<Tick>(0, std::max(start, end));
     refreshTable();
@@ -130,6 +155,11 @@ void PracticeClock::setLoopRegion(Tick start, Tick end)
 
 void PracticeClock::clearLoopRegion()
 {
+    if (locked)
+    {
+        return;
+    }
+
     loopStart = 0;
     loopEnd = 0;
     refreshTable();
@@ -178,6 +208,27 @@ bool PracticeClock::accentEnabled() const noexcept
 bool PracticeClock::hasScore() const noexcept
 {
     return builtScore != nullptr;
+}
+
+void PracticeClock::lock() noexcept
+{
+    locked = true;
+}
+
+void PracticeClock::unlock() noexcept
+{
+    locked = false;
+}
+
+bool PracticeClock::isLocked() const noexcept
+{
+    return locked;
+}
+
+std::shared_ptr<const ClockTable> PracticeClock::currentTable() const
+{
+    const auto* table = clockRenderer->tableForGeneration(clockRenderer->publishedGeneration());
+    return table != nullptr ? std::make_shared<const ClockTable>(*table) : nullptr;
 }
 
 bool PracticeClock::truncated() const noexcept

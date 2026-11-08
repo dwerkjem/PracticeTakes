@@ -32,6 +32,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -53,6 +54,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -74,6 +76,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -95,6 +98,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -116,6 +120,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -137,6 +142,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -158,6 +164,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -179,6 +186,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -200,6 +208,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -221,6 +230,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -242,6 +252,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -263,6 +274,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Tuner"
     },
     {
@@ -284,6 +296,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -305,6 +318,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Spectrogram"
     },
     {
@@ -326,6 +340,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -347,6 +362,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Harmonic Analyzer"
     },
     {
@@ -368,6 +384,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -389,6 +406,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -410,6 +428,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -431,6 +450,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -452,6 +472,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -473,6 +494,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -494,6 +516,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -515,6 +538,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -536,6 +560,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -557,6 +582,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -578,6 +604,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -599,6 +626,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -620,6 +648,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -641,6 +670,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -662,6 +692,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -683,6 +714,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -704,6 +736,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -725,6 +758,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -746,6 +780,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -767,6 +802,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -788,6 +824,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Send feedback"
     },
     {
@@ -809,6 +846,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Send feedback"
     },
     {
@@ -830,6 +868,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Score import"
     },
     {
@@ -851,6 +890,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Score import"
     },
     {
@@ -872,6 +912,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -893,6 +934,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Score View"
     },
     {
@@ -914,6 +956,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -935,6 +978,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -956,6 +1000,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -977,6 +1022,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -998,6 +1044,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -1019,6 +1066,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": true,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -1040,6 +1088,29 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": 5,
+      "recordTake": false,
+      "windowTitle": ""
+    },
+    {
+      "id": "take-recording",
+      "description": "A take being recorded: Finish in red, the readout counting the take, the tempo and loop locked",
+      "tools": ["score-view"],
+      "toolIds": ["score-view"],
+      "presentation": "docked",
+      "arrangement": "single",
+      "geometry": "normal",
+      "microphone": "available",
+      "settingsOpen": false,
+      "settingsPanel": "",
+      "feedbackOpen": false,
+      "toneHz": 440,
+      "toolView": "",
+      "scoreFixture": "<bundled sample>",
+      "showScoreImportSummary": false,
+      "holdScoreImportInProgress": false,
+      "clockPlaying": false,
+      "clockBar": -1,
+      "recordTake": true,
       "windowTitle": ""
     },
     {
@@ -1061,6 +1132,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -1082,6 +1154,7 @@
       "holdScoreImportInProgress": false,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": ""
     },
     {
@@ -1103,6 +1176,7 @@
       "holdScoreImportInProgress": true,
       "clockPlaying": false,
       "clockBar": -1,
+      "recordTake": false,
       "windowTitle": "Score import"
     }
   ]

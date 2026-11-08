@@ -117,6 +117,11 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     practiceClock.setScalePercent(transport::defaultScalePercent);
     testControlPlayClock = state.clockPlaying;
     testControlClockBar = state.clockBar;
+    testControlRecordTake = state.recordTake;
+    if (takeRecorder.isRecording())
+    {
+        takeRecorder.cancel();
+    }
 
     testControlNoMicrophone = state.microphone == MicrophoneCondition::unavailable;
     audioInputService.setMuted(state.microphone == MicrophoneCondition::muted);
@@ -340,7 +345,12 @@ void MainComponent::startClockForTestControl(int attemptsLeft)
     // builds has to reach the audio path before it can play. Rather than
     // guess how long that takes, try again until it has a score.
     practiceClock.poll();
-    if (practiceClock.hasScore())
+
+    // A take also waits for something to record from: the tone, which the
+    // generator starts on its own timer.
+    const bool ready = practiceClock.hasScore() &&
+                       (!testControlRecordTake || !takeRecorder.whyCannotStart().has_value());
+    if (ready)
     {
         if (testControlClockBar >= 0)
         {
@@ -355,6 +365,15 @@ void MainComponent::startClockForTestControl(int attemptsLeft)
             practiceClock.setCountInBars(0);
             practiceClock.setMetronomeEnabled(true);
             practiceClock.play();
+            practiceClock.setCountInBars(countIn);
+        }
+
+        if (testControlRecordTake)
+        {
+            // No count-in either, so the picture is of a take recording.
+            const int countIn = practiceClock.countInBars();
+            practiceClock.setCountInBars(0);
+            static_cast<void>(takeRecorder.start());
             practiceClock.setCountInBars(countIn);
         }
 

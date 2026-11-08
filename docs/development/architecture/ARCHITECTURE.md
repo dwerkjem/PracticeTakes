@@ -249,6 +249,40 @@ opened input-only and Settings says why the metronome is silent. The clock
 keeps time either way. With no device at all, the synthetic-input generator
 hands it blocks.
 
+## Takes
+
+A take is recorded against the practice clock (`src/platform/take/`, the
+archived `takes` change):
+
+- **The microphone is recorded by the clock's renderer**, inside the audio
+  callback, with a stamp of the clock frame of every span. Its audio and the
+  clock share one timeline exactly.
+- **Keyboard events are placed on that timeline** through the clock's
+  (frame, time) pair.
+- **`TakeLifecycle`, `Take` and the assembler are JUCE-free.**
+- **`TakeRecorder`** is the message-thread service. `MainComponent` owns it,
+  after `practiceClock` and `midiInputService` and before `transportStrip` and
+  `liveTools`, and passes it to tools as `ToolServices::takes`. While a take
+  runs it locks the clock, so nothing it is measured against can change.
+- **Takes are kept in memory for the session**, at most 50. Saving them is
+  #39's job.
+
+## Evaluation
+
+What a take is judged by lives in `src/platform/evaluation/`. It is
+JUCE-free and runs on the message thread after a take, never during one.
+
+- **Onset timing** (the archived `onset-timing` change):
+  - the score's expected attacks for one part;
+  - onsets from the keyboard's note-ons, or from the microphone by spectral
+    flux;
+  - a dynamic-programming alignment of the two, in order;
+  - a verdict for each attack: early, on time, late or absent, in
+    milliseconds and beats, with a tempo-scaled tolerance.
+
+  `judgeTake(take, part)` is the entry point. #48 adds pitch to the same
+  alignment, and #52 draws the results on the score.
+
 Presentation is not ownership. `DockedToolPanel` and `ToolWindow` hold a tool's
 chrome, never the tool, which is what lets a tool move between docked and
 floating without its analysis restarting or its audio registration dropping.

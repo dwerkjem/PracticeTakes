@@ -184,6 +184,14 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/audio/SharedPitchAnalysis.cpp
     src/platform/audio/SharedPitchAnalysis.h
     src/platform/audio/SyntheticTone.h
+    src/platform/evaluation/ExpectedAttacks.h
+    src/platform/evaluation/Fft.h
+    src/platform/evaluation/KeyboardOnsets.h
+    src/platform/evaluation/OnsetDetector.cpp
+    src/platform/evaluation/OnsetDetector.h
+    src/platform/evaluation/OnsetTiming.cpp
+    src/platform/evaluation/OnsetTiming.h
+    src/platform/evaluation/PerformedOnset.h
     src/platform/midi/MidiEvent.h
     src/platform/midi/MidiEventFifo.h
     src/platform/midi/MidiInputService.cpp
@@ -231,6 +239,12 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/score/musicxml/read/MusicXmlTieResolver.h
     src/platform/score/musicxml/read/MusicXmlValueParsing.cpp
     src/platform/score/musicxml/read/MusicXmlValueParsing.h
+    src/platform/take/Take.h
+    src/platform/take/TakeAssembler.h
+    src/platform/take/TakeLifecycle.h
+    src/platform/take/TakeRecorder.cpp
+    src/platform/take/TakeRecorder.h
+    src/platform/take/TakeStatus.h
     src/platform/transport/ClockCommandQueue.h
     src/platform/transport/ClockMath.h
     src/platform/transport/ClockRenderer.cpp
@@ -335,6 +349,14 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/score/musicxml/read/MusicXmlPercussionTests.cpp
     src/tests/platform/score/musicxml/read/MusicXmlTimingTests.cpp
     src/tests/platform/score/musicxml/read/MusicXmlTranspositionTests.cpp
+    src/tests/platform/evaluation/ExpectedAttacksTests.cpp
+    src/tests/platform/evaluation/KeyboardOnsetsTests.cpp
+    src/tests/platform/evaluation/OnsetDetectorTests.cpp
+    src/tests/platform/evaluation/OnsetTimingTests.cpp
+    src/tests/platform/take/TakeAssemblerTests.cpp
+    src/tests/platform/take/TakeLifecycleTests.cpp
+    src/tests/platform/take/TakeRecorderTests.cpp
+    src/tests/platform/take/TakeStatusTests.cpp
     src/tests/platform/transport/ClockMathTests.cpp
     src/tests/platform/transport/ClockRendererTests.cpp
     src/tests/platform/transport/PracticeClockTests.cpp
@@ -387,4 +409,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/score/musicxml/read/MusicXmlValueParsing.cpp
     src/platform/transport/ClockRenderer.cpp
     src/platform/transport/PracticeClock.cpp
+    src/platform/take/TakeRecorder.cpp
+    src/platform/evaluation/OnsetDetector.cpp
+    src/platform/evaluation/OnsetTiming.cpp
 )

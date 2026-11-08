@@ -412,3 +412,40 @@ TEST_CASE("the frame and time pair places an event on the timeline", "[transport
     // 10 ms after the block began is 441 frames later.
     CHECK(timing.frameAt(timing.timeMilliseconds + 10.0) == timing.position + 441);
 }
+
+TEST_CASE("a locked clock ignores what would change a take", "[transport][clock][take]")
+{
+    ClockUnderTest fixture;
+    auto& clock = *fixture.clock;
+    clock.setCountInBars(0);
+    fixture.block();
+
+    clock.lock();
+    CHECK(clock.isLocked());
+    clock.setScalePercent(50);
+    clock.setLoopEnabled(true);
+    clock.setLoopRegion(0, 4 * quarter);
+    clock.seek(8 * quarter);
+    clock.seekToBar(3);
+    fixture.block();
+
+    CHECK(clock.scalePercent() == 100);
+    CHECK_FALSE(clock.loopEnabled());
+    CHECK(clock.position().frame == 0);
+
+    // Play, pause and the metronome stay free.
+    clock.play();
+    fixture.blocks(2);
+    CHECK(clock.position().state == ClockState::playing);
+    clock.setMetronomeEnabled(false);
+    CHECK_FALSE(clock.metronomeEnabled());
+
+    clock.unlock();
+    clock.setScalePercent(50);
+    CHECK(clock.scalePercent() == 50);
+
+    // The table a take keeps.
+    const auto table = clock.currentTable();
+    REQUIRE(table != nullptr);
+    CHECK_FALSE(table->empty());
+}
