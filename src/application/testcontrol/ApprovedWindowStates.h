@@ -159,6 +159,13 @@ struct ApprovedWindowState
     //
     // Appended last, for the reason the comments above give.
     bool clockPlaying = false;
+
+    // Move the practice clock to the start of this zero-based bar once
+    // `scoreFixture` has imported, so the score cursor is photographed at a
+    // known place (score-cursor). Negative leaves the clock where it is.
+    //
+    // Appended last, for the reason the comments above give.
+    int clockBar = -1;
 };
 
 // An object that can be asked to act, as though clicked.

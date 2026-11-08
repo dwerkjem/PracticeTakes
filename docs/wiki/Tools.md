@@ -71,6 +71,29 @@ marks, with each part named beside its staves.
   scroll* and *Horizontal scroll*.
 - **Enlarge**, **Shrink** and **Default size** change the size of the music.
 - **Parts** shows and hides individual parts.
+- **Fit width** and **Fit page** (Page view) size the page to the panel's width,
+  or show the whole page at once.
+
+### Following the practice clock
+
+Play a score with the transport in the title bar (see [[Getting Started]]) and
+the Score View follows it:
+
+- A **cursor** marks where the clock is, moving through each note as it sounds.
+- The **notes sounding** are tinted, and the **notes coming next** are ringed.
+  **Look ahead** in the options menu sets how many onsets ahead, from none to
+  four (two by default). Only the parts you show are marked, so hide the piano
+  to see only your line.
+- The view **follows the clock**. It turns the page in Page view, steps a
+  system at a time in Vertical scroll, and moves a screen at a time in
+  Horizontal scroll. Scroll or turn a page yourself to look elsewhere: it stops
+  following, and a **Follow** button appears in the header until you press it
+  or play again. **Follow the practice clock** in the options menu turns it off
+  altogether.
+- **Click a note** to move the clock there, and **Go to bar…** to move it to a
+  bar by its printed number. Every Score View, and the transport, follow.
+
+![The score view with the clock at bar 6: a band over the first beat, its notes tinted and the next two onsets ringed](images/score-cursor.png)
 
 Open a score with **File → Open score...**. Until then it says "No score open".
 The header names the work and its parts, and links to the import's notes when

@@ -116,6 +116,7 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     practiceClock.setLoopEnabled(false);
     practiceClock.setScalePercent(transport::defaultScalePercent);
     testControlPlayClock = state.clockPlaying;
+    testControlClockBar = state.clockBar;
 
     testControlNoMicrophone = state.microphone == MicrophoneCondition::unavailable;
     audioInputService.setMuted(state.microphone == MicrophoneCondition::muted);
@@ -341,13 +342,21 @@ void MainComponent::startClockForTestControl(int attemptsLeft)
     practiceClock.poll();
     if (practiceClock.hasScore())
     {
-        // No count-in, so the picture is of the score playing; the person's
-        // own count-in is put back straight after.
-        const int countIn = practiceClock.countInBars();
-        practiceClock.setCountInBars(0);
-        practiceClock.setMetronomeEnabled(true);
-        practiceClock.play();
-        practiceClock.setCountInBars(countIn);
+        if (testControlClockBar >= 0)
+        {
+            practiceClock.seekToBar(testControlClockBar);
+        }
+
+        if (testControlPlayClock)
+        {
+            // No count-in, so the picture is of the score playing; the
+            // person's own count-in is put back straight after.
+            const int countIn = practiceClock.countInBars();
+            practiceClock.setCountInBars(0);
+            practiceClock.setMetronomeEnabled(true);
+            practiceClock.play();
+            practiceClock.setCountInBars(countIn);
+        }
 
         return;
     }

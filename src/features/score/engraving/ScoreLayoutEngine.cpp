@@ -1212,6 +1212,13 @@ double emitMeasure(
     {
         const double x = xOf(placed);
 
+        // Every main onset is a moment the cursor can be at, rests included:
+        // a rest takes time as surely as a note does (score-cursor decision 1).
+        if (!placed.event->isGrace && plan.source != nullptr)
+        {
+            system.timeAnchors.push_back(TimeAnchor{plan.source->start + placed.event->onset, x});
+        }
+
         if (!placed.value.has_value())
         {
             continue;
@@ -2137,6 +2144,8 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     // `partOfStaff` says which drawn part each planned staff belongs to.
     std::vector<std::vector<MeasurePlan>> plansByStaff;
     std::vector<std::size_t> partOfStaff;
+    // The same, as an index into `Score::parts`, for the cursor (System::staffParts).
+    std::vector<std::size_t> scorePartOfStaff;
     std::vector<int> partVerses(drawnParts.size(), 0);
 
     for (std::size_t partIndex = 0; partIndex < drawnParts.size(); ++partIndex)
@@ -2151,6 +2160,7 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
                 plansByStaff.back().begin() + static_cast<std::ptrdiff_t>(measureCount),
                 plansByStaff.back().end());
             partOfStaff.push_back(partIndex);
+            scorePartOfStaff.push_back(static_cast<std::size_t>(drawn.part - score->parts.data()));
         }
 
         layout.lyricVerseCount = std::max(layout.lyricVerseCount, partVerses.at(partIndex));
@@ -2604,11 +2614,44 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
                 assignStaff(system, before, static_cast<int>(staff));
             }
 
+            // The bar's own two ends, so the cursor crosses a bar with no notes
+            // in a staff, and a condensed rest, as well as one full of them.
+            const score::Measure* first = plansByStaff.front().at(measure).source;
+            const score::Measure* last =
+                plansByStaff.front().at(measure + static_cast<std::size_t>(bars) - 1).source;
+            if (first != nullptr && last != nullptr)
+            {
+                system.timeAnchors.push_back(TimeAnchor{first->start, contentStart});
+                system.timeAnchors.push_back(
+                    TimeAnchor{last->start + last->nominalDuration, barlineX});
+            }
+
             spans.push_back(MeasureSpan{plansByStaff.front().at(measure).source, x, barlineX});
             x = barlineX;
         }
 
         system.width = x;
+
+        // One x per tick, the later one: a bar's start is its first note when
+        // it has one, not the content start before it, and a downbeat is the
+        // note after the barline, not the barline (score-cursor decision 1).
+        std::sort(
+            system.timeAnchors.begin(), system.timeAnchors.end(),
+            [](const TimeAnchor& left, const TimeAnchor& right)
+            { return left.tick != right.tick ? left.tick < right.tick : left.x < right.x; });
+        std::vector<TimeAnchor> anchors;
+        anchors.reserve(system.timeAnchors.size());
+        for (const TimeAnchor& anchor : system.timeAnchors)
+        {
+            if (!anchors.empty() && anchors.back().tick == anchor.tick)
+            {
+                anchors.back().x = anchor.x;
+                continue;
+            }
+            anchors.push_back(anchor);
+        }
+        system.timeAnchors = std::move(anchors);
+        system.staffParts = scorePartOfStaff;
 
         addJumps(system, spans);
 

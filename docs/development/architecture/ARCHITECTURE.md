@@ -238,6 +238,11 @@ position at the same frame are the same instant.
     thread, such as a MIDI note, can be placed on the timeline.
 - **`TransportStrip`** puts the controls in the window's control strip once a
   score is open.
+- **The Score View follows it.** It draws a cursor at the clock's place and
+  marks the sounding and upcoming notes. Each laid-out system records its time
+  anchors (tick → x) and the score part of each staff, and the JUCE-free
+  `engraving/ScoreCursor.h` holds every rule the cursor follows. See the
+  archived `score-cursor` change.
 
 The device is opened with two outputs beside its inputs. If that fails, it is
 opened input-only and Settings says why the metronome is silent. The clock

@@ -223,7 +223,9 @@ Training what you hear and understand, alongside what you play and sing.
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
 | Score View | Engraved notation with page, vertical and horizontal views, sizing, and showing or hiding parts | ✅ | — |
-| Score cursor | The current note followed through the score as you play | MVP | [#33](https://github.com/dwerkjem/PracticeTakes/issues/33) |
+| Score cursor | The practice clock's place in the score, the notes sounding and the next few marked, followed page by page as it plays; click a note or go to a bar to start from there; fit a whole page | ✅ | [#33](https://github.com/dwerkjem/PracticeTakes/issues/33) |
+| Rehearsal marks | Keep a score's rehearsal marks, and jump to one | Not yet scheduled | [#324](https://github.com/dwerkjem/PracticeTakes/issues/324) |
+| One voice of a part | Choose which voice of a shared staff is yours, such as the alto in an SATB score | Not yet scheduled | [#325](https://github.com/dwerkjem/PracticeTakes/issues/325) |
 
 ### Changing the score
 

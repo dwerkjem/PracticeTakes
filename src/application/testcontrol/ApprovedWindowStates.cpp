@@ -332,6 +332,15 @@ const std::vector<ApprovedWindowState>& states()
          "The practice clock playing the sample score: the transport in the control strip, "
          "showing where it is",
          0.0, "", bundledSampleFixtureName(), false, false, true},
+        // The score cursor at a known place: the clock moved to bar 6 and left
+        // there, so the cursor, the sounding note and the two after it are
+        // the same in every picture (score-cursor).
+        {"score-view-cursor", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view with the practice clock at bar 6: the cursor, the note sounding and "
+         "the next two ringed",
+         0.0, "", bundledSampleFixtureName(), false, false, false, 5},
         {"score-view-vertical", Tools{"score-view"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false,

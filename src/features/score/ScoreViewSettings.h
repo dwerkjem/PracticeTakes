@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../application/tools/ToolSettingsPayload.h"
+#include "engraving/ScoreCursor.h"
 #include "engraving/ScoreLayout.h"
 
 #include <array>
@@ -27,6 +28,17 @@ enum class ViewMode
     horizontal
 };
 
+// How Page view sizes its page (score-cursor design.md decision 7).
+enum class PageFit
+{
+    // As wide as the panel, scrolled within when taller: the default, and how
+    // Page view always worked.
+    width,
+
+    // As tall as the panel, so the whole page shows at once, smaller.
+    page
+};
+
 // The staff sizes enlarge and shrink step through, as pixels per staff space,
 // smallest first. The old Small, Medium and Large (5.2, 7.0, 9.4) are on it, so
 // nobody's chosen size disappears.
@@ -45,6 +57,15 @@ struct Settings
     // Empty, the default, draws every part.
     std::vector<engraving::PartKey> hiddenParts;
 
+    // How many onsets ahead of the practice clock to ring, none to four
+    // (score-cursor decision 3).
+    int lookAhead = engraving::defaultLookAhead;
+
+    // Whether the view follows the clock while it plays (decision 5).
+    bool follow = true;
+
+    PageFit pageFit = PageFit::width;
+
     bool operator==(const Settings&) const = default;
 };
 
@@ -60,7 +81,8 @@ struct Settings
 inline constexpr int settingsVersion = 1;
 
 // "view=page;size=7" -- the view by name and the size in pixels per space --
-// then, when any part is hidden, ";hidden=P1:Voice,P3:Alto". A part's id is an
+// then, when any part is hidden, ";hidden=P1:Voice,P3:Alto"; then, each only
+// when it is not the default, ";ahead=3", ";follow=0" and ";fit=page". A part's id is an
 // XML name and never holds `:` `,` `;` or `=`; its name can, so the name is
 // percent-encoded for those and `%`. A version without hidden parts ignores the
 // key, which is why adding it did not need a new `settingsVersion`.

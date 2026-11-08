@@ -435,6 +435,18 @@ struct PartNameGlyph
 // `System::staffOffsets`, inclusive. A part on more than one staff -- a piano --
 // is braced, and its barlines run through all of its staves; between two parts
 // they break, so each part's bars read as its own.
+// Where a moment in the score is drawn on a system: a tick, and the x it falls
+// at. What #33's cursor reads (score-cursor design.md decision 1): the layout
+// already knows where every onset went after justification, so the cursor asks
+// it rather than spacing the music a second time and disagreeing with it.
+struct TimeAnchor
+{
+    score::Tick tick = 0;
+    double x = 0.0;
+
+    bool operator==(const TimeAnchor&) const = default;
+};
+
 struct StaffGroup
 {
     int firstStaff = 0;
@@ -503,6 +515,18 @@ struct System
     // no name. Room for them is reserved at the system's start, before
     // `staffStartX`.
     std::vector<PartNameGlyph> partNames;
+
+    // Every main (non-grace) onset on any staff of this system, and the end of
+    // every bar at its barline, sorted by tick with one x per tick. Where two
+    // ticks coincide -- a bar's end and the next bar's first note -- the later
+    // x wins, so the cursor at a downbeat is on its note rather than on the
+    // barline before it. A condensed multi-bar rest anchors only its two ends.
+    std::vector<TimeAnchor> timeAnchors;
+
+    // The index into `Score::parts` of the part each staff draws, by staff.
+    // A `NoteRef` names a note within its own part, so telling the soprano's
+    // first note from the alto's needs the staff's part as well.
+    std::vector<std::size_t> staffParts;
 
     // The vertical strip this system occupies, in staff spaces from the top of
     // the layout: from the end of the system above to the start of the one

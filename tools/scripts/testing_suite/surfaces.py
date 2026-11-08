@@ -900,6 +900,39 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The score cursor at a known place (score-cursor): the clock moved to bar
+    # 6 and left there, so the picture is the same every run.
+    Surface(
+        state="score-view-cursor",
+        title="The score cursor at bar 6",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=5.0,
+        extras=(
+            Question(
+                "cursor-on-the-bar",
+                "Is a coloured band drawn across the system at the first beat of bar 6, over "
+                "its notes?",
+            ),
+            Question(
+                "marks-legible",
+                "Are the sounding notes tinted and the next two onsets ringed, with every "
+                "notehead, accidental and stem still readable through the marks?",
+            ),
+            Question(
+                "follows-while-playing",
+                "Press Play: does the cursor move with the music, the page turn by itself at "
+                "the next page, and scrolling by hand stop that until Follow is pressed?",
+                behavioural=True,
+            ),
+            Question(
+                "click-to-seek",
+                "Click a note in another bar: does the cursor jump there, and does Play start "
+                "from it?",
+                behavioural=True,
+            ),
+        ),
+    ),
     # The practice clock playing the sample (practice-clock). The position
     # moves, so a question asks what the transport says rather than which bar.
     Surface(

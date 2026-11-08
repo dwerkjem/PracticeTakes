@@ -466,6 +466,7 @@ class MainComponent final
     // Start the practice clock once the state's score has imported. Set from
     // the approved state and cleared by every state that does not ask for it.
     bool testControlPlayClock = false;
+    int testControlClockBar = -1;
     void startClockForTestControl(int attemptsLeft);
 
     // Set the first time a state is applied, and never cleared: this process is
