@@ -1,116 +1,111 @@
 # Practice Takes
 
-Practice Takes is an early desktop music-practice application for Windows,
-Linux, and macOS. It is currently focused on live microphone analysis and is
-intended to grow into a more complete digital audio workstation over time.
+Practice Takes is a desktop music-practice application for Windows, Linux and
+macOS. You play or sing, and it listens: a tuner, a spectrogram and a harmonic
+analyzer for the microphone, an engraved score viewer for MusicXML, and live
+capture of a MIDI keyboard and its sustain pedal.
 
-> **Project status:** very early work in progress. Features, layouts, and file
-> formats may change substantially.
+![The tuner, spectrogram and harmonic analyzer tiled side by side, all reading the same sung A4](docs/wiki/images/overview.png)
 
-## Current tools
+> **Status: early, and not yet a viable product.** The tools below work, but
+> what Practice Takes is for — play a piece, then see what went wrong in that
+> take — doesn't exist yet. That is the MVP, committed for **17 May 2027**. The
+> [roadmap](https://github.com/dwerkjem/PracticeTakes/wiki/Roadmap) has the
+> dates and the [live forecast](https://github.com/dwerkjem/PracticeTakes/issues/10)
+> says whether they're on track.
 
-### Tuner
+**User guide:** the [wiki](https://github.com/dwerkjem/PracticeTakes/wiki) ·
+**Every feature, planned and done:** [Features](https://github.com/dwerkjem/PracticeTakes/wiki/Features)
 
-The tuner listens to the selected microphone and displays:
+## What it does today
 
-- the detected note
-- frequency and cents offset
-- a pitch-history graph
-- bar and meter display modes
-- adjustable smoothing, averaging, note-switch, dropout, and graph-duration
-  controls
+### Listen
 
-### Spectrogram
+| | |
+|---|---|
+| ![The tuner reading A4, with a pitch graph showing the note drift above and below](docs/wiki/images/tuner-graph.png) | **Tuner.** The note you're on, its frequency, and how many cents sharp or flat, as a pitch graph, a bar or a meter. Advanced settings shape how it settles, and practice presets set them for you. |
+| ![A spectrogram with a sung note and its overtones as bright horizontal bands](docs/wiki/images/spectrogram.png) | **Spectrogram.** A scrolling view of the frequencies in the sound: harmonics, noise, resonance, and how a tone changes over time. |
+| ![The harmonic analyzer showing eight harmonic bars and their levels over time](docs/wiki/images/harmonic-analyzer.png) | **Harmonic analyzer.** How strong each harmonic of a held note is, over time, with its fundamental and brightness. It says when it can't give a clean answer instead of guessing. |
 
-The spectrogram displays a scrolling frequency view of the microphone input.
-It is useful for examining harmonics, noise, resonance, and changes in tone
-over time.
+### Read a score
 
-## Interface
+![The score view drawing a song for voice and piano, with lyrics, dynamics and a grand staff](docs/wiki/images/score-view.png)
 
-The main window provides four top-level controls:
+**File → Open score...** reads MusicXML (`.musicxml`, `.xml`, `.mxl`), the
+format every mainstream notation program exports. The **Score View** draws it as
+engraved notation, in page, vertical or horizontal views, and an import summary
+says exactly what came in differently from the file. **File → Open sample
+score** opens a bundled song by Mahler if you just want to see it.
 
-- **File** — reserved for future project and audio-file commands
-- **Settings** — microphone selection, mute, input volume, live level,
-  buffering status, appearance, and portable settings import/export
-- **Tools** — opens the tuner and spectrogram
-- **Help** — send feedback and manage feedback invitations
+### Play a MIDI keyboard
 
-Each tool can run inside the main workspace or in its own resizable floating
-window. Use **Tools → Tuner/Spectrogram → Dock in workspace** or **Float in
-window** to move a live tool without restarting its analysis. The tuner and
-spectrogram can remain open at the same time and share the microphone selected
-in Settings.
+Choose a keyboard under **Settings → MIDI** and Practice Takes reads its keys,
+velocities and sustain pedal live, including notes held by the pedal. The MVP
+uses this to judge each take against the score.
 
-Drag the **Drag** handle on a docked or floating tool into the main workspace.
-Visible targets tile it left, right, top, or bottom, group it as a tab, or move
-it back to a floating window. Split dividers are resizable. The equivalent
-**Tools → Arrange workspace** commands provide a keyboard-accessible path.
-Input volume is a shared software gain from 0–200%, so the same adjusted
-signal reaches every analysis tool without changing the operating-system
-microphone setting.
+### Arrange it your way
 
-When no usable microphone is available, the main window shows a dismissible
-warning with a shortcut to Settings.
+Every tool can be docked in the main window, tiled beside the others, grouped as
+tabs, or floated in its own window, without restarting it. Four built-in
+workspaces get you started, you can save your own, and the whole setup exports
+to a portable `.ptsettings` file. There is a dark theme and a light one.
 
-### Workspaces and portable settings
+## Where it's going
 
-**Tools → Workspaces** includes four built-in arrangements: Vocal Warm-up,
-Pitch Practice, Spectrum Analysis, and Performance Preparation. You can also
-save the current arrangement under a name, apply it later, overwrite or rename
-it, and delete it. Named workspaces are independent saved copies. Resetting the
-workspace replaces only the current arrangement with Pitch Practice; it does
-not delete named workspaces or reset global preferences.
+The MVP is built in two lanes at once:
 
-The full Settings window can export a human-readable `.ptsettings` file. The
-bundle contains supported appearance, audio, fullscreen, feedback-invitation,
-tool, active-workspace, and named-workspace settings. It deliberately excludes
-feedback text and contact details, installation identity, use counters,
-invitation history, logs, benchmarks, and analysis data.
+- **Listening and pitch:** choose a target note, see the note you're on against
+  it on a keyboard and a staff, find your vocal range, and sing against a drone.
+- **Piano practice:** learn a piece at the keyboard, one hand at a time.
 
-Import validates and migrates a bundle before showing a replacement summary.
-Nothing changes until you confirm. A confirmed import replaces supported
-preferences and all named workspaces and takes effect immediately. A bundle
-from a newer unsupported version is left untouched and reports a compatibility
-error. Missing audio devices and off-screen window positions recover to safe
-available choices without rejecting the rest of the import.
+Both lead into one practice loop: play a piece on a MIDI keyboard, or sing your
+part with the rest of the score as accompaniment; see on the score which notes
+were wrong, missed, early or late, and how sharp or flat; loop the weak passage,
+slower, and take it again.
+
+After that come depth on both instruments, recordings examined with the same
+tools as live input, ear-training drills, and, after 1.0, ear training and music
+theory. The [Features](https://github.com/dwerkjem/PracticeTakes/wiki/Features)
+page lists everything, by category, with the release it's planned for.
+
+## Install
+
+Published versions come from
+[GitHub Releases](https://github.com/dwerkjem/PracticeTakes/releases) as native
+installers, built for every platform below:
+
+| Platform | Package |
+|---|---|
+| Windows x64 and ARM64 | `.exe` installer, with its runtime libraries, added to the Start Menu |
+| Debian 12+ and compatible Ubuntu, x64 and ARM64 | `.deb`, which installs its dependencies through APT |
+| macOS Intel and Apple Silicon | `.pkg`, installed into `/Applications` |
+
+Then follow [Getting Started](https://github.com/dwerkjem/PracticeTakes/wiki/Getting-Started):
+choose your microphone, open a tool, and pick a workspace.
 
 ## Feedback
 
-Every tool's options menu offers **Give feedback on this tool**, and the
-**Help** menu can open the same form at any time. Reports are submitted
-online when possible and are kept as a local draft if no connection is
-available. After a few completed tool uses, Practice Takes may also ask once
-whether you would like to share feedback; this invitation can be turned off
-from the **Help** menu at any time.
-
-## Platforms
-
-Automated packages are built for:
-
-- Windows x64 and ARM64
-- Linux x64 and ARM64
-- macOS Intel and Apple Silicon
-
-Published versions, when available, are provided through GitHub Releases as
-native installers:
-
-- Debian 12+ and compatible Ubuntu `.deb` packages that install runtime
-  dependencies through APT
-  and add Practice Takes to the desktop Applications menu
-- Windows `.exe` installers that bundle the required runtime libraries and add
-  Practice Takes to the Start Menu
-- macOS `.pkg` installers that place Practice Takes in `/Applications`
+Every tool's options menu has **Give feedback on this tool**, and the **Help**
+menu opens the same form. It is the fastest way to change what gets built next.
+Bugs and feature requests can also go to
+[the issue tracker](https://github.com/dwerkjem/PracticeTakes/issues/new/choose);
+security reports go through [`SECURITY.md`](.github/SECURITY.md).
 
 ## Development
 
-Developer documentation, including architecture, local builds, code
-conventions, and release instructions, is kept in
-[`docs/development/`](docs/development/README.md).
+Practice Takes is C++20 on JUCE 8, built with CMake. To build and run it on
+Linux:
 
-The [architecture map](https://dwerkjem.github.io/PracticeTakes/) is a
-browsable graph of the codebase — every file, its role, and what it connects
-to, with a guided tour. It needs no checkout or setup.
+```bash
+./tools/scripts/build/build-and-run.sh --install-dependencies
+```
+
+[Contributing](https://github.com/dwerkjem/PracticeTakes/wiki/Contributing) is
+the short version. Developer documentation (architecture, builds on every
+platform, code conventions, testing and releases) is in
+[`docs/development/`](docs/development/README.md), and the
+[architecture map](https://dwerkjem.github.io/PracticeTakes/) is a browsable
+graph of the codebase with a guided tour.
 
 ## License
 

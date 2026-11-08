@@ -19,10 +19,19 @@ for the full one.
 
 ## First run
 
+With no score and no tool open, the window offers **Open the sample score**. If
+there is no usable microphone, a warning in the corner says so and links to
+Settings:
+
+![The empty window: "Open a score to get started" with an Open the sample score button, and a No microphone detected warning](images/first-run.png)
+
 1. **Choose your input.** Open **Settings → Audio** and pick a microphone. If
    there is no usable microphone, the main window shows a warning with a
    shortcut to Settings. **Input volume** is a software gain from 0 to 200%,
    shared by every tool, and never changes the operating system's own setting.
+
+   ![Settings, Audio tab: Mute microphone, Input volume, Input level, buffer health and the Input device list](images/settings-audio.png)
+
 2. **Open a tool.** The **Tools** menu opens the Tuner, Spectrogram, Harmonic
    Analyzer, Score View and Target Note. Every tool listens to the same
    microphone, so several can be open at once. See [[Tools]].
@@ -35,7 +44,7 @@ for the full one.
 5. **Connect a MIDI keyboard** (optional). Choose it under **Settings → MIDI**.
    See [[MIDI Keyboard]].
 
-## The four menus
+## The menus and the title bar
 
 | Menu | Holds |
 |---|---|
@@ -43,6 +52,10 @@ for the full one.
 | **Settings** | Appearance, audio, MIDI, practice presets, reset and support, and portable settings import/export |
 | **Tools** | Opens each tool, arranges the workspace, and manages named workspaces |
 | **Help** | Send feedback, and turn feedback invitations on or off |
+
+On the right of the title bar, the **microphone button** shows the input's state
+and mutes or unmutes it in one click: *Mic active - Mute*, *Mic muted - Unmute*,
+or *Mic disconnected*. **Fullscreen** fills the screen, and becomes **Restore**.
 
 ## Telling us what you think
 
