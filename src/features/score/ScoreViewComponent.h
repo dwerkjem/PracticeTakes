@@ -5,10 +5,12 @@
 #include "../../application/theme/Theme.h"
 #include "../../application/tools/ToolComponent.h"
 #include "../../platform/score/CurrentScore.h"
+#include "../../platform/transport/PracticeClock.h"
 
 #include "ScoreGlyphPainter.h"
 #include "ScoreViewSettings.h"
 #include "engraving/Pagination.h"
+#include "engraving/ScoreCursor.h"
 #include "engraving/ScoreLayout.h"
 
 #include <cstddef>
@@ -31,11 +33,19 @@
 //
 // The score it reads arrives through `ToolServices`, exactly as the Target Note
 // tool's does: a tool reaches application state through that bundle and never
-// back into the shell.
-class ScoreViewComponent final : public ToolComponent, private juce::Timer
+// back into the shell. So does the practice clock, which it draws a cursor for,
+// marks the sounding and upcoming notes of, and follows while it plays
+// (openspec/changes/score-cursor). Every rule the cursor follows is in
+// engraving/ScoreCursor.h; this draws it and scrolls.
+class ScoreViewComponent final
+    : public ToolComponent,
+      private juce::Timer,
+      private transport::ClockListener
 {
   public:
-    explicit ScoreViewComponent(const score::CurrentScore& sharedCurrentScore);
+    ScoreViewComponent(
+        const score::CurrentScore& sharedCurrentScore,
+        transport::PracticeClock& practiceClock);
     ~ScoreViewComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -68,10 +78,27 @@ class ScoreViewComponent final : public ToolComponent, private juce::Timer
         // turns and Ctrl/Cmd +/- work without a separate focus step.
         void mouseDown(const juce::MouseEvent& event) override;
 
+        // A click, not a drag, moves the practice clock to the onset under it
+        // (score-cursor decision 6).
+        void mouseUp(const juce::MouseEvent& event) override;
+
       private:
         ScoreViewComponent& owner;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Canvas)
+    };
+
+    // A viewport that says when it was scrolled by the reader rather than by
+    // the view itself, which is what suspends following (decision 5).
+    class WatchedViewport final : public juce::Viewport
+    {
+      public:
+        explicit WatchedViewport(ScoreViewComponent& ownerToUse) : owner(ownerToUse) {}
+
+        void visibleAreaChanged(const juce::Rectangle<int>& area) override;
+
+      private:
+        ScoreViewComponent& owner;
     };
 
     // What a layout was computed for. Laid out again only when one of these
@@ -84,6 +111,7 @@ class ScoreViewComponent final : public ToolComponent, private juce::Timer
         score_view::ViewMode view = score_view::ViewMode::page;
         std::size_t sizeStep = score_view::defaultSizeStep;
         std::vector<engraving::PartKey> hiddenParts;
+        score_view::PageFit pageFit = score_view::PageFit::width;
 
         bool operator==(const LayoutKey&) const = default;
     };
@@ -94,6 +122,50 @@ class ScoreViewComponent final : public ToolComponent, private juce::Timer
     static constexpr int refreshRateHz = 2;
 
     void timerCallback() override;
+
+    // The clock moved, changed state, or jumped: move the cursor and the
+    // marks, and follow it.
+    void clockChanged(const transport::ClockUpdate& update) override;
+
+    // Recompute where the cursor is and which notes are marked, for the
+    // position last heard and the layout now on screen, repainting the systems
+    // that changed.
+    void updateCursor();
+
+    // Keep the cursor's system in view: a page turn, a system step or a
+    // screen's move, never a crawl (decision 5).
+    void follow();
+
+    // The reader moved the view while the clock played.
+    void suspendFollowing();
+    void resumeFollowing();
+
+    // Scroll or turn without that counting as the reader doing it.
+    void scrollProgrammatically(int x, int y);
+
+    // Where a system is drawn on the canvas: its origin (the top line of its
+    // first staff, and its left edge), the pixels per staff space it is drawn
+    // at, and the rectangle of its staves. Nothing for a system not drawn --
+    // one on another page.
+    struct SystemOnCanvas
+    {
+        double originX = 0.0;
+        double originY = 0.0;
+        double pixelsPerSpace = 1.0;
+        juce::Rectangle<int> bounds;
+    };
+    [[nodiscard]] std::optional<SystemOnCanvas> systemOnCanvas(std::size_t index) const;
+
+    // The cursor band and the note marks on one system, over its notation.
+    void
+    paintCursorOn(juce::Graphics& graphics, std::size_t index, const SystemOnCanvas& where) const;
+
+    void seekToCanvasPoint(juce::Point<float> point);
+    void showGoToBar();
+    void goToBar(const juce::String& text);
+    void setPageFit(score_view::PageFit fit);
+    void setLookAhead(int onsets);
+    void setFollow(bool shouldFollow);
 
     // Re-read the holder, and lay the score out again only if it is one this
     // has not seen.
@@ -158,8 +230,24 @@ class ScoreViewComponent final : public ToolComponent, private juce::Timer
     // notation. Declared before `canvas`, which borrows it to paint.
     MusicFont musicFont;
 
+    transport::PracticeClock& clock;
+
+    // The clock as last heard, where its cursor is on the layout, and which
+    // notes are marked. `cursor` is empty with no score or nothing laid out.
+    transport::ClockPosition clockPosition;
+    std::optional<engraving::CursorPlace> cursor;
+    engraving::Targets targets;
+
+    // Following is on (settings.follow) but the reader has scrolled away while
+    // the clock plays. Cleared by Follow, or by the clock starting again.
+    bool followSuspended = false;
+
+    // Set while the view scrolls or lays itself out, so the viewport's report
+    // of that is not taken for the reader scrolling.
+    bool scrollingProgrammatically = false;
+
     Canvas canvas{*this};
-    juce::Viewport viewport;
+    WatchedViewport viewport{*this};
 
     // On the title strip: shrink, the size, enlarge; and in Page view the page
     // turns either side of "Page n of m".
@@ -169,6 +257,9 @@ class ScoreViewComponent final : public ToolComponent, private juce::Timer
     juce::TextButton previousPageButton{juce::String::fromUTF8("\xe2\x80\xb9")};
     juce::Label pageLabel;
     juce::TextButton nextPageButton{juce::String::fromUTF8("\xe2\x80\xba")};
+
+    // Shown while following is suspended and the clock plays.
+    juce::TextButton followButton{"Follow"};
 
     // Where the score's title goes: the title strip less the controls.
     juce::Rectangle<int> titleTextBounds;

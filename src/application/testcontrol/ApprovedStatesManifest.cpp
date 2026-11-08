@@ -165,6 +165,7 @@ void appendState(std::string& out, const ApprovedWindowState& state)
     out += indent + "\"holdScoreImportInProgress\": " + boolean(state.holdScoreImportInProgress) +
            ",\n";
     out += indent + "\"clockPlaying\": " + boolean(state.clockPlaying) + ",\n";
+    out += indent + "\"clockBar\": " + std::to_string(state.clockBar) + ",\n";
     out += indent + "\"windowTitle\": " + quoted(windowTitleOf(state)) + "\n";
     out += "    }";
 }

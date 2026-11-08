@@ -19,17 +19,17 @@
 
 ## 3. The Score View
 
-- [ ] 3.1 The clock in the factory, through `ToolServices`. The view becomes a
+- [x] 3.1 The clock in the factory, through `ToolServices`. The view becomes a
       `ClockListener`.
-- [ ] 3.2 The cursor band and the sounding and upcoming marks, repainting only
+- [x] 3.2 The cursor band and the sounding and upcoming marks, repainting only
       the systems that change.
-- [ ] 3.3 Following, with manual suspension and the Follow button.
-- [ ] 3.4 Click to seek, and Go to bar.
-- [ ] 3.5 Fit page and fit width in Page view; the options menu entries.
+- [x] 3.3 Following, with manual suspension and the Follow button.
+- [x] 3.4 Click to seek, and Go to bar.
+- [x] 3.5 Fit page and fit width in Page view; the options menu entries.
 
 ## 4. Verification and docs
 
-- [ ] 4.1 An approved state with the clock positioned mid-score (paused, so
+- [x] 4.1 An approved state with the clock positioned mid-score (paused, so
       the picture is stable), and its capture surface. Read the pictures.
 - [ ] 4.2 The wiki's Scores page and the Features row, and follow-up issues for
       rehearsal marks and voice selection.

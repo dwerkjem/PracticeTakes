@@ -134,3 +134,25 @@ Missing keys take their defaults, as `hidden` did:
   is nothing to sing.
 - **Repaint cost** is bounded by redrawing one or two system bands at 60 Hz
   while playing.
+
+## Implementation notes
+
+Decisions made while building that the sections above didn't settle.
+
+- **A seek is followed even while stopped.** Go to bar, a click elsewhere, or
+  the transport's Stop brings the cursor into view in every Score View
+  following the clock, not only the one that asked. Moving the clock is asking
+  to see where it went.
+- **A newly opened score follows straight away.** The clock can be moved
+  before the Score View's 2 Hz poll notices the new score. The capture state
+  does exactly that, and the view would otherwise stay at the top of the page.
+- **Every system is drawn only where it meets the repaint**, not only the
+  cursor's. A long score in Vertical scroll stays cheap at 60 Hz, and it costs
+  nothing when the clock is still.
+- **The cursor band is centred on a notehead's middle.** An anchor is a
+  head's left edge, and the band reads as being on the notes.
+- **Clicking past the last note of a system starts from that note**, not
+  from the final barline, which is the end of the music rather than an onset.
+- **The capture state `score-view-cursor`** opens the sample score, moves the
+  clock to bar 6 and leaves it there, so the picture is the same every run. A
+  new approved-state field, `clockBar`, does that.

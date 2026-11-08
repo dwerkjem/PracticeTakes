@@ -1214,7 +1214,7 @@ double emitMeasure(
 
         // Every main onset is a moment the cursor can be at, rests included:
         // a rest takes time as surely as a note does (score-cursor decision 1).
-        if (placed.event != nullptr && !placed.event->isGrace && plan.source != nullptr)
+        if (!placed.event->isGrace && plan.source != nullptr)
         {
             system.timeAnchors.push_back(TimeAnchor{plan.source->start + placed.event->onset, x});
         }

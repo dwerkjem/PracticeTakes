@@ -61,6 +61,9 @@ class ApprovedState:
     # Whether the practice clock is playing the score once it has imported.
     clock_playing: bool
 
+    # The zero-based bar the clock is moved to once the score imports, or -1.
+    clock_bar: int
+
     # The top-level window the state is a picture of. Empty for the main one.
     window_title: str
 
@@ -107,6 +110,7 @@ def _state_from(entry: dict) -> ApprovedState:
         show_score_import_summary=entry["showScoreImportSummary"],
         hold_score_import_in_progress=entry["holdScoreImportInProgress"],
         clock_playing=entry["clockPlaying"],
+        clock_bar=int(entry["clockBar"]),
         window_title=entry["windowTitle"],
     )
 
