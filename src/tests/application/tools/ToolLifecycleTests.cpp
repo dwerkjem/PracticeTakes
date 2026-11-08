@@ -197,3 +197,58 @@ TEST_CASE("every shipped tool allocates its single instance", "[tools][policy]")
         CHECK(instance->value() == definition.id);
     }
 }
+
+TEST_CASE(
+    "open or focus targets the first live instance of a multi-instance tool",
+    "[tools][policy]")
+{
+    const auto catalog = multiInstanceCatalog();
+    std::set<std::string> live{"many#2", "many#3"};
+    const auto isLive = [&live](const ToolInstanceId& id) { return live.count(id.value()) == 1; };
+
+    // The first instance was closed, so the first *live* one is the second.
+    const auto focused = ToolInstanceAllocator::instanceToFocus(catalog, "many", isLive, 3);
+    REQUIRE(focused.has_value());
+    CHECK(focused->value() == "many#2");
+
+    // Choosing it again changes nothing: open or focus never mints an ordinal.
+    const auto again = ToolInstanceAllocator::instanceToFocus(catalog, "many", isLive, 3);
+    REQUIRE(again.has_value());
+    CHECK(again->value() == "many#2");
+}
+
+TEST_CASE("open or focus opens the first instance when none is live", "[tools][policy]")
+{
+    const auto catalog = multiInstanceCatalog();
+    const auto isLive = [](const ToolInstanceId&) { return false; };
+
+    const auto focused = ToolInstanceAllocator::instanceToFocus(catalog, "many", isLive, 4);
+    REQUIRE(focused.has_value());
+    CHECK(focused->value() == "many");
+    CHECK_FALSE(ToolInstanceAllocator::instanceToFocus(catalog, "no-such-tool", isLive, 4));
+}
+
+TEST_CASE("open another is refused for a single-instance tool", "[tools][policy]")
+{
+    const auto catalog = multiInstanceCatalog();
+    CHECK_FALSE(ToolInstanceAllocator::mayOpenAnother(*catalog.find("solo"), 8));
+    CHECK(ToolInstanceAllocator::mayOpenAnother(*catalog.find("many"), 0));
+}
+
+TEST_CASE("open another needs a free audio consumer slot for a microphone tool", "[tools][policy]")
+{
+    ToolDefinition listening{"ears", "Ears", {}, ToolInstancePolicy::multi, std::nullopt, {}, true};
+
+    CHECK(ToolInstanceAllocator::mayOpenAnother(listening, 1));
+    CHECK_FALSE(ToolInstanceAllocator::mayOpenAnother(listening, 0));
+}
+
+TEST_CASE("the microphone tools declare that they take an audio consumer", "[tools][catalog]")
+{
+    const auto& catalog = builtInToolCatalog();
+    CHECK(catalog.find("tuner")->usesAudioInput);
+    CHECK(catalog.find("spectrogram")->usesAudioInput);
+    CHECK(catalog.find("harmonic-analyzer")->usesAudioInput);
+    CHECK_FALSE(catalog.find("score-view")->usesAudioInput);
+    CHECK_FALSE(catalog.find("target-note")->usesAudioInput);
+}

@@ -794,3 +794,32 @@ TEST_CASE("muting silences the generated tone as well as a device", "[audio][ton
     REQUIRE(usable);
     REQUIRE(state == AudioInputService::InputState::muted);
 }
+
+TEST_CASE(
+    "free consumer slots count down as listeners join and back up as they leave",
+    "[audio][consumers]")
+{
+    // The shell asks this before creating another tool that listens, because
+    // addListener has no way to tell its caller the slots are full
+    // (openspec/changes/multi-instance-tools).
+    ServiceUnderTest fixture;
+    AudioInputService& service = fixture.service;
+    const auto initiallyFree = service.freeConsumerSlots();
+    REQUIRE(initiallyFree > 2);
+
+    SilentConsumer first;
+    SilentConsumer second;
+    service.addListener(&first);
+    service.addListener(&second);
+    CHECK(service.freeConsumerSlots() == initiallyFree - 2);
+
+    // Adding the same listener twice takes no second slot.
+    service.addListener(&first);
+    CHECK(service.freeConsumerSlots() == initiallyFree - 2);
+
+    service.removeListener(&first);
+    CHECK(service.freeConsumerSlots() == initiallyFree - 1);
+
+    service.removeListener(&second);
+    CHECK(service.freeConsumerSlots() == initiallyFree);
+}

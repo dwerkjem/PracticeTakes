@@ -143,6 +143,12 @@ struct WorkspaceSnapshot
     std::optional<std::string> focusedTool;
     std::map<std::string, ToolSettingsPayload> toolSettings;
 
+    // The user's name for an instance, keyed by instance id. Absent means the
+    // instance shows its default name ("Tuner", "Tuner 2"). Stored only when
+    // non-empty, so a workspace nobody renamed anything in serialises exactly
+    // as it did before labels existed (openspec/changes/multi-instance-tools).
+    std::map<std::string, std::string> toolLabels;
+
     [[nodiscard]] WorkspaceToolPresentation presentationOf(const std::string& toolId) const
     {
         if (dockRoot.has_value() && contains(*dockRoot, toolId))

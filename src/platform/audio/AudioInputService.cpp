@@ -125,6 +125,14 @@ void AudioInputService::addListener(Listener* listener)
     }
 }
 
+std::size_t AudioInputService::freeConsumerSlots() const
+{
+    const juce::ScopedLock lock(consumerLock);
+    return static_cast<std::size_t>(std::count_if(
+        consumers.begin(), consumers.end(),
+        [](const ConsumerSlot& consumer) { return consumer.listener == nullptr; }));
+}
+
 void AudioInputService::removeListener(Listener* listener)
 {
     ConsumerSlot* removedConsumer = nullptr;

@@ -80,6 +80,14 @@ class AudioInputService final
     void addListener(Listener* listener);
     void removeListener(Listener* listener);
 
+    // How many more listeners addListener can take. The consumer slots are
+    // preallocated and fixed in number, and addListener cannot report a full
+    // array to its caller, so the shell asks this first before creating another
+    // tool that listens (openspec/changes/multi-instance-tools). Message thread
+    // only; it takes the same lock addListener does and never touches the
+    // audio callback.
+    [[nodiscard]] std::size_t freeConsumerSlots() const;
+
     [[nodiscard]] std::size_t availableSamples(Listener* listener) const;
     [[nodiscard]] std::size_t
     readSamples(Listener* listener, float* destination, std::size_t maximumSamples);
