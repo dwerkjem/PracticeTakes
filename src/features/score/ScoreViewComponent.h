@@ -5,11 +5,13 @@
 #include "../../application/theme/Theme.h"
 #include "../../application/tools/ToolComponent.h"
 #include "../../platform/score/CurrentScore.h"
+#include "../../platform/take/TakeRecorder.h"
 #include "../../platform/transport/PracticeClock.h"
 
 #include "ScoreGlyphPainter.h"
 #include "ScoreViewSettings.h"
 #include "engraving/Pagination.h"
+#include "engraving/ReviewMarks.h"
 #include "engraving/ScoreCursor.h"
 #include "engraving/ScoreLayout.h"
 
@@ -37,15 +39,22 @@
 // marks the sounding and upcoming notes of, and follows while it plays
 // (openspec/changes/archive/2026-11-08-score-cursor). Every rule the cursor follows is in
 // engraving/ScoreCursor.h; this draws it and scrolls.
+//
+// The takes arrive the same way, and the take under review is marked on its
+// notes -- right, wrong, missed, early, late, extra -- while its score is the
+// one shown (openspec/changes/take-review, decision 3). Where each mark goes is
+// engraving/ReviewMarks.h; this draws them.
 class ScoreViewComponent final
     : public ToolComponent,
       private juce::Timer,
-      private transport::ClockListener
+      private transport::ClockListener,
+      private take::TakeListener
 {
   public:
     ScoreViewComponent(
         const score::CurrentScore& sharedCurrentScore,
-        transport::PracticeClock& practiceClock);
+        transport::PracticeClock& practiceClock,
+        take::TakeRecorder& takeRecorder);
     ~ScoreViewComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -132,6 +141,14 @@ class ScoreViewComponent final
     // that changed.
     void updateCursor();
 
+    // A take was reviewed, or the review changed: mark it again.
+    void takesChanged() override;
+
+    // Place the review's marks on the layout now on screen, or none when the
+    // review is of another score or the marks are turned off.
+    void updateReview();
+    void setShowReview(bool show);
+
     // Keep the cursor's system in view: a page turn, a system step or a
     // screen's move, never a crawl (decision 5).
     void follow();
@@ -159,6 +176,10 @@ class ScoreViewComponent final
     // The cursor band and the note marks on one system, over its notation.
     void
     paintCursorOn(juce::Graphics& graphics, std::size_t index, const SystemOnCanvas& where) const;
+
+    // The review's marks on one system, over the cursor.
+    void
+    paintReviewOn(juce::Graphics& graphics, std::size_t index, const SystemOnCanvas& where) const;
 
     void seekToCanvasPoint(juce::Point<float> point);
     void showGoToBar();
@@ -237,6 +258,12 @@ class ScoreViewComponent final
     transport::ClockPosition clockPosition;
     std::optional<engraving::CursorPlace> cursor;
     engraving::Targets targets;
+
+    take::TakeRecorder& takes;
+
+    // The take under review's marks on the current layout; empty when none
+    // are drawn.
+    engraving::ReviewMarks reviewMarks;
 
     // Following is on (settings.follow) but the reader has scrolled away while
     // the clock plays. Cleared by Follow, or by the clock starting again.

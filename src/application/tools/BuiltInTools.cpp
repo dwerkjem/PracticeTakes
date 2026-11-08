@@ -27,8 +27,10 @@ const ToolRegistry& builtInToolRegistry()
             {"target-note", [](const ToolServices& services)
              { return std::make_unique<TargetNoteComponent>(services.currentScore); }},
             {"score-view",
-             [](const ToolServices& services) {
-                 return std::make_unique<ScoreViewComponent>(services.currentScore, services.clock);
+             [](const ToolServices& services)
+             {
+                 return std::make_unique<ScoreViewComponent>(
+                     services.currentScore, services.clock, services.takes);
              }},
         });
 

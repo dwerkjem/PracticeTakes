@@ -6,7 +6,7 @@
 
 ## 2. On the score
 
-- [ ] 2.1 The Score View overlay (decision 3) and **Show take review**.
+- [x] 2.1 The Score View overlay (decision 3) and **Show take review**.
 
 ## 3. The Take Review tool
 

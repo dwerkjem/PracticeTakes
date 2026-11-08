@@ -66,6 +66,10 @@ struct Settings
 
     PageFit pageFit = PageFit::width;
 
+    // Whether the take under review is marked on the score
+    // (openspec/changes/take-review/design.md, decision 3).
+    bool showReview = true;
+
     bool operator==(const Settings&) const = default;
 };
 
@@ -82,7 +86,8 @@ inline constexpr int settingsVersion = 1;
 
 // "view=page;size=7" -- the view by name and the size in pixels per space --
 // then, when any part is hidden, ";hidden=P1:Voice,P3:Alto"; then, each only
-// when it is not the default, ";ahead=3", ";follow=0" and ";fit=page". A part's id is an
+// when it is not the default, ";ahead=3", ";follow=0", ";fit=page" and
+// ";review=0". A part's id is an
 // XML name and never holds `:` `,` `;` or `=`; its name can, so the name is
 // percent-encoded for those and `%`. A version without hidden parts ignores the
 // key, which is why adding it did not need a new `settingsVersion`.
