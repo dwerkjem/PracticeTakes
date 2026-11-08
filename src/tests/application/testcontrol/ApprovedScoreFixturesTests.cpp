@@ -100,7 +100,7 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
                       "score-view-engraving", "score-view-grand-staff", "score-view-horizontal",
                       "score-view-notation", "score-view-part-hidden", "score-view-notation-large",
                       "score-view-page", "score-view-sample", "score-view-vertical",
-                      "score-view-cursor", "transport-playing"});
+                      "score-view-cursor", "take-recording", "transport-playing"});
 }
 
 // The invariant this started as was "a state naming a score opens nothing
@@ -776,6 +776,20 @@ TEST_CASE("a state moving the clock opens a score", "[testcontrol][approved][sco
         if (state.clockBar >= 0)
         {
             CHECK_FALSE(state.scoreFixture.empty());
+        }
+    }
+}
+
+TEST_CASE(
+    "a state recording a take opens a score and feeds a tone",
+    "[testcontrol][approved][score]")
+{
+    for (const ApprovedWindowState& state : approvedWindowStates())
+    {
+        if (state.recordTake)
+        {
+            CHECK_FALSE(state.scoreFixture.empty());
+            CHECK(state.toneHz > 0.0);
         }
     }
 }

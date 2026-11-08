@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 
+#include "../../../../platform/take/TakeRecorder.h"
+#include "../../../../platform/take/TakeStatus.h"
 #include "../../../../platform/transport/PracticeClock.h"
 
 #include <functional>
@@ -14,19 +16,47 @@
 // to play. It reads the clock through a ClockListener like any tool would, and
 // drives it through the clock's own methods -- the strip holds no state of its
 // own beyond what the controls show.
-class TransportStrip final : public juce::Component, private transport::ClockListener
+class TransportStrip final
+    : public juce::Component,
+      private transport::ClockListener,
+      private take::TakeListener,
+      private juce::Timer
 {
   public:
     // Widths the control strip lays this out at: everything, or without the
-    // position readout when the window is narrow.
-    static constexpr int fullWidth = 472;
-    static constexpr int compactWidth = 342;
+    // readout when the window is narrow.
+    static constexpr int fullWidth = 552;
+    static constexpr int compactWidth = 378;
+
+    // How long the readout says how the last take ended before going back to
+    // where the clock is.
+    static constexpr int lastTakeShownMilliseconds = 6000;
 
     // `settingsHandler` is called when a control changes something that is
     // saved -- the metronome switch -- so the shell can persist it.
-    TransportStrip(transport::PracticeClock& practiceClock, std::function<void()> settingsHandler)
-        : clock(practiceClock), onSettingsChanged(std::move(settingsHandler))
+    TransportStrip(
+        transport::PracticeClock& practiceClock,
+        take::TakeRecorder& takeRecorder,
+        std::function<void()> settingsHandler)
+        : clock(practiceClock), takes(takeRecorder), onSettingsChanged(std::move(settingsHandler))
     {
+        // Records a take, counting in first; while one records, finishes it
+        // (openspec/changes/takes).
+        recordButton.setComponentID("transport-record");
+        recordButton.onClick = [this]
+        {
+            if (takes.isRecording())
+            {
+                takes.stop();
+            }
+            else
+            {
+                static_cast<void>(takes.start());
+            }
+            refresh(clock.position());
+        };
+        addAndMakeVisible(recordButton);
+
         // Component ids let the development-only test control channel click
         // these by name.
         playButton.setComponentID("transport-play");
@@ -80,11 +110,18 @@ class TransportStrip final : public juce::Component, private transport::ClockLis
         addAndMakeVisible(loopButton);
 
         clock.addListener(this);
+        takes.addListener(this);
         refresh(clock.position());
+
+        // Whether a take can start depends on the microphone and the keyboard,
+        // which change without the clock moving.
+        startTimerHz(4);
     }
 
     ~TransportStrip() override
     {
+        stopTimer();
+        takes.removeListener(this);
         clock.removeListener(this);
     }
 
@@ -94,23 +131,25 @@ class TransportStrip final : public juce::Component, private transport::ClockLis
         constexpr int gap = 4;
         const bool compact = getWidth() < fullWidth;
 
-        playButton.setBounds(bounds.removeFromLeft(64));
+        recordButton.setBounds(bounds.removeFromLeft(58));
         bounds.removeFromLeft(gap);
-        stopButton.setBounds(bounds.removeFromLeft(54));
+        playButton.setBounds(bounds.removeFromLeft(58));
+        bounds.removeFromLeft(gap);
+        stopButton.setBounds(bounds.removeFromLeft(48));
         bounds.removeFromLeft(gap);
 
         positionLabel.setVisible(!compact);
         if (!compact)
         {
-            positionLabel.setBounds(bounds.removeFromLeft(126));
+            positionLabel.setBounds(bounds.removeFromLeft(170));
             bounds.removeFromLeft(gap);
         }
 
-        tempoSlider.setBounds(bounds.removeFromLeft(100));
+        tempoSlider.setBounds(bounds.removeFromLeft(92));
         bounds.removeFromLeft(gap);
-        clickButton.setBounds(bounds.removeFromLeft(56));
+        clickButton.setBounds(bounds.removeFromLeft(50));
         bounds.removeFromLeft(gap);
-        loopButton.setBounds(bounds.removeFromLeft(52));
+        loopButton.setBounds(bounds.removeFromLeft(48));
     }
 
     // What the readout says for a position: "Bar 3, beat 2", or the count-in.
@@ -134,6 +173,41 @@ class TransportStrip final : public juce::Component, private transport::ClockLis
         refresh(update.position);
     }
 
+    void takesChanged() override
+    {
+        // A take that has just ended is announced for a while.
+        if (const take::Take* ended = takes.lastEnded();
+            ended != nullptr && ended->id != announcedTake && !takes.isRecording())
+        {
+            announcedTake = ended->id;
+            announceUntil = juce::Time::getMillisecondCounter() +
+                            static_cast<juce::uint32>(lastTakeShownMilliseconds);
+        }
+        refresh(clock.position());
+    }
+
+    void timerCallback() override
+    {
+        refresh(clock.position());
+    }
+
+    // The readout: the take while one records, how the last one ended for a
+    // few seconds after, and otherwise where the clock is.
+    [[nodiscard]] juce::String readout(const transport::ClockPosition& position) const
+    {
+        if (const take::Take* live = takes.current())
+        {
+            return juce::String(take::describe(*live));
+        }
+        if (const take::Take* ended = takes.lastEnded();
+            ended != nullptr && ended->id == announcedTake &&
+            juce::Time::getMillisecondCounter() < announceUntil)
+        {
+            return juce::String(take::describe(*ended));
+        }
+        return describe(position);
+    }
+
     void refresh(const transport::ClockPosition& position)
     {
         if (isVisible() != position.hasScore)
@@ -152,7 +226,32 @@ class TransportStrip final : public juce::Component, private transport::ClockLis
         playButton.setTooltip(
             running ? "Pause, holding the position"
                     : "Play from here, counting in first (Settings > Practice)");
-        positionLabel.setText(describe(position), juce::dontSendNotification);
+        positionLabel.setText(readout(position), juce::dontSendNotification);
+        positionLabel.setTooltip(positionLabel.getText());
+
+        // Record, or Finish while a take records, red so it cannot be missed.
+        const bool recording = takes.isRecording();
+        const std::optional<std::string> blocked = takes.whyCannotStart();
+        recordButton.setButtonText(recording ? "Finish" : "Record");
+        recordButton.setEnabled(recording || !blocked.has_value());
+        recordButton.setTooltip(
+            recording ? "Finish the take, keeping what was played"
+            : blocked.has_value()
+                ? "Recording is unavailable: " + juce::String(*blocked)
+                : "Record a take from the microphone and keyboard, counting in first");
+        recordButton.setColour(
+            juce::TextButton::buttonColourId,
+            recording ? juce::Colour::fromRGB(196, 43, 43)
+                      : getLookAndFeel().findColour(juce::TextButton::buttonColourId));
+        recordButton.setColour(
+            juce::TextButton::textColourOffId,
+            recording ? juce::Colours::white
+                      : getLookAndFeel().findColour(juce::TextButton::textColourOffId));
+
+        // What a take is measured against cannot change while one records
+        // (takes design.md decision 4).
+        tempoSlider.setEnabled(!clock.isLocked());
+        loopButton.setEnabled(!clock.isLocked());
 
         if (!tempoSlider.isMouseButtonDown())
         {
@@ -163,7 +262,11 @@ class TransportStrip final : public juce::Component, private transport::ClockLis
     }
 
     transport::PracticeClock& clock;
+    take::TakeRecorder& takes;
     std::function<void()> onSettingsChanged;
+    std::uint64_t announcedTake = 0;
+    juce::uint32 announceUntil = 0;
+    juce::TextButton recordButton{"Record"};
     juce::TextButton playButton{"Play"};
     juce::TextButton stopButton{"Stop"};
     juce::Label positionLabel;

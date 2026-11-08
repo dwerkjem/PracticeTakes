@@ -392,7 +392,7 @@ class MainComponent final
     // the menus. Declared after the clock it listens to, so it stops listening
     // before the clock goes. Saving the metronome switch goes through the
     // shell, which owns the settings file.
-    TransportStrip transportStrip{practiceClock, [this] { saveSettings(false); }};
+    TransportStrip transportStrip{practiceClock, takeRecorder, [this] { saveSettings(false); }};
 
     juce::TextButton fileButton{"File"};
 
@@ -483,6 +483,7 @@ class MainComponent final
     // the approved state and cleared by every state that does not ask for it.
     bool testControlPlayClock = false;
     int testControlClockBar = -1;
+    bool testControlRecordTake = false;
     void startClockForTestControl(int attemptsLeft);
 
     // Set the first time a state is applied, and never cleared: this process is

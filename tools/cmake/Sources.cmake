@@ -236,6 +236,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/take/TakeLifecycle.h
     src/platform/take/TakeRecorder.cpp
     src/platform/take/TakeRecorder.h
+    src/platform/take/TakeStatus.h
     src/platform/transport/ClockCommandQueue.h
     src/platform/transport/ClockMath.h
     src/platform/transport/ClockRenderer.cpp
@@ -343,6 +344,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/take/TakeAssemblerTests.cpp
     src/tests/platform/take/TakeLifecycleTests.cpp
     src/tests/platform/take/TakeRecorderTests.cpp
+    src/tests/platform/take/TakeStatusTests.cpp
     src/tests/platform/transport/ClockMathTests.cpp
     src/tests/platform/transport/ClockRendererTests.cpp
     src/tests/platform/transport/PracticeClockTests.cpp

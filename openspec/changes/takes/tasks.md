@@ -25,9 +25,9 @@
 
 ## 4. Controls and verification
 
-- [ ] 4.1 Record in the transport strip, the take's status, and locked
+- [x] 4.1 Record in the transport strip, the take's status, and locked
       controls greyed (the strip, and click to seek in the Score View).
-- [ ] 4.2 An approved state recording a take from the synthetic tone, and its
+- [x] 4.2 An approved state recording a take from the synthetic tone, and its
       capture surface. Read the pictures.
 - [ ] 4.3 A take from a real microphone and keyboard together. **Needs a
       person.**

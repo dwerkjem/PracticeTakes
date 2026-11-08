@@ -166,6 +166,12 @@ struct ApprovedWindowState
     //
     // Appended last, for the reason the comments above give.
     int clockBar = -1;
+
+    // Record a take once `scoreFixture` has imported, from the tone in `toneHz`
+    // standing in for a microphone (openspec/changes/takes).
+    //
+    // Appended last, for the reason the comments above give.
+    bool recordTake = false;
 };
 
 // An object that can be asked to act, as though clicked.

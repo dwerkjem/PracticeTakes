@@ -341,6 +341,14 @@ const std::vector<ApprovedWindowState>& states()
          "The score view with the practice clock at bar 6: the cursor, the note sounding and "
          "the next two ringed",
          0.0, "", bundledSampleFixtureName(), false, false, false, 5},
+        // A take being recorded from the tone, with the transport saying so:
+        // the one state where a take runs (takes).
+        {"take-recording", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "A take being recorded: Finish in red, the readout counting the take, the tempo and "
+         "loop locked",
+         440.0, "", bundledSampleFixtureName(), false, false, false, -1, true},
         {"score-view-vertical", Tools{"score-view"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false,

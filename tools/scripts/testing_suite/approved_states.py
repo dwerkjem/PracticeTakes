@@ -64,6 +64,9 @@ class ApprovedState:
     # The zero-based bar the clock is moved to once the score imports, or -1.
     clock_bar: int
 
+    # Whether a take is recorded once the score imports.
+    record_take: bool
+
     # The top-level window the state is a picture of. Empty for the main one.
     window_title: str
 
@@ -111,6 +114,7 @@ def _state_from(entry: dict) -> ApprovedState:
         hold_score_import_in_progress=entry["holdScoreImportInProgress"],
         clock_playing=entry["clockPlaying"],
         clock_bar=int(entry["clockBar"]),
+        record_take=entry["recordTake"],
         window_title=entry["windowTitle"],
     )
 
