@@ -286,3 +286,21 @@ Decisions made while building, which the sections above did not settle.
   restart the last device with its output opens the same input without one.
   The output comes back when it's chosen again in Settings, or on the next
   launch.
+- **`PracticeClock` takes a function to attach its renderer**, not the audio
+  service itself, so it is tested headless with blocks driven by the test.
+  `MainComponent` passes `audioInputService.setRealtimeRenderer`. It is
+  declared after `scoreImport` as well as `audioInputService`, because it
+  borrows the score holder too.
+- **Looping with no region set plays the whole score round.** The transport
+  strip's loop switch needs something to loop before any tool can set a
+  region (#201 will let one).
+- **Every play counts in**, from stopped or from paused, when the count-in
+  isn't zero bars. Coming back in after a pause is when a count-in helps most.
+- **Opening another score stops the clock and clears the loop.** A position
+  or a loop region in the old score means nothing in the new one.
+- **A command waits behind a table that couldn't be published yet**, so a
+  seek made just after a scale change or a new score is converted with the new
+  table, not the old one.
+- **Listeners are told only when something changed**: the frame, the state,
+  the count-in, the scale, the score, or an event. A stopped clock costs its
+  listeners nothing at 60 Hz.

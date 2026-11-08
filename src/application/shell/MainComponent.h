@@ -5,6 +5,7 @@
 #include "../../platform/audio/AudioInputService.h"
 #include "../../platform/audio/SharedPitchAnalysis.h"
 #include "../../platform/midi/MidiInputService.h"
+#include "../../platform/transport/PracticeClock.h"
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
 #include "../theme/AppLookAndFeel.h"
@@ -358,6 +359,17 @@ class MainComponent final
     // the whole of the enforcement -- there is no runtime check -- so do not
     // move this declaration below liveTools.
     ScoreImportState scoreImport;
+
+    // The practice clock, shared by every tool through ToolServices. Declared
+    // after audioInputService, whose callback runs its renderer, and after
+    // scoreImport, whose score it plays -- so it is destroyed before both, and
+    // its destructor takes the renderer back from the callback while the
+    // service still exists. Declared before liveTools so every tool that
+    // borrows it is gone first. The same ordering rule as the members above:
+    // do not move it.
+    transport::PracticeClock practiceClock{
+        [this](RealtimeRenderer* renderer) { audioInputService.setRealtimeRenderer(renderer); },
+        scoreImport.currentScoreHolder()};
 
     juce::TextButton fileButton{"File"};
 

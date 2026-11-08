@@ -47,16 +47,16 @@
 
 ## 4. PracticeClock, message thread
 
-- [ ] 4.1 `PracticeClock`:
+- [x] 4.1 `PracticeClock`:
       - play, pause, stop, seek, count-in, scale, loop, metronome on or off;
       - the score comes from `CurrentScore`;
       - it republishes segments when the score or the scale changes.
-- [ ] 4.2 A 60 Hz notification timer with `ClockListener`, `ClockPosition` and
+- [x] 4.2 A 60 Hz notification timer with `ClockListener`, `ClockPosition` and
       the latched events. Publish the (frame, high-resolution time) pair for
       #40.
-- [ ] 4.3 Owned by `MainComponent`, declared after `audioInputService` and
+- [x] 4.3 Owned by `MainComponent`, declared after `audioInputService` and
       before `liveTools`. Passed in `ToolServices`.
-- [ ] 4.4 Headless tests with a fake block source: states, seek and wrap
+- [x] 4.4 Headless tests with a fake block source: states, seek and wrap
       events delivered once each, and the count-in reported.
 
 ## 5. Controls and verification
