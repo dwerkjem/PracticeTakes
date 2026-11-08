@@ -36,7 +36,7 @@
 
 - [x] 3.1 `initialise(2, 2, …)`, falling back to `(2, 0, …)` on failure, with
       the reason kept for Settings.
-- [ ] 3.2 Settings → Audio: the output device, metronome volume, accent on or
+- [x] 3.2 Settings → Audio: the output device, metronome volume, accent on or
       off, and "Metronome unavailable: …" when there is no output. Saved
       locally and not exported, like the MIDI keyboard.
 - [x] 3.3 Re-check audio device recovery (`audio-device-recovery` spec) with

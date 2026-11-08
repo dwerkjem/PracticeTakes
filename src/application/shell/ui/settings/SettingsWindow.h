@@ -95,8 +95,12 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         class AudioPanel final : public CategoryPanel, private juce::ChangeListener
         {
           public:
-            explicit AudioPanel(AudioInputService& inputService)
-                : audioInputService(inputService),
+            AudioPanel(
+                AudioInputService& inputService,
+                transport::PracticeClock& practiceClock,
+                std::function<void()> metronomeHandler)
+                : audioInputService(inputService), clock(practiceClock),
+                  onMetronomeChanged(std::move(metronomeHandler)),
                   // Up to two outputs, for the metronome. None is allowed:
                   // the clock and every analysis tool work without one.
                   deviceSelector(
@@ -146,16 +150,50 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 bufferingStatusLabel.setJustificationType(juce::Justification::centredLeft);
                 addAndMakeVisible(bufferingStatusLabel);
+
+                metronomeVolumeLabel.setText("Metronome volume", juce::dontSendNotification);
+                addAndMakeVisible(metronomeVolumeLabel);
+                metronomeVolumeSlider.setRange(0.0, 100.0, 1.0);
+                metronomeVolumeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+                metronomeVolumeSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 72, 22);
+                metronomeVolumeSlider.setTextValueSuffix("%");
+                metronomeVolumeSlider.setValue(
+                    clock.metronomeVolume() * 100.0, juce::dontSendNotification);
+                metronomeVolumeSlider.setTooltip(
+                    "How loud the metronome and the count-in click through the output device");
+                // clang-format off
+                metronomeVolumeSlider.onValueChange = [this] {
+                    clock.setMetronomeVolume(
+                        static_cast<float>(metronomeVolumeSlider.getValue() / 100.0));
+                };
+                metronomeVolumeSlider.onDragEnd = [this] { notifyMetronomeChanged(); };
+                // clang-format on
+                addAndMakeVisible(metronomeVolumeSlider);
+
+                accentToggle.setButtonText("Accent the first beat of each bar");
+                accentToggle.setToggleState(clock.accentEnabled(), juce::dontSendNotification);
+                accentToggle.onClick = [this]
+                {
+                    clock.setAccentEnabled(accentToggle.getToggleState());
+                    notifyMetronomeChanged();
+                };
+                addAndMakeVisible(accentToggle);
+
+                metronomeStatusLabel.setJustificationType(juce::Justification::centredLeft);
+                addAndMakeVisible(metronomeStatusLabel);
+
                 deviceViewport.setViewedComponent(&deviceSelector, false);
                 deviceViewport.setScrollBarsShown(true, false);
                 addAndMakeVisible(deviceViewport);
 
                 audioInputService.addChangeListener(this);
+                audioInputService.deviceManager().addChangeListener(this);
                 updateMicrophoneControls();
             }
 
             ~AudioPanel() override
             {
+                audioInputService.deviceManager().removeChangeListener(this);
                 audioInputService.removeChangeListener(this);
             }
 
@@ -179,7 +217,14 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 inputLevelMeter.setBounds(levelRow.removeFromLeft(360));
                 bounds.removeFromTop(6);
                 bufferingStatusLabel.setBounds(bounds.removeFromTop(26));
-                bounds.removeFromTop(14);
+                bounds.removeFromTop(8);
+
+                auto metronomeRow = bounds.removeFromTop(36);
+                metronomeVolumeLabel.setBounds(metronomeRow.removeFromLeft(130));
+                metronomeVolumeSlider.setBounds(metronomeRow.removeFromLeft(360));
+                accentToggle.setBounds(bounds.removeFromTop(28).removeFromLeft(360));
+                metronomeStatusLabel.setBounds(bounds.removeFromTop(26));
+                bounds.removeFromTop(10);
 
                 deviceViewport.setBounds(bounds);
                 const auto selectorWidth = juce::jmax(
@@ -192,10 +237,38 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
           private:
             void changeListenerCallback(juce::ChangeBroadcaster* source) override
             {
-                if (source == &audioInputService)
+                if (source == &audioInputService || source == &audioInputService.deviceManager())
                 {
                     updateMicrophoneControls();
                 }
+            }
+
+            void notifyMetronomeChanged()
+            {
+                if (onMetronomeChanged)
+                {
+                    onMetronomeChanged();
+                }
+            }
+
+            // Where the click goes, or why there is nowhere for it to go.
+            void updateMetronomeStatus()
+            {
+                const auto reason = audioInputService.outputUnavailableReason();
+                if (reason.isNotEmpty())
+                {
+                    metronomeStatusLabel.setText(
+                        "Metronome unavailable: " + reason + ".", juce::dontSendNotification);
+                    return;
+                }
+
+                juce::AudioDeviceManager::AudioDeviceSetup setup;
+                audioInputService.deviceManager().getAudioDeviceSetup(setup);
+                metronomeStatusLabel.setText(
+                    setup.outputDeviceName.isNotEmpty()
+                        ? "The metronome plays through " + setup.outputDeviceName + "."
+                        : juce::String("The metronome plays through the output device."),
+                    juce::dontSendNotification);
             }
 
             void updateMicrophoneControls()
@@ -216,11 +289,18 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                                        : juce::String(droppedBlocks) +
                                              " analysis block(s) dropped; a tool is not keeping up",
                     juce::dontSendNotification);
+                updateMetronomeStatus();
             }
 
             juce::Label heading;
             juce::Label description;
             AudioInputService& audioInputService;
+            transport::PracticeClock& clock;
+            std::function<void()> onMetronomeChanged;
+            juce::Label metronomeVolumeLabel;
+            juce::Slider metronomeVolumeSlider;
+            juce::ToggleButton accentToggle;
+            juce::Label metronomeStatusLabel;
             juce::TextButton microphoneButton;
             juce::Label inputGainLabel;
             juce::Slider inputGainSlider;
@@ -677,8 +757,12 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         class PracticePanel final : public CategoryPanel
         {
           public:
-            explicit PracticePanel(std::function<void(AppDefaults::Preset)> presetHandler)
-                : onPreset(std::move(presetHandler))
+            PracticePanel(
+                std::function<void(AppDefaults::Preset)> presetHandler,
+                transport::PracticeClock& practiceClock,
+                std::function<void()> countInHandler)
+                : onPreset(std::move(presetHandler)), clock(practiceClock),
+                  onCountInChanged(std::move(countInHandler))
             {
                 configureHeading(heading, "Practice");
                 configureDescription(
@@ -703,6 +787,28 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     }
                 };
                 addAndMakeVisible(presetBox);
+
+                countInLabel.setText("Count-in", juce::dontSendNotification);
+                addAndMakeVisible(countInLabel);
+                countInBox.addItem("None", 1);
+                for (int bars = 1; bars <= transport::maximumCountInBars; ++bars)
+                {
+                    countInBox.addItem(
+                        juce::String(bars) + (bars == 1 ? " bar" : " bars"), bars + 1);
+                }
+                countInBox.setSelectedId(clock.countInBars() + 1, juce::dontSendNotification);
+                countInBox.setTooltip(
+                    "Bars of clicks before the clock starts, at the tempo and meter of the "
+                    "point it starts from");
+                countInBox.onChange = [this]
+                {
+                    clock.setCountInBars(countInBox.getSelectedId() - 1);
+                    if (onCountInChanged)
+                    {
+                        onCountInChanged();
+                    }
+                };
+                addAndMakeVisible(countInBox);
             }
 
             void resized() override
@@ -715,6 +821,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 auto presetRow = bounds.removeFromTop(36);
                 presetLabel.setBounds(presetRow.removeFromLeft(150));
                 presetBox.setBounds(presetRow.removeFromLeft(280));
+                bounds.removeFromTop(12);
+
+                auto countInRow = bounds.removeFromTop(36);
+                countInLabel.setBounds(countInRow.removeFromLeft(150));
+                countInBox.setBounds(countInRow.removeFromLeft(280));
             }
 
           private:
@@ -723,6 +834,10 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::Label presetLabel;
             juce::ComboBox presetBox;
             std::function<void(AppDefaults::Preset)> onPreset;
+            transport::PracticeClock& clock;
+            std::function<void()> onCountInChanged;
+            juce::Label countInLabel;
+            juce::ComboBox countInBox;
         };
 
         class ResetPanel final : public CategoryPanel
@@ -822,6 +937,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         Content(
             AudioInputService& inputService,
             MidiInputService& midiService,
+            transport::PracticeClock& practiceClock,
+            std::function<void()> clockSettingsHandler,
             int pedalDownThreshold,
             Theme initialTheme,
             std::function<void(Theme)> appearanceHandler,
@@ -836,13 +953,14 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             std::function<void()> resetAudioHandler,
             std::function<void()> resetLayoutHandler,
             std::function<void()> resetAllHandler)
-            : appearancePanel(initialTheme, std::move(appearanceHandler)), audioPanel(inputService),
+            : appearancePanel(initialTheme, std::move(appearanceHandler)),
+              audioPanel(inputService, practiceClock, clockSettingsHandler),
               midiPanel(
                   midiService,
                   pedalDownThreshold,
                   std::move(midiSelectionHandler),
                   std::move(pedalThresholdHandler)),
-              practicePanel(std::move(presetHandler)),
+              practicePanel(std::move(presetHandler), practiceClock, clockSettingsHandler),
               resetPanel(
                   std::move(feedbackHandler),
                   std::move(resetToolHandler),
@@ -934,6 +1052,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
     SettingsWindow(
         AudioInputService& audioInputService,
         MidiInputService& midiInputService,
+        transport::PracticeClock& practiceClock,
+        std::function<void()> clockSettingsHandler,
         int pedalDownThreshold,
         Theme initialTheme,
         std::function<void(Theme)> appearanceHandler,
@@ -958,11 +1078,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         setUsingNativeTitleBar(true);
         setContentOwned(
             new Content(
-                audioInputService, midiInputService, pedalDownThreshold, initialTheme,
-                std::move(appearanceHandler), std::move(presetHandler),
-                std::move(midiSelectionHandler), std::move(pedalThresholdHandler),
-                std::move(saveHandler), std::move(importHandler), std::move(exportHandler),
-                std::move(feedbackHandler), std::move(resetToolHandler),
+                audioInputService, midiInputService, practiceClock, std::move(clockSettingsHandler),
+                pedalDownThreshold, initialTheme, std::move(appearanceHandler),
+                std::move(presetHandler), std::move(midiSelectionHandler),
+                std::move(pedalThresholdHandler), std::move(saveHandler), std::move(importHandler),
+                std::move(exportHandler), std::move(feedbackHandler), std::move(resetToolHandler),
                 std::move(resetAudioHandler), std::move(resetLayoutHandler),
                 std::move(resetAllHandler)),
             true);

@@ -645,3 +645,68 @@ TEST_CASE("clearing settings removes the pedal threshold", "[settings][midi]")
 
     CHECK_FALSE(properties.containsKey("midi.pedalDownThreshold"));
 }
+
+TEST_CASE("the metronome and count-in settings survive a round trip", "[settings][persistence]")
+{
+    TemporarySettingsFile temporary;
+    AppSettings::State expected;
+    expected.metronomeEnabled = false;
+    expected.metronomeVolume = 0.35;
+    expected.metronomeAccent = false;
+    expected.countInBars = 3;
+
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    CHECK_FALSE(loaded.state.metronomeEnabled);
+    CHECK(loaded.state.metronomeVolume == Catch::Approx(0.35));
+    CHECK_FALSE(loaded.state.metronomeAccent);
+    CHECK(loaded.state.countInBars == 3);
+}
+
+TEST_CASE("a file from before the metronome takes its defaults", "[settings][persistence]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        AppSettings::store(writer, AppSettings::State{});
+        writer.removeValue("metronome.enabled");
+        writer.removeValue("metronome.volume");
+        writer.removeValue("metronome.accent");
+        writer.removeValue("practice.countInBars");
+        REQUIRE(writer.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    REQUIRE(loaded.status == AppSettings::LoadStatus::loaded);
+    CHECK(loaded.state.metronomeEnabled == AppDefaults::Metronome::enabled);
+    CHECK(loaded.state.metronomeVolume == Catch::Approx(AppDefaults::Metronome::volume));
+    CHECK(loaded.state.metronomeAccent == AppDefaults::Metronome::accent);
+    CHECK(loaded.state.countInBars == AppDefaults::Metronome::countInBars);
+}
+
+TEST_CASE("an out-of-range metronome volume or count-in falls back", "[settings][persistence]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        AppSettings::store(writer, AppSettings::State{});
+        writer.setValue("metronome.volume", 7.0);
+        writer.setValue("practice.countInBars", 12);
+        REQUIRE(writer.saveIfNeeded());
+    }
+
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+
+    CHECK(loaded.state.metronomeVolume == Catch::Approx(AppDefaults::Metronome::volume));
+    CHECK(loaded.state.countInBars == AppDefaults::Metronome::countInBars);
+}

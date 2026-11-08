@@ -107,7 +107,17 @@ void MainComponent::showSettings()
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     settingsWindow = std::make_unique<SettingsWindow>(
-        audioInputService, midiInputService, midiPedalDownThreshold, currentTheme,
+        audioInputService, midiInputService, practiceClock,
+        [safeThis]
+        {
+            // The metronome and the count-in are saved as they change, like
+            // the MIDI keyboard: local preferences, never exported.
+            if (safeThis != nullptr)
+            {
+                safeThis->saveSettings(false);
+            }
+        },
+        midiPedalDownThreshold, currentTheme,
         [safeThis](Theme theme)
         {
             if (safeThis != nullptr)
@@ -601,6 +611,10 @@ AppSettings::State MainComponent::captureSettingsState()
     state.midiInputDeviceIdentifier = midiInputService.selectedDeviceIdentifier();
     state.midiInputDeviceName = midiInputService.selectedDeviceName();
     state.midiPedalDownThreshold = midiPedalDownThreshold;
+    state.metronomeEnabled = practiceClock.metronomeEnabled();
+    state.metronomeVolume = practiceClock.metronomeVolume();
+    state.metronomeAccent = practiceClock.accentEnabled();
+    state.countInBars = practiceClock.countInBars();
 
     if (pendingAudioDeviceState != nullptr)
     {
@@ -664,6 +678,10 @@ void MainComponent::loadSettings()
     midiInputService.selectDevice(
         loaded.state.midiInputDeviceIdentifier, loaded.state.midiInputDeviceName);
     midiPedalDownThreshold = loaded.state.midiPedalDownThreshold;
+    practiceClock.setMetronomeEnabled(loaded.state.metronomeEnabled);
+    practiceClock.setMetronomeVolume(static_cast<float>(loaded.state.metronomeVolume));
+    practiceClock.setAccentEnabled(loaded.state.metronomeAccent);
+    practiceClock.setCountInBars(loaded.state.countInBars);
 
     savedSettingsBounds = validWindowBounds(loaded.state.settingsBounds);
 
