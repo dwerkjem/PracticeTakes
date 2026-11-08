@@ -3,7 +3,7 @@
 #include "RealtimeSafety.h"
 
 // Something the audio callback runs once per block, to produce sound or keep
-// time: the practice clock (openspec/changes/practice-clock).
+// time: the practice clock (openspec/changes/archive/2026-11-08-practice-clock).
 //
 // No JUCE dependency, so a renderer is built and tested without a device.
 // `AudioInputService` hosts exactly one, published to the callback atomically

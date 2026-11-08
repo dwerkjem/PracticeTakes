@@ -48,6 +48,13 @@ struct State
     // preference about a particular keyboard's pedal, which is why -- like the
     // device selection -- it is not carried in a settings transfer file.
     int midiPedalDownThreshold = AppDefaults::Midi::pedalDownThreshold;
+
+    // The practice clock's metronome, and how many bars it counts in. Local to
+    // this machine and not carried in a transfer file, like the MIDI keyboard.
+    bool metronomeEnabled = AppDefaults::Metronome::enabled;
+    double metronomeVolume = AppDefaults::Metronome::volume;
+    bool metronomeAccent = AppDefaults::Metronome::accent;
+    int countInBars = AppDefaults::Metronome::countInBars;
     AppDefaults::TunerSettings tuner = AppDefaults::tunerDefaults();
     juce::String tunerBounds;
     juce::String spectrogramBounds;

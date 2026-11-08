@@ -7,6 +7,11 @@ namespace score
 class CurrentScore;
 }
 
+namespace transport
+{
+class PracticeClock;
+}
+
 class AudioInputService;
 class SharedPitchAnalysis;
 
@@ -37,6 +42,12 @@ struct ToolServices
     // polling arrangement SharedPitchAnalysis uses, because a newly opened
     // score is the least urgent update in the application.
     const score::CurrentScore& currentScore;
+
+    // The one practice clock: its position, the transport, the metronome. A
+    // tool reads its position through a ClockListener and may drive it -- play,
+    // seek, loop -- because practising a passage is a tool's business; it
+    // never owns it.
+    transport::PracticeClock& clock;
 
     // The theme a tool should start in. Later changes arrive through
     // ToolComponent::setTheme rather than by re-reading this, because a change

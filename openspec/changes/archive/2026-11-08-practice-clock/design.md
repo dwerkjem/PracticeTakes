@@ -275,3 +275,46 @@ Decisions made while building, which the sections above did not settle.
 - **Cost:** a 512-frame block against a full 512-segment table renders in
   about 0.74 µs on the development machine (`[.benchmark]`, "rendering a block
   against a full segment table").
+- **A saved state from before outputs existed is given the default output.**
+  Saved device states name no output, and opening one as it stands would leave
+  the metronome silent on a machine with speakers.
+- **The output device stays with the machine.** A settings export removes it
+  from the device state (`AudioDeviceStateTransfer.h`), and an import keeps
+  this machine's output beside the imported input. The input device travels
+  as it always has.
+- **Losing only the output doesn't stop capture.** A recovery that can't
+  restart the last device with its output opens the same input without one.
+  The output comes back when it's chosen again in Settings, or on the next
+  launch.
+- **`PracticeClock` takes a function to attach its renderer**, not the audio
+  service itself, so it is tested headless with blocks driven by the test.
+  `MainComponent` passes `audioInputService.setRealtimeRenderer`. It is
+  declared after `scoreImport` as well as `audioInputService`, because it
+  borrows the score holder too.
+- **Looping with no region set plays the whole score round.** The transport
+  strip's loop switch needs something to loop before any tool can set a
+  region (#201 will let one).
+- **Every play counts in**, from stopped or from paused, when the count-in
+  isn't zero bars. Coming back in after a pause is when a count-in helps most.
+- **Opening another score stops the clock and clears the loop.** A position
+  or a loop region in the old score means nothing in the new one.
+- **A command waits behind a table that couldn't be published yet**, so a
+  seek made just after a scale change or a new score is converted with the new
+  table, not the old one.
+- **Listeners are told only when something changed**: the frame, the state,
+  the count-in, the scale, the score, or an event. A stopped clock costs its
+  listeners nothing at 60 Hz.
+- **The transport strip sits between the menus and the microphone** in the
+  window's control strip, shown once a score is open. It has:
+  - Play/Pause and Stop;
+  - a "Bar 3, beat 2" readout, dropped below about 1,180 px;
+  - the tempo percentage, with − and + buttons;
+  - Click and Loop toggles.
+
+  At the narrowest window the menu buttons give up a little width rather than
+  hide it.
+- **The metronome switch is saved; the tempo scale and the loop are not.** The
+  switch is a standing preference. A scale or a loop belongs to the passage
+  being practised.
+- **The capture state `transport-playing`** opens the sample score in the
+  Score View and plays it with no count-in, at 100%, with the metronome on.

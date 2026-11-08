@@ -211,7 +211,10 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   `docs/development/architecture/notation-engraving.md`), `feedback`,
   `performance` (launch timing).
 - `src/platform` — shared infrastructure: `audio/` (`AudioInputService`,
-  `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`), `midi/`
+  `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`, `RealtimeRenderer`),
+  `transport/` (the practice clock: JUCE-free `ClockMath.h` holding every
+  timing rule, `ClockRenderer` on the audio thread, `PracticeClock` on the
+  message thread; see ARCHITECTURE.md § Practice clock), `midi/`
   (`MidiInputService`, `MidiEventFifo`, `MidiMessageTranslation`,
   `MidiRecoveryPolicy`, `NoteSoundingTracker`, `SoundingDurationJudgement`) —
   live keyboard capture, owning its own `juce::MidiInput` rather than going
@@ -254,7 +257,9 @@ single-owner objects; references for shared long-lived services.
 (`audioInputService`, `appLookAndFeel`), so reverse-order member destruction
 destroys every tool first. That ordering is the whole of how "a tool cannot
 outlive its shared services" is enforced — there is no runtime check. Do not
-move the declaration.
+move the declaration. `practiceClock` sits between them, after
+`audioInputService` and `scoreImport`: its destructor takes its renderer back
+from the audio callback, so it must run while the service still exists.
 
 ### Audio-thread boundary (hard constraint)
 
@@ -269,8 +274,10 @@ because no MIDI event is safe to lose.
 `AudioInputService::audioDeviceIOCallbackWithContext` runs on the real-time
 audio thread and must stay bounded: no heap allocation, locks, blocking waits,
 file/network I/O, logging, UI updates, or FFT/pitch-detection work. It only
-clears output, reads atomic mute/gain, measures peak, and copies samples into
-one preallocated 65,536-sample SPSC FIFO per active tool consumer. Each tool
+clears output, runs the practice clock's one `RealtimeRenderer` (bounded:
+binary search over at most 512 segments plus a click copy), reads atomic
+mute/gain, measures peak, and copies samples into one preallocated
+65,536-sample SPSC FIFO per active tool consumer. Each tool
 drains its own FIFO from a message-thread timer and does its analysis there,
 so a slow tool can't block capture or another tool. Device
 start/stop/sample-rate changes are communicated via atomics polled on a timer,

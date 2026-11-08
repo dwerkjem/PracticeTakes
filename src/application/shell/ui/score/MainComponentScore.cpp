@@ -164,6 +164,12 @@ void MainComponent::finishScoreImport(const score::musicxml::MusicXmlImportResul
     // An approved state that opens a score into a tool wants the tool in the
     // picture, not a report over it. The score has already been published into
     // the holder above, so the tool will pick it up on its own timer.
+    if (testControlPlayClock)
+    {
+        testControlPlayClock = false;
+        startClockForTestControl(100);
+    }
+
     if (testControlHideScoreImportSummary)
     {
         juce::ignoreUnused(summary);

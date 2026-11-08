@@ -25,6 +25,7 @@
 set(PRACTICE_TAKES_SOURCES
     src/bootstrap/main.cpp
     src/application/configuration/AppDefaults.h
+    src/application/configuration/AudioDeviceStateTransfer.h
     src/application/configuration/SettingsPersistence.cpp
     src/application/configuration/SettingsPersistence.h
     src/application/configuration/SettingsImportPersistence.h
@@ -40,6 +41,7 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/state/testcontrol/MainComponentTestControl.cpp
     src/application/shell/ui/main_window/MainTitleBar.h
     src/application/shell/ui/main_window/MicrophoneWarning.h
+    src/application/shell/ui/main_window/TransportStrip.h
     src/application/shell/ui/feedback/FeedbackWindow.h
     src/application/shell/ui/feedback/MainComponentFeedback.cpp
     src/application/shell/ui/score/BundledSampleScore.cpp
@@ -231,6 +233,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/transport/ClockMath.h
     src/platform/transport/ClockRenderer.cpp
     src/platform/transport/ClockRenderer.h
+    src/platform/transport/PracticeClock.cpp
+    src/platform/transport/PracticeClock.h
 )
 # The test target is not just the tests: it also compiles the production
 # sources under test, and deliberately only those. A file added here starts
@@ -244,6 +248,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/midi/MidiMessageTranslation.cpp
     src/platform/midi/NoteSoundingTracker.cpp
     src/tests/application/configuration/AppDefaultsTests.cpp
+    src/tests/application/configuration/AudioDeviceStateTransferTests.cpp
     src/tests/application/configuration/SettingsPersistenceTests.cpp
     src/tests/application/configuration/SettingsTransferCodecTests.cpp
     src/tests/application/shell/WorkspaceStartupSequenceTests.cpp
@@ -329,6 +334,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/score/musicxml/read/MusicXmlTranspositionTests.cpp
     src/tests/platform/transport/ClockMathTests.cpp
     src/tests/platform/transport/ClockRendererTests.cpp
+    src/tests/platform/transport/PracticeClockTests.cpp
     src/application/configuration/SettingsPersistence.cpp
     src/application/configuration/SettingsTransferCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.cpp
@@ -376,4 +382,5 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/score/musicxml/read/MusicXmlTieResolver.cpp
     src/platform/score/musicxml/read/MusicXmlValueParsing.cpp
     src/platform/transport/ClockRenderer.cpp
+    src/platform/transport/PracticeClock.cpp
 )

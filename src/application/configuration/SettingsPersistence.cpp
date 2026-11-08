@@ -18,6 +18,10 @@ constexpr auto audioInputGainKey = "audio.inputGain";
 constexpr auto midiInputDeviceIdentifierKey = "midi.inputDeviceIdentifier";
 constexpr auto midiInputDeviceNameKey = "midi.inputDeviceName";
 constexpr auto midiPedalDownThresholdKey = "midi.pedalDownThreshold";
+constexpr auto metronomeEnabledKey = "metronome.enabled";
+constexpr auto metronomeVolumeKey = "metronome.volume";
+constexpr auto metronomeAccentKey = "metronome.accent";
+constexpr auto countInBarsKey = "practice.countInBars";
 constexpr auto tunerDisplayModeKey = "tuner.displayMode";
 constexpr auto tunerEasingKey = "tuner.easing";
 constexpr auto tunerAveragingKey = "tuner.averaging";
@@ -52,6 +56,10 @@ constexpr const char* ownedKeys[] = {
     midiInputDeviceIdentifierKey,
     midiInputDeviceNameKey,
     midiPedalDownThresholdKey,
+    metronomeEnabledKey,
+    metronomeVolumeKey,
+    metronomeAccentKey,
+    countInBarsKey,
     tunerDisplayModeKey,
     tunerEasingKey,
     tunerAveragingKey,
@@ -236,6 +244,16 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
     result.state.midiInputDeviceIdentifier = properties.getValue(midiInputDeviceIdentifierKey);
     result.state.midiInputDeviceName = properties.getValue(midiInputDeviceNameKey);
     result.state.midiPedalDownThreshold = loadPedalDownThreshold(properties);
+    // Additive keys with no schema bump, for the reason loadPedalDownThreshold
+    // gives: a file without them takes the defaults.
+    result.state.metronomeEnabled =
+        properties.getBoolValue(metronomeEnabledKey, AppDefaults::Metronome::enabled);
+    result.state.metronomeVolume =
+        boundedValue(properties, metronomeVolumeKey, AppDefaults::Metronome::volume, 0.0, 1.0);
+    result.state.metronomeAccent =
+        properties.getBoolValue(metronomeAccentKey, AppDefaults::Metronome::accent);
+    result.state.countInBars = static_cast<int>(
+        boundedValue(properties, countInBarsKey, AppDefaults::Metronome::countInBars, 0.0, 4.0));
     // The pre-workspace keys, read against the ranges in the tuner's schema.
     const auto tunerValue =
         [&properties](const char* key, double AppDefaults::TunerSettings::*member)
@@ -302,6 +320,10 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(midiInputDeviceIdentifierKey, state.midiInputDeviceIdentifier);
     properties.setValue(midiInputDeviceNameKey, state.midiInputDeviceName);
     properties.setValue(midiPedalDownThresholdKey, state.midiPedalDownThreshold);
+    properties.setValue(metronomeEnabledKey, state.metronomeEnabled);
+    properties.setValue(metronomeVolumeKey, state.metronomeVolume);
+    properties.setValue(metronomeAccentKey, state.metronomeAccent);
+    properties.setValue(countInBarsKey, state.countInBars);
     properties.setValue(tunerDisplayModeKey, state.tuner.displayMode);
     properties.setValue(tunerEasingKey, state.tuner.easing);
     properties.setValue(tunerAveragingKey, state.tuner.averaging);

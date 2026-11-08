@@ -49,7 +49,7 @@ Settings:
 | Menu | Holds |
 |---|---|
 | **File** | Open a score, or the bundled sample |
-| **Settings** | Appearance, audio, MIDI, practice presets, reset and support, and portable settings import/export |
+| **Settings** | Appearance, audio and the metronome, MIDI, practice presets and the count-in, reset and support, and portable settings import/export |
 | **Tools** | Opens each tool, arranges the workspace, and manages named workspaces |
 | **Help** | Send feedback, and turn feedback invitations on or off |
 
@@ -62,6 +62,33 @@ labelled **Microphone muted** surrounds the whole workspace, so you can't sing
 into a muted microphone without noticing:
 
 ![The workspace framed in amber, labelled Microphone muted, with the title bar's button reading Mic muted - Unmute](images/microphone-muted.png)
+
+## Playing along with a score
+
+Once a score is open, the title bar shows the **transport** between the menus
+and the microphone button. It drives one practice clock, which every tool
+shares:
+
+| Control | Does |
+|---|---|
+| **Play** / **Pause** | Starts the clock from where it is, counting in first, and holds it where it is. Pausing keeps your place. |
+| **Stop** | Stops, and goes back to the start of the score, or of the loop |
+| **Bar 3, beat 2** | Where the clock is in the score, or which count-in beat is sounding |
+| **100%** | The tempo, as a percentage of the score's own, from 5% to 200% in steps of 5. **−** and **+** change it, even while playing, and the music carries on from the same beat. |
+| **Click** | The metronome, on every beat, with the first beat of each bar accented |
+| **Loop** | Plays the score round and round, starting again on exactly the same beat however many times it loops |
+
+The clock follows the score's own tempo changes and time signatures. A bar of
+7/8 clicks seven times. The **count-in** is one bar by default, at the tempo
+and time signature of the point you start from. You can change it to none or up
+to four bars in **Settings → Practice**.
+
+The metronome plays through the output device chosen in **Settings → Audio**,
+where you also set its volume and turn the accent on or off. Muting the
+microphone doesn't mute the metronome. With no output device, the clock still
+runs, and Settings says why the metronome is silent.
+
+![The title bar's transport while the sample score plays: Pause, Stop, Bar 3 beat 2, 100%, Click and Loop](images/transport-playing.png)
 
 ## Telling us what you think
 

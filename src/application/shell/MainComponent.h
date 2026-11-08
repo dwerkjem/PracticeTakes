@@ -5,6 +5,7 @@
 #include "../../platform/audio/AudioInputService.h"
 #include "../../platform/audio/SharedPitchAnalysis.h"
 #include "../../platform/midi/MidiInputService.h"
+#include "../../platform/transport/PracticeClock.h"
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
 #include "../theme/AppLookAndFeel.h"
@@ -13,6 +14,7 @@
 #include "../tools/BuiltInTools.h"
 #include "../tools/ToolInstanceAllocator.h"
 #include "../tools/ToolInstanceId.h"
+#include "ui/main_window/TransportStrip.h"
 #include "ui/score/ScoreImportJob.h"
 #include "ui/score/ScoreImportState.h"
 #include "ui/workspace/model/NamedWorkspaceService.h"
@@ -359,6 +361,23 @@ class MainComponent final
     // move this declaration below liveTools.
     ScoreImportState scoreImport;
 
+    // The practice clock, shared by every tool through ToolServices. Declared
+    // after audioInputService, whose callback runs its renderer, and after
+    // scoreImport, whose score it plays -- so it is destroyed before both, and
+    // its destructor takes the renderer back from the callback while the
+    // service still exists. Declared before liveTools so every tool that
+    // borrows it is gone first. The same ordering rule as the members above:
+    // do not move it.
+    transport::PracticeClock practiceClock{
+        [this](RealtimeRenderer* renderer) { audioInputService.setRealtimeRenderer(renderer); },
+        scoreImport.currentScoreHolder()};
+
+    // The clock's controls, which the window's control strip lays out beside
+    // the menus. Declared after the clock it listens to, so it stops listening
+    // before the clock goes. Saving the metronome switch goes through the
+    // shell, which owns the settings file.
+    TransportStrip transportStrip{practiceClock, [this] { saveSettings(false); }};
+
     juce::TextButton fileButton{"File"};
 
     // Shown in the empty workspace, under the guidance text, so a first launch
@@ -443,6 +462,11 @@ class MainComponent final
     // and cleared by every state that does not ask for it, so it cannot leak
     // from one capture to the next.
     bool testControlHideScoreImportSummary = false;
+
+    // Start the practice clock once the state's score has imported. Set from
+    // the approved state and cleared by every state that does not ask for it.
+    bool testControlPlayClock = false;
+    void startClockForTestControl(int attemptsLeft);
 
     // Set the first time a state is applied, and never cleared: this process is
     // being driven by the harness rather than used by a person.

@@ -160,7 +160,7 @@ void MainComponent::configureTopButtons()
 std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(std::function<void()> fullscreenHandler)
 {
     return std::make_unique<MainTitleBar>(
-        fileButton, settingsButton, toolsButton, helpButton, microphoneButton,
+        fileButton, settingsButton, toolsButton, helpButton, microphoneButton, transportStrip,
         std::move(fullscreenHandler));
 }
 

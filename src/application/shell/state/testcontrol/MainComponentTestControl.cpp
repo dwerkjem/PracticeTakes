@@ -110,6 +110,13 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
         scoreImportWindow->setVisible(false);
     }
 
+    // The clock at rest, at the score's tempo, with nothing looping: a state
+    // that wants it playing says so, and no state inherits the last one's.
+    practiceClock.stop();
+    practiceClock.setLoopEnabled(false);
+    practiceClock.setScalePercent(transport::defaultScalePercent);
+    testControlPlayClock = state.clockPlaying;
+
     testControlNoMicrophone = state.microphone == MicrophoneCondition::unavailable;
     audioInputService.setMuted(state.microphone == MicrophoneCondition::muted);
 
@@ -324,6 +331,42 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     testControlStateId = state.id;
 
     return true;
+}
+
+void MainComponent::startClockForTestControl(int attemptsLeft)
+{
+    // The clock learns of a new score on its own timer, and the table it
+    // builds has to reach the audio path before it can play. Rather than
+    // guess how long that takes, try again until it has a score.
+    practiceClock.poll();
+    if (practiceClock.hasScore())
+    {
+        // No count-in, so the picture is of the score playing; the person's
+        // own count-in is put back straight after.
+        const int countIn = practiceClock.countInBars();
+        practiceClock.setCountInBars(0);
+        practiceClock.setMetronomeEnabled(true);
+        practiceClock.play();
+        practiceClock.setCountInBars(countIn);
+
+        return;
+    }
+
+    if (attemptsLeft <= 0)
+    {
+        return;
+    }
+
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    juce::Timer::callAfterDelay(
+        50,
+        [safeThis, attemptsLeft]
+        {
+            if (safeThis != nullptr)
+            {
+                safeThis->startClockForTestControl(attemptsLeft - 1);
+            }
+        });
 }
 
 bool MainComponent::applyTestControlTheme(const std::string& theme)

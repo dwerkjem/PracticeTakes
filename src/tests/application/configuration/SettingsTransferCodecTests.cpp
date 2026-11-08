@@ -606,3 +606,31 @@ TEST_CASE(
     CHECK(reservedName.status == SettingsTransferDecodeStatus::invalid);
     CHECK_FALSE(reservedName.model.has_value());
 }
+
+TEST_CASE("a transfer file carries no metronome or output device", "[settings][transfer]")
+{
+    SettingsTransferModel exported;
+    exported.applicationVersion = "1.2.3-test";
+    exported.state.metronomeEnabled = false;
+    exported.state.metronomeVolume = 0.2;
+    exported.state.metronomeAccent = false;
+    exported.state.countInBars = 4;
+    exported.state.audioDeviceState =
+        R"(<DEVICESETUP deviceType="ALSA" audioInputDeviceName="Mic" audioOutputDeviceName="Speakers"/>)";
+
+    const auto encoded = SettingsTransferCodec::encode(exported);
+    REQUIRE(encoded.document.has_value());
+
+    // The machine's own preferences, like the MIDI keyboard: none of them in
+    // the file.
+    const std::string& text = *encoded.document;
+    CHECK(text.find("metronome") == std::string::npos);
+    CHECK(text.find("countIn") == std::string::npos);
+    CHECK(text.find("Speakers") == std::string::npos);
+    CHECK(text.find("Mic") != std::string::npos);
+
+    const auto decoded = SettingsTransferCodec::decode(*encoded.document, {{0, 0, 2560, 1440}});
+    REQUIRE(decoded.model.has_value());
+    CHECK(decoded.model->state.metronomeEnabled == AppDefaults::Metronome::enabled);
+    CHECK(decoded.model->state.countInBars == AppDefaults::Metronome::countInBars);
+}

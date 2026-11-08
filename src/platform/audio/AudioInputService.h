@@ -139,6 +139,13 @@ class AudioInputService final
     [[nodiscard]] std::uint64_t droppedAnalysisBlocks() const noexcept;
     [[nodiscard]] std::uint64_t droppedAnalysisSamples() const noexcept;
 
+    // Why there is no output to play the metronome through, or empty when there
+    // is one. The device is opened with two outputs beside its inputs and, if
+    // that fails, opened input-only exactly as before -- capture never depends
+    // on an output -- and the reason is kept here for Settings to show.
+    // Message thread only.
+    [[nodiscard]] juce::String outputUnavailableReason() const;
+
     void initialiseDefaultInput();
     void resetToDefaultInput();
     void applySavedDeviceState(const juce::XmlElement& state);
@@ -257,7 +264,37 @@ class AudioInputService final
     // Behind a seam so a test can supply one that blocks. Nothing else can
     // answer "what does this do when the device never opens", and that is the
     // question this file has to have an answer to.
-    static void reopenDevice(juce::AudioDeviceManager& deviceManager);
+    // Why the last open had no output, written by whichever thread opened the
+    // device. Shared with that thread for the same reason the manager is: it
+    // may still be running after this object is gone.
+    struct OutputStatus
+    {
+        juce::CriticalSection lock;
+        juce::String reason;
+
+        void set(const juce::String& newReason)
+        {
+            const juce::ScopedLock scoped(lock);
+            reason = newReason;
+        }
+
+        [[nodiscard]] juce::String get() const
+        {
+            const juce::ScopedLock scoped(lock);
+            return reason;
+        }
+    };
+
+    // Open the device with two inputs and two outputs, and if that fails, with
+    // the inputs alone. A saved state from before outputs were opened names no
+    // output, and is given the system default one. Runs on the device-work
+    // thread: it may block for as long as the device does.
+    static void openDevice(
+        juce::AudioDeviceManager& deviceManager,
+        const juce::XmlElement* state,
+        OutputStatus& status);
+
+    static void reopenDevice(juce::AudioDeviceManager& deviceManager, OutputStatus& status);
 
     // One recovery: the flag, the step, the flag again. Separate from the scan
     // that decides to call it, because the deciding needs a device backend to
@@ -369,7 +406,10 @@ class AudioInputService final
     ToneSource toneSource{*this};
     std::atomic<bool> toneSourceRunning{false};
 
-    std::function<void()> reopen = [owner = ownedManager] { reopenDevice(*owner); };
+    std::shared_ptr<OutputStatus> outputStatus = std::make_shared<OutputStatus>();
+
+    std::function<void()> reopen = [owner = ownedManager, status = outputStatus]
+    { reopenDevice(*owner, *status); };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioInputService)
 };

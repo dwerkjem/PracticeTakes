@@ -412,10 +412,10 @@ void AudioInputService::initialiseInput(const juce::XmlElement* state, bool forc
                                   : std::shared_ptr<juce::XmlElement>{};
 
     startDeviceWork(
-        [owner = ownedManager, saved]
+        [owner = ownedManager, saved, status = outputStatus]
         {
             owner->closeAudioDevice();
-            juce::ignoreUnused(owner->initialise(2, 0, saved.get(), true));
+            openDevice(*owner, saved.get(), *status);
         });
     publishState();
 }
@@ -426,6 +426,29 @@ void AudioInputService::applySavedDeviceState(const juce::XmlElement& state)
     // opens the system default as a temporary fallback. createDeviceState()
     // will therefore keep the user's preference for a later reconnect/save.
     initialiseInput(&state, false);
+}
+
+juce::String AudioInputService::outputUnavailableReason() const
+{
+    auto* device = manager.getCurrentAudioDevice();
+    if (device != nullptr && device->isOpen() &&
+        device->getActiveOutputChannels().countNumberOfSetBits() > 0)
+    {
+        return {};
+    }
+    if (inputDeclined)
+    {
+        return "this instance opens no audio device";
+    }
+    if (const auto reason = outputStatus->get(); reason.isNotEmpty())
+    {
+        return reason;
+    }
+    if (device == nullptr || !device->isOpen())
+    {
+        return "no audio device is open";
+    }
+    return "the audio device has no output";
 }
 
 std::unique_ptr<juce::XmlElement> AudioInputService::createDeviceState() const
@@ -982,7 +1005,119 @@ void AudioInputService::startDeviceWork(std::function<void()> step)
         .detach();
 }
 
-void AudioInputService::reopenDevice(juce::AudioDeviceManager& deviceManager)
+namespace
+{
+[[nodiscard]] bool hasOpenOutput(juce::AudioDeviceManager& deviceManager)
+{
+    auto* device = deviceManager.getCurrentAudioDevice();
+    return device != nullptr && device->isOpen() &&
+           device->getActiveOutputChannels().countNumberOfSetBits() > 0;
+}
+
+[[nodiscard]] bool hasOpenDevice(juce::AudioDeviceManager& deviceManager)
+{
+    auto* device = deviceManager.getCurrentAudioDevice();
+    return device != nullptr && device->isOpen();
+}
+
+// The system's default output for the device type a saved state names, or for
+// the current type when it names none.
+[[nodiscard]] juce::String
+defaultOutputName(juce::AudioDeviceManager& deviceManager, const juce::String& typeName)
+{
+    for (auto* type : deviceManager.getAvailableDeviceTypes())
+    {
+        if (typeName.isNotEmpty() && type->getTypeName() != typeName)
+        {
+            continue;
+        }
+        type->scanForDevices();
+        const auto names = type->getDeviceNames(false);
+        const auto index = type->getDefaultDeviceIndex(false);
+        if (juce::isPositiveAndBelow(index, names.size()))
+        {
+            return names[index];
+        }
+        if (!names.isEmpty())
+        {
+            return names[0];
+        }
+        if (typeName.isNotEmpty())
+        {
+            break;
+        }
+    }
+    return {};
+}
+} // namespace
+
+void AudioInputService::openDevice(
+    juce::AudioDeviceManager& deviceManager,
+    const juce::XmlElement* state,
+    OutputStatus& status)
+{
+    std::unique_ptr<juce::XmlElement> withOutput;
+    if (state != nullptr)
+    {
+        withOutput = std::make_unique<juce::XmlElement>(*state);
+
+        // A state saved while the device was opened input-only names no
+        // output. Left alone it would open with none, and the metronome would
+        // be silent on a machine that has speakers: give it the default.
+        if (withOutput->getStringAttribute("audioDeviceName").isEmpty() &&
+            withOutput->getStringAttribute("audioOutputDeviceName").isEmpty())
+        {
+            const auto output =
+                defaultOutputName(deviceManager, withOutput->getStringAttribute("deviceType"));
+            if (output.isNotEmpty())
+            {
+                withOutput->setAttribute("audioOutputDeviceName", output);
+                withOutput->removeAttribute("audioDeviceOutChans");
+            }
+        }
+    }
+
+    const auto error = deviceManager.initialise(2, 2, withOutput.get(), true);
+    if (error.isEmpty() && hasOpenOutput(deviceManager))
+    {
+        status.set({});
+        return;
+    }
+
+    if (error.isEmpty() && hasOpenDevice(deviceManager))
+    {
+        // Open, with no output: a machine with none, or an input-only device
+        // type. Capture has what it needs; only the metronome is silent.
+        status.set("the audio device has no output");
+        return;
+    }
+
+    // With outputs it would not open. Try again exactly as before outputs
+    // existed, so capture never regresses because of a speaker.
+    deviceManager.closeAudioDevice();
+    std::unique_ptr<juce::XmlElement> inputOnly;
+    if (state != nullptr)
+    {
+        inputOnly = std::make_unique<juce::XmlElement>(*state);
+        inputOnly->setAttribute("audioOutputDeviceName", juce::String());
+        inputOnly->removeAttribute("audioDeviceOutChans");
+    }
+    juce::ignoreUnused(deviceManager.initialise(2, 0, inputOnly.get(), true));
+
+    // Only the output is to blame if the input opened without it. With nothing
+    // open at all -- no hardware, or a device held elsewhere -- the reason is
+    // that, which `outputUnavailableReason` says when given none here.
+    if (!hasOpenDevice(deviceManager))
+    {
+        status.set({});
+        return;
+    }
+    status.set(
+        error.isNotEmpty() ? "the output could not be opened (" + error + ")"
+                           : juce::String("the output could not be opened"));
+}
+
+void AudioInputService::reopenDevice(juce::AudioDeviceManager& deviceManager, OutputStatus& status)
 {
     juce::AudioDeviceManager::AudioDeviceSetup setup;
     deviceManager.getAudioDeviceSetup(setup);
@@ -995,6 +1130,27 @@ void AudioInputService::reopenDevice(juce::AudioDeviceManager& deviceManager)
     if (setup.inputDeviceName.isNotEmpty() || setup.outputDeviceName.isNotEmpty())
     {
         deviceManager.restartLastAudioDevice();
+
+        // The output may be what went away -- headphones unplugged, a USB
+        // interface's output disappearing -- and then the last device will not
+        // restart with it. Capture must not stop for that: open the same input
+        // with no output, and say why the metronome went quiet.
+        if (!hasOpenDevice(deviceManager) && setup.outputDeviceName.isNotEmpty())
+        {
+            const auto lostOutput = setup.outputDeviceName;
+            setup.outputDeviceName = {};
+            setup.outputChannels.clear();
+            setup.useDefaultOutputChannels = false;
+            const auto error = deviceManager.setAudioDeviceSetup(setup, true);
+            if (error.isEmpty() && hasOpenDevice(deviceManager))
+            {
+                status.set("the output \"" + lostOutput + "\" is not available");
+            }
+        }
+        else if (hasOpenOutput(deviceManager))
+        {
+            status.set({});
+        }
     }
     else
     {
@@ -1002,7 +1158,7 @@ void AudioInputService::reopenDevice(juce::AudioDeviceManager& deviceManager)
         // `scanForDeviceChanges` has already established that it offers
         // something; without that this would open the default output and call
         // it a recovery.
-        juce::ignoreUnused(deviceManager.initialise(2, 0, nullptr, true));
+        openDevice(deviceManager, nullptr, status);
     }
 }
 

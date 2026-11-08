@@ -241,7 +241,7 @@ Shared by every instrument.
 
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
-| Practice clock | Count-in, metronome, tempo, and looping a passage | MVP | [#36](https://github.com/dwerkjem/PracticeTakes/issues/36) |
+| Practice clock | Play, pause, stop and a count-in; a metronome on every beat, the first of each bar accented; the tempo from 5% to 200%; and looping the score | ✅ | [#36](https://github.com/dwerkjem/PracticeTakes/issues/36) |
 
 #### The take itself
 

@@ -16,6 +16,17 @@ namespace Audio
 inline constexpr double inputGain = 1.0;
 } // namespace Audio
 
+// The practice clock's metronome and count-in. Preferences about this
+// machine's speakers and this player's habits, so -- like the MIDI keyboard --
+// saved locally and never carried in a settings transfer file.
+namespace Metronome
+{
+inline constexpr bool enabled = true;
+inline constexpr double volume = 0.7;
+inline constexpr bool accent = true;
+inline constexpr int countInBars = 1;
+} // namespace Metronome
+
 namespace Midi
 {
 // The one default lives with the MIDI code, which is what applies it. Re-stated
