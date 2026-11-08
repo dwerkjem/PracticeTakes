@@ -14,7 +14,7 @@
 
 ## 2. Settings
 
-- [ ] 2.1 `lookAhead`, `follow` and `pageFit` in `score_view::Settings`, with
+- [x] 2.1 `lookAhead`, `follow` and `pageFit` in `score_view::Settings`, with
       codec tests: defaults when missing, clamped when out of range.
 
 ## 3. The Score View

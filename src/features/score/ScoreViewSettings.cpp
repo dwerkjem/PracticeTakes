@@ -256,6 +256,22 @@ ToolSettingsPayload encode(const Settings& settings)
         }
     }
 
+    // Each written only when it is not the default, so a Score View nobody
+    // changed saves exactly what it always did (score-cursor decision 8).
+    const int ahead = std::clamp(settings.lookAhead, 0, engraving::maximumLookAhead);
+    if (ahead != engraving::defaultLookAhead)
+    {
+        data += ";ahead=" + std::to_string(ahead);
+    }
+    if (!settings.follow)
+    {
+        data += ";follow=0";
+    }
+    if (settings.pageFit == PageFit::page)
+    {
+        data += ";fit=page";
+    }
+
     return {settingsVersion, data};
 }
 
@@ -292,6 +308,21 @@ Settings decode(const ToolSettingsPayload& payload)
             else if (key == "hidden")
             {
                 settings.hiddenParts = parseHiddenParts(value);
+            }
+            else if (key == "ahead")
+            {
+                if (value.size() == 1 && value.front() >= '0' && value.front() <= '9')
+                {
+                    settings.lookAhead = std::min(value.front() - '0', engraving::maximumLookAhead);
+                }
+            }
+            else if (key == "follow")
+            {
+                settings.follow = value != "0";
+            }
+            else if (key == "fit")
+            {
+                settings.pageFit = value == "page" ? PageFit::page : PageFit::width;
             }
             else if (key == "size")
             {
