@@ -125,29 +125,33 @@ pitchAtStaffPosition(StaffClef clef, int steps, int alter)
     return spelled(static_cast<score::Step>(letters % 7), alter, letters / 7);
 }
 
-// A semitone up, spelled with a sharp, or down, spelled with a flat.
-[[nodiscard]] inline std::optional<score::Pitch>
-stepBySemitone(const score::Pitch& from, int direction)
+// A MIDI number spelled with sharps (as a key has no spelling of its own), or
+// with flats.
+[[nodiscard]] inline std::optional<score::Pitch> spellMidi(int midi, bool sharps)
 {
     static constexpr int sharpSteps[12] = {0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6};
     static constexpr int sharpAlters[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
     static constexpr int flatSteps[12] = {0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6};
     static constexpr int flatAlters[12] = {0, -1, 0, -1, 0, 0, -1, 0, -1, 0, -1, 0};
-
-    const int midi = from.midiNoteNumber + (direction > 0 ? 1 : -1);
     if (midi < 0 || midi > 127)
     {
         return std::nullopt;
     }
     const int pitchClass = midi % 12;
     const int octave = (midi / 12) - 1;
-    return direction > 0
-               ? spelled(
-                     static_cast<score::Step>(sharpSteps[pitchClass]), sharpAlters[pitchClass],
-                     octave)
-               : spelled(
-                     static_cast<score::Step>(flatSteps[pitchClass]), flatAlters[pitchClass],
-                     octave);
+    return sharps ? spelled(
+                        static_cast<score::Step>(sharpSteps[pitchClass]), sharpAlters[pitchClass],
+                        octave)
+                  : spelled(
+                        static_cast<score::Step>(flatSteps[pitchClass]), flatAlters[pitchClass],
+                        octave);
+}
+
+// A semitone up, spelled with a sharp, or down, spelled with a flat.
+[[nodiscard]] inline std::optional<score::Pitch>
+stepBySemitone(const score::Pitch& from, int direction)
+{
+    return spellMidi(from.midiNoteNumber + (direction > 0 ? 1 : -1), direction > 0);
 }
 
 // The alteration a major key in `fifths` (-7 to 7) gives a letter.

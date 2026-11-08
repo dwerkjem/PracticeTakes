@@ -77,6 +77,10 @@ class CurrentTarget
         return reason;
     }
 
+    // The open score's key at its start, in fifths, for stepping the target by
+    // a step of the key; 0 (C major) with no score.
+    int keyFifths = 0;
+
     // Whether opening a score leaves a chosen target alone
     // (Settings -> Practice; target-note-picker decision 4).
     bool keepChosenWhenScoreOpens = false;

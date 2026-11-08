@@ -74,3 +74,12 @@ TEST_CASE("a step of the key keeps the key's spelling", "[pitch][choice]")
     CHECK(keyAlteration(score::Step::f, 7) == 1);
     CHECK(keyAlteration(score::Step::f, -7) == -1);
 }
+
+TEST_CASE("a key is spelled with sharps, or flats when asked", "[pitch][choice]")
+{
+    CHECK(nameOf(spellMidi(61, true)) == "C#4");
+    CHECK(nameOf(spellMidi(61, false)) == "Db4");
+    CHECK(nameOf(spellMidi(60, true)) == "C4");
+    CHECK(nameOf(spellMidi(0, true)) == "C-1");
+    CHECK_FALSE(spellMidi(128, true).has_value());
+}

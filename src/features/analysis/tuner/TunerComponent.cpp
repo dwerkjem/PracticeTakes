@@ -1,6 +1,7 @@
 #include "TunerComponent.h"
 
 #include "../../../platform/pitch/TargetReading.h"
+#include "TargetPickerPanel.h"
 
 #include "TunerSettingsCodec.h"
 
@@ -383,13 +384,55 @@ std::vector<ToolComponent::MenuEntry> TunerComponent::optionsMenuEntries()
         {"Bar", [selectMode] { selectMode(DisplayMode::bar); }, currentMode == DisplayMode::bar},
         {"Meter", [selectMode] { selectMode(DisplayMode::meter); },
          currentMode == DisplayMode::meter},
-        {areAdvancedSettingsExpanded ? "Hide advanced settings" : "Advanced settings", [this]
+        {areAdvancedSettingsExpanded ? "Hide advanced settings" : "Advanced settings",
+         [this]
          {
              areAdvancedSettingsExpanded = !areAdvancedSettingsExpanded;
              updateAdvancedSettingsVisibility();
              resized();
              repaint();
-         }}};
+         }},
+        {juce::String::fromUTF8("Choose target\xe2\x80\xa6"), [this] { openTargetPicker(); }}};
+}
+
+std::optional<int> TunerComponent::steadyNote() const
+{
+    return steadyReading.steadyNote(juce::Time::getMillisecondCounterHiRes());
+}
+
+juce::Rectangle<int> TunerComponent::targetLineBounds() const
+{
+    return getLocalBounds().reduced(18).removeFromTop(targetHeight);
+}
+
+void TunerComponent::openTargetPicker()
+{
+    juce::Component* window = getTopLevelComponent();
+    if (window == nullptr)
+    {
+        return;
+    }
+    const juce::Component::SafePointer<TunerComponent> safeThis(this);
+    auto panel = std::make_unique<TargetPickerPanel>(
+        target, [safeThis]() -> std::optional<int>
+        { return safeThis != nullptr ? safeThis->steadyNote() : std::nullopt; }, currentTheme);
+    juce::CallOutBox::launchAsynchronously(
+        std::move(panel), window->getLocalArea(this, targetLineBounds()), window);
+}
+
+void TunerComponent::mouseUp(const juce::MouseEvent& event)
+{
+    if (!event.mouseWasDraggedSinceMouseDown() && targetLineBounds().contains(event.getPosition()))
+    {
+        openTargetPicker();
+    }
+}
+
+void TunerComponent::mouseMove(const juce::MouseEvent& event)
+{
+    setMouseCursor(
+        targetLineBounds().contains(event.getPosition()) ? juce::MouseCursor::PointingHandCursor
+                                                         : juce::MouseCursor::NormalCursor);
 }
 
 juce::String TunerComponent::statusText() const
@@ -542,6 +585,10 @@ void TunerComponent::applyTrackerUpdate(const PitchTracker::Update& update)
     displayedNote = update.hasDisplayedNote
                         ? juce::String(noteNameForMidi(update.displayedMidiNote))
                         : juce::String("--");
+    steadyReading.update(
+        update.hasSignal && update.hasDisplayedNote ? std::optional<int>(update.displayedMidiNote)
+                                                    : std::nullopt,
+        update.displayedCents, juce::Time::getMillisecondCounterHiRes());
 
     // Every frame contributes a point. A NaN is a deliberate gap -- silence, or
     // a reading rejected as a suspected harmonic -- and the graph draws a break
