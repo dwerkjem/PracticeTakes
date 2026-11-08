@@ -8,7 +8,7 @@
 #include "PlaybackEvents.h"
 
 // What of the score is heard: playback on or off, its volume, and mute and solo
-// per track (no JUCE dependency). openspec/changes/score-playback/design.md,
+// per track (no JUCE dependency). openspec/changes/archive/2026-11-08-score-playback/design.md,
 // decision 5.
 //
 // The renderer never sees this: it reads the one mask `audibleTracks` folds it

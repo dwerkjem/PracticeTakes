@@ -215,7 +215,9 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`, `RealtimeRenderer`),
   `transport/` (the practice clock: JUCE-free `ClockMath.h` holding every
   timing rule, `ClockRenderer` on the audio thread, `PracticeClock` on the
-  message thread; see ARCHITECTURE.md § Practice clock), `take/` (recording a
+  message thread, and the score's playback through `ScoreSynth`, TinySoundFont
+  and a SoundFont fetched at configure time; see ARCHITECTURE.md § Practice
+  clock), `take/` (recording a
 take on the clock's timeline: JUCE-free `TakeLifecycle`, `Take` and assembler,
 and the `TakeRecorder` service; see ARCHITECTURE.md § Takes), `evaluation/`
 (JUCE-free judging of a take after it is recorded: expected attacks, keyboard

@@ -1094,7 +1094,7 @@ TEST_CASE(
     // Under RealtimeSanitizer this is the check that TinySoundFont, once
     // loaded, allocates nothing on any path the renderer takes: notes on and
     // off on two hands at once, a hand going quiet, a loop's wrap and a seek
-    // (openspec/changes/score-playback, design.md decision 1).
+    // (openspec/changes/archive/2026-11-08-score-playback, design.md decision 1).
     score::Score source;
     source.tempoMap = score::TempoMap::build({{0, 240.0}});
     score::Part piano;

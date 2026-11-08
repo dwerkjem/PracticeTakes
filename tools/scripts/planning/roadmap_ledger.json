@@ -52,6 +52,7 @@
     {"issue": 199, "reason": "code merged; only the hardware check remains, sized in #284's session"},
     {"issue": 323, "reason": "the practice clock's speaker check (#36), sized in #284's session"},
     {"issue": 328, "reason": "recording a take from a real microphone and keyboard (#40), done in #284's session"},
+    {"issue": 331, "reason": "listening to score playback on real speakers and headphones (#201, #286), done in #284's session"},
     {"issue": 324, "reason": "split from #33 (rehearsal marks need the importer to keep them); not sized until the maintainer schedules it"},
     {"issue": 325, "reason": "split from #33 (one voice of a shared staff); not sized until the maintainer schedules it"},
     {"issue": 291, "reason": "parent of #292-#294, which carry its size"},

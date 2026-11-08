@@ -122,7 +122,7 @@ MainComponent::MainComponent(bool muteMicrophoneForSession, bool declineAudioInp
     }
 
     // The score's sounds load on a worker thread; the clock picks them up when
-    // they are ready (openspec/changes/score-playback).
+    // they are ready (openspec/changes/archive/2026-11-08-score-playback).
     practiceClock.loadSoundFont(findSoundFont());
 
     configureTopButtons();

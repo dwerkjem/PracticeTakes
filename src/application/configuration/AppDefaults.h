@@ -27,7 +27,7 @@ inline constexpr bool accent = true;
 inline constexpr int countInBars = 1;
 } // namespace Metronome
 
-// Playing the score through the clock (openspec/changes/score-playback): off
+// Playing the score through the clock (openspec/changes/archive/2026-11-08-score-playback): off
 // until someone turns it on, so the clock sounds as it always did. Local, like
 // the metronome.
 namespace Playback

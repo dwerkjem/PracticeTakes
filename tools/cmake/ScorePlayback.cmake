@@ -1,4 +1,4 @@
-# Score playback (openspec/changes/score-playback): TinySoundFont, the player,
+# Score playback (openspec/changes/archive/2026-11-08-score-playback): TinySoundFont, the player,
 # and GeneralUser GS, the sound. See tools/packaging/sounds/README.md.
 #
 # Each file is downloaded from its exact commit and checked against its SHA-256,

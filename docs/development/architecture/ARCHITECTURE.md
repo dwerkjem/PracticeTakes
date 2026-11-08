@@ -238,6 +238,19 @@ position at the same frame are the same instant.
     thread, such as a MIDI note, can be placed on the timeline.
 - **`TransportStrip`** puts the controls in the window's control strip once a
   score is open.
+- **The score plays through it** (`score-playback` change):
+  - `playbackEventsOf` (JUCE-free) turns the score into note events at clock
+    frames, one track per staff of each part. They travel in the table's slot,
+    so notes and table always agree.
+  - `PlaybackMix` folds Play the score, Mute and Solo into a 64-bit mask the
+    renderer reads atomically.
+  - `ScoreSynth` wraps TinySoundFont. Everything it allocates is allocated
+    while loading, on a worker thread. The SoundFont, GeneralUser GS, is
+    downloaded at configure time by `tools/cmake/ScorePlayback.cmake` and
+    installed beside the application. See `tools/packaging/sounds/README.md`.
+  - The renderer dispatches the notes in each played span (never the
+    count-in), at most 512 a block, and releases them all at every seek, wrap,
+    stop and new table.
 - **The Score View follows it.** It draws a cursor at the clock's place and
   marks the sounding and upcoming notes. Each laid-out system records its time
   anchors (tick → x) and the score part of each staff, and the JUCE-free

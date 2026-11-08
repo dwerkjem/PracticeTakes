@@ -1,7 +1,7 @@
 # Sounds
 
 Practice Takes plays the open score through the practice clock
-(`openspec/changes/score-playback`). Two pieces of other people's work make
+(`openspec/changes/archive/2026-11-08-score-playback`). Two pieces of other people's work make
 that possible. Neither is committed here: `tools/cmake/ScorePlayback.cmake`
 downloads each from its exact commit, at configure time, and checks it against
 its SHA-256.

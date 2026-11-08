@@ -48,8 +48,11 @@ however long it runs. The clock follows the score's own tempo changes and time
 signatures, and keeps the same timeline as the microphone. The Score View
 follows it: a cursor at the current beat, the notes sounding and the next few
 marked, the page turning by itself, and a click on any note to start from there.
-**Record** takes it from there: a take from the microphone, a MIDI keyboard or
-both, counted in and on the same timeline as the score.
+**Mix** plays the score along with it, from a General MIDI SoundFont, with
+each part, and each hand of a piano, muted or soloed: practise the right hand
+over the left at 60%. **Record** takes it from there: a take from the
+microphone, a MIDI keyboard or both, counted in and on the same timeline as the
+score.
 
 ### See what went wrong
 

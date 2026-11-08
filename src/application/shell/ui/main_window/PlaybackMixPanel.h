@@ -10,7 +10,7 @@
 
 // What the Mix button opens: whether the score plays, how loud, and Mute and
 // Solo for each part, and each hand of a piano
-// (openspec/changes/score-playback/design.md, decision 6).
+// (openspec/changes/archive/2026-11-08-score-playback/design.md, decision 6).
 //
 // It holds no state: every control reads the practice clock when the panel
 // opens and changes it at once. Play the score and the volume are saved, so

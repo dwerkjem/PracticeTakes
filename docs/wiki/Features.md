@@ -114,7 +114,7 @@ Live tools for any voice or instrument. No score needed.
 
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
-| Accompaniment | The score's other parts play while yours is muted | MVP | [#286](https://github.com/dwerkjem/PracticeTakes/issues/286) |
+| Accompaniment | The score's other parts play while yours is muted | ✅ | [#286](https://github.com/dwerkjem/PracticeTakes/issues/286) |
 | Sing-along | Sing your part with the accompaniment, and get the take reviewed | MVP | [#37](https://github.com/dwerkjem/PracticeTakes/issues/37) |
 
 #### How it was sung
@@ -138,7 +138,7 @@ Live tools for any voice or instrument. No score needed.
 
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
-| Hands separately, slower | Loop a passage one hand at a time, below tempo, the other hand muted or played for you | MVP | [#201](https://github.com/dwerkjem/PracticeTakes/issues/201) |
+| Hands separately, slower | Loop a passage one hand at a time, below tempo, the other hand muted or played for you | ✅ | [#201](https://github.com/dwerkjem/PracticeTakes/issues/201) |
 | Wait mode | The score waits at each note or chord until you play it, with no tempo and no penalty | Beta 1 | [#304](https://github.com/dwerkjem/PracticeTakes/issues/304) |
 | Fingering | The score's own fingering numbers, shown or hidden | Beta 1 | [#305](https://github.com/dwerkjem/PracticeTakes/issues/305) |
 

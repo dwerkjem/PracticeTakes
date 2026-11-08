@@ -27,8 +27,8 @@
 
 - [x] 4.1 An approved state with the Mix popup open over the sample score, and
       its surface. Read the pictures.
-- [ ] 4.2 The wiki (Getting Started: playing the score, hands separately; the
+- [x] 4.2 The wiki (Getting Started: playing the score, hands separately; the
       headphones note), Features rows, README, ARCHITECTURE.md § Practice
       clock, and the agent guide.
-- [ ] 4.3 A `status:ready-for-human` issue: listen to it on real speakers and
+- [x] 4.3 A `status:ready-for-human` issue (#331): listen to it on real speakers and
       headphones, with a take.

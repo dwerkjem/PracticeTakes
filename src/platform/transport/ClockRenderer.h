@@ -32,7 +32,7 @@
 //  - **Commands** (message -> audio). An SPSC queue, drained each block.
 //  - **Settings** (message -> audio). Atomics: metronome on, volume, accent;
 //    and for the score's playback, the mask of tracks that sound and their
-//    volume (openspec/changes/score-playback).
+//    volume (openspec/changes/archive/2026-11-08-score-playback).
 //  - **The score's notes** travel in the slot beside its table, so the two
 //    always agree, and sound through a `ScoreSynth` handed over once it has
 //    loaded.
@@ -158,7 +158,7 @@ class ClockRenderer final : public RealtimeRenderer
     [[nodiscard]] float volume() const noexcept;
     [[nodiscard]] bool accentEnabled() const noexcept;
 
-    // --- Playing the score (openspec/changes/score-playback) ----------------
+    // --- Playing the score (openspec/changes/archive/2026-11-08-score-playback) ----------------
     //
     // The synthesiser, once it has loaded: set once, and owned by the caller,
     // who keeps it alive until this renderer has left the audio callback.

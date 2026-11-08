@@ -139,7 +139,7 @@ class PracticeClock final : private juce::Timer
     // into ticks. Null before the first publish.
     [[nodiscard]] std::shared_ptr<const ClockTable> currentTable() const;
 
-    // --- Playing the score (openspec/changes/score-playback) ----------------
+    // --- Playing the score (openspec/changes/archive/2026-11-08-score-playback) ----------------
 
     // Load the SoundFont at `path` on a worker thread; the timer hands it to
     // the renderer when it is ready. An empty path says none was found.

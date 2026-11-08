@@ -616,7 +616,7 @@ TEST_CASE(
     CHECK(harness.renderer.recordingOverflows() == 0);
 }
 
-// --- Playing the score (openspec/changes/score-playback) --------------------
+// --- Playing the score (openspec/changes/archive/2026-11-08-score-playback) --------------------
 
 #include "platform/transport/PlaybackEvents.h"
 #include "platform/transport/ScoreSynth.h"

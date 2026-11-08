@@ -4,7 +4,7 @@
 #include <vector>
 
 // Where the SoundFont is installed, relative to the executable (no JUCE
-// dependency). openspec/changes/score-playback/design.md, decision 2; the
+// dependency). openspec/changes/archive/2026-11-08-score-playback/design.md, decision 2; the
 // layouts are listed in tools/packaging/sounds/README.md.
 namespace transport
 {

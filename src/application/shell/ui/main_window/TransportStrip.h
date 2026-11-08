@@ -111,7 +111,7 @@ class TransportStrip final
         addAndMakeVisible(loopButton);
 
         // The score's sound, and each part's and hand's
-        // (openspec/changes/score-playback).
+        // (openspec/changes/archive/2026-11-08-score-playback).
         mixButton.setComponentID("transport-mix");
         mixButton.setTooltip("Hear the score, and mute or solo each part or hand");
         mixButton.onClick = [this] { showMix(); };

@@ -12,7 +12,7 @@ struct tsf;
 
 // The score's sound: TinySoundFont playing a General MIDI SoundFont, wrapped so
 // nothing else knows it exists (no JUCE dependency).
-// openspec/changes/score-playback/design.md, decision 1.
+// openspec/changes/archive/2026-11-08-score-playback/design.md, decision 1.
 //
 // `load` does everything that allocates: it reads the file, sets a maximum
 // number of voices and creates every channel. Once loaded, nothing below the

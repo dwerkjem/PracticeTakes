@@ -6,7 +6,7 @@
 #include "PlaybackEvents.h"
 
 // What the Mix popup calls a track (no JUCE dependency).
-// openspec/changes/score-playback/design.md, decision 6.
+// openspec/changes/archive/2026-11-08-score-playback/design.md, decision 6.
 //
 // A two-staff part is a piano's two hands, which is #201's staff-is-hand
 // assumption; any more staves are numbered. A one-staff part is its name.

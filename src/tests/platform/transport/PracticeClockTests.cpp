@@ -454,7 +454,7 @@ TEST_CASE("a locked clock ignores what would change a take", "[transport][clock]
     CHECK_FALSE(table->empty());
 }
 
-// --- Playing the score (openspec/changes/score-playback) --------------------
+// --- Playing the score (openspec/changes/archive/2026-11-08-score-playback) --------------------
 
 TEST_CASE(
     "the SoundFont loads off the message thread, or says why not",

@@ -8,7 +8,7 @@
 #include "ClockMath.h"
 
 // The score as notes on the practice clock's timeline, for playback (no JUCE
-// dependency). openspec/changes/score-playback/design.md, decision 3.
+// dependency). openspec/changes/archive/2026-11-08-score-playback/design.md, decision 3.
 //
 // Built on the message thread whenever the clock's table is, into the slot the
 // renderer is not reading, so the notes and the table always agree.
