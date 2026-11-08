@@ -25,7 +25,7 @@ before any code.
   - play, pause, stop and seek;
   - a count-in;
   - a metronome with an accented downbeat;
-  - a tempo scale (25% to 200% of the score's tempo);
+  - a tempo scale (5% to 200% of the score's tempo, in 5% steps);
   - one loop region.
 - **Position comes from audio samples.** It is counted in frames of the audio
   callback that also captures the microphone, so the click you hear, the note

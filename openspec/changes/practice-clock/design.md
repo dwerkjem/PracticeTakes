@@ -215,17 +215,19 @@ default output. A `.ptsettings` file without it imports unchanged, and the
 setting is not exported, because it belongs to the machine, like the MIDI
 keyboard.
 
-## Open Questions
+## Decisions on the open questions
 
-These are for the maintainer. A default is proposed for each, so
-implementation isn't blocked if the default is accepted.
+The maintainer settled these on 2026-11-08, accepting each proposed default
+except the tempo scale's lower bound:
 
-1. **Where the transport controls live.** Proposed: a compact strip in the
-   main window's title bar (play/pause, stop, tempo %, metronome on/off, loop
-   on/off), shown once a score is open. The alternative is a Transport tool in
-   the Tools menu.
-2. **Count-in length.** Proposed: one bar, with 0–4 bars in Settings →
-   Practice.
-3. **Tempo scale range and step.** Proposed: 25%–200%, in 5% steps.
-4. **Metronome subdivisions** (eighths, triplets). Proposed: not in this
-   change; beats only, with an accented downbeat.
+1. **Where the transport controls live.** A compact strip in the main window's
+   title bar (play/pause, stop, tempo %, metronome on/off, loop on/off), shown
+   once a score is open.
+2. **Count-in length.** One bar by default, 0–4 bars in Settings → Practice.
+3. **Tempo scale range and step.** 5%–200%, in 5% steps. The lower bound is 5%,
+   not the proposed 25%, so a passage can be worked through very slowly. At 5%,
+   a beat of a 60 bpm score lasts 20 s, 882,000 frames at 44.1 kHz. That still
+   fits a 64-bit frame position many times over, and a 30 ms click is
+   unaffected because its length doesn't scale.
+4. **Metronome subdivisions.** Not in this change; beats only, with an accented
+   downbeat.

@@ -79,7 +79,8 @@ metronome.
 - **THEN** the metronome is still heard
 
 ### Requirement: Tempo scale
-The clock SHALL play at a scale of the score's tempo between 25% and 200%.
+The clock SHALL play at a scale of the score's tempo between 5% and 200%,
+in steps of 5%.
 Changing the scale while playing SHALL keep the current score position and
 continue from it at the new tempo, without a jump.
 
