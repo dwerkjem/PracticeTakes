@@ -961,7 +961,10 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                   pedalDownThreshold,
                   std::move(midiSelectionHandler),
                   std::move(pedalThresholdHandler)),
-              practicePanel(std::move(presetHandler), practiceClock, clockSettingsHandler),
+              practicePanel(
+                  std::move(presetHandler),
+                  practiceClock,
+                  std::move(clockSettingsHandler)),
               resetPanel(
                   std::move(feedbackHandler),
                   std::move(resetToolHandler),
