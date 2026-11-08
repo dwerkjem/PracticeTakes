@@ -13,7 +13,7 @@
 #include "../score/TempoMap.h"
 
 // Every timing rule of the practice clock, with no JUCE dependency, so each is
-// tested without a device or a display (openspec/changes/practice-clock).
+// tested without a device or a display (openspec/changes/archive/2026-11-08-practice-clock).
 //
 // Two halves, split by thread:
 //

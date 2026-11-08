@@ -14,8 +14,8 @@ The source tree groups code first by architectural role, then by feature:
 - `src/application/tools` defines the contract every analysis tool is declared
   and built through — see [Adding a tool](adding-a-tool.md).
 - `src/features` contains user-facing analysis and feedback features.
-- `src/platform` contains shared infrastructure such as microphone capture
-  and the normalized score model.
+- `src/platform` contains shared infrastructure such as microphone capture,
+  the normalized score model, and the practice clock (`platform/transport`).
 
 Shell UI helpers are nested under `shell/ui/main_window`, `feedback`, `settings`,
 and `workspace`; appearance and audio state live under `shell/state`. This
@@ -30,6 +30,7 @@ services.
 `MainComponent` owns:
 
 - one `AudioDeviceManager`
+- the practice clock, and the transport strip that controls it
 - the application `LookAndFeel`
 - the Settings window
 - one live component for each open tool
@@ -103,10 +104,16 @@ JUCE calls `AudioInputService::audioDeviceIOCallbackWithContext` on the
 real-time audio thread. That callback performs only bounded work:
 
 1. clear any requested output buffers
-2. read the atomic mute and input-gain controls
-3. measure the post-gain peak
-4. copy microphone samples into one preallocated SPSC FIFO per active tool
-5. return without allocation, locks, logging, file access, analysis, or UI code
+2. run the practice clock's renderer, which advances the clock and adds the
+   metronome's click to the output (before the mute check, so muting the
+   microphone does not silence it)
+3. read the atomic mute and input-gain controls
+4. measure the post-gain peak
+5. copy microphone samples into one preallocated SPSC FIFO per active tool
+6. return without allocation, locks, logging, file access, analysis, or UI code
+
+The renderer's bounds, and how it is published to the callback, are in
+[Audio-thread safety](../performance/audio-thread-safety.md#rendering-the-practice-clock).
 
 Each tool drains only its own FIFO from its message-thread timer and performs
 analysis there. A slow tool therefore cannot block capture or prevent another
@@ -182,9 +189,9 @@ callback is unchanged. See `openspec/specs/tool-registry/spec.md`.
 ### Services and lifetime
 
 A tool reaches shared state only through `ToolServices`, passed to its factory.
-It is a struct rather than a widening parameter list so a new service — a
-transport, when reference tempo lands — is one field instead of a signature
-change at every factory.
+It is a struct rather than a widening parameter list so a new service is one
+field instead of a signature change at every factory. The practice clock
+arrived that way, as `ToolServices::clock`.
 
 `MainComponent` holds one `LiveTool` per instance: the component, its docked and
 floating chrome, its presentation state, its last floating bounds, and its last
@@ -195,6 +202,47 @@ where it was with the settings it had.
 `liveTools` is declared after `audioInputService` and `appLookAndFeel`, so
 reverse-order member destruction tears every tool down first. There is no
 runtime check; moving that declaration would silently break the guarantee.
+
+The practice clock has an ordering of its own inside that rule.
+`practiceClock` is declared after `audioInputService`, whose callback runs its
+renderer, and after `scoreImport`, whose score it plays. Its destructor takes
+the renderer back from the callback, waiting for any callback still inside it,
+so it has to run while the service still exists. `transportStrip` comes after
+`practiceClock`, and `liveTools` after both.
+
+## Practice clock
+
+One clock per application, in `src/platform/transport/`, specified by the
+`practice-clock` change. Its position is an integer count of frames of the
+callback that captures the microphone, so a captured sample and the clock's
+position at the same frame are the same instant.
+
+- **`ClockMath.h`** (JUCE-free) holds every timing rule:
+  - the segment table flattened from the score's tempo map and meter (at most
+    512 segments);
+  - frames ↔ ticks at a tempo scale of 5–200%;
+  - bar and beat, and the next click;
+  - the loop wrap, by an exact frame count;
+  - the count-in;
+  - re-anchoring the position when the scale changes.
+- **`ClockRenderer`** is the audio-thread half, hosted by the callback. It
+  keeps the position, counts in, loops and clicks. It reads only the table and
+  commands the message thread publishes to it, never the score.
+- **`PracticeClock`** is the message-thread half, owned by `MainComponent` and
+  passed to tools as `ToolServices::clock`. It:
+  - rebuilds and republishes the table when the score, the scale, the loop or
+    the sample rate changes;
+  - notifies `ClockListener`s at 60 Hz with a `ClockPosition`, with seeks,
+    wraps and the end of the piece delivered once each;
+  - publishes the (frame, high-resolution time) pair, so an event from another
+    thread, such as a MIDI note, can be placed on the timeline.
+- **`TransportStrip`** puts the controls in the window's control strip once a
+  score is open.
+
+The device is opened with two outputs beside its inputs. If that fails, it is
+opened input-only and Settings says why the metronome is silent. The clock
+keeps time either way. With no device at all, the synthetic-input generator
+hands it blocks.
 
 Presentation is not ownership. `DockedToolPanel` and `ToolWindow` hold a tool's
 chrome, never the tool, which is what lets a tool move between docked and

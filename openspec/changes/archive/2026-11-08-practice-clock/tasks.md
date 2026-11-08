@@ -66,12 +66,13 @@
 - [x] 5.2 An approved state with the clock playing a score, plus its capture
       surface. Read the pictures.
 - [ ] 5.3 On real speakers: the click is in time, and audible with the
-      microphone muted. **Needs a person.**
+      microphone muted. **Needs a person.** *Moved to #323
+      (`status:ready-for-human`), part of the hardware session in #284.*
 
 ## 6. Docs
 
-- [ ] 6.1 `audio-thread-safety.md`: rendering the clock is a permitted callback
+- [x] 6.1 `audio-thread-safety.md`: rendering the clock is a permitted callback
       activity, and how it is bounded.
-- [ ] 6.2 `ARCHITECTURE.md` (the transport, and the ownership order), the wiki
+- [x] 6.2 `ARCHITECTURE.md` (the transport, and the ownership order), the wiki
       (Tools or Getting Started: the transport, the metronome, loops), and the
       Features page row for #36.

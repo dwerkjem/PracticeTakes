@@ -5,7 +5,7 @@
 #include <memory>
 
 // What of the audio device state travels in a settings transfer file, and what
-// stays with the machine (openspec/changes/practice-clock, design.md,
+// stays with the machine (openspec/changes/archive/2026-11-08-practice-clock, design.md,
 // Migration Plan).
 //
 // The output device -- the speakers or headphones the metronome plays through

@@ -22,7 +22,10 @@ The callback may:
 - render the synthetic tone into a preallocated block;
 - measure peak level and set a clipping flag;
 - push samples into one preallocated 65,536-sample SPSC FIFO per active
-  consumer, and increment a bounded drop counter when a FIFO is full.
+  consumer, and increment a bounded drop counter when a FIFO is full;
+- run the one `RealtimeRenderer` it hosts, the practice clock, after the output
+  is cleared and before the mute check (see
+  [Rendering the practice clock](#rendering-the-practice-clock)).
 
 The callback must not:
 
@@ -46,6 +49,45 @@ and never overwrites unread data.
 
 `AudioInputService.cpp` rejects unsupported targets at compile time with
 `is_always_lock_free` assertions for every atomic type the callback reads.
+
+## Rendering the practice clock
+
+The callback is the application's only output path, and the practice clock
+(`src/platform/transport/`, openspec change `practice-clock`) is the only thing
+that renders into it. `AudioInputService::setRealtimeRenderer` publishes one
+`RealtimeRenderer` with release, and the callback reads it with acquire.
+Replacing or removing it waits for `callbacksInProgress` to reach zero, the
+bargain `removeListener` makes, so a renderer is never destroyed while a
+callback is inside it. The synthetic-input generator counts as a callback for
+that wait: with no device it calls the same renderer, with no output, so the
+clock keeps time.
+
+`ClockRenderer::render` is `noexcept PRACTICE_TAKES_NONBLOCKING`, like the
+callback. What it does, and why each part is bounded:
+
+- **One acquire load picks up a new segment table, if one was published.**
+  The message thread fills one of two preallocated slots and publishes a
+  generation. The renderer echoes it back, and a slot is never refilled before
+  that echo. Moving the position to the new table is two binary searches.
+- **It drains a 64-entry SPSC command queue**: play, pause, stop, seek. The
+  queue is fixed-size and the message thread never waits on it.
+- **It finds each click in the block by binary search over at most 512
+  segments, plus a multiply.** A block is split at most 64 times (count-in,
+  loop wrap, end of piece), and each span holds at most 64 clicks. Those caps
+  hold for any table at all, not just a sensible one.
+- **It copies a click into the output**: at most one 30 ms click, synthesised
+  on the message thread when its table was built. It carries across a block
+  boundary by a read position.
+- **It writes a sequence-locked snapshot and three counters** (seeks, wraps,
+  ends) as relaxed atomics, and reads the high-resolution clock once.
+
+Measured by the `[.benchmark]` case "rendering a block against a full segment
+table": a 512-frame block against a full 512-segment table takes about 0.74 µs.
+
+The renderer runs before the mute check, so muting the microphone does not
+silence the metronome. It is driven through the real callback by four
+`[callback]` cases in `AudioInputServiceTests.cpp`, so the Realtime job sees
+it run.
 
 ## How it is enforced
 
@@ -85,7 +127,9 @@ not as "the contract holds".
 
 - **Only the paths the harness drives.** RTSan sees the branches
   `src/tests/platform/audio/AudioInputServiceTests.cpp` executes: output
-  clearing, mute, gain, the FIFO push, zero samples, and null input pointers.
+  clearing, mute, gain, the FIFO push, zero samples, null input pointers, and
+  the practice clock's renderer (a click, a muted block, no output, a removed
+  renderer).
   The synthetic-tone branch, the multi-consumer loop with more than one active
   consumer, and every device-lifecycle path are not driven, so an allocation
   added there would not be caught. Widening the harness is #116.

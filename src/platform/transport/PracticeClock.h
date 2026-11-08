@@ -12,7 +12,7 @@
 #include "ClockRenderer.h"
 
 // The practice clock: one per application, shared by every tool through
-// ToolServices (openspec/changes/practice-clock).
+// ToolServices (openspec/changes/archive/2026-11-08-practice-clock).
 //
 // This is the message-thread half. It owns the `ClockRenderer` that the audio
 // callback runs, and is the only thing that talks to it: it builds the segment

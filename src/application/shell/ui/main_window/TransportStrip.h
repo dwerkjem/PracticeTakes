@@ -8,7 +8,7 @@
 
 // The practice clock's controls, in the main window's control strip: play or
 // pause, stop, where the clock is, the tempo scale, the metronome and the loop
-// (openspec/changes/practice-clock, design.md, decision 1).
+// (openspec/changes/archive/2026-11-08-practice-clock, design.md, decision 1).
 //
 // Shown only once a score is open, because a clock with no score has nothing
 // to play. It reads the clock through a ClockListener like any tool would, and

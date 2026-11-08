@@ -13,7 +13,7 @@
 
 // The practice clock's audio-thread half: it keeps the position, counts in,
 // loops, and sounds the metronome, inside the audio callback
-// (openspec/changes/practice-clock, design.md).
+// (openspec/changes/archive/2026-11-08-practice-clock, design.md).
 //
 // No JUCE dependency, so it is driven in tests block by block, and through the
 // real callback under RealtimeSanitizer.

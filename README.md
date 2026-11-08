@@ -37,6 +37,14 @@ engraved notation, in page, vertical or horizontal views, and an import summary
 says exactly what came in differently from the file. **File → Open sample
 score** opens a bundled song by Mahler if you just want to see it.
 
+### Keep time with it
+
+Once a score is open, the transport in the title bar plays it on a practice
+clock: a count-in, a metronome with the first beat of each bar accented, the
+tempo from 5% to 200%, and a loop that comes round on exactly the same beat
+however long it runs. The clock follows the score's own tempo changes and time
+signatures, and keeps the same timeline as the microphone.
+
 ### Play a MIDI keyboard
 
 Choose a keyboard under **Settings → MIDI** and Practice Takes reads its keys,
