@@ -343,6 +343,14 @@ against it — they can drift (`docs/development/quality/QA_STRATEGY.md` area 12
   through an OpenSpec proposal in `openspec/changes/` first — see
   `docs/development/architecture/ARCHITECTURE_QA.md § When to write more than a checklist
   pass`.
+- The roadmap issue (#10) carries a Live forecast that
+  `.github/workflows/roadmap-forecast.yml` rewrites on every issue close or
+  reopen, from `tools/scripts/planning/roadmap_ledger.json`. When you add,
+  split, move or cut a roadmap issue, change its ledger entry in the same pull
+  request. Close finished work as *completed* and dropped work as *not
+  planned*: the forecast credits only the first. Never edit a commitment date
+  without the maintainer's decision recorded in #10. See
+  `docs/development/operations/ROADMAP_FORECAST.md`.
 - Keep work in progress small: at most three OpenSpec changes in
   implementation at once, archive a change as soon as its last task is done,
   and move a task blocked on hardware to a `status:ready-for-human` issue

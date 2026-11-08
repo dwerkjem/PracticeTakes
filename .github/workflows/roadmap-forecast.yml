@@ -1,0 +1,71 @@
+# Re-forecast the roadmap whenever an issue is closed or reopened, and publish
+# the result into the "Live forecast" block of the roadmap issue (#10).
+#
+# The commitments in #10 are only worth something if slipping is visible the day
+# it starts, so the forecast is re-run on the event that changes it: work being
+# closed (credit) or reopened (credit taken back). The script never moves a
+# commitment; it shows the current forecast beside each one and says whether it
+# is on track. See docs/development/operations/ROADMAP_FORECAST.md.
+name: Roadmap forecast
+
+on:
+  issues:
+    types:
+      - closed
+      - reopened
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+# Serialised, not cancelled: two issues closed a second apart must not race on
+# #10's body, and the later run reads the state both closes left behind.
+concurrency:
+  group: roadmap-forecast
+  cancel-in-progress: false
+
+jobs:
+  forecast:
+    name: Update the live forecast in the roadmap issue
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      # Standard library only, so the runner's preinstalled interpreter is enough.
+      - name: Re-forecast and publish
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_ACTION: ${{ github.event.action }}
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "issues" ]; then
+            trigger="#${ISSUE_NUMBER} was ${ISSUE_ACTION}"
+          else
+            trigger="a manual run"
+          fi
+          python3 tools/scripts/planning/forecast_roadmap.py \
+            --repo "${GITHUB_REPOSITORY}" \
+            --trigger "${trigger}" \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+      # An issue close nobody is watching is an unattended trigger, so a failure
+      # files an issue rather than sitting in the Actions tab. A manual run's
+      # failure is already in front of whoever started it.
+      - name: Report the failure
+        if: ${{ failure() && github.event_name == 'issues' }}
+        run: |
+          python3 tools/scripts/ci/report_workflow_failure.py \
+            --title "Roadmap forecast: the live forecast in #10 is not updating" \
+            --workflow "${GITHUB_WORKFLOW}" \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --commit "${GITHUB_SHA}" \
+            --trigger "${GITHUB_EVENT_NAME}" \
+            --failing-step "Re-forecast and publish" \
+            --label type:bug \
+            --label priority:p2 \
+            --guidance "The usual causes are a ledger that no longer validates (the log names the issue) or the forecast markers having been deleted from #10's body. Restore the two markers around the Live forecast section, or fix tools/scripts/planning/roadmap_ledger.json, then run the workflow by hand."
