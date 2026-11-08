@@ -14,21 +14,29 @@
 {
     static const ToolCatalog catalog({
         ToolDefinition{
-            "tuner", "Tuner", {"pitch-detector"}, ToolInstancePolicy::single, 1, {920, 760}},
+            "tuner",
+            "Tuner",
+            {"pitch-detector"},
+            ToolInstancePolicy::single,
+            1,
+            {920, 760},
+            /* usesAudioInput */ true},
         ToolDefinition{
             "spectrogram",
             "Spectrogram",
             {"spectrum"},
             ToolInstancePolicy::single,
             std::nullopt,
-            {980, 650}},
+            {980, 650},
+            /* usesAudioInput */ true},
         ToolDefinition{
             "harmonic-analyzer",
             "Harmonic Analyzer",
             {"harmonics", "harmonicAnalyzer"},
             ToolInstancePolicy::single,
             std::nullopt,
-            {980, 700}},
+            {980, 700},
+            /* usesAudioInput */ true},
         ToolDefinition{
             "target-note",
             "Target Note",

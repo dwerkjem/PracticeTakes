@@ -2,6 +2,7 @@
 
 #include "WorkspaceBuiltIns.h"
 #include "WorkspaceNormalizer.h"
+#include "application/tools/ToolInstanceLabel.h"
 
 #include <juce_core/juce_core.h>
 
@@ -15,6 +16,10 @@ namespace
 {
 constexpr std::size_t maximumIdentifierCharacters = 128;
 constexpr std::size_t maximumPayloadCharacters = 256 * 1024;
+// A label is at most ToolInstanceLabel::maximumCharacters code points, which is
+// up to four bytes each in UTF-8; anything longer than that was not written by
+// this application.
+constexpr std::size_t maximumLabelCharacters = ToolInstanceLabel::maximumCharacters * 4;
 constexpr std::size_t maximumParsedCollectionEntries = 4096;
 constexpr std::size_t maximumParsedNodes = 4096;
 
@@ -172,6 +177,23 @@ struct SnapshotDecodeContext
         settings->setProperty(juce::Identifier(propertyName), value.release());
     }
     object->setProperty("toolSettings", settings.release());
+
+    // Written only when there is a label to keep, so a snapshot without any is
+    // byte-identical to one written before labels existed.
+    if (!snapshot.toolLabels.empty())
+    {
+        auto labels = std::make_unique<juce::DynamicObject>();
+        for (const auto& [instanceId, label] : snapshot.toolLabels)
+        {
+            const auto propertyName = toJuceString(instanceId);
+            if (label.empty() || !juce::Identifier::isValidIdentifier(propertyName))
+            {
+                continue;
+            }
+            labels->setProperty(juce::Identifier(propertyName), toJuceString(label));
+        }
+        object->setProperty("toolLabels", labels.release());
+    }
     return object.release();
 }
 
@@ -359,6 +381,39 @@ struct SnapshotDecodeContext
             return false;
         }
         decoded.toolSettings.emplace(toolId, std::move(payload));
+    }
+
+    // Optional: absent in every snapshot written before labels existed.
+    if (hasProperty(*object, "toolLabels") && !property(*object, "toolLabels").isVoid())
+    {
+        const auto* labels = property(*object, "toolLabels").getDynamicObject();
+        if (labels == nullptr || static_cast<std::size_t>(labels->getProperties().size()) >
+                                     maximumParsedCollectionEntries)
+        {
+            return false;
+        }
+        for (const auto& item : labels->getProperties())
+        {
+            std::string label;
+            if (!readString(item.value, label, maximumLabelCharacters, true))
+            {
+                return false;
+            }
+
+            const auto instanceId = item.name.toString().toStdString();
+            if (instanceId.empty() || instanceId.size() > maximumIdentifierCharacters)
+            {
+                return false;
+            }
+
+            // A label is user text; whatever was stored, what comes back out
+            // is what the rename dialog itself would have kept.
+            auto sanitised = ToolInstanceLabel::sanitise(label);
+            if (!sanitised.empty())
+            {
+                decoded.toolLabels.emplace(instanceId, std::move(sanitised));
+            }
+        }
     }
 
     snapshot = std::move(decoded);

@@ -10,10 +10,9 @@
 
 // How many live copies of a tool may exist at once.
 //
-// Every tool currently ships `single`. `multi` is declared and enforced but
-// unexercised in production -- it exists so that adding a duplicatable tool
-// later is a one-field change rather than a redesign. See
-// openspec/changes/tool-registry-contract/design.md.
+// The microphone tools are `multi`; the score tools are `single`, since every
+// copy would show the same open score. See
+// openspec/changes/multi-instance-tools/design.md.
 enum class ToolInstancePolicy
 {
     single,
@@ -49,6 +48,11 @@ struct ToolDefinition
     std::optional<int> settingsVersion;
 
     ToolPreferredSize preferredSize;
+
+    // Whether each instance registers its own AudioInputService consumer. The
+    // service has a fixed number of consumer slots, so the shell checks for a
+    // free one before creating another instance of such a tool.
+    bool usesAudioInput = false;
 };
 
 // The roster of tools the application knows about, keyed by tool id.

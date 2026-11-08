@@ -118,3 +118,55 @@ TEST_CASE(
     CHECK(malformed.catalog->active == WorkspaceBuiltIns::pitchPractice().snapshot);
     REQUIRE(malformed.catalog->named.size() == 1);
 }
+TEST_CASE(
+    "a workspace with no instance labels writes no label field",
+    "[workspace][catalog][codec][labels]")
+{
+    // What keeps every workspace saved before labels existed byte-identical
+    // when it is saved again (openspec/changes/multi-instance-tools).
+    const auto encoded = WorkspaceCatalogCodec::encode(sampleCatalog());
+    CHECK(encoded.find("toolLabels") == std::string::npos);
+}
+
+TEST_CASE("instance labels survive a round trip", "[workspace][catalog][codec][labels]")
+{
+    auto catalog = sampleCatalog();
+    catalog.active.toolLabels.emplace("tuner", "Violin");
+    catalog.named.front().snapshot.toolLabels.emplace("spectrogram", "Room");
+
+    const auto encoded = WorkspaceCatalogCodec::encode(catalog);
+    CHECK(encoded.find("toolLabels") != std::string::npos);
+
+    const auto decoded = WorkspaceCatalogCodec::decode(encoded, {{0, 0, 2560, 1400}});
+    REQUIRE(decoded.status == WorkspaceCatalogDecodeStatus::loaded);
+    REQUIRE(decoded.catalog.has_value());
+    CHECK(decoded.catalog->active.toolLabels.at("tuner") == "Violin");
+    CHECK(decoded.catalog->named.front().snapshot.toolLabels.at("spectrogram") == "Room");
+    CHECK(*decoded.catalog == catalog);
+}
+
+TEST_CASE("a stored label is sanitised on the way in", "[workspace][catalog][codec][labels]")
+{
+    const auto decoded = WorkspaceCatalogCodec::decode(
+        R"({"version":1,"active":{"dockRoot":{"kind":"leaf","toolId":"tuner"},"floating":[],"focusedTool":"tuner","toolSettings":{},"toolLabels":{"tuner":"  Vio\u0007lin  ","spectrogram":"   "}},"named":[]})",
+        {});
+    REQUIRE(decoded.status == WorkspaceCatalogDecodeStatus::loaded);
+    REQUIRE(decoded.catalog.has_value());
+    CHECK(decoded.catalog->active.toolLabels.at("tuner") == "Violin");
+    // A label that sanitises to nothing means "the default name", so it is not kept.
+    CHECK_FALSE(decoded.catalog->active.toolLabels.contains("spectrogram"));
+}
+
+TEST_CASE(
+    "a malformed label field is treated like any malformed layout",
+    "[workspace][catalog][codec][labels]")
+{
+    // A broken active layout never blocks startup: it falls back to Pitch
+    // Practice and says it recovered, the same as a malformed dock tree does.
+    const auto decoded = WorkspaceCatalogCodec::decode(
+        R"({"version":1,"active":{"dockRoot":{"kind":"leaf","toolId":"tuner"},"floating":[],"focusedTool":"tuner","toolSettings":{},"toolLabels":{"tuner":42}},"named":[]})",
+        {});
+    REQUIRE(decoded.status == WorkspaceCatalogDecodeStatus::loadedWithRecovery);
+    REQUIRE(decoded.catalog.has_value());
+    CHECK(decoded.catalog->active == WorkspaceBuiltIns::pitchPractice().snapshot);
+}

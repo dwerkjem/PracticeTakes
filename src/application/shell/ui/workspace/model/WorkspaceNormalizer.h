@@ -88,6 +88,24 @@ class WorkspaceNormalizer
             }
         }
 
+        // A label follows its instance: kept for any instance that could be
+        // placed, dropped with an instance that could not (a single-instance
+        // duplicate, an unknown tool), and capped like the settings.
+        std::size_t labelCount = 0;
+        for (const auto& [id, label] : source.toolLabels)
+        {
+            if (labelCount++ >= maximumToolSettings)
+            {
+                context.report.exceededCollectionLimit = true;
+                break;
+            }
+            const auto resolved = placeableInstance(id, context);
+            if (resolved.has_value() && !label.empty())
+            {
+                normalized.toolLabels.emplace(*resolved, label);
+            }
+        }
+
         const auto resolvedFocus =
             source.focusedTool.has_value() ? placeableInstance(*source.focusedTool, context)
                                            : std::nullopt;

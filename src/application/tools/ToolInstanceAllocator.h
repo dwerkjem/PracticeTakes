@@ -48,4 +48,48 @@ namespace ToolInstanceAllocator
         }
     }
 }
+
+// The instance "Open or focus" means: the first live instance of the tool, or
+// ordinal 1 when none is live. Unlike nextInstanceId, this never mints a new
+// ordinal, so for a multi-instance tool "Open or focus" focuses what is there
+// instead of adding another copy each time it is chosen. `highestOrdinal`
+// bounds the search; the shell passes the largest ordinal it has live.
+[[nodiscard]] inline std::optional<ToolInstanceId> instanceToFocus(
+    const ToolCatalog& catalog,
+    std::string_view toolId,
+    const std::function<bool(const ToolInstanceId&)>& isLive,
+    std::size_t highestOrdinal)
+{
+    if (catalog.find(toolId) == nullptr)
+    {
+        return std::nullopt;
+    }
+
+    if (isLive)
+    {
+        for (std::size_t ordinal = 1; ordinal <= highestOrdinal; ++ordinal)
+        {
+            auto candidate = ToolInstanceId::forOrdinal(toolId, ordinal);
+            if (isLive(candidate))
+            {
+                return candidate;
+            }
+        }
+    }
+    return ToolInstanceId::forOrdinal(toolId, 1);
+}
+
+// Whether "Open another" can create an instance now. Never for a
+// single-instance tool; for a tool that takes an audio consumer, only while the
+// shared input service has a slot free -- addListener cannot fail loudly on the
+// audio side, so the shell refuses first and says why.
+[[nodiscard]] inline bool
+mayOpenAnother(const ToolDefinition& definition, std::size_t freeConsumerSlots) noexcept
+{
+    if (definition.instancePolicy != ToolInstancePolicy::multi)
+    {
+        return false;
+    }
+    return !definition.usesAudioInput || freeConsumerSlots > 0;
+}
 } // namespace ToolInstanceAllocator

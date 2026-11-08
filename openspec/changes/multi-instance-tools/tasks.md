@@ -1,21 +1,21 @@
 ## 1. Pure rules, tested headless
 
-- [ ] 1.1 Add `src/application/tools/ToolInstanceLabel.h`:
+- [x] 1.1 Add `src/application/tools/ToolInstanceLabel.h`:
       - `defaultName(displayName, ordinal)`: the display name for ordinal 1,
         and the display name, a space and the ordinal after that;
       - `sanitise(label)`: trim, strip control characters, cap at 40 characters,
         and return empty to mean "use the default".
 
       No JUCE include.
-- [ ] 1.2 Add `ToolInstanceAllocator::instanceToFocus(catalog, toolId, isLive)`:
+- [x] 1.2 Add `ToolInstanceAllocator::instanceToFocus(catalog, toolId, isLive)`:
       the first live instance of a tool, or ordinal 1 when none is live. "Open or
       focus" uses it; `nextInstanceId` stays what "Open another" uses.
-- [ ] 1.3 Add `ToolInstanceAllocator::mayOpenAnother(definition, freeConsumerSlots)`:
+- [x] 1.3 Add `ToolInstanceAllocator::mayOpenAnother(definition, freeConsumerSlots)`:
       false for a single-instance tool, and false for an audio-consuming tool
       when no slot is free.
-- [ ] 1.4 Add `bool usesAudioInput` to `ToolDefinition`, defaulting to false,
+- [x] 1.4 Add `bool usesAudioInput` to `ToolDefinition`, defaulting to false,
       and set it for the tuner, spectrogram and harmonic analyzer.
-- [ ] 1.5 Tests in `src/tests/application/tools/`: a new
+- [x] 1.5 Tests in `src/tests/application/tools/`: a new
       `ToolInstanceLabelTests.cpp`, and new cases beside the existing allocator
       cases in `ToolLifecycleTests.cpp` for `instanceToFocus`, `mayOpenAnother`,
       and ordinal reuse with the real built-in catalog. Add the new test file to
@@ -23,24 +23,24 @@
 
 ## 2. Labels in the workspace document
 
-- [ ] 2.1 Add `std::map<std::string, std::string> toolLabels` to
+- [x] 2.1 Add `std::map<std::string, std::string> toolLabels` to
       `WorkspaceSnapshot`. Encode it in `WorkspaceCatalogCodec.cpp` only when
       non-empty, decode it when present, sanitise each label, and cap the count
       at `maximumToolSettings`.
-- [ ] 2.2 `WorkspaceNormalizer` drops labels for instances it drops, such as a
+- [x] 2.2 `WorkspaceNormalizer` drops labels for instances it drops, such as a
       single-instance duplicate or an unknown tool.
-- [ ] 2.3 Codec tests: a round trip with labels; a document without
+- [x] 2.3 Codec tests: a round trip with labels; a document without
       `toolLabels` decodes and re-encodes byte-identical; an oversized or
       control-character label is sanitised. The existing workspace and
       settings-transfer fixtures must pass unchanged.
 
 ## 3. Audio consumer capacity
 
-- [ ] 3.1 Add `AudioInputService::freeConsumerSlots()`, message-thread only,
+- [x] 3.1 Add `AudioInputService::freeConsumerSlots()`, message-thread only,
       counted under `consumerLock`. No change to the callback, the slot array
       or `maximumConsumers`. Keep the callback's `noexcept
       PRACTICE_TAKES_NONBLOCKING` annotation untouched.
-- [ ] 3.2 Test it in `AudioInputServiceTests.cpp`: eight free slots minus the
+- [x] 3.2 Test it in `AudioInputServiceTests.cpp`: eight free slots minus the
       listeners added, back up on removal. The RealtimeSanitizer job must stay
       green.
 
@@ -90,3 +90,15 @@
       `two-tuners-split` capture.
 - [ ] 6.3 Update #135, removing the #134 dependency (maintainer decision
       2026-11-08) and linking this change. Tick #12's checklist when it closes.
+
+## Decisions made during implementation
+
+- 1.2: `instanceToFocus` takes the highest live ordinal as a bound, rather than
+  scanning an open-ended range, so it never loops on a predicate that answers
+  "live" for everything.
+- 2.1: a malformed `toolLabels` field (a non-string label, say) is handled like
+  any other malformed active layout: the codec falls back to Pitch Practice and
+  reports a recovery, rather than refusing the document. That is the codec's
+  existing rule, which is that a broken layout never blocks startup.
+- 2.1: a label that sanitises to nothing is not stored, because an empty label
+  means "use the default name".

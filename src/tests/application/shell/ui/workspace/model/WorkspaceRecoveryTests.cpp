@@ -129,3 +129,24 @@ TEST_CASE(
     // lingering as an entry nothing will ever read.
     CHECK(result.snapshot.toolSettings.empty());
 }
+
+TEST_CASE("a label follows its instance through normalisation", "[workspace][recovery][labels]")
+{
+    WorkspaceSnapshot snapshot;
+    snapshot.dockRoot = WorkspaceNode::leaf("tuner");
+    snapshot.toolLabels = {
+        {"tuner", "Violin"},
+        {"pitch-detector", "Alias"}, // an old alias of the tuner
+        {"missing-tool", "Gone"},
+        {"score-view#2", "Duplicate"}, // a single-instance tool has no second instance
+    };
+
+    const auto result = WorkspaceNormalizer::normalize(snapshot, {{0, 0, 1920, 1040}});
+
+    // The alias resolves onto the tuner too; std::map keeps whichever came
+    // first, and neither an unknown tool nor a forbidden duplicate keeps one.
+    CHECK(result.snapshot.toolLabels.contains("tuner"));
+    CHECK_FALSE(result.snapshot.toolLabels.contains("missing-tool"));
+    CHECK_FALSE(result.snapshot.toolLabels.contains("score-view#2"));
+    CHECK(result.snapshot.toolLabels.size() == 1);
+}
