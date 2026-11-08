@@ -1,6 +1,6 @@
 ## 1. The reference pitch
 
-- [ ] 1.1 `pitch::ReferencePitch` and the conversions (JUCE-free); `PitchTracker`
+- [x] 1.1 `pitch::ReferencePitch` and the conversions (JUCE-free); `PitchTracker`
       reads it from its settings. Tests.
 - [ ] 1.2 Owned by `MainComponent`, in `ToolServices`, set in Settings → Practice,
       saved locally; the tuner passes it on. Tests for the setting.

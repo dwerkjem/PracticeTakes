@@ -30,12 +30,12 @@ void settle(PitchTracker& tracker, double frequency, int frames = 30)
 
 TEST_CASE("PitchTracker converts between frequency and MIDI", "[tuner][pitch-tracker]")
 {
-    CHECK(PitchTracker::frequencyToMidi(a4) == Catch::Approx(69.0));
-    CHECK(PitchTracker::midiToFrequency(69.0) == Catch::Approx(a4));
+    CHECK(PitchTracker::frequencyToMidi(a4, 440.0) == Catch::Approx(69.0));
+    CHECK(PitchTracker::midiToFrequency(69.0, 440.0) == Catch::Approx(a4));
 
     // An octave is twelve semitones in either direction.
-    CHECK(PitchTracker::frequencyToMidi(a4 * 2.0) == Catch::Approx(81.0));
-    CHECK(PitchTracker::midiToFrequency(57.0) == Catch::Approx(a4 / 2.0));
+    CHECK(PitchTracker::frequencyToMidi(a4 * 2.0, 440.0) == Catch::Approx(81.0));
+    CHECK(PitchTracker::midiToFrequency(57.0, 440.0) == Catch::Approx(a4 / 2.0));
 }
 
 TEST_CASE("A steady pitch is reported and held", "[tuner][pitch-tracker]")
@@ -255,7 +255,7 @@ TEST_CASE("Easing controls how quickly the display follows", "[tuner][pitch-trac
         (void)fast.detected(target, fastSettings);
     }
 
-    const auto targetMidi = PitchTracker::frequencyToMidi(target);
+    const auto targetMidi = PitchTracker::frequencyToMidi(target, 440.0);
     CHECK(
         std::abs(fast.smoothedMidiNote() - targetMidi) <
         std::abs(slow.smoothedMidiNote() - targetMidi));
@@ -286,4 +286,30 @@ TEST_CASE("Note names cover the octave and its boundaries", "[tuner][pitch-track
     CHECK(noteNameForMidi(59) == "B3");
     CHECK(noteNameForMidi(12) == "C0");
     CHECK(noteNameForMidi(0) == "C-1");
+}
+
+TEST_CASE("the tracker reads against the application's reference", "[tuner][tracker][reference]")
+{
+    // A442: a 442 Hz tone is A4 in tune, and 440 Hz is A4 about 8 cents flat.
+    PitchTracker::Settings settings;
+    settings.referenceHz = 442.0;
+    settings.easing = 1.0;
+    settings.averaging = 1.0;
+
+    PitchTracker tuned;
+    PitchTracker::Update update;
+    for (int frame = 0; frame < 10; ++frame)
+    {
+        update = tuned.detected(442.0, settings);
+    }
+    CHECK(update.displayedMidiNote == 69);
+    CHECK(update.displayedCents == Catch::Approx(0.0).margin(0.01));
+
+    PitchTracker flat;
+    for (int frame = 0; frame < 10; ++frame)
+    {
+        update = flat.detected(440.0, settings);
+    }
+    CHECK(update.displayedMidiNote == 69);
+    CHECK(update.displayedCents == Catch::Approx(-7.85).margin(0.05));
 }

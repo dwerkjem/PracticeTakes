@@ -6,21 +6,18 @@
 
 namespace
 {
-constexpr double referenceFrequencyHz = 440.0;
-constexpr int referenceMidiNote = 69;
-
 constexpr std::array<const char*, 12> noteNames{
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 } // namespace
 
-double PitchTracker::frequencyToMidi(double frequency)
+double PitchTracker::frequencyToMidi(double frequency, double reference)
 {
-    return referenceMidiNote + 12.0 * std::log2(frequency / referenceFrequencyHz);
+    return pitch::frequencyToMidi(frequency, reference);
 }
 
-double PitchTracker::midiToFrequency(double midiPitch)
+double PitchTracker::midiToFrequency(double midiPitch, double reference)
 {
-    return referenceFrequencyHz * std::pow(2.0, (midiPitch - referenceMidiNote) / 12.0);
+    return pitch::midiToFrequency(midiPitch, reference);
 }
 
 std::string noteNameForMidi(int midiNote)
@@ -33,6 +30,7 @@ std::string noteNameForMidi(int midiNote)
 
 PitchTracker::Update PitchTracker::detected(double frequency, const Settings& settings)
 {
+    referenceHz = pitch::clampReference(settings.referenceHz);
     Update update;
 
     if (!isConfirmedPitch(frequency))
@@ -91,7 +89,7 @@ PitchTracker::Update PitchTracker::missing(const Settings& settings)
 
 bool PitchTracker::isConfirmedPitch(double frequency)
 {
-    const auto midiPitch = frequencyToMidi(frequency);
+    const auto midiPitch = frequencyToMidi(frequency, referenceHz);
     if (std::abs(smoothedMidi) <= std::numeric_limits<double>::epsilon() ||
         std::abs(midiPitch - smoothedMidi) <= immediatePitchJumpSemitones)
     {
@@ -131,7 +129,7 @@ bool PitchTracker::isConfirmedPitch(double frequency)
 
 double PitchTracker::smoothFrequency(double frequency, double easing, double averaging)
 {
-    const auto midiPitch = frequencyToMidi(frequency);
+    const auto midiPitch = frequencyToMidi(frequency, referenceHz);
 
     recentMidiPitches[static_cast<std::size_t>(recentPitchWriteIndex)] = midiPitch;
     recentPitchWriteIndex = (recentPitchWriteIndex + 1) % maximumAverageWindow;
@@ -143,7 +141,7 @@ double PitchTracker::smoothFrequency(double frequency, double easing, double ave
                        ? averagedMidiPitch
                        : smoothedMidi + easing * (averagedMidiPitch - smoothedMidi);
 
-    return midiToFrequency(smoothedMidi);
+    return midiToFrequency(smoothedMidi, referenceHz);
 }
 
 double PitchTracker::averageRecentMidiPitches(double averaging) const
@@ -164,7 +162,7 @@ double PitchTracker::averageRecentMidiPitches(double averaging) const
 
 void PitchTracker::updateDisplayedNote(double frequency, double noteSwitchSemitones)
 {
-    const auto midiPitch = frequencyToMidi(frequency);
+    const auto midiPitch = frequencyToMidi(frequency, referenceHz);
     const auto nearestMidiNote = static_cast<int>(std::round(midiPitch));
 
     if (!hasLockedMidiNote)
