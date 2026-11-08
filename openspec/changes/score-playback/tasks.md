@@ -10,7 +10,7 @@
 
 - [x] 2.1 `playbackEventsOf` (decision 3). Tests.
 - [x] 2.2 `PlaybackMix` and its mask (decision 5). Tests.
-- [ ] 2.3 `ScoreSynth`: load on a worker, channels and voices up front, render
+- [x] 2.3 `ScoreSynth`: load on a worker, channels and voices up front, render
       bounded. Tests against the real SoundFont.
 - [ ] 2.4 `ClockRenderer`: events in the slot, dispatch, the mask, releases on
       every discontinuity, the score's volume. Tests, and the RealtimeSanitizer

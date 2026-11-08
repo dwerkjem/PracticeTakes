@@ -263,6 +263,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/transport/PlaybackMix.h
     src/platform/transport/PracticeClock.cpp
     src/platform/transport/PracticeClock.h
+    src/platform/transport/ScoreSynth.cpp
+    src/platform/transport/ScoreSynth.h
 )
 # The test target is not just the tests: it also compiles the production
 # sources under test, and deliberately only those. A file added here starts
@@ -377,6 +379,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/transport/ClockRendererTests.cpp
     src/tests/platform/transport/PlaybackEventsTests.cpp
     src/tests/platform/transport/PracticeClockTests.cpp
+    src/tests/platform/transport/ScoreSynthTests.cpp
     src/application/configuration/SettingsPersistence.cpp
     src/application/configuration/SettingsTransferCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.cpp
@@ -427,6 +430,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/score/musicxml/read/MusicXmlValueParsing.cpp
     src/platform/transport/ClockRenderer.cpp
     src/platform/transport/PlaybackEvents.cpp
+    src/platform/transport/ScoreSynth.cpp
     src/platform/transport/PracticeClock.cpp
     src/platform/take/TakeRecorder.cpp
     src/platform/evaluation/OnsetDetector.cpp
