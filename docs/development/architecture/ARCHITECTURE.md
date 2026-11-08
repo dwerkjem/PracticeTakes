@@ -280,8 +280,13 @@ JUCE-free and runs on the message thread after a take, never during one.
   - a verdict for each attack: early, on time, late or absent, in
     milliseconds and beats, with a tempo-scaled tolerance.
 
-  `judgeTake(take, part)` is the entry point. #48 adds pitch to the same
-  alignment, and #52 draws the results on the score.
+  `judgeTake(take, part)` is the entry point.
+- **Note matching** (the archived `note-matching` change) compares pitches
+  within the moments onset timing matched. Each written note is correct,
+  wrong (keeping what was played), missed, or not judged for pitch when the
+  evidence has none: the microphone, until #42. Every played note left over is
+  extra, and a pairing with an equally good alternative is marked ambiguous.
+  `judgeNotes(take, part)` runs both. #52 draws the results on the score.
 
 Presentation is not ownership. `DockedToolPanel` and `ToolWindow` hold a tool's
 chrome, never the tool, which is what lets a tool move between docked and
