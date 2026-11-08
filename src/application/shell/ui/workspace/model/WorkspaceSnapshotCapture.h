@@ -20,6 +20,8 @@ class WorkspaceSnapshotCapture
         WorkspaceToolState::Presentation presentation = WorkspaceToolState::Presentation::closed;
         WorkspaceBounds floatingBounds;
         std::optional<ToolSettingsPayload> settings;
+        // The user's name for the instance; empty when it has none.
+        std::string label;
     };
 
     [[nodiscard]] static WorkspaceSnapshot capture(
@@ -39,6 +41,10 @@ class WorkspaceSnapshotCapture
             if (tool.settings.has_value())
             {
                 snapshot.toolSettings.insert_or_assign(tool.id, *tool.settings);
+            }
+            if (!tool.label.empty())
+            {
+                snapshot.toolLabels.insert_or_assign(tool.id, tool.label);
             }
         }
 

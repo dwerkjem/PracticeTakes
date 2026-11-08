@@ -86,6 +86,30 @@ could be read by a tool. It is due to be replaced by a target note the whole
 application shares, which the tuner will show beside its own reading
 ([#227](https://github.com/dwerkjem/PracticeTakes/issues/227)).
 
+## Two of the same tool
+
+The tuner, the spectrogram and the harmonic analyzer can each be open more than
+once: two tuners side by side, or two spectrograms at different settings. Each
+copy has its own settings, its own analysis and its own place in the workspace.
+
+- **Tools → *tool* → Open another** opens a new copy. **Open or focus** still
+  goes to the one already open.
+- Copies after the first are numbered: *Tuner*, *Tuner 2*.
+- **Rename...**, in the Tools menu or the tool's own **...** menu, gives a copy
+  a name of your own, such as *Violin*. Leave the name empty to go back to the
+  number. Names are saved with the workspace.
+- Once two copies are open, the tool's Tools submenu lists each one by name,
+  with its own Dock, Float, Rename and Close.
+
+![Two tuners tiled side by side, named Tuner and Tuner 2](images/two-tuners.png)
+
+![The Tools menu with two tuners open: Open or focus, Open another, then an entry for Tuner and one for Tuner 2](images/tools-menu-instances.png)
+
+Every copy listens to the microphone through its own channel, and there are a
+fixed number of them. When none is left, **Open another** is greyed out and
+says *no audio capacity left*. Close a copy to free one. The score view and the
+target note tool open once each, because every copy would show the same score.
+
 ## Coming next
 
 Every planned feature is on the [[Features]] page. Among the first:

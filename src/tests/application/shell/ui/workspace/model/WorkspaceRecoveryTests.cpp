@@ -91,16 +91,14 @@ TEST_CASE(
     "a snapshot naming a single-instance tool twice restores one instance",
     "[workspace][recovery][tools]")
 {
-    // "tuner#2" is a well-formed instance id, so it survives deduplication --
-    // the two ids genuinely differ. It is dropped by the instance policy
-    // instead, because the tuner is declared single-instance. This is the
-    // seam multi-instance would be enabled through: flip the policy and this
-    // snapshot restores two tuners rather than one.
+    // "score-view#2" is a well-formed instance id, so it survives
+    // deduplication -- the two ids genuinely differ. It is dropped by the
+    // instance policy instead, because the score view is single-instance.
     WorkspaceSnapshot snapshot;
     snapshot.dockRoot = WorkspaceNode::split(
-        WorkspaceOrientation::horizontal, 0.5, WorkspaceNode::leaf("tuner"),
-        WorkspaceNode::leaf("tuner#2"));
-    snapshot.focusedTool = "tuner";
+        WorkspaceOrientation::horizontal, 0.5, WorkspaceNode::leaf("score-view"),
+        WorkspaceNode::leaf("score-view#2"));
+    snapshot.focusedTool = "score-view";
 
     const auto result = WorkspaceNormalizer::normalize(snapshot, {{0, 0, 1280, 720}});
 
@@ -109,8 +107,32 @@ TEST_CASE(
     // The split collapsed to the one surviving leaf rather than the whole
     // workspace being refused.
     CHECK(result.snapshot.dockRoot->kind == WorkspaceNodeKind::leaf);
-    CHECK(result.snapshot.dockRoot->toolId == "tuner");
-    CHECK(result.snapshot.focusedTool == "tuner");
+    CHECK(result.snapshot.dockRoot->toolId == "score-view");
+    CHECK(result.snapshot.focusedTool == "score-view");
+}
+
+TEST_CASE(
+    "a snapshot naming a multi-instance tool twice restores both",
+    "[workspace][recovery][tools]")
+{
+    // The same snapshot shape with the tuner, which is multi-instance, keeps
+    // both instances (multi-instance-tools).
+    WorkspaceSnapshot snapshot;
+    snapshot.dockRoot = WorkspaceNode::split(
+        WorkspaceOrientation::horizontal, 0.5, WorkspaceNode::leaf("tuner"),
+        WorkspaceNode::leaf("tuner#2"));
+    snapshot.focusedTool = "tuner#2";
+    snapshot.toolSettings.emplace("tuner#2", ToolSettingsPayload{1, "{}"});
+
+    const auto result = WorkspaceNormalizer::normalize(snapshot, {{0, 0, 1280, 720}});
+
+    REQUIRE(result.snapshot.dockRoot.has_value());
+    CHECK_FALSE(result.report.usedFallback);
+    CHECK(result.snapshot.dockRoot->kind == WorkspaceNodeKind::split);
+    CHECK(result.snapshot.presentationOf("tuner") == WorkspaceToolPresentation::docked);
+    CHECK(result.snapshot.presentationOf("tuner#2") == WorkspaceToolPresentation::docked);
+    CHECK(result.snapshot.focusedTool == "tuner#2");
+    CHECK(result.snapshot.toolSettings.contains("tuner#2"));
 }
 
 TEST_CASE(
@@ -118,9 +140,9 @@ TEST_CASE(
     "[workspace][recovery][tools]")
 {
     WorkspaceSnapshot snapshot;
-    snapshot.dockRoot = WorkspaceNode::leaf("spectrogram");
-    snapshot.floating.push_back({"spectrogram#2", {40, 40, 600, 400}});
-    snapshot.toolSettings.emplace("tuner#4", ToolSettingsPayload{1, "{}"});
+    snapshot.dockRoot = WorkspaceNode::leaf("score-view");
+    snapshot.floating.push_back({"target-note#2", {40, 40, 600, 400}});
+    snapshot.toolSettings.emplace("score-view#4", ToolSettingsPayload{1, "{}"});
 
     const auto result = WorkspaceNormalizer::normalize(snapshot, {{0, 0, 1280, 720}});
 

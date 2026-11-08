@@ -315,7 +315,7 @@ Anything you can look at live, you can look at on a recording
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
 | Dock, float, tile and tab tools | Arrange tools in the window or in their own windows, without restarting them | ✅ | — |
-| Two of the same tool | Open a second tuner or spectrogram side by side | Foundation | [#135](https://github.com/dwerkjem/PracticeTakes/issues/135) |
+| Two of the same tool | Open a second tuner or spectrogram side by side, and name each copy | ✅ | [#135](https://github.com/dwerkjem/PracticeTakes/issues/135) |
 | Docked tools use their room | A docked tool shows more when given more space | 1.0 | [#151](https://github.com/dwerkjem/PracticeTakes/issues/151) |
 
 #### Saved layouts

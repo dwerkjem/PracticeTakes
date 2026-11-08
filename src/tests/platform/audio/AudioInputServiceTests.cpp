@@ -801,7 +801,7 @@ TEST_CASE(
 {
     // The shell asks this before creating another tool that listens, because
     // addListener has no way to tell its caller the slots are full
-    // (openspec/changes/multi-instance-tools).
+    // (openspec/changes/archive/2026-11-08-multi-instance-tools).
     ServiceUnderTest fixture;
     AudioInputService& service = fixture.service;
     const auto initiallyFree = service.freeConsumerSlots();

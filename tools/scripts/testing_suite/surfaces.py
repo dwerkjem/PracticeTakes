@@ -365,6 +365,18 @@ SURFACES: tuple[Surface, ...] = (
         ),
     ),
     Surface(
+        state="two-tuners-split",
+        title="Two tuners tiled side by side",
+        modes=frozenset({FULL}),
+        extras=(
+            Question(
+                "independent",
+                "Does changing one tuner's display mode leave the other as it was?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    Surface(
         state="three-tools-tabbed",
         title="All three tools sharing a tab strip",
         modes=frozenset({FULL}),

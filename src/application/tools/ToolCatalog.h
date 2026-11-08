@@ -12,7 +12,7 @@
 //
 // The microphone tools are `multi`; the score tools are `single`, since every
 // copy would show the same open score. See
-// openspec/changes/multi-instance-tools/design.md.
+// openspec/changes/archive/2026-11-08-multi-instance-tools/design.md.
 enum class ToolInstancePolicy
 {
     single,

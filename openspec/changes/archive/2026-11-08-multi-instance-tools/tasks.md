@@ -46,49 +46,49 @@
 
 ## 4. Shell
 
-- [ ] 4.1 Flip the tuner, spectrogram and harmonic analyzer to
+- [x] 4.1 Flip the tuner, spectrogram and harmonic analyzer to
       `ToolInstancePolicy::multi` in `BuiltInToolCatalog.h`.
-- [ ] 4.2 Rebuild `showToolsMenu` around an (item id → instance, action) table
+- [x] 4.2 Rebuild `showToolsMenu` around an (item id → instance, action) table
       instead of `index × 4 + offset`:
       - "Open or focus";
       - "Open another", disabled with its reason when `mayOpenAnother` is false;
       - per-instance submenus once two or more are live.
-- [ ] 4.3 Add `openAnotherInstance(toolId)`, which uses `nextInstanceId` and
+- [x] 4.3 Add `openAnotherInstance(toolId)`, which uses `nextInstanceId` and
       presents the instance where "Open or focus" would.
-- [ ] 4.4 Add "Rename...", in the Tools menu's per-instance entry and in the
+- [x] 4.4 Add "Rename...", in the Tools menu's per-instance entry and in the
       tool's own **...** options menu (`ToolOptionsButton`, beside "Give
       feedback"). It opens an `AlertWindow` with one text field, prefilled with
       the current name. It stores the label in the `LiveTool` entry and in the
       active workspace, then refreshes the window title, tab label, dock header
       and menu.
-- [ ] 4.5 `toolName` reads the label first, then `ToolInstanceLabel::defaultName`.
-- [ ] 4.6 Capture writes `toolLabels`, and apply restores them before an
+- [x] 4.5 `toolName` reads the label first, then `ToolInstanceLabel::defaultName`.
+- [x] 4.6 Capture writes `toolLabels`, and apply restores them before an
       instance is presented.
-- [ ] 4.7 On restore, open audio-consuming instances in workspace order while
+- [x] 4.7 On restore, open audio-consuming instances in workspace order while
       `freeConsumerSlots()` allows, and leave the rest closed. Confirm the
       restoration code already tolerates an instance it leaves closed. If it
       doesn't, fix that here and record it in this file.
 
 ## 5. Verification
 
-- [ ] 5.1 Add a `two-tuners-split` approved state (two tuners tiled, the second
+- [x] 5.1 Add a `two-tuners-split` approved state (two tuners tiled, the second
       renamed) and its surface. Regenerate
       `docs/contracts/testcontrol/approved-states.json` by building
       `PracticeTakesTests`.
-- [ ] 5.2 Capture `two-tuners-split`, `all-tools-tone` and `tuner-docked` (the
+- [x] 5.2 Capture `two-tuners-split`, `all-tools-tone` and `tuner-docked` (the
       restart surface) at the default, constrained and slim sizes, in both
       themes, and read every image.
-- [ ] 5.3 Run `PracticeTakesTests` and `python tools/scripts/run_tests.py`.
+- [x] 5.3 Run `PracticeTakesTests` and `python tools/scripts/run_tests.py`.
 
 ## 6. Follow-ups and docs
 
-- [ ] 6.1 File an issue for a state-only `AudioInputService` listener. The tuner
+- [x] 6.1 File an issue for a state-only `AudioInputService` listener. The tuner
       and harmonic analyzer hold a FIFO slot they never drain, which halves the
       room for more instances.
-- [ ] 6.2 Update the wiki: Tools ("Open another", renaming, the cap), Workspace
+- [x] 6.2 Update the wiki: Tools ("Open another", renaming, the cap), Workspace
       and Settings, and the Features page row for #135. Add a picture from the
       `two-tuners-split` capture.
-- [ ] 6.3 Update #135, removing the #134 dependency (maintainer decision
+- [x] 6.3 Update #135, removing the #134 dependency (maintainer decision
       2026-11-08) and linking this change. Tick #12's checklist when it closes.
 
 ## Decisions made during implementation
@@ -102,3 +102,33 @@
   existing rule, which is that a broken layout never blocks startup.
 - 2.1: a label that sanitises to nothing is not stored, because an empty label
   means "use the default name".
+- 4.2: `instanceIdToOpen` now means "the first live instance, or the first
+  instance", via `instanceToFocus`, instead of "the next free ordinal". It has
+  callers in settings, presets, legacy state and the test channel, and every
+  one of them wants "the tuner", which the old meaning would have broken the
+  moment the tuner became multi-instance. "Open another" calls `nextInstanceId`
+  directly.
+- 4.3: a reused ordinal starts afresh. A closed "Tuner 2"'s settings, bounds and
+  label are cleared before "Open another" reopens the slot, so a new copy
+  doesn't inherit what an old one was doing.
+- 4.4: "Rename..." is offered for every open instance, single-instance tools
+  included. The spec's naming requirement isn't limited to multi-instance
+  tools, and typing the default name back in clears the label.
+- 4.7: `presentTool` refuses a microphone tool when no slot is free and says
+  why in an alert, so "Open or focus" can't open a deaf tool either. On
+  restore, a microphone instance that can't get a slot is removed from the
+  tiling tree and left closed, as closing it would do. The restore carries on.
+  Instances open in the order the shell lists them (first instances in
+  registry order, then the extra ones the workspace names), not strictly in
+  workspace order.
+- 5.1: the `two-tuners-split` state shows default names. Approved states have
+  no field for a label, and adding one wasn't worth it for one surface.
+  Renaming was verified end to end instead, in a driven session on a private
+  X screen: the menu opens, Rename... shows the dialog, and the title changes
+  in place while both tuners keep analysing.
+- 5.2: the Tools menu can't be reached by the capture harness, which never
+  clicks. It was checked in that same driven session, with one instance and
+  with two. The wiki shows the two-instance menu.
+- 6.1: filed as #317.
+- 6.3: #135 was updated when the proposal merged. The tracker tick happens when
+  this change's PR closes #135.

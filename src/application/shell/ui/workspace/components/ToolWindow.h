@@ -68,6 +68,17 @@ class MainComponent::ToolWindow final : public juce::DocumentWindow
         }
     }
 
+    // The instance's name changed (a rename): the window's title is its name.
+    void setDisplayTitle(const juce::String& title)
+    {
+        setName(title);
+    }
+
+    void setRenameHandler(std::function<void()> handler)
+    {
+        optionsButton.setRenameHandler(std::move(handler));
+    }
+
     void releaseContent()
     {
         if (contentComponent != nullptr)

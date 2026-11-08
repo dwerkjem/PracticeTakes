@@ -57,6 +57,18 @@ class MainComponent::DockedToolPanel final : public juce::Component
         releaseContent();
     }
 
+    // The instance's name changed (a rename): retitled in place, so the tool
+    // inside keeps running.
+    void setDisplayTitle(const juce::String& title)
+    {
+        titleLabel.setText(title, juce::dontSendNotification);
+    }
+
+    void setRenameHandler(std::function<void()> handler)
+    {
+        optionsButton.setRenameHandler(std::move(handler));
+    }
+
     void releaseContent()
     {
         // Handed back before the panel goes: the tool checks whether anyone

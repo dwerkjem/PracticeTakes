@@ -73,3 +73,25 @@ TEST_CASE(
     CHECK(recaptured.focusedTool == "tuner");
     CHECK(recaptured.toolSettings.at("tuner") == *tools[0].settings);
 }
+TEST_CASE(
+    "capture records two instances of one tool and their labels",
+    "[workspace][capture][labels]")
+{
+    constexpr Tool secondTuner{3};
+    WorkspaceLayoutState layout;
+    auto root = WorkspaceLayoutState::makeSplitNode(
+        WorkspaceLayoutState::Orientation::horizontal, 0.5,
+        WorkspaceLayoutState::makeLeafNode(tuner), WorkspaceLayoutState::makeLeafNode(secondTuner));
+    REQUIRE(layout.replaceRoot(std::move(root)));
+
+    auto first = observe("tuner", tuner, Presentation::docked);
+    auto second = observe("tuner#2", secondTuner, Presentation::docked);
+    second.label = "Violin";
+    const auto captured = WorkspaceSnapshotCapture::capture(layout, {first, second}, "tuner#2");
+
+    CHECK(captured.presentationOf("tuner") == WorkspaceToolPresentation::docked);
+    CHECK(captured.presentationOf("tuner#2") == WorkspaceToolPresentation::docked);
+    // Only the renamed instance has a label; the other keeps its default name.
+    REQUIRE(captured.toolLabels.size() == 1);
+    CHECK(captured.toolLabels.at("tuner#2") == "Violin");
+}

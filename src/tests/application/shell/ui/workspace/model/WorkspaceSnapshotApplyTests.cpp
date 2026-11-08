@@ -2,6 +2,7 @@
 
 #include "application/shell/ui/workspace/model/WorkspaceSnapshotApply.h"
 
+#include <algorithm>
 #include <array>
 #include <string>
 #include <vector>
@@ -180,4 +181,48 @@ TEST_CASE(
                           "detach", "replace", "prepare:tuner", "prepare:spectrogram",
                           "prepare:harmonic-analyzer", "present:tuner", "present:spectrogram",
                           "present:harmonic-analyzer", "rebuild", "focus:harmonic-analyzer"});
+}
+
+TEST_CASE(
+    "the instances a snapshot places are listed in order, second instances included",
+    "[workspace][apply][instances]")
+{
+    WorkspaceSnapshot snapshot;
+    snapshot.dockRoot = WorkspaceNode::split(
+        WorkspaceOrientation::horizontal, 0.5, WorkspaceNode::leaf("tuner"),
+        WorkspaceNode::tabGroup({"tuner#2", "spectrogram"}, "tuner#2"));
+    snapshot.floating = {{"harmonics", {0, 0, 600, 400}}, {"missing-tool", {0, 0, 1, 1}}};
+
+    const auto ids = WorkspaceSnapshotApply::referencedInstances(snapshot, builtInToolCatalog());
+
+    // Depth-first through the dock tree, then the floating windows; an alias
+    // resolves to its canonical id and an unknown tool is left out.
+    CHECK(ids == std::vector<std::string>{"tuner", "tuner#2", "spectrogram", "harmonic-analyzer"});
+}
+
+TEST_CASE("a plan carries each instance's label", "[workspace][apply][labels]")
+{
+    WorkspaceSnapshot snapshot;
+    snapshot.dockRoot = WorkspaceNode::split(
+        WorkspaceOrientation::horizontal, 0.5, WorkspaceNode::leaf("tuner"),
+        WorkspaceNode::leaf("tuner#2"));
+    snapshot.toolLabels = {{"tuner#2", "Violin"}};
+
+    auto bindings = toolBindings();
+    bindings.push_back({"tuner#2", WorkspaceLayoutState::Tool{3}});
+    const auto plan = WorkspaceSnapshotApply::plan(snapshot, builtInToolCatalog(), bindings);
+
+    REQUIRE(plan.has_value());
+    const auto directive = std::find_if(
+        plan->tools.begin(), plan->tools.end(),
+        [](const auto& tool) { return tool.id == "tuner#2"; });
+    REQUIRE(directive != plan->tools.end());
+    CHECK(directive->label == "Violin");
+    CHECK(directive->presentation == WorkspaceToolState::Presentation::docked);
+
+    const auto first = std::find_if(
+        plan->tools.begin(), plan->tools.end(),
+        [](const auto& tool) { return tool.id == "tuner"; });
+    REQUIRE(first != plan->tools.end());
+    CHECK(first->label.empty());
 }

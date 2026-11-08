@@ -35,7 +35,7 @@ void MainComponent::captureActiveWorkspace()
 
         observations.push_back(
             {entry.id.value(), entry.handle, entry.state.presentation(),
-             workspaceBounds(entry.savedBounds), entry.savedSettings});
+             workspaceBounds(entry.savedBounds), entry.savedSettings, entry.label});
     }
 
     activeWorkspaceSnapshot =
@@ -44,11 +44,18 @@ void MainComponent::captureActiveWorkspace()
 
 bool MainComponent::applyWorkspaceSnapshot(const WorkspaceSnapshot& snapshot)
 {
-    // Every registered tool gets an entry up front so the plan can place any of
-    // them, whether or not it happens to be live right now.
+    // Every registered tool's first instance gets an entry up front so the
+    // plan can place any of them, whether or not it happens to be live right
+    // now -- and so does every further instance the snapshot names, such as a
+    // second tuner (multi-instance-tools).
     for (const auto& definition : builtInToolRegistry().tools())
     {
-        static_cast<void>(ensureLiveTool(instanceIdToOpen(definition.id)));
+        static_cast<void>(ensureLiveTool(ToolInstanceId::forOrdinal(definition.id, 1)));
+    }
+    for (const auto& id :
+         WorkspaceSnapshotApply::referencedInstances(snapshot, builtInToolRegistry().catalog()))
+    {
+        static_cast<void>(ensureLiveTool(ToolInstanceId(id)));
     }
 
     std::vector<WorkspaceSnapshotApply::ToolBinding> bindings;
@@ -91,8 +98,9 @@ bool MainComponent::applyWorkspaceSnapshot(const WorkspaceSnapshot& snapshot)
 
                 // The stored payload becomes this instance's saved settings
                 // whatever its presentation, so a tool restored closed still
-                // reopens configured the way it was left.
+                // reopens configured the way it was left. The label likewise.
                 entry->savedSettings = directive.settings;
+                entry->label = directive.label;
 
                 if (directive.presentation == WorkspaceToolState::Presentation::closed)
                 {
@@ -106,6 +114,19 @@ bool MainComponent::applyWorkspaceSnapshot(const WorkspaceSnapshot& snapshot)
                     entry->savedBounds = juce::Rectangle<int>{
                         directive.floatingBounds.x, directive.floatingBounds.y,
                         directive.floatingBounds.width, directive.floatingBounds.height};
+                }
+
+                // A workspace can name more microphone tools than there are
+                // audio consumer slots free. Open what fits, and leave the rest
+                // closed and out of the tiling tree, as closing it would -- the
+                // restore carries on rather than failing.
+                if (const auto* definition = definitionFor(entry->id);
+                    entry->component == nullptr && definition != nullptr &&
+                    definition->usesAudioInput && audioInputService.freeConsumerSlots() == 0)
+                {
+                    workspaceLayoutState.remove(entry->handle);
+                    static_cast<void>(entry->state.close());
+                    return;
                 }
 
                 if (entry->component == nullptr)
@@ -128,7 +149,9 @@ bool MainComponent::applyWorkspaceSnapshot(const WorkspaceSnapshot& snapshot)
                     return;
                 }
                 const auto instance = ToolInstanceId(directive.id);
-                if (findLiveTool(instance) == nullptr)
+                const auto* entry = findLiveTool(instance);
+                // Left closed by prepareTool when no audio slot was free.
+                if (entry == nullptr || entry->component == nullptr)
                 {
                     return;
                 }

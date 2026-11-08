@@ -6,16 +6,29 @@ namespace
 {
 constexpr int toolsMenuWidth = 190;
 
-// One block of four consecutive ids per registered tool, so the menu grows
-// with the registry instead of needing a hand-assigned id per tool. The base
-// leaves room below it for the fixed items and room above it, before
-// firstWorkspaceMenuItemId, for far more tools than the roadmap plans.
+// Tool items are numbered from here, one id per item, and looked up in a table
+// built alongside the menu -- each submenu's length varies with how many
+// instances of its tool are open, so a fixed block per tool cannot work. The
+// base leaves room below it for the fixed items and room above it, before
+// firstWorkspaceMenuItemId, for far more items than the instance cap allows.
 constexpr int firstToolMenuItemId = 100;
-constexpr int toolMenuItemsPerTool = 4;
-constexpr int openToolMenuOffset = 0;
-constexpr int dockToolMenuOffset = 1;
-constexpr int floatToolMenuOffset = 2;
-constexpr int closeToolMenuOffset = 3;
+
+enum class ToolMenuAction
+{
+    openOrFocus,
+    openAnother,
+    dock,
+    floating,
+    rename,
+    close
+};
+
+struct ToolMenuItem
+{
+    ToolInstanceId instance;
+    std::string toolId;
+    ToolMenuAction action;
+};
 
 constexpr int horizontalLayoutMenuItemId = 31;
 constexpr int verticalLayoutMenuItemId = 32;
@@ -33,36 +46,77 @@ void MainComponent::showToolsMenu()
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
 
-    // Every registered tool gets the same submenu, built from its definition.
-    // A new tool appears here by being registered -- there is nothing to add.
-    std::vector<ToolInstanceId> menuTools;
-    for (const auto& definition : builtInToolRegistry().tools())
+    // Every registered tool gets a submenu built from its definition, so a new
+    // tool appears here by being registered -- there is nothing to add. A tool
+    // with at most one open instance shows the familiar four items; once a
+    // multi-instance tool has two, each open instance gets its own entry
+    // (openspec/changes/archive/2026-11-08-multi-instance-tools).
+    std::vector<ToolMenuItem> toolItems;
+    const auto addToolItem = [&toolItems](
+                                 juce::PopupMenu& into, const juce::String& text, ToolMenuItem item,
+                                 bool enabled = true, bool ticked = false)
     {
-        const auto instance = instanceIdToOpen(definition.id);
+        into.addItem(
+            firstToolMenuItemId + static_cast<int>(toolItems.size()), text, enabled, ticked);
+        toolItems.push_back(std::move(item));
+    };
+
+    // Dock, float, rename and close for one instance. Dock and Float are the
+    // state -- one of them ticked says it is open and where; neither ticked says
+    // it is closed.
+    const auto addInstanceItems =
+        [this, &addToolItem](juce::PopupMenu& into, const ToolInstanceId& instance)
+    {
         const auto* entry = findLiveTool(instance);
         const auto presentation = entry != nullptr ? entry->state.presentation()
                                                    : WorkspaceToolState::Presentation::closed;
         const auto isOpen = entry != nullptr && entry->state.isOpen();
-        const auto base =
-            firstToolMenuItemId + (static_cast<int>(menuTools.size()) * toolMenuItemsPerTool);
+        const auto toolId = std::string{instance.toolId()};
+        addToolItem(
+            into, "Dock in workspace", {instance, toolId, ToolMenuAction::dock}, true,
+            presentation == WorkspaceToolState::Presentation::docked);
+        addToolItem(
+            into, "Float in window", {instance, toolId, ToolMenuAction::floating}, true,
+            presentation == WorkspaceToolState::Presentation::floating);
+        addToolItem(into, "Rename...", {instance, toolId, ToolMenuAction::rename}, isOpen);
+        into.addSeparator();
+        addToolItem(into, "Close", {instance, toolId, ToolMenuAction::close}, isOpen);
+    };
+
+    for (const auto& definition : builtInToolRegistry().tools())
+    {
+        const auto isMulti = definition.instancePolicy == ToolInstancePolicy::multi;
+        const auto openInstances = openInstancesOf(definition.id);
+        const auto focusTarget = instanceIdToOpen(definition.id);
 
         juce::PopupMenu toolMenu;
         // "Open or focus" is an action, not a state, so it carries no tick.
-        // Dock and Float are the state -- one of them ticked says the tool is
-        // open and says where it is, and neither ticked says it is closed.
-        // Ticking all three said the same thing twice.
-        toolMenu.addItem(base + openToolMenuOffset, "Open or focus", true, false);
-        toolMenu.addItem(
-            base + dockToolMenuOffset, "Dock in workspace", true,
-            presentation == WorkspaceToolState::Presentation::docked);
-        toolMenu.addItem(
-            base + floatToolMenuOffset, "Float in window", true,
-            presentation == WorkspaceToolState::Presentation::floating);
-        toolMenu.addSeparator();
-        toolMenu.addItem(base + closeToolMenuOffset, "Close", isOpen);
+        addToolItem(
+            toolMenu, "Open or focus", {focusTarget, definition.id, ToolMenuAction::openOrFocus});
+        if (isMulti)
+        {
+            const auto mayOpen = mayOpenAnotherInstance(definition.id);
+            addToolItem(
+                toolMenu, mayOpen ? "Open another" : "Open another (no audio capacity left)",
+                {{}, definition.id, ToolMenuAction::openAnother}, mayOpen);
+        }
+
+        if (isMulti && openInstances.size() >= 2)
+        {
+            toolMenu.addSeparator();
+            for (const auto& instance : openInstances)
+            {
+                juce::PopupMenu instanceMenu;
+                addInstanceItems(instanceMenu, instance);
+                toolMenu.addSubMenu(toolName(instance), instanceMenu);
+            }
+        }
+        else
+        {
+            addInstanceItems(toolMenu, focusTarget);
+        }
 
         menu.addSubMenu(juce::String(definition.displayName), toolMenu);
-        menuTools.push_back(instance);
     }
 
     const auto dockedCount = dockedTools().size();
@@ -113,31 +167,38 @@ void MainComponent::showToolsMenu()
             .withTargetComponent(&toolsButton)
             .withMinimumWidth(toolsMenuWidth),
         [safeThis, workspaceIds = std::move(workspaceIds),
-         menuTools = std::move(menuTools)](int selectedItemId)
+         toolItems = std::move(toolItems)](int selectedItemId)
         {
             if (safeThis == nullptr)
             {
                 return;
             }
 
-            const auto toolIndex = (selectedItemId - firstToolMenuItemId) / toolMenuItemsPerTool;
+            const auto toolIndex = selectedItemId - firstToolMenuItemId;
             if (selectedItemId >= firstToolMenuItemId &&
-                toolIndex < static_cast<int>(menuTools.size()))
+                toolIndex < static_cast<int>(toolItems.size()))
             {
-                const auto& instance = menuTools[static_cast<size_t>(toolIndex)];
-                switch ((selectedItemId - firstToolMenuItemId) % toolMenuItemsPerTool)
+                const auto& item = toolItems[static_cast<std::size_t>(toolIndex)];
+                switch (item.action)
                 {
-                case openToolMenuOffset:
-                    safeThis->openTool(instance);
+                case ToolMenuAction::openOrFocus:
+                    safeThis->openTool(item.instance);
                     break;
-                case dockToolMenuOffset:
-                    safeThis->presentTool(instance, WorkspaceToolState::Presentation::docked);
+                case ToolMenuAction::openAnother:
+                    safeThis->openAnotherInstance(item.toolId);
                     break;
-                case floatToolMenuOffset:
-                    safeThis->presentTool(instance, WorkspaceToolState::Presentation::floating);
+                case ToolMenuAction::dock:
+                    safeThis->presentTool(item.instance, WorkspaceToolState::Presentation::docked);
                     break;
-                default:
-                    safeThis->closeTool(instance);
+                case ToolMenuAction::floating:
+                    safeThis->presentTool(
+                        item.instance, WorkspaceToolState::Presentation::floating);
+                    break;
+                case ToolMenuAction::rename:
+                    safeThis->showRenameToolDialog(item.instance);
+                    break;
+                case ToolMenuAction::close:
+                    safeThis->closeTool(item.instance);
                     break;
                 }
             }

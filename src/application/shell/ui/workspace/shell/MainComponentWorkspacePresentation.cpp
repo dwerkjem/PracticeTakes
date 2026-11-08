@@ -1,10 +1,12 @@
 #include "../../../MainComponent.h"
 
 #include "../../../../tools/ToolInstanceAllocator.h"
+#include "../../../../tools/ToolInstanceLabel.h"
 #include "../../../../tools/ToolServices.h"
 #include "../components/DockedToolPanel.h"
 #include "../components/ToolWindow.h"
 
+#include <algorithm>
 #include <utility>
 
 MainComponent::LiveTool* MainComponent::findLiveTool(const ToolInstanceId& instance)
@@ -68,15 +70,160 @@ MainComponent::LiveTool* MainComponent::ensureLiveTool(const ToolInstanceId& ins
 
 ToolInstanceId MainComponent::instanceIdToOpen(std::string_view toolId) const
 {
-    // The policy itself lives in ToolInstanceAllocator so it can be tested
-    // without a display; all the shell contributes is what is currently live.
+    // The rules live in ToolInstanceAllocator so they can be tested without a
+    // display; all the shell contributes is what is currently live.
     const auto isLive = [this](const ToolInstanceId& candidate)
     {
         const auto* existing = findLiveTool(candidate);
         return existing != nullptr && existing->state.isOpen();
     };
-    return ToolInstanceAllocator::nextInstanceId(builtInToolRegistry().catalog(), toolId, isLive)
+    std::size_t highestOrdinal = 1;
+    for (const auto& entry : liveTools)
+    {
+        if (entry.id.toolId() == toolId)
+        {
+            highestOrdinal = std::max(highestOrdinal, entry.id.ordinal().value_or(1));
+        }
+    }
+    return ToolInstanceAllocator::instanceToFocus(
+               builtInToolRegistry().catalog(), toolId, isLive, highestOrdinal)
         .value_or(ToolInstanceId{});
+}
+
+std::vector<ToolInstanceId> MainComponent::openInstancesOf(std::string_view toolId) const
+{
+    std::vector<ToolInstanceId> open;
+    for (const auto& entry : liveTools)
+    {
+        if (entry.id.toolId() == toolId && entry.state.isOpen())
+        {
+            open.push_back(entry.id);
+        }
+    }
+    std::sort(
+        open.begin(), open.end(), [](const ToolInstanceId& left, const ToolInstanceId& right)
+        { return left.ordinal().value_or(1) < right.ordinal().value_or(1); });
+    return open;
+}
+
+bool MainComponent::mayOpenAnotherInstance(std::string_view toolId) const
+{
+    const auto* definition = builtInToolRegistry().catalog().find(toolId);
+    return definition != nullptr && ToolInstanceAllocator::mayOpenAnother(
+                                        *definition, audioInputService.freeConsumerSlots());
+}
+
+void MainComponent::openAnotherInstance(std::string_view toolId)
+{
+    if (!mayOpenAnotherInstance(toolId))
+    {
+        return;
+    }
+
+    const auto isLive = [this](const ToolInstanceId& candidate)
+    {
+        const auto* existing = findLiveTool(candidate);
+        return existing != nullptr && existing->state.isOpen();
+    };
+    const auto instance =
+        ToolInstanceAllocator::nextInstanceId(builtInToolRegistry().catalog(), toolId, isLive);
+    if (!instance.has_value())
+    {
+        return;
+    }
+
+    // A slot that a closed instance gave up is reused, but not what it held:
+    // a new copy starts from the tool's defaults and default name, rather than
+    // inheriting the settings and label of whichever instance last had the
+    // ordinal.
+    if (auto* entry = findLiveTool(*instance); entry != nullptr && !entry->state.isOpen())
+    {
+        entry->savedSettings.reset();
+        entry->savedBounds = {};
+        entry->label.clear();
+    }
+    openTool(*instance, WorkspaceToolState::Presentation::docked);
+}
+
+void MainComponent::showRenameToolDialog(const ToolInstanceId& instance)
+{
+    const auto* definition = definitionFor(instance);
+    if (definition == nullptr || findLiveTool(instance) == nullptr)
+    {
+        return;
+    }
+
+    auto alert = std::make_unique<juce::AlertWindow>(
+        "Rename " + toolName(instance),
+        "A name for this " + juce::String::fromUTF8(definition->displayName.c_str()) +
+            ". Leave it empty to use the default.",
+        juce::MessageBoxIconType::NoIcon, this);
+    alert->setLookAndFeel(&appLookAndFeel);
+    alert->addTextEditor("toolName", toolName(instance), "Name");
+    if (auto* editor = alert->getTextEditor("toolName"))
+    {
+        editor->setInputRestrictions(static_cast<int>(ToolInstanceLabel::maximumCharacters));
+        editor->setTitle("Tool name");
+        editor->setDescription("A name for this tool instance");
+        editor->selectAll();
+    }
+    alert->addButton("Rename", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    alert->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+
+    const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
+    auto* alertPointer = alert.get();
+    alert->enterModalState(
+        true,
+        juce::ModalCallbackFunction::create(
+            [safeThis, alertPointer, instance](int result)
+            {
+                if (safeThis != nullptr && result == 1)
+                {
+                    safeThis->renameTool(instance, alertPointer->getTextEditorContents("toolName"));
+                }
+            }),
+        true);
+    auto* releasedAlert = alert.release();
+    juce::ignoreUnused(releasedAlert);
+}
+
+void MainComponent::renameTool(const ToolInstanceId& instance, const juce::String& requestedName)
+{
+    auto* entry = findLiveTool(instance);
+    const auto* definition = definitionFor(instance);
+    if (entry == nullptr || definition == nullptr)
+    {
+        return;
+    }
+
+    // Typing the default name back in is the same as clearing the label: the
+    // instance keeps following the default if its ordinal's default ever
+    // changes, rather than pinning today's text.
+    auto label = ToolInstanceLabel::sanitise(requestedName.toStdString());
+    if (label ==
+        ToolInstanceLabel::defaultName(definition->displayName, instance.ordinal().value_or(1)))
+    {
+        label.clear();
+    }
+    if (label == entry->label)
+    {
+        return;
+    }
+    entry->label = std::move(label);
+
+    // Renamed in place, never recreated: the tool keeps its analysis running.
+    const auto name = toolName(instance);
+    if (entry->dock != nullptr)
+    {
+        entry->dock->setDisplayTitle(name);
+    }
+    if (entry->window != nullptr)
+    {
+        entry->window->setDisplayTitle(name);
+    }
+    // Tab labels are made when the workspace container is built.
+    rebuildWorkspaceContainer();
+    captureActiveWorkspace();
 }
 
 void MainComponent::openToolById(
@@ -128,6 +275,21 @@ void MainComponent::presentTool(
     currentTool = instance;
     if (entry->component == nullptr)
     {
+        // A microphone tool needs one of AudioInputService's fixed consumer
+        // slots, and addListener has no way to say they are full. So ask first,
+        // and say so, rather than open a tool that silently hears nothing.
+        if (const auto* definition = definitionFor(instance);
+            definition != nullptr && definition->usesAudioInput &&
+            audioInputService.freeConsumerSlots() == 0)
+        {
+            juce::AlertWindow::showMessageBoxAsync(
+                juce::MessageBoxIconType::InfoIcon, "No audio capacity left",
+                "Every slot for a tool that listens to the microphone is in use. Close one of "
+                "the open tuners, spectrograms or harmonic analyzers to open another.",
+                "OK");
+            return;
+        }
+
         static_cast<void>(entry->state.present(presentation));
 
         const ToolServices services{
@@ -215,6 +377,13 @@ void MainComponent::constructToolPresentation(
             safeThis->recordToolFocus(instance);
         }
     };
+    const auto renameHandler = [safeThis, instance]
+    {
+        if (safeThis != nullptr)
+        {
+            safeThis->showRenameToolDialog(instance);
+        }
+    };
 
     if (presentation == WorkspaceToolState::Presentation::docked)
     {
@@ -228,6 +397,7 @@ void MainComponent::constructToolPresentation(
         entry->dock = std::make_unique<DockedToolPanel>(
             toolName(instance), *entry->component, dragHandler, floatHandler, feedbackHandler,
             closeHandler, focusHandler, entry->component.get());
+        entry->dock->setRenameHandler(renameHandler);
     }
     else
     {
@@ -247,6 +417,7 @@ void MainComponent::constructToolPresentation(
         entry->window = std::make_unique<ToolWindow>(
             toolName(instance), *entry->component, preferredSize, dragHandler, dockHandler,
             feedbackHandler, closeHandler, focusHandler, entry->component.get());
+        entry->window->setRenameHandler(renameHandler);
         if (!entry->savedBounds.isEmpty())
         {
             entry->window->setBounds(entry->savedBounds);
@@ -309,13 +480,14 @@ juce::String MainComponent::toolName(const ToolInstanceId& instance) const
         return {};
     }
 
-    const auto name = juce::String(definition->displayName);
-    const auto ordinal = instance.ordinal().value_or(1);
-
-    // Only a duplicate needs disambiguating; the first instance keeps the
-    // tool's plain name, which is what every existing workspace and screenshot
-    // expects to see.
-    return ordinal > 1 ? name + " " + juce::String(static_cast<int>(ordinal)) : name;
+    // The user's label when there is one; otherwise the first instance keeps
+    // the tool's plain name, which is what every existing workspace and
+    // screenshot expects to see, and later ones carry their ordinal.
+    const auto* entry = findLiveTool(instance);
+    return juce::String::fromUTF8(ToolInstanceLabel::displayName(
+                                      definition->displayName, instance.ordinal().value_or(1),
+                                      entry != nullptr ? entry->label : std::string{})
+                                      .c_str());
 }
 
 bool MainComponent::toolIsOpen(const ToolInstanceId& instance) const

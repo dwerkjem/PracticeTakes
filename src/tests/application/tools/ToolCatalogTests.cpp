@@ -19,15 +19,17 @@ TEST_CASE("the built-in catalog declares every shipped tool", "[tools][catalog]"
     }
 }
 
-TEST_CASE("every shipped tool is single-instance", "[tools][catalog]")
+TEST_CASE("only the tools that take audio are multi-instance", "[tools][catalog]")
 {
-    // Multi-instance is declared but deliberately unexercised in production.
-    // If this fails, a tool started duplicating without the workspace model
-    // having been widened for it.
+    // A multi-instance tool needs its own audio consumer per copy, which the
+    // shell counts before opening another; a score tool would only show the
+    // same open score twice (multi-instance-tools). If this fails, a tool's
+    // policy changed without the other half of that reasoning following it.
     for (const auto& definition : builtInToolCatalog().tools())
     {
         INFO("tool id: " << definition.id);
-        CHECK(definition.instancePolicy == ToolInstancePolicy::single);
+        CHECK(
+            (definition.instancePolicy == ToolInstancePolicy::multi) == definition.usesAudioInput);
     }
 }
 

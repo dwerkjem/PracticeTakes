@@ -34,6 +34,7 @@ class ToolOptionsButton final : public juce::TextButton
         changePresentation = 1,
         giveFeedback,
         close,
+        rename,
 
         // The tool's own entries are numbered from here, so adding a shell item
         // above can never collide with them.
@@ -41,6 +42,14 @@ class ToolOptionsButton final : public juce::TextButton
     };
 
   public:
+    // Adds "Rename..." to the menu. Set by the shell after construction rather
+    // than through the constructor, so the existing presentations need no new
+    // parameter to carry it (multi-instance-tools).
+    void setRenameHandler(std::function<void()> handler)
+    {
+        onRename = std::move(handler);
+    }
+
     // Shown by the button, and by a right-click on the tool -- which is the only
     // way to reach it once a pane is too small to show the button at all.
     void showOptions()
@@ -83,6 +92,10 @@ class ToolOptionsButton final : public juce::TextButton
         }
 
         menu.addItem(changePresentation, presentationAction);
+        if (onRename)
+        {
+            menu.addItem(rename, "Rename...");
+        }
         menu.addItem(giveFeedback, "Give feedback");
         menu.addSeparator();
         menu.addItem(close, "Close tool");
@@ -113,6 +126,10 @@ class ToolOptionsButton final : public juce::TextButton
                 else if (selectedItemId == close)
                 {
                     action = safeThis->onClose;
+                }
+                else if (selectedItemId == rename)
+                {
+                    action = safeThis->onRename;
                 }
                 else if (selectedItemId >= firstToolEntry)
                 {
@@ -146,5 +163,6 @@ class ToolOptionsButton final : public juce::TextButton
     std::function<void()> onPresentation;
     std::function<void()> onFeedback;
     std::function<void()> onClose;
+    std::function<void()> onRename;
     std::function<std::vector<ToolComponent::MenuEntry>()> toolEntries;
 };

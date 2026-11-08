@@ -96,6 +96,11 @@ const std::vector<ApprovedWindowState>& states()
         {"tuner-harmonics-split", Tools{"tuner", "harmonics"}, ToolPresentation::docked,
          WorkspaceArrangement::split, WindowGeometry::normal, MicrophoneCondition::available, false,
          "", false, "The tuner and the harmonic analyser tiled side by side"},
+        // Two copies of one tool: the only state where an instance past the
+        // first is on screen (multi-instance-tools).
+        {"two-tuners-split", Tools{"tuner", "tuner#2"}, ToolPresentation::docked,
+         WorkspaceArrangement::split, WindowGeometry::normal, MicrophoneCondition::available, false,
+         "", false, "Two tuners tiled side by side, both reading the same tone", 440.0, ""},
         {"three-tools-tabbed", Tools{"tuner", "spectrogram", "harmonics"}, ToolPresentation::docked,
          WorkspaceArrangement::tabbed, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "All three tools sharing one tab strip"},

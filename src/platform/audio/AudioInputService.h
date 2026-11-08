@@ -83,7 +83,7 @@ class AudioInputService final
     // How many more listeners addListener can take. The consumer slots are
     // preallocated and fixed in number, and addListener cannot report a full
     // array to its caller, so the shell asks this first before creating another
-    // tool that listens (openspec/changes/multi-instance-tools). Message thread
+    // tool that listens (openspec/changes/archive/2026-11-08-multi-instance-tools). Message thread
     // only; it takes the same lock addListener does and never touches the
     // audio callback.
     [[nodiscard]] std::size_t freeConsumerSlots() const;

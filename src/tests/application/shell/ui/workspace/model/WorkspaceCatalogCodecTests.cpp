@@ -123,7 +123,7 @@ TEST_CASE(
     "[workspace][catalog][codec][labels]")
 {
     // What keeps every workspace saved before labels existed byte-identical
-    // when it is saved again (openspec/changes/multi-instance-tools).
+    // when it is saved again (openspec/changes/archive/2026-11-08-multi-instance-tools).
     const auto encoded = WorkspaceCatalogCodec::encode(sampleCatalog());
     CHECK(encoded.find("toolLabels") == std::string::npos);
 }

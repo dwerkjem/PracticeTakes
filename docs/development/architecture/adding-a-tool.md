@@ -33,6 +33,7 @@ ToolDefinition{
 | `instancePolicy` | `single` or `multi`. See below. |
 | `settingsVersion` | Set only if the tool persists settings. Bump it when the payload format changes; stored payloads at any other version are discarded and the tool starts at its defaults. |
 | `preferredSize` | Opening size of the floating window. |
+| `usesAudioInput` | Set when each instance registers an `AudioInputService` listener. The shell checks for a free consumer slot before creating one, so a tool that listens must say so. It also has to be `multi` (a test pins the two together). |
 
 ## 2. Build it
 
@@ -118,25 +119,31 @@ something a reviewer sees — but it is a fourth edit, so expect it.
 
 ## Instance policy
 
-A **tool** is a kind of tool; an **instance** is one live copy. They are
-separate concepts even though every shipped tool is `single`.
+A **tool** is a kind of tool; an **instance** is one live copy.
 
 - `single` — opening the tool while it is already open focuses the existing
-  instance. Its instance id is always exactly the tool id.
-- `multi` — opening it again creates another instance, with the lowest ordinal
-  not currently live. The second instance's id is `"loudness-meter#2"`.
+  instance. Its instance id is always exactly the tool id. The score view and
+  the target note tool are `single`: every copy would show the same open score.
+- `multi` — **Tools → *tool* → Open another** creates another instance, with
+  the lowest ordinal not currently live. The second instance's id is
+  `"loudness-meter#2"`. "Open or focus" still focuses the first live instance;
+  only "Open another" duplicates. The tuner, spectrogram and harmonic analyzer
+  are `multi`.
 
 Two instances share one catalog entry — one name, one factory — but get their
 own settings payload, keyed by instance id, so they can be configured
 differently.
 
-**`multi` is declared and enforced, but no shipped tool uses it.** It is
-deliberately not exercised in production; the branch is kept alive by
-`ToolLifecycleTests`. Before shipping a genuinely multi-instance tool, read
-`openspec/changes/archive/*/tool-registry-contract/design.md` — the deduplication
-in `WorkspaceNormalizer` and `WorkspaceSnapshotApply` already keys on instance
-ids, so the remaining work is display naming and whatever UI offers the
-duplicate action, not the workspace model.
+Each instance is named by `MainComponent::toolName`: the user's label when they
+have renamed it (**Rename...**, in the Tools menu or the tool's **...** menu,
+stored as the workspace's optional `toolLabels`), otherwise the display name,
+with the ordinal after the first ("Tuner 2"). The naming rules are in
+`ToolInstanceLabel.h`.
+
+A multi-instance tool that listens to the microphone is capped by
+`AudioInputService`'s eight consumer slots: "Open another" is disabled, with
+its reason, when none is free. See
+`openspec/changes/archive/*-multi-instance-tools/design.md`.
 
 ## Lifecycle
 
