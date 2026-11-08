@@ -163,6 +163,7 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/PartNames.cpp
     src/features/score/engraving/PartNames.h
     src/features/score/engraving/ScoreLayout.h
+    src/features/score/engraving/NoteHit.h
     src/features/score/engraving/ReviewMarks.cpp
     src/features/score/engraving/ReviewMarks.h
     src/features/score/engraving/ScoreCursor.cpp
@@ -336,6 +337,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/score/engraving/NoteValueTests.cpp
     src/tests/features/score/engraving/PaginationTests.cpp
     src/tests/features/score/engraving/PartNamesTests.cpp
+    src/tests/features/score/engraving/NoteHitTests.cpp
     src/tests/features/score/engraving/ReviewMarksTests.cpp
     src/tests/features/score/engraving/ScoreCursorTests.cpp
     src/tests/features/score/engraving/ScoreLayoutCorpusTests.cpp

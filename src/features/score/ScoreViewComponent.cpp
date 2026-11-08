@@ -1,6 +1,8 @@
 #include "ScoreViewComponent.h"
 
 #include "../../platform/evaluation/TakeReview.h"
+#include "../../platform/score/PitchNames.h"
+#include "engraving/NoteHit.h"
 #include "engraving/PartNames.h"
 #include "engraving/ScoreLayoutEngine.h"
 #include "engraving/StaffGeometry.h"
@@ -97,10 +99,16 @@ void ScoreViewComponent::Canvas::mouseDown(const juce::MouseEvent& event)
 
 void ScoreViewComponent::Canvas::mouseUp(const juce::MouseEvent& event)
 {
-    if (!event.mouseWasDraggedSinceMouseDown())
+    if (event.mouseWasDraggedSinceMouseDown())
     {
-        owner.seekToCanvasPoint(event.position);
+        return;
     }
+    if (event.mods.isPopupMenu())
+    {
+        owner.showNoteMenu(event.position);
+        return;
+    }
+    owner.seekToCanvasPoint(event.position);
 }
 
 void ScoreViewComponent::Canvas::paint(juce::Graphics& graphics)
@@ -418,8 +426,10 @@ void ScoreViewComponent::paintReviewOn(
 ScoreViewComponent::ScoreViewComponent(
     const score::CurrentScore& sharedCurrentScore,
     transport::PracticeClock& practiceClock,
-    take::TakeRecorder& takeRecorder)
-    : currentScore(sharedCurrentScore), clock(practiceClock), takes(takeRecorder)
+    take::TakeRecorder& takeRecorder,
+    pitch::CurrentTarget& applicationTarget)
+    : currentScore(sharedCurrentScore), clock(practiceClock), takes(takeRecorder),
+      target(applicationTarget)
 {
     setComponentID("score-view-tool");
     setWantsKeyboardFocus(true);
@@ -1391,6 +1401,63 @@ void ScoreViewComponent::seekToCanvasPoint(juce::Point<float> point)
         }
         return;
     }
+}
+
+void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
+{
+    juce::PopupMenu menu;
+    for (std::size_t index = 0; index < layout.systems.size() && renderedScore != nullptr; ++index)
+    {
+        const std::optional<SystemOnCanvas> where = systemOnCanvas(index);
+        if (!where.has_value() || !where->bounds.toFloat().contains(point))
+        {
+            continue;
+        }
+        const engraving::System& system = layout.systems.at(index);
+        const double x = (static_cast<double>(point.x) - where->originX) / where->pixelsPerSpace;
+        const double y = (static_cast<double>(point.y) - where->originY) / where->pixelsPerSpace;
+        const std::optional<std::size_t> head = engraving::noteheadAt(system, x, y);
+        if (!head.has_value())
+        {
+            break;
+        }
+        const engraving::NoteheadGlyph& glyph = system.noteheads.at(*head);
+        const auto staff = static_cast<std::size_t>(std::max(0, glyph.staff));
+        if (staff >= system.staffParts.size() ||
+            system.staffParts.at(staff) >= renderedScore->parts.size())
+        {
+            break;
+        }
+        const score::Part& part = renderedScore->parts.at(system.staffParts.at(staff));
+        const score::NoteRef& ref = glyph.source;
+        if (ref.measureIndex >= part.measures.size() ||
+            ref.voiceIndex >= part.measures[ref.measureIndex].voices.size() ||
+            ref.eventIndex >= part.measures[ref.measureIndex].voices[ref.voiceIndex].events.size())
+        {
+            break;
+        }
+        const score::Measure& measure = part.measures[ref.measureIndex];
+        const score::ScoreEvent& event = measure.voices[ref.voiceIndex].events[ref.eventIndex];
+        const std::string source =
+            (part.name.empty() ? part.id : part.name) + ", bar " + measure.printedNumber;
+
+        // Every note of a chord: which one is the player's choice.
+        for (const score::Note& note : event.notes)
+        {
+            juce::String label = "Aim at " + juce::String(score::spelledName(note.written));
+            if (!score::soundsAsWritten(note))
+            {
+                label += " (sounds " + juce::String(score::spelledName(note.sounding)) + ")";
+            }
+            menu.addItem(
+                label, [this, note, source]
+                { target.publish(pitch::chosenTarget(note.sounding, note.written, source)); });
+        }
+        break;
+    }
+
+    menu.addItem("Move the clock here", [this, point] { seekToCanvasPoint(point); });
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&canvas).withMousePosition());
 }
 
 void ScoreViewComponent::showGoToBar()
