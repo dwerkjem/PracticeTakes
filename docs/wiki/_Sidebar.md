@@ -1,0 +1,16 @@
+**[[Home]]**
+
+**Using Practice Takes**
+- [[Getting Started]]
+- [[Tools]]
+- [[Workspace and Settings]]
+- [[Scores and MusicXML]]
+- [[MIDI Keyboard]]
+- [[Troubleshooting]]
+
+**The project**
+- [[Roadmap]]
+- [[Contributing]]
+- [[Architecture at a Glance]]
+- [Live forecast (#10)](https://github.com/dwerkjem/PracticeTakes/issues/10)
+- [Issues](https://github.com/dwerkjem/PracticeTakes/issues)

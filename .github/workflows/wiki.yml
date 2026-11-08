@@ -1,0 +1,86 @@
+# Publish docs/wiki/ to the repository's GitHub wiki.
+#
+# The wiki is written in the repository, so a page is reviewed like any other
+# documentation and changes in the same pull request as the behaviour it
+# describes. This mirrors the folder into the wiki's own git repository on every
+# push to main that touches it. The mirror is exact: a page deleted here is
+# deleted there, and an edit made in the wiki's web editor is overwritten.
+name: Publish wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/wiki/**"
+      - ".github/workflows/wiki.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Mirror docs/wiki into the GitHub wiki
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      # GitHub creates a wiki's git repository only when its first page is saved
+      # in the web editor, so until then there is nothing to clone. Say so
+      # rather than fail with git's "repository not found".
+      - name: Clone the wiki
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! git clone --depth 1 \
+              "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" wiki; then
+            echo "::error::Could not clone the wiki. If it has never had a page, create any page once in the repository's Wiki tab (it will be overwritten), then re-run this workflow."
+            exit 1
+          fi
+
+      - name: Mirror the pages
+        run: |
+          find wiki -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R docs/wiki/. wiki/
+
+      - name: Commit and push
+        working-directory: wiki
+        run: |
+          git add --all
+          if git diff --cached --quiet; then
+            echo "The wiki is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Publish docs/wiki from ${GITHUB_SHA::7}" \
+            -m "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
+          git push origin HEAD
+
+      # A push to main nobody is watching is an unattended trigger, so a failure
+      # files an issue. A manual run's failure is already in front of its author.
+      - name: Report the failure
+        if: ${{ failure() && github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/scripts/ci/report_workflow_failure.py \
+            --title "Publish wiki: docs/wiki is not reaching the GitHub wiki" \
+            --workflow "${GITHUB_WORKFLOW}" \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --commit "${GITHUB_SHA}" \
+            --trigger "${GITHUB_EVENT_NAME}" \
+            --failing-step "Publish wiki" \
+            --label area:docs \
+            --label type:bug \
+            --label priority:p3 \
+            --guidance "If the clone failed, the wiki has never had a page: create any page once in the Wiki tab, then re-run the workflow. Otherwise the log names the failing git step."
