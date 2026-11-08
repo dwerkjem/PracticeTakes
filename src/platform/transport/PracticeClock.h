@@ -151,6 +151,8 @@ class PracticeClock final : private juce::Timer
     // The open score's tracks, a staff of a part each, and the mix over them.
     // Mute and solo reset with each new score; playback and volume stay.
     [[nodiscard]] const std::vector<PlaybackTrack>& playbackTracks() const noexcept;
+    // What each is called: "Voice", "Piano, right hand".
+    [[nodiscard]] const std::vector<std::string>& playbackTrackNames() const noexcept;
     [[nodiscard]] const PlaybackMix& playbackMix() const noexcept;
     void setPlaybackEnabled(bool enabled);
     void setPlaybackVolume(float volume);
@@ -200,6 +202,7 @@ class PracticeClock final : private juce::Timer
     // when it leaves the callback, in the destructor, before either goes.
     PlaybackMix mix;
     std::vector<PlaybackTrack> tracks;
+    std::vector<std::string> trackNames;
     std::future<std::unique_ptr<ScoreSynth>> loadingSynth;
     std::unique_ptr<ScoreSynth> synth;
     std::optional<std::string> synthUnavailable = std::string("The sounds have not been loaded");

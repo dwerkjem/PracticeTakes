@@ -143,3 +143,25 @@ handled. Headphones avoid it, and the wiki says so.
 - **Downloads:** CI downloads about 32 MB once per clean configure.
 - **Sample provenance** in GeneralUser GS is the author's caveat. It is
   surfaced for the release review rather than resolved here.
+
+## Decided while building
+
+- **The strip narrowed by a few pixels to make room for Mix.** Record, Play,
+  Stop, the readout, Click and Loop each lost 2–12 px, so the whole strip still
+  fits beside the menus in a 1280-pixel window: 576 px full, 414 px compact.
+- **Mute and Solo are coloured when on,** amber and green, because the
+  look-and-feel's toggled shade was too close to the off one to read in either
+  theme.
+- **The popup opens inside the window** (`CallOutBox` with the top-level window
+  as parent), so a capture sees it. Like any call-out it closes when the window
+  is resized, which is why the harness's tiny-window picture shows the strip
+  without it.
+- **Each track's name** is computed by the clock alongside its tracks
+  (`playbackTrackNames`), so the transport strip needs no score of its own.
+- **Allocation-free on the audio paths, checked locally** as well as by
+  RealtimeSanitizer in CI. A build of `tsf.h` with counting
+  `TSF_MALLOC`/`TSF_REALLOC` ran 50 rounds of the renderer's calls after
+  loading: program changes on 64 channels, 200 note-ons against 96 voices (so
+  voices are stolen), note-offs, releases, every channel silenced, and sample
+  rate changes. It made **zero** allocations. `tsf_reset` frees the channels,
+  so the synthesiser silences each channel instead.

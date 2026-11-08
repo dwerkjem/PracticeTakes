@@ -196,3 +196,25 @@ TEST_CASE("the mix folds into one mask of the tracks that sound", "[transport][p
     CHECK(mix.audibleTracks() == 0b11);
     CHECK_FALSE(mix.isMuted(1));
 }
+
+#include "platform/transport/PlaybackTrackNames.h"
+
+TEST_CASE("a track is named for its part and, on a piano, its hand", "[transport][playback]")
+{
+    score::Score source;
+    score::Part voice;
+    voice.name = "Voice";
+    score::Part piano;
+    piano.name = "Piano";
+    piano.staffCount = 2;
+    score::Part organ;
+    organ.staffCount = 3;
+    source.parts = {voice, piano, organ};
+
+    const std::vector<PlaybackTrack> tracks = playbackTracksOf(source);
+    REQUIRE(tracks.size() == 6);
+    CHECK(trackName(source, tracks[0]) == "Voice");
+    CHECK(trackName(source, tracks[1]) == "Piano, right hand");
+    CHECK(trackName(source, tracks[2]) == "Piano, left hand");
+    CHECK(trackName(source, tracks[5]) == "Part 3, staff 3");
+}

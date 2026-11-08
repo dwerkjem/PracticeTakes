@@ -21,11 +21,11 @@
 - [x] 3.1 `PracticeClock`: build events with the table, load the SoundFont,
       publish the mix; the shell finds the file and saves the switch and
       volume.
-- [ ] 3.2 The Mix button and popup (decision 6).
+- [x] 3.2 The Mix button and popup (decision 6).
 
 ## 4. Verification and docs
 
-- [ ] 4.1 An approved state with the Mix popup open over the sample score, and
+- [x] 4.1 An approved state with the Mix popup open over the sample score, and
       its surface. Read the pictures.
 - [ ] 4.2 The wiki (Getting Started: playing the score, hands separately; the
       headphones note), Features rows, README, ARCHITECTURE.md § Practice

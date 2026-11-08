@@ -1,5 +1,7 @@
 #include "PracticeClock.h"
 
+#include "PlaybackTrackNames.h"
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -300,6 +302,11 @@ void PracticeClock::refreshTable()
     if (current != builtScore)
     {
         tracks = pendingPlayback->tracks;
+        trackNames.clear();
+        for (const PlaybackTrack& track : tracks)
+        {
+            trackNames.push_back(current != nullptr ? trackName(*current, track) : std::string{});
+        }
         mix.setTrackCount(tracks.size());
         publishMix();
     }
@@ -478,6 +485,11 @@ std::optional<std::string> PracticeClock::whyPlaybackUnavailable() const
 const std::vector<PlaybackTrack>& PracticeClock::playbackTracks() const noexcept
 {
     return tracks;
+}
+
+const std::vector<std::string>& PracticeClock::playbackTrackNames() const noexcept
+{
+    return trackNames;
 }
 
 const PlaybackMix& PracticeClock::playbackMix() const noexcept

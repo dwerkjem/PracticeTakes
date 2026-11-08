@@ -41,6 +41,7 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/state/testcontrol/MainComponentTestControl.cpp
     src/application/shell/ui/main_window/MainTitleBar.h
     src/application/shell/ui/main_window/MicrophoneWarning.h
+    src/application/shell/ui/main_window/PlaybackMixPanel.h
     src/application/shell/ui/main_window/TransportStrip.h
     src/application/shell/ui/feedback/FeedbackWindow.h
     src/application/shell/ui/feedback/MainComponentFeedback.cpp
@@ -261,6 +262,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/transport/PlaybackEvents.cpp
     src/platform/transport/PlaybackEvents.h
     src/platform/transport/PlaybackMix.h
+    src/platform/transport/PlaybackTrackNames.h
     src/platform/transport/PracticeClock.cpp
     src/platform/transport/PracticeClock.h
     src/platform/transport/ScoreSynth.cpp
