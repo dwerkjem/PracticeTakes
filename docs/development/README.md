@@ -12,6 +12,11 @@ broader music-practice and digital-audio workstation application.
 - [Architecture map](https://dwerkjem.github.io/PracticeTakes/) — browsable
   graph of every file, its role, and what it connects to, with a guided tour
   through the codebase. Generated from the repository; no setup required
+- [Wiki](https://github.com/dwerkjem/PracticeTakes/wiki) — the user-facing
+  guide: getting started, the tools, scores, the MIDI keyboard,
+  troubleshooting and the roadmap. Written in [`docs/wiki/`](../wiki/) and
+  published by `.github/workflows/wiki.yml` on every push to `main` that
+  changes it; edits made in the wiki itself are overwritten
 
 ### `build/`
 

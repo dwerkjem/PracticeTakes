@@ -351,6 +351,11 @@ against it — they can drift (`docs/development/quality/QA_STRATEGY.md` area 12
   planned*: the forecast credits only the first. Never edit a commitment date
   without the maintainer's decision recorded in #10. See
   `docs/development/operations/ROADMAP_FORECAST.md`.
+- The GitHub wiki is generated from `docs/wiki/` by
+  `.github/workflows/wiki.yml`. A change to something a user sees or does (a
+  menu, a tool, a setting, what a score import accepts) updates the matching
+  wiki page in the same pull request. Never edit the wiki directly; it is
+  overwritten.
 - Keep work in progress small: at most three OpenSpec changes in
   implementation at once, archive a change as soon as its last task is done,
   and move a task blocked on hardware to a `status:ready-for-human` issue
