@@ -8,6 +8,7 @@
 #include "../../../application/tools/ToolComponent.h"
 #include "../../../platform/audio/AudioInputService.h"
 #include "../../../platform/audio/SharedPitchAnalysis.h"
+#include "../../../platform/pitch/CurrentTarget.h"
 #include "PitchTracker.h"
 
 #include <memory>
@@ -25,7 +26,8 @@ class TunerComponent final
     TunerComponent(
         AudioInputService& sharedAudioInputService,
         SharedPitchAnalysis& sharedPitchAnalysis,
-        const pitch::ReferencePitch& applicationReferencePitch);
+        const pitch::ReferencePitch& applicationReferencePitch,
+        const pitch::CurrentTarget& applicationTarget);
     ~TunerComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -67,6 +69,10 @@ class TunerComponent final
     // carry the same magic 142 independently and nothing would have caught them
     // drifting apart except noticing the controls had slipped.
     static constexpr int statusHeight = 22;
+
+    // The line naming the target and where the reading is against it
+    // (system-wide-target-note decision 4), above the status line.
+    static constexpr int targetHeight = 24;
     static constexpr int statusGap = 6;
     static constexpr int modeChooserHeight = 32;
 
@@ -119,6 +125,10 @@ class TunerComponent final
     void placeModeChooser(juce::Rectangle<int> area);
     [[nodiscard]] juce::String statusText() const;
 
+    // The target line, and whether the reading is on the target.
+    [[nodiscard]] juce::String targetText() const;
+    [[nodiscard]] bool onTarget() const;
+
     // Whether the graph has ever shown a real reading this session -- as
     // opposed to `hasSignal`, which also goes false during an ordinary pause
     // between notes. graphHistory carries NaN gaps for silence (the graph
@@ -152,6 +162,7 @@ class TunerComponent final
     AudioInputService& audioInputService;
     SharedPitchAnalysis& pitchAnalysis;
     const pitch::ReferencePitch& referencePitch;
+    const pitch::CurrentTarget& target;
 
     juce::Label displayModeLabel;
     juce::ComboBox displayModeBox;

@@ -212,6 +212,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/midi/SoundingDurationJudgement.h
     src/platform/pitch/CurrentTarget.h
     src/platform/pitch/ReferencePitch.h
+    src/platform/pitch/TargetReading.h
     src/platform/score/CurrentScore.h
     src/platform/score/Diagnostic.h
     src/platform/score/LyricSyllable.h
@@ -355,6 +356,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/midi/SoundingDurationJudgementTests.cpp
     src/tests/platform/pitch/CurrentTargetTests.cpp
     src/tests/platform/pitch/ReferencePitchTests.cpp
+    src/tests/platform/pitch/TargetReadingTests.cpp
     src/tests/platform/score/CurrentScoreTests.cpp
     src/tests/platform/score/MusicalTimeTests.cpp
     src/tests/platform/score/PitchNamesTests.cpp

@@ -11,7 +11,7 @@
       monophonic part (decision 3). Tests.
 - [x] 2.2 `pitch::CurrentTarget`, set by the shell from each score, in
       `ToolServices`.
-- [ ] 2.3 `describeAgainstTarget` (JUCE-free) and the tuner's target line. Tests.
+- [x] 2.3 `describeAgainstTarget` (JUCE-free) and the tuner's target line. Tests.
 
 ## 3. The Target Note tool leaves
 

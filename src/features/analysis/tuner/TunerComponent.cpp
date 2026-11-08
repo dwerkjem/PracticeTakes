@@ -1,5 +1,7 @@
 #include "TunerComponent.h"
 
+#include "../../../platform/pitch/TargetReading.h"
+
 #include "TunerSettingsCodec.h"
 
 #include "application/theme/AppLookAndFeel.h"
@@ -46,9 +48,10 @@ class TunerComponent::ModeChooser final : public juce::Component
 TunerComponent::TunerComponent(
     AudioInputService& sharedAudioInputService,
     SharedPitchAnalysis& sharedPitchAnalysis,
-    const pitch::ReferencePitch& applicationReferencePitch)
+    const pitch::ReferencePitch& applicationReferencePitch,
+    const pitch::CurrentTarget& applicationTarget)
     : audioInputService(sharedAudioInputService), pitchAnalysis(sharedPitchAnalysis),
-      referencePitch(applicationReferencePitch)
+      referencePitch(applicationReferencePitch), target(applicationTarget)
 {
     setOpaque(true);
 
@@ -422,6 +425,41 @@ juce::String TunerComponent::statusText() const
     const auto centsSign = displayedCents > 0.0 ? "+" : "";
     return juce::String(displayedFrequency, 1) + " Hz " + centsSign +
            juce::String(displayedCents, 1) + " cents";
+}
+
+namespace
+{
+[[nodiscard]] std::optional<double>
+heardPitch(bool hasSignal, bool hasLockedNote, int lockedNote, double cents)
+{
+    if (!hasSignal || !hasLockedNote)
+    {
+        return std::nullopt;
+    }
+    return static_cast<double>(lockedNote) + (cents / 100.0);
+}
+} // namespace
+
+juce::String TunerComponent::targetText() const
+{
+    const std::shared_ptr<const pitch::Target> aimingAt = target.target();
+    if (aimingAt == nullptr)
+    {
+        return juce::String::fromUTF8(target.whyNone().c_str());
+    }
+    return juce::String::fromUTF8(
+        pitch::readAgainstTarget(
+            *aimingAt, heardPitch(hasSignal, hasLockedMidiNote, lockedMidiNote, displayedCents))
+            .text.c_str());
+}
+
+bool TunerComponent::onTarget() const
+{
+    const std::shared_ptr<const pitch::Target> aimingAt = target.target();
+    return aimingAt != nullptr &&
+           pitch::readAgainstTarget(
+               *aimingAt, heardPitch(hasSignal, hasLockedMidiNote, lockedMidiNote, displayedCents))
+                   .standing == pitch::TargetStanding::onIt;
 }
 
 bool TunerComponent::hasGraphHistory() const

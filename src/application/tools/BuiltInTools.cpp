@@ -20,7 +20,8 @@ const ToolRegistry& builtInToolRegistry()
              [](const ToolServices& services)
              {
                  return std::make_unique<TunerComponent>(
-                     services.audio, services.pitchAnalysis, services.referencePitch);
+                     services.audio, services.pitchAnalysis, services.referencePitch,
+                     services.target);
              }},
             {"spectrogram", [](const ToolServices& services)
              { return std::make_unique<SpectrogramComponent>(services.audio); }},
