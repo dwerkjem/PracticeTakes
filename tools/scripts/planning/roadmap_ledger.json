@@ -27,6 +27,13 @@
     {"id": "beta", "name": "Beta 0.11.0", "tracker": 14, "target": "2027-10-11", "commitment": "2028-05-08"},
     {"id": "v1", "name": "1.0.0", "tracker": 15, "target": "2028-01-31", "commitment": "2028-11-27"}
   ],
+  "_milestones_comment": "Each milestone's due date is the commitment of the latest release it names; sync_milestones.py makes GitHub match this whenever the ledger changes on main. Titles and descriptions are left as they are on GitHub unless an entry gives a title or description.",
+  "milestones": [
+    {"number": 2, "releases": ["foundation"]},
+    {"number": 3, "releases": ["mvp"]},
+    {"number": 4, "releases": ["beta1", "beta2", "beta"]},
+    {"number": 5, "releases": ["v1"]}
+  ],
   "checkpoints": [
     {"date": "2026-12-31", "floor": 12, "target": 20},
     {"date": "2027-01-31", "floor": 18, "target": 30},
