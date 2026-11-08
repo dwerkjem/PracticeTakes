@@ -86,3 +86,33 @@ ready, except in the recorder's destructor at shutdown.
 While a different take is being judged, there is no review at all: the old
 take's marks would be wrong for the new one. While only the part changes, the
 old review stays until the new one arrives.
+
+### A take is judged only where it was played
+
+The first picture of a review said "1122 missed". The take had stopped in
+bar 8, and every note after it counted. `attacksInTake` now keeps only the
+attacks from the take's `startTick` up to its `lastFrame`. A hand-built take
+with no last frame is still judged to the end, so the onset-timing and
+note-matching tests keep their meaning. A take started from bar 20 is not
+missing bars 1–19 either.
+
+### The capture harness's take
+
+`testcontrol::syntheticKeyboardTake` plays the last part of the open score
+through eight bars, on a fixed pattern over its attacks:
+- every eleventh is missed;
+- every seventh has a wrong first note;
+- some are 60 ms late or early;
+- a stray key now and then.
+
+A moment is moved, or followed by a stray key, only where its neighbours are
+at least 300 ms away. Otherwise the keyboard's 30 ms chord spread runs the two
+together, and the picture shows that instead.
+
+Each approved state starts with no takes (`TakeRecorder::forgetTakes`), so
+the empty Take Review picture is not of the previous state's take.
+
+The review picture shows two tools, the Score View and the Take Review, where
+every other score state shows one. Its subject is the two together, which agree
+by design (decision 1), and the "one subject per score picture" test makes that
+the one exception.

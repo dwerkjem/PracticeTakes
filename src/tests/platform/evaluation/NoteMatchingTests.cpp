@@ -191,3 +191,60 @@ TEST_CASE("a keyboard take is matched end to end", "[evaluation][notes]")
     CHECK(report.results[3].outcome == NoteOutcome::missed);
     CHECK(report.summary.extra == 0);
 }
+
+TEST_CASE("only what a take covered is judged", "[evaluation][notes]")
+{
+    // Four bars of quarters at 120 bpm; the take started in bar 2 and stopped
+    // at the start of bar 4.
+    auto source = std::make_shared<score::Score>();
+    source->tempoMap = score::TempoMap::build({{0, 120.0}});
+    score::Part part;
+    for (int bar = 0; bar < 4; ++bar)
+    {
+        score::Measure measure;
+        measure.index = static_cast<std::size_t>(bar);
+        measure.start = static_cast<score::Tick>(bar) * 4 * score::ticksPerQuarterNote;
+        measure.nominalDuration = 4 * score::ticksPerQuarterNote;
+        if (bar == 0)
+        {
+            measure.attributes.time = score::TimeSignature{4, 4};
+        }
+        score::Voice voice;
+        for (int beat = 0; beat < 4; ++beat)
+        {
+            score::ScoreEvent event;
+            event.kind = score::EventKind::note;
+            event.onset = static_cast<score::Tick>(beat) * score::ticksPerQuarterNote;
+            event.duration = score::ticksPerQuarterNote;
+            score::Pitch pitch;
+            pitch.midiNoteNumber = 60;
+            event.notes.push_back(score::Note{pitch, pitch, std::nullopt, std::nullopt});
+            voice.events.push_back(event);
+        }
+        measure.voices.push_back(voice);
+        part.measures.push_back(measure);
+    }
+    source->parts.push_back(part);
+
+    take::Take recorded;
+    recorded.score = source;
+    auto table = std::make_shared<transport::ClockTable>();
+    transport::buildTable(*table, *source, 100, 44100.0);
+    recorded.table = table;
+    recorded.startTick = 4 * score::ticksPerQuarterNote;
+    recorded.lastFrame = 3 * 4 * 22050;
+    recorded.usedKeyboard = true;
+    take::KeyboardEvent key;
+    key.frame = 4 * 22050;
+    key.event.kind = midi::MidiEventKind::noteOn;
+    key.event.noteNumber = 60;
+    key.event.velocity = 70;
+    recorded.keyboard.push_back(key);
+
+    // Bars 2 and 3: eight notes, one played.
+    const NoteReport report = judgeNotes(recorded, 0);
+    CHECK(report.results.size() == 8);
+    CHECK(report.summary.correct == 1);
+    CHECK(report.summary.missed == 7);
+    CHECK(report.results.front().tick == 4 * score::ticksPerQuarterNote);
+}

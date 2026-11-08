@@ -471,3 +471,24 @@ TEST_CASE("a take recorded here is reviewed when it ends", "[take][recorder][rev
     REQUIRE(fixture.recorder->review() != nullptr);
     CHECK(fixture.recorder->review()->take->id == id);
 }
+
+TEST_CASE("forgetting takes leaves nothing to review", "[take][recorder][review]")
+{
+    RecorderUnderTest fixture;
+    static_cast<void>(fixture.recorder->keep(keyboardTakeOf(voiceAndPiano(), {60, 64})));
+    fixture.recorder->finishJudging();
+    REQUIRE(fixture.recorder->review() != nullptr);
+
+    // Forgotten while a second judgement runs: it is dropped when it finishes.
+    static_cast<void>(fixture.recorder->keep(keyboardTakeOf(voiceAndPiano(), {60})));
+    fixture.recorder->forgetTakes();
+    CHECK(fixture.recorder->takes().empty());
+    CHECK(fixture.recorder->lastEnded() == nullptr);
+    CHECK(fixture.recorder->review() == nullptr);
+    CHECK_FALSE(fixture.recorder->isJudging());
+    fixture.recorder->finishJudging();
+    CHECK(fixture.recorder->review() == nullptr);
+
+    // Ids keep counting, so a take is never confused with a forgotten one.
+    CHECK(fixture.recorder->keep(keyboardTakeOf(voiceAndPiano(), {60})) == 3);
+}

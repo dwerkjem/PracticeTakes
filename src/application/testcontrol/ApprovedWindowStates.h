@@ -172,6 +172,12 @@ struct ApprovedWindowState
     //
     // Appended last, for the reason the comments above give.
     bool recordTake = false;
+
+    // Keep a synthetic keyboard take of `scoreFixture`'s last part, with known
+    // mistakes, once it has imported, and review it (take-review decision 5).
+    //
+    // Appended last, for the reason the comments above give.
+    bool reviewTake = false;
 };
 
 // An object that can be asked to act, as though clicked.

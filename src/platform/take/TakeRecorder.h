@@ -136,6 +136,11 @@ class TakeRecorder final : private juce::Timer, private transport::ClockListener
     // take about a second for three minutes.
     [[nodiscard]] bool isJudging() const noexcept;
 
+    // Forget every kept take and the review, leaving a live take alone. The
+    // capture harness starts each state from none, so no picture shows the
+    // last one's takes.
+    void forgetTakes();
+
     // Wait for the judging in progress and take its result. For tests and the
     // capture harness; the timer takes it otherwise.
     void finishJudging();

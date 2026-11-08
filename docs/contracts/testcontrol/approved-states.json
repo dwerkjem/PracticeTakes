@@ -33,6 +33,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -55,6 +56,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -77,6 +79,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -99,6 +102,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -121,6 +125,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -143,6 +148,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -165,6 +171,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -187,6 +194,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -209,6 +217,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -231,6 +240,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -253,6 +263,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -275,6 +286,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Tuner"
     },
     {
@@ -297,6 +309,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -319,6 +332,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Spectrogram"
     },
     {
@@ -341,6 +355,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -363,6 +378,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Harmonic Analyzer"
     },
     {
@@ -385,6 +401,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -407,6 +424,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -429,6 +447,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -451,6 +470,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -473,6 +493,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -495,6 +516,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -517,13 +539,14 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
       "id": "all-tools-docked",
-      "description": "Every tool tiled at once -- the three live-audio tools and the two that read a score",
-      "tools": ["tuner", "spectrogram", "harmonics", "target-note", "score-view"],
-      "toolIds": ["tuner", "spectrogram", "harmonic-analyzer", "target-note", "score-view"],
+      "description": "Every tool tiled at once -- the three live-audio tools, the two that read a score, and the take review",
+      "tools": ["tuner", "spectrogram", "harmonics", "target-note", "score-view", "take-review"],
+      "toolIds": ["tuner", "spectrogram", "harmonic-analyzer", "target-note", "score-view", "take-review"],
       "presentation": "docked",
       "arrangement": "split",
       "geometry": "normal",
@@ -539,6 +562,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -561,6 +585,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -583,6 +608,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -605,6 +631,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -627,6 +654,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -649,6 +677,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -671,6 +700,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -693,6 +723,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -715,6 +746,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -737,6 +769,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -759,6 +792,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -781,6 +815,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -803,6 +838,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -825,6 +861,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Send feedback"
     },
     {
@@ -847,6 +884,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Send feedback"
     },
     {
@@ -869,6 +907,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Score import"
     },
     {
@@ -891,6 +930,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Score import"
     },
     {
@@ -913,6 +953,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -935,6 +976,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Score View"
     },
     {
@@ -957,6 +999,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -979,6 +1022,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -1001,6 +1045,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -1023,6 +1068,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -1045,6 +1091,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -1067,6 +1114,7 @@
       "clockPlaying": true,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -1089,6 +1137,7 @@
       "clockPlaying": false,
       "clockBar": 5,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -1111,6 +1160,53 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": true,
+      "reviewTake": false,
+      "windowTitle": ""
+    },
+    {
+      "id": "take-review",
+      "description": "A take under review: its notes marked on the score, and the list of results beside it",
+      "tools": ["score-view", "take-review"],
+      "toolIds": ["score-view", "take-review"],
+      "presentation": "docked",
+      "arrangement": "split",
+      "geometry": "normal",
+      "microphone": "available",
+      "settingsOpen": false,
+      "settingsPanel": "",
+      "feedbackOpen": false,
+      "toneHz": 0,
+      "toolView": "",
+      "scoreFixture": "<bundled sample>",
+      "showScoreImportSummary": false,
+      "holdScoreImportInProgress": false,
+      "clockPlaying": false,
+      "clockBar": -1,
+      "recordTake": false,
+      "reviewTake": true,
+      "windowTitle": ""
+    },
+    {
+      "id": "take-review-empty",
+      "description": "The Take Review tool with no take yet: how to record one",
+      "tools": ["take-review"],
+      "toolIds": ["take-review"],
+      "presentation": "docked",
+      "arrangement": "single",
+      "geometry": "normal",
+      "microphone": "available",
+      "settingsOpen": false,
+      "settingsPanel": "",
+      "feedbackOpen": false,
+      "toneHz": 0,
+      "toolView": "",
+      "scoreFixture": "",
+      "showScoreImportSummary": true,
+      "holdScoreImportInProgress": false,
+      "clockPlaying": false,
+      "clockBar": -1,
+      "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -1133,6 +1229,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -1155,6 +1252,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": ""
     },
     {
@@ -1177,6 +1275,7 @@
       "clockPlaying": false,
       "clockBar": -1,
       "recordTake": false,
+      "reviewTake": false,
       "windowTitle": "Score import"
     }
   ]

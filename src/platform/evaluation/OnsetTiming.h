@@ -130,6 +130,13 @@ struct OnsetMatch
                : static_cast<std::int64_t>(take.inputLatencyFrames) + take.outputLatencyFrames;
 }
 
+// The attacks a take covered: from the tick it started at to the frame it
+// stopped at, exclusive. A take stopped in bar 8 is not missing bar 9. A take
+// with no last frame (0: built by hand rather than recorded) is judged to the
+// end of the score.
+[[nodiscard]] std::vector<ExpectedAttack>
+attacksInTake(const take::Take& take, std::vector<ExpectedAttack> attacks);
+
 // What a take is judged from: its keyboard's onsets when it has keyboard
 // events, otherwise its microphone's. The microphone's take the longest to find
 // (about a second for three minutes, optimised), and are the same for every

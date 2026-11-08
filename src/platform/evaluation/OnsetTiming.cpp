@@ -250,6 +250,24 @@ TimingReport judgeTiming(
     return report;
 }
 
+std::vector<ExpectedAttack>
+attacksInTake(const take::Take& take, std::vector<ExpectedAttack> attacks)
+{
+    const bool ended = take.lastFrame > 0 && take.table != nullptr;
+    attacks.erase(
+        std::remove_if(
+            attacks.begin(), attacks.end(),
+            [&take, ended](const ExpectedAttack& attack)
+            {
+                return attack.tick < take.startTick ||
+                       (ended &&
+                        transport::frameOfTick(*take.table, static_cast<double>(attack.tick)) >=
+                            take.lastFrame);
+            }),
+        attacks.end());
+    return attacks;
+}
+
 std::vector<PerformedOnset> onsetsOf(const take::Take& take)
 {
     if (judgedFromKeyboard(take))
@@ -270,8 +288,8 @@ TimingReport judgeTake(
         return {};
     }
     return judgeTiming(
-        expectedAttacksOf(*take.score, part), onsets, *take.table, take.sampleRate,
-        latencyFramesOf(take), settings);
+        attacksInTake(take, expectedAttacksOf(*take.score, part)), onsets, *take.table,
+        take.sampleRate, latencyFramesOf(take), settings);
 }
 
 TimingReport judgeTake(const take::Take& take, std::size_t part, const TimingSettings& settings)

@@ -105,10 +105,11 @@ const std::vector<ApprovedWindowState>& states()
          WorkspaceArrangement::tabbed, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "All three tools sharing one tab strip"},
         {"all-tools-docked",
-         Tools{"tuner", "spectrogram", "harmonics", "target-note", "score-view"},
+         Tools{"tuner", "spectrogram", "harmonics", "target-note", "score-view", "take-review"},
          ToolPresentation::docked, WorkspaceArrangement::split, WindowGeometry::normal,
          MicrophoneCondition::available, false, "", false,
-         "Every tool tiled at once -- the three live-audio tools and the two that read a score"},
+         "Every tool tiled at once -- the three live-audio tools, the two that read a score, and "
+         "the take review"},
 
         // --- Window geometry ---
         {"narrow-window", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
@@ -349,6 +350,17 @@ const std::vector<ApprovedWindowState>& states()
          "A take being recorded: Finish in red, the readout counting the take, the tempo and "
          "loop locked",
          440.0, "", bundledSampleFixtureName(), false, false, false, -1, true},
+        // A take under review (take-review): a pianist's take of the sample,
+        // made up with known mistakes, marked on the score and listed beside it.
+        {"take-review", Tools{"score-view", "take-review"}, ToolPresentation::docked,
+         WorkspaceArrangement::split, WindowGeometry::normal, MicrophoneCondition::available, false,
+         "", false,
+         "A take under review: its notes marked on the score, and the list of results beside it",
+         0.0, "", bundledSampleFixtureName(), false, false, false, -1, false, true},
+        // The Take Review tool before any take: what most sessions see first.
+        {"take-review-empty", Tools{"take-review"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false, "The Take Review tool with no take yet: how to record one"},
         {"score-view-vertical", Tools{"score-view"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false,

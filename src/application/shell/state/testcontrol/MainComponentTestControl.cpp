@@ -4,6 +4,7 @@
 
 #include <optional>
 
+#include "../../../testcontrol/SyntheticTake.h"
 #include "../../../testcontrol/TestControlClicker.h"
 #include "../../ui/feedback/FeedbackWindow.h"
 #include "../../ui/score/BundledSampleScore.h"
@@ -118,10 +119,12 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     testControlPlayClock = state.clockPlaying;
     testControlClockBar = state.clockBar;
     testControlRecordTake = state.recordTake;
+    testControlReviewTake = state.reviewTake;
     if (takeRecorder.isRecording())
     {
         takeRecorder.cancel();
     }
+    takeRecorder.forgetTakes();
 
     testControlNoMicrophone = state.microphone == MicrophoneCondition::unavailable;
     audioInputService.setMuted(state.microphone == MicrophoneCondition::muted);
@@ -366,6 +369,20 @@ void MainComponent::startClockForTestControl(int attemptsLeft)
             practiceClock.setMetronomeEnabled(true);
             practiceClock.play();
             practiceClock.setCountInBars(countIn);
+        }
+
+        if (testControlReviewTake)
+        {
+            // A pianist's take of the score's last part, through its first
+            // eight bars, judged before the picture is taken.
+            if (const std::shared_ptr<const score::Score> shown =
+                    scoreImport.currentScoreHolder().score();
+                shown != nullptr && !shown->parts.empty())
+            {
+                static_cast<void>(takeRecorder.keep(
+                    testcontrol::syntheticKeyboardTake(shown, shown->parts.size() - 1, 8)));
+                takeRecorder.finishJudging();
+            }
         }
 
         if (testControlRecordTake)

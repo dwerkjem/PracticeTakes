@@ -354,15 +354,22 @@ void ScoreViewComponent::paintReviewOn(
             graphics.drawEllipse(around, ring);
             if (mark.playedMidi.has_value())
             {
-                // What was played, above the head.
-                const auto height = static_cast<float>(std::max(10.0, 1.5 * px));
-                graphics.setFont(juce::FontOptions(height, juce::Font::bold));
-                graphics.drawText(
-                    juce::String(evaluation::keyName(*mark.playedMidi)),
-                    juce::Rectangle<float>(
-                        static_cast<float>(centreX) - (height * 2.0f),
-                        around.getY() - height - 1.0f, height * 4.0f, height),
-                    juce::Justification::centredBottom, false);
+                // What was played, on a tab above the head and to its right,
+                // clear of the chord it is in.
+                const auto height = static_cast<float>(std::max(11.0, 1.7 * px));
+                const juce::Font font(juce::FontOptions(height, juce::Font::bold));
+                const juce::String name(evaluation::keyName(*mark.playedMidi));
+                const float width =
+                    juce::GlyphArrangement::getStringWidth(font, name) + (height * 0.5f);
+                const juce::Rectangle<float> tab(
+                    around.getRight() - (height * 0.2f), around.getY() - (height * 0.9f), width,
+                    height * 1.1f);
+                graphics.setColour(palette().panel.withAlpha(0.92f));
+                graphics.fillRoundedRectangle(tab, height * 0.25f);
+                graphics.setColour(juce::Colour(reviewWrong));
+                graphics.drawRoundedRectangle(tab, height * 0.25f, 1.0f);
+                graphics.setFont(font);
+                graphics.drawText(name, tab, juce::Justification::centred, false);
             }
             break;
         case engraving::PitchMark::missed:

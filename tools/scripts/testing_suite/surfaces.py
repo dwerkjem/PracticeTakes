@@ -960,6 +960,53 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # A synthetic pianist's take under review (take-review).
+    Surface(
+        state="take-review",
+        title="A take under review",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "marks-on-notes",
+                "Are the piano's notes ringed green, with a few filled red and labelled with "
+                "the key played, a few ringed grey, and small orange arrows beside some?",
+            ),
+            Question(
+                "voice-unmarked",
+                "Is the voice's staff free of marks, since the take was judged against the "
+                "piano?",
+            ),
+            Question(
+                "extras-above",
+                "Is there a red cross above the staff where an extra key was played?",
+            ),
+            Question(
+                "list-beside",
+                "Does the Take Review list say the take stopped in bar 8, name the piano, "
+                "and list results in time order with bar, beat, pitch and outcome?",
+            ),
+            Question(
+                "row-moves-clock",
+                "Click a red row: does the score cursor move to that note?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    # The Take Review tool before any take.
+    Surface(
+        state="take-review-empty",
+        title="Take Review with no take",
+        area="score",
+        modes=frozenset({FULL}),
+        extras=(
+            Question(
+                "says-how",
+                "Does it say there is no take yet, and how to record one?",
+            ),
+        ),
+    ),
     # The practice clock playing the sample (practice-clock). The position
     # moves, so a question asks what the transport says rather than which bar.
     Surface(

@@ -83,6 +83,7 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp
     src/application/testcontrol/ApprovedWindowStates.cpp
     src/application/testcontrol/ApprovedWindowStates.h
+    src/application/testcontrol/SyntheticTake.h
     src/application/testcontrol/TestControlChannel.cpp
     src/application/testcontrol/TestControlChannel.h
     src/application/testcontrol/TestControlClicker.cpp
@@ -120,6 +121,8 @@ set(PRACTICE_TAKES_SOURCES
     src/features/analysis/tuner/TunerSettingsCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.h
     src/features/analysis/tuner/TunerDrawing.cpp
+    src/features/review/TakeReviewComponent.cpp
+    src/features/review/TakeReviewComponent.h
     src/features/score/MusicFont.cpp
     src/features/score/MusicFont.h
     src/features/score/ScoreGlyphPainter.cpp
@@ -291,6 +294,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
     src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp
     src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp
+    src/tests/application/testcontrol/SyntheticTakeTests.cpp
     src/tests/application/testcontrol/ApprovedStatesManifestTests.cpp
     src/tests/application/theme/AppLookAndFeelTests.cpp
     src/tests/application/tools/CompactPresentationTests.cpp

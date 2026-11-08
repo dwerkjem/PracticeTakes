@@ -67,6 +67,10 @@ class ApprovedState:
     # Whether a take is recorded once the score imports.
     record_take: bool
 
+    # Whether a synthetic keyboard take is kept and reviewed once the score
+    # imports.
+    review_take: bool
+
     # The top-level window the state is a picture of. Empty for the main one.
     window_title: str
 
@@ -115,6 +119,7 @@ def _state_from(entry: dict) -> ApprovedState:
         clock_playing=entry["clockPlaying"],
         clock_bar=int(entry["clockBar"]),
         record_take=entry["recordTake"],
+        review_take=entry["reviewTake"],
         window_title=entry["windowTitle"],
     )
 

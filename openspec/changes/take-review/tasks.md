@@ -10,12 +10,12 @@
 
 ## 3. The Take Review tool
 
-- [ ] 3.1 `TakeReviewComponent`, its catalog entry and factory, and clicking to
+- [x] 3.1 `TakeReviewComponent`, its catalog entry and factory, and clicking to
       seek.
 
 ## 4. Verification and docs
 
-- [ ] 4.1 An approved state with a synthetic keyboard take under review (the
+- [x] 4.1 An approved state with a synthetic keyboard take under review (the
       Score View and the Take Review tool side by side), and its capture
       surface. Read the pictures.
 - [ ] 4.2 The wiki (the Take Review tool, reading a review), the Features row,

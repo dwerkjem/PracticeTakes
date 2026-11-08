@@ -150,12 +150,16 @@ std::vector<ReviewRow> reviewRows(const take::Take& take, const NoteReport& repo
             result.outcome == NoteOutcome::wrong || result.outcome == NoteOutcome::missed ||
             result.timing == TimingVerdict::early || result.timing == TimingVerdict::late;
 
-        row.text = place(row.bar, row.beat) + separator + writtenName(take, result) + separator +
-                   outcomeText(result);
-        if (const std::string timing = timingText(result.timing, result.timingErrorMs);
-            !timing.empty())
+        row.text = place(row.bar, row.beat);
+        for (const std::string& part :
+             {writtenName(take, result), outcomeText(result),
+              timingText(result.timing, result.timingErrorMs)})
         {
-            row.text += separator + timing;
+            if (!part.empty())
+            {
+                row.text += separator;
+                row.text += part;
+            }
         }
         rows.push_back(std::move(row));
     }
@@ -175,9 +179,14 @@ std::vector<ReviewRow> reviewRows(const take::Take& take, const NoteReport& repo
             row.bar = beat.bar;
             row.beat = beat.beat;
         }
-        row.text =
-            place(row.bar, row.beat) + separator +
-            (extra.midi.has_value() ? keyName(*extra.midi) + separator : std::string{}) + "extra";
+        row.text = place(row.bar, row.beat);
+        if (extra.midi.has_value())
+        {
+            row.text += separator;
+            row.text += keyName(*extra.midi);
+        }
+        row.text += separator;
+        row.text += "extra";
         rows.push_back(std::move(row));
     }
 

@@ -484,6 +484,7 @@ class MainComponent final
     bool testControlPlayClock = false;
     int testControlClockBar = -1;
     bool testControlRecordTake = false;
+    bool testControlReviewTake = false;
     void startClockForTestControl(int attemptsLeft);
 
     // Set the first time a state is applied, and never cleared: this process is

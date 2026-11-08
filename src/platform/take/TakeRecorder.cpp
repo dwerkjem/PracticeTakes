@@ -280,6 +280,18 @@ bool TakeRecorder::isJudging() const noexcept
     return !judging.empty() && judging.back().request == nextRequest;
 }
 
+void TakeRecorder::forgetTakes()
+{
+    kept.clear();
+    ended.reset();
+    reviewed.reset();
+
+    // Judging still running finishes and is dropped: its request is no longer
+    // the newest.
+    ++nextRequest;
+    notify();
+}
+
 void TakeRecorder::finishJudging()
 {
     adoptJudgement(true);
