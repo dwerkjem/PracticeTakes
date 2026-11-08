@@ -1,6 +1,6 @@
 ## 1. Inputs
 
-- [ ] 1.1 `Part::midiProgram` from `<midi-program>`, the subset document, and
+- [x] 1.1 `Part::midiProgram` from `<midi-program>`, the subset document, and
       tests.
 - [ ] 1.2 Fetch TinySoundFont and GeneralUser GS at pinned commits; copy the
       SoundFont beside the built executable; install rules for every platform;

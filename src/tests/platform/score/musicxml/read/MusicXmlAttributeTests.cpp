@@ -363,6 +363,34 @@ TEST_CASE("score metadata is read from the head of the file", "[score][musicxml]
     CHECK(score->parts.front().name == "Soprano");
     CHECK(score->parts.front().abbreviation == "S.");
     CHECK(score->parts.front().id == "P1");
+    CHECK_FALSE(score->parts.front().midiProgram.has_value());
+}
+
+TEST_CASE("a part's General MIDI program is kept", "[score][musicxml][attributes]")
+{
+    const auto withProgram = [](const std::string& program)
+    {
+        return R"(<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <part-list><score-part id="P1"><part-name>Violin</part-name>
+    <score-instrument id="P1-I1"><instrument-name>Violin</instrument-name></score-instrument>
+    <midi-instrument id="P1-I1"><midi-channel>1</midi-channel>
+      <midi-program>)" +
+               program +
+               R"(</midi-program></midi-instrument></score-part></part-list>
+  <part id="P1">
+)" + measure("1", attributes(1, 4, 4) + note("C", 5, 4)) +
+               R"(  </part>
+</score-partwise>
+)";
+    };
+
+    // The file counts from 1; the model from 0, as General MIDI does.
+    CHECK(importOrFail(withProgram("41"))->parts.front().midiProgram == 40);
+    CHECK(importOrFail(withProgram("1"))->parts.front().midiProgram == 0);
+    CHECK_FALSE(importOrFail(withProgram("0"))->parts.front().midiProgram.has_value());
+    CHECK_FALSE(importOrFail(withProgram("129"))->parts.front().midiProgram.has_value());
+    CHECK_FALSE(importOrFail(withProgram("violin"))->parts.front().midiProgram.has_value());
 }
 
 TEST_CASE(
