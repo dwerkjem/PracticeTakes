@@ -66,6 +66,34 @@ struct ClockSnapshot
     double sampleRate = 0.0;
 };
 
+// The (frame, time) pair the audio callback last published: for placing an
+// event stamped on another thread -- a MIDI note -- on the clock's timeline.
+struct ClockTiming
+{
+    std::uint64_t streamFrame = 0;
+    Frame position = 0;
+    double timeMilliseconds = 0.0;
+    double sampleRate = 0.0;
+
+    // The clock frame at `milliseconds` on the same high-resolution clock, by
+    // the elapsed time since the block began. Meaningful while playing.
+    [[nodiscard]] Frame frameAt(double milliseconds) const noexcept
+    {
+        return position + roundToFrame((milliseconds - timeMilliseconds) * sampleRate / 1000.0);
+    }
+};
+
+// One block the renderer recorded while a take was armed: where on the clock it
+// started, how many samples it holds, and whether the clock was counting in.
+// Pushed beside the samples, so the message thread can place every sample on
+// the timeline exactly (openspec/changes/takes, design.md decision 1).
+struct RecordedBlock
+{
+    Frame position = 0;
+    std::uint32_t frames = 0;
+    bool countingIn = false;
+};
+
 // Monotonic counts of the discrete events. A reader keeps the last counts it
 // saw; the difference is how many of each happened since.
 struct ClockEventCounts

@@ -69,23 +69,6 @@ class ClockListener
     virtual void clockChanged(const ClockUpdate& update) = 0;
 };
 
-// The (frame, time) pair the audio callback last published: for placing an
-// event stamped on another thread -- a MIDI note -- on the clock's timeline.
-struct ClockTiming
-{
-    std::uint64_t streamFrame = 0;
-    Frame position = 0;
-    double timeMilliseconds = 0.0;
-    double sampleRate = 0.0;
-
-    // The clock frame at `milliseconds` on the same high-resolution clock, by
-    // the elapsed time since the block began. Meaningful while playing.
-    [[nodiscard]] Frame frameAt(double milliseconds) const noexcept
-    {
-        return position + roundToFrame((milliseconds - timeMilliseconds) * sampleRate / 1000.0);
-    }
-};
-
 class PracticeClock final : private juce::Timer
 {
   public:
