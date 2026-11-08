@@ -7,6 +7,9 @@ Scripts are grouped by their purpose:
   files an unattended workflow failure into the issue queue.
 - `design/` regenerates committed design assets such as the application icon.
 - `feedback/` manages the feedback database and dashboard service.
+- `planning/` holds the roadmap ledger and the forecast that republishes the
+  roadmap issue's Live forecast block whenever an issue is closed or reopened.
+  See `docs/development/operations/ROADMAP_FORECAST.md`.
 - `quality/` runs source-formatting and static-analysis checks.
 - `release/` manages application versions.
 - `secrets/` encrypts, synchronizes, and resolves configured SOPS secrets.
