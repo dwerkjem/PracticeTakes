@@ -1,0 +1,39 @@
+# What a pull request has to touch for "Build desktop packages" to build.
+#
+# Read by .github/workflows/build-multiplatform.yml through changed_paths.py,
+# with the meaning of `on.<event>.paths`: patterns in order, the last match
+# decides, `!` excludes. Lines starting with `#` are comments.
+#
+# Everything builds except what is listed as excluded, so a file nobody thought
+# about still builds. Exclude only what the build provably never reads, and
+# say why beside it. Pinned by tools/scripts/ci/test_desktop_build_paths.py.
+
+**
+
+# Documentation. docs/contracts/ is the exception: the test build writes
+# docs/contracts/testcontrol/approved-states.json, so a change there is a
+# change the build checks.
+!docs/**
+docs/contracts/**
+
+# OpenSpec proposals, designs and specs are read by people, not by CMake.
+!openspec/**
+
+# Markdown anywhere, except the root README.md, which the packages ship
+# (tools/cmake/Packaging.cmake and the macOS bundle step copy it).
+!**/*.md
+README.md
+
+# Repository plumbing that no build step reads.
+!.github/ISSUE_TEMPLATE/**
+!.github/CODEOWNERS
+!.github/dependabot.yml
+!.github/prompts/**
+!.github/skills/**
+!.claude/**
+
+# Other workflows. This one, the release that calls it, and the decision it
+# calls still build: a change to how the build runs is tested by running it.
+!.github/workflows/**
+.github/workflows/build-multiplatform.yml
+.github/workflows/release.yml

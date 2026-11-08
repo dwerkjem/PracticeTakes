@@ -105,8 +105,71 @@ env:
   CCACHE_SLOPPINESS: include_file_ctime,include_file_mtime
 
 jobs:
+  # Decides whether this change needs a build at all. A pull request that only
+  # touches documentation does not: see tools/scripts/ci/desktop_build_paths.txt
+  # for exactly what counts. Everything else (a push to main, a release, a
+  # manual run) always builds.
+  #
+  # This does not call changed-paths.yml like the other conditional checks. That
+  # asks the API for the pull request's files and needs `pull-requests: read`,
+  # and the release workflow calls this one with `contents: read` only, so a
+  # job here asking for more would stop every release from starting. Comparing
+  # the commits with git needs nothing beyond `contents: read`.
+  #
+  # Fails open, like changed-paths.yml: anything but a clear "false" builds.
+  changes:
+    name: Decide whether this change needs a build
+    runs-on: ubuntu-24.04
+    outputs:
+      relevant: ${{ steps.decide.outputs.relevant }}
+
+    steps:
+      - name: Check out the history to compare
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: tools/scripts/ci
+          sparse-checkout-cone-mode: true
+
+      - name: Decide
+        id: decide
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ "${EVENT}" != "pull_request" ]]; then
+            echo "Not a pull request, so it builds."
+            echo "relevant=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          # Both names of a renamed file, so moving a file out of the build's
+          # inputs still builds once.
+          if ! base="$(git merge-base "${BASE_SHA}" "${HEAD_SHA}")" \
+              || ! git diff --name-status -M "${base}" "${HEAD_SHA}" > status.txt; then
+            echo "::warning::Could not compare the pull request with its base, so it builds."
+            echo "relevant=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          cut -f2- status.txt | tr '\t' '\n' > changed.txt
+
+          echo "Changed files:"
+          sed 's/^/  /' changed.txt
+
+          python3 tools/scripts/ci/changed_paths.py \
+            --patterns "$(cat tools/scripts/ci/desktop_build_paths.txt)" changed.txt \
+            | tee -a "${GITHUB_OUTPUT}"
+
   linux:
     name: Linux ${{ matrix.arch }}
+    needs: changes
+    # Runs even if the decision failed: an empty answer is not "false", so a
+    # broken decision builds rather than skips.
+    if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       matrix:
@@ -124,15 +187,26 @@ jobs:
     # Debian 12 (for example, by requiring the newer t64 library packages).
     container: debian:12
     env:
+      BUILD_NEEDED: ${{ needs.changes.outputs.relevant != 'false' }}
       CCACHE_DIR: ${{ github.workspace }}/.ccache
 
     steps:
+      # A pull request that touches only documentation still has to report
+      # this check by its own name, because main requires it. So the job runs
+      # and every step below is skipped, rather than the whole job, which for a
+      # matrix job would report under its unexpanded name and block the merge.
+      - name: Skip the build when nothing it reads changed
+        if: ${{ env.BUILD_NEEDED != 'true' }}
+        run: echo "::notice::Only documentation changed, so there is nothing to build. See tools/scripts/ci/desktop_build_paths.txt."
+
       - name: Bootstrap Debian runner
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         run: |
           apt-get update
           apt-get install --yes ca-certificates ccache git python3
 
       - name: Check out repository
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.ref || github.sha }}
@@ -140,7 +214,7 @@ jobs:
       # Release builds pass an explicit version. Those compile every object
       # from source instead of trusting mutable Actions cache contents.
       - name: Restore Linux compiler cache
-        if: ${{ inputs.version == '' }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (inputs.version == '') }}
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ github.workspace }}/.ccache
@@ -149,25 +223,29 @@ jobs:
             ccache-${{ runner.os }}-${{ matrix.arch }}-
 
       - name: Configure ccache
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         run: |
           ccache --max-size=1G
           ccache --zero-stats
 
       - name: Apply requested release version
-        if: ${{ inputs.version != '' }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (inputs.version != '') }}
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: python3 tools/scripts/release/version.py set "${RELEASE_VERSION}"
 
       - name: Read application version
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         id: version
         shell: bash
         run: echo "version=$(python3 tools/scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
 
       - name: Install Linux build dependencies
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         run: bash tools/scripts/build/check-linux-build-dependencies.sh --install
 
       - name: Configure
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
@@ -178,16 +256,19 @@ jobs:
             -DPRACTICE_TAKES_PACKAGE_FILE_NAME="PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}"
 
       - name: Build
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         run: cmake --build build --config "${BUILD_TYPE}" --parallel
 
       - name: Report compiler cache performance
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         run: ccache --show-stats
 
       - name: Test
-        if: ${{ matrix.run_tests }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (matrix.run_tests) }}
         run: ctest --test-dir build --build-config "${BUILD_TYPE}" --output-on-failure
 
       - name: Package
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         shell: bash
         run: |
           artifact_name="PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}"
@@ -228,6 +309,7 @@ jobs:
           apt-get install --yes "./${package_path}"
 
       - name: Upload Linux artifact
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
@@ -238,6 +320,10 @@ jobs:
 
   windows:
     name: Windows ${{ matrix.arch }}
+    needs: changes
+    # Runs even if the decision failed: an empty answer is not "false", so a
+    # broken decision builds rather than skips.
+    if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       matrix:
@@ -259,6 +345,7 @@ jobs:
             run_tests: true
     runs-on: ${{ matrix.runner }}
     env:
+      BUILD_NEEDED: ${{ needs.changes.outputs.relevant != 'false' }}
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_VERSION: 4.13.6
       NSIS_VERSION: 3.12.0
@@ -268,7 +355,16 @@ jobs:
       WINDOWS_SIGNING_ENABLED: ${{ secrets.WINDOWS_CERT_PFX_BASE64 != '' && secrets.WINDOWS_CERT_PASSWORD != '' }}
 
     steps:
+      # A pull request that touches only documentation still has to report
+      # this check by its own name, because main requires it. So the job runs
+      # and every step below is skipped, rather than the whole job, which for a
+      # matrix job would report under its unexpanded name and block the merge.
+      - name: Skip the build when nothing it reads changed
+        if: ${{ env.BUILD_NEEDED != 'true' }}
+        run: echo "::notice::Only documentation changed, so there is nothing to build. See tools/scripts/ci/desktop_build_paths.txt."
+
       - name: Check out repository
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.ref || github.sha }}
@@ -276,7 +372,7 @@ jobs:
       # Release builds pass an explicit version. Those compile every object
       # from source instead of trusting mutable Actions cache contents.
       - name: Restore Windows compiler cache
-        if: ${{ inputs.version == '' }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (inputs.version == '') }}
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ github.workspace }}/.ccache
@@ -285,13 +381,14 @@ jobs:
             ccache-${{ runner.os }}-${{ matrix.arch }}-
 
       - name: Apply requested release version
-        if: ${{ inputs.version != '' }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (inputs.version != '') }}
         shell: pwsh
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: python tools/scripts/release/version.py set "${env:RELEASE_VERSION}"
 
       - name: Read application version
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         id: version
         shell: pwsh
         run: |
@@ -312,7 +409,7 @@ jobs:
       # Best effort on purpose: a slower build is a better outcome than a job
       # that fails because a runner image did not let us ask.
       - name: Exclude the build from Defender
-        if: ${{ matrix.arch == 'x64' }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (matrix.arch == 'x64') }}
         shell: pwsh
         run: |
           # Two calls rather than seven. Each Add-MpPreference is a round trip
@@ -329,6 +426,7 @@ jobs:
           }
 
       - name: Install Windows build tools
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -387,6 +485,7 @@ jobs:
           }
 
       - name: Configure
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         shell: pwsh
         run: |
           $vsInstallPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
@@ -404,6 +503,7 @@ jobs:
             -DPRACTICE_TAKES_PACKAGE_FILE_NAME="PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}"
 
       - name: Build
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         shell: pwsh
         run: |
           $vsInstallPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
@@ -416,11 +516,12 @@ jobs:
           cmake --build build --config "${env:BUILD_TYPE}" --parallel
 
       - name: Report compiler cache performance
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         shell: pwsh
         run: ccache --show-stats
 
       - name: Test
-        if: ${{ matrix.run_tests }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (matrix.run_tests) }}
         shell: pwsh
         run: ctest --test-dir build --build-config "${env:BUILD_TYPE}" --output-on-failure
 
@@ -433,7 +534,7 @@ jobs:
       # gate. Without the secrets the installer ships unsigned, exactly as it
       # does today.
       - name: Prepare Windows code signing
-        if: ${{ env.WINDOWS_SIGNING_ENABLED == 'true' }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (env.WINDOWS_SIGNING_ENABLED == 'true') }}
         shell: pwsh
         env:
           WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
@@ -470,7 +571,7 @@ jobs:
       # The application binary is signed before CPack collects it so the signed
       # copy is what the installer carries.
       - name: Sign Windows application binary
-        if: ${{ env.WINDOWS_SIGNING_ENABLED == 'true' }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (env.WINDOWS_SIGNING_ENABLED == 'true') }}
         shell: pwsh
         env:
           WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
@@ -493,6 +594,7 @@ jobs:
           }
 
       - name: Package
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         shell: pwsh
         run: |
           $artifactName = "PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}"
@@ -522,7 +624,7 @@ jobs:
       # Signed last so the published installer, and therefore the checksum and
       # provenance recorded for it, cover the final bytes.
       - name: Sign Windows installer
-        if: ${{ env.WINDOWS_SIGNING_ENABLED == 'true' }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (env.WINDOWS_SIGNING_ENABLED == 'true') }}
         shell: pwsh
         env:
           WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
@@ -547,6 +649,7 @@ jobs:
           }
 
       - name: Upload Windows artifact
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}
@@ -556,7 +659,7 @@ jobs:
           compression-level: 0
 
       - name: Discard Windows signing certificate
-        if: ${{ always() && env.WINDOWS_SIGNING_ENABLED == 'true' }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (always() && env.WINDOWS_SIGNING_ENABLED == 'true') }}
         shell: pwsh
         run: |
           Remove-Item `
@@ -565,6 +668,10 @@ jobs:
 
   macos:
     name: macOS ${{ matrix.name }}
+    needs: changes
+    # Runs even if the decision failed: an empty answer is not "false", so a
+    # broken decision builds rather than skips.
+    if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       matrix:
@@ -581,6 +688,7 @@ jobs:
             run_tests: false
     runs-on: ${{ matrix.runner }}
     env:
+      BUILD_NEEDED: ${{ needs.changes.outputs.relevant != 'false' }}
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       # The Developer ID steps below stay dormant until the matching secrets
       # exist. Secrets cannot be read from a step `if:`, so both decisions are
@@ -589,7 +697,16 @@ jobs:
       MACOS_NOTARIZATION_ENABLED: ${{ secrets.APPLE_NOTARY_APPLE_ID != '' && secrets.APPLE_NOTARY_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
 
     steps:
+      # A pull request that touches only documentation still has to report
+      # this check by its own name, because main requires it. So the job runs
+      # and every step below is skipped, rather than the whole job, which for a
+      # matrix job would report under its unexpanded name and block the merge.
+      - name: Skip the build when nothing it reads changed
+        if: ${{ env.BUILD_NEEDED != 'true' }}
+        run: echo "::notice::Only documentation changed, so there is nothing to build. See tools/scripts/ci/desktop_build_paths.txt."
+
       - name: Check out repository
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.ref || github.sha }}
@@ -597,7 +714,7 @@ jobs:
       # Release builds pass an explicit version. Those compile every object
       # from source instead of trusting mutable Actions cache contents.
       - name: Restore macOS compiler cache
-        if: ${{ inputs.version == '' }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (inputs.version == '') }}
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ github.workspace }}/.ccache
@@ -606,6 +723,7 @@ jobs:
             ccache-${{ runner.os }}-${{ matrix.arch }}-
 
       - name: Install ccache
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         env:
           HOMEBREW_NO_AUTO_UPDATE: "1"
         run: |
@@ -614,17 +732,19 @@ jobs:
           ccache --zero-stats
 
       - name: Apply requested release version
-        if: ${{ inputs.version != '' }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (inputs.version != '') }}
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: python3 tools/scripts/release/version.py set "${RELEASE_VERSION}"
 
       - name: Read application version
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         id: version
         shell: bash
         run: echo "version=$(python3 tools/scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
 
       - name: Configure
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         run: |
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
@@ -635,13 +755,15 @@ jobs:
             -DBUILD_TESTING="${{ matrix.run_tests }}"
 
       - name: Build
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         run: cmake --build build --config "${BUILD_TYPE}" --parallel
 
       - name: Report compiler cache performance
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         run: ccache --show-stats
 
       - name: Test
-        if: ${{ matrix.run_tests }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (matrix.run_tests) }}
         run: ctest --test-dir build --build-config "${BUILD_TYPE}" --output-on-failure
 
       # Developer ID signing turns on when the repository owner creates:
@@ -655,7 +777,7 @@ jobs:
       # Without them the Package step keeps its ad-hoc signature and the build
       # behaves exactly as it does today.
       - name: Import Apple Developer ID identities
-        if: ${{ env.MACOS_SIGNING_ENABLED == 'true' }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (env.MACOS_SIGNING_ENABLED == 'true') }}
         env:
           APPLE_DEVELOPER_ID_CERT_P12: ${{ secrets.APPLE_DEVELOPER_ID_CERT_P12 }}
           APPLE_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_CERT_PASSWORD }}
@@ -685,6 +807,7 @@ jobs:
           rm -f "${certificate_path}"
 
       - name: Package
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         env:
           APPLE_DEVELOPER_ID_APPLICATION: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION }}
           APPLE_DEVELOPER_ID_INSTALLER: ${{ secrets.APPLE_DEVELOPER_ID_INSTALLER }}
@@ -763,6 +886,7 @@ jobs:
       # actually places in /Applications, so packaging is checked end to end
       # rather than only for the presence of a payload path.
       - name: Verify macOS bundle and installed package
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         run: |
           set -euo pipefail
 
@@ -846,7 +970,7 @@ jobs:
       # Stapling rewrites the package, so this runs before the upload that the
       # release checksums and provenance are taken from.
       - name: Notarize and staple macOS installer
-        if: ${{ env.MACOS_SIGNING_ENABLED == 'true' && env.MACOS_NOTARIZATION_ENABLED == 'true' }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (env.MACOS_SIGNING_ENABLED == 'true' && env.MACOS_NOTARIZATION_ENABLED == 'true') }}
         env:
           APPLE_NOTARY_APPLE_ID: ${{ secrets.APPLE_NOTARY_APPLE_ID }}
           APPLE_NOTARY_PASSWORD: ${{ secrets.APPLE_NOTARY_PASSWORD }}
@@ -864,6 +988,7 @@ jobs:
           xcrun stapler validate "${package_path}"
 
       - name: Upload macOS artifact
+        if: ${{ env.BUILD_NEEDED == 'true' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: PracticeTakes-${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}
@@ -873,7 +998,7 @@ jobs:
           compression-level: 0
 
       - name: Discard Apple signing keychain
-        if: ${{ always() && env.MACOS_SIGNING_ENABLED == 'true' }}
+        if: ${{ env.BUILD_NEEDED == 'true' && (always() && env.MACOS_SIGNING_ENABLED == 'true') }}
         run: |
           keychain_path="${RUNNER_TEMP}/practice-takes-signing.keychain-db"
           rm -f "${RUNNER_TEMP}/practice-takes-developer-id.p12"
@@ -885,7 +1010,9 @@ jobs:
   linux-compatibility:
     name: Install Linux ${{ matrix.arch }} package on ${{ matrix.name }}
     needs:
+      - changes
       - linux
+    if: ${{ needs.changes.outputs.relevant != 'false' }}
     strategy:
       fail-fast: false
       matrix:
@@ -976,10 +1103,12 @@ jobs:
   release-assets:
     name: Assemble release artifact bundle
     needs:
+      - changes
       - linux
       - linux-compatibility
       - windows
       - macos
+    if: ${{ needs.changes.outputs.relevant != 'false' }}
     runs-on: ubuntu-24.04
 
     steps:
