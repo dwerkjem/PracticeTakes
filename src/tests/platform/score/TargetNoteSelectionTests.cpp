@@ -263,6 +263,53 @@ TEST_CASE("the earliest onset across voices wins", "[score][target-note]")
     CHECK(selection.note->location.voiceIndex == 1);
 }
 
+TEST_CASE(
+    "cue notes are not performed, so an ossia leaves a voice monophonic",
+    "[score][target-note]")
+{
+    ScoreEvent ossia = makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::e, 0, 4));
+    ossia.isCue = true;
+    const auto score = makeScore({makeMeasure(
+        0, "1",
+        {
+            makeVoice(1, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::e, 0, 5))}),
+            makeVoice(2, {ossia}),
+        })});
+
+    CHECK(isMonophonic(score->parts.front()));
+    const TargetNoteSelection selection = selectTargetNote(score);
+    REQUIRE(selection.outcome == TargetNoteOutcome::found);
+    CHECK(selection.note->soundingName == "E5");
+}
+
+TEST_CASE("a unison of two voices is one note", "[score][target-note]")
+{
+    const auto score = makeScore({makeMeasure(
+        0, "1",
+        {
+            makeVoice(1, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::b, 0, 4))}),
+            makeVoice(2, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::b, 0, 4))}),
+        })});
+    CHECK(isMonophonic(score->parts.front()));
+}
+
+TEST_CASE("a long line with one bar of divisi is still a line", "[score][target-note]")
+{
+    // Forty-eight bars of single notes, then one bar where two voices split.
+    std::vector<Measure> bars;
+    for (std::size_t index = 0; index < 48; ++index)
+    {
+        bars.push_back(makeMeasure(
+            index, std::to_string(index + 1),
+            {makeVoice(1, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::c, 0, 5))})}));
+    }
+    bars.push_back(makeMeasure(
+        48, "49",
+        {makeVoice(1, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::e, 0, 5))}),
+         makeVoice(2, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::c, 0, 5))})}));
+    CHECK(isMonophonic(makeScore(bars)->parts.front()));
+}
+
 TEST_CASE("two voices sounding at once make a part polyphonic", "[score][target-note]")
 {
     const auto score = makeScore({makeMeasure(

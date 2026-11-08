@@ -97,8 +97,10 @@ struct TargetNoteSelection
     std::optional<TargetNote> note;
 };
 
-// Whether a part plays one note at a time: no event holds more than one note,
-// and no two of its voices sound at once. Grace notes are not counted.
+// Whether a part plays one note at a time: at most one note in twenty sounds
+// against a different pitch, in a chord or in another voice. A unison of two
+// voices is one note, and grace and cue notes are not counted, so a vocal line
+// with the odd divisi or ossia is still a line.
 [[nodiscard]] bool isMonophonic(const score::Part& part);
 
 // The target is the **first pitched, non-grace note of the first monophonic

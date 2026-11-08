@@ -51,7 +51,7 @@ expectedAttacksOf(const score::Score& score, std::size_t partIndex)
             for (std::size_t event = 0; event < events.size(); ++event)
             {
                 const score::ScoreEvent& candidate = events.at(event);
-                if (!score::isPitched(candidate) || candidate.isGrace)
+                if (!score::isPitched(candidate) || candidate.isGrace || candidate.isCue)
                 {
                     continue;
                 }

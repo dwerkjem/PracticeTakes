@@ -4,7 +4,6 @@
 #include "PitchNames.h"
 
 #include <algorithm>
-#include <utility>
 #include <vector>
 
 namespace
@@ -20,7 +19,7 @@ struct Candidate
 
 [[nodiscard]] bool isTargetable(const score::ScoreEvent& event)
 {
-    return isPitched(event) && !event.isGrace;
+    return isPitched(event) && !event.isGrace && !event.isCue;
 }
 
 // The earliest targetable event in a measure, across all of its voices.
@@ -93,11 +92,20 @@ struct Candidate
 
 bool isMonophonic(const score::Part& part)
 {
+    // How many notes sound against a different pitch: a chord's, or one
+    // overlapping another voice's note. A unison of two voices is one note.
+    std::size_t notes = 0;
+    std::size_t together = 0;
     for (const score::Measure& measure : part.measures)
     {
-        // Each voice's sounding spans, to check across voices.
-        std::vector<std::pair<score::Tick, score::Tick>> spans;
-        std::vector<std::size_t> voiceOf;
+        struct Span
+        {
+            score::Tick start = 0;
+            score::Tick end = 0;
+            int midi = 0;
+            std::size_t voice = 0;
+        };
+        std::vector<Span> spans;
         for (std::size_t voice = 0; voice < measure.voices.size(); ++voice)
         {
             for (const score::ScoreEvent& event : measure.voices[voice].events)
@@ -106,28 +114,34 @@ bool isMonophonic(const score::Part& part)
                 {
                     continue;
                 }
+                notes += event.notes.size();
                 if (event.notes.size() > 1)
                 {
-                    return false;
+                    together += event.notes.size();
+                    continue;
                 }
-                spans.emplace_back(event.onset, event.onset + event.duration);
-                voiceOf.push_back(voice);
+                spans.push_back(
+                    {event.onset, event.onset + event.duration,
+                     event.notes.front().sounding.midiNoteNumber, voice});
             }
         }
         for (std::size_t first = 0; first < spans.size(); ++first)
         {
-            for (std::size_t second = first + 1; second < spans.size(); ++second)
+            for (std::size_t second = 0; second < spans.size(); ++second)
             {
-                const bool overlap = spans[first].first < spans[second].second &&
-                                     spans[second].first < spans[first].second;
-                if (overlap && voiceOf[first] != voiceOf[second])
+                const Span& one = spans[first];
+                const Span& other = spans[second];
+                if (first != second && one.voice != other.voice && one.midi != other.midi &&
+                    one.start < other.end && other.start < one.end)
                 {
-                    return false;
+                    ++together;
+                    break;
                 }
             }
         }
     }
-    return true;
+    // A line with the odd divisi or ossia is still a line (decision 3).
+    return notes > 0 && together * 20 <= notes;
 }
 
 TargetNoteSelection selectTargetNote(const std::shared_ptr<const score::Score>& score)

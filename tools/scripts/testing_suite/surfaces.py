@@ -1000,6 +1000,33 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The tuner against the shared target (system-wide-target-note).
+    Surface(
+        state="tuner-target",
+        title="The tuner with a target",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "target-line",
+                "Above the frequency, does a line name the target from the sample song and say "
+                "how far flat of it the tone is, in cents?",
+            ),
+        ),
+    ),
+    Surface(
+        state="tuner-target-a442",
+        title="The tuner with a target, at A442",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "flatter-at-442",
+                "Is the same tone now further flat of the target than at A440, and does Settings "
+                "> Practice show Reference pitch 442 Hz?",
+            ),
+        ),
+    ),
     # The Take Review tool before any take.
     Surface(
         state="take-review-empty",

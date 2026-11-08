@@ -169,6 +169,7 @@ void appendState(std::string& out, const ApprovedWindowState& state)
     out += indent + "\"recordTake\": " + boolean(state.recordTake) + ",\n";
     out += indent + "\"reviewTake\": " + boolean(state.reviewTake) + ",\n";
     out += indent + "\"mixOpen\": " + boolean(state.mixOpen) + ",\n";
+    out += indent + "\"referencePitchHz\": " + number(state.referencePitchHz) + ",\n";
     out += indent + "\"windowTitle\": " + quoted(windowTitleOf(state)) + "\n";
     out += "    }";
 }

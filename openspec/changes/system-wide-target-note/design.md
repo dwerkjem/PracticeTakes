@@ -83,3 +83,34 @@ removed, and `all-tools-docked` loses it. The pinned tool count drops by one.
 tool, uses it now. Its tests move with it.
 
 `adding-a-tool.md` gains "Removing a tool".
+
+## Decided while building
+
+### Cue notes are modelled, and nothing performs them
+
+The sample song's voice has an ossia in bars 8–9: a second voice of cue notes
+(`<cue/>`). The importer accepted them and dropped the mark, so:
+- they counted as a second voice sounding at once;
+- playback would have played them;
+- take judging would have expected them.
+
+`ScoreEvent::isCue` now carries the mark. Target selection, expected attacks
+and playback pass over cue notes; the engraver still draws them.
+
+### "One note at a time" tolerates a unison and the odd divisi
+
+The same ossia opens with one note not marked as a cue, sung in unison with
+the voice. A rule of "never two voices at once" therefore failed on a real
+song. A part now counts as monophonic when:
+- a unison of two voices counts as one note;
+- at most one note in twenty sounds against a different pitch, in a chord or
+  in another voice.
+
+A piano part, where most notes do, is still polyphonic.
+
+### The capture states
+
+`tuner-target` and `tuner-target-a442` show the tuner reading the sample's
+target (E4) from a tone a little under it, at A440 and A442. The second reads
+about 8 ¢ flatter. A new `referencePitchHz` state field sets the reference for
+a picture and puts it back to 440 for every other state.
