@@ -109,14 +109,16 @@ TunerComponent::TunerComponent(
     applyThemeToControls();
     updateAdvancedSettingsVisibility();
 
-    audioInputService.addListener(this);
+    // State only: the tuner reads its pitch from SharedPitchAnalysis, so it
+    // needs to hear about mute and disconnection but takes no sample slot.
+    audioInputService.addStateListener(this);
     startTimerHz(analysisRefreshRateHz);
 }
 
 TunerComponent::~TunerComponent()
 {
     stopTimer();
-    audioInputService.removeListener(this);
+    audioInputService.removeStateListener(this);
 }
 
 bool TunerComponent::showView(const juce::String& view)
@@ -433,17 +435,12 @@ bool TunerComponent::hasGraphHistory() const
 void TunerComponent::audioInputAboutToStart(double sampleRate, int inputChannels)
 {
     juce::ignoreUnused(sampleRate, inputChannels);
-    audioInputService.discardPendingSamples(this);
 }
 
-void TunerComponent::audioInputStopped()
-{
-    audioInputService.discardPendingSamples(this);
-}
+void TunerComponent::audioInputStopped() {}
 
 void TunerComponent::audioInputStateChanged(AudioInputService::InputState state)
 {
-    audioInputService.discardPendingSamples(this);
     resetPitchTracking();
 
     switch (state)
@@ -473,12 +470,8 @@ void TunerComponent::audioInputStateChanged(AudioInputService::InputState state)
 
 void TunerComponent::timerCallback()
 {
-    // No longer this tool's own FIFO to drain: SharedPitchAnalysis is the one
-    // registered consumer for pitch detection. Discarding here keeps this
-    // tool's otherwise-idle consumer slot from silently overflowing and
-    // inflating AudioInputService's dropped-sample diagnostics.
-    audioInputService.discardPendingSamples(this);
-
+    // SharedPitchAnalysis is the one registered consumer for pitch detection;
+    // this tool is a state-only listener and has no FIFO of its own.
     const auto analysis = pitchAnalysis.latestResult();
     inputLevel = analysis.inputLevel;
 

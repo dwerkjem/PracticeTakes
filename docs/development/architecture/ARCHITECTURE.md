@@ -171,10 +171,13 @@ only "Open another" creates a second, and only for a `multi` tool. The three
 microphone tools (tuner, spectrogram, harmonic analyzer) are `multi`; the score
 view and target note are `single`. An instance can be renamed, and the label is
 stored in the workspace's optional `toolLabels`, written only when non-empty.
-Because each microphone instance takes one of `AudioInputService`'s eight
-preallocated consumer slots, the shell asks `freeConsumerSlots()` (message
-thread only) before creating one, and refuses with a reason when none is free;
-the audio callback is unchanged. See `openspec/specs/tool-registry/spec.md`.
+There are at most six copies of a tool. A tool that reads samples (the
+spectrogram and the harmonic analyzer) takes one of `AudioInputService`'s
+sixteen preallocated sample streams, so the shell asks `freeConsumerSlots()`
+(message thread only) before creating one, and refuses with an explanation of
+who holds them. The tuner reads pitch from `SharedPitchAnalysis` and is a
+state-only listener (`addStateListener`), which costs no stream. The audio
+callback is unchanged. See `openspec/specs/tool-registry/spec.md`.
 
 ### Services and lifetime
 

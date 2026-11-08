@@ -33,7 +33,7 @@ ToolDefinition{
 | `instancePolicy` | `single` or `multi`. See below. |
 | `settingsVersion` | Set only if the tool persists settings. Bump it when the payload format changes; stored payloads at any other version are discarded and the tool starts at its defaults. |
 | `preferredSize` | Opening size of the floating window. |
-| `usesAudioInput` | Set when each instance registers an `AudioInputService` listener. The shell checks for a free consumer slot before creating one, so a tool that listens must say so. It also has to be `multi` (a test pins the two together). |
+| `readsAudioSamples` | Set when each instance reads samples through its own `AudioInputService` FIFO (`addListener`). The shell checks for a free stream before creating one, so a tool that reads samples must say so, and must be `multi` (a test pins that). A tool that only needs the input's state — muted, disconnected — uses `addStateListener` and leaves this false. |
 
 ## 2. Build it
 
@@ -140,10 +140,12 @@ stored as the workspace's optional `toolLabels`), otherwise the display name,
 with the ordinal after the first ("Tuner 2"). The naming rules are in
 `ToolInstanceLabel.h`.
 
-A multi-instance tool that listens to the microphone is capped by
-`AudioInputService`'s eight consumer slots: "Open another" is disabled, with
-its reason, when none is free. See
-`openspec/changes/archive/*-multi-instance-tools/design.md`.
+There are at most six copies of any tool (`maximumInstancesPerTool`). A tool
+that reads samples also needs one of `AudioInputService`'s sixteen sample
+streams. "Open another" shows which limit applies; out of streams, choosing it
+explains who holds them (`AudioStreamUse.h`). See
+`openspec/changes/archive/*-multi-instance-tools/design.md` and
+`openspec/changes/archive/*-audio-stream-accounting/design.md`.
 
 ## Lifecycle
 

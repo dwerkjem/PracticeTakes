@@ -122,7 +122,7 @@ bool MainComponent::applyWorkspaceSnapshot(const WorkspaceSnapshot& snapshot)
                 // restore carries on rather than failing.
                 if (const auto* definition = definitionFor(entry->id);
                     entry->component == nullptr && definition != nullptr &&
-                    definition->usesAudioInput && audioInputService.freeConsumerSlots() == 0)
+                    definition->readsAudioSamples && audioInputService.freeConsumerSlots() == 0)
                 {
                     workspaceLayoutState.remove(entry->handle);
                     static_cast<void>(entry->state.close());

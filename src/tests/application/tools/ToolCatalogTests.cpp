@@ -19,17 +19,19 @@ TEST_CASE("the built-in catalog declares every shipped tool", "[tools][catalog]"
     }
 }
 
-TEST_CASE("only the tools that take audio are multi-instance", "[tools][catalog]")
+TEST_CASE("every tool that reads audio samples can be opened more than once", "[tools][catalog]")
 {
-    // A multi-instance tool needs its own audio consumer per copy, which the
-    // shell counts before opening another; a score tool would only show the
-    // same open score twice (multi-instance-tools). If this fails, a tool's
-    // policy changed without the other half of that reasoning following it.
+    // The shell counts audio streams on the paths that create an instance; the
+    // rule that a tool reading samples is multi-instance keeps every such tool
+    // inside the same accounting. If this fails, a tool started reading samples
+    // without that check following it.
     for (const auto& definition : builtInToolCatalog().tools())
     {
         INFO("tool id: " << definition.id);
-        CHECK(
-            (definition.instancePolicy == ToolInstancePolicy::multi) == definition.usesAudioInput);
+        if (definition.readsAudioSamples)
+        {
+            CHECK(definition.instancePolicy == ToolInstancePolicy::multi);
+        }
     }
 }
 

@@ -3,6 +3,7 @@
 #include "WorkspaceBuiltIns.h"
 #include "WorkspaceDocuments.h"
 #include "application/tools/BuiltInToolCatalog.h"
+#include "application/tools/ToolInstanceAllocator.h"
 
 #include <algorithm>
 #include <cmath>
@@ -236,6 +237,13 @@ class WorkspaceNormalizer
         }
         if (definition->instancePolicy == ToolInstancePolicy::single &&
             resolved->ordinal().value_or(1) > 1)
+        {
+            return std::nullopt;
+        }
+        // The same cap "Open another" enforces, so a saved or hand-edited
+        // workspace cannot restore more copies of a tool than the menu would
+        // ever have opened.
+        if (resolved->ordinal().value_or(1) > ToolInstanceAllocator::maximumInstancesPerTool)
         {
             return std::nullopt;
         }

@@ -95,10 +95,23 @@ void MainComponent::showToolsMenu()
             toolMenu, "Open or focus", {focusTarget, definition.id, ToolMenuAction::openOrFocus});
         if (isMulti)
         {
-            const auto mayOpen = mayOpenAnotherInstance(definition.id);
+            // Its reason is part of its text, so a disabled item is never a
+            // mystery. Out of audio streams it stays clickable: choosing it
+            // says what is using them, which a greyed-out item cannot.
+            const auto verdict = canOpenAnotherInstance(definition.id);
+            juce::String text = "Open another";
+            if (verdict == ToolInstanceAllocator::OpenAnother::toolLimitReached)
+            {
+                text << " (" << static_cast<int>(ToolInstanceAllocator::maximumInstancesPerTool)
+                     << " is the most)";
+            }
+            else if (verdict == ToolInstanceAllocator::OpenAnother::noAudioStreamFree)
+            {
+                text << " (no audio stream free)";
+            }
             addToolItem(
-                toolMenu, mayOpen ? "Open another" : "Open another (no audio capacity left)",
-                {{}, definition.id, ToolMenuAction::openAnother}, mayOpen);
+                toolMenu, text, {{}, definition.id, ToolMenuAction::openAnother},
+                verdict != ToolInstanceAllocator::OpenAnother::toolLimitReached);
         }
 
         if (isMulti && openInstances.size() >= 2)

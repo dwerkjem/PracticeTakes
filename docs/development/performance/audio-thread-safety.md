@@ -35,7 +35,11 @@ The callback must not:
 - throw. The function is `noexcept`, so an exception escaping it terminates.
 
 Consumers drain their own FIFO from a message-thread timer and analyse there, so
-a slow tool cannot block capture or another tool. Device start, stop, and
+a slow tool cannot block capture or another tool. There are sixteen FIFOs,
+preallocated with the service; an inactive one costs the callback a single
+atomic load. A tool that needs only the input's state (the tuner, which reads
+pitch from `SharedPitchAnalysis`) registers with `addStateListener` instead: it
+gets no FIFO and the callback never visits it. Device start, stop, and
 sample-rate changes travel by atomics polled on a timer rather than by shared
 mutable state. A full FIFO drops the newest block and counts it; it never blocks
 and never overwrites unread data.

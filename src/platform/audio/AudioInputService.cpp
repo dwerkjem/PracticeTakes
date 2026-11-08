@@ -125,6 +125,42 @@ void AudioInputService::addListener(Listener* listener)
     }
 }
 
+void AudioInputService::addStateListener(Listener* listener)
+{
+    if (listener == nullptr)
+    {
+        return;
+    }
+
+    {
+        const juce::ScopedLock lock(consumerLock);
+        if (std::find(stateListeners.begin(), stateListeners.end(), listener) !=
+            stateListeners.end())
+        {
+            return;
+        }
+        stateListeners.push_back(listener);
+    }
+
+    // Told where things stand straight away, exactly as addListener tells a
+    // sample listener, so a tool built mid-session does not wait for the next
+    // change to know the microphone is muted.
+    listener->audioInputStateChanged(inputState());
+    if (deviceRunning.load(std::memory_order_acquire))
+    {
+        listener->audioInputAboutToStart(
+            currentSampleRate.load(std::memory_order_acquire),
+            currentInputChannels.load(std::memory_order_acquire));
+    }
+}
+
+void AudioInputService::removeStateListener(Listener* listener)
+{
+    const juce::ScopedLock lock(consumerLock);
+    stateListeners.erase(
+        std::remove(stateListeners.begin(), stateListeners.end(), listener), stateListeners.end());
+}
+
 std::size_t AudioInputService::freeConsumerSlots() const
 {
     const juce::ScopedLock lock(consumerLock);
@@ -733,18 +769,20 @@ const AudioInputService::ConsumerSlot* AudioInputService::findConsumer(Listener*
     return nullptr;
 }
 
-std::array<AudioInputService::Listener*, AudioInputService::maximumConsumers>
-AudioInputService::listenerSnapshot() const
+std::vector<AudioInputService::Listener*> AudioInputService::listenerSnapshot() const
 {
-    std::array<Listener*, maximumConsumers> snapshot{};
+    std::vector<Listener*> snapshot;
     const juce::ScopedLock lock(consumerLock);
-    for (std::size_t index = 0; index < consumers.size(); ++index)
+    snapshot.reserve(consumers.size() + stateListeners.size());
+    for (const auto& consumer : consumers)
     {
-        snapshot[index] = consumers[index].listener;
+        if (consumer.listener != nullptr)
+        {
+            snapshot.push_back(consumer.listener);
+        }
     }
-    // Copying nullable pointer values does not dereference them. The analyzer
-    // can otherwise misdiagnose std::array's return copy as a null dereference.
-    return snapshot; // NOLINT(clang-analyzer-core.NullDereference)
+    snapshot.insert(snapshot.end(), stateListeners.begin(), stateListeners.end());
+    return snapshot;
 }
 
 void AudioInputService::deliverFormatChange()

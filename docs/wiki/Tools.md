@@ -105,10 +105,16 @@ copy has its own settings, its own analysis and its own place in the workspace.
 
 ![The Tools menu with two tuners open: Open or focus, Open another, then an entry for Tuner and one for Tuner 2](images/tools-menu-instances.png)
 
-Every copy listens to the microphone through its own channel, and there are a
-fixed number of them. When none is left, **Open another** is greyed out and
-says *no audio capacity left*. Close a copy to free one. The score view and the
-target note tool open once each, because every copy would show the same score.
+You can have up to six copies of each tool. At six, **Open another** is greyed
+out and says *6 is the most*.
+
+Spectrograms and harmonic analyzers each take one of 16 audio streams from the
+microphone. Tuners don't take one, because all tuners share one pitch reading.
+If the streams ever run out, **Open another** says *no audio stream free*.
+Choosing it tells you which tools are using them, so you know what to close.
+
+The score view and the target note tool open once each, because every copy
+would show the same score.
 
 ## Coming next
 

@@ -106,16 +106,51 @@ std::vector<ToolInstanceId> MainComponent::openInstancesOf(std::string_view tool
     return open;
 }
 
-bool MainComponent::mayOpenAnotherInstance(std::string_view toolId) const
+ToolInstanceAllocator::OpenAnother
+MainComponent::canOpenAnotherInstance(std::string_view toolId) const
 {
     const auto* definition = builtInToolRegistry().catalog().find(toolId);
-    return definition != nullptr && ToolInstanceAllocator::mayOpenAnother(
-                                        *definition, audioInputService.freeConsumerSlots());
+    if (definition == nullptr)
+    {
+        return ToolInstanceAllocator::OpenAnother::singleInstance;
+    }
+    return ToolInstanceAllocator::canOpenAnother(
+        *definition, openInstancesOf(toolId).size(), audioInputService.freeConsumerSlots());
+}
+
+AudioStreamUse::Use MainComponent::audioStreamUse() const
+{
+    // Counted from what is open rather than asked of the service, which holds
+    // only pointers: whatever the open tools do not account for is the shared
+    // pitch detector's slot (see AudioStreamUse).
+    AudioStreamUse::Use use{
+        AudioInputService::consumerCapacity(), audioInputService.freeConsumerSlots(), {}};
+    for (const auto& definition : builtInToolRegistry().tools())
+    {
+        if (definition.readsAudioSamples)
+        {
+            use.tools.push_back({definition.displayName, openInstancesOf(definition.id).size()});
+        }
+    }
+    return use;
+}
+
+void MainComponent::showNoAudioStreamAlert() const
+{
+    juce::AlertWindow::showMessageBoxAsync(
+        juce::MessageBoxIconType::InfoIcon, "No audio stream free",
+        juce::String::fromUTF8(AudioStreamUse::explainFull(audioStreamUse()).c_str()), "OK");
 }
 
 void MainComponent::openAnotherInstance(std::string_view toolId)
 {
-    if (!mayOpenAnotherInstance(toolId))
+    const auto verdict = canOpenAnotherInstance(toolId);
+    if (verdict == ToolInstanceAllocator::OpenAnother::noAudioStreamFree)
+    {
+        showNoAudioStreamAlert();
+        return;
+    }
+    if (verdict != ToolInstanceAllocator::OpenAnother::allowed)
     {
         return;
     }
@@ -275,18 +310,15 @@ void MainComponent::presentTool(
     currentTool = instance;
     if (entry->component == nullptr)
     {
-        // A microphone tool needs one of AudioInputService's fixed consumer
-        // slots, and addListener has no way to say they are full. So ask first,
-        // and say so, rather than open a tool that silently hears nothing.
+        // A tool that reads samples needs one of AudioInputService's fixed
+        // consumer slots, and addListener has no way to say they are full. So
+        // ask first, and say what is using them, rather than open a tool that
+        // silently hears nothing.
         if (const auto* definition = definitionFor(instance);
-            definition != nullptr && definition->usesAudioInput &&
+            definition != nullptr && definition->readsAudioSamples &&
             audioInputService.freeConsumerSlots() == 0)
         {
-            juce::AlertWindow::showMessageBoxAsync(
-                juce::MessageBoxIconType::InfoIcon, "No audio capacity left",
-                "Every slot for a tool that listens to the microphone is in use. Close one of "
-                "the open tuners, spectrograms or harmonic analyzers to open another.",
-                "OK");
+            showNoAudioStreamAlert();
             return;
         }
 

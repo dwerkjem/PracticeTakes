@@ -172,3 +172,23 @@ TEST_CASE("a label follows its instance through normalisation", "[workspace][rec
     CHECK_FALSE(result.snapshot.toolLabels.contains("score-view#2"));
     CHECK(result.snapshot.toolLabels.size() == 1);
 }
+
+TEST_CASE(
+    "a workspace cannot restore more copies of a tool than the menu would open",
+    "[workspace][recovery][tools]")
+{
+    const auto limit = ToolInstanceAllocator::maximumInstancesPerTool;
+    WorkspaceSnapshot snapshot;
+    snapshot.dockRoot = WorkspaceNode::leaf("tuner");
+    snapshot.floating.push_back({"tuner#" + std::to_string(limit), {40, 40, 600, 400}});
+    snapshot.floating.push_back({"tuner#" + std::to_string(limit + 1), {80, 80, 600, 400}});
+
+    const auto result = WorkspaceNormalizer::normalize(snapshot, {{0, 0, 1280, 720}});
+
+    CHECK(
+        result.snapshot.presentationOf("tuner#" + std::to_string(limit)) ==
+        WorkspaceToolPresentation::floating);
+    CHECK(
+        result.snapshot.presentationOf("tuner#" + std::to_string(limit + 1)) ==
+        WorkspaceToolPresentation::closed);
+}
