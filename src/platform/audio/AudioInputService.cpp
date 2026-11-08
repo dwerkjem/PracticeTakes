@@ -33,6 +33,7 @@ static_assert(std::atomic<float>::is_always_lock_free);
 static_assert(std::atomic<double>::is_always_lock_free);
 static_assert(std::atomic<int>::is_always_lock_free);
 static_assert(std::atomic<std::uint64_t>::is_always_lock_free);
+static_assert(std::atomic<RealtimeRenderer*>::is_always_lock_free);
 
 void storeMaximum(std::atomic<float>& destination, float value) noexcept
 {
@@ -239,9 +240,11 @@ bool AudioInputService::hasUsableInput() const
     // and already delivering input callbacks. audioDeviceAboutToStart/stopped
     // is the authoritative lifecycle signal and avoids repeatedly reopening a
     // live device because of that backend reporting mismatch.
-    if (toneSourceRunning.load(std::memory_order_acquire))
+    if (toneSourceRunning.load(std::memory_order_acquire) &&
+        toneFrequency.load(std::memory_order_acquire) > 0.0f)
     {
-        // Being fed a tone *is* having input. A tool drawing "microphone
+        // Being fed a tone *is* having input. The generator running only to
+        // keep the clock's time is not: it delivers no samples. A tool drawing "microphone
         // disconnected" over a graph of a signal it is being given would be
         // describing its own plumbing rather than what it has.
         return true;
@@ -288,6 +291,32 @@ void AudioInputService::setMuted(bool shouldBeMuted)
 void AudioInputService::toggleMuted()
 {
     setMuted(!isMuted());
+}
+
+void AudioInputService::setRealtimeRenderer(RealtimeRenderer* newRenderer)
+{
+    const auto* previous = renderer.exchange(newRenderer, std::memory_order_acq_rel);
+
+    // Whoever owns the previous renderer may destroy it once this returns, so
+    // no callback may still be inside it. The callback never waits for this
+    // thread; this thread waits for one bounded callback to finish. The
+    // generator's blocks count as callbacks too, for the same reason.
+    if (previous != nullptr && previous != newRenderer)
+    {
+        while (callbacksInProgress.load(std::memory_order_acquire) != 0)
+        {
+            juce::Thread::yield();
+        }
+    }
+
+    // A renderer keeps time whether or not a device is open, so with none the
+    // generator has to run to hand it blocks.
+    updateToneSource();
+}
+
+RealtimeRenderer* AudioInputService::realtimeRenderer() const noexcept
+{
+    return renderer.load(std::memory_order_acquire);
 }
 
 float AudioInputService::inputGain() const noexcept
@@ -459,7 +488,11 @@ void AudioInputService::updateToneSource()
     // never true in one, so the generator starts whenever a tone is asked for.
     // One rule -- "the device wins when there is one" -- rather than a second
     // that only happens to agree with it.
-    const auto wanted = toneFrequency.load(std::memory_order_acquire) > 0.0f &&
+    //
+    // A renderer wants blocks too, tone or no tone: the practice clock runs
+    // from them, and with no device nothing else will hand it any.
+    const auto wanted = (toneFrequency.load(std::memory_order_acquire) > 0.0f ||
+                         renderer.load(std::memory_order_acquire) != nullptr) &&
                         !deviceRunning.load(std::memory_order_acquire);
 
     if (wanted == toneSourceRunning.load(std::memory_order_acquire))
@@ -487,8 +520,45 @@ void AudioInputService::updateToneSource()
     }
 }
 
-void AudioInputService::renderToneBlock()
+void AudioInputService::renderRealtime(
+    const float* input,
+    float* const* outputs,
+    int outputChannels,
+    int frames,
+    double sampleRate) noexcept PRACTICE_TAKES_NONBLOCKING
 {
+    auto* active = renderer.load(std::memory_order_acquire);
+    if (active == nullptr || frames <= 0)
+    {
+        return;
+    }
+
+    RenderBlock block;
+    block.input = input;
+    block.inputGain = gain.load(std::memory_order_relaxed);
+    block.outputs = outputChannels > 0 ? outputs : nullptr;
+    block.outputChannels = outputChannels > 0 ? outputChannels : 0;
+    block.frames = frames;
+    block.sampleRate = sampleRate;
+    block.timeMilliseconds = juce::Time::getMillisecondCounterHiRes();
+    active->render(block);
+}
+
+void AudioInputService::renderToneBlock() noexcept PRACTICE_TAKES_NONBLOCKING
+{
+    // Counted as a callback, so `setRealtimeRenderer` waits for this block as
+    // it waits for a device's before letting a renderer go.
+    AudioCallbackScope callbackScope(callbacksInProgress);
+
+    const auto rate = currentSampleRate.load(std::memory_order_relaxed);
+    const auto frames = static_cast<int>(std::min<double>(
+        static_cast<double>(maximumToneBlock), rate * toneBlockMilliseconds / 1000.0));
+
+    // The clock first, with no output: there is no device to hear it on, but
+    // its position has to advance with the samples the tools are being fed.
+    // Before the mute check, as in the device callback.
+    renderRealtime(nullptr, nullptr, 0, frames, rate);
+
     const auto frequency = toneFrequency.load(std::memory_order_acquire);
 
     if (frequency <= 0.0f || generatedBlock.empty())
@@ -512,9 +582,7 @@ void AudioInputService::renderToneBlock()
         return;
     }
 
-    const auto rate = currentSampleRate.load(std::memory_order_relaxed);
-    const auto count = std::min(
-        generatedBlock.size(), static_cast<std::size_t>(rate * toneBlockMilliseconds / 1000.0));
+    const auto count = std::min(generatedBlock.size(), static_cast<std::size_t>(frames));
 
     if (count == 0)
     {
@@ -553,6 +621,24 @@ void AudioInputService::audioDeviceIOCallbackWithContext(
         {
             juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
         }
+    }
+
+    // The clock, after the output is cleared and before the mute check: mute
+    // silences the microphone, not the metronome.
+    if (numSamples > 0 && renderer.load(std::memory_order_relaxed) != nullptr)
+    {
+        const float* deviceInput = nullptr;
+        for (int channel = 0; channel < numInputChannels; ++channel)
+        {
+            if (inputChannelData[channel] != nullptr)
+            {
+                deviceInput = inputChannelData[channel];
+                break;
+            }
+        }
+        renderRealtime(
+            deviceInput, outputChannelData, numOutputChannels, numSamples,
+            currentSampleRate.load(std::memory_order_relaxed));
     }
 
     if (numSamples <= 0 || muted.load(std::memory_order_relaxed))

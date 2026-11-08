@@ -17,18 +17,18 @@
 
 ## 2. The real-time renderer
 
-- [ ] 2.1 `RealtimeRenderer` and `RenderBlock` (in `src/platform/audio/`).
+- [x] 2.1 `RealtimeRenderer` and `RenderBlock` (in `src/platform/audio/`).
       `AudioInputService::setRealtimeRenderer` publishes with release, and a
       swap waits for `callbacksInProgress`.
-- [ ] 2.2 The callback calls the renderer after clearing the output and before
+- [x] 2.2 The callback calls the renderer after clearing the output and before
       the mute check. `ToneSource` calls it with no output.
-- [ ] 2.3 `ClockRenderer`:
+- [x] 2.3 `ClockRenderer`:
       - two preallocated segment tables and an atomic index with a generation
         echo;
       - two clicks synthesised at construction;
       - a click straddling a block boundary;
       - atomic latches for wraps, seeks and the end of the piece.
-- [ ] 2.4 Drive it through `AudioInputServiceCallbackAccess` in tests, under the
+- [x] 2.4 Drive it through `AudioInputServiceCallbackAccess` in tests, under the
       RealtimeSanitizer job, and add a `[.benchmark]` case for a 512-segment
       table.
 

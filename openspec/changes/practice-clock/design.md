@@ -247,3 +247,31 @@ Decisions made while building, which the sections above did not settle.
   bar's start, so the beat count carries on.
 - **A segment's start frame comes from the tempo map's exact seconds**, never
   from summing earlier segments, so rounding can't accumulate across them.
+- **The clicks travel with the table.** Each of the renderer's two table slots
+  carries its own pair of clicks, synthesised on the message thread at that
+  table's sample rate. A 1.5 kHz click at 44.1 kHz would otherwise play at
+  1.63 kHz on a 48 kHz device. "Synthesised at construction" still holds: the
+  constructor synthesises both slots, and the audio thread never synthesises
+  or allocates.
+- **The count-in always sounds**, even with the metronome off. It is how a
+  person knows when to start; the metronome switch governs the take.
+- **Pausing during a count-in abandons it.** The position returns to the point
+  it was counting in to, and playing again counts in afresh.
+- **Reaching the end of the piece stops the clock**, as the stop command would
+  (back to the loop's start, or the score's), and is reported once.
+- **The position during a count-in is the target's frame minus what is left.**
+  It is negative when counting in to the start of the score, as the spec
+  says. Counting in to bar 9, it runs up to bar 9's frame instead.
+- **Commands travel in a 64-entry SPSC queue**, drained at the top of each
+  block. A command is several values (a seek's tick, a play's count-in), and
+  two in one display tick must both happen in order, which separate atomics
+  can't promise.
+- **The synthetic-input generator now runs whenever a renderer is set and no
+  device is delivering**, tone or no tone, so the clock keeps time with no
+  device at all. Running only for the clock, it is not reported as input.
+- **The block carries a monotonic stream frame** beside the clock's position
+  and the high-resolution time, so #40 can place a MIDI event even while the
+  clock is stopped.
+- **Cost:** a 512-frame block against a full 512-segment table renders in
+  about 0.74 µs on the development machine (`[.benchmark]`, "rendering a block
+  against a full segment table").
