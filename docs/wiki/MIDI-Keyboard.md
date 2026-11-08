@@ -1,9 +1,9 @@
 # MIDI Keyboard
 
-A digital piano or MIDI keyboard is the main input the MVP is being built for.
-With one, Practice Takes knows exactly which keys you pressed, when, how hard,
-and what the sustain pedal was doing. It doesn't have to guess any of that from
-a microphone.
+A digital piano or MIDI keyboard is one of the MVP's two inputs; the other is a
+singer's microphone. With a keyboard, Practice Takes knows exactly which keys
+you pressed, when, how hard, and what the sustain pedal was doing. It doesn't
+have to guess any of that from a microphone.
 
 ## Connecting
 

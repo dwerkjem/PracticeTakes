@@ -25,11 +25,15 @@ MIDI keyboard.
 
 ## What the MVP will be
 
-> Open a piece, play it on a MIDI keyboard at a chosen tempo, and afterwards see
-> on the score which notes were wrong, missed, extra, early or late. Then loop
-> the weak passage, slower or one hand at a time, and play it again.
+The MVP is one practice loop, for the piano and the voice:
 
-It is committed for **22 February 2027**, with a planning target of 4 January 2027.
+> Open a piece and choose a tempo. **Play it on a MIDI keyboard, or sing your
+> part with the rest of the score as accompaniment.** Afterwards, see on the
+> score which notes were wrong, missed, extra, early or late, and for a singer
+> how sharp or flat. Then loop the weak passage, slower (or one hand at a time
+> on the piano), and take it again.
+
+It is committed for **12 April 2027**, with a planning target of 8 February 2027.
 The live forecast against that date is kept current in
 [the roadmap issue](https://github.com/dwerkjem/PracticeTakes/issues/10).
 

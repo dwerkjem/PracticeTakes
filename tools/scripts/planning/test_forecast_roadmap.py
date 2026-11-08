@@ -67,12 +67,13 @@ class LedgerTests(unittest.TestCase):
     def test_the_committed_ledger_loads_and_totals_the_published_scope(self):
         ledger = fr.load_ledger()
         self.assertEqual(ledger.roadmap_issue, 10)
-        # #10 publishes 102.5 estimate-weeks to 1.0; the file and the issue must agree.
-        self.assertAlmostEqual(sum(i.size for i in ledger.items), 102.5)
+        # #10 publishes 110.5 estimate-weeks to 1.0; the file and the issue must agree.
+        self.assertAlmostEqual(sum(i.size for i in ledger.items), 110.5)
         per_release = {r.id: 0.0 for r in ledger.releases}
         for item in ledger.items:
             per_release[item.release] += item.size
-        self.assertAlmostEqual(per_release["mvp"], 19.25)
+        # The MVP covers the piano and the voice together (2026-11-08).
+        self.assertAlmostEqual(per_release["mvp"], 30.25)
 
     def test_committed_releases_are_in_date_order(self):
         ledger = fr.load_ledger()
@@ -274,7 +275,7 @@ class OfflineRunTests(unittest.TestCase):
             code = fr.main(["--issues-json", handle.name, "--today", "2026-11-09", "--runs", "200"])
         Path(handle.name).unlink()
         self.assertEqual(code, 0)
-        self.assertIn("**Remaining:** 102.5", out.getvalue())
+        self.assertIn("**Remaining:** 110.5", out.getvalue())
 
 
 if __name__ == "__main__":
