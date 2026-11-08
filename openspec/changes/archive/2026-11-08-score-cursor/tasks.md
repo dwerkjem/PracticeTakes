@@ -31,5 +31,6 @@
 
 - [x] 4.1 An approved state with the clock positioned mid-score (paused, so
       the picture is stable), and its capture surface. Read the pictures.
-- [ ] 4.2 The wiki's Scores page and the Features row, and follow-up issues for
-      rehearsal marks and voice selection.
+- [x] 4.2 The wiki's Scores page and the Features row, and follow-up issues for
+      rehearsal marks and voice selection. *#324 and #325, listed in the
+      roadmap ledger as excluded until the maintainer sizes them.*

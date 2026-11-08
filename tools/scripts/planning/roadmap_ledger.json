@@ -51,6 +51,8 @@
     {"issue": 28, "reason": "built only if #46 or #47 proves it needs it"},
     {"issue": 199, "reason": "code merged; only the hardware check remains, sized in #284's session"},
     {"issue": 323, "reason": "the practice clock's speaker check (#36), sized in #284's session"},
+    {"issue": 324, "reason": "split from #33 (rehearsal marks need the importer to keep them); not sized until the maintainer schedules it"},
+    {"issue": 325, "reason": "split from #33 (one voice of a shared staff); not sized until the maintainer schedules it"},
     {"issue": 291, "reason": "parent of #292-#294, which carry its size"},
     {"issue": 308, "reason": "Stage 7, ear training and music theory (#309-#311): after 1.0, not committed"}
   ],

@@ -35,7 +35,7 @@
 // tool's does: a tool reaches application state through that bundle and never
 // back into the shell. So does the practice clock, which it draws a cursor for,
 // marks the sounding and upcoming notes of, and follows while it plays
-// (openspec/changes/score-cursor). Every rule the cursor follows is in
+// (openspec/changes/archive/2026-11-08-score-cursor). Every rule the cursor follows is in
 // engraving/ScoreCursor.h; this draws it and scrolls.
 class ScoreViewComponent final
     : public ToolComponent,

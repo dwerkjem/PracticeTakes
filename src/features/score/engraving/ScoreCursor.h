@@ -10,7 +10,7 @@
 // Where the practice clock is on a laid-out score, and which notes it is on
 // (no JUCE dependency). Every rule the Score View's cursor follows is here, so
 // each is tested without a display; see
-// openspec/changes/score-cursor/design.md.
+// openspec/changes/archive/2026-11-08-score-cursor/design.md.
 namespace engraving
 {
 // A place on a laid-out score: which system, and the x on it, in staff spaces

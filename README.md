@@ -43,7 +43,9 @@ Once a score is open, the transport in the title bar plays it on a practice
 clock: a count-in, a metronome with the first beat of each bar accented, the
 tempo from 5% to 200%, and a loop that comes round on exactly the same beat
 however long it runs. The clock follows the score's own tempo changes and time
-signatures, and keeps the same timeline as the microphone.
+signatures, and keeps the same timeline as the microphone. The Score View
+follows it: a cursor at the current beat, the notes sounding and the next few
+marked, the page turning by itself, and a click on any note to start from there.
 
 ### Play a MIDI keyboard
 
