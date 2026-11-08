@@ -161,7 +161,7 @@ void MainComponent::finishScoreImport(const score::musicxml::MusicXmlImportResul
     const ScoreImportSummary& summary = scoreImport.apply(result);
 
     // The target follows the open score (system-wide-target-note decision 2).
-    if (result.score != nullptr)
+    if (result.score != nullptr && currentTarget.scoreReplacesTarget())
     {
         auto [target, reason] = pitch::targetFromScore(scoreImport.score());
         currentTarget.publish(std::move(target), std::move(reason));

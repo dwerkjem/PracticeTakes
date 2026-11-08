@@ -27,7 +27,7 @@ class TunerComponent final
         AudioInputService& sharedAudioInputService,
         SharedPitchAnalysis& sharedPitchAnalysis,
         const pitch::ReferencePitch& applicationReferencePitch,
-        const pitch::CurrentTarget& applicationTarget);
+        pitch::CurrentTarget& applicationTarget);
     ~TunerComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -162,7 +162,7 @@ class TunerComponent final
     AudioInputService& audioInputService;
     SharedPitchAnalysis& pitchAnalysis;
     const pitch::ReferencePitch& referencePitch;
-    const pitch::CurrentTarget& target;
+    pitch::CurrentTarget& target;
 
     juce::Label displayModeLabel;
     juce::ComboBox displayModeBox;

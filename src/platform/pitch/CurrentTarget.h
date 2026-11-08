@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 
+#include "../score/PitchNames.h"
 #include "../score/Score.h"
 #include "../score/TargetNoteSelection.h"
 
@@ -16,6 +17,14 @@
 // it opens; #296's picker writes to this same holder.
 namespace pitch
 {
+// Where a target came from: the open score's first note, or the player's own
+// choice (target-note-picker design.md, decision 4).
+enum class TargetOrigin
+{
+    score,
+    chosen
+};
+
 struct Target
 {
     // The sounding pitch, which is what is matched against what is heard.
@@ -28,7 +37,25 @@ struct Target
 
     // Where it came from, in words: "Voice, bar 1".
     std::string source;
+
+    TargetOrigin origin = TargetOrigin::score;
 };
+
+// A target the player chose: from a key, a staff, a name, their own voice, or a
+// note in the score. `written` differs from `sounding` only for a transposing
+// part's note.
+[[nodiscard]] inline std::shared_ptr<const Target>
+chosenTarget(const score::Pitch& sounding, const score::Pitch& written, std::string source)
+{
+    auto target = std::make_shared<Target>();
+    target->midiNoteNumber = sounding.midiNoteNumber;
+    target->name = score::spelledName(sounding);
+    target->writtenName = score::spelledName(written);
+    target->soundsAsWritten = sounding == written;
+    target->source = std::move(source);
+    target->origin = TargetOrigin::chosen;
+    return target;
+}
 
 class CurrentTarget
 {
@@ -48,6 +75,19 @@ class CurrentTarget
     [[nodiscard]] const std::string& whyNone() const noexcept
     {
         return reason;
+    }
+
+    // Whether opening a score leaves a chosen target alone
+    // (Settings -> Practice; target-note-picker decision 4).
+    bool keepChosenWhenScoreOpens = false;
+
+    // Whether a score now opening replaces the target: always, unless the
+    // target was chosen and the player asked to keep it.
+    [[nodiscard]] bool scoreReplacesTarget() const noexcept
+    {
+        return !(
+            keepChosenWhenScoreOpens && current != nullptr &&
+            current->origin == TargetOrigin::chosen);
     }
 
   private:

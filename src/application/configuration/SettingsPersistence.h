@@ -62,6 +62,12 @@ struct State
 
     // A4 in hertz, 415-466.
     double referencePitchHz = AppDefaults::referencePitchHz;
+
+    // A target the player chose, as its sounding and written names ("Bb3"),
+    // empty for none; and whether opening a score keeps it (target-note-picker).
+    juce::String chosenTargetSounding;
+    juce::String chosenTargetWritten;
+    bool keepTargetWhenScoreOpens = false;
     AppDefaults::TunerSettings tuner = AppDefaults::tunerDefaults();
     juce::String tunerBounds;
     juce::String spectrogramBounds;

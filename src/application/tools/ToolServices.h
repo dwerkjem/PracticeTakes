@@ -71,9 +71,10 @@ struct ToolServices
     const pitch::ReferencePitch& referencePitch;
 
     // The note the player is aiming at, or why there is none
-    // (system-wide-target-note, decision 2). `const`: until #296's picker, the
-    // shell sets it from the open score, and a tool only reads it.
-    const pitch::CurrentTarget& target;
+    // (system-wide-target-note, decision 2). Set by the shell from each score
+    // opened, and by the player through a tool: the tuner's picker and the
+    // Score View's menu (target-note-picker).
+    pitch::CurrentTarget& target;
 
     // The theme a tool should start in. Later changes arrive through
     // ToolComponent::setTheme rather than by re-reading this, because a change

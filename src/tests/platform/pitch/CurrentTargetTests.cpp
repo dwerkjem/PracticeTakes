@@ -80,3 +80,35 @@ TEST_CASE("a song's target is its voice; a piano piece has none", "[pitch][targe
 
     CHECK(pitch::targetFromScore(nullptr).second == "No score is open");
 }
+
+TEST_CASE("a chosen target is kept over a new score only when asked", "[pitch][target]")
+{
+    pitch::CurrentTarget holder;
+    CHECK(holder.scoreReplacesTarget());
+
+    const auto bFlat = pitchFromSpelling(Step::b, -1, 3);
+    holder.publish(pitch::chosenTarget(bFlat, bFlat, "Chosen"));
+    REQUIRE(holder.target() != nullptr);
+    CHECK(holder.target()->origin == pitch::TargetOrigin::chosen);
+    CHECK(holder.target()->name == "Bb3");
+    CHECK(holder.target()->midiNoteNumber == 58);
+    CHECK(holder.scoreReplacesTarget());
+
+    holder.keepChosenWhenScoreOpens = true;
+    CHECK_FALSE(holder.scoreReplacesTarget());
+
+    // A target that came from a score is still replaced by the next one.
+    auto fromScore = std::make_shared<pitch::Target>();
+    holder.publish(fromScore);
+    CHECK(holder.scoreReplacesTarget());
+}
+
+TEST_CASE("a target chosen from a transposing part keeps both names", "[pitch][target]")
+{
+    // A B-flat clarinet's written D5 sounds C5.
+    const auto target = pitch::chosenTarget(
+        pitchFromSpelling(Step::c, 0, 5), pitchFromSpelling(Step::d, 0, 5), "Clarinet, bar 3");
+    CHECK(target->name == "C5");
+    CHECK(target->writtenName == "D5");
+    CHECK_FALSE(target->soundsAsWritten);
+}

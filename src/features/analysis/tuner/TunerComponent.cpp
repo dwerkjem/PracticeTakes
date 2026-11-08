@@ -49,7 +49,7 @@ TunerComponent::TunerComponent(
     AudioInputService& sharedAudioInputService,
     SharedPitchAnalysis& sharedPitchAnalysis,
     const pitch::ReferencePitch& applicationReferencePitch,
-    const pitch::CurrentTarget& applicationTarget)
+    pitch::CurrentTarget& applicationTarget)
     : audioInputService(sharedAudioInputService), pitchAnalysis(sharedPitchAnalysis),
       referencePitch(applicationReferencePitch), target(applicationTarget)
 {
