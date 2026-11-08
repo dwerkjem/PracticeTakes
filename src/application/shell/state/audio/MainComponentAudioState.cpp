@@ -21,6 +21,10 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
     {
         updateMicrophoneStateControl();
         updateMicrophoneWarning();
+
+        // The muted frame (paintMutedFrame) is drawn by this component, so a
+        // change of input state has to repaint it, not only the button.
+        repaint();
     }
 }
 
@@ -68,6 +72,47 @@ void MainComponent::updateMicrophoneStateControl()
     microphoneButton.setColour(juce::TextButton::buttonOnColourId, colour);
     microphoneButton.setColour(juce::TextButton::textColourOffId, palette.foreground);
     microphoneButton.setColour(juce::TextButton::textColourOnId, palette.foreground);
+}
+
+void MainComponent::paintMutedFrame(juce::Graphics& graphics) const
+{
+    // #114: muting was a change of text on one button, which does not register
+    // out of the corner of your eye, and muting is a state you can stay in for
+    // a long time without noticing. So while the microphone is muted the whole
+    // workspace is framed in the palette's warning colour, the same amber the
+    // button turns, with a label saying why. It is drawn over the tools rather
+    // than by them, so no tool needs to know, and it goes the moment the mute
+    // is lifted.
+    if (audioInputService.inputState() != AudioInputService::InputState::muted)
+    {
+        return;
+    }
+
+    const auto palette = appPaletteFor(currentTheme);
+    constexpr float frameInset = 6.0f;
+    constexpr float frameThickness = 3.0f;
+    constexpr float cornerRadius = 6.0f;
+    const auto frame = workspaceArea().toFloat().expanded(frameInset);
+
+    graphics.setColour(palette.warning);
+    graphics.drawRoundedRectangle(frame, cornerRadius, frameThickness);
+
+    // The label sits on the frame's top edge, at the left, where the eye
+    // starts reading the workspace. Its text takes black or white, whichever
+    // reads on the warning colour of the current theme.
+    const juce::String label{"Microphone muted"};
+    const juce::Font font{juce::FontOptions(12.0f, juce::Font::bold)};
+    constexpr float labelHeight = 18.0f;
+    constexpr float labelPadding = 8.0f;
+    const auto labelWidth =
+        juce::GlyphArrangement::getStringWidth(font, label) + 2.0f * labelPadding;
+    const juce::Rectangle<float> labelBounds{
+        frame.getX() + 16.0f, frame.getY() - labelHeight / 2.0f, labelWidth, labelHeight};
+
+    graphics.fillRoundedRectangle(labelBounds, labelHeight / 2.0f);
+    graphics.setColour(palette.warning.contrasting(1.0f));
+    graphics.setFont(font);
+    graphics.drawText(label, labelBounds, juce::Justification::centred, false);
 }
 
 void MainComponent::updateMicrophoneWarning()

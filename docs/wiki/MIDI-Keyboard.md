@@ -13,6 +13,8 @@ have to guess any of that from a microphone.
 3. Play a key. The panel confirms what it received. Until then it says "Nothing
    received yet. Play a key to check the connection."
 
+![Settings, MIDI tab: the Keyboard list and Rescan, the connection status, and the Pedal counts as down at slider](images/settings-midi.png)
+
 The choice is remembered. If the keyboard isn't plugged in when Practice Takes
 starts, the panel says it will be used as soon as it appears. If you unplug it
 and plug it back in, it reconnects by itself, and Practice Takes never quietly

@@ -10,11 +10,24 @@ also has **Give feedback on this tool**.
 Listens to the microphone and shows the detected note, its frequency, and how
 many cents sharp or flat it is.
 
-- **Display mode:** a bar or a meter.
-- **Graph:** pitch over time, so drift within a held note is visible.
-- **Advanced settings** tune how the reading behaves: *pitch easing* (smoothing),
-  *average window*, *note switch* (how readily it moves to a new note), *dropout
-  hold* (how long it holds through a gap) and *graph duration*.
+![The tuner in its graph view, reading A4 with the pitch line drifting just above and below it](images/tuner-graph.png)
+
+- **Display mode** picks one of three views:
+  - **Graph**, pitch over time, so drift within a held note is visible (above);
+  - **Bar**, the cents offset as a dot on a line from −50 to +50;
+  - **Meter**, a needle between *flat* and *sharp*.
+
+| Bar | Meter |
+|---|---|
+| ![The tuner's bar view, a dot a few cents left of zero](images/tuner-bar.png) | ![The tuner's meter view, a needle just left of centre](images/tuner-meter.png) |
+
+- **Advanced settings**, from the tool's **...** menu, tune how the reading
+  behaves: *pitch easing* (smoothing), *average window*, *note switch* (how
+  readily it moves to a new note), *dropout hold* (how long it holds through a
+  gap) and *graph duration*. **Clear graph** starts the graph afresh.
+
+  ![The tuner with its advanced settings open: five sliders under the graph, and a Clear graph button](images/tuner-advanced.png)
+
 - **Settings → Practice → Practice preset** applies a coordinated set of these
   controls for the material you are practising.
 - When the tool is small it shows less detail rather than cramming everything in.
@@ -25,13 +38,22 @@ it hears one.
 ## Spectrogram
 
 A scrolling frequency view of the microphone. It is useful for looking at
-harmonics, noise, resonance and how a tone changes over time.
+harmonics, noise, resonance and how a tone changes over time. Frequency is
+marked from 100 Hz to 10 kHz on a logarithmic scale, rising up the screen. In a
+tall, narrow panel the view turns on its side, so frequency runs left to right
+and its labels read downwards, as in the picture on [[Home]].
+
+![The spectrogram with a sung note: a bright band near 440 Hz and its overtones stacked above it](images/spectrogram.png)
 
 ## Harmonic Analyzer
 
 Shows the relative strength of a sustained note's harmonics over time, with its
-fundamental and a brightness reading. It tells you when it can't give a clean
-answer, rather than guessing:
+fundamental and a brightness reading. The bars are the first eight harmonics now;
+the graph below is the same harmonics over time.
+
+![The harmonic analyzer: a fundamental of 215 Hz, eight harmonic bars falling away from H1, and their history as lines](images/harmonic-analyzer.png)
+
+It tells you when it can't give a clean answer, rather than guessing:
 
 - **"Weak fundamental"**: the profile is anchored to the strongest overtone.
 - **"Uncertain or inharmonic input"**: the sound isn't a clean pitched tone.
@@ -43,12 +65,18 @@ Draws the open score as engraved notation: staves and grand staves, clefs, key
 and time signatures, notes, rests, stems, beams, ties, lyrics, dynamics and tempo
 marks, with each part named beside its staves.
 
+![The score view showing the sample song for voice and piano, page 1 of 4](images/score-view.png)
+
 - **Three views:** *Page* (the default, with previous and next page), *Vertical
   scroll* and *Horizontal scroll*.
 - **Enlarge**, **Shrink** and **Default size** change the size of the music.
 - **Parts** shows and hides individual parts.
 
 Open a score with **File → Open score...**. Until then it says "No score open".
+The header names the work and its parts, and links to the import's notes when
+there are any (*8 import diagnostics* above). A line at the bottom says where the
+drawing knowingly differs from the file, such as beams regrouped by the time
+signature.
 
 ## Target Note
 

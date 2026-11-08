@@ -253,6 +253,10 @@ void MainComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& de
 
 void MainComponent::paintOverChildren(juce::Graphics& graphics)
 {
+    // Over the tools, beneath any drop targets: a muted microphone frames the
+    // workspace (#114), and a drag in progress still reads on top of it.
+    paintMutedFrame(graphics);
+
     // Nothing is being dragged over the workspace right now -- draw none of
     // the drop-zone indicators (including the floating target) at all.
     if (activeDropTarget.zone == WorkspaceLayoutState::DropZone::none)

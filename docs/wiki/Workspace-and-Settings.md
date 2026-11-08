@@ -13,6 +13,10 @@ and its history.
 - Split dividers are resizable.
 - **Tools → Arrange workspace** does the same things from the keyboard.
 
+| Tiled | Tabbed |
+|---|---|
+| ![Three tools tiled side by side](images/overview.png) | ![Three tools sharing a tab strip: Tuner, Spectrogram, Harmonic Analyzer](images/tools-tabbed.png) |
+
 ## Workspaces
 
 **Tools → Workspaces** has four built-in arrangements:
@@ -33,8 +37,20 @@ Your layout is restored the next time you start Practice Takes.
 
 ## Settings
 
-**Settings** has five tabs: **Appearance**, **Audio**, **MIDI**, **Practice**,
-and **Reset & support**.
+**Settings** has five tabs:
+
+| Tab | Holds |
+|---|---|
+| **Appearance** | The theme, **Dark** or **Light**, for every open window |
+| **Audio** | Mute, input volume, the live input level, buffer health, and the input device |
+| **MIDI** | The keyboard and the sustain pedal (see [[MIDI Keyboard]]) |
+| **Practice** | Practice presets, which set the tuner's behaviour for the material you're practising |
+| **Reset & support** | **Send feedback**, and reset the current tool, the audio settings, the layout, or all settings, each after a confirmation |
+
+**Import settings**, **Export settings** and **Save settings** sit along the
+bottom of every tab.
+
+![The same three tools in the light theme](images/overview-light.png)
 
 ## Moving settings to another machine
 

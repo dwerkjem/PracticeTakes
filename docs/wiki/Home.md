@@ -5,6 +5,8 @@ macOS. You play or sing, and it listens: a tuner, a spectrogram and a harmonic
 analyzer for the microphone, a score viewer for MusicXML, and live capture of a
 MIDI keyboard.
 
+![The tuner, spectrogram and harmonic analyzer tiled side by side, all reading the same sung A4](images/overview.png)
+
 > **Status: early, and not yet a viable product.** The tools above work, but the
 > thing Practice Takes is for (play a piece, then see what went wrong in that
 > take) does not exist yet. That is the MVP, and the [[Roadmap]] says when it

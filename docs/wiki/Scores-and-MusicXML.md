@@ -20,6 +20,10 @@ Opening a score shows an **import summary**: anything that came in differently
 from the file, grouped by severity, with the part and bar number. Score View
 and Target Note then show the score.
 
+![An import summary: the work's details, then content not supported, structures repaired, and notes about the file, each with its part and bar](images/score-import-summary.png)
+
+![The score view drawing a piano part on a grand staff, with a clef change and a tie](images/score-view-grand-staff.png)
+
 ## What is read
 
 Parts and measures, notes and rests, voices and multiple staves (a piano part is
