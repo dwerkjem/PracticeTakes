@@ -30,6 +30,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -49,6 +50,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -68,6 +70,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -87,6 +90,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -106,6 +110,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -125,6 +130,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -144,6 +150,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -163,6 +170,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -182,6 +190,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -201,6 +210,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -220,6 +230,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -239,6 +250,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": "Tuner"
     },
     {
@@ -258,6 +270,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -277,6 +290,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": "Spectrogram"
     },
     {
@@ -296,6 +310,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -315,6 +330,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": "Harmonic Analyzer"
     },
     {
@@ -334,6 +350,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -353,6 +370,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -372,6 +390,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -391,6 +410,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -410,6 +430,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -429,6 +450,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -448,6 +470,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -467,6 +490,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -486,6 +510,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -505,6 +530,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -524,6 +550,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -543,6 +570,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -562,6 +590,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -581,6 +610,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -600,6 +630,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": "Settings"
     },
     {
@@ -619,6 +650,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": "Settings"
     },
     {
@@ -638,6 +670,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": "Settings"
     },
     {
@@ -657,6 +690,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": "Settings"
     },
     {
@@ -676,6 +710,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": "Settings"
     },
     {
@@ -695,6 +730,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": "Settings"
     },
     {
@@ -714,6 +750,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": "Send feedback"
     },
     {
@@ -733,6 +770,7 @@
       "scoreFixture": "",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": "Send feedback"
     },
     {
@@ -752,6 +790,7 @@
       "scoreFixture": "clean-import.musicxml",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": "Score import"
     },
     {
@@ -771,6 +810,7 @@
       "scoreFixture": "diagnostic-import.musicxml",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": "Score import"
     },
     {
@@ -790,6 +830,7 @@
       "scoreFixture": "notation-sample.musicxml",
       "showScoreImportSummary": false,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -809,6 +850,7 @@
       "scoreFixture": "notation-sample.musicxml",
       "showScoreImportSummary": false,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": "Score View"
     },
     {
@@ -828,6 +870,7 @@
       "scoreFixture": "grand-staff-sample.musicxml",
       "showScoreImportSummary": false,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -847,6 +890,7 @@
       "scoreFixture": "engraving-polish.musicxml",
       "showScoreImportSummary": false,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -866,6 +910,7 @@
       "scoreFixture": "<bundled sample>",
       "showScoreImportSummary": false,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -885,6 +930,7 @@
       "scoreFixture": "<bundled sample>",
       "showScoreImportSummary": false,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -904,6 +950,27 @@
       "scoreFixture": "<bundled sample>",
       "showScoreImportSummary": false,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
+      "windowTitle": ""
+    },
+    {
+      "id": "transport-playing",
+      "description": "The practice clock playing the sample score: the transport in the control strip, showing where it is",
+      "tools": ["score-view"],
+      "toolIds": ["score-view"],
+      "presentation": "docked",
+      "arrangement": "single",
+      "geometry": "normal",
+      "microphone": "available",
+      "settingsOpen": false,
+      "settingsPanel": "",
+      "feedbackOpen": false,
+      "toneHz": 0,
+      "toolView": "",
+      "scoreFixture": "<bundled sample>",
+      "showScoreImportSummary": false,
+      "holdScoreImportInProgress": false,
+      "clockPlaying": true,
       "windowTitle": ""
     },
     {
@@ -923,6 +990,7 @@
       "scoreFixture": "<bundled sample>",
       "showScoreImportSummary": false,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -942,6 +1010,7 @@
       "scoreFixture": "<bundled sample>",
       "showScoreImportSummary": false,
       "holdScoreImportInProgress": false,
+      "clockPlaying": false,
       "windowTitle": ""
     },
     {
@@ -961,6 +1030,7 @@
       "scoreFixture": "<bundled sample>",
       "showScoreImportSummary": true,
       "holdScoreImportInProgress": true,
+      "clockPlaying": false,
       "windowTitle": "Score import"
     }
   ]

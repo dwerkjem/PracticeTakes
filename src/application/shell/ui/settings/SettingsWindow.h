@@ -117,7 +117,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 configureHeading(heading, "Audio");
                 configureDescription(
                     description,
-                    "Control the shared microphone signal used by every analysis tool.");
+                    "Control the shared microphone signal used by every analysis tool, and the "
+                    "metronome the practice clock plays.");
 
                 microphoneButton.onClick = [this] { audioInputService.toggleMuted(); };
                 microphoneButton.setTitle("Microphone mute control");
@@ -768,7 +769,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 configureDescription(
                     description,
                     "Apply a coordinated set of tuner controls for the material you are "
-                    "practicing.");
+                    "practicing, and choose how many bars the metronome counts in.");
 
                 presetLabel.setText("Practice preset", juce::dontSendNotification);
                 addAndMakeVisible(presetLabel);

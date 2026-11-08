@@ -900,6 +900,34 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The practice clock playing the sample (practice-clock). The position
+    # moves, so a question asks what the transport says rather than which bar.
+    Surface(
+        state="transport-playing",
+        title="The practice clock playing the sample score",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=5.0,
+        extras=(
+            Question(
+                "transport-in-strip",
+                "Does the control strip at the top show the transport between the menus and "
+                "the microphone -- Pause, Stop, a bar and beat, a tempo of 100%, Click and Loop "
+                "-- with nothing cut off or overlapping?",
+            ),
+            Question(
+                "transport-says-playing",
+                "Does the button read Pause, and the readout name a bar and beat after the first "
+                "beat of bar 1, showing the clock has been running?",
+            ),
+            Question(
+                "click-in-time",
+                "With speakers on, does the metronome click steadily on each beat, louder on the "
+                "first of each bar, and keep sounding when the microphone is muted?",
+                behavioural=True,
+            ),
+        ),
+    ),
     # The score the application ships, opened the way a first launch opens it.
     # Real exporter output with far more in it than the hand-written fixtures,
     # so this is the picture that shows what the renderer does with an actual

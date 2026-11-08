@@ -304,3 +304,17 @@ Decisions made while building, which the sections above did not settle.
 - **Listeners are told only when something changed**: the frame, the state,
   the count-in, the scale, the score, or an event. A stopped clock costs its
   listeners nothing at 60 Hz.
+- **The transport strip sits between the menus and the microphone** in the
+  window's control strip, shown once a score is open. It has:
+  - Play/Pause and Stop;
+  - a "Bar 3, beat 2" readout, dropped below about 1,180 px;
+  - the tempo percentage, with − and + buttons;
+  - Click and Loop toggles.
+
+  At the narrowest window the menu buttons give up a little width rather than
+  hide it.
+- **The metronome switch is saved; the tempo scale and the loop are not.** The
+  switch is a standing preference. A scale or a loop belongs to the passage
+  being practised.
+- **The capture state `transport-playing`** opens the sample score in the
+  Score View and plays it with no count-in, at 100%, with the metronome on.

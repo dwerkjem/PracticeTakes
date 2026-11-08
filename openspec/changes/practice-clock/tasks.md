@@ -61,9 +61,9 @@
 
 ## 5. Controls and verification
 
-- [ ] 5.1 The transport strip, placed as decided in design.md's open
+- [x] 5.1 The transport strip, placed as decided in design.md's open
       question 1.
-- [ ] 5.2 An approved state with the clock playing a score, plus its capture
+- [x] 5.2 An approved state with the clock playing a score, plus its capture
       surface. Read the pictures.
 - [ ] 5.3 On real speakers: the click is in time, and audible with the
       microphone muted. **Needs a person.**

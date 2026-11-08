@@ -323,6 +323,15 @@ const std::vector<ApprovedWindowState>& states()
          false, "", false,
          "The score view with the sample's voice hidden: the piano alone, in Page view", 0.0,
          "view=page;hidden=P1:Voice", bundledSampleFixtureName(), false},
+        // The practice clock playing the sample, with the transport in the
+        // control strip: the one state where the clock is running
+        // (practice-clock).
+        {"transport-playing", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The practice clock playing the sample score: the transport in the control strip, "
+         "showing where it is",
+         0.0, "", bundledSampleFixtureName(), false, false, true},
         {"score-view-vertical", Tools{"score-view"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false,

@@ -2,11 +2,14 @@
 
 #include <JuceHeader.h>
 
+#include "TransportStrip.h"
+
+#include <algorithm>
 #include <functional>
 
 // The application's own control strip, along the top of the window's content:
-// the menu buttons (or the collapsed Menu below 900 px), the microphone, and
-// fullscreen.
+// the menu buttons (or the collapsed Menu below 900 px), the practice clock's
+// transport once a score is open, the microphone, and fullscreen.
 //
 // It used to be the window's title bar as well, drawing the title and its own
 // minimise and close buttons and dragging the window. The window now uses the
@@ -22,10 +25,17 @@ class MainTitleBar final : public juce::Component
         juce::TextButton& tools,
         juce::TextButton& help,
         juce::TextButton& microphone,
+        TransportStrip& transport,
         std::function<void()> fullscreenHandler)
         : fileButton(file), settingsButton(settings), toolsButton(tools), helpButton(help),
-          microphoneButton(microphone), onFullscreen(std::move(fullscreenHandler))
+          microphoneButton(microphone), transportStrip(transport),
+          onFullscreen(std::move(fullscreenHandler))
     {
+        // Its own visibility is the strip's to decide: shown once a score is
+        // open. Added without being made visible, so this does not override it.
+        addChildComponent(transportStrip);
+        transportStrip.setVisible(transport.isVisible());
+
         for (auto* button :
              {&fileButton, &settingsButton, &toolsButton, &helpButton, &microphoneButton})
         {
@@ -87,24 +97,47 @@ class MainTitleBar final : public juce::Component
             button->setVisible(!useCollapsedMenu);
         }
 
+        constexpr int transportGap = 12;
         if (useCollapsedMenu)
         {
             hamburgerButton.setBounds(bounds.removeFromLeft(76));
-            bounds.removeFromLeft(12);
+            bounds.removeFromLeft(transportGap);
         }
         else
         {
             microphoneButton.setBounds(bounds.removeFromRight(190));
-            bounds.removeFromRight(12);
+            bounds.removeFromRight(transportGap);
 
-            fileButton.setBounds(bounds.removeFromLeft(menuWidth));
+            // While the transport shows, the menus give up width before it
+            // drops below its compact size: at the narrowest window there is
+            // room for both only if the menu buttons narrow a little.
+            int width = menuWidth;
+            if (transportStrip.isVisible())
+            {
+                const int menusAtFull = 4 * menuWidth + 3 * gap + transportGap;
+                const int shortfall =
+                    TransportStrip::compactWidth - (bounds.getWidth() - menusAtFull);
+                if (shortfall > 0)
+                {
+                    width = std::max(64, menuWidth - (shortfall + 3) / 4);
+                }
+            }
+
+            fileButton.setBounds(bounds.removeFromLeft(width));
             bounds.removeFromLeft(gap);
-            settingsButton.setBounds(bounds.removeFromLeft(menuWidth));
+            settingsButton.setBounds(bounds.removeFromLeft(width));
             bounds.removeFromLeft(gap);
-            toolsButton.setBounds(bounds.removeFromLeft(menuWidth));
+            toolsButton.setBounds(bounds.removeFromLeft(width));
             bounds.removeFromLeft(gap);
-            helpButton.setBounds(bounds.removeFromLeft(menuWidth));
+            helpButton.setBounds(bounds.removeFromLeft(width));
+            bounds.removeFromLeft(transportGap);
         }
+
+        const int available = bounds.getWidth();
+        const int stripWidth = available >= TransportStrip::fullWidth
+                                   ? TransportStrip::fullWidth
+                                   : std::min(available, TransportStrip::compactWidth);
+        transportStrip.setBounds(bounds.removeFromLeft(std::max(0, stripWidth)));
     }
 
   private:
@@ -165,6 +198,7 @@ class MainTitleBar final : public juce::Component
     juce::TextButton& toolsButton;
     juce::TextButton& helpButton;
     juce::TextButton& microphoneButton;
+    TransportStrip& transportStrip;
     juce::TextButton hamburgerButton;
     juce::TextButton fullscreenButton;
     std::function<void()> onFullscreen;

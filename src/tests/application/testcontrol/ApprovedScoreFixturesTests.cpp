@@ -95,11 +95,12 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
     // other state behaves exactly as before" a checked claim rather than an
     // assumption.
     CHECK(
-        naming == std::set<std::string>{
-                      "score-import-clean", "score-import-diagnostics", "score-import-in-progress",
-                      "score-view-engraving", "score-view-grand-staff", "score-view-horizontal",
-                      "score-view-notation", "score-view-part-hidden", "score-view-notation-large",
-                      "score-view-page", "score-view-sample", "score-view-vertical"});
+        naming ==
+        std::set<std::string>{
+            "score-import-clean", "score-import-diagnostics", "score-import-in-progress",
+            "score-view-engraving", "score-view-grand-staff", "score-view-horizontal",
+            "score-view-notation", "score-view-part-hidden", "score-view-notation-large",
+            "score-view-page", "score-view-sample", "score-view-vertical", "transport-playing"});
 }
 
 // The invariant this started as was "a state naming a score opens nothing
@@ -748,4 +749,22 @@ TEST_CASE(
 
     REQUIRE(tempo != layout.systems.front().texts.end());
     CHECK(tempo->text.find("Alla Marcia") != std::string::npos);
+}
+
+TEST_CASE("only the transport state plays the clock", "[testcontrol][approved][score]")
+{
+    std::set<std::string> playing;
+
+    for (const ApprovedWindowState& state : approvedWindowStates())
+    {
+        if (state.clockPlaying)
+        {
+            // A clock with no score has nothing to play, so a state that asks
+            // for one playing has to open a score.
+            CHECK_FALSE(state.scoreFixture.empty());
+            playing.insert(state.id);
+        }
+    }
+
+    CHECK(playing == std::set<std::string>{"transport-playing"});
 }

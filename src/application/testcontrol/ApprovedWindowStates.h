@@ -152,6 +152,13 @@ struct ApprovedWindowState
     //
     // Appended last, for the reason the comments above give.
     bool holdScoreImportInProgress = false;
+
+    // Start the practice clock playing once `scoreFixture` has been imported,
+    // so the transport is photographed doing its job rather than at rest.
+    // Played without a count-in, at the score's tempo, with the metronome on.
+    //
+    // Appended last, for the reason the comments above give.
+    bool clockPlaying = false;
 };
 
 // An object that can be asked to act, as though clicked.

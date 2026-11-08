@@ -1103,6 +1103,15 @@ void AudioInputService::openDevice(
         inputOnly->removeAttribute("audioDeviceOutChans");
     }
     juce::ignoreUnused(deviceManager.initialise(2, 0, inputOnly.get(), true));
+
+    // Only the output is to blame if the input opened without it. With nothing
+    // open at all -- no hardware, or a device held elsewhere -- the reason is
+    // that, which `outputUnavailableReason` says when given none here.
+    if (!hasOpenDevice(deviceManager))
+    {
+        status.set({});
+        return;
+    }
     status.set(
         error.isNotEmpty() ? "the output could not be opened (" + error + ")"
                            : juce::String("the output could not be opened"));

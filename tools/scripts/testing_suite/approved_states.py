@@ -58,6 +58,9 @@ class ApprovedState:
     show_score_import_summary: bool
     hold_score_import_in_progress: bool
 
+    # Whether the practice clock is playing the score once it has imported.
+    clock_playing: bool
+
     # The top-level window the state is a picture of. Empty for the main one.
     window_title: str
 
@@ -103,6 +106,7 @@ def _state_from(entry: dict) -> ApprovedState:
         score_fixture=entry["scoreFixture"],
         show_score_import_summary=entry["showScoreImportSummary"],
         hold_score_import_in_progress=entry["holdScoreImportInProgress"],
+        clock_playing=entry["clockPlaying"],
         window_title=entry["windowTitle"],
     )
 
