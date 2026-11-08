@@ -7,7 +7,7 @@
 
 ## 2. The target
 
-- [ ] 2.1 `TargetNoteSelection` moves to `src/platform/score/` and chooses only a
+- [x] 2.1 `TargetNoteSelection` moves to `src/platform/score/` and chooses only a
       monophonic part (decision 3). Tests.
 - [ ] 2.2 `pitch::CurrentTarget`, set by the shell from each score, in
       `ToolServices`.

@@ -6,7 +6,7 @@
 #include "../../application/tools/ToolComponent.h"
 #include "../../platform/score/CurrentScore.h"
 
-#include "TargetNoteSelection.h"
+#include "../../platform/score/TargetNoteSelection.h"
 
 #include <memory>
 

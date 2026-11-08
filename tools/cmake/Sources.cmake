@@ -136,7 +136,6 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/SmuflGlyphs.h
     src/features/score/TargetNoteComponent.cpp
     src/features/score/TargetNoteComponent.h
-    src/features/score/TargetNoteSelection.cpp
     src/features/score/engraving/AccidentalStacking.cpp
     src/features/score/engraving/BeamGeometry.cpp
     src/features/score/engraving/BeamGrouping.cpp
@@ -147,7 +146,6 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/PartNames.cpp
     src/features/score/engraving/ScoreLayoutEngine.cpp
     src/features/score/engraving/StaffPosition.cpp
-    src/features/score/TargetNoteSelection.h
     src/features/score/engraving/Accidental.h
     src/features/score/engraving/AccidentalStacking.cpp
     src/features/score/engraving/AccidentalStacking.h
@@ -227,6 +225,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/score/ScoreEvent.h
     src/platform/score/ScoreInvariants.cpp
     src/platform/score/ScoreInvariants.h
+    src/platform/score/TargetNoteSelection.cpp
+    src/platform/score/TargetNoteSelection.h
     src/platform/score/TempoMap.cpp
     src/platform/score/TempoMap.h
     src/platform/score/musicxml/MusicXmlDiagnosticSink.cpp
@@ -322,7 +322,6 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/analysis/tuner/PitchTrackerTests.cpp
     src/tests/features/analysis/tuner/TunerSettingsCodecTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
-    src/tests/features/score/TargetNoteSelectionTests.cpp
     src/tests/features/score/MusicFontTests.cpp
     src/tests/features/score/ScoreViewSettingsTests.cpp
     src/tests/features/score/SmuflGlyphsTests.cpp
@@ -360,6 +359,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/score/PitchTests.cpp
     src/tests/platform/score/ScoreInvariantsTests.cpp
     src/tests/platform/score/ScoreModelTests.cpp
+    src/tests/platform/score/TargetNoteSelectionTests.cpp
     src/tests/platform/score/TempoMapTests.cpp
     src/tests/platform/score/musicxml/MusicXmlCorpusTests.cpp
     src/tests/platform/score/musicxml/container/MusicXmlContainerTests.cpp
@@ -406,7 +406,6 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/features/score/MusicFont.cpp
     src/features/score/ScoreViewSettings.cpp
     src/features/score/SmuflGlyphs.cpp
-    src/features/score/TargetNoteSelection.cpp
     src/features/score/engraving/AccidentalStacking.cpp
     src/features/score/engraving/BeamGeometry.cpp
     src/features/score/engraving/BeamGrouping.cpp
@@ -423,6 +422,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/audio/SharedPitchAnalysis.cpp
     src/platform/score/ScoreBuilder.cpp
     src/platform/score/ScoreInvariants.cpp
+    src/platform/score/TargetNoteSelection.cpp
     src/platform/score/TempoMap.cpp
     src/platform/score/musicxml/MusicXmlDiagnosticSink.cpp
     src/platform/score/musicxml/MusicXmlImporter.cpp

@@ -176,13 +176,6 @@ void TargetNoteComponent::paintTarget(
             " -- this part transposes, and the target is what it sounds");
     }
 
-    if (target.isChordMember)
-    {
-        lines.add(
-            "One of " + juce::String(static_cast<int>(target.chordNoteCount)) +
-            " notes in a chord");
-    }
-
     for (const juce::String& line : lines)
     {
         graphics.drawFittedText(

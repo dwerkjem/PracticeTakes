@@ -5,11 +5,13 @@
 #include <optional>
 #include <string>
 
-#include "platform/score/Score.h"
-#include "platform/score/ScoreEvent.h"
+#include "Score.h"
+#include "ScoreEvent.h"
 
-// Choosing and describing the one note the Target Note tool shows (no JUCE
-// dependency).
+// Choosing and describing the application's target note from a score (no JUCE
+// dependency). It began as the Target Note tool's, and moved here when the
+// target became application state
+// (openspec/changes/system-wide-target-note, decision 2).
 //
 // Split out of the `Component` following the `WorkspaceLayoutState` and
 // `ScoreImportSummary` precedent: this is the only part of the tool a unit test
@@ -28,6 +30,11 @@ enum class TargetNoteOutcome
 {
     noScoreOpen,
     noPitchedNote,
+
+    // Every part plays chords or overlapping voices: a target is one note at a
+    // time (decision 3).
+    onlyPolyphonic,
+
     found
 };
 
@@ -38,6 +45,9 @@ struct TargetNote
     // move from here, and because it lets a test verify the choice against the
     // score rather than against the chooser.
     score::NoteRef location;
+
+    // Which part it is in, as an index into `Score::parts`.
+    std::size_t partIndex = 0;
 
     std::string partId;
     std::string partName;
@@ -67,12 +77,6 @@ struct TargetNote
     std::string writtenName;
     bool soundsAsWritten = true;
 
-    // Whether the event this note belongs to is a chord, and how many notes it
-    // holds. A chord is one event carrying several pitches, so the target is one
-    // of them, and saying so is more honest than presenting it as a lone note.
-    bool isChordMember = false;
-    std::size_t chordNoteCount = 1;
-
     // Through the score's own TempoMap, which is the one pair of numbers that
     // proves the tempo map was read rather than defaulted. The duration is the
     // difference between the note's end and its start in seconds, not the tick
@@ -93,14 +97,15 @@ struct TargetNoteSelection
     std::optional<TargetNote> note;
 };
 
-// The target is the **first pitched, non-grace note of the first part**: the
-// earliest onset in the earliest measure that has one, tie-broken by the lower
-// voice number.
-//
-// Deliberately dumb and deliberately not configurable. Choosing a target
-// properly is #33's question and needs a cursor, a selected part, and a
-// transport, none of which exist; a rule that fits in one sentence is a rule a
-// test can pin, and it is enough to prove the model's accessors work.
+// Whether a part plays one note at a time: no event holds more than one note,
+// and no two of its voices sound at once. Grace notes are not counted.
+[[nodiscard]] bool isMonophonic(const score::Part& part);
+
+// The target is the **first pitched, non-grace note of the first monophonic
+// part**: the earliest onset in the earliest measure that has one, tie-broken
+// by the lower voice number. A part that plays chords or overlapping voices is
+// passed over, because a target is one note (decision 3); when every part is
+// like that, the outcome says so.
 //
 // Rests are never targets, and a grace note is skipped: it is a zero-duration
 // event taking its time from performance rather than from the bar's arithmetic
