@@ -60,6 +60,16 @@ application shares, which the tuner will show beside its own reading
 
 ## Coming next
 
+Every planned feature is on the [[Features]] page. Among the first:
+
+- **Choose a target note** on a keyboard, a staff or the score, or by singing it,
+  and **see the note you're on** against it, on a piano keyboard and a staff
+  ([#296](https://github.com/dwerkjem/PracticeTakes/issues/296),
+  [#297](https://github.com/dwerkjem/PracticeTakes/issues/297)).
+- **Your vocal range**, found, kept, and drawn against a piece
+  ([#298](https://github.com/dwerkjem/PracticeTakes/issues/298)).
+- **A reference tone or drone** to sing in tune against
+  ([#299](https://github.com/dwerkjem/PracticeTakes/issues/299)).
 - **The same tools on a recording.** Record a take, or open an audio file, and
   look at it with every tool above, exactly as you would live: play it, pause
   it, scrub it. Graphs show a whole take at once, with the score's target notes

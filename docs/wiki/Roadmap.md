@@ -12,12 +12,14 @@ the summary.
 | Stage | What you get | Commitment | Planning target |
 |---|---|---|---|
 | **Foundation** ([#12](https://github.com/dwerkjem/PracticeTakes/issues/12)) | The dockable workspace and its tools: what exists today. A development build, not a product | 29 Nov 2026 | 16 Nov 2026 |
-| **MVP** ([#13](https://github.com/dwerkjem/PracticeTakes/issues/13)) | **Piano and voice together.** Play a piece on a MIDI keyboard, or sing it with the score as accompaniment. See on the score what went wrong in the take, and loop the weak passage slower | **12 Apr 2027** | 8 Feb 2027 |
-| Beta 1 ([#14](https://github.com/dwerkjem/PracticeTakes/issues/14)) | Depth on both instruments: held notes, the pedal and chords on the piano; vibrato, phrasing, breath and latency drift for the voice; dynamics for both | 26 Jul 2027 | 19 Apr 2027 |
-| Beta 2 | Files and sessions: MIDI files, saved sessions, the piano roll, a score library, and recording takes and opening audio files | 27 Sep 2027 | 31 May 2027 |
-| **Beta** | Review and history: an explained overall result, phrase-level review, saved and compared takes, retrying weak sections. **Every tool works on a recording as it does live**, with whole-take graphs ([#291](https://github.com/dwerkjem/PracticeTakes/issues/291)) | **7 Feb 2028** | 16 Aug 2027 |
-| **1.0** ([#15](https://github.com/dwerkjem/PracticeTakes/issues/15)) | Crash recovery, onboarding, accessibility, translations, verified on Windows, Linux and macOS | **28 Aug 2028** | 29 Nov 2027 |
+| **MVP** ([#13](https://github.com/dwerkjem/PracticeTakes/issues/13)) | **Two lanes at once.** Listening and pitch: choose a target note, see the note you're on against it, find your range, sing against a drone. Piano practice: hands separately, slower. Both lead into one practice loop: play or sing a piece, see on the score what went wrong, loop the weak passage | **17 May 2027** | 1 Mar 2027 |
+| Beta 1 ([#14](https://github.com/dwerkjem/PracticeTakes/issues/14)) | Depth on both instruments: held notes, the pedal and chords on the piano; vibrato, phrasing, breath and latency drift for the voice; dynamics for both | 23 Aug 2027 | 10 May 2027 |
+| Beta 2 | Files and sessions: MIDI files, saved sessions, the piano roll, a score library, and recording takes and opening audio files | 1 Nov 2027 | 21 Jun 2027 |
+| **Beta** | Review and history: an explained overall result, phrase-level review, saved and compared takes, retrying weak sections. **Every tool works on a recording as it does live**, with whole-take graphs ([#291](https://github.com/dwerkjem/PracticeTakes/issues/291)) | **6 Mar 2028** | 6 Sep 2027 |
+| **1.0** ([#15](https://github.com/dwerkjem/PracticeTakes/issues/15)) | Crash recovery, onboarding, accessibility, translations, verified on Windows, Linux and macOS | **18 Sep 2028** | 20 Dec 2027 |
 | After 1.0 ([#188](https://github.com/dwerkjem/PracticeTakes/issues/188)) | Authorable practice content, scripting, live score editing | not committed | — |
+
+Every feature, by category and status, is on the [[Features]] page.
 
 ## Two kinds of date
 
