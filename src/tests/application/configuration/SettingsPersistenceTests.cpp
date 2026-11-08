@@ -742,3 +742,39 @@ TEST_CASE("playing the score and its volume survive a round trip", "[settings][p
     CHECK_FALSE(loaded.state.playbackEnabled);
     CHECK(loaded.state.playbackVolume == Catch::Approx(AppDefaults::Playback::volume));
 }
+
+TEST_CASE(
+    "the reference pitch survives a round trip, and defaults to A440",
+    "[settings][persistence]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        AppSettings::State expected;
+        expected.referencePitchHz = 442.0;
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    {
+        juce::PropertiesFile reader(temporary.path, settingsOptions());
+        CHECK(AppSettings::load(reader).state.referencePitchHz == Catch::Approx(442.0));
+    }
+
+    // A file from before it, or one out of range, reads as A440.
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.removeValue("practice.referencePitchHz");
+        REQUIRE(writer.saveIfNeeded());
+    }
+    {
+        juce::PropertiesFile reader(temporary.path, settingsOptions());
+        CHECK(AppSettings::load(reader).state.referencePitchHz == Catch::Approx(440.0));
+    }
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.setValue("practice.referencePitchHz", 300.0);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    CHECK(AppSettings::load(reader).state.referencePitchHz == Catch::Approx(440.0));
+}

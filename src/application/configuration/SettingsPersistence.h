@@ -59,6 +59,9 @@ struct State
     // Whether the score plays with the clock, and how loud. Local too.
     bool playbackEnabled = AppDefaults::Playback::enabled;
     double playbackVolume = AppDefaults::Playback::volume;
+
+    // A4 in hertz, 415-466.
+    double referencePitchHz = AppDefaults::referencePitchHz;
     AppDefaults::TunerSettings tuner = AppDefaults::tunerDefaults();
     juce::String tunerBounds;
     juce::String spectrogramBounds;

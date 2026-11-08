@@ -30,6 +30,10 @@ inline constexpr int countInBars = 1;
 // Playing the score through the clock (openspec/changes/archive/2026-11-08-score-playback): off
 // until someone turns it on, so the clock sounds as it always did. Local, like
 // the metronome.
+// The application's A4 in hertz (system-wide-target-note). Local, like the
+// metronome: a preference about where this person practises.
+inline constexpr double referencePitchHz = 440.0;
+
 namespace Playback
 {
 inline constexpr bool enabled = false;

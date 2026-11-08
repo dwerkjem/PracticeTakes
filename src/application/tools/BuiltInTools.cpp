@@ -16,8 +16,12 @@ const ToolRegistry& builtInToolRegistry()
     static const ToolRegistry registry(
         builtInToolCatalog(),
         {
-            {"tuner", [](const ToolServices& services)
-             { return std::make_unique<TunerComponent>(services.audio, services.pitchAnalysis); }},
+            {"tuner",
+             [](const ToolServices& services)
+             {
+                 return std::make_unique<TunerComponent>(
+                     services.audio, services.pitchAnalysis, services.referencePitch);
+             }},
             {"spectrogram", [](const ToolServices& services)
              { return std::make_unique<SpectrogramComponent>(services.audio); }},
             {"harmonic-analyzer",

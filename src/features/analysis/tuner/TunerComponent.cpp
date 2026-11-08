@@ -45,8 +45,10 @@ class TunerComponent::ModeChooser final : public juce::Component
 //==============================================================================
 TunerComponent::TunerComponent(
     AudioInputService& sharedAudioInputService,
-    SharedPitchAnalysis& sharedPitchAnalysis)
-    : audioInputService(sharedAudioInputService), pitchAnalysis(sharedPitchAnalysis)
+    SharedPitchAnalysis& sharedPitchAnalysis,
+    const pitch::ReferencePitch& applicationReferencePitch)
+    : audioInputService(sharedAudioInputService), pitchAnalysis(sharedPitchAnalysis),
+      referencePitch(applicationReferencePitch)
 {
     setOpaque(true);
 
@@ -488,11 +490,8 @@ PitchTracker::Settings TunerComponent::trackerSettings() const
     // Read straight off the sliders each frame, so a mid-note adjustment takes
     // effect immediately rather than at the next note.
     return {
-        easingSlider.getValue(),
-        averagingSlider.getValue(),
-        thresholdSlider.getValue(),
-        dropoutSlider.getValue(),
-    };
+        easingSlider.getValue(), averagingSlider.getValue(), thresholdSlider.getValue(),
+        dropoutSlider.getValue(), referencePitch.hertz()};
 }
 
 void TunerComponent::applyTrackerUpdate(const PitchTracker::Update& update)

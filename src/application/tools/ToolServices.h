@@ -17,6 +17,11 @@ namespace take
 class TakeRecorder;
 }
 
+namespace pitch
+{
+class ReferencePitch;
+}
+
 class AudioInputService;
 class SharedPitchAnalysis;
 
@@ -58,6 +63,11 @@ struct ToolServices
     // read them -- #52's review will -- and start or stop one, as the transport
     // does.
     take::TakeRecorder& takes;
+
+    // The application's A4, which every pitch-to-frequency conversion uses
+    // (openspec/changes/system-wide-target-note, decision 1). Read on a tool's
+    // own timer; set in Settings, never by a tool.
+    const pitch::ReferencePitch& referencePitch;
 
     // The theme a tool should start in. Later changes arrive through
     // ToolComponent::setTheme rather than by re-reading this, because a change
