@@ -9,7 +9,7 @@
 
 // The note the player is aiming at, for the whole application, or why there is
 // none (no JUCE dependency).
-// openspec/changes/system-wide-target-note/design.md, decision 2.
+// openspec/changes/archive/2026-11-08-system-wide-target-note/design.md, decision 2.
 //
 // Held like score::CurrentScore: published whole, read on the message thread,
 // and changed when the pointer is. Until #296 the shell sets it from each score
@@ -72,7 +72,13 @@ targetFromScore(const std::shared_ptr<const score::Score>& score)
         break;
     }
 
-    const TargetNote& note = *selection.note;
+    // Checked rather than trusted from the outcome: `found` means it is there,
+    // but nothing here should have to know that.
+    if (!selection.note.has_value())
+    {
+        return {nullptr, "This score has no notes to aim at"};
+    }
+    const TargetNote& note = selection.note.value();
     auto target = std::make_shared<Target>();
     target->midiNoteNumber = note.soundingMidiNoteNumber;
     target->name = note.soundingName;

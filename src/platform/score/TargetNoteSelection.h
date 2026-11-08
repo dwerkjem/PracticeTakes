@@ -11,7 +11,7 @@
 // Choosing and describing the application's target note from a score (no JUCE
 // dependency). It began as the Target Note tool's, and moved here when the
 // target became application state
-// (openspec/changes/system-wide-target-note, decision 2).
+// (openspec/changes/archive/2026-11-08-system-wide-target-note, decision 2).
 //
 // Split out of the `Component` following the `WorkspaceLayoutState` and
 // `ScoreImportSummary` precedent: this is the only part of the tool a unit test

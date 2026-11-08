@@ -24,6 +24,6 @@
 
 - [x] 4.1 The tuner with a target from the sample song, at A440 and at A442;
       captures read.
-- [ ] 4.2 The wiki (Tools: the tuner's target line; Settings: reference pitch;
+- [x] 4.2 The wiki (Tools: the tuner's target line; Settings: reference pitch;
       the Target Note section replaced), Features rows, README,
       `score-model-findings.md` findings 2 and 6 closed, ARCHITECTURE.md.

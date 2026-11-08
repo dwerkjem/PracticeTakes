@@ -4,7 +4,7 @@
 #include <cmath>
 
 // The application's tuning reference: A4 in hertz (no JUCE dependency).
-// openspec/changes/system-wide-target-note/design.md, decision 1.
+// openspec/changes/archive/2026-11-08-system-wide-target-note/design.md, decision 1.
 //
 // One value, owned by the application, so a tuner set to A442 and anything else
 // that turns a frequency into a note agree. The conversions take it as a

@@ -8,7 +8,8 @@
 #include "CurrentTarget.h"
 
 // What the tuner says about the note it hears against the target (no JUCE
-// dependency). openspec/changes/system-wide-target-note/design.md, decision 4.
+// dependency).
+// openspec/changes/archive/2026-11-08-system-wide-target-note/design.md, decision 4.
 namespace pitch
 {
 // The tuner's own in-tune band, so "on it" and the tuner's green agree.

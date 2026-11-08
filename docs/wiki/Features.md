@@ -66,7 +66,7 @@ Live tools for any voice or instrument. No score needed.
 
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
-| Shared target note and reference pitch | One target note every tool can see, and one A4 everything measures against | MVP | [#227](https://github.com/dwerkjem/PracticeTakes/issues/227) |
+| Shared target note and reference pitch | One target note every tool can see, and one A4 everything measures against | ✅ | [#227](https://github.com/dwerkjem/PracticeTakes/issues/227) |
 | Target note picker | Choose the note to aim at on a keyboard, on a staff, in the score, by name, or by singing it | MVP | [#296](https://github.com/dwerkjem/PracticeTakes/issues/296) |
 | Reference tone and drone | Hear the target note, or hold a drone to sing in tune against | MVP | [#299](https://github.com/dwerkjem/PracticeTakes/issues/299) |
 

@@ -66,8 +66,8 @@ struct ToolServices
     take::TakeRecorder& takes;
 
     // The application's A4, which every pitch-to-frequency conversion uses
-    // (openspec/changes/system-wide-target-note, decision 1). Read on a tool's
-    // own timer; set in Settings, never by a tool.
+    // (openspec/changes/archive/2026-11-08-system-wide-target-note, decision
+    // 1). Read on a tool's own timer; set in Settings, never by a tool.
     const pitch::ReferencePitch& referencePitch;
 
     // The note the player is aiming at, or why there is none

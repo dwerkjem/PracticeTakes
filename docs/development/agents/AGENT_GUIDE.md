@@ -213,6 +213,8 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   (launch timing).
 - `src/platform` — shared infrastructure: `audio/` (`AudioInputService`,
   `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`, `RealtimeRenderer`),
+  `pitch/` (the application's reference pitch and current target note, both
+  JUCE-free; see ARCHITECTURE.md § The target note and the reference pitch),
   `transport/` (the practice clock: JUCE-free `ClockMath.h` holding every
   timing rule, `ClockRenderer` on the audio thread, `PracticeClock` on the
   message thread, and the score's playback through `ScoreSynth`, TinySoundFont
