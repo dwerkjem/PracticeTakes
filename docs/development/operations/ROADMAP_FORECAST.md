@@ -65,8 +65,8 @@ description it has on GitHub, unless its ledger entry gives a `title` or
 `description`, in which case that field is kept in step too. So **change a due
 date through the ledger's commitments, not on GitHub**: a due date edited on
 GitHub is put back the next time the ledger changes. Renaming a milestone on
-GitHub is fine. Due dates are sent at midday UTC, so they read as the same date from UTC-11 to
-UTC+11.
+GitHub is fine. GitHub keeps a due date as a day, stored as midnight UTC, and
+the sync compares days only.
 
 ## Keeping the ledger true
 

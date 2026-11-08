@@ -78,11 +78,11 @@ def planned_milestones(raw: dict) -> list[Milestone]:
 def due_on(date: dt.date) -> str:
     """GitHub's due_on for a date.
 
-    Midday UTC, not midnight: GitHub shows a due date in the viewer's time zone,
-    and midnight UTC reads as the day before anywhere west of Greenwich. Midday
-    reads as the same date from UTC-11 to UTC+11.
+    GitHub keeps only the day, and stores it as midnight UTC whatever time is
+    sent (seen on 2026-11-08: 12:00 came back as 00:00), so midnight is what is
+    sent. ``changes`` compares dates only, never times.
     """
-    return f"{date.isoformat()}T12:00:00Z"
+    return f"{date.isoformat()}T00:00:00Z"
 
 
 def changes(planned: list[Milestone], current: dict[int, dict]) -> list[tuple[int, dict]]:

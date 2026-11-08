@@ -83,7 +83,7 @@ class ChangesTests(unittest.TestCase):
         current = self.current(m4={"title": "Stage 4 — Performance Beta", "due_on": "2027-08-15T00:00:00Z"})
         self.assertEqual(
             sm.changes(self.planned, current),
-            [(4, {"title": "Stage 4 — Beta", "due_on": "2028-05-08T12:00:00Z"})],
+            [(4, {"title": "Stage 4 — Beta", "due_on": "2028-05-08T00:00:00Z"})],
         )
 
     def test_title_and_description_are_left_alone_when_the_ledger_gives_none(self):
@@ -97,7 +97,7 @@ class ChangesTests(unittest.TestCase):
 
     def test_a_milestone_with_no_due_date_gets_one(self):
         current = self.current(m3={"due_on": None})
-        self.assertEqual(sm.changes(self.planned, current), [(3, {"due_on": "2027-05-17T12:00:00Z"})])
+        self.assertEqual(sm.changes(self.planned, current), [(3, {"due_on": "2027-05-17T00:00:00Z"})])
 
     def test_a_milestone_missing_from_github_is_an_error_not_a_creation(self):
         current = self.current()
@@ -112,8 +112,8 @@ class ChangesTests(unittest.TestCase):
 
 
 class DueOnTests(unittest.TestCase):
-    def test_due_on_is_midday_utc(self):
-        self.assertEqual(sm.due_on(D("2028-11-27")), "2028-11-27T12:00:00Z")
+    def test_due_on_is_midnight_utc_as_github_stores_it(self):
+        self.assertEqual(sm.due_on(D("2028-11-27")), "2028-11-27T00:00:00Z")
 
 
 class RealLedgerTests(unittest.TestCase):
