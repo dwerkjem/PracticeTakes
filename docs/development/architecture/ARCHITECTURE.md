@@ -262,6 +262,23 @@ opened input-only and Settings says why the metronome is silent. The clock
 keeps time either way. With no device at all, the synthetic-input generator
 hands it blocks.
 
+## The target note and the reference pitch
+
+Two pieces of application state, held like `CurrentScore`: owned by
+`MainComponent`, read by tools through `ToolServices`, on the message thread
+only. Both come from the `system-wide-target-note` change.
+
+- **`pitch::ReferencePitch`** is A4 in hertz (415–466, 440 by default). It is
+  set in Settings → Practice and saved locally. `frequencyToMidi` and
+  `midiToFrequency` take it as a parameter, so nothing converts without it,
+  and the tuner's `PitchTracker` reads it per frame.
+- **`pitch::CurrentTarget`** is the note being aimed at, or the reason there is
+  none. The shell sets it from each score it opens, by `selectTargetNote` in
+  `src/platform/score/`: the first note of the first part that plays one note
+  at a time. Grace and cue notes are not counted, a unison is one note, and one
+  note in twenty may sound against another. The tuner shows it through
+  `pitch::readAgainstTarget`. #296's picker will write to the same holder.
+
 ## Takes
 
 A take is recorded against the practice clock (`src/platform/take/`, the

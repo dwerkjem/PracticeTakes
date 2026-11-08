@@ -463,6 +463,22 @@ TEST_CASE("a grace note takes no time and does not move the cursor", "[score][mu
     CHECK(voice.events[2].onset == quarter * 2);
 }
 
+TEST_CASE("a cue note is kept and marked as not performed", "[score][musicxml][note]")
+{
+    // An ossia in a second voice, as the sample song has: kept and drawn, but
+    // marked, so playback and judging pass it over.
+    const std::string body = measure(
+        "1",
+        attributes(1, 4, 4) + note("C", 5, 4) + "      <backup><duration>4</duration></backup>\n" +
+            note("A", 4, 4, 2, "        <cue/>\n"));
+
+    const auto score = importOrFail(scoreDocument(body));
+    const Measure& bar = score->parts.front().measures.front();
+    REQUIRE(bar.voices.size() == 2);
+    CHECK_FALSE(bar.voices[0].events.front().isCue);
+    CHECK(bar.voices[1].events.front().isCue);
+}
+
 TEST_CASE("a tuplet keeps its ratio but not its bracket", "[score][musicxml][note]")
 {
     // The ratio makes the duration arithmetic add up; the bracket a program

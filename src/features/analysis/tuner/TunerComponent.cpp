@@ -1,5 +1,7 @@
 #include "TunerComponent.h"
 
+#include "../../../platform/pitch/TargetReading.h"
+
 #include "TunerSettingsCodec.h"
 
 #include "application/theme/AppLookAndFeel.h"
@@ -45,8 +47,11 @@ class TunerComponent::ModeChooser final : public juce::Component
 //==============================================================================
 TunerComponent::TunerComponent(
     AudioInputService& sharedAudioInputService,
-    SharedPitchAnalysis& sharedPitchAnalysis)
-    : audioInputService(sharedAudioInputService), pitchAnalysis(sharedPitchAnalysis)
+    SharedPitchAnalysis& sharedPitchAnalysis,
+    const pitch::ReferencePitch& applicationReferencePitch,
+    const pitch::CurrentTarget& applicationTarget)
+    : audioInputService(sharedAudioInputService), pitchAnalysis(sharedPitchAnalysis),
+      referencePitch(applicationReferencePitch), target(applicationTarget)
 {
     setOpaque(true);
 
@@ -422,6 +427,41 @@ juce::String TunerComponent::statusText() const
            juce::String(displayedCents, 1) + " cents";
 }
 
+namespace
+{
+[[nodiscard]] std::optional<double>
+heardPitch(bool hasSignal, bool hasLockedNote, int lockedNote, double cents)
+{
+    if (!hasSignal || !hasLockedNote)
+    {
+        return std::nullopt;
+    }
+    return static_cast<double>(lockedNote) + (cents / 100.0);
+}
+} // namespace
+
+juce::String TunerComponent::targetText() const
+{
+    const std::shared_ptr<const pitch::Target> aimingAt = target.target();
+    if (aimingAt == nullptr)
+    {
+        return juce::String::fromUTF8(target.whyNone().c_str());
+    }
+    return juce::String::fromUTF8(
+        pitch::readAgainstTarget(
+            *aimingAt, heardPitch(hasSignal, hasLockedMidiNote, lockedMidiNote, displayedCents))
+            .text.c_str());
+}
+
+bool TunerComponent::onTarget() const
+{
+    const std::shared_ptr<const pitch::Target> aimingAt = target.target();
+    return aimingAt != nullptr &&
+           pitch::readAgainstTarget(
+               *aimingAt, heardPitch(hasSignal, hasLockedMidiNote, lockedMidiNote, displayedCents))
+                   .standing == pitch::TargetStanding::onIt;
+}
+
 bool TunerComponent::hasGraphHistory() const
 {
     return std::any_of(
@@ -488,11 +528,8 @@ PitchTracker::Settings TunerComponent::trackerSettings() const
     // Read straight off the sliders each frame, so a mid-note adjustment takes
     // effect immediately rather than at the next note.
     return {
-        easingSlider.getValue(),
-        averagingSlider.getValue(),
-        thresholdSlider.getValue(),
-        dropoutSlider.getValue(),
-    };
+        easingSlider.getValue(), averagingSlider.getValue(), thresholdSlider.getValue(),
+        dropoutSlider.getValue(), referencePitch.hertz()};
 }
 
 void TunerComponent::applyTrackerUpdate(const PitchTracker::Update& update)

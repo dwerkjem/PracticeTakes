@@ -25,7 +25,7 @@ capture of a MIDI keyboard and its sustain pedal.
 
 | | |
 |---|---|
-| ![The tuner reading A4, with a pitch graph showing the note drift above and below](docs/wiki/images/tuner-graph.png) | **Tuner.** The note you're on, its frequency, and how many cents sharp or flat, as a pitch graph, a bar or a meter. Advanced settings shape how it settles, and practice presets set them for you. |
+| ![The tuner reading A4, with a pitch graph showing the note drift above and below](docs/wiki/images/tuner-graph.png) | **Tuner.** The note you're on, its frequency, and how many cents sharp or flat, as a pitch graph, a bar or a meter, against a reference pitch you can set. With a score open it also names the target, the first note of the line you're singing or playing, and how far you are from it. Advanced settings shape how it settles, and practice presets set them for you. |
 | ![A spectrogram with a sung note and its overtones as bright horizontal bands](docs/wiki/images/spectrogram.png) | **Spectrogram.** A scrolling view of the frequencies in the sound: harmonics, noise, resonance, and how a tone changes over time. |
 | ![The harmonic analyzer showing eight harmonic bars and their levels over time](docs/wiki/images/harmonic-analyzer.png) | **Harmonic analyzer.** How strong each harmonic of a held note is, over time, with its fundamental and brightness. It says when it can't give a clean answer instead of guessing. |
 

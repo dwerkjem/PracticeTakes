@@ -102,7 +102,7 @@ void playbackEventsOf(const score::Score& score, const ClockTable& table, Playba
                 for (std::size_t e = 0; e < events.size(); ++e)
                 {
                     const score::ScoreEvent& event = events[e];
-                    if (!score::isPitched(event) || event.isGrace)
+                    if (!score::isPitched(event) || event.isGrace || event.isCue)
                     {
                         continue;
                     }

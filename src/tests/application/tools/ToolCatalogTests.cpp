@@ -8,7 +8,7 @@ TEST_CASE("the built-in catalog declares every shipped tool", "[tools][catalog]"
     const auto& catalog = builtInToolCatalog();
 
     REQUIRE(catalog.rejectedIds().empty());
-    REQUIRE(catalog.tools().size() == 6);
+    REQUIRE(catalog.tools().size() == 5);
 
     for (const auto& definition : catalog.tools())
     {
@@ -44,8 +44,17 @@ TEST_CASE("historical aliases still resolve to their tool", "[tools][catalog]")
     CHECK(catalog.resolve("spectrum") == "spectrogram");
     CHECK(catalog.resolve("harmonics") == "harmonic-analyzer");
     CHECK(catalog.resolve("harmonicAnalyzer") == "harmonic-analyzer");
-    CHECK(catalog.resolve("score-target") == "target-note");
-    CHECK(catalog.resolve("targetNote") == "target-note");
+    CHECK_FALSE(catalog.resolve("no-such-tool").has_value());
+}
+
+TEST_CASE("the removed Target Note tool's ids open a tuner", "[tools][catalog]")
+{
+    // A workspace saved with the Target Note tool still opens: its target is
+    // shown in the tuner now (system-wide-target-note decision 5).
+    const auto& catalog = builtInToolCatalog();
+    CHECK(catalog.resolve("target-note") == "tuner");
+    CHECK(catalog.resolve("score-target") == "tuner");
+    CHECK(catalog.resolve("targetNote") == "tuner");
     CHECK_FALSE(catalog.resolve("no-such-tool").has_value());
 }
 

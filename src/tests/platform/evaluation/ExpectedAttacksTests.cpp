@@ -93,6 +93,18 @@ TEST_CASE("rests and grace notes are not attacks", "[evaluation][attacks]")
     CHECK(attacks.front().notes.front().midiNoteNumber == 62);
 }
 
+TEST_CASE("cue notes are not attacks", "[evaluation][attacks]")
+{
+    // An ossia is printed for reference; nobody is expected to play it.
+    score::ScoreEvent cue = noteAt(0, quarter, 64);
+    cue.isCue = true;
+    const auto source = scoreOf({{cue, noteAt(quarter, quarter, 62)}});
+
+    const auto attacks = expectedAttacksOf(source, 0);
+    REQUIRE(attacks.size() == 1);
+    CHECK(attacks.front().notes.front().midiNoteNumber == 62);
+}
+
 TEST_CASE("a chord and voices starting together are one moment", "[evaluation][attacks]")
 {
     score::ScoreEvent chord = noteAt(0, quarter, 60);

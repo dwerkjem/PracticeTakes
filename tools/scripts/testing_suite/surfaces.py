@@ -691,21 +691,6 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
-    # The target note tool's paint routine is Component code: selectTargetNote
-    # is unit tested, what it looks like is not.
-    Surface(
-        state="target-note-empty",
-        title="The target note tool with no score open",
-        area="score",
-        modes=frozenset({FULL}),
-        extras=(
-            Question(
-                "says-what-to-do",
-                "Does it name the command that opens a score, rather than showing an empty "
-                "panel?",
-            ),
-        ),
-    ),
     Surface(
         state="score-view-empty",
         title="The score view with no score open",
@@ -1012,6 +997,33 @@ SURFACES: tuple[Surface, ...] = (
                 "Press Play with speakers on: does the score play in time with the clicks, the "
                 "piano's right hand silent, and does Solo on the voice leave only the voice?",
                 behavioural=True,
+            ),
+        ),
+    ),
+    # The tuner against the shared target (system-wide-target-note).
+    Surface(
+        state="tuner-target",
+        title="The tuner with a target",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "target-line",
+                "Above the frequency, does a line name the target from the sample song and say "
+                "how far flat of it the tone is, in cents?",
+            ),
+        ),
+    ),
+    Surface(
+        state="tuner-target-a442",
+        title="The tuner with a target, at A442",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "flatter-at-442",
+                "Is the same tone now further flat of the target than at A440, and does Settings "
+                "> Practice show Reference pitch 442 Hz?",
             ),
         ),
     ),

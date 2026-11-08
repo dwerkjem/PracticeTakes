@@ -282,6 +282,7 @@ void readNote(
 {
     const bool isChordTone = findChild(noteNode, "chord") != nullptr;
     const bool isGrace = findChild(noteNode, "grace") != nullptr;
+    const bool isCue = findChild(noteNode, "cue") != nullptr;
     const XmlNode* restNode = findChild(noteNode, "rest");
     const XmlNode* pitchNode = findChild(noteNode, "pitch");
 
@@ -353,6 +354,7 @@ void readNote(
     PendingEvent pending;
     pending.event.onset = cursor;
     pending.event.isGrace = isGrace;
+    pending.event.isCue = isCue;
     pending.event.staff = static_cast<int>(parseInteger(childValue(noteNode, "staff")).value_or(1));
 
     if (restNode != nullptr)

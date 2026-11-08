@@ -121,6 +121,7 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     testControlRecordTake = state.recordTake;
     testControlReviewTake = state.reviewTake;
     testControlOpenMix = state.mixOpen;
+    referencePitch.set(state.referencePitchHz > 0.0 ? state.referencePitchHz : 440.0);
 
     // Playback off and nothing muted: a state that wants it on says so.
     practiceClock.setPlaybackEnabled(false);

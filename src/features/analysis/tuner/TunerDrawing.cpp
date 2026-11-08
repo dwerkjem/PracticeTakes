@@ -754,6 +754,12 @@ void TunerComponent::paint(juce::Graphics& graphics)
     // One quiet line of readout, then the display takes everything left. The
     // frequency and cents are a detail you consult; the note is the thing you
     // read at a glance, and it is drawn behind the display instead of above it.
+    // The target first: what you are aiming at matters more than the hertz.
+    graphics.setColour(onTarget() ? palette.inTune : palette.foreground);
+    graphics.setFont(juce::FontOptions(15.0f, juce::Font::bold));
+    graphics.drawText(
+        targetText(), bounds.removeFromTop(targetHeight), juce::Justification::centred, true);
+
     graphics.setColour(palette.muted);
     graphics.setFont(juce::FontOptions(13.0f));
     graphics.drawText(
@@ -772,6 +778,7 @@ void TunerComponent::resized()
 
     // Must consume exactly what paint() consumes above the display, or the
     // controls drift away from the box they belong under.
+    bounds.removeFromTop(targetHeight);
     bounds.removeFromTop(statusHeight);
     bounds.removeFromTop(statusGap);
 

@@ -141,7 +141,7 @@ TEST_CASE(
 {
     WorkspaceSnapshot snapshot;
     snapshot.dockRoot = WorkspaceNode::leaf("score-view");
-    snapshot.floating.push_back({"target-note#2", {40, 40, 600, 400}});
+    snapshot.floating.push_back({"score-view#2", {40, 40, 600, 400}});
     snapshot.toolSettings.emplace("score-view#4", ToolSettingsPayload{1, "{}"});
 
     const auto result = WorkspaceNormalizer::normalize(snapshot, {{0, 0, 1280, 720}});

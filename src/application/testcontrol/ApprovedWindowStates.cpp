@@ -75,12 +75,6 @@ const std::vector<ApprovedWindowState>& states()
         {"harmonics-floating", Tools{"harmonics"}, ToolPresentation::floating,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "The harmonic analyser, in its own floating window"},
-        // The one tool whose empty state is worth a picture: it is what a
-        // session that has not opened a file shows, which is most of them.
-        {"target-note-empty", Tools{"target-note"}, ToolPresentation::docked,
-         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
-         false, "", false,
-         "The target note tool with no score open, which is what a new session shows"},
         {"score-view-empty", Tools{"score-view"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "The score view with no score open, which is what a new session shows"},
@@ -105,11 +99,11 @@ const std::vector<ApprovedWindowState>& states()
          WorkspaceArrangement::tabbed, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "All three tools sharing one tab strip"},
         {"all-tools-docked",
-         Tools{"tuner", "spectrogram", "harmonics", "target-note", "score-view", "take-review"},
+         Tools{"tuner", "spectrogram", "harmonics", "score-view", "take-review"},
          ToolPresentation::docked, WorkspaceArrangement::split, WindowGeometry::normal,
          MicrophoneCondition::available, false, "", false,
-         "Every tool tiled at once -- the three live-audio tools, the two that read a score, and "
-         "the take review"},
+         "Every tool tiled at once -- the three live-audio tools, the Score View, and the take "
+         "review"},
 
         // --- Window geometry ---
         {"narrow-window", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
@@ -380,6 +374,35 @@ const std::vector<ApprovedWindowState>& states()
          false,
          false,
          true},
+        // The tuner reading against the sample song's target (system-wide-
+        // target-note): a tone a little flat of the voice's first note, at
+        // A440, and the same at A442, where the same tone reads flatter.
+        {"tuner-target", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
+         WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
+         "The tuner with a target: the sample song's first sung note, the tone 12 cents flat "
+         "of it",
+         334.0, "", bundledSampleFixtureName(), false},
+        {"tuner-target-a442",
+         Tools{"tuner"},
+         ToolPresentation::docked,
+         WorkspaceArrangement::single,
+         WindowGeometry::normal,
+         MicrophoneCondition::available,
+         false,
+         "",
+         false,
+         "The same at A442: the same tone reads further flat of the target",
+         334.0,
+         "",
+         bundledSampleFixtureName(),
+         false,
+         false,
+         false,
+         -1,
+         false,
+         false,
+         false,
+         442.0},
         // The Take Review tool before any take: what most sessions see first.
         {"take-review-empty", Tools{"take-review"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,

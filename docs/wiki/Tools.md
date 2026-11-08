@@ -35,6 +35,25 @@ many cents sharp or flat it is.
 It needs a sustained note: "Play or sing a sustained note" is what it says until
 it hears one.
 
+### The target note
+
+Above the reading, the tuner names the note you're aiming at and where you are
+against it:
+- *Target E4 · on it*, within 5 cents, in green;
+- *Target E4 · 16 ¢ flat*, within half a semitone;
+- *Target E4 · 2 semitones below*, further away.
+
+The target comes from the open score: the first note of its first part that
+plays one note at a time, such as the voice of a song. A piano piece has
+none, and the tuner says so, because a target is one note. Choosing the target
+yourself, on a keyboard, a staff, the score or by singing it, comes next
+([#296](https://github.com/dwerkjem/PracticeTakes/issues/296)).
+
+The tuner measures against the **reference pitch**, A4 = 440 Hz unless you
+change it in **Settings → Practice** (from 415 to 466 Hz).
+
+![The tuner with a target: Target E4, 16 cents flat, from the sample song](images/tuner-target.png)
+
 ## Spectrogram
 
 A scrolling frequency view of the microphone. It is useful for looking at
@@ -121,13 +140,11 @@ note. Before the first take it says how to record one.
 
 ![The Take Review beside the Score View: a piano take stopped in bar 8, its notes marked and listed](images/take-review.png)
 
-## Target Note
+## Target Note (retired)
 
-Shows one note of the open score as text: its bar, where it starts, how it is
-written and the MIDI note it sounds as. It was built to prove the score model
-could be read by a tool. It is due to be replaced by a target note the whole
-application shares, which the tuner will show beside its own reading
-([#227](https://github.com/dwerkjem/PracticeTakes/issues/227)).
+The Target Note tool showed the first note of the open score. It was replaced by
+the target line in the tuner (above), which every tool can read. A workspace
+saved with the Target Note tool opens a tuner in its place.
 
 ## Two of the same tool
 

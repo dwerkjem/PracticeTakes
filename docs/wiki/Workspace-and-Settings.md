@@ -46,7 +46,7 @@ Your layout is restored the next time you start Practice Takes.
 | **Appearance** | The theme, **Dark** or **Light**, for every open window |
 | **Audio** | Mute, input volume, the live input level, buffer health, the metronome's volume and accent (and why it's silent, if it is), and the input and output devices |
 | **MIDI** | The keyboard and the sustain pedal (see [[MIDI Keyboard]]) |
-| **Practice** | Practice presets, which set the tuner's behaviour for the material you're practising, and how many bars the metronome counts in |
+| **Practice** | Practice presets, which set the tuner's behaviour for the material you're practising; how many bars the metronome counts in; and the **reference pitch**, A4 = 440 Hz by default, from 415 to 466 Hz |
 | **Reset & support** | **Send feedback**, and reset the current tool, the audio settings, the layout, or all settings, each after a confirmation |
 
 **Import settings**, **Export settings** and **Save settings** sit along the
@@ -66,9 +66,9 @@ It deliberately leaves out:
 - logs, benchmarks and analysis data;
 - your MIDI keyboard and pedal setting, because those belong to the machine the
   keyboard is plugged into;
-- your output device, the metronome's volume, accent and switch, and the
-  count-in, for the same reason: they belong to this machine's speakers and
-  your habits on it. Importing a file keeps this machine's output device.
+- your output device, the metronome's volume, accent and switch, the
+  count-in, playing the score, and the reference pitch, for the same reason:
+  they belong to this machine's speakers and your habits on it. Importing a file keeps this machine's output device.
 
 **Import** checks and migrates the file, then shows what it would replace.
 Nothing changes until you confirm. A confirmed import replaces your supported

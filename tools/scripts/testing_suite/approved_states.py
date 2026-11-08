@@ -75,6 +75,9 @@ class ApprovedState:
     # opened once the score imports.
     mix_open: bool
 
+    # The reference pitch for the picture, in hertz; zero for A440.
+    reference_pitch_hz: float
+
     # The top-level window the state is a picture of. Empty for the main one.
     window_title: str
 
@@ -125,6 +128,7 @@ def _state_from(entry: dict) -> ApprovedState:
         record_take=entry["recordTake"],
         review_take=entry["reviewTake"],
         mix_open=entry["mixOpen"],
+        reference_pitch_hz=float(entry["referencePitchHz"]),
         window_title=entry["windowTitle"],
     )
 

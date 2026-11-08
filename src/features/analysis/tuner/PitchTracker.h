@@ -3,6 +3,8 @@
 #include <array>
 #include <string>
 
+#include "../../../platform/pitch/ReferencePitch.h"
+
 // PitchTracker turns the per-frame estimates of PitchDetector into a stable
 // note a human can read.
 //
@@ -30,6 +32,9 @@ class PitchTracker
         double averaging = 5.0;            // frames of pitch history to mean
         double noteSwitchSemitones = 0.55; // distance before the label changes
         double dropoutFrames = 4.0;        // silent frames before giving up
+
+        // The application's A4 (system-wide-target-note decision 1).
+        double referenceHz = pitch::defaultReferenceHz;
     };
 
     // What one analysis frame produced. `historyMidiNote` is NaN whenever the
@@ -67,8 +72,8 @@ class PitchTracker
 
     static constexpr int maximumAverageWindow = 15;
 
-    [[nodiscard]] static double frequencyToMidi(double frequency);
-    [[nodiscard]] static double midiToFrequency(double midiPitch);
+    [[nodiscard]] static double frequencyToMidi(double frequency, double referenceHz);
+    [[nodiscard]] static double midiToFrequency(double midiPitch, double referenceHz);
 
   private:
     // A jump of more than this is treated as suspect until it repeats.
@@ -86,6 +91,9 @@ class PitchTracker
     std::array<double, maximumAverageWindow> recentMidiPitches{};
     int recentPitchCount = 0;
     int recentPitchWriteIndex = 0;
+
+    // The reference of the frame being handled.
+    double referenceHz = pitch::defaultReferenceHz;
 
     double smoothedMidi = 0.0;
     double displayedFrequency = 0.0;

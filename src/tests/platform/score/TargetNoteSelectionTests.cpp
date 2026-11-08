@@ -1,7 +1,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "features/score/TargetNoteSelection.h"
+#include "platform/score/TargetNoteSelection.h"
 
 #include "platform/score/PitchNames.h"
 #include "platform/score/musicxml/MusicXmlImporter.h"
@@ -191,7 +191,7 @@ TEST_CASE("a leading grace note is skipped", "[score][target-note]")
     CHECK(selection.note->durationSeconds > 0.0);
 }
 
-TEST_CASE("a leading chord reports that the target is one of its notes", "[score][target-note]")
+TEST_CASE("a part that plays chords has no target", "[score][target-note]")
 {
     ScoreEvent chord;
     chord.kind = EventKind::chord;
@@ -205,21 +205,38 @@ TEST_CASE("a leading chord reports that the target is one of its notes", "[score
 
     const TargetNoteSelection selection = selectTargetNote(score);
 
-    REQUIRE(selection.outcome == TargetNoteOutcome::found);
-    CHECK(selection.note->isChordMember);
-    CHECK(selection.note->chordNoteCount == 3);
-    CHECK(selection.note->soundingName == "C4");
-    CHECK(selection.note->location.noteIndex == 0);
+    CHECK(selection.outcome == TargetNoteOutcome::onlyPolyphonic);
+    CHECK_FALSE(selection.note.has_value());
 }
 
-TEST_CASE("a single note is not reported as a chord", "[score][target-note]")
+TEST_CASE(
+    "the first part that plays one note at a time is the one targeted",
+    "[score][target-note]")
 {
-    const TargetNoteSelection selection =
-        selectTargetNote(makeOneNoteScore(pitchFromSpelling(Step::a, 0, 4)));
+    // A piano part of chords first, then a voice: the voice is the target.
+    ScoreEvent chord;
+    chord.kind = EventKind::chord;
+    chord.duration = ticksPerWholeNote;
+    chord.notes = notesOf({pitchFromSpelling(Step::c, 0, 4), pitchFromSpelling(Step::e, 0, 4)});
+    Part piano;
+    piano.id = "P1";
+    piano.name = "Piano";
+    piano.measures = {makeMeasure(0, "1", {makeVoice(1, {chord})})};
+    Part voice;
+    voice.id = "P2";
+    voice.name = "Voice";
+    voice.measures = {makeMeasure(
+        0, "1",
+        {makeVoice(1, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::b, 0, 3))})})};
+    auto score = std::make_shared<Score>();
+    score->parts = {piano, voice};
 
-    REQUIRE(selection.note.has_value());
-    CHECK_FALSE(selection.note->isChordMember);
-    CHECK(selection.note->chordNoteCount == 1);
+    const TargetNoteSelection selection = selectTargetNote(score);
+
+    REQUIRE(selection.outcome == TargetNoteOutcome::found);
+    CHECK(selection.note->partIndex == 1);
+    CHECK(selection.note->partName == "Voice");
+    CHECK(selection.note->soundingName == "B3");
 }
 
 // The voices of a measure are independent timelines. Taking the first voice
@@ -235,7 +252,7 @@ TEST_CASE("the earliest onset across voices wins", "[score][target-note]")
                     makeNote(
                         ticksPerQuarterNote * 2, ticksPerQuarterNote * 2,
                         pitchFromSpelling(Step::e, 0, 5))}),
-            makeVoice(5, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::f, 0, 2))}),
+            makeVoice(5, {makeNote(0, ticksPerQuarterNote * 2, pitchFromSpelling(Step::f, 0, 2))}),
         })});
 
     const TargetNoteSelection selection = selectTargetNote(score);
@@ -246,7 +263,54 @@ TEST_CASE("the earliest onset across voices wins", "[score][target-note]")
     CHECK(selection.note->location.voiceIndex == 1);
 }
 
-TEST_CASE("a tie on the same onset goes to the lower voice number", "[score][target-note]")
+TEST_CASE(
+    "cue notes are not performed, so an ossia leaves a voice monophonic",
+    "[score][target-note]")
+{
+    ScoreEvent ossia = makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::e, 0, 4));
+    ossia.isCue = true;
+    const auto score = makeScore({makeMeasure(
+        0, "1",
+        {
+            makeVoice(1, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::e, 0, 5))}),
+            makeVoice(2, {ossia}),
+        })});
+
+    CHECK(isMonophonic(score->parts.front()));
+    const TargetNoteSelection selection = selectTargetNote(score);
+    REQUIRE(selection.outcome == TargetNoteOutcome::found);
+    CHECK(selection.note->soundingName == "E5");
+}
+
+TEST_CASE("a unison of two voices is one note", "[score][target-note]")
+{
+    const auto score = makeScore({makeMeasure(
+        0, "1",
+        {
+            makeVoice(1, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::b, 0, 4))}),
+            makeVoice(2, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::b, 0, 4))}),
+        })});
+    CHECK(isMonophonic(score->parts.front()));
+}
+
+TEST_CASE("a long line with one bar of divisi is still a line", "[score][target-note]")
+{
+    // Forty-eight bars of single notes, then one bar where two voices split.
+    std::vector<Measure> bars;
+    for (std::size_t index = 0; index < 48; ++index)
+    {
+        bars.push_back(makeMeasure(
+            index, std::to_string(index + 1),
+            {makeVoice(1, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::c, 0, 5))})}));
+    }
+    bars.push_back(makeMeasure(
+        48, "49",
+        {makeVoice(1, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::e, 0, 5))}),
+         makeVoice(2, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::c, 0, 5))})}));
+    CHECK(isMonophonic(makeScore(bars)->parts.front()));
+}
+
+TEST_CASE("two voices sounding at once make a part polyphonic", "[score][target-note]")
 {
     const auto score = makeScore({makeMeasure(
         0, "1",
@@ -255,11 +319,8 @@ TEST_CASE("a tie on the same onset goes to the lower voice number", "[score][tar
             makeVoice(1, {makeNote(0, ticksPerWholeNote, pitchFromSpelling(Step::c, 0, 4))}),
         })});
 
-    const TargetNoteSelection selection = selectTargetNote(score);
-
-    REQUIRE(selection.outcome == TargetNoteOutcome::found);
-    CHECK(selection.note->voiceNumber == 1);
-    CHECK(selection.note->soundingName == "C4");
+    CHECK_FALSE(isMonophonic(score->parts.front()));
+    CHECK(selectTargetNote(score).outcome == TargetNoteOutcome::onlyPolyphonic);
 }
 
 TEST_CASE("the staff the note sits on is carried", "[score][target-note]")
@@ -487,12 +548,18 @@ TEST_CASE(
 
         // Every score in the corpus is real repertoire, so every one of them
         // has a note in it. "No pitched note" here would mean the walk is
-        // broken, not that the file is empty.
+        // broken, not that the file is empty. A piano piece has no target.
+        REQUIRE(selection.outcome != TargetNoteOutcome::noPitchedNote);
+        if (selection.outcome == TargetNoteOutcome::onlyPolyphonic)
+        {
+            continue;
+        }
         REQUIRE(selection.outcome == TargetNoteOutcome::found);
         REQUIRE(selection.note.has_value());
 
         const TargetNote& target = *selection.note;
-        const Part& part = result.score->parts.front();
+        REQUIRE(target.partIndex < result.score->parts.size());
+        const Part& part = result.score->parts[target.partIndex];
 
         CHECK_FALSE(selection.scoreTitle.empty());
         CHECK(target.partId == part.id);

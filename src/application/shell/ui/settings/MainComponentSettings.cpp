@@ -107,7 +107,7 @@ void MainComponent::showSettings()
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     settingsWindow = std::make_unique<SettingsWindow>(
-        audioInputService, midiInputService, practiceClock,
+        audioInputService, midiInputService, practiceClock, referencePitch,
         [safeThis]
         {
             // The metronome and the count-in are saved as they change, like
@@ -617,6 +617,7 @@ AppSettings::State MainComponent::captureSettingsState()
     state.countInBars = practiceClock.countInBars();
     state.playbackEnabled = practiceClock.playbackMix().enabled;
     state.playbackVolume = practiceClock.playbackMix().volume;
+    state.referencePitchHz = referencePitch.hertz();
 
     if (pendingAudioDeviceState != nullptr)
     {
@@ -686,6 +687,7 @@ void MainComponent::loadSettings()
     practiceClock.setCountInBars(loaded.state.countInBars);
     practiceClock.setPlaybackEnabled(loaded.state.playbackEnabled);
     practiceClock.setPlaybackVolume(static_cast<float>(loaded.state.playbackVolume));
+    referencePitch.set(loaded.state.referencePitchHz);
 
     savedSettingsBounds = validWindowBounds(loaded.state.settingsBounds);
 

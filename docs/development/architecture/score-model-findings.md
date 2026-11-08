@@ -81,7 +81,11 @@ double flat.
 
 **Done:** `score::spelledName` in `src/platform/score/PitchNames.h`.
 
-### 2. There is no shared reference pitch, so a target cannot be heard
+### 2. There is no shared reference pitch, so a target cannot be heard — *fixed by #227*
+
+**Fixed** by `system-wide-target-note`: `pitch::ReferencePitch` belongs to the
+application, is set in Settings → Practice, and is what the tuner converts
+with. What follows is the finding as it was written.
 
 The target note the tool shows carries a sounding MIDI number. Turning that into
 a frequency — which is what comparing it against live audio needs — requires a
@@ -142,7 +146,13 @@ span, so the wrong form is the shorter one and the right form has to be known.
 
 **Should happen:** `TempoMap::spanSeconds(Tick from, Tick length)`.
 
-### 6. "The first note" is not a question the model can answer
+### 6. "The first note" is not a question the model can answer — *partly settled by #227*
+
+`system-wide-target-note` settled **which part** and **the chord**: the target
+comes from the first part that plays one note at a time, and a chord is never a
+target, so its order no longer matters to the target. Which voice comes first
+when two start together stays as written below. A monophonic part rarely has
+two, and a unison counts as one note.
 
 Three separate gaps, all of which this change had to decide for itself with
 nothing in the model to appeal to:

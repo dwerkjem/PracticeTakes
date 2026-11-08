@@ -218,3 +218,12 @@ TEST_CASE("a track is named for its part and, on a piano, its hand", "[transport
     CHECK(trackName(source, tracks[2]) == "Piano, left hand");
     CHECK(trackName(source, tracks[5]) == "Part 3, staff 3");
 }
+
+TEST_CASE("cue notes are not played", "[transport][playback]")
+{
+    Fixture fixture;
+    fixture.source.parts[0].measures[0].voices[0].events[0].isCue = true;
+    PlaybackScore built;
+    playbackEventsOf(fixture.source, fixture.table, built);
+    CHECK(eventsOn(built, 0).empty());
+}

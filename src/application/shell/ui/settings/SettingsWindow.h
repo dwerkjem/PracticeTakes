@@ -761,15 +761,17 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             PracticePanel(
                 std::function<void(AppDefaults::Preset)> presetHandler,
                 transport::PracticeClock& practiceClock,
+                pitch::ReferencePitch& applicationReferencePitch,
                 std::function<void()> countInHandler)
                 : onPreset(std::move(presetHandler)), clock(practiceClock),
-                  onCountInChanged(std::move(countInHandler))
+                  reference(applicationReferencePitch), onCountInChanged(std::move(countInHandler))
             {
                 configureHeading(heading, "Practice");
                 configureDescription(
                     description,
                     "Apply a coordinated set of tuner controls for the material you are "
-                    "practicing, and choose how many bars the metronome counts in.");
+                    "practicing, choose how many bars the metronome counts in, and set the "
+                    "pitch everything tunes to.");
 
                 presetLabel.setText("Practice preset", juce::dontSendNotification);
                 addAndMakeVisible(presetLabel);
@@ -810,6 +812,28 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     }
                 };
                 addAndMakeVisible(countInBox);
+
+                // The application's A4 (system-wide-target-note decision 1).
+                referenceLabel.setText("Reference pitch", juce::dontSendNotification);
+                addAndMakeVisible(referenceLabel);
+                referenceSlider.setComponentID("settings-reference-pitch");
+                referenceSlider.setSliderStyle(juce::Slider::IncDecButtons);
+                referenceSlider.setRange(pitch::minimumReferenceHz, pitch::maximumReferenceHz, 1.0);
+                referenceSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
+                referenceSlider.setTextValueSuffix(" Hz");
+                referenceSlider.setValue(reference.hertz(), juce::dontSendNotification);
+                referenceSlider.setTooltip(
+                    "A4, which the tuner and every note reading are measured against: 440 Hz "
+                    "unless your ensemble tunes elsewhere");
+                referenceSlider.onValueChange = [this]
+                {
+                    reference.set(referenceSlider.getValue());
+                    if (onCountInChanged)
+                    {
+                        onCountInChanged();
+                    }
+                };
+                addAndMakeVisible(referenceSlider);
             }
 
             void resized() override
@@ -827,6 +851,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 auto countInRow = bounds.removeFromTop(36);
                 countInLabel.setBounds(countInRow.removeFromLeft(150));
                 countInBox.setBounds(countInRow.removeFromLeft(280));
+                bounds.removeFromTop(12);
+
+                auto referenceRow = bounds.removeFromTop(36);
+                referenceLabel.setBounds(referenceRow.removeFromLeft(150));
+                referenceSlider.setBounds(referenceRow.removeFromLeft(180));
             }
 
           private:
@@ -836,9 +865,12 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::ComboBox presetBox;
             std::function<void(AppDefaults::Preset)> onPreset;
             transport::PracticeClock& clock;
+            pitch::ReferencePitch& reference;
             std::function<void()> onCountInChanged;
             juce::Label countInLabel;
             juce::ComboBox countInBox;
+            juce::Label referenceLabel;
+            juce::Slider referenceSlider;
         };
 
         class ResetPanel final : public CategoryPanel
@@ -939,6 +971,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             AudioInputService& inputService,
             MidiInputService& midiService,
             transport::PracticeClock& practiceClock,
+            pitch::ReferencePitch& referencePitch,
             std::function<void()> clockSettingsHandler,
             int pedalDownThreshold,
             Theme initialTheme,
@@ -964,6 +997,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
               practicePanel(
                   std::move(presetHandler),
                   practiceClock,
+                  referencePitch,
                   std::move(clockSettingsHandler)),
               resetPanel(
                   std::move(feedbackHandler),
@@ -1057,6 +1091,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         AudioInputService& audioInputService,
         MidiInputService& midiInputService,
         transport::PracticeClock& practiceClock,
+        pitch::ReferencePitch& referencePitch,
         std::function<void()> clockSettingsHandler,
         int pedalDownThreshold,
         Theme initialTheme,
@@ -1082,11 +1117,12 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         setUsingNativeTitleBar(true);
         setContentOwned(
             new Content(
-                audioInputService, midiInputService, practiceClock, std::move(clockSettingsHandler),
-                pedalDownThreshold, initialTheme, std::move(appearanceHandler),
-                std::move(presetHandler), std::move(midiSelectionHandler),
-                std::move(pedalThresholdHandler), std::move(saveHandler), std::move(importHandler),
-                std::move(exportHandler), std::move(feedbackHandler), std::move(resetToolHandler),
+                audioInputService, midiInputService, practiceClock, referencePitch,
+                std::move(clockSettingsHandler), pedalDownThreshold, initialTheme,
+                std::move(appearanceHandler), std::move(presetHandler),
+                std::move(midiSelectionHandler), std::move(pedalThresholdHandler),
+                std::move(saveHandler), std::move(importHandler), std::move(exportHandler),
+                std::move(feedbackHandler), std::move(resetToolHandler),
                 std::move(resetAudioHandler), std::move(resetLayoutHandler),
                 std::move(resetAllHandler)),
             true);

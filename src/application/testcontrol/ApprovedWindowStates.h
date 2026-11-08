@@ -185,6 +185,12 @@ struct ApprovedWindowState
     //
     // Appended last, for the reason the comments above give.
     bool mixOpen = false;
+
+    // The application's reference pitch for the picture, in hertz; zero for
+    // A440 (system-wide-target-note).
+    //
+    // Appended last, for the reason the comments above give.
+    double referencePitchHz = 0.0;
 };
 
 // An object that can be asked to act, as though clicked.

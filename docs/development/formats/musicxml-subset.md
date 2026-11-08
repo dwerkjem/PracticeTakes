@@ -66,6 +66,9 @@ Everything here reaches the model and is covered by tests.
 
 - Parts, including multi-staff parts (`<staves>`), with the `<score-part>`
   identifier kept verbatim, display name, and abbreviation.
+- Cue notes (`<cue/>`): another part's line or an ossia, printed for
+  reference. They are kept and drawn, and marked so that playback, take
+  judging and the target note pass over them.
 - Each part's General MIDI program: the first `<midi-instrument>`'s
   `<midi-program>` (1–128), kept as 0–127 for playback. One out of range, or
   none, leaves it unset, and playback uses a piano.

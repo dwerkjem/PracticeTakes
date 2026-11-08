@@ -35,6 +35,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -59,6 +60,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -83,6 +85,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -107,6 +110,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -131,6 +135,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -155,6 +160,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -179,6 +185,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -203,6 +210,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -227,6 +235,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -251,6 +260,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -275,6 +285,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -299,6 +310,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Tuner"
     },
     {
@@ -323,6 +335,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -347,6 +360,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Spectrogram"
     },
     {
@@ -371,6 +385,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -395,31 +410,8 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Harmonic Analyzer"
-    },
-    {
-      "id": "target-note-empty",
-      "description": "The target note tool with no score open, which is what a new session shows",
-      "tools": ["target-note"],
-      "toolIds": ["target-note"],
-      "presentation": "docked",
-      "arrangement": "single",
-      "geometry": "normal",
-      "microphone": "available",
-      "settingsOpen": false,
-      "settingsPanel": "",
-      "feedbackOpen": false,
-      "toneHz": 0,
-      "toolView": "",
-      "scoreFixture": "",
-      "showScoreImportSummary": true,
-      "holdScoreImportInProgress": false,
-      "clockPlaying": false,
-      "clockBar": -1,
-      "recordTake": false,
-      "reviewTake": false,
-      "mixOpen": false,
-      "windowTitle": ""
     },
     {
       "id": "score-view-empty",
@@ -443,6 +435,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -467,6 +460,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -491,6 +485,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -515,6 +510,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -539,6 +535,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -563,13 +560,14 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
       "id": "all-tools-docked",
-      "description": "Every tool tiled at once -- the three live-audio tools, the two that read a score, and the take review",
-      "tools": ["tuner", "spectrogram", "harmonics", "target-note", "score-view", "take-review"],
-      "toolIds": ["tuner", "spectrogram", "harmonic-analyzer", "target-note", "score-view", "take-review"],
+      "description": "Every tool tiled at once -- the three live-audio tools, the Score View, and the take review",
+      "tools": ["tuner", "spectrogram", "harmonics", "score-view", "take-review"],
+      "toolIds": ["tuner", "spectrogram", "harmonic-analyzer", "score-view", "take-review"],
       "presentation": "docked",
       "arrangement": "split",
       "geometry": "normal",
@@ -587,6 +585,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -611,6 +610,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -635,6 +635,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -659,6 +660,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -683,6 +685,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -707,6 +710,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -731,6 +735,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -755,6 +760,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Settings"
     },
     {
@@ -779,6 +785,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Settings"
     },
     {
@@ -803,6 +810,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Settings"
     },
     {
@@ -827,6 +835,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Settings"
     },
     {
@@ -851,6 +860,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Settings"
     },
     {
@@ -875,6 +885,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Settings"
     },
     {
@@ -899,6 +910,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Send feedback"
     },
     {
@@ -923,6 +935,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Send feedback"
     },
     {
@@ -947,6 +960,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Score import"
     },
     {
@@ -971,6 +985,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Score import"
     },
     {
@@ -995,6 +1010,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -1019,6 +1035,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Score View"
     },
     {
@@ -1043,6 +1060,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -1067,6 +1085,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -1091,6 +1110,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -1115,6 +1135,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -1139,6 +1160,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -1163,6 +1185,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -1187,6 +1210,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -1211,6 +1235,7 @@
       "recordTake": true,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -1235,6 +1260,7 @@
       "recordTake": false,
       "reviewTake": true,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -1259,6 +1285,57 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": true,
+      "referencePitchHz": 0,
+      "windowTitle": ""
+    },
+    {
+      "id": "tuner-target",
+      "description": "The tuner with a target: the sample song's first sung note, the tone 12 cents flat of it",
+      "tools": ["tuner"],
+      "toolIds": ["tuner"],
+      "presentation": "docked",
+      "arrangement": "single",
+      "geometry": "normal",
+      "microphone": "available",
+      "settingsOpen": false,
+      "settingsPanel": "",
+      "feedbackOpen": false,
+      "toneHz": 334,
+      "toolView": "",
+      "scoreFixture": "<bundled sample>",
+      "showScoreImportSummary": false,
+      "holdScoreImportInProgress": false,
+      "clockPlaying": false,
+      "clockBar": -1,
+      "recordTake": false,
+      "reviewTake": false,
+      "mixOpen": false,
+      "referencePitchHz": 0,
+      "windowTitle": ""
+    },
+    {
+      "id": "tuner-target-a442",
+      "description": "The same at A442: the same tone reads further flat of the target",
+      "tools": ["tuner"],
+      "toolIds": ["tuner"],
+      "presentation": "docked",
+      "arrangement": "single",
+      "geometry": "normal",
+      "microphone": "available",
+      "settingsOpen": false,
+      "settingsPanel": "",
+      "feedbackOpen": false,
+      "toneHz": 334,
+      "toolView": "",
+      "scoreFixture": "<bundled sample>",
+      "showScoreImportSummary": false,
+      "holdScoreImportInProgress": false,
+      "clockPlaying": false,
+      "clockBar": -1,
+      "recordTake": false,
+      "reviewTake": false,
+      "mixOpen": false,
+      "referencePitchHz": 442,
       "windowTitle": ""
     },
     {
@@ -1283,6 +1360,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -1307,6 +1385,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -1331,6 +1410,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": ""
     },
     {
@@ -1355,6 +1435,7 @@
       "recordTake": false,
       "reviewTake": false,
       "mixOpen": false,
+      "referencePitchHz": 0,
       "windowTitle": "Score import"
     }
   ]

@@ -160,6 +160,13 @@ void MainComponent::finishScoreImport(const score::musicxml::MusicXmlImportResul
     // is tested on it.
     const ScoreImportSummary& summary = scoreImport.apply(result);
 
+    // The target follows the open score (system-wide-target-note decision 2).
+    if (result.score != nullptr)
+    {
+        auto [target, reason] = pitch::targetFromScore(scoreImport.score());
+        currentTarget.publish(std::move(target), std::move(reason));
+    }
+
 #if PRACTICE_TAKES_ENABLE_TEST_CONTROL
     // An approved state that opens a score into a tool wants the tool in the
     // picture, not a report over it. The score has already been published into

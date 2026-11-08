@@ -144,6 +144,11 @@ struct ScoreEvent
     // to draw it and enough for playback to ignore it for now.
     bool isGrace = false;
 
+    // A cue note (`<cue/>`): another part's line, or an ossia, printed for
+    // reference and not performed. Drawn like any note, but never played,
+    // judged, or offered as a target (system-wide-target-note).
+    bool isCue = false;
+
     TupletRatio tuplet;
 
     // Empty for a rest, one entry for a note, two or more for a chord. Each
