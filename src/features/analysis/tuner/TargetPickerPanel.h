@@ -11,7 +11,7 @@
 #include <string>
 
 // The target picker: every way of choosing the note to aim at, in a call-out
-// from the tuner (openspec/changes/target-note-picker/design.md, decision 1).
+// from the tuner (openspec/changes/archive/2026-11-08-target-note-picker/design.md, decision 1).
 //
 // It keeps no target of its own: each control writes the application's
 // target at once, and every tool reading it shows the new one.
@@ -188,7 +188,8 @@ class TargetPickerPanel final
                 for (int line = -2; line <= 2; ++line)
                 {
                     const float y = middle - (static_cast<float>(line) * spacing);
-                    graphics.drawHorizontalLine(static_cast<int>(y), 20.0f, getWidth() - 10.0f);
+                    graphics.drawHorizontalLine(
+                        static_cast<int>(y), 20.0f, static_cast<float>(getWidth()) - 10.0f);
                 }
             }
             graphics.setFont(juce::FontOptions(12.0f));

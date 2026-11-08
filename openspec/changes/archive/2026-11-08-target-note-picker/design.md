@@ -63,3 +63,17 @@ a note opens a menu:
 
 A transposing part's note is offered as its written name, and the target keeps
 both names.
+
+## Decided while building
+
+- **The picker opens from the tuner's `showView("target-picker")`** for the
+  capture harness. That needs no new approved-state field, and the shell still
+  names no tool.
+- **The keyboard reads middle C as C4,** like the rest of the application.
+  JUCE's default labels it C3. The target's key is held down on the keyboard,
+  and a 10 Hz timer puts it back after a click releases the key it pressed.
+- **The staff is drawn in light ink,** because a call-out is dark in both
+  themes.
+- **The key for stepping** is the open score's key at its first bar. The shell
+  keeps it on `CurrentTarget` (`keyFifths`), so the tuner needs no score of its
+  own. With no score, it is C major.

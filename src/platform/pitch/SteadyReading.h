@@ -6,7 +6,7 @@
 
 // Whether the note being heard is steady enough to take as a target: one note,
 // within 30 cents of it, for 300 ms (no JUCE dependency).
-// openspec/changes/target-note-picker/design.md, decision 3.
+// openspec/changes/archive/2026-11-08-target-note-picker/design.md, decision 3.
 namespace pitch
 {
 class SteadyReading

@@ -277,7 +277,17 @@ only. Both come from the `system-wide-target-note` change.
   `src/platform/score/`: the first note of the first part that plays one note
   at a time. Grace and cue notes are not counted, a unison is one note, and one
   note in twenty may sound against another. The tuner shows it through
-  `pitch::readAgainstTarget`. #296's picker will write to the same holder.
+  `pitch::readAgainstTarget`.
+- **The player chooses it too** (the `target-note-picker` change):
+  - The tuner's picker writes the same holder. Its JUCE-free rules are in
+    `pitch/TargetChoice.h`: names, staff positions, steps by semitone or by
+    key.
+  - "Use the note I'm on" takes a note only once it is steady
+    (`pitch/SteadyReading.h`).
+  - The Score View offers *Aim at* on a right-click, finding the note with
+    `engraving/NoteHit.h`.
+  - A target records whether it was chosen or came from a score, and a
+    setting decides whether opening a score replaces a chosen one.
 
 ## Takes
 

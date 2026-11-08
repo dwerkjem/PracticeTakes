@@ -9,7 +9,7 @@
 
 // The ways of naming a target note that need no display: typing its name,
 // clicking a staff position, and stepping from the current one (no JUCE
-// dependency). openspec/changes/target-note-picker/design.md, decision 2.
+// dependency). openspec/changes/archive/2026-11-08-target-note-picker/design.md, decision 2.
 namespace pitch
 {
 // A pitch with a MIDI number in range, or nothing.

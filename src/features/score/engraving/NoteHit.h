@@ -9,7 +9,7 @@
 
 // Which notehead of a laid-out system is at a point (no JUCE dependency), for
 // the Score View's right-click menu
-// (openspec/changes/target-note-picker/design.md, decision 6).
+// (openspec/changes/archive/2026-11-08-target-note-picker/design.md, decision 6).
 namespace engraving
 {
 // `x` and `y` in staff spaces from the system's origin: the left edge, and the
