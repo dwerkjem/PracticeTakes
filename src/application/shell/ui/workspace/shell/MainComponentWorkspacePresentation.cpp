@@ -327,7 +327,7 @@ void MainComponent::presentTool(
         const ToolServices services{
             audioInputService, pitchAnalysis, scoreImport.currentScoreHolder(),
             practiceClock,     takeRecorder,  referencePitch,
-            currentTheme};
+            currentTarget,     currentTheme};
         entry->component = builtInToolRegistry().create(instance.toolId(), services);
         if (entry->component == nullptr)
         {

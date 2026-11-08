@@ -9,7 +9,7 @@
 
 - [x] 2.1 `TargetNoteSelection` moves to `src/platform/score/` and chooses only a
       monophonic part (decision 3). Tests.
-- [ ] 2.2 `pitch::CurrentTarget`, set by the shell from each score, in
+- [x] 2.2 `pitch::CurrentTarget`, set by the shell from each score, in
       `ToolServices`.
 - [ ] 2.3 `describeAgainstTarget` (JUCE-free) and the tuner's target line. Tests.
 

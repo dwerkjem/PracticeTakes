@@ -20,7 +20,8 @@ class TakeRecorder;
 namespace pitch
 {
 class ReferencePitch;
-}
+class CurrentTarget;
+} // namespace pitch
 
 class AudioInputService;
 class SharedPitchAnalysis;
@@ -68,6 +69,11 @@ struct ToolServices
     // (openspec/changes/system-wide-target-note, decision 1). Read on a tool's
     // own timer; set in Settings, never by a tool.
     const pitch::ReferencePitch& referencePitch;
+
+    // The note the player is aiming at, or why there is none
+    // (system-wide-target-note, decision 2). `const`: until #296's picker, the
+    // shell sets it from the open score, and a tool only reads it.
+    const pitch::CurrentTarget& target;
 
     // The theme a tool should start in. Later changes arrive through
     // ToolComponent::setTheme rather than by re-reading this, because a change

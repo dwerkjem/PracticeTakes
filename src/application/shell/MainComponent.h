@@ -5,6 +5,7 @@
 #include "../../platform/audio/AudioInputService.h"
 #include "../../platform/audio/SharedPitchAnalysis.h"
 #include "../../platform/midi/MidiInputService.h"
+#include "../../platform/pitch/CurrentTarget.h"
 #include "../../platform/pitch/ReferencePitch.h"
 #include "../../platform/take/TakeRecorder.h"
 #include "../../platform/transport/PracticeClock.h"
@@ -377,6 +378,9 @@ class MainComponent final
     // The application's A4 (system-wide-target-note). Before the live tools,
     // which read it.
     pitch::ReferencePitch referencePitch;
+
+    // The note the player is aiming at, set from each score opened.
+    pitch::CurrentTarget currentTarget;
 
     transport::PracticeClock practiceClock{
         [this](RealtimeRenderer* renderer) { audioInputService.setRealtimeRenderer(renderer); },
