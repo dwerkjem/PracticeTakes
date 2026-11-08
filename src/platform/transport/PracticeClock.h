@@ -123,7 +123,7 @@ class PracticeClock final : private juce::Timer
     [[nodiscard]] bool truncated() const noexcept;
 
     // While a take is recorded nothing may change what it is measured against
-    // (openspec/changes/takes, design.md decision 4): locked, seeking, the tempo
+    // (openspec/changes/archive/2026-11-08-takes, design.md decision 4): locked, seeking, the tempo
     // scale and the loop are left as they are, and a request to change them is
     // ignored. Play, pause, stop and the metronome stay free. Message thread.
     void lock() noexcept;

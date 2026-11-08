@@ -16,7 +16,7 @@
 #include "../transport/PracticeClock.h"
 #include "Take.h"
 
-// Records takes: the message-thread half of openspec/changes/takes.
+// Records takes: the message-thread half of openspec/changes/archive/2026-11-08-takes.
 //
 // It starts a take by locking the practice clock, arming its renderer to record
 // the microphone, and playing with the count-in; follows the clock to move the

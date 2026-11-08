@@ -5,7 +5,7 @@
 #include "Take.h"
 
 // Appends what the renderer recorded to a take's audio, block by block (no JUCE
-// dependency). openspec/changes/takes/design.md, decision 6.
+// dependency). openspec/changes/archive/2026-11-08-takes/design.md, decision 6.
 //
 // Each block arrives with the clock frame it started at. A block continues the
 // take when it starts exactly where the audio so far ends; anything else is a

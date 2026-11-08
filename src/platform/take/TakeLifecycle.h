@@ -4,7 +4,7 @@
 #include <utility>
 
 // The states a take passes through, and the only ways between them (no JUCE
-// dependency). openspec/changes/takes/design.md, decision 3.
+// dependency). openspec/changes/archive/2026-11-08-takes/design.md, decision 3.
 //
 // A take is live while it is ready, counting in, performing or paused, and then
 // ends exactly once, in one of four ways. "Stopped early" is the incomplete

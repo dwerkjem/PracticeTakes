@@ -41,7 +41,7 @@ class TransportStrip final
         : clock(practiceClock), takes(takeRecorder), onSettingsChanged(std::move(settingsHandler))
     {
         // Records a take, counting in first; while one records, finishes it
-        // (openspec/changes/takes).
+        // (openspec/changes/archive/2026-11-08-takes).
         recordButton.setComponentID("transport-record");
         recordButton.onClick = [this]
         {

@@ -90,6 +90,32 @@ runs, and Settings says why the metronome is silent.
 
 ![The title bar's transport while the sample score plays: Pause, Stop, Bar 3 beat 2, 100%, Click and Loop](images/transport-playing.png)
 
+## Recording a take
+
+**Record**, at the left of the transport, records a take: what you play on a
+MIDI keyboard and what the microphone hears, against the open score. It counts
+in first, the same way Play does. Recording starts from the first click of the
+count-in, so the first note is never cut off.
+
+- The button turns red and reads **Finish**. The readout says *Counting in*,
+  then *Recording 0:12*. Press **Finish** or **Stop** to end the take part-way,
+  or let it play to the end of the piece.
+- **Nothing can change under a take.** The tempo and **Loop** are greyed out
+  and the clock can't be moved. The metronome stays yours to turn on or off.
+- **Afterwards**, the readout says how the take ended, such as *Take 3 complete,
+  1:05* or *Take 3 stopped in bar 14, 0:42*. A take stopped before the count-in
+  finished isn't kept. Opening another score, or losing both the microphone and
+  the keyboard, ends a take with the reason. Muting the microphone doesn't end
+  one: it records silence.
+- **Record needs something to record**: a microphone that isn't muted, or a
+  keyboard chosen in **Settings → MIDI**. Without either it is greyed out, and
+  its tooltip says why.
+
+Takes are kept until you quit. Seeing how a take went, note by note on the
+score, comes next (#52).
+
+![A take being recorded: Finish in red, Recording 0:05, the tempo and Loop greyed out](images/take-recording.png)
+
 ## Telling us what you think
 
 After a few completed tool uses, Practice Takes may ask once whether you'd like

@@ -249,7 +249,7 @@ Shared by every instrument.
 
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
-| Takes | Start, count in, play or sing, stop | MVP | [#40](https://github.com/dwerkjem/PracticeTakes/issues/40) |
+| Takes | Record a take from the microphone, a MIDI keyboard or both, counted in, against the score; stop it part-way or play to the end | ✅ | [#40](https://github.com/dwerkjem/PracticeTakes/issues/40) |
 
 #### Guidance while you play
 

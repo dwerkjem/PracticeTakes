@@ -15,7 +15,7 @@
 
 // One take: what was played or sung, on the practice clock's timeline, with
 // everything a later analysis needs to read it against the score (no JUCE
-// dependency). openspec/changes/takes/design.md, decision 5.
+// dependency). openspec/changes/archive/2026-11-08-takes/design.md, decision 5.
 //
 // Positions are clock frames: the frame of the audio callback that captured the
 // microphone, at the take's tempo scale. Frame zero is the start point the take

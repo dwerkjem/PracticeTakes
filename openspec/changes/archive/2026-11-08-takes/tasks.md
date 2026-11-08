@@ -30,10 +30,11 @@
 - [x] 4.2 An approved state recording a take from the synthetic tone, and its
       capture surface. Read the pictures.
 - [ ] 4.3 A take from a real microphone and keyboard together. **Needs a
-      person.**
+      person.** *Moved to #328 (`status:ready-for-human`), in #284's
+      hardware session.*
 
 ## 5. Docs
 
-- [ ] 5.1 `audio-thread-safety.md` (recording in the renderer),
+- [x] 5.1 `audio-thread-safety.md` (recording in the renderer),
       `ARCHITECTURE.md` (takes, ownership), the wiki (recording a take) and the
       Features row.

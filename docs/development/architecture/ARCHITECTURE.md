@@ -249,6 +249,24 @@ opened input-only and Settings says why the metronome is silent. The clock
 keeps time either way. With no device at all, the synthetic-input generator
 hands it blocks.
 
+## Takes
+
+A take is recorded against the practice clock (`src/platform/take/`, the
+archived `takes` change):
+
+- **The microphone is recorded by the clock's renderer**, inside the audio
+  callback, with a stamp of the clock frame of every span. Its audio and the
+  clock share one timeline exactly.
+- **Keyboard events are placed on that timeline** through the clock's
+  (frame, time) pair.
+- **`TakeLifecycle`, `Take` and the assembler are JUCE-free.**
+- **`TakeRecorder`** is the message-thread service. `MainComponent` owns it,
+  after `practiceClock` and `midiInputService` and before `transportStrip` and
+  `liveTools`, and passes it to tools as `ToolServices::takes`. While a take
+  runs it locks the clock, so nothing it is measured against can change.
+- **Takes are kept in memory for the session**, at most 50. Saving them is
+  #39's job.
+
 Presentation is not ownership. `DockedToolPanel` and `ToolWindow` hold a tool's
 chrome, never the tool, which is what lets a tool move between docked and
 floating without its analysis restarting or its audio registration dropping.

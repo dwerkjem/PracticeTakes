@@ -381,7 +381,7 @@ class MainComponent final
     TakeKeyboardConsumer takeKeyboard;
 
     // Records takes from the microphone and the keyboard on the practice
-    // clock's timeline (openspec/changes/takes). Declared after the clock, the
+    // clock's timeline (openspec/changes/archive/2026-11-08-takes). Declared after the clock, the
     // MIDI service and the audio service it records from, so it ends a live
     // take and lets go of them before they go; before the transport strip and
     // the live tools, which use it.

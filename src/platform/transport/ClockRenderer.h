@@ -87,7 +87,7 @@ struct ClockTiming
 // One block the renderer recorded while a take was armed: where on the clock it
 // started, how many samples it holds, and whether the clock was counting in.
 // Pushed beside the samples, so the message thread can place every sample on
-// the timeline exactly (openspec/changes/takes, design.md decision 1).
+// the timeline exactly (openspec/changes/archive/2026-11-08-takes, design.md decision 1).
 struct RecordedBlock
 {
     Frame position = 0;
@@ -152,7 +152,7 @@ class ClockRenderer final : public RealtimeRenderer
     [[nodiscard]] ClockSnapshot snapshot() const noexcept;
     [[nodiscard]] ClockEventCounts events() const noexcept;
 
-    // --- Recording a take (openspec/changes/takes, design.md decision 1) -----
+    // --- Recording a take (openspec/changes/archive/2026-11-08-takes, design.md decision 1) -----
     //
     // While armed, every block the clock plays is copied, with its gain, into
     // a preallocated FIFO, and a `RecordedBlock` saying where it starts is
