@@ -1,5 +1,7 @@
 # Re-forecast the roadmap whenever an issue is closed or reopened, and publish
-# the result into the "Live forecast" block of the roadmap issue (#10).
+# the result into the "Live forecast" block of the roadmap issue (#10). When the
+# ledger itself changes on main, re-forecast too, and make the milestones carry
+# the ledger's commitments, titles and descriptions.
 #
 # The commitments in #10 are only worth something if slipping is visible the day
 # it starts, so the forecast is re-run on the event that changes it: work being
@@ -13,6 +15,11 @@ on:
     types:
       - closed
       - reopened
+  push:
+    branches:
+      - main
+    paths:
+      - tools/scripts/planning/roadmap_ledger.json
   workflow_dispatch:
 
 permissions:
@@ -45,6 +52,8 @@ jobs:
         run: |
           if [ "${GITHUB_EVENT_NAME}" = "issues" ]; then
             trigger="#${ISSUE_NUMBER} was ${ISSUE_ACTION}"
+          elif [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+            trigger="the ledger changed in ${GITHUB_SHA::7}"
           else
             trigger="a manual run"
           fi
@@ -53,11 +62,18 @@ jobs:
             --trigger "${trigger}" \
             --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
-      # An issue close nobody is watching is an unattended trigger, so a failure
-      # files an issue rather than sitting in the Actions tab. A manual run's
-      # failure is already in front of whoever started it.
+      # Milestones change only when the ledger does, so an issue close skips this.
+      # A milestone's due date is its latest release's commitment: moving a
+      # commitment in the ledger, by a decision recorded in #10, moves it here.
+      - name: Make the milestones match the ledger
+        if: ${{ github.event_name != 'issues' }}
+        run: python3 tools/scripts/planning/sync_milestones.py --repo "${GITHUB_REPOSITORY}"
+
+      # An issue close or a merge nobody is watching is an unattended trigger, so
+      # a failure files an issue rather than sitting in the Actions tab. A manual
+      # run's failure is already in front of whoever started it.
       - name: Report the failure
-        if: ${{ failure() && github.event_name == 'issues' }}
+        if: ${{ failure() && github.event_name != 'workflow_dispatch' }}
         run: |
           python3 tools/scripts/ci/report_workflow_failure.py \
             --title "Roadmap forecast: the live forecast in #10 is not updating" \
@@ -65,7 +81,7 @@ jobs:
             --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             --commit "${GITHUB_SHA}" \
             --trigger "${GITHUB_EVENT_NAME}" \
-            --failing-step "Re-forecast and publish" \
+            --failing-step "Re-forecast and publish, or make the milestones match the ledger" \
             --label type:bug \
             --label priority:p2 \
-            --guidance "The usual causes are a ledger that no longer validates (the log names the issue) or the forecast markers having been deleted from #10's body. Restore the two markers around the Live forecast section, or fix tools/scripts/planning/roadmap_ledger.json, then run the workflow by hand."
+            --guidance "The usual causes are a ledger that no longer validates (the log names the issue) or the forecast markers having been deleted from #10's body. Restore the two markers around the Live forecast section, or fix tools/scripts/planning/roadmap_ledger.json, then run the workflow by hand. If the milestone step failed, a milestone number in the ledger may not exist on GitHub."

@@ -349,7 +349,9 @@ against it — they can drift (`docs/development/quality/QA_STRATEGY.md` area 12
   split, move or cut a roadmap issue, change its ledger entry in the same pull
   request. Close finished work as *completed* and dropped work as *not
   planned*: the forecast credits only the first. Never edit a commitment date
-  without the maintainer's decision recorded in #10. See
+  without the maintainer's decision recorded in #10. Milestone titles,
+  descriptions and due dates come from the ledger's `milestones` list and are
+  synced when it reaches `main`, so change them there, not on GitHub. See
   `docs/development/operations/ROADMAP_FORECAST.md`.
 - The GitHub wiki is generated from `docs/wiki/` by
   `.github/workflows/wiki.yml`. A change to something a user sees or does (a

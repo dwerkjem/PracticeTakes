@@ -27,6 +27,13 @@
     {"id": "beta", "name": "Beta 0.11.0", "tracker": 14, "target": "2027-10-11", "commitment": "2028-05-08"},
     {"id": "v1", "name": "1.0.0", "tracker": 15, "target": "2028-01-31", "commitment": "2028-11-27"}
   ],
+  "_milestones_comment": "Each milestone's due date is the commitment of the latest release it names; sync_milestones.py makes GitHub match this whenever the ledger changes on main. Change a title or description here, not on GitHub.",
+  "milestones": [
+    {"number": 2, "title": "Stage 2 — Workspace foundation", "releases": ["foundation"], "description": "The dockable workspace and its tools: a development build, not a product. Tracker #12."},
+    {"number": 3, "title": "Stage 3 — MVP", "releases": ["mvp"], "description": "Listening and pitch beside piano practice, into one practice loop. Tracker #13."},
+    {"number": 4, "title": "Stage 4 — Beta", "releases": ["beta1", "beta2", "beta"], "description": "Depth and drills on both instruments, files, sessions and recordings, then review and history. Tracker #14."},
+    {"number": 5, "title": "Stage 5 — 1.0", "releases": ["v1"], "description": "Crash recovery, onboarding, accessibility and translations, verified on Windows, Linux and macOS. Tracker #15."}
+  ],
   "checkpoints": [
     {"date": "2026-12-31", "floor": 12, "target": 20},
     {"date": "2027-01-31", "floor": 18, "target": 30},

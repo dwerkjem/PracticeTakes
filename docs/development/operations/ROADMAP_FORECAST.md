@@ -5,13 +5,16 @@ makes **commitments**: one date per release, each with an 80% chance of being
 met if the future behaves like the project's measured past. A commitment is only
 worth something if slipping is visible the day it starts. So every time an issue
 is closed or reopened, a workflow re-runs the forecast against what is left and
-rewrites the **Live forecast** block in #10.
+rewrites the **Live forecast** block in #10. When the ledger changes on `main`,
+the same workflow re-forecasts and sets the milestones' due dates to the
+commitments, so nobody copies a date across by hand.
 
 | Piece | Path |
 |---|---|
 | The ledger: every issue to 1.0, its size, its release | `tools/scripts/planning/roadmap_ledger.json` |
 | The forecast and the publisher | `tools/scripts/planning/forecast_roadmap.py` |
 | Its tests | `tools/scripts/planning/test_forecast_roadmap.py` |
+| The milestone sync, and its tests | `tools/scripts/planning/sync_milestones.py`, `test_sync_milestones.py` |
 | The workflow | `.github/workflows/roadmap-forecast.yml` |
 
 ## What it does on each run
@@ -45,6 +48,24 @@ A commitment moves only by a person's decision recorded in #10, never by this
 workflow. If a checkpoint is below the floor, #10's rule is to cut scope from
 the next release first.
 
+## The milestones
+
+The ledger's `milestones` list names each GitHub milestone by number, with its
+title, its description, and the releases it stands for. Stage 4, the Beta,
+stands for Beta 1, Beta 2 and the Beta. A milestone is **due on the commitment
+of the latest release it names**.
+
+When a push to `main` changes the ledger, or the workflow is run by hand,
+`sync_milestones.py` compares each named milestone with GitHub and sends only
+the fields that differ. Running it twice changes nothing the second time. It
+never creates or closes a milestone, and leaves milestones the ledger doesn't
+name alone. A number in the ledger that doesn't exist on GitHub fails the run.
+
+So **edit a milestone's title, description or due date in the ledger, not on
+GitHub**: a change made on GitHub is put back the next time the ledger changes.
+Due dates are sent at midday UTC, so they read as the same date from UTC-11 to
+UTC+11.
+
 ## Keeping the ledger true
 
 The forecast is exactly as honest as the ledger.
@@ -59,7 +80,8 @@ The forecast is exactly as honest as the ledger.
 - **An issue that deliberately carries no size**, such as a hardware check or a
   maybe, goes in `excluded` with a reason.
 - **Changing a commitment** means editing `commitment` *and* recording the
-  decision and its reason in #10. Changing a target is the same.
+  decision and its reason in #10. Changing a target is the same. The
+  milestone's due date follows when the change reaches `main`.
 - `parse_ledger` refuses duplicates, unknown releases, non-positive sizes and an
   issue both sized and excluded. The tests also check that the committed ledger
   still totals the 128 estimate-weeks #10 publishes. Change that test when the
@@ -94,12 +116,16 @@ python3 tools/scripts/planning/forecast_roadmap.py --repo dwerkjem/PracticeTakes
 # Offline, from a saved REST `issues` listing
 python3 tools/scripts/planning/forecast_roadmap.py --issues-json issues.json --today 2026-12-31
 
+# What the milestones would change to, without changing them
+python3 tools/scripts/planning/sync_milestones.py --repo dwerkjem/PracticeTakes --dry-run
+
 # The tests
 python3 tools/scripts/run_tests.py
 ```
 
-From GitHub, **Actions → Roadmap forecast → Run workflow** publishes on demand.
-If the workflow fails on an issue event, it files an issue titled *Roadmap
+From GitHub, **Actions → Roadmap forecast → Run workflow** publishes on demand
+and syncs the milestones. If the workflow fails on an issue event or a push, it
+files an issue titled *Roadmap
 forecast: the live forecast in #10 is not updating*. The usual causes are a
 ledger that no longer validates, or the two markers having been deleted from
 #10's body.
