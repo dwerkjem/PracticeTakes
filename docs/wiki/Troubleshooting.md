@@ -6,7 +6,7 @@
 |---|---|
 | A warning that no usable microphone is available | Connect one, then choose it in **Settings → Audio**. The warning's shortcut goes there |
 | "Waiting for the microphone" | The device is opening or was just changed. If it doesn't clear, choose the device again in **Settings → Audio** |
-| "Microphone muted" | Unmute it in **Settings → Audio** |
+| "Microphone muted", or an amber frame around the workspace | Click **Mic muted - Unmute** on the title bar, or unmute it in **Settings → Audio** |
 | "Microphone disconnected" | Reconnect it. Practice Takes recovers the device by itself when it returns |
 | "Microphone input is clipping" | Lower **Input volume** in **Settings → Audio**, or move back from the microphone |
 | The tuner never settles | Play or sing a *sustained* note. A short or noisy sound gives it nothing to hold. **Settings → Practice** has presets for different material |

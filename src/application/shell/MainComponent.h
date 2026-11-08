@@ -294,6 +294,7 @@ class MainComponent final
   private:
     void updateMicrophoneStateControl();
     void updateMicrophoneWarning();
+    void paintMutedFrame(juce::Graphics& graphics) const;
     void dismissMicrophoneWarning();
 
     // One audio device manager is shared by every open analysis tool.

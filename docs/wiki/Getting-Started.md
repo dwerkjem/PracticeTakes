@@ -57,6 +57,12 @@ On the right of the title bar, the **microphone button** shows the input's state
 and mutes or unmutes it in one click: *Mic active - Mute*, *Mic muted - Unmute*,
 or *Mic disconnected*. **Fullscreen** fills the screen, and becomes **Restore**.
 
+While the microphone is muted, the button turns amber and an amber frame
+labelled **Microphone muted** surrounds the whole workspace, so you can't sing
+into a muted microphone without noticing:
+
+![The workspace framed in amber, labelled Microphone muted, with the title bar's button reading Mic muted - Unmute](images/microphone-muted.png)
+
 ## Telling us what you think
 
 After a few completed tool uses, Practice Takes may ask once whether you'd like
