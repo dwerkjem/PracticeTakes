@@ -18,14 +18,14 @@
     "active_window_days": 14,
     "horizon_weeks": 400
   },
-  "_releases_comment": "2026-11-08: the MVP covers the piano and the voice together (#10), so the MVP and both early Betas re-forecast later. Recordings (#291) then added 8 estimate-weeks to Beta 2 and the Beta, which moved those and 1.0.",
+  "_releases_comment": "2026-11-08: the MVP covers the piano and the voice together (#10), so the MVP and both early Betas re-forecast later. Recordings (#291) then added 8 estimate-weeks to Beta 2 and the Beta, and the listening-and-pitch features (#296-#299) 6.5 to the MVP, which moved every later release. Every idea not yet on the roadmap was then added (#301-#307): 8 estimate-weeks of drills, wait mode and fingering to Beta 1, and 3 of tempo ladder and practice log to the Beta. Ear training and music theory (#308) come after 1.0.",
   "releases": [
     {"id": "foundation", "name": "Foundation 0.7.0", "tracker": 12, "target": "2026-11-16", "commitment": "2026-11-29"},
-    {"id": "mvp", "name": "MVP 0.8.0", "tracker": 13, "target": "2027-02-08", "commitment": "2027-04-12"},
-    {"id": "beta1", "name": "Beta 1 0.9.0", "tracker": 14, "target": "2027-04-19", "commitment": "2027-07-26"},
-    {"id": "beta2", "name": "Beta 2 0.10.0", "tracker": 14, "target": "2027-05-31", "commitment": "2027-09-27"},
-    {"id": "beta", "name": "Beta 0.11.0", "tracker": 14, "target": "2027-08-16", "commitment": "2028-02-07"},
-    {"id": "v1", "name": "1.0.0", "tracker": 15, "target": "2027-11-29", "commitment": "2028-08-28"}
+    {"id": "mvp", "name": "MVP 0.8.0", "tracker": 13, "target": "2027-03-01", "commitment": "2027-05-17"},
+    {"id": "beta1", "name": "Beta 1 0.9.0", "tracker": 14, "target": "2027-06-07", "commitment": "2027-10-04"},
+    {"id": "beta2", "name": "Beta 2 0.10.0", "tracker": 14, "target": "2027-07-19", "commitment": "2027-12-13"},
+    {"id": "beta", "name": "Beta 0.11.0", "tracker": 14, "target": "2027-10-11", "commitment": "2028-05-08"},
+    {"id": "v1", "name": "1.0.0", "tracker": 15, "target": "2028-01-31", "commitment": "2028-11-27"}
   ],
   "checkpoints": [
     {"date": "2026-12-31", "floor": 12, "target": 20},
@@ -43,7 +43,8 @@
     {"issue": 26, "reason": "built only if #46 or #47 proves it needs it"},
     {"issue": 28, "reason": "built only if #46 or #47 proves it needs it"},
     {"issue": 199, "reason": "code merged; only the hardware check remains, sized in #284's session"},
-    {"issue": 291, "reason": "parent of #292-#294, which carry its size"}
+    {"issue": 291, "reason": "parent of #292-#294, which carry its size"},
+    {"issue": 308, "reason": "Stage 7, ear training and music theory (#309-#311): after 1.0, not committed"}
   ],
   "items": [
     {"issue": 30, "size": 0.5, "release": "foundation"},
@@ -58,12 +59,16 @@
     {"issue": 48, "size": 4.0, "release": "mvp", "note": "shared: matching"},
     {"issue": 52, "size": 2.0, "release": "mvp", "note": "shared: note-by-note review"},
     {"issue": 41, "size": 2.5, "release": "mvp", "note": "shared: live current note"},
-    {"issue": 201, "size": 2.0, "release": "mvp", "note": "piano: one hand at a time"},
-    {"issue": 38, "size": 2.5, "release": "mvp", "note": "voice: latency calibration"},
-    {"issue": 42, "size": 3.0, "release": "mvp", "note": "voice: pitch from the microphone"},
-    {"issue": 286, "size": 1.0, "release": "mvp", "note": "voice: accompaniment from the score's own parts"},
-    {"issue": 37, "size": 2.5, "release": "mvp", "note": "voice: sing-along"},
-    {"issue": 227, "size": 2.0, "release": "mvp", "note": "voice: the shared target note"},
+    {"issue": 227, "size": 2.0, "release": "mvp", "note": "listening and pitch: the shared target note and reference pitch"},
+    {"issue": 296, "size": 1.5, "release": "mvp", "note": "listening and pitch: choose a target note"},
+    {"issue": 297, "size": 2.0, "release": "mvp", "note": "listening and pitch: the note you're on, on a keyboard and a staff"},
+    {"issue": 298, "size": 2.0, "release": "mvp", "note": "listening and pitch: vocal range"},
+    {"issue": 299, "size": 1.0, "release": "mvp", "note": "listening and pitch: reference tone and drone"},
+    {"issue": 38, "size": 2.5, "release": "mvp", "note": "singing: latency calibration"},
+    {"issue": 42, "size": 3.0, "release": "mvp", "note": "singing: pitch judged from the microphone"},
+    {"issue": 286, "size": 1.0, "release": "mvp", "note": "singing: accompaniment from the score's own parts"},
+    {"issue": 37, "size": 2.5, "release": "mvp", "note": "singing: sing-along"},
+    {"issue": 201, "size": 2.0, "release": "mvp", "note": "piano pedagogy: one hand at a time, below tempo"},
 
     {"issue": 44, "size": 2.0, "release": "beta1", "note": "piano: duration"},
     {"issue": 27, "size": 2.0, "release": "beta1", "note": "piano: paired with #44"},
@@ -74,6 +79,11 @@
     {"issue": 47, "size": 2.5, "release": "beta1", "note": "voice: phrase and breath"},
     {"issue": 45, "size": 2.5, "release": "beta1", "note": "both: dynamics"},
     {"issue": 25, "size": 1.5, "release": "beta1", "note": "both: paired with #45"},
+    {"issue": 301, "size": 1.5, "release": "beta1", "note": "listening drills: pitch matching"},
+    {"issue": 302, "size": 1.5, "release": "beta1", "note": "listening drills: sing an interval"},
+    {"issue": 303, "size": 1.0, "release": "beta1", "note": "listening drills: hold one note steady"},
+    {"issue": 304, "size": 2.0, "release": "beta1", "note": "piano: wait mode"},
+    {"issue": 305, "size": 2.0, "release": "beta1", "note": "piano: fingering from the score"},
 
     {"issue": 34, "size": 2.5, "release": "beta2"},
     {"issue": 39, "size": 2.0, "release": "beta2"},
@@ -89,6 +99,8 @@
     {"issue": 54, "size": 2.5, "release": "beta"},
     {"issue": 293, "size": 3.5, "release": "beta", "note": "recordings: the same tools on a recording"},
     {"issue": 294, "size": 2.5, "release": "beta", "note": "recordings: whole-take graphs"},
+    {"issue": 306, "size": 1.0, "release": "beta", "note": "tempo ladder"},
+    {"issue": 307, "size": 2.0, "release": "beta", "note": "practice log"},
 
     {"issue": 55, "size": 2.0, "release": "v1"},
     {"issue": 56, "size": 3.0, "release": "v1", "note": "partly done"},

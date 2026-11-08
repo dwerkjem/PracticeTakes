@@ -15,6 +15,7 @@ MIDI keyboard.
 | If you want to… | Read |
 |---|---|
 | Install it and open it for the first time | [[Getting Started]] |
+| See every feature, what it's for, and when it lands | [[Features]] |
 | Know what each tool shows | [[Tools]] |
 | Dock, float, tile and save layouts | [[Workspace and Settings]] |
 | Open a score, and know why a file came in differently | [[Scores and MusicXML]] |
@@ -25,7 +26,11 @@ MIDI keyboard.
 
 ## What the MVP will be
 
-The MVP is one practice loop, for the piano and the voice:
+The MVP is built in two lanes at once. **Listening and pitch:** choose a
+target note, see the note you're on against it on a keyboard and a staff, find
+your vocal range, and sing against a reference tone or drone. **Piano
+practice:** learn a piece at the keyboard, one hand at a time. Both lead into
+one practice loop:
 
 > Open a piece and choose a tempo. **Play it on a MIDI keyboard, or sing your
 > part with the rest of the score as accompaniment.** Afterwards, see on the
@@ -33,7 +38,9 @@ The MVP is one practice loop, for the piano and the voice:
 > how sharp or flat. Then loop the weak passage, slower (or one hand at a time
 > on the piano), and take it again.
 
-It is committed for **12 April 2027**, with a planning target of 8 February 2027.
+It is committed for **17 May 2027**, with a planning target of 1 March 2027. The
+listening and pitch tools don't need the rest of the loop, so each can ship on
+its own as it lands.
 The live forecast against that date is kept current in
 [the roadmap issue](https://github.com/dwerkjem/PracticeTakes/issues/10).
 

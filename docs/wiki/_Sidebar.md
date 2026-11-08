@@ -2,6 +2,7 @@
 
 **Using Practice Takes**
 - [[Getting Started]]
+- [[Features]]
 - [[Tools]]
 - [[Workspace and Settings]]
 - [[Scores and MusicXML]]
