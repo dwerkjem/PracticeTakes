@@ -187,6 +187,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/evaluation/ExpectedAttacks.h
     src/platform/evaluation/Fft.h
     src/platform/evaluation/KeyboardOnsets.h
+    src/platform/evaluation/NoteMatching.cpp
+    src/platform/evaluation/NoteMatching.h
     src/platform/evaluation/OnsetDetector.cpp
     src/platform/evaluation/OnsetDetector.h
     src/platform/evaluation/OnsetTiming.cpp
@@ -351,6 +353,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/score/musicxml/read/MusicXmlTranspositionTests.cpp
     src/tests/platform/evaluation/ExpectedAttacksTests.cpp
     src/tests/platform/evaluation/KeyboardOnsetsTests.cpp
+    src/tests/platform/evaluation/NoteMatchingTests.cpp
     src/tests/platform/evaluation/OnsetDetectorTests.cpp
     src/tests/platform/evaluation/OnsetTimingTests.cpp
     src/tests/platform/take/TakeAssemblerTests.cpp
@@ -412,4 +415,5 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/take/TakeRecorder.cpp
     src/platform/evaluation/OnsetDetector.cpp
     src/platform/evaluation/OnsetTiming.cpp
+    src/platform/evaluation/NoteMatching.cpp
 )
