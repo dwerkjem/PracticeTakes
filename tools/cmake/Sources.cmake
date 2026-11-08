@@ -184,6 +184,12 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/audio/SharedPitchAnalysis.cpp
     src/platform/audio/SharedPitchAnalysis.h
     src/platform/audio/SyntheticTone.h
+    src/platform/evaluation/ExpectedAttacks.h
+    src/platform/evaluation/Fft.h
+    src/platform/evaluation/KeyboardOnsets.h
+    src/platform/evaluation/OnsetDetector.cpp
+    src/platform/evaluation/OnsetDetector.h
+    src/platform/evaluation/PerformedOnset.h
     src/platform/midi/MidiEvent.h
     src/platform/midi/MidiEventFifo.h
     src/platform/midi/MidiInputService.cpp
@@ -341,6 +347,9 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/score/musicxml/read/MusicXmlPercussionTests.cpp
     src/tests/platform/score/musicxml/read/MusicXmlTimingTests.cpp
     src/tests/platform/score/musicxml/read/MusicXmlTranspositionTests.cpp
+    src/tests/platform/evaluation/ExpectedAttacksTests.cpp
+    src/tests/platform/evaluation/KeyboardOnsetsTests.cpp
+    src/tests/platform/evaluation/OnsetDetectorTests.cpp
     src/tests/platform/take/TakeAssemblerTests.cpp
     src/tests/platform/take/TakeLifecycleTests.cpp
     src/tests/platform/take/TakeRecorderTests.cpp
@@ -398,4 +407,5 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/transport/ClockRenderer.cpp
     src/platform/transport/PracticeClock.cpp
     src/platform/take/TakeRecorder.cpp
+    src/platform/evaluation/OnsetDetector.cpp
 )
