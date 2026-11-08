@@ -20,7 +20,7 @@
             ToolInstancePolicy::multi,
             1,
             {920, 760},
-            /* usesAudioInput */ true},
+            /* readsAudioSamples: pitch comes from SharedPitchAnalysis */ false},
         ToolDefinition{
             "spectrogram",
             "Spectrogram",
@@ -28,7 +28,7 @@
             ToolInstancePolicy::multi,
             std::nullopt,
             {980, 650},
-            /* usesAudioInput */ true},
+            /* readsAudioSamples */ true},
         ToolDefinition{
             "harmonic-analyzer",
             "Harmonic Analyzer",
@@ -36,7 +36,7 @@
             ToolInstancePolicy::multi,
             std::nullopt,
             {980, 700},
-            /* usesAudioInput */ true},
+            /* readsAudioSamples */ true},
         ToolDefinition{
             "target-note",
             "Target Note",

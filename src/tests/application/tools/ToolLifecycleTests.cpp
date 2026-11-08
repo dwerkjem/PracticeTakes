@@ -250,24 +250,52 @@ TEST_CASE("open or focus opens the first instance when none is live", "[tools][p
 TEST_CASE("open another is refused for a single-instance tool", "[tools][policy]")
 {
     const auto catalog = multiInstanceCatalog();
-    CHECK_FALSE(ToolInstanceAllocator::mayOpenAnother(*catalog.find("solo"), 8));
-    CHECK(ToolInstanceAllocator::mayOpenAnother(*catalog.find("many"), 0));
+    using ToolInstanceAllocator::OpenAnother;
+    CHECK(
+        ToolInstanceAllocator::canOpenAnother(*catalog.find("solo"), 1, 16) ==
+        OpenAnother::singleInstance);
+    // A multi-instance tool that reads no samples needs no audio stream.
+    CHECK(
+        ToolInstanceAllocator::canOpenAnother(*catalog.find("many"), 1, 0) == OpenAnother::allowed);
 }
 
-TEST_CASE("open another needs a free audio consumer slot for a microphone tool", "[tools][policy]")
+TEST_CASE("open another stops at the per-tool limit", "[tools][policy]")
 {
-    ToolDefinition listening{"ears", "Ears", {}, ToolInstancePolicy::multi, std::nullopt, {}, true};
-
-    CHECK(ToolInstanceAllocator::mayOpenAnother(listening, 1));
-    CHECK_FALSE(ToolInstanceAllocator::mayOpenAnother(listening, 0));
+    const auto catalog = multiInstanceCatalog();
+    using ToolInstanceAllocator::OpenAnother;
+    const auto limit = ToolInstanceAllocator::maximumInstancesPerTool;
+    CHECK(
+        ToolInstanceAllocator::canOpenAnother(*catalog.find("many"), limit - 1, 16) ==
+        OpenAnother::allowed);
+    CHECK(
+        ToolInstanceAllocator::canOpenAnother(*catalog.find("many"), limit, 16) ==
+        OpenAnother::toolLimitReached);
 }
 
-TEST_CASE("the microphone tools declare that they take an audio consumer", "[tools][catalog]")
+TEST_CASE(
+    "open another needs a free audio stream only for a tool that reads samples",
+    "[tools][policy]")
+{
+    using ToolInstanceAllocator::OpenAnother;
+    ToolDefinition reading{"ears", "Ears", {}, ToolInstancePolicy::multi, std::nullopt, {}, true};
+
+    CHECK(ToolInstanceAllocator::canOpenAnother(reading, 1, 1) == OpenAnother::allowed);
+    CHECK(ToolInstanceAllocator::canOpenAnother(reading, 1, 0) == OpenAnother::noAudioStreamFree);
+    // The per-tool limit is reported first: freeing a stream would not help.
+    CHECK(
+        ToolInstanceAllocator::canOpenAnother(
+            reading, ToolInstanceAllocator::maximumInstancesPerTool, 0) ==
+        OpenAnother::toolLimitReached);
+}
+
+TEST_CASE("only the tools that run their own FFT read audio samples", "[tools][catalog]")
 {
     const auto& catalog = builtInToolCatalog();
-    CHECK(catalog.find("tuner")->usesAudioInput);
-    CHECK(catalog.find("spectrogram")->usesAudioInput);
-    CHECK(catalog.find("harmonic-analyzer")->usesAudioInput);
-    CHECK_FALSE(catalog.find("score-view")->usesAudioInput);
-    CHECK_FALSE(catalog.find("target-note")->usesAudioInput);
+    // The tuner reads its pitch from SharedPitchAnalysis, so it listens for the
+    // input's state only and takes no stream.
+    CHECK_FALSE(catalog.find("tuner")->readsAudioSamples);
+    CHECK(catalog.find("spectrogram")->readsAudioSamples);
+    CHECK(catalog.find("harmonic-analyzer")->readsAudioSamples);
+    CHECK_FALSE(catalog.find("score-view")->readsAudioSamples);
+    CHECK_FALSE(catalog.find("target-note")->readsAudioSamples);
 }

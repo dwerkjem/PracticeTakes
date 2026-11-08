@@ -264,6 +264,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/tools/CompactPresentationTests.cpp
     src/tests/application/tools/ToolCatalogTests.cpp
     src/tests/application/tools/ToolLifecycleTests.cpp
+    src/tests/application/tools/AudioStreamUseTests.cpp
     src/tests/application/tools/ToolInstanceLabelTests.cpp
     src/tests/application/tools/ToolMenuEntriesTests.cpp
     src/tests/application/tools/UnknownToolIntegrationTests.cpp

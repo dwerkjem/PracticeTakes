@@ -79,17 +79,43 @@ namespace ToolInstanceAllocator
     return ToolInstanceId::forOrdinal(toolId, 1);
 }
 
-// Whether "Open another" can create an instance now. Never for a
-// single-instance tool; for a tool that takes an audio consumer, only while the
-// shared input service has a slot free -- addListener cannot fail loudly on the
-// audio side, so the shell refuses first and says why.
-[[nodiscard]] inline bool
-mayOpenAnother(const ToolDefinition& definition, std::size_t freeConsumerSlots) noexcept
+// The most copies of one tool open at once. Six tiles is about what a 1280-wide
+// window shows legibly side by side, and more than that is a tab strip nobody
+// can scan; it also bounds what a restored workspace can open. The audio
+// consumer slots are sized so this limit, not the slots, is the one a user
+// meets (see AudioInputService::maximumConsumers).
+inline constexpr std::size_t maximumInstancesPerTool = 6;
+
+enum class OpenAnother
+{
+    allowed,
+    singleInstance,
+    // maximumInstancesPerTool copies are already open.
+    toolLimitReached,
+    // The tool reads samples and every AudioInputService consumer slot is
+    // taken.
+    noAudioStreamFree
+};
+
+// Whether "Open another" can create an instance now, and if not, why --
+// the menu and the alert say the reason rather than just greying out.
+[[nodiscard]] inline OpenAnother canOpenAnother(
+    const ToolDefinition& definition,
+    std::size_t openInstances,
+    std::size_t freeConsumerSlots) noexcept
 {
     if (definition.instancePolicy != ToolInstancePolicy::multi)
     {
-        return false;
+        return OpenAnother::singleInstance;
     }
-    return !definition.usesAudioInput || freeConsumerSlots > 0;
+    if (openInstances >= maximumInstancesPerTool)
+    {
+        return OpenAnother::toolLimitReached;
+    }
+    if (definition.readsAudioSamples && freeConsumerSlots == 0)
+    {
+        return OpenAnother::noAudioStreamFree;
+    }
+    return OpenAnother::allowed;
 }
 } // namespace ToolInstanceAllocator

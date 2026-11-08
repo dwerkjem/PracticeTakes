@@ -80,13 +80,26 @@ class AudioInputService final
     void addListener(Listener* listener);
     void removeListener(Listener* listener);
 
-    // How many more listeners addListener can take. The consumer slots are
-    // preallocated and fixed in number, and addListener cannot report a full
-    // array to its caller, so the shell asks this first before creating another
-    // tool that listens (openspec/changes/archive/2026-11-08-multi-instance-tools). Message thread
-    // only; it takes the same lock addListener does and never touches the
-    // audio callback.
+    // For a listener that wants to know when the input starts, stops or
+    // changes state -- muted, disconnected, clipping -- but never reads
+    // samples. It takes no consumer slot and the audio callback never visits
+    // it, so a tool that only shows state (the tuner reads its pitch from
+    // SharedPitchAnalysis) costs the audio path nothing. Message thread only.
+    void addStateListener(Listener* listener);
+    void removeStateListener(Listener* listener);
+
+    // How many more sample listeners addListener can take. The consumer slots
+    // are preallocated and fixed in number, and addListener cannot report a
+    // full array to its caller, so the shell asks this first before creating
+    // another tool that reads samples. Message thread only; it takes the same
+    // lock addListener does and never touches the audio callback.
     [[nodiscard]] std::size_t freeConsumerSlots() const;
+
+    // How many sample listeners there can be at once.
+    [[nodiscard]] static constexpr std::size_t consumerCapacity() noexcept
+    {
+        return maximumConsumers;
+    }
 
     [[nodiscard]] std::size_t availableSamples(Listener* listener) const;
     [[nodiscard]] std::size_t
@@ -136,7 +149,14 @@ class AudioInputService final
     // replaceable, by one named type and nothing else.
     friend struct AudioInputServiceRecoveryAccess;
 
-    static constexpr std::size_t maximumConsumers = 8;
+    // Sixteen: one for SharedPitchAnalysis, and room for every copy of every
+    // tool that reads samples (the spectrogram and the harmonic analyzer, up to
+    // ToolInstanceAllocator::maximumInstancesPerTool each) with space left for
+    // the sample tools the roadmap adds. Each slot is a 256 KB FIFO, so the
+    // whole array is 4 MB, allocated once with the service. The audio callback
+    // only pushes into slots that are active, so a free slot costs it a single
+    // atomic load per block.
+    static constexpr std::size_t maximumConsumers = 16;
     static constexpr std::size_t consumerFifoCapacity = 65536;
     static constexpr int serviceRefreshRateHz = 20;
     static constexpr int disconnectedDeviceScanIntervalTicks = serviceRefreshRateHz * 2;
@@ -198,7 +218,9 @@ class AudioInputService final
 
     [[nodiscard]] ConsumerSlot* findConsumer(Listener* listener);
     [[nodiscard]] const ConsumerSlot* findConsumer(Listener* listener) const;
-    [[nodiscard]] std::array<Listener*, maximumConsumers> listenerSnapshot() const;
+    // Every listener to notify of a state or format change: the sample
+    // listeners in their slots, then the state-only ones. Message thread only.
+    [[nodiscard]] std::vector<Listener*> listenerSnapshot() const;
     void deliverFormatChange();
     void scanForDeviceChanges();
 
@@ -245,6 +267,8 @@ class AudioInputService final
     juce::AudioDeviceManager& manager = *ownedManager;
     mutable juce::CriticalSection consumerLock;
     std::array<ConsumerSlot, maximumConsumers> consumers;
+    // Guarded by consumerLock. Never read by the audio callback.
+    std::vector<Listener*> stateListeners;
     juce::String lastDeviceName;
     InputState lastState = InputState::disconnected;
 

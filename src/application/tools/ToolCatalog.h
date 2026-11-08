@@ -49,10 +49,14 @@ struct ToolDefinition
 
     ToolPreferredSize preferredSize;
 
-    // Whether each instance registers its own AudioInputService consumer. The
-    // service has a fixed number of consumer slots, so the shell checks for a
-    // free one before creating another instance of such a tool.
-    bool usesAudioInput = false;
+    // Whether each instance reads samples through its own AudioInputService
+    // consumer slot (the spectrogram and the harmonic analyzer do their own
+    // FFT). The service has a fixed number of slots, so the shell checks for a
+    // free one before creating another instance of such a tool. A tool that
+    // only needs to know the input's state -- the tuner, which reads pitch from
+    // SharedPitchAnalysis -- registers as a state listener and leaves this
+    // false.
+    bool readsAudioSamples = false;
 };
 
 // The roster of tools the application knows about, keyed by tool id.

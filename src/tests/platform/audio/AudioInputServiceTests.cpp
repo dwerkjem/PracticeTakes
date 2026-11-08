@@ -74,8 +74,8 @@ struct ServiceUnderTest
     // service is destroyed first and never outlives the MessageManager.
     juce::ScopedJuceInitialiser_GUI juceRuntime;
 
-    // On the heap, and it has to be. AudioInputService carries eight inline
-    // 65,536-sample FIFOs -- a little over 2 MB -- and Windows gives a thread
+    // On the heap, and it has to be. AudioInputService carries sixteen inline
+    // 65,536-sample FIFOs -- a little over 4 MB -- and Windows gives a thread
     // 1 MB of stack by default where Linux and macOS give 8. As a by-value
     // member this fixture overflowed the stack, and all six cases below
     // segfaulted on Windows while passing everywhere else. The application
@@ -822,4 +822,85 @@ TEST_CASE(
 
     service.removeListener(&second);
     CHECK(service.freeConsumerSlots() == initiallyFree);
+}
+
+namespace
+{
+// Records what it is told, so a state-only listener's notifications can be
+// checked without a device.
+class RecordingStateListener final : public AudioInputService::Listener
+{
+  public:
+    void audioInputAboutToStart(double, int) override
+    {
+        ++starts;
+    }
+    void audioInputStopped() override
+    {
+        ++stops;
+    }
+    void audioInputStateChanged(AudioInputService::InputState state) override
+    {
+        states.push_back(state);
+    }
+
+    int starts = 0;
+    int stops = 0;
+    std::vector<AudioInputService::InputState> states;
+};
+} // namespace
+
+TEST_CASE("a state-only listener takes no consumer slot", "[audio][consumers]")
+{
+    // The tuner reads pitch from SharedPitchAnalysis and only needs to know
+    // when the input is muted or gone, so it must not cost a sample stream.
+    ServiceUnderTest fixture;
+    AudioInputService& service = fixture.service;
+    const auto initiallyFree = service.freeConsumerSlots();
+
+    RecordingStateListener listener;
+    service.addStateListener(&listener);
+    CHECK(service.freeConsumerSlots() == initiallyFree);
+
+    // Told the current state straight away, as a sample listener is.
+    REQUIRE_FALSE(listener.states.empty());
+    CHECK(listener.states.back() == service.inputState());
+
+    service.removeStateListener(&listener);
+    CHECK(service.freeConsumerSlots() == initiallyFree);
+}
+
+TEST_CASE("a state-only listener hears a mute", "[audio][consumers]")
+{
+    ServiceUnderTest fixture;
+    AudioInputService& service = fixture.service;
+
+    // A tone counts as input, which mute can then silence. With no input at
+    // all the state is "disconnected", and mute has nothing to change.
+    service.setSyntheticTone(440.0f);
+    for (auto waited = 0; waited < 2000 && !service.hasUsableInput(); waited += 20)
+    {
+        juce::Thread::sleep(20);
+    }
+    REQUIRE(service.hasUsableInput());
+
+    RecordingStateListener listener;
+    service.addStateListener(&listener);
+    service.addStateListener(&listener); // twice is once
+    const auto heardBefore = listener.states.size();
+    CHECK(heardBefore == 1);
+
+    // setMuted publishes the new state synchronously on the calling thread.
+    service.setMuted(true);
+
+    REQUIRE(listener.states.size() > heardBefore);
+    CHECK(listener.states.back() == AudioInputService::InputState::muted);
+    service.removeStateListener(&listener);
+    service.setMuted(false);
+    service.setSyntheticTone(0.0f);
+}
+
+TEST_CASE("there are sixteen sample streams", "[audio][consumers]")
+{
+    CHECK(AudioInputService::consumerCapacity() == 16);
 }

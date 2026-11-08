@@ -9,7 +9,9 @@
 #include "../configuration/SettingsPersistence.h"
 #include "../theme/AppLookAndFeel.h"
 #include "../theme/Theme.h"
+#include "../tools/AudioStreamUse.h"
 #include "../tools/BuiltInTools.h"
+#include "../tools/ToolInstanceAllocator.h"
 #include "../tools/ToolInstanceId.h"
 #include "ui/score/ScoreImportJob.h"
 #include "ui/score/ScoreImportState.h"
@@ -173,7 +175,12 @@ class MainComponent final
     // "Open another": a new instance of a multi-instance tool, when its policy
     // and the free audio consumer slots allow (multi-instance-tools).
     void openAnotherInstance(std::string_view toolId);
-    [[nodiscard]] bool mayOpenAnotherInstance(std::string_view toolId) const;
+    [[nodiscard]] ToolInstanceAllocator::OpenAnother
+    canOpenAnotherInstance(std::string_view toolId) const;
+    // Which tools hold AudioInputService's sample streams right now, for the
+    // message shown when they run out.
+    [[nodiscard]] AudioStreamUse::Use audioStreamUse() const;
+    void showNoAudioStreamAlert() const;
     void showRenameToolDialog(const ToolInstanceId& instance);
     void renameTool(const ToolInstanceId& instance, const juce::String& requestedName);
     // The open instances of one tool, lowest ordinal first.
