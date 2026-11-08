@@ -15,6 +15,6 @@
 
 ## 3. Verification and docs
 
-- [ ] 3.1 An approved state with the picker open; captures read.
+- [x] 3.1 An approved state with the picker open; captures read.
 - [ ] 3.2 The wiki (the tuner's target, choosing it, the setting), Features
       row, ARCHITECTURE.md.

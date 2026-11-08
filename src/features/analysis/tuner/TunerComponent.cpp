@@ -155,6 +155,25 @@ bool TunerComponent::showView(const juce::String& view)
         return true;
     }
 
+    if (view == "target-picker")
+    {
+        // The graph under the picker, and the picker opened once the tuner is
+        // on screen (target-note-picker).
+        selectMode(DisplayMode::graph);
+        const juce::Component::SafePointer<TunerComponent> safeThis(this);
+        juce::Timer::callAfterDelay(
+            600,
+            [safeThis]
+            {
+                if (safeThis != nullptr && safeThis->isShowing())
+                {
+                    safeThis->openTargetPicker();
+                }
+            });
+
+        return true;
+    }
+
     if (view == "advanced")
     {
         // The display too, not only the panel. A state has to describe what is

@@ -403,6 +403,12 @@ const std::vector<ApprovedWindowState>& states()
          false,
          false,
          442.0},
+        // The target picker open from the tuner (target-note-picker), over the
+        // sample song so its key is there to step in.
+        {"target-picker", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
+         WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
+         "The target picker: a keyboard, a staff, a name, the note being sung, and steps", 334.0,
+         "target-picker", bundledSampleFixtureName(), false},
         // The Take Review tool before any take: what most sessions see first.
         {"take-review-empty", Tools{"take-review"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,

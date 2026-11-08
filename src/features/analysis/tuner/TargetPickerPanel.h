@@ -43,6 +43,8 @@ class TargetPickerPanel final
         keyboard.setLowestVisibleKey(36);
         keyboard.setKeyWidth(14.0f);
         keyboard.setScrollButtonsVisible(true);
+        // Middle C is C4 here, as everywhere else in the application.
+        keyboard.setOctaveForMiddleC(4);
         keyboard.setWantsKeyboardFocus(false);
         addAndMakeVisible(keyboard);
 
@@ -303,6 +305,10 @@ class TargetPickerPanel final
 
     void handleNoteOn(juce::MidiKeyboardState*, int, int midiNoteNumber, float) override
     {
+        if (showingTarget)
+        {
+            return;
+        }
         // A key has no spelling, so it is spelled with a sharp.
         if (const auto key = pitch::spellMidi(midiNoteNumber, true))
         {
@@ -315,6 +321,7 @@ class TargetPickerPanel final
     void timerCallback() override
     {
         singButton.setEnabled(steadyNote && steadyNote().has_value());
+        showTargetOnKeyboard();
     }
 
     void chooseByName()
@@ -351,14 +358,38 @@ class TargetPickerPanel final
                                : juce::String("No target: choose one"),
             juce::dontSendNotification);
         staff.shown = currentPitch();
-        staff.ink = colours.foreground;
-        staff.accent = colours.accent;
+        // A call-out is dark in either theme, so the staff is drawn light.
+        staff.ink = juce::Colours::white.withAlpha(0.85f);
+        staff.accent = colours.accent.brighter(0.3f);
         staff.repaint();
+        showTargetOnKeyboard();
+    }
+
+    // The target's key held down on the keyboard, and no other; put back after
+    // a click lets go of the key it pressed.
+    void showTargetOnKeyboard()
+    {
+        const auto current = target.target();
+        const int key = current != nullptr ? current->midiNoteNumber : -1;
+        const juce::ScopedValueSetter<bool> quiet(showingTarget, true);
+        for (int note = 0; note < 128; ++note)
+        {
+            const bool on = keyboardState.isNoteOn(1, note);
+            if (note == key && !on)
+            {
+                keyboardState.noteOn(1, note, 1.0f);
+            }
+            else if (note != key && on && !keyboard.isMouseButtonDownAnywhere())
+            {
+                keyboardState.noteOff(1, note, 0.0f);
+            }
+        }
     }
 
     pitch::CurrentTarget& target;
     std::function<std::optional<int>()> steadyNote;
     AppPalette colours;
+    bool showingTarget = false;
 
     juce::Label heading;
     juce::MidiKeyboardState keyboardState;
