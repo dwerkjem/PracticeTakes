@@ -275,3 +275,14 @@ Decisions made while building, which the sections above did not settle.
 - **Cost:** a 512-frame block against a full 512-segment table renders in
   about 0.74 µs on the development machine (`[.benchmark]`, "rendering a block
   against a full segment table").
+- **A saved state from before outputs existed is given the default output.**
+  Saved device states name no output, and opening one as it stands would leave
+  the metronome silent on a machine with speakers.
+- **The output device stays with the machine.** A settings export removes it
+  from the device state (`AudioDeviceStateTransfer.h`), and an import keeps
+  this machine's output beside the imported input. The input device travels
+  as it always has.
+- **Losing only the output doesn't stop capture.** A recovery that can't
+  restart the last device with its output opens the same input without one.
+  The output comes back when it's chosen again in Settings, or on the next
+  launch.

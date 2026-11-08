@@ -2,6 +2,7 @@
 
 #include "../../../../features/analysis/tuner/TunerComponent.h"
 #include "../../../../features/analysis/tuner/TunerSettingsCodec.h"
+#include "../../../configuration/AudioDeviceStateTransfer.h"
 #include "../../../configuration/SettingsImportPersistence.h"
 #include "../../../configuration/SettingsImportTransaction.h"
 #include "../../../configuration/SettingsTransferCodec.h"
@@ -487,7 +488,12 @@ bool MainComponent::applyTransferredSettings(const SettingsTransferModel& model)
     savedSettingsBounds = validWindowBounds(state.settingsBounds);
     workspaceCatalog = state.workspaceCatalog;
 
-    if (auto audioState = juce::parseXML(state.audioDeviceState); audioState != nullptr)
+    // The imported input, with this machine's own output kept: a transfer file
+    // carries no output device (AudioDeviceStateTransfer.h).
+    const auto localState = audioInputService.createDeviceState();
+    if (auto audioState = AudioDeviceStateTransfer::withLocalOutputDevice(
+            state.audioDeviceState, localState.get());
+        audioState != nullptr)
     {
         audioInputService.applySavedDeviceState(*audioState);
     }

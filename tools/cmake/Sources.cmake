@@ -25,6 +25,7 @@
 set(PRACTICE_TAKES_SOURCES
     src/bootstrap/main.cpp
     src/application/configuration/AppDefaults.h
+    src/application/configuration/AudioDeviceStateTransfer.h
     src/application/configuration/SettingsPersistence.cpp
     src/application/configuration/SettingsPersistence.h
     src/application/configuration/SettingsImportPersistence.h
@@ -244,6 +245,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/midi/MidiMessageTranslation.cpp
     src/platform/midi/NoteSoundingTracker.cpp
     src/tests/application/configuration/AppDefaultsTests.cpp
+    src/tests/application/configuration/AudioDeviceStateTransferTests.cpp
     src/tests/application/configuration/SettingsPersistenceTests.cpp
     src/tests/application/configuration/SettingsTransferCodecTests.cpp
     src/tests/application/shell/WorkspaceStartupSequenceTests.cpp

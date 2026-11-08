@@ -97,12 +97,14 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
           public:
             explicit AudioPanel(AudioInputService& inputService)
                 : audioInputService(inputService),
+                  // Up to two outputs, for the metronome. None is allowed:
+                  // the clock and every analysis tool work without one.
                   deviceSelector(
                       inputService.deviceManager(),
                       1,
                       2,
                       0,
-                      0,
+                      2,
                       false,
                       false,
                       false,

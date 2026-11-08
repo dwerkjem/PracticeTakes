@@ -1,5 +1,7 @@
 #include "SettingsTransferCodec.h"
 
+#include "AudioDeviceStateTransfer.h"
+
 #include <juce_core/juce_core.h>
 
 #include <cmath>
@@ -233,7 +235,10 @@ SettingsTransferEncodeResult SettingsTransferCodec::encode(const SettingsTransfe
     auto audio = std::make_unique<juce::DynamicObject>();
     audio->setProperty("microphoneMuted", model.state.microphoneMuted);
     audio->setProperty("inputGain", model.state.inputGain);
-    audio->setProperty("deviceState", model.state.audioDeviceState);
+    // Without the output device: the speakers belong to this machine, like
+    // the MIDI keyboard, and do not travel (AudioDeviceStateTransfer.h).
+    audio->setProperty(
+        "deviceState", AudioDeviceStateTransfer::withoutOutputDevice(model.state.audioDeviceState));
     settings->setProperty("audio", audio.release());
 
     auto window = std::make_unique<juce::DynamicObject>();

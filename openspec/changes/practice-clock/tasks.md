@@ -34,13 +34,16 @@
 
 ## 3. Output on the device
 
-- [ ] 3.1 `initialise(2, 2, …)`, falling back to `(2, 0, …)` on failure, with
+- [x] 3.1 `initialise(2, 2, …)`, falling back to `(2, 0, …)` on failure, with
       the reason kept for Settings.
 - [ ] 3.2 Settings → Audio: the output device, metronome volume, accent on or
       off, and "Metronome unavailable: …" when there is no output. Saved
       locally and not exported, like the MIDI keyboard.
-- [ ] 3.3 Re-check audio device recovery (`audio-device-recovery` spec) with
+- [x] 3.3 Re-check audio device recovery (`audio-device-recovery` spec) with
       outputs open: unplugging the output alone must not stop capture.
+      *A recovery that can't restart the last device with its output reopens
+      the same input with no output, and Settings says why. Pulling a real
+      output out is checked in the hardware session (5.3).*
 
 ## 4. PracticeClock, message thread
 
