@@ -1,14 +1,14 @@
 ## 1. Timing rules, JUCE-free (src/platform/transport/ClockMath.h)
 
-- [ ] 1.1 `ClockSegment` and `buildSegments(tempoMap, timeSignatures, scale,
+- [x] 1.1 `ClockSegment` and `buildSegments(tempoMap, timeSignatures, scale,
       sampleRate)`: at most 512 segments, and report a truncation.
-- [ ] 1.2 Frame → (bar, beat, accented) and "does a click start inside
+- [x] 1.2 Frame → (bar, beat, accented) and "does a click start inside
       [frame, frame + n)?", by binary search plus one multiply.
-- [ ] 1.3 Tick ↔ frame at a scale, and re-anchoring the position when the scale
+- [x] 1.3 Tick ↔ frame at a scale, and re-anchoring the position when the scale
       changes.
-- [ ] 1.4 The loop: bounds to whole frames, and an exact wrap.
-- [ ] 1.5 The count-in start frame for *n* bars at a point's tempo and meter.
-- [ ] 1.6 Tests in `src/tests/platform/transport/ClockMathTests.cpp`:
+- [x] 1.4 The loop: bounds to whole frames, and an exact wrap.
+- [x] 1.5 The count-in start frame for *n* bars at a point's tempo and meter.
+- [x] 1.6 Tests in `src/tests/platform/transport/ClockMathTests.cpp`:
       - tempo changes to the frame;
       - 7/8;
       - 10,000 wraps at 44.1 kHz with a tempo change inside the loop;

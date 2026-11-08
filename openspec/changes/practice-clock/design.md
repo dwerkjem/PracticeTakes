@@ -231,3 +231,19 @@ except the tempo scale's lower bound:
    unaffected because its length doesn't scale.
 4. **Metronome subdivisions.** Not in this change; beats only, with an accented
    downbeat.
+
+## Implementation notes
+
+Decisions made while building, which the sections above did not settle.
+
+- **A beat is a note of the time signature's beat type.** 7/8 clicks seven
+  eighths, 6/8 six. Grouping compound meters into dotted beats is a
+  subdivision question, which decision 4 leaves out of this change.
+- **Bars follow the measures, not only the time signature.** The importer
+  widens a bar whose notes overrun its signature, so a segment's bar length is
+  the measure's nominal duration. A widened bar's last part-beat still clicks.
+- **A segment starts at every tempo entry and at every change of bar grid.** A
+  tempo change in the middle of a bar starts a segment whose bar origin is that
+  bar's start, so the beat count carries on.
+- **A segment's start frame comes from the tempo map's exact seconds**, never
+  from summing earlier segments, so rounding can't accumulate across them.
