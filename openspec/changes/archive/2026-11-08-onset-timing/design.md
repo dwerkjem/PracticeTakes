@@ -117,3 +117,15 @@ otherwise.
   better evidence for legato singing, and will be added there.
 - **The stated latencies can be wrong**, which biases every error by the same
   amount. #38 fixes it, and the bias is a parameter, not baked in.
+
+## Implementation notes
+
+- **The aligner keeps two rows of costs and one byte per state** for the way
+  back, rather than a full table of doubles. A take of a few thousand attacks
+  and onsets costs a few megabytes, once.
+- **A window is never narrower than its attack's tolerance**, so a note
+  between two very close neighbours can still be matched when it is on time.
+- **The keyboard is preferred whenever a take has keyboard events.** A pianist
+  who also sang is judged on the keys, which are exact. Judging the voice as
+  well comes with #42's pitch, when a part's pitches can say which onset
+  belongs to whom.

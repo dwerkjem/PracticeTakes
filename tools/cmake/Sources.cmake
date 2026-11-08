@@ -189,6 +189,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/evaluation/KeyboardOnsets.h
     src/platform/evaluation/OnsetDetector.cpp
     src/platform/evaluation/OnsetDetector.h
+    src/platform/evaluation/OnsetTiming.cpp
+    src/platform/evaluation/OnsetTiming.h
     src/platform/evaluation/PerformedOnset.h
     src/platform/midi/MidiEvent.h
     src/platform/midi/MidiEventFifo.h
@@ -350,6 +352,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/evaluation/ExpectedAttacksTests.cpp
     src/tests/platform/evaluation/KeyboardOnsetsTests.cpp
     src/tests/platform/evaluation/OnsetDetectorTests.cpp
+    src/tests/platform/evaluation/OnsetTimingTests.cpp
     src/tests/platform/take/TakeAssemblerTests.cpp
     src/tests/platform/take/TakeLifecycleTests.cpp
     src/tests/platform/take/TakeRecorderTests.cpp
@@ -408,4 +411,5 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/transport/PracticeClock.cpp
     src/platform/take/TakeRecorder.cpp
     src/platform/evaluation/OnsetDetector.cpp
+    src/platform/evaluation/OnsetTiming.cpp
 )

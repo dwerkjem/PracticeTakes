@@ -8,7 +8,7 @@
 
 // The attacks a part asks for: one moment at each distinct onset tick, with
 // every note that starts there (no JUCE dependency).
-// openspec/changes/onset-timing/design.md, decision 1.
+// openspec/changes/archive/2026-11-08-onset-timing/design.md, decision 1.
 namespace evaluation
 {
 struct ExpectedNote

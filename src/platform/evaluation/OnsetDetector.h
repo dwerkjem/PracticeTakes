@@ -7,7 +7,7 @@
 #include "PerformedOnset.h"
 
 // Where attacks begin in a take's audio, by spectral flux (no JUCE
-// dependency). openspec/changes/onset-timing/design.md, decision 3.
+// dependency). openspec/changes/archive/2026-11-08-onset-timing/design.md, decision 3.
 namespace evaluation
 {
 struct OnsetSettings

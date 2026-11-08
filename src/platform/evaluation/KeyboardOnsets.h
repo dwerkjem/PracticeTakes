@@ -7,7 +7,7 @@
 #include "PerformedOnset.h"
 
 // A keyboard take's onsets: its note-ons, gathered into chords (no JUCE
-// dependency). openspec/changes/onset-timing/design.md, decision 2.
+// dependency). openspec/changes/archive/2026-11-08-onset-timing/design.md, decision 2.
 namespace evaluation
 {
 // Note-ons within this long of the first of a group are one chord.
