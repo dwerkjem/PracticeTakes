@@ -330,3 +330,165 @@ TEST_CASE("a paused take resumes without a gap in its audio", "[take][recorder]"
     CHECK(take.audioEnd() > bar * 3 / 2);
     CHECK(take.countInFrames == bar);
 }
+
+namespace
+{
+// One bar of quarters per part, at 120 bpm: a voice above, a piano below.
+[[nodiscard]] std::shared_ptr<const score::Score> voiceAndPiano()
+{
+    auto result = std::make_shared<score::Score>();
+    result->tempoMap = score::TempoMap::build({{0, 120.0}});
+    const std::vector<std::vector<int>> parts{{76, 77, 79, 81}, {60, 64, 67, 72}};
+    for (const auto& pitches : parts)
+    {
+        score::Part part;
+        score::Measure measure;
+        measure.nominalDuration = 4 * quarter;
+        measure.attributes.time = score::TimeSignature{4, 4};
+        score::Voice voice;
+        for (std::size_t beat = 0; beat < pitches.size(); ++beat)
+        {
+            score::ScoreEvent event;
+            event.kind = score::EventKind::note;
+            event.onset = static_cast<score::Tick>(beat) * quarter;
+            event.duration = quarter;
+            score::Pitch pitch;
+            pitch.midiNoteNumber = pitches[beat];
+            event.notes.push_back(score::Note{pitch, pitch, std::nullopt, std::nullopt});
+            voice.events.push_back(event);
+        }
+        measure.voices.push_back(voice);
+        part.measures.push_back(measure);
+        result->parts.push_back(part);
+    }
+    return result;
+}
+
+// A completed keyboard take of `source`, pressing `keys` a beat apart.
+[[nodiscard]] Take keyboardTakeOf(std::shared_ptr<const score::Score> source, std::vector<int> keys)
+{
+    Take result;
+    auto table = std::make_shared<transport::ClockTable>();
+    transport::buildTable(*table, *source, 100, 44100.0);
+    result.score = std::move(source);
+    result.table = table;
+    result.usedKeyboard = true;
+    for (std::size_t beat = 0; beat < keys.size(); ++beat)
+    {
+        KeyboardEvent key;
+        key.frame = static_cast<Frame>(beat) * 22050;
+        key.event.kind = midi::MidiEventKind::noteOn;
+        key.event.noteNumber = keys[beat];
+        key.event.velocity = 80;
+        result.keyboard.push_back(key);
+    }
+    result.lifecycle.apply(TakeEvent::countInStarted);
+    result.lifecycle.apply(TakeEvent::performanceStarted);
+    result.lifecycle.apply(TakeEvent::reachedEnd);
+    return result;
+}
+
+struct CountingListener final : TakeListener
+{
+    int changes = 0;
+    void takesChanged() override
+    {
+        ++changes;
+    }
+};
+} // namespace
+
+TEST_CASE("a kept take is reviewed against the part it matches best", "[take][recorder][review]")
+{
+    RecorderUnderTest fixture;
+    CountingListener listener;
+    fixture.recorder->addListener(&listener);
+    CHECK(fixture.recorder->review() == nullptr);
+
+    // The pianist played the piano part, one note wrong.
+    const std::uint64_t id =
+        fixture.recorder->keep(keyboardTakeOf(voiceAndPiano(), {60, 64, 69, 72}));
+    CHECK(id == 1);
+    REQUIRE(fixture.recorder->takes().size() == 1);
+    CHECK(fixture.recorder->lastEnded()->id == id);
+
+    fixture.recorder->finishJudging();
+    CHECK_FALSE(fixture.recorder->isJudging());
+    const TakeReview* review = fixture.recorder->review();
+    REQUIRE(review != nullptr);
+    CHECK(review->take->id == id);
+    CHECK(review->part == 1);
+    CHECK(review->report.summary.correct == 3);
+    CHECK(review->report.summary.wrong == 1);
+    CHECK(listener.changes >= 2);
+
+    // The same take against the voice: every note wrong.
+    CHECK(fixture.recorder->reviewTake(id, 0));
+    fixture.recorder->finishJudging();
+    REQUIRE(fixture.recorder->review() != nullptr);
+    CHECK(fixture.recorder->review()->part == 0);
+    CHECK(fixture.recorder->review()->report.summary.wrong == 4);
+
+    // Neither a take that was not kept nor a part the score lacks.
+    CHECK_FALSE(fixture.recorder->reviewTake(99));
+    CHECK_FALSE(fixture.recorder->reviewTake(id, 2));
+    fixture.recorder->removeListener(&listener);
+}
+
+TEST_CASE("a take that has not ended, or was cancelled, is not kept", "[take][recorder][review]")
+{
+    RecorderUnderTest fixture;
+    CHECK(fixture.recorder->keep(Take{}) == 0);
+
+    Take cancelled = keyboardTakeOf(voiceAndPiano(), {60});
+    cancelled.lifecycle = TakeLifecycle{};
+    cancelled.lifecycle.apply(TakeEvent::countInStarted);
+    cancelled.lifecycle.apply(TakeEvent::cancelled);
+    CHECK(fixture.recorder->keep(std::move(cancelled)) == 0);
+    CHECK(fixture.recorder->takes().empty());
+}
+
+TEST_CASE("a take recorded here is reviewed when it ends", "[take][recorder][review]")
+{
+    RecorderUnderTest fixture;
+    REQUIRE(fixture.recorder->start());
+    fixture.run(static_cast<int>((3 * bar) / blockFrames) + 8);
+    REQUIRE(fixture.recorder->takes().size() == 1);
+
+    // Judged on the worker, taken by a poll.
+    while (fixture.recorder->isJudging())
+    {
+        fixture.recorder->poll();
+    }
+    const TakeReview* review = fixture.recorder->review();
+    REQUIRE(review != nullptr);
+    CHECK(review->take == fixture.recorder->takes().front());
+
+    // A newer take's review replaces it; the older take's marks go at once.
+    const std::uint64_t id = fixture.recorder->keep(keyboardTakeOf(voiceAndPiano(), {60}));
+    CHECK(fixture.recorder->review() == nullptr);
+    fixture.recorder->finishJudging();
+    REQUIRE(fixture.recorder->review() != nullptr);
+    CHECK(fixture.recorder->review()->take->id == id);
+}
+
+TEST_CASE("forgetting takes leaves nothing to review", "[take][recorder][review]")
+{
+    RecorderUnderTest fixture;
+    static_cast<void>(fixture.recorder->keep(keyboardTakeOf(voiceAndPiano(), {60, 64})));
+    fixture.recorder->finishJudging();
+    REQUIRE(fixture.recorder->review() != nullptr);
+
+    // Forgotten while a second judgement runs: it is dropped when it finishes.
+    static_cast<void>(fixture.recorder->keep(keyboardTakeOf(voiceAndPiano(), {60})));
+    fixture.recorder->forgetTakes();
+    CHECK(fixture.recorder->takes().empty());
+    CHECK(fixture.recorder->lastEnded() == nullptr);
+    CHECK(fixture.recorder->review() == nullptr);
+    CHECK_FALSE(fixture.recorder->isJudging());
+    fixture.recorder->finishJudging();
+    CHECK(fixture.recorder->review() == nullptr);
+
+    // Ids keep counting, so a take is never confused with a forgotten one.
+    CHECK(fixture.recorder->keep(keyboardTakeOf(voiceAndPiano(), {60})) == 3);
+}

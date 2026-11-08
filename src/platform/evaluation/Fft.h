@@ -50,11 +50,18 @@ inline void fft(std::vector<std::complex<float>>& data)
             std::complex<float> twiddle(1.0f, 0.0f);
             for (std::size_t offset = 0; offset < length / 2; ++offset)
             {
+                // Multiplied by hand: std::complex's operator* checks for
+                // infinities and NaNs, which costs more than the FFT itself.
                 const std::complex<float> even = data[start + offset];
-                const std::complex<float> odd = data[start + offset + (length / 2)] * twiddle;
+                const std::complex<float> other = data[start + offset + (length / 2)];
+                const std::complex<float> odd(
+                    (other.real() * twiddle.real()) - (other.imag() * twiddle.imag()),
+                    (other.real() * twiddle.imag()) + (other.imag() * twiddle.real()));
                 data[start + offset] = even + odd;
                 data[start + offset + (length / 2)] = even - odd;
-                twiddle *= step;
+                twiddle = std::complex<float>(
+                    (twiddle.real() * step.real()) - (twiddle.imag() * step.imag()),
+                    (twiddle.real() * step.imag()) + (twiddle.imag() * step.real()));
             }
         }
     }

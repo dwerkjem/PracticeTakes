@@ -253,9 +253,11 @@ void PracticeClock::refreshTable()
         looping = false;
         loopStart = 0;
         loopEnd = 0;
-        if (builtScore != nullptr)
+        // A full queue sends it after the new table instead, which still stops.
+        if (const ClockCommand stop{ClockCommand::Kind::stop};
+            builtScore != nullptr && !clockRenderer->send(stop))
         {
-            clockRenderer->send({ClockCommand::Kind::stop});
+            unsent.insert(unsent.begin(), stop);
         }
     }
 

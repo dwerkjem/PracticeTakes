@@ -53,6 +53,13 @@
             // this catalog may not include a feature's header.
             1,
             {1060, 620}},
+        ToolDefinition{
+            "take-review",
+            "Take Review",
+            {"review"},
+            ToolInstancePolicy::single,
+            std::nullopt,
+            {760, 520}},
     });
     return catalog;
 }

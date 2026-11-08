@@ -1,5 +1,6 @@
 #include "ScoreViewComponent.h"
 
+#include "../../platform/evaluation/TakeReview.h"
 #include "engraving/PartNames.h"
 #include "engraving/ScoreLayoutEngine.h"
 #include "engraving/StaffGeometry.h"
@@ -52,6 +53,15 @@ constexpr double verticalFollowPlace = 0.25;
 constexpr double markWidth = 1.75;
 constexpr double markHeight = 1.3;
 constexpr double cursorBandWidth = 1.6;
+
+// The review's marks (take-review decision 3): a ring a little larger than the
+// cursor's, so both show on a note that has both, and colours that read on
+// either theme's paper.
+constexpr double reviewMarkWidth = 2.1;
+constexpr double reviewMarkHeight = 1.6;
+constexpr juce::uint32 reviewCorrect = 0xff2e9e4f;
+constexpr juce::uint32 reviewWrong = 0xffd23c3c;
+constexpr juce::uint32 reviewTiming = 0xffe08a1e;
 
 // How strongly the marks are drawn over the notation, which shows through.
 constexpr float soundingAlpha = 0.45f;
@@ -115,6 +125,7 @@ void ScoreViewComponent::Canvas::paint(juce::Graphics& graphics)
                 scoreNotationPaletteFor(owner.currentTheme));
             painter.drawSystem(owner.layout.systems.at(index), where->originX, where->originY);
             owner.paintCursorOn(graphics, index, *where);
+            owner.paintReviewOn(graphics, index, *where);
         }
     };
 
@@ -296,10 +307,119 @@ void ScoreViewComponent::paintCursorOn(
     }
 }
 
+void ScoreViewComponent::paintReviewOn(
+    juce::Graphics& graphics,
+    std::size_t index,
+    const SystemOnCanvas& where) const
+{
+    if (reviewMarks.notes.empty() && reviewMarks.extras.empty())
+    {
+        return;
+    }
+
+    const engraving::System& system = layout.systems.at(index);
+    const double px = where.pixelsPerSpace;
+    const double noteheadMiddle = engraving::LayoutOptions{}.noteheadWidth / 2.0;
+    const auto ring = static_cast<float>(std::max(1.5, 0.18 * px));
+    const juce::Colour muted = palette().muted;
+
+    for (const engraving::NoteMark& mark : reviewMarks.notes)
+    {
+        if (mark.system != index || mark.notehead >= system.noteheads.size())
+        {
+            continue;
+        }
+        const engraving::NoteheadGlyph& head = system.noteheads.at(mark.notehead);
+        const auto staff = static_cast<std::size_t>(std::max(0, head.staff));
+        const double offset =
+            staff < system.staffOffsets.size() ? system.staffOffsets.at(staff) : 0.0;
+        const double centreX = where.originX + ((head.x + noteheadMiddle) * px);
+        const double centreY =
+            where.originY + ((offset + engraving::spacesBelowTopLine(head.position)) * px);
+        const juce::Rectangle<float> around(
+            static_cast<float>(centreX - (reviewMarkWidth * px * 0.5)),
+            static_cast<float>(centreY - (reviewMarkHeight * px * 0.5)),
+            static_cast<float>(reviewMarkWidth * px), static_cast<float>(reviewMarkHeight * px));
+
+        switch (mark.pitch)
+        {
+        case engraving::PitchMark::correct:
+            graphics.setColour(juce::Colour(reviewCorrect));
+            graphics.drawEllipse(around, ring);
+            break;
+        case engraving::PitchMark::wrong:
+            graphics.setColour(juce::Colour(reviewWrong).withAlpha(0.5f));
+            graphics.fillEllipse(around);
+            graphics.setColour(juce::Colour(reviewWrong));
+            graphics.drawEllipse(around, ring);
+            if (mark.playedMidi.has_value())
+            {
+                // What was played, on a tab above the head and to its right,
+                // clear of the chord it is in.
+                const auto height = static_cast<float>(std::max(11.0, 1.7 * px));
+                const juce::Font font(juce::FontOptions(height, juce::Font::bold));
+                const juce::String name(evaluation::keyName(*mark.playedMidi));
+                const float width =
+                    juce::GlyphArrangement::getStringWidth(font, name) + (height * 0.5f);
+                const juce::Rectangle<float> tab(
+                    around.getRight() - (height * 0.2f), around.getY() - (height * 0.9f), width,
+                    height * 1.1f);
+                graphics.setColour(palette().panel.withAlpha(0.92f));
+                graphics.fillRoundedRectangle(tab, height * 0.25f);
+                graphics.setColour(juce::Colour(reviewWrong));
+                graphics.drawRoundedRectangle(tab, height * 0.25f, 1.0f);
+                graphics.setFont(font);
+                graphics.drawText(name, tab, juce::Justification::centred, false);
+            }
+            break;
+        case engraving::PitchMark::missed:
+            graphics.setColour(muted);
+            graphics.drawEllipse(around, ring);
+            break;
+        case engraving::PitchMark::none:
+            break;
+        }
+
+        if (mark.timing != engraving::TimingMark::none)
+        {
+            // A small arrow beside the head, pointing the way it was off.
+            const bool early = mark.timing == engraving::TimingMark::early;
+            const double side = early ? -1.0 : 1.0;
+            const double base = centreX + (side * ((reviewMarkWidth * 0.5) + 0.35) * px);
+            const double tip = base + (side * 0.9 * px);
+            const double half = 0.45 * px;
+            juce::Path arrow;
+            arrow.addTriangle(
+                static_cast<float>(base), static_cast<float>(centreY - half),
+                static_cast<float>(base), static_cast<float>(centreY + half),
+                static_cast<float>(tip), static_cast<float>(centreY));
+            graphics.setColour(juce::Colour(reviewTiming));
+            graphics.fillPath(arrow);
+        }
+    }
+
+    // An extra note: a cross above the top staff, at its time.
+    const auto stroke = static_cast<float>(std::max(1.5, 0.22 * px));
+    for (const engraving::ExtraMark& extra : reviewMarks.extras)
+    {
+        if (extra.system != index)
+        {
+            continue;
+        }
+        const auto x = static_cast<float>(where.originX + ((extra.x + noteheadMiddle) * px));
+        const auto y = static_cast<float>(where.originY - (2.6 * px));
+        const auto arm = static_cast<float>(0.55 * px);
+        graphics.setColour(juce::Colour(reviewWrong));
+        graphics.drawLine(x - arm, y - arm, x + arm, y + arm, stroke);
+        graphics.drawLine(x - arm, y + arm, x + arm, y - arm, stroke);
+    }
+}
+
 ScoreViewComponent::ScoreViewComponent(
     const score::CurrentScore& sharedCurrentScore,
-    transport::PracticeClock& practiceClock)
-    : currentScore(sharedCurrentScore), clock(practiceClock)
+    transport::PracticeClock& practiceClock,
+    take::TakeRecorder& takeRecorder)
+    : currentScore(sharedCurrentScore), clock(practiceClock), takes(takeRecorder)
 {
     setComponentID("score-view-tool");
     setWantsKeyboardFocus(true);
@@ -365,10 +485,14 @@ ScoreViewComponent::ScoreViewComponent(
     clockPosition = clock.position();
     clock.addListener(this);
     updateCursor();
+
+    takes.addListener(this);
+    updateReview();
 }
 
 ScoreViewComponent::~ScoreViewComponent()
 {
+    takes.removeListener(this);
     clock.removeListener(this);
     stopTimer();
 }
@@ -573,9 +697,10 @@ void ScoreViewComponent::relayout(std::optional<std::size_t> keep, bool force)
     canvas.repaint();
     repaint();
 
-    // The cursor's place was on the old layout.
+    // The cursor's place, and the review's marks, were on the old layout.
     cursor.reset();
     updateCursor();
+    updateReview();
 }
 
 std::optional<std::size_t> ScoreViewComponent::measureInView() const
@@ -1018,9 +1143,10 @@ void ScoreViewComponent::applySettings(const ToolSettingsPayload& payload)
     settings = score_view::decode(payload);
     relayout(keep);
 
-    // The look-ahead is not part of the layout, so a relayout that found
-    // nothing changed did not reach the marks.
+    // The look-ahead and the review are not part of the layout, so a relayout
+    // that found nothing changed did not reach the marks.
     updateCursor();
+    updateReview();
 }
 
 bool ScoreViewComponent::showView(const juce::String& view)
@@ -1362,6 +1488,47 @@ void ScoreViewComponent::setFollow(bool shouldFollow)
     updateControls();
 }
 
+void ScoreViewComponent::takesChanged()
+{
+    updateReview();
+}
+
+void ScoreViewComponent::updateReview()
+{
+    engraving::ReviewMarks placed;
+    const take::TakeReview* review = takes.review();
+    if (settings.showReview && review != nullptr && review->take != nullptr &&
+        renderedScore != nullptr && review->take->score == renderedScore)
+    {
+        // An extra note's tick is where the review's rows put it.
+        std::vector<double> extraTicks(review->report.extra.size(), 0.0);
+        for (const evaluation::ReviewRow& row :
+             evaluation::reviewRows(*review->take, review->report))
+        {
+            if (row.extra.has_value() && *row.extra < extraTicks.size())
+            {
+                extraTicks[*row.extra] = row.tick;
+            }
+        }
+        placed = engraving::reviewMarksFor(layout, review->report, extraTicks);
+    }
+
+    // Anything drawn before or after is repainted; nothing either side is not.
+    const bool changed = !placed.notes.empty() || !placed.extras.empty() ||
+                         !reviewMarks.notes.empty() || !reviewMarks.extras.empty();
+    reviewMarks = std::move(placed);
+    if (changed)
+    {
+        canvas.repaint();
+    }
+}
+
+void ScoreViewComponent::setShowReview(bool show)
+{
+    settings.showReview = show;
+    updateReview();
+}
+
 std::vector<ToolComponent::MenuEntry> ScoreViewComponent::optionsMenuEntries()
 {
     const auto viewEntry = [this](const juce::String& label, score_view::ViewMode view)
@@ -1419,6 +1586,10 @@ std::vector<ToolComponent::MenuEntry> ScoreViewComponent::optionsMenuEntries()
 
     entries.push_back(MenuEntry{
         "Follow the practice clock", [this] { setFollow(!settings.follow); }, settings.follow});
+
+    // The take under review (take-review decision 3).
+    entries.push_back(MenuEntry{
+        "Show take review", [this] { setShowReview(!settings.showReview); }, settings.showReview});
 
     return entries;
 }

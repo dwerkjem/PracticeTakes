@@ -111,10 +111,35 @@ count-in, so the first note is never cut off.
   keyboard chosen in **Settings → MIDI**. Without either it is greyed out, and
   its tooltip says why.
 
-Takes are kept until you quit. Seeing how a take went, note by note on the
-score, comes next (#52).
+Takes are kept until you quit.
 
 ![A take being recorded: Finish in red, Recording 0:05, the tempo and Loop greyed out](images/take-recording.png)
+
+## Reviewing a take
+
+When a take ends, Practice Takes judges it against the part you were playing:
+the one your take matches best, so a pianist's take of a song is judged against
+the piano. Open **Tools → Take Review** beside the Score View to see the result.
+
+- **On the score**, every note you played is marked: a **green ring** if it was
+  right, **red** with the key you pressed if it was wrong, a **grey ring** if
+  you missed it, and an **orange arrow** beside it if it was early (pointing
+  left) or late (pointing right). A **red ✕** above the staff is a key the score
+  didn't ask for. **Show take review** in the Score View's options menu turns
+  the marks off.
+- **In the Take Review**, a summary counts each kind, and a list gives every
+  result in order: *Bar 3, beat 2 · G4 · wrong, played A4 · 40 ms late*.
+  **Click a result** to move the score and the transport there, ready to play
+  that passage again.
+- **Choose another take**, or **another part** to judge it against, at the top
+  of the Take Review.
+
+Only what the take covered is judged: a take stopped in bar 8 isn't missing
+bar 9. A take from the microphone is judged for timing now; whether its notes
+were the right pitch comes with sung-pitch judging
+([#42](https://github.com/dwerkjem/PracticeTakes/issues/42)).
+
+![A take under review: the piano's notes marked on the score, and the list of results beside it](images/take-review.png)
 
 ## Telling us what you think
 

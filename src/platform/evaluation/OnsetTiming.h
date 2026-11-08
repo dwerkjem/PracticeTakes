@@ -113,9 +113,45 @@ struct OnsetMatch
     std::int64_t latencyFrames,
     const TimingSettings& settings = {});
 
-// A take's timing against one part of its score: from the keyboard when the
-// take has keyboard events, otherwise from the microphone's audio. Latency is
-// the take's stated latencies (design.md decision 5).
+// Whether a take is judged from its keyboard rather than its microphone: it
+// used the keyboard and pressed something.
+[[nodiscard]] inline bool judgedFromKeyboard(const take::Take& take) noexcept
+{
+    return take.usedKeyboard && !take.keyboard.empty();
+}
+
+// How late a take's evidence arrives, in frames: the performer hears the click
+// late by the output latency, and the microphone hears them late by the input
+// latency on top (design.md decision 5).
+[[nodiscard]] inline std::int64_t latencyFramesOf(const take::Take& take) noexcept
+{
+    return judgedFromKeyboard(take)
+               ? static_cast<std::int64_t>(take.outputLatencyFrames)
+               : static_cast<std::int64_t>(take.inputLatencyFrames) + take.outputLatencyFrames;
+}
+
+// The attacks a take covered: from the tick it started at to the frame it
+// stopped at, exclusive. A take stopped in bar 8 is not missing bar 9. A take
+// with no last frame (0: built by hand rather than recorded) is judged to the
+// end of the score.
+[[nodiscard]] std::vector<ExpectedAttack>
+attacksInTake(const take::Take& take, std::vector<ExpectedAttack> attacks);
+
+// What a take is judged from: its keyboard's onsets when it has keyboard
+// events, otherwise its microphone's. The microphone's take the longest to find
+// (about a second for three minutes, optimised), and are the same for every
+// part, so a caller judging several parts finds them once.
+[[nodiscard]] std::vector<PerformedOnset> onsetsOf(const take::Take& take);
+
+// A take's timing against one part of its score, from `onsets` (`onsetsOf`
+// the take). Latency is `latencyFramesOf`.
+[[nodiscard]] TimingReport judgeTake(
+    const take::Take& take,
+    std::size_t part,
+    const std::vector<PerformedOnset>& onsets,
+    const TimingSettings& settings = {});
+
+// The same, finding the onsets.
 [[nodiscard]] TimingReport
 judgeTake(const take::Take& take, std::size_t part, const TimingSettings& settings = {});
 } // namespace evaluation

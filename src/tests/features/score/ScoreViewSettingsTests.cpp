@@ -148,6 +148,7 @@ TEST_CASE("the cursor settings default and round-trip", "[score][view-settings][
     CHECK(defaults.lookAhead == 2);
     CHECK(defaults.follow);
     CHECK(defaults.pageFit == score_view::PageFit::width);
+    CHECK(defaults.showReview);
 
     // Unchanged, the payload is exactly what it was before these existed.
     CHECK(score_view::encode(defaults).data == "view=page;size=7");
@@ -156,8 +157,9 @@ TEST_CASE("the cursor settings default and round-trip", "[score][view-settings][
     changed.lookAhead = 4;
     changed.follow = false;
     changed.pageFit = score_view::PageFit::page;
+    changed.showReview = false;
     const ToolSettingsPayload payload = score_view::encode(changed);
-    CHECK(payload.data == "view=page;size=7;ahead=4;follow=0;fit=page");
+    CHECK(payload.data == "view=page;size=7;ahead=4;follow=0;fit=page;review=0");
     CHECK(score_view::decode(payload) == changed);
 
     changed.lookAhead = 0;
@@ -174,6 +176,7 @@ TEST_CASE("cursor settings that cannot be read fall back", "[score][view-setting
     CHECK(decoded("view=page;size=7;ahead=x").lookAhead == 2);
     CHECK(decoded("view=page;size=7;ahead=12").lookAhead == 2);
     CHECK(decoded("view=page;size=7;follow=1").follow);
+    CHECK(decoded("view=page;size=7;review=1").showReview);
     CHECK(decoded("view=page;size=7;fit=sideways").pageFit == score_view::PageFit::width);
     CHECK(decoded("view=vertical;size=7;fit=page").view == score_view::ViewMode::vertical);
 }

@@ -250,26 +250,54 @@ TimingReport judgeTiming(
     return report;
 }
 
+std::vector<ExpectedAttack>
+attacksInTake(const take::Take& take, std::vector<ExpectedAttack> attacks)
+{
+    const bool ended = take.lastFrame > 0 && take.table != nullptr;
+    attacks.erase(
+        std::remove_if(
+            attacks.begin(), attacks.end(),
+            [&take, ended](const ExpectedAttack& attack)
+            {
+                return attack.tick < take.startTick ||
+                       (ended &&
+                        transport::frameOfTick(*take.table, static_cast<double>(attack.tick)) >=
+                            take.lastFrame);
+            }),
+        attacks.end());
+    return attacks;
+}
+
+std::vector<PerformedOnset> onsetsOf(const take::Take& take)
+{
+    if (judgedFromKeyboard(take))
+    {
+        return keyboardOnsetsOf(take.keyboard, take.sampleRate);
+    }
+    return detectOnsets(take.audio.data(), take.audio.size(), take.sampleRate, take.audioStart);
+}
+
+TimingReport judgeTake(
+    const take::Take& take,
+    std::size_t part,
+    const std::vector<PerformedOnset>& onsets,
+    const TimingSettings& settings)
+{
+    if (take.score == nullptr || take.table == nullptr)
+    {
+        return {};
+    }
+    return judgeTiming(
+        attacksInTake(take, expectedAttacksOf(*take.score, part)), onsets, *take.table,
+        take.sampleRate, latencyFramesOf(take), settings);
+}
+
 TimingReport judgeTake(const take::Take& take, std::size_t part, const TimingSettings& settings)
 {
     if (take.score == nullptr || take.table == nullptr)
     {
         return {};
     }
-    const std::vector<ExpectedAttack> attacks = expectedAttacksOf(*take.score, part);
-
-    // The performer hears the click late by the output latency; the
-    // microphone hears them late by the input latency on top (decision 5).
-    if (take.usedKeyboard && !take.keyboard.empty())
-    {
-        return judgeTiming(
-            attacks, keyboardOnsetsOf(take.keyboard, take.sampleRate), *take.table, take.sampleRate,
-            take.outputLatencyFrames, settings);
-    }
-    return judgeTiming(
-        attacks,
-        detectOnsets(take.audio.data(), take.audio.size(), take.sampleRate, take.audioStart),
-        *take.table, take.sampleRate,
-        static_cast<std::int64_t>(take.inputLatencyFrames) + take.outputLatencyFrames, settings);
+    return judgeTake(take, part, onsetsOf(take), settings);
 }
 } // namespace evaluation

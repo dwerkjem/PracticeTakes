@@ -5,12 +5,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <future>
 #include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "../evaluation/NoteMatching.h"
 #include "../midi/MidiEvent.h"
 #include "../score/CurrentScore.h"
 #include "../transport/PracticeClock.h"
@@ -23,7 +25,10 @@
 // take through its lifecycle; drains the recorded audio and the keyboard's
 // events onto the take's timeline; and ends the take -- completed at the end of
 // the piece, stopped early, cancelled, or failed with a reason -- keeping every
-// take but a cancelled one for the session.
+// take but a cancelled one for the session. A kept take is reviewed: judged
+// against the part of its score it matches best, on a worker thread, and held
+// for the Score View and the Take Review tool
+// (openspec/changes/archive/2026-11-08-take-review).
 //
 // Its sources arrive as functions rather than as the services themselves, so it
 // is tested headless with blocks and key events supplied by the test.
@@ -56,8 +61,17 @@ class TakeListener
   public:
     virtual ~TakeListener() = default;
 
-    // A take started, changed state, or ended.
+    // A take started, changed state, or ended, or the review changed.
     virtual void takesChanged() = 0;
+};
+
+// A kept take, judged against one part of its score
+// (openspec/changes/archive/2026-11-08-take-review/design.md, decision 1).
+struct TakeReview
+{
+    std::shared_ptr<const Take> take;
+    std::size_t part = 0;
+    evaluation::NoteReport report;
 };
 
 class TakeRecorder final : private juce::Timer, private transport::ClockListener
@@ -104,6 +118,34 @@ class TakeRecorder final : private juce::Timer, private transport::ClockListener
     // transport says about "the last take". Null before the first.
     [[nodiscard]] const Take* lastEnded() const noexcept;
 
+    // Keep an ended take recorded elsewhere -- the capture harness's -- as if
+    // it had just ended here: it gets an id, joins the kept takes, and is
+    // reviewed. Returns the id; 0, keeping nothing, for a take that has not
+    // ended or was cancelled.
+    std::uint64_t keep(Take take);
+
+    // Review a kept take, against `part` or, with none, the part it matches
+    // best (design.md decision 2). False, changing nothing, for a take that is
+    // not kept or a part its score does not have.
+    bool reviewTake(std::uint64_t id, std::optional<std::size_t> part = std::nullopt);
+
+    // The take under review, judged. Null before the first, and while a
+    // different take is being judged.
+    [[nodiscard]] const TakeReview* review() const noexcept;
+
+    // A review is being judged, on a worker thread: a microphone take's onsets
+    // take about a second for three minutes.
+    [[nodiscard]] bool isJudging() const noexcept;
+
+    // Forget every kept take and the review, leaving a live take alone. The
+    // capture harness starts each state from none, so no picture shows the
+    // last one's takes.
+    void forgetTakes();
+
+    // Wait for the judging in progress and take its result. For tests and the
+    // capture harness; the timer takes it otherwise.
+    void finishJudging();
+
     void addListener(TakeListener* listener);
     void removeListener(TakeListener* listener);
 
@@ -120,6 +162,12 @@ class TakeRecorder final : private juce::Timer, private transport::ClockListener
     [[nodiscard]] bool drain();
     void finish(TakeEvent event, std::string reason = {});
     void notify();
+
+    // Keep a take that has ended, oldest dropped past the maximum.
+    void retain(std::shared_ptr<const Take> take);
+
+    // Take a finished judgement, if the newest one is done.
+    void adoptJudgement(bool wait);
 
     [[nodiscard]] bool microphoneUsable() const;
     [[nodiscard]] bool keyboardUsable() const;
@@ -140,6 +188,17 @@ class TakeRecorder final : private juce::Timer, private transport::ClockListener
     std::vector<std::shared_ptr<const Take>> kept;
     std::shared_ptr<const Take> ended;
     std::uint64_t nextId = 0;
+
+    // The judgement in progress, and the review it replaces. Only the newest
+    // request's result is taken; an older one finishes and is dropped.
+    struct Judging
+    {
+        std::uint64_t request = 0;
+        std::future<TakeReview> result;
+    };
+    std::vector<Judging> judging;
+    std::uint64_t nextRequest = 0;
+    std::optional<TakeReview> reviewed;
 
     std::vector<float> scratch;
     std::vector<midi::MidiEvent> keyBuffer;

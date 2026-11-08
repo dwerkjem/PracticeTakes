@@ -100,7 +100,7 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
                       "score-view-engraving", "score-view-grand-staff", "score-view-horizontal",
                       "score-view-notation", "score-view-part-hidden", "score-view-notation-large",
                       "score-view-page", "score-view-sample", "score-view-vertical",
-                      "score-view-cursor", "take-recording", "transport-playing"});
+                      "score-view-cursor", "take-recording", "take-review", "transport-playing"});
 }
 
 // The invariant this started as was "a state naming a score opens nothing
@@ -134,7 +134,14 @@ TEST_CASE("one subject per score picture", "[testcontrol][approved][score]")
 
         // A state that suppresses the summary is about what a tool draws, so
         // it needs exactly one -- and suppressing the summary while opening no
-        // tool would import a score for nobody to look at.
+        // tool would import a score for nobody to look at. A review is the one
+        // exception: its subject is the score and its list together, which
+        // agree by design (take-review decision 1).
+        if (state.reviewTake)
+        {
+            CHECK(state.tools == std::vector<std::string>{"score-view", "take-review"});
+            continue;
+        }
         CHECK(state.tools.size() == 1);
     }
 }
@@ -790,6 +797,18 @@ TEST_CASE(
         {
             CHECK_FALSE(state.scoreFixture.empty());
             CHECK(state.toneHz > 0.0);
+        }
+    }
+}
+
+TEST_CASE("a state reviewing a take opens a score", "[testcontrol][approved][score]")
+{
+    for (const ApprovedWindowState& state : approvedWindowStates())
+    {
+        if (state.reviewTake)
+        {
+            CHECK_FALSE(state.scoreFixture.empty());
+            CHECK_FALSE(state.recordTake);
         }
     }
 }

@@ -271,6 +271,10 @@ ToolSettingsPayload encode(const Settings& settings)
     {
         data += ";fit=page";
     }
+    if (!settings.showReview)
+    {
+        data += ";review=0";
+    }
 
     return {settingsVersion, data};
 }
@@ -319,6 +323,10 @@ Settings decode(const ToolSettingsPayload& payload)
             else if (key == "follow")
             {
                 settings.follow = value != "0";
+            }
+            else if (key == "review")
+            {
+                settings.showReview = value != "0";
             }
             else if (key == "fit")
             {

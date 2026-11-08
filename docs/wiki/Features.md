@@ -264,9 +264,9 @@ Shared by every instrument.
 
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
-| Wrong, missed and extra notes | Every note of a take matched to the score | MVP | [#48](https://github.com/dwerkjem/PracticeTakes/issues/48) |
-| Timing | Each note early, late or on time | MVP | [#43](https://github.com/dwerkjem/PracticeTakes/issues/43) |
-| Note-by-note review | Every note marked on the score after the take; click one to go there | MVP | [#52](https://github.com/dwerkjem/PracticeTakes/issues/52) |
+| Wrong, missed and extra notes | Every note of a take matched to the score | ✅ | [#48](https://github.com/dwerkjem/PracticeTakes/issues/48) |
+| Timing | Each note early, late or on time | ✅ | [#43](https://github.com/dwerkjem/PracticeTakes/issues/43) |
+| Note-by-note review | Every note marked on the score after the take; click one to go there | ✅ | [#52](https://github.com/dwerkjem/PracticeTakes/issues/52) |
 
 #### The whole take
 

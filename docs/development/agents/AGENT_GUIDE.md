@@ -208,8 +208,9 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   View tool, which draws the score as notation — with `score/engraving/`, a
   JUCE-free layout pass turning a `Score` into glyphs with positions in staff
   spaces, where every engraving rule worth asserting lives; see
-  `docs/development/architecture/notation-engraving.md`), `feedback`,
-  `performance` (launch timing).
+  `docs/development/architecture/notation-engraving.md`), `review` (the Take
+  Review tool, listing the take under review), `feedback`, `performance`
+  (launch timing).
 - `src/platform` — shared infrastructure: `audio/` (`AudioInputService`,
   `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`, `RealtimeRenderer`),
   `transport/` (the practice clock: JUCE-free `ClockMath.h` holding every

@@ -83,6 +83,7 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp
     src/application/testcontrol/ApprovedWindowStates.cpp
     src/application/testcontrol/ApprovedWindowStates.h
+    src/application/testcontrol/SyntheticTake.h
     src/application/testcontrol/TestControlChannel.cpp
     src/application/testcontrol/TestControlChannel.h
     src/application/testcontrol/TestControlClicker.cpp
@@ -120,6 +121,8 @@ set(PRACTICE_TAKES_SOURCES
     src/features/analysis/tuner/TunerSettingsCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.h
     src/features/analysis/tuner/TunerDrawing.cpp
+    src/features/review/TakeReviewComponent.cpp
+    src/features/review/TakeReviewComponent.h
     src/features/score/MusicFont.cpp
     src/features/score/MusicFont.h
     src/features/score/ScoreGlyphPainter.cpp
@@ -162,6 +165,8 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/PartNames.cpp
     src/features/score/engraving/PartNames.h
     src/features/score/engraving/ScoreLayout.h
+    src/features/score/engraving/ReviewMarks.cpp
+    src/features/score/engraving/ReviewMarks.h
     src/features/score/engraving/ScoreCursor.cpp
     src/features/score/engraving/ScoreCursor.h
     src/features/score/engraving/ScoreLayoutEngine.cpp
@@ -194,6 +199,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/evaluation/OnsetTiming.cpp
     src/platform/evaluation/OnsetTiming.h
     src/platform/evaluation/PerformedOnset.h
+    src/platform/evaluation/TakeReview.cpp
+    src/platform/evaluation/TakeReview.h
     src/platform/midi/MidiEvent.h
     src/platform/midi/MidiEventFifo.h
     src/platform/midi/MidiInputService.cpp
@@ -287,6 +294,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
     src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp
     src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp
+    src/tests/application/testcontrol/SyntheticTakeTests.cpp
     src/tests/application/testcontrol/ApprovedStatesManifestTests.cpp
     src/tests/application/theme/AppLookAndFeelTests.cpp
     src/tests/application/tools/CompactPresentationTests.cpp
@@ -317,6 +325,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/score/engraving/NoteValueTests.cpp
     src/tests/features/score/engraving/PaginationTests.cpp
     src/tests/features/score/engraving/PartNamesTests.cpp
+    src/tests/features/score/engraving/ReviewMarksTests.cpp
     src/tests/features/score/engraving/ScoreCursorTests.cpp
     src/tests/features/score/engraving/ScoreLayoutCorpusTests.cpp
     src/tests/features/score/engraving/ScoreLayoutEngineTests.cpp
@@ -356,6 +365,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/evaluation/NoteMatchingTests.cpp
     src/tests/platform/evaluation/OnsetDetectorTests.cpp
     src/tests/platform/evaluation/OnsetTimingTests.cpp
+    src/tests/platform/evaluation/TakeReviewTests.cpp
     src/tests/platform/take/TakeAssemblerTests.cpp
     src/tests/platform/take/TakeLifecycleTests.cpp
     src/tests/platform/take/TakeRecorderTests.cpp
@@ -392,6 +402,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/features/score/engraving/NoteValue.cpp
     src/features/score/engraving/Pagination.cpp
     src/features/score/engraving/PartNames.cpp
+    src/features/score/engraving/ReviewMarks.cpp
     src/features/score/engraving/ScoreCursor.cpp
     src/features/score/engraving/ScoreLayoutEngine.cpp
     src/features/score/engraving/StaffPosition.cpp
@@ -416,4 +427,5 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/evaluation/OnsetDetector.cpp
     src/platform/evaluation/OnsetTiming.cpp
     src/platform/evaluation/NoteMatching.cpp
+    src/platform/evaluation/TakeReview.cpp
 )
