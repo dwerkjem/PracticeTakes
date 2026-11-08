@@ -1,6 +1,6 @@
 ## 1. The model
 
-- [ ] 1.1 `TargetChoice.h` (JUCE-free): note names, staff positions, stepping
+- [x] 1.1 `TargetChoice.h` (JUCE-free): note names, staff positions, stepping
       by semitone and by key. Tests.
 - [ ] 1.2 `Target::origin`; the shell keeps a chosen target over a score when
       asked; the target and the setting saved; `ToolServices::target`
