@@ -11,6 +11,7 @@
 #include "../audio/RealtimeSafety.h"
 #include "ClockCommandQueue.h"
 #include "ClockMath.h"
+#include "PlaybackEvents.h"
 
 // The practice clock's audio-thread half: it keeps the position, counts in,
 // loops, and sounds the metronome, inside the audio callback
@@ -29,12 +30,19 @@
 //    refill a slot until that echo arrives, so a callback never reads a table
 //    half-written.
 //  - **Commands** (message -> audio). An SPSC queue, drained each block.
-//  - **Settings** (message -> audio). Atomics: metronome on, volume, accent.
+//  - **Settings** (message -> audio). Atomics: metronome on, volume, accent;
+//    and for the score's playback, the mask of tracks that sound and their
+//    volume (openspec/changes/score-playback).
+//  - **The score's notes** travel in the slot beside its table, so the two
+//    always agree, and sound through a `ScoreSynth` handed over once it has
+//    loaded.
 //  - **Where it is** (audio -> message). A sequence-locked snapshot written once
 //    per block, and monotonic counters for seeks, wraps and the end of the
 //    piece, so each is reported once however the display ticks fall.
 namespace transport
 {
+class ScoreSynth;
+
 enum class ClockState : std::uint8_t
 {
     stopped,
@@ -126,10 +134,11 @@ class ClockRenderer final : public RealtimeRenderer
 
     // --- Message thread -----------------------------------------------------
 
-    // Publish a new table. False when the previous publish has not yet been
-    // picked up by a block, in which case nothing changed and the caller tries
-    // again later.
+    // Publish a new table, and the score's notes on it. False when the
+    // previous publish has not yet been picked up by a block, in which case
+    // nothing changed and the caller tries again later.
     [[nodiscard]] bool publish(const ClockTable& table);
+    [[nodiscard]] bool publish(const ClockTable& table, const PlaybackScore& playback);
 
     // Whether the last publish has been picked up.
     [[nodiscard]] bool publishAcknowledged() const noexcept;
@@ -148,6 +157,27 @@ class ClockRenderer final : public RealtimeRenderer
     [[nodiscard]] bool metronomeEnabled() const noexcept;
     [[nodiscard]] float volume() const noexcept;
     [[nodiscard]] bool accentEnabled() const noexcept;
+
+    // --- Playing the score (openspec/changes/score-playback) ----------------
+    //
+    // The synthesiser, once it has loaded: set once, and owned by the caller,
+    // who keeps it alive until this renderer has left the audio callback.
+    void setSynth(ScoreSynth* loaded) noexcept;
+    [[nodiscard]] bool hasSynth() const noexcept;
+
+    // Bit n set when track n sounds; zero, the default, plays nothing.
+    void setAudibleTracks(std::uint64_t mask) noexcept;
+    [[nodiscard]] std::uint64_t audibleTracks() const noexcept;
+    void setPlaybackVolume(float gain) noexcept;
+
+    // Note events skipped because a block held more than it may dispatch.
+    [[nodiscard]] std::uint64_t playbackOverflows() const noexcept;
+
+    // At most this many note events are dispatched in one block.
+    static constexpr int maximumEventsPerBlock = 512;
+
+    // Every note at the same strength until dynamics are read: 80 of 127.
+    static constexpr float playbackVelocity = 80.0f / 127.0f;
 
     [[nodiscard]] ClockSnapshot snapshot() const noexcept;
     [[nodiscard]] ClockEventCounts events() const noexcept;
@@ -184,6 +214,7 @@ class ClockRenderer final : public RealtimeRenderer
     struct Slot
     {
         ClockTable table;
+        PlaybackScore playback;
         std::array<float, maximumClickFrames> accented{};
         std::array<float, maximumClickFrames> normal{};
         std::size_t clickFrames = 0;
@@ -207,6 +238,16 @@ class ClockRenderer final : public RealtimeRenderer
     void
     startClick(RenderBlock& block, int offset, bool accented) noexcept PRACTICE_TAKES_NONBLOCKING;
     void mixVoiceUntil(RenderBlock& block, int offset) noexcept PRACTICE_TAKES_NONBLOCKING;
+
+    // The score's playback: get the synthesiser ready for the block, sound the
+    // notes in one span of it, and render it up to an offset.
+    void preparePlayback(const RenderBlock& block) noexcept PRACTICE_TAKES_NONBLOCKING;
+    void dispatchNotes(RenderBlock& block, int offset, Frame start, Frame length) noexcept
+        PRACTICE_TAKES_NONBLOCKING;
+    void renderSynthUntil(RenderBlock& block, int offset) noexcept PRACTICE_TAKES_NONBLOCKING;
+    // Every note released, and the event cursor found again: a seek, a wrap,
+    // a stop, a new table.
+    void releaseNotes() noexcept PRACTICE_TAKES_NONBLOCKING;
     // Copy one span of the block -- `length` frames from `offset`, which start
     // at clock frame `start` -- into the recording, if one is armed.
     void recordSpan(
@@ -240,6 +281,11 @@ class ClockRenderer final : public RealtimeRenderer
     static constexpr std::size_t silenceFrames = 1024;
     std::array<float, silenceFrames> silence{};
 
+    std::atomic<ScoreSynth*> synthPointer{nullptr};
+    std::atomic<std::uint64_t> audibleMask{0};
+    std::atomic<float> playbackGain{0.8f};
+    std::atomic<std::uint64_t> playbackOverflowCount{0};
+
     std::atomic<bool> metronomeOn{true};
     std::atomic<float> gain{0.7f};
     std::atomic<bool> accentOn{true};
@@ -253,6 +299,17 @@ class ClockRenderer final : public RealtimeRenderer
     Voice voice;
     int mixedUpTo = 0;
     std::uint64_t streamFrames = 0;
+
+    // Playback, audio thread only. `nextEvent` is meaningful only while
+    // `eventsInSync`; `programsFor` is the table generation whose tracks'
+    // programs the synthesiser has.
+    ScoreSynth* synth = nullptr;
+    std::size_t nextEvent = 0;
+    bool eventsInSync = false;
+    std::uint64_t programsFor = 0;
+    std::uint64_t soundingTracks = 0;
+    int synthRenderedUpTo = 0;
+    int eventsThisBlock = 0;
 
     // The snapshot, under a sequence lock: odd while being written.
     std::atomic<std::uint32_t> snapshotSequence{0};

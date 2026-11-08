@@ -615,3 +615,143 @@ TEST_CASE(
     harness.renderer.armRecording();
     CHECK(harness.renderer.recordingOverflows() == 0);
 }
+
+// --- Playing the score (openspec/changes/score-playback) --------------------
+
+#include "platform/transport/PlaybackEvents.h"
+#include "platform/transport/ScoreSynth.h"
+
+namespace
+{
+// Two bars of 4/4 at 120 bpm: a whole note in the right hand on bar 1, and one
+// in the left hand on bar 2. A beat is 22,050 frames.
+[[nodiscard]] score::Score twoHands()
+{
+    score::Score source = scoreOf(2, score::TimeSignature{4, 4}, 120.0);
+    score::Part& piano = source.parts.front();
+    piano.staffCount = 2;
+    for (int bar = 0; bar < 2; ++bar)
+    {
+        score::ScoreEvent event;
+        event.kind = score::EventKind::note;
+        event.duration = 4 * quarter;
+        event.staff = bar + 1;
+        score::Pitch pitch;
+        pitch.midiNoteNumber = bar == 0 ? 72 : 48;
+        event.notes.push_back(score::Note{pitch, pitch, std::nullopt, std::nullopt});
+        score::Voice voice;
+        voice.events.push_back(event);
+        piano.measures[static_cast<std::size_t>(bar)].voices.push_back(voice);
+    }
+    return source;
+}
+
+struct Playback
+{
+    Harness harness;
+    std::unique_ptr<ScoreSynth> synth = ScoreSynth::load(PRACTICE_TAKES_TEST_SOUNDFONT);
+    score::Score source = twoHands();
+
+    explicit Playback(Tick loopStart = 0, Tick loopEnd = 0)
+    {
+        REQUIRE(synth != nullptr);
+        const auto table = tableOf(source, 100, loopStart, loopEnd);
+        PlaybackScore notes;
+        playbackEventsOf(source, *table, notes);
+        REQUIRE(harness.renderer.publish(*table, notes));
+        harness.renderer.setMetronomeEnabled(false);
+        harness.renderer.setSynth(synth.get());
+        harness.renderer.setAudibleTracks(0b11);
+        harness.block(64);
+        harness.recorded.clear();
+    }
+
+    [[nodiscard]] static float
+    peakOf(const std::vector<float>& samples, std::size_t from, std::size_t to)
+    {
+        float loudest = 0.0f;
+        for (std::size_t index = from; index < std::min(to, samples.size()); ++index)
+        {
+            loudest = std::max(loudest, std::abs(samples[index]));
+        }
+        return loudest;
+    }
+};
+} // namespace
+
+TEST_CASE(
+    "the score sounds with the clock, and not before it plays",
+    "[transport][renderer][playback]")
+{
+    Playback fixture;
+    fixture.harness.blocks(20);
+    CHECK(Playback::peakOf(fixture.harness.recorded, 0, fixture.harness.recorded.size()) == 0.0f);
+
+    fixture.harness.recorded.clear();
+    fixture.harness.play();
+    fixture.harness.blocks(40);
+    CHECK(Playback::peakOf(fixture.harness.recorded, 0, 20000) > 0.01f);
+}
+
+TEST_CASE("a muted hand is silent and the other plays on", "[transport][renderer][playback]")
+{
+    // Mute the right hand: bar 1 is silent, bar 2's left hand sounds.
+    Playback fixture;
+    fixture.harness.renderer.setAudibleTracks(0b10);
+    fixture.harness.play();
+    fixture.harness.blocks(4 * 22050 / 512);
+    const std::size_t bar = 4 * 22050;
+    CHECK(Playback::peakOf(fixture.harness.recorded, 0, bar - 512) == 0.0f);
+    fixture.harness.blocks(40);
+    CHECK(Playback::peakOf(fixture.harness.recorded, bar, bar + 20000) > 0.01f);
+
+    // Nothing audible, nothing plays.
+    Playback silent;
+    silent.harness.renderer.setAudibleTracks(0);
+    silent.harness.play();
+    silent.harness.blocks(400);
+    CHECK(Playback::peakOf(silent.harness.recorded, 0, silent.harness.recorded.size()) == 0.0f);
+}
+
+TEST_CASE(
+    "the count-in plays no notes, and the music starts after it",
+    "[transport][renderer][playback]")
+{
+    // The count-in's clicks always sound, so the synthesiser's voices say
+    // whether any note did.
+    Playback fixture;
+    fixture.harness.play(1);
+    const int countInBlocks = 4 * 22050 / 512;
+    for (int block = 0; block < countInBlocks - 2; ++block)
+    {
+        fixture.harness.block(512);
+        REQUIRE(fixture.synth->activeVoices() == 0);
+    }
+    fixture.harness.blocks(10);
+    CHECK(fixture.synth->activeVoices() > 0);
+}
+
+TEST_CASE("stopping releases every note", "[transport][renderer][playback]")
+{
+    Playback fixture;
+    fixture.harness.play();
+    fixture.harness.blocks(20);
+    REQUIRE(fixture.synth->activeVoices() > 0);
+    REQUIRE(fixture.harness.renderer.send({ClockCommand::Kind::stop}));
+    fixture.harness.blocks(400);
+    CHECK(fixture.synth->activeVoices() == 0);
+}
+
+TEST_CASE(
+    "a loop releases at its end and strikes again at its start",
+    "[transport][renderer][playback]")
+{
+    // Loop the first beat: the whole note in bar 1 is struck each time round
+    // and never carried past the beat.
+    Playback fixture(0, quarter);
+    fixture.harness.play();
+    fixture.harness.blocks(5 * 22050 / 512);
+    const std::size_t beat = 22050;
+    CHECK(Playback::peakOf(fixture.harness.recorded, 2 * beat, 2 * beat + 5000) > 0.01f);
+    CHECK(fixture.harness.renderer.events().wraps >= 4);
+}
