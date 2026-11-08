@@ -1,6 +1,7 @@
 #include "PracticeClock.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 
 namespace transport
@@ -277,21 +278,31 @@ void PracticeClock::refreshTable()
     if (current != nullptr)
     {
         buildTable(*pendingTable, *current, scale, rate, wantedLoopStart, wantedLoopEnd);
+        playbackEventsOf(*current, *pendingTable, *pendingPlayback);
     }
     else
     {
         *pendingTable = ClockTable{};
         pendingTable->sampleRate = rate;
         pendingTable->scalePercent = scale;
+        *pendingPlayback = PlaybackScore{};
     }
 
-    if (!clockRenderer->publish(*pendingTable))
+    if (!clockRenderer->publish(*pendingTable, *pendingPlayback))
     {
         tablePending = true;
         return;
     }
 
     tablePending = false;
+
+    // A new score's tracks, with nothing muted or soloed.
+    if (current != builtScore)
+    {
+        tracks = pendingPlayback->tracks;
+        mix.setTrackCount(tracks.size());
+        publishMix();
+    }
     builtScore = current;
     builtScalePercent = scale;
     builtSampleRate = rate;
@@ -389,6 +400,7 @@ void PracticeClock::removeListener(ClockListener* listener)
 
 void PracticeClock::poll()
 {
+    adoptSynth();
     refreshTable();
 
     const auto snapshot = clockRenderer->snapshot();
@@ -423,5 +435,83 @@ void PracticeClock::poll()
             listener->clockChanged(update);
         }
     }
+}
+void PracticeClock::loadSoundFont(const std::string& path)
+{
+    if (synth != nullptr || loadingSynth.valid())
+    {
+        return;
+    }
+    if (path.empty())
+    {
+        synthUnavailable = "The sounds were not found beside the application";
+        return;
+    }
+    synthUnavailable = "The sounds are still loading";
+    loadingSynth = std::async(std::launch::async, [path] { return ScoreSynth::load(path); });
+    soundFontPath = path;
+}
+
+void PracticeClock::adoptSynth()
+{
+    if (!loadingSynth.valid() ||
+        loadingSynth.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+    {
+        return;
+    }
+    synth = loadingSynth.get();
+    if (synth == nullptr)
+    {
+        synthUnavailable = "The sounds could not be read from " + soundFontPath;
+        return;
+    }
+    synthUnavailable.reset();
+    clockRenderer->setSynth(synth.get());
+    publishMix();
+}
+
+std::optional<std::string> PracticeClock::whyPlaybackUnavailable() const
+{
+    return synthUnavailable;
+}
+
+const std::vector<PlaybackTrack>& PracticeClock::playbackTracks() const noexcept
+{
+    return tracks;
+}
+
+const PlaybackMix& PracticeClock::playbackMix() const noexcept
+{
+    return mix;
+}
+
+void PracticeClock::setPlaybackEnabled(bool enabled)
+{
+    mix.enabled = enabled;
+    publishMix();
+}
+
+void PracticeClock::setPlaybackVolume(float volume)
+{
+    mix.volume = std::clamp(volume, 0.0f, 1.0f);
+    publishMix();
+}
+
+void PracticeClock::setTrackMuted(std::size_t track, bool muted)
+{
+    mix.setMuted(track, muted);
+    publishMix();
+}
+
+void PracticeClock::setTrackSoloed(std::size_t track, bool soloed)
+{
+    mix.setSoloed(track, soloed);
+    publishMix();
+}
+
+void PracticeClock::publishMix()
+{
+    clockRenderer->setAudibleTracks(mix.audibleTracks());
+    clockRenderer->setPlaybackVolume(mix.volume);
 }
 } // namespace transport

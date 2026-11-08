@@ -710,3 +710,35 @@ TEST_CASE("an out-of-range metronome volume or count-in falls back", "[settings]
     CHECK(loaded.state.metronomeVolume == Catch::Approx(AppDefaults::Metronome::volume));
     CHECK(loaded.state.countInBars == AppDefaults::Metronome::countInBars);
 }
+
+TEST_CASE("playing the score and its volume survive a round trip", "[settings][persistence]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        AppSettings::State expected;
+        expected.playbackEnabled = true;
+        expected.playbackVolume = 0.4;
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    {
+        juce::PropertiesFile reader(temporary.path, settingsOptions());
+        const auto loaded = AppSettings::load(reader);
+        CHECK(loaded.state.playbackEnabled);
+        CHECK(loaded.state.playbackVolume == Catch::Approx(0.4));
+    }
+
+    // A file from before playback, or with a volume out of range, plays nothing
+    // until asked, at the default volume.
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.removeValue("playback.enabled");
+        writer.setValue("playback.volume", 3.0);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+    CHECK_FALSE(loaded.state.playbackEnabled);
+    CHECK(loaded.state.playbackVolume == Catch::Approx(AppDefaults::Playback::volume));
+}

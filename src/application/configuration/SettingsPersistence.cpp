@@ -22,6 +22,8 @@ constexpr auto metronomeEnabledKey = "metronome.enabled";
 constexpr auto metronomeVolumeKey = "metronome.volume";
 constexpr auto metronomeAccentKey = "metronome.accent";
 constexpr auto countInBarsKey = "practice.countInBars";
+constexpr auto playbackEnabledKey = "playback.enabled";
+constexpr auto playbackVolumeKey = "playback.volume";
 constexpr auto tunerDisplayModeKey = "tuner.displayMode";
 constexpr auto tunerEasingKey = "tuner.easing";
 constexpr auto tunerAveragingKey = "tuner.averaging";
@@ -60,6 +62,8 @@ constexpr const char* ownedKeys[] = {
     metronomeVolumeKey,
     metronomeAccentKey,
     countInBarsKey,
+    playbackEnabledKey,
+    playbackVolumeKey,
     tunerDisplayModeKey,
     tunerEasingKey,
     tunerAveragingKey,
@@ -254,6 +258,10 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
         properties.getBoolValue(metronomeAccentKey, AppDefaults::Metronome::accent);
     result.state.countInBars = static_cast<int>(
         boundedValue(properties, countInBarsKey, AppDefaults::Metronome::countInBars, 0.0, 4.0));
+    result.state.playbackEnabled =
+        properties.getBoolValue(playbackEnabledKey, AppDefaults::Playback::enabled);
+    result.state.playbackVolume =
+        boundedValue(properties, playbackVolumeKey, AppDefaults::Playback::volume, 0.0, 1.0);
     // The pre-workspace keys, read against the ranges in the tuner's schema.
     const auto tunerValue =
         [&properties](const char* key, double AppDefaults::TunerSettings::*member)
@@ -324,6 +332,8 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(metronomeVolumeKey, state.metronomeVolume);
     properties.setValue(metronomeAccentKey, state.metronomeAccent);
     properties.setValue(countInBarsKey, state.countInBars);
+    properties.setValue(playbackEnabledKey, state.playbackEnabled);
+    properties.setValue(playbackVolumeKey, state.playbackVolume);
     properties.setValue(tunerDisplayModeKey, state.tuner.displayMode);
     properties.setValue(tunerEasingKey, state.tuner.easing);
     properties.setValue(tunerAveragingKey, state.tuner.averaging);

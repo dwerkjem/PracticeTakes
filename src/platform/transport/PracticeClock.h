@@ -4,12 +4,17 @@
 
 #include <cstdint>
 #include <functional>
+#include <future>
 #include <memory>
+#include <optional>
+#include <string>
 #include <vector>
 
 #include "../score/CurrentScore.h"
 #include "ClockMath.h"
 #include "ClockRenderer.h"
+#include "PlaybackMix.h"
+#include "ScoreSynth.h"
 
 // The practice clock: one per application, shared by every tool through
 // ToolServices (openspec/changes/archive/2026-11-08-practice-clock).
@@ -134,6 +139,24 @@ class PracticeClock final : private juce::Timer
     // into ticks. Null before the first publish.
     [[nodiscard]] std::shared_ptr<const ClockTable> currentTable() const;
 
+    // --- Playing the score (openspec/changes/score-playback) ----------------
+
+    // Load the SoundFont at `path` on a worker thread; the timer hands it to
+    // the renderer when it is ready. An empty path says none was found.
+    void loadSoundFont(const std::string& path);
+
+    // Why the score cannot be played, in a sentence; nothing once it can.
+    [[nodiscard]] std::optional<std::string> whyPlaybackUnavailable() const;
+
+    // The open score's tracks, a staff of a part each, and the mix over them.
+    // Mute and solo reset with each new score; playback and volume stay.
+    [[nodiscard]] const std::vector<PlaybackTrack>& playbackTracks() const noexcept;
+    [[nodiscard]] const PlaybackMix& playbackMix() const noexcept;
+    void setPlaybackEnabled(bool enabled);
+    void setPlaybackVolume(float volume);
+    void setTrackMuted(std::size_t track, bool muted);
+    void setTrackSoloed(std::size_t track, bool soloed);
+
     void addListener(ClockListener* listener);
     void removeListener(ClockListener* listener);
 
@@ -170,6 +193,19 @@ class PracticeClock final : private juce::Timer
     Tick builtLoopEnd = 0;
     bool tablePending = true;
     std::unique_ptr<ClockTable> pendingTable = std::make_unique<ClockTable>();
+    std::unique_ptr<PlaybackScore> pendingPlayback = std::make_unique<PlaybackScore>();
+
+    // The mix, and the synthesiser: loading, loaded, or why not. Declared
+    // here, before nothing that uses them; the renderer stops using the synth
+    // when it leaves the callback, in the destructor, before either goes.
+    PlaybackMix mix;
+    std::vector<PlaybackTrack> tracks;
+    std::future<std::unique_ptr<ScoreSynth>> loadingSynth;
+    std::unique_ptr<ScoreSynth> synth;
+    std::optional<std::string> synthUnavailable = std::string("The sounds have not been loaded");
+    std::string soundFontPath;
+    void adoptSynth();
+    void publishMix();
 
     int scale = defaultScalePercent;
     bool looping = false;

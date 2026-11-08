@@ -18,7 +18,7 @@
 
 ## 3. The application
 
-- [ ] 3.1 `PracticeClock`: build events with the table, load the SoundFont,
+- [x] 3.1 `PracticeClock`: build events with the table, load the SoundFont,
       publish the mix; the shell finds the file and saves the switch and
       volume.
 - [ ] 3.2 The Mix button and popup (decision 6).

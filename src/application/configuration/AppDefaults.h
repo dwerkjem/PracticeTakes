@@ -27,6 +27,15 @@ inline constexpr bool accent = true;
 inline constexpr int countInBars = 1;
 } // namespace Metronome
 
+// Playing the score through the clock (openspec/changes/score-playback): off
+// until someone turns it on, so the clock sounds as it always did. Local, like
+// the metronome.
+namespace Playback
+{
+inline constexpr bool enabled = false;
+inline constexpr double volume = 0.8;
+} // namespace Playback
+
 namespace Midi
 {
 // The one default lives with the MIDI code, which is what applies it. Re-stated
