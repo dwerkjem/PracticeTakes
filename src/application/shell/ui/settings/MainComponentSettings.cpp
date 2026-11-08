@@ -615,6 +615,8 @@ AppSettings::State MainComponent::captureSettingsState()
     state.metronomeVolume = practiceClock.metronomeVolume();
     state.metronomeAccent = practiceClock.accentEnabled();
     state.countInBars = practiceClock.countInBars();
+    state.playbackEnabled = practiceClock.playbackMix().enabled;
+    state.playbackVolume = practiceClock.playbackMix().volume;
 
     if (pendingAudioDeviceState != nullptr)
     {
@@ -682,6 +684,8 @@ void MainComponent::loadSettings()
     practiceClock.setMetronomeVolume(static_cast<float>(loaded.state.metronomeVolume));
     practiceClock.setAccentEnabled(loaded.state.metronomeAccent);
     practiceClock.setCountInBars(loaded.state.countInBars);
+    practiceClock.setPlaybackEnabled(loaded.state.playbackEnabled);
+    practiceClock.setPlaybackVolume(static_cast<float>(loaded.state.playbackVolume));
 
     savedSettingsBounds = validWindowBounds(loaded.state.settingsBounds);
 

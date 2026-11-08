@@ -66,6 +66,9 @@ Everything here reaches the model and is covered by tests.
 
 - Parts, including multi-staff parts (`<staves>`), with the `<score-part>`
   identifier kept verbatim, display name, and abbreviation.
+- Each part's General MIDI program: the first `<midi-instrument>`'s
+  `<midi-program>` (1–128), kept as 0–127 for playback. One out of range, or
+  none, leaves it unset, and playback uses a piano.
 - Measures, with the **printed measure number as a string** — MusicXML numbers
   are not integers: a pickup is `"0"` and a split bar is `"12a"`.
 - Pickup measures (`<measure implicit="yes">`), which are exempt from the

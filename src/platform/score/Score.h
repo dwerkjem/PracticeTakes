@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -57,6 +58,12 @@ struct Part
 
     // 1 for a vocal part, 2 for a typical piano part.
     int staffCount = 1;
+
+    // The General MIDI program it plays as, 0-127 (the file's 1-128, less
+    // one): the first `<midi-program>` of its `<score-part>`. Empty when the
+    // file names none, or one out of range. Playback uses it
+    // (openspec/changes/archive/2026-11-08-score-playback).
+    std::optional<int> midiProgram;
 
     // Every <divisions> value this part declared, in source order. The first
     // entry is the part's initial declaration.

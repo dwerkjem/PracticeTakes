@@ -247,6 +247,10 @@ class MainComponent final
     void applyPreset(AppDefaults::Preset preset);
     void saveSettings(bool explicitSave = false);
     void loadSettings();
+
+    // The installed SoundFont's path, or empty when it is not beside the
+    // application where a platform installs it (score-playback).
+    [[nodiscard]] static std::string findSoundFont();
     [[nodiscard]] AppSettings::State captureSettingsState();
     // Adapter between the id-keyed runtime and the fixed per-tool fields the
     // stored .ptsettings schema still uses. See MainComponentSettings.cpp.
@@ -485,6 +489,7 @@ class MainComponent final
     int testControlClockBar = -1;
     bool testControlRecordTake = false;
     bool testControlReviewTake = false;
+    bool testControlOpenMix = false;
     void startClockForTestControl(int attemptsLeft);
 
     // Set the first time a state is applied, and never cleared: this process is

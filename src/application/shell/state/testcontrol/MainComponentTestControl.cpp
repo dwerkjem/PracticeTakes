@@ -120,6 +120,10 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     testControlClockBar = state.clockBar;
     testControlRecordTake = state.recordTake;
     testControlReviewTake = state.reviewTake;
+    testControlOpenMix = state.mixOpen;
+
+    // Playback off and nothing muted: a state that wants it on says so.
+    practiceClock.setPlaybackEnabled(false);
     if (takeRecorder.isRecording())
     {
         takeRecorder.cancel();
@@ -352,7 +356,8 @@ void MainComponent::startClockForTestControl(int attemptsLeft)
     // A take also waits for something to record from: the tone, which the
     // generator starts on its own timer.
     const bool ready = practiceClock.hasScore() &&
-                       (!testControlRecordTake || !takeRecorder.whyCannotStart().has_value());
+                       (!testControlRecordTake || !takeRecorder.whyCannotStart().has_value()) &&
+                       (!testControlOpenMix || !practiceClock.whyPlaybackUnavailable().has_value());
     if (ready)
     {
         if (testControlClockBar >= 0)
@@ -383,6 +388,13 @@ void MainComponent::startClockForTestControl(int attemptsLeft)
                     testcontrol::syntheticKeyboardTake(shown, shown->parts.size() - 1, 8)));
                 takeRecorder.finishJudging();
             }
+        }
+
+        if (testControlOpenMix)
+        {
+            practiceClock.setPlaybackEnabled(true);
+            practiceClock.setTrackMuted(1, true);
+            transportStrip.showMix();
         }
 
         if (testControlRecordTake)

@@ -71,6 +71,10 @@ class ApprovedState:
     # imports.
     review_take: bool
 
+    # Whether playback is turned on, the second track muted, and the Mix popup
+    # opened once the score imports.
+    mix_open: bool
+
     # The top-level window the state is a picture of. Empty for the main one.
     window_title: str
 
@@ -120,6 +124,7 @@ def _state_from(entry: dict) -> ApprovedState:
         clock_bar=int(entry["clockBar"]),
         record_take=entry["recordTake"],
         review_take=entry["reviewTake"],
+        mix_open=entry["mixOpen"],
         window_title=entry["windowTitle"],
     )
 

@@ -7,6 +7,7 @@
 #include "MusicXmlMeasureReader.h"
 #include "MusicXmlSubset.h"
 #include "MusicXmlTieResolver.h"
+#include "MusicXmlValueParsing.h"
 
 namespace score::musicxml
 {
@@ -129,6 +130,19 @@ readPartList(const XmlNode& root, ReadContext& context, Score& score)
         part.id = attributeValue(*scorePart, "id");
         part.name = childValue(*scorePart, "part-name");
         part.abbreviation = childValue(*scorePart, "part-abbreviation");
+
+        // The first instrument's program. A part of several instruments (a
+        // doubling) plays as its first; one out of range plays as nothing in
+        // particular rather than as a guess.
+        if (const XmlNode* instrument = findChild(*scorePart, "midi-instrument"))
+        {
+            const std::optional<long long> program =
+                parseInteger(childValue(*instrument, "midi-program"));
+            if (program.has_value() && *program >= 1 && *program <= 128)
+            {
+                part.midiProgram = static_cast<int>(*program - 1);
+            }
+        }
 
         // Invariant 6 wants unique, non-empty identifiers, and the model's own
         // repair would generate one anyway. Doing it here means the <part>

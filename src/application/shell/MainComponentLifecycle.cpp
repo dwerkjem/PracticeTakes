@@ -11,6 +11,8 @@
 #include "ui/workspace/components/DockedToolPanel.h"
 #include "ui/workspace/components/ToolWindow.h"
 
+#include "../../platform/transport/SoundFontLocation.h"
+
 namespace
 {
 constexpr int microphoneWarningWidth = 470;
@@ -78,6 +80,21 @@ void migrateLegacySettingsFile(const juce::File& destination)
 }
 } // namespace
 
+std::string MainComponent::findSoundFont()
+{
+    const juce::File executable = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+    for (const std::string& candidate : transport::soundFontCandidates(
+             executable.getParentDirectory().getFullPathName().toStdString()))
+    {
+        const juce::File file{juce::String(candidate)};
+        if (file.existsAsFile())
+        {
+            return file.getFullPathName().toStdString();
+        }
+    }
+    return {};
+}
+
 MainComponent::MainComponent(bool muteMicrophoneForSession, bool declineAudioInput)
     // Declaration order, not argument order: audioInputService is declared well
     // before sessionMicrophoneMuteEnabled, so the parameter is used directly
@@ -103,6 +120,10 @@ MainComponent::MainComponent(bool muteMicrophoneForSession, bool declineAudioInp
     {
         audioInputService.setMuted(true);
     }
+
+    // The score's sounds load on a worker thread; the clock picks them up when
+    // they are ready (openspec/changes/archive/2026-11-08-score-playback).
+    practiceClock.loadSoundFont(findSoundFont());
 
     configureTopButtons();
     createMicrophoneWarning();

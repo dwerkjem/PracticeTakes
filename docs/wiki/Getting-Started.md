@@ -77,6 +77,7 @@ shares:
 | **100%** | The tempo, as a percentage of the score's own, from 5% to 200% in steps of 5. **−** and **+** change it, even while playing, and the music carries on from the same beat. |
 | **Click** | The metronome, on every beat, with the first beat of each bar accented |
 | **Loop** | Plays the score round and round, starting again on exactly the same beat however many times it loops |
+| **Mix** | Hear the score, and mute or solo each part, or each hand of a piano. See below |
 
 The clock follows the score's own tempo changes and time signatures. A bar of
 7/8 clicks seven times. The **count-in** is one bar by default, at the tempo
@@ -89,6 +90,30 @@ microphone doesn't mute the metronome. With no output device, the clock still
 runs, and Settings says why the metronome is silent.
 
 ![The title bar's transport while the sample score plays: Pause, Stop, Bar 3 beat 2, 100%, Click and Loop](images/transport-playing.png)
+
+### Hearing the score, one hand at a time
+
+**Mix** opens a panel where the score can play along with the clock:
+
+- **Play the score** turns it on. It is off until you turn it on, and is
+  remembered.
+- **Volume** sets how loud the score is, separately from the metronome.
+- **Each part has a row**, and a piano has one per hand: *Piano, right hand*
+  and *Piano, left hand*. **Mute** silences a row, and **Solo** plays only the
+  soloed rows.
+
+To practise one hand, mute it and play it yourself over the other. To hear one
+hand on its own, solo it. Mute and Solo reset when you open another score.
+
+The score plays at the tempo you've chosen, follows the loop and its count-in,
+and is silent during the count-in. Each part plays the instrument its file
+names, or a piano when it names none. The sounds come from GeneralUser GS, a
+General MIDI bank that installs with Practice Takes.
+
+**Use headphones while recording a take** with the score playing. The
+microphone hears the speakers too, and so do the timing and note judgements.
+
+![The Mix popup: Play the score on, the volume, and Mute and Solo for the voice and each hand of the piano, the right hand muted](images/playback-mix.png)
 
 ## Recording a take
 

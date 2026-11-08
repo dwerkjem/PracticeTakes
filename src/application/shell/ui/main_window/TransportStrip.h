@@ -5,6 +5,7 @@
 #include "../../../../platform/take/TakeRecorder.h"
 #include "../../../../platform/take/TakeStatus.h"
 #include "../../../../platform/transport/PracticeClock.h"
+#include "PlaybackMixPanel.h"
 
 #include <functional>
 
@@ -25,8 +26,8 @@ class TransportStrip final
   public:
     // Widths the control strip lays this out at: everything, or without the
     // readout when the window is narrow.
-    static constexpr int fullWidth = 552;
-    static constexpr int compactWidth = 378;
+    static constexpr int fullWidth = 576;
+    static constexpr int compactWidth = 414;
 
     // How long the readout says how the last take ended before going back to
     // where the clock is.
@@ -109,6 +110,13 @@ class TransportStrip final
         loopButton.onClick = [this] { clock.setLoopEnabled(loopButton.getToggleState()); };
         addAndMakeVisible(loopButton);
 
+        // The score's sound, and each part's and hand's
+        // (openspec/changes/archive/2026-11-08-score-playback).
+        mixButton.setComponentID("transport-mix");
+        mixButton.setTooltip("Hear the score, and mute or solo each part or hand");
+        mixButton.onClick = [this] { showMix(); };
+        addAndMakeVisible(mixButton);
+
         clock.addListener(this);
         takes.addListener(this);
         refresh(clock.position());
@@ -131,25 +139,27 @@ class TransportStrip final
         constexpr int gap = 4;
         const bool compact = getWidth() < fullWidth;
 
-        recordButton.setBounds(bounds.removeFromLeft(58));
+        recordButton.setBounds(bounds.removeFromLeft(56));
         bounds.removeFromLeft(gap);
-        playButton.setBounds(bounds.removeFromLeft(58));
+        playButton.setBounds(bounds.removeFromLeft(56));
         bounds.removeFromLeft(gap);
-        stopButton.setBounds(bounds.removeFromLeft(48));
+        stopButton.setBounds(bounds.removeFromLeft(46));
         bounds.removeFromLeft(gap);
 
         positionLabel.setVisible(!compact);
         if (!compact)
         {
-            positionLabel.setBounds(bounds.removeFromLeft(170));
+            positionLabel.setBounds(bounds.removeFromLeft(158));
             bounds.removeFromLeft(gap);
         }
 
         tempoSlider.setBounds(bounds.removeFromLeft(92));
         bounds.removeFromLeft(gap);
-        clickButton.setBounds(bounds.removeFromLeft(50));
+        clickButton.setBounds(bounds.removeFromLeft(48));
         bounds.removeFromLeft(gap);
-        loopButton.setBounds(bounds.removeFromLeft(48));
+        loopButton.setBounds(bounds.removeFromLeft(46));
+        bounds.removeFromLeft(gap);
+        mixButton.setBounds(bounds.removeFromLeft(44));
     }
 
     // What the readout says for a position: "Bar 3, beat 2", or the count-in.
@@ -165,6 +175,20 @@ class TransportStrip final
         }
         return "Bar " + juce::String(position.bar + 1) + ", beat " +
                juce::String(position.beat + 1);
+    }
+
+    // Open the Mix popup under its button, inside the window so a capture
+    // sees it.
+    void showMix()
+    {
+        juce::Component* window = getTopLevelComponent();
+        if (window == nullptr)
+        {
+            return;
+        }
+        auto panel = std::make_unique<PlaybackMixPanel>(clock, onSettingsChanged);
+        const auto area = window->getLocalArea(this, mixButton.getBounds());
+        juce::CallOutBox::launchAsynchronously(std::move(panel), area, window);
     }
 
   private:
@@ -273,4 +297,5 @@ class TransportStrip final
     juce::Slider tempoSlider;
     juce::TextButton clickButton{"Click"};
     juce::TextButton loopButton{"Loop"};
+    juce::TextButton mixButton{"Mix"};
 };

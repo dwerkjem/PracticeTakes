@@ -994,6 +994,27 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The Mix popup (score-playback).
+    Surface(
+        state="playback-mix",
+        title="The Mix popup",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "mix-rows",
+                "Does the popup under Mix show Play the score ticked, a volume, and rows for "
+                "Voice, Piano right hand and Piano left hand, the right hand's Mute on?",
+            ),
+            Question(
+                "hear-the-score",
+                "Press Play with speakers on: does the score play in time with the clicks, the "
+                "piano's right hand silent, and does Solo on the voice leave only the voice?",
+                behavioural=True,
+            ),
+        ),
+    ),
     # The Take Review tool before any take.
     Surface(
         state="take-review-empty",

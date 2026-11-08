@@ -5,7 +5,11 @@
 #include "platform/transport/PracticeClock.h"
 
 #include <array>
+#include <chrono>
 #include <memory>
+#include <optional>
+#include <string>
+#include <thread>
 #include <vector>
 
 using Catch::Approx;
@@ -448,4 +452,71 @@ TEST_CASE("a locked clock ignores what would change a take", "[transport][clock]
     const auto table = clock.currentTable();
     REQUIRE(table != nullptr);
     CHECK_FALSE(table->empty());
+}
+
+// --- Playing the score (openspec/changes/archive/2026-11-08-score-playback) --------------------
+
+TEST_CASE(
+    "the SoundFont loads off the message thread, or says why not",
+    "[transport][clock][playback]")
+{
+    ClockUnderTest fixture;
+    REQUIRE(fixture.clock->whyPlaybackUnavailable().has_value());
+
+    fixture.clock->loadSoundFont("");
+    CHECK(
+        *fixture.clock->whyPlaybackUnavailable() ==
+        "The sounds were not found beside the application");
+
+    ClockUnderTest broken;
+    broken.clock->loadSoundFont("/nonexistent/GeneralUser-GS.sf2");
+    for (int attempt = 0;
+         attempt < 200 && broken.clock->whyPlaybackUnavailable() ==
+                              std::optional<std::string>("The sounds are still loading");
+         ++attempt)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        broken.clock->poll();
+    }
+    CHECK(broken.clock->whyPlaybackUnavailable()->find("could not be read") != std::string::npos);
+
+    ClockUnderTest loaded;
+    loaded.clock->loadSoundFont(PRACTICE_TAKES_TEST_SOUNDFONT);
+    for (int attempt = 0; attempt < 500 && loaded.clock->whyPlaybackUnavailable().has_value();
+         ++attempt)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        loaded.clock->poll();
+    }
+    CHECK_FALSE(loaded.clock->whyPlaybackUnavailable().has_value());
+    CHECK(loaded.clock->renderer().hasSynth());
+}
+
+TEST_CASE(
+    "the mix reaches the renderer as a mask, and resets with a new score",
+    "[transport][clock][playback]")
+{
+    auto piano = std::make_shared<score::Score>(*scoreOf(4, {4, 4}, 120.0));
+    piano->parts.front().staffCount = 2;
+    ClockUnderTest fixture(piano);
+    fixture.block();
+    fixture.clock->poll();
+
+    REQUIRE(fixture.clock->playbackTracks().size() == 2);
+    CHECK(fixture.clock->renderer().audibleTracks() == 0);
+
+    fixture.clock->setPlaybackEnabled(true);
+    CHECK(fixture.clock->renderer().audibleTracks() == 0b11);
+    fixture.clock->setTrackMuted(0, true);
+    CHECK(fixture.clock->renderer().audibleTracks() == 0b10);
+
+    // Another score: its own tracks, nothing muted, playback still on.
+    fixture.currentScore.publish(scoreOf(4, {3, 4}, 90.0));
+    fixture.block();
+    fixture.clock->poll();
+    fixture.block();
+    fixture.clock->poll();
+    CHECK(fixture.clock->playbackTracks().size() == 1);
+    CHECK(fixture.clock->renderer().audibleTracks() == 0b1);
+    CHECK(fixture.clock->playbackMix().enabled);
 }

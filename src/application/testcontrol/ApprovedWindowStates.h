@@ -178,6 +178,13 @@ struct ApprovedWindowState
     //
     // Appended last, for the reason the comments above give.
     bool reviewTake = false;
+
+    // Turn on playing the score, mute the second track (the sample's piano
+    // right hand), and open the Mix popup once `scoreFixture` has imported and
+    // the sounds have loaded (score-playback).
+    //
+    // Appended last, for the reason the comments above give.
+    bool mixOpen = false;
 };
 
 // An object that can be asked to act, as though clicked.

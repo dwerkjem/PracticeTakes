@@ -55,6 +55,10 @@ struct State
     double metronomeVolume = AppDefaults::Metronome::volume;
     bool metronomeAccent = AppDefaults::Metronome::accent;
     int countInBars = AppDefaults::Metronome::countInBars;
+
+    // Whether the score plays with the clock, and how loud. Local too.
+    bool playbackEnabled = AppDefaults::Playback::enabled;
+    double playbackVolume = AppDefaults::Playback::volume;
     AppDefaults::TunerSettings tuner = AppDefaults::tunerDefaults();
     juce::String tunerBounds;
     juce::String spectrogramBounds;

@@ -89,6 +89,20 @@ callback. What it does, and why each part is bounded:
   silence. The input is the one the tools get: the tone or the device after
   mute, chosen before the renderer is called.
 
+- **When the score plays** (`score-playback` change), it dispatches the note
+  events in each played span:
+  - from a cursor, found again by binary search after any jump;
+  - at most 512 a block, with the rest skipped and counted;
+  - rendered by `ScoreSynth` in pieces of at most 4,096 frames into a
+    preallocated scratch.
+
+  TinySoundFont allocates only on loading, for a voice beyond its maximum, and
+  for a channel used for the first time. `ScoreSynth::load`, on a worker
+  thread, sets 96 voices and creates all 64 channels, so none of those happens
+  in the callback. The `[callback]` case "the audio callback plays the score
+  without allocating" plays chords on two hands, through a mute, a loop's wrap
+  and a seek, under RealtimeSanitizer.
+
 Measured by the `[.benchmark]` case "rendering a block against a full segment
 table": a 512-frame block against a full 512-segment table takes about 0.74 µs.
 

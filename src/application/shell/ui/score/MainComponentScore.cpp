@@ -165,7 +165,7 @@ void MainComponent::finishScoreImport(const score::musicxml::MusicXmlImportResul
     // picture, not a report over it. The score has already been published into
     // the holder above, so the tool will pick it up on its own timer.
     if (testControlPlayClock || testControlClockBar >= 0 || testControlRecordTake ||
-        testControlReviewTake)
+        testControlReviewTake || testControlOpenMix)
     {
         startClockForTestControl(100);
     }

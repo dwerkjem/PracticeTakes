@@ -3,6 +3,8 @@
 #include "platform/audio/AudioInputService.h"
 #include "platform/score/Score.h"
 #include "platform/transport/ClockRenderer.h"
+#include "platform/transport/PlaybackEvents.h"
+#include "platform/transport/ScoreSynth.h"
 #include "support/AudioInputServiceCallbackAccess.h"
 
 #include <algorithm>
@@ -1083,4 +1085,91 @@ TEST_CASE("the audio callback records a take's input", "[audio][callback][transp
     CHECK(block.position == blockSize);
     REQUIRE(clock.renderer.readRecording(samples.data(), samples.size()) == samples.size());
     CHECK(samples.front() == 0.0f);
+}
+
+TEST_CASE(
+    "the audio callback plays the score without allocating",
+    "[audio][callback][transport][playback]")
+{
+    // Under RealtimeSanitizer this is the check that TinySoundFont, once
+    // loaded, allocates nothing on any path the renderer takes: notes on and
+    // off on two hands at once, a hand going quiet, a loop's wrap and a seek
+    // (openspec/changes/archive/2026-11-08-score-playback, design.md decision 1).
+    score::Score source;
+    source.tempoMap = score::TempoMap::build({{0, 240.0}});
+    score::Part piano;
+    piano.staffCount = 2;
+    for (int bar = 0; bar < 2; ++bar)
+    {
+        score::Measure measure;
+        measure.index = static_cast<std::size_t>(bar);
+        measure.start = static_cast<score::Tick>(bar) * score::ticksPerWholeNote;
+        measure.nominalDuration = score::ticksPerWholeNote;
+        if (bar == 0)
+        {
+            measure.attributes.time = score::TimeSignature{4, 4};
+        }
+        for (int staff = 1; staff <= 2; ++staff)
+        {
+            score::Voice voice;
+            for (int eighth = 0; eighth < 8; ++eighth)
+            {
+                score::ScoreEvent event;
+                event.kind = score::EventKind::note;
+                event.onset = static_cast<score::Tick>(eighth) * score::ticksPerQuarterNote / 2;
+                event.duration = score::ticksPerQuarterNote / 2;
+                event.staff = staff;
+                for (const int interval : {0, 4, 7})
+                {
+                    score::Pitch pitch;
+                    pitch.midiNoteNumber = (staff == 1 ? 60 : 36) + eighth + interval;
+                    event.notes.push_back(score::Note{pitch, pitch, std::nullopt, std::nullopt});
+                }
+                voice.events.push_back(event);
+            }
+            measure.voices.push_back(voice);
+        }
+        piano.measures.push_back(measure);
+    }
+    source.parts.push_back(piano);
+
+    // Loaded here, off the callback, as the application loads it.
+    const auto synth = transport::ScoreSynth::load(PRACTICE_TAKES_TEST_SOUNDFONT);
+    REQUIRE(synth != nullptr);
+    transport::ClockRenderer renderer;
+    auto table = std::make_unique<transport::ClockTable>();
+    transport::buildTable(*table, source, 100, 44100.0, 0, score::ticksPerWholeNote);
+    transport::PlaybackScore notes;
+    transport::playbackEventsOf(source, *table, notes);
+    REQUIRE(renderer.publish(*table, notes));
+    renderer.setMetronomeEnabled(false);
+    renderer.setSynth(synth.get());
+    renderer.setAudibleTracks(0b11);
+    REQUIRE(renderer.send({transport::ClockCommand::Kind::play}));
+
+    ServiceUnderTest fixture;
+    standUpDevice(fixture.service);
+    fixture.service.setRealtimeRenderer(&renderer);
+
+    Buffers buffers;
+    bool heard = false;
+    for (int block = 0; block < 1500; ++block)
+    {
+        if (block == 600)
+        {
+            renderer.setAudibleTracks(0b10);
+        }
+        if (block == 900)
+        {
+            REQUIRE(
+                renderer.send({transport::ClockCommand::Kind::seek, score::ticksPerQuarterNote}));
+        }
+        drive(fixture.service, buffers);
+        heard = heard || anySound(buffers.output);
+    }
+
+    CHECK(heard);
+    CHECK(renderer.events().wraps > 0);
+    CHECK(renderer.playbackOverflows() == 0);
+    fixture.service.setRealtimeRenderer(nullptr);
 }

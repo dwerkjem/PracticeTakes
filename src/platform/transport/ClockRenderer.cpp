@@ -1,5 +1,7 @@
 #include "ClockRenderer.h"
 
+#include "ScoreSynth.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -69,6 +71,11 @@ void ClockRenderer::synthesise(Slot& slot, double sampleRate)
 
 bool ClockRenderer::publish(const ClockTable& table)
 {
+    return publish(table, PlaybackScore{});
+}
+
+bool ClockRenderer::publish(const ClockTable& table, const PlaybackScore& playback)
+{
     const std::uint64_t generation = published.load(std::memory_order_relaxed);
     if (acknowledged.load(std::memory_order_acquire) != generation)
     {
@@ -78,9 +85,40 @@ bool ClockRenderer::publish(const ClockTable& table)
     const std::uint64_t next = generation + 1;
     Slot& slot = (*slots)[next & 1U];
     slot.table = table;
+    slot.playback = playback;
     synthesise(slot, table.sampleRate);
     published.store(next, std::memory_order_release);
     return true;
+}
+
+void ClockRenderer::setSynth(ScoreSynth* loaded) noexcept
+{
+    synthPointer.store(loaded, std::memory_order_release);
+}
+
+bool ClockRenderer::hasSynth() const noexcept
+{
+    return synthPointer.load(std::memory_order_acquire) != nullptr;
+}
+
+void ClockRenderer::setAudibleTracks(std::uint64_t mask) noexcept
+{
+    audibleMask.store(mask, std::memory_order_relaxed);
+}
+
+std::uint64_t ClockRenderer::audibleTracks() const noexcept
+{
+    return audibleMask.load(std::memory_order_relaxed);
+}
+
+void ClockRenderer::setPlaybackVolume(float newGain) noexcept
+{
+    playbackGain.store(std::clamp(newGain, 0.0f, 1.0f), std::memory_order_relaxed);
+}
+
+std::uint64_t ClockRenderer::playbackOverflows() const noexcept
+{
+    return playbackOverflowCount.load(std::memory_order_relaxed);
 }
 
 bool ClockRenderer::publishAcknowledged() const noexcept
@@ -289,6 +327,7 @@ void ClockRenderer::pickUpTable() noexcept PRACTICE_TAKES_NONBLOCKING
 
     current = latest;
     acknowledged.store(latest, std::memory_order_release);
+    releaseNotes();
 }
 
 void ClockRenderer::startCountIn(int bars) noexcept PRACTICE_TAKES_NONBLOCKING
@@ -318,6 +357,8 @@ void ClockRenderer::applyCommands() noexcept PRACTICE_TAKES_NONBLOCKING
     ClockCommand command;
     while (commands.pop(command))
     {
+        // Every command moves the clock somewhere it was not, or stops it.
+        releaseNotes();
         switch (command.kind)
         {
         case ClockCommand::Kind::play:
@@ -439,6 +480,7 @@ void ClockRenderer::advance(RenderBlock& block) noexcept PRACTICE_TAKES_NONBLOCK
             if (position >= countIn.targetFrame)
             {
                 countingIn = false;
+                eventsInSync = false;
             }
             continue;
         }
@@ -447,6 +489,8 @@ void ClockRenderer::advance(RenderBlock& block) noexcept PRACTICE_TAKES_NONBLOCK
         if (!looping && position >= table.endFrame)
         {
             // The end of the piece: stop, as the stop command would.
+            renderSynthUntil(block, offset);
+            releaseNotes();
             state = ClockState::stopped;
             position = table.loopEnabled ? table.loopStartFrame : 0;
             endCount.fetch_add(1, std::memory_order_release);
@@ -456,6 +500,7 @@ void ClockRenderer::advance(RenderBlock& block) noexcept PRACTICE_TAKES_NONBLOCK
         const Frame boundary = looping ? table.loopEndFrame : table.endFrame;
         const Frame length = std::min(remaining, boundary - position);
         recordSpan(block, offset, position, length, false);
+        dispatchNotes(block, offset, position, length);
 
         if (metronome)
         {
@@ -481,6 +526,9 @@ void ClockRenderer::advance(RenderBlock& block) noexcept PRACTICE_TAKES_NONBLOCK
             {
                 wrapCount.fetch_add(1, std::memory_order_release);
             }
+            // Nothing rings on past the loop's end into its start.
+            renderSynthUntil(block, offset);
+            releaseNotes();
         }
     }
 }
@@ -507,10 +555,126 @@ void ClockRenderer::publishSnapshot(
     snapshotSequence.store(sequence + 2, std::memory_order_release);
 }
 
+void ClockRenderer::releaseNotes() noexcept PRACTICE_TAKES_NONBLOCKING
+{
+    if (synth != nullptr)
+    {
+        synth->releaseAll();
+    }
+    eventsInSync = false;
+}
+
+void ClockRenderer::preparePlayback(const RenderBlock& block) noexcept PRACTICE_TAKES_NONBLOCKING
+{
+    synthRenderedUpTo = 0;
+    eventsThisBlock = 0;
+    if (synth == nullptr)
+    {
+        return;
+    }
+    synth->setSampleRate(block.sampleRate);
+
+    // A new table's tracks get their instruments, everything still sounding
+    // having just been released.
+    const Slot* slot = activeSlot();
+    if (slot != nullptr && programsFor != current)
+    {
+        const auto& tracks = slot->playback.tracks;
+        for (std::size_t track = 0; track < tracks.size(); ++track)
+        {
+            synth->setProgram(static_cast<int>(track), tracks[track].program);
+        }
+        programsFor = current;
+    }
+
+    // A track that has just gone quiet lets its notes ring out.
+    const std::uint64_t audible = audibleMask.load(std::memory_order_relaxed);
+    const std::uint64_t silenced = soundingTracks & ~audible;
+    for (std::size_t track = 0; silenced != 0 && track < maximumPlaybackTracks; ++track)
+    {
+        if ((silenced & (std::uint64_t{1} << track)) != 0)
+        {
+            synth->releaseChannel(static_cast<int>(track));
+        }
+    }
+    soundingTracks = audible;
+}
+
+void ClockRenderer::dispatchNotes(
+    RenderBlock& block,
+    int offset,
+    Frame start,
+    Frame length) noexcept PRACTICE_TAKES_NONBLOCKING
+{
+    const Slot* slot = activeSlot();
+    if (synth == nullptr || slot == nullptr || length <= 0)
+    {
+        return;
+    }
+    const auto& events = slot->playback.events;
+    const auto byFrame = [](const PlaybackEvent& event, Frame frame)
+    { return event.frame < frame; };
+    if (!eventsInSync)
+    {
+        nextEvent = static_cast<std::size_t>(
+            std::lower_bound(events.begin(), events.end(), start, byFrame) - events.begin());
+        eventsInSync = true;
+    }
+
+    const Frame end = start + length;
+    while (nextEvent < events.size() && events[nextEvent].frame < end)
+    {
+        if (eventsThisBlock >= maximumEventsPerBlock)
+        {
+            // Too many for one block: skip to the span's end, and say so.
+            const auto skipTo = std::lower_bound(
+                events.begin() + static_cast<std::ptrdiff_t>(nextEvent), events.end(), end,
+                byFrame);
+            const auto skipped = static_cast<std::uint64_t>(skipTo - events.begin()) - nextEvent;
+            playbackOverflowCount.fetch_add(skipped, std::memory_order_relaxed);
+            nextEvent = static_cast<std::size_t>(skipTo - events.begin());
+            break;
+        }
+
+        const PlaybackEvent& event = events[nextEvent];
+        renderSynthUntil(block, offset + static_cast<int>(std::max<Frame>(0, event.frame - start)));
+        if (!event.on)
+        {
+            synth->noteOff(event.track, event.key);
+        }
+        else if ((soundingTracks & (std::uint64_t{1} << event.track)) != 0)
+        {
+            synth->noteOn(event.track, event.key, playbackVelocity);
+        }
+        ++nextEvent;
+        ++eventsThisBlock;
+    }
+}
+
+void ClockRenderer::renderSynthUntil(RenderBlock& block, int offset) noexcept
+    PRACTICE_TAKES_NONBLOCKING
+{
+    const int until = std::clamp(offset, 0, block.frames);
+    if (synth == nullptr || until <= synthRenderedUpTo)
+    {
+        return;
+    }
+    // Nothing sounding renders as nothing, so it is not rendered at all.
+    if (synth->activeVoices() > 0)
+    {
+        synth->renderAdding(
+            block.outputs, block.outputChannels, synthRenderedUpTo, until - synthRenderedUpTo,
+            playbackGain.load(std::memory_order_relaxed));
+    }
+    synthRenderedUpTo = until;
+}
+
 void ClockRenderer::render(RenderBlock& block) noexcept PRACTICE_TAKES_NONBLOCKING
 {
+    synth = synthPointer.load(std::memory_order_acquire);
     pickUpTable();
     applyCommands();
+    preparePlayback(block);
 
     const Frame blockStartPosition = position;
     const std::uint64_t blockStartStream = streamFrames;
@@ -518,6 +682,7 @@ void ClockRenderer::render(RenderBlock& block) noexcept PRACTICE_TAKES_NONBLOCKI
 
     advance(block);
     mixVoiceUntil(block, block.frames);
+    renderSynthUntil(block, block.frames);
 
     streamFrames = blockStartStream + static_cast<std::uint64_t>(std::max(0, block.frames));
     publishSnapshot(blockStartPosition, blockStartStream, block);
