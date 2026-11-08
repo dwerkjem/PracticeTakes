@@ -71,7 +71,15 @@ struct NoteReport
 // Compare pitches within the moments `timing` matched (decision 1).
 [[nodiscard]] NoteReport matchNotes(const TimingReport& timing, std::size_t part);
 
-// Timing, then matching, for one part of a take's score.
+// Timing, then matching, for one part of a take's score, from `onsets`
+// (`onsetsOf` the take).
+[[nodiscard]] NoteReport judgeNotes(
+    const take::Take& take,
+    std::size_t part,
+    const std::vector<PerformedOnset>& onsets,
+    const TimingSettings& settings = {});
+
+// The same, finding the onsets.
 [[nodiscard]] NoteReport
 judgeNotes(const take::Take& take, std::size_t part, const TimingSettings& settings = {});
 } // namespace evaluation

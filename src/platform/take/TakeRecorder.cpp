@@ -1,15 +1,52 @@
 #include "TakeRecorder.h"
 
+#include "../evaluation/TakeReview.h"
 #include "TakeAssembler.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <new>
 
 namespace take
 {
 namespace
 {
 constexpr std::size_t keyBufferSize = 256;
+
+// Judging runs off the message thread on a take nothing changes any more: a
+// kept take, its score and its table are all immutable.
+[[nodiscard]] TakeReview judge(std::shared_ptr<const Take> take, std::optional<std::size_t> part)
+{
+    TakeReview review;
+    review.take = std::move(take);
+    try
+    {
+        if (part.has_value())
+        {
+            review.part = *part;
+            review.report = evaluation::judgeNotes(*review.take, *part);
+        }
+        else
+        {
+            evaluation::ReviewedPart best = evaluation::bestPartFor(*review.take);
+            review.part = best.part;
+            review.report = std::move(best.report);
+        }
+    }
+    catch (const std::bad_alloc&)
+    {
+        // A take too long to judge is reviewed with nothing judged rather than
+        // ending the application from a timer callback.
+        review.report = {};
+    }
+    return review;
+}
+
+[[nodiscard]] bool isReady(const std::future<TakeReview>& result)
+{
+    return result.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+}
 } // namespace
 
 TakeRecorder::TakeRecorder(
@@ -192,8 +229,107 @@ void TakeRecorder::timerCallback()
     poll();
 }
 
+std::uint64_t TakeRecorder::keep(Take take)
+{
+    if (!isKept(take.state()))
+    {
+        return 0;
+    }
+    take.id = ++nextId;
+    const std::uint64_t id = take.id;
+    auto done = std::make_shared<const Take>(std::move(take));
+    ended = done;
+    retain(std::move(done));
+    static_cast<void>(reviewTake(id));
+    return id;
+}
+
+bool TakeRecorder::reviewTake(std::uint64_t id, std::optional<std::size_t> part)
+{
+    const auto found = std::find_if(
+        kept.begin(), kept.end(),
+        [id](const std::shared_ptr<const Take>& candidate) { return candidate->id == id; });
+    if (found == kept.end())
+    {
+        return false;
+    }
+    const std::shared_ptr<const Take>& take = *found;
+    if (part.has_value() && (take->score == nullptr || *part >= take->score->parts.size()))
+    {
+        return false;
+    }
+
+    // Another take's marks would be wrong for this one; the same take's, while
+    // its part changes, are only out of date.
+    if (reviewed.has_value() && reviewed->take != take)
+    {
+        reviewed.reset();
+    }
+    judging.push_back(Judging{++nextRequest, std::async(std::launch::async, judge, take, part)});
+    notify();
+    return true;
+}
+
+const TakeReview* TakeRecorder::review() const noexcept
+{
+    return reviewed.has_value() ? &*reviewed : nullptr;
+}
+
+bool TakeRecorder::isJudging() const noexcept
+{
+    return !judging.empty() && judging.back().request == nextRequest;
+}
+
+void TakeRecorder::finishJudging()
+{
+    adoptJudgement(true);
+}
+
+void TakeRecorder::adoptJudgement(bool wait)
+{
+    bool adopted = false;
+    if (isJudging())
+    {
+        Judging& newest = judging.back();
+        if (wait)
+        {
+            newest.result.wait();
+        }
+        if (isReady(newest.result))
+        {
+            reviewed = newest.result.get();
+            judging.pop_back();
+            adopted = true;
+        }
+    }
+
+    // Older requests are dropped once they finish: destroying a future that
+    // std::async made waits for it, which the message thread must not do.
+    judging.erase(
+        std::remove_if(
+            judging.begin(), judging.end(), [this](const Judging& entry)
+            { return entry.request != nextRequest && isReady(entry.result); }),
+        judging.end());
+
+    if (adopted)
+    {
+        notify();
+    }
+}
+
+void TakeRecorder::retain(std::shared_ptr<const Take> take)
+{
+    kept.push_back(std::move(take));
+    if (kept.size() > maximumTakes)
+    {
+        kept.erase(
+            kept.begin(), kept.begin() + static_cast<std::ptrdiff_t>(kept.size() - maximumTakes));
+    }
+}
+
 void TakeRecorder::poll()
 {
+    adoptJudgement(false);
     if (live == nullptr)
     {
         return;
@@ -379,13 +515,9 @@ void TakeRecorder::finish(TakeEvent event, std::string reason)
     ended = done;
     if (isKept(done->state()))
     {
-        kept.push_back(std::move(done));
-        if (kept.size() > maximumTakes)
-        {
-            kept.erase(
-                kept.begin(),
-                kept.begin() + static_cast<std::ptrdiff_t>(kept.size() - maximumTakes));
-        }
+        const std::uint64_t id = done->id;
+        retain(std::move(done));
+        static_cast<void>(reviewTake(id));
     }
     notify();
 }

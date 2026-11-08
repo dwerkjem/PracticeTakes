@@ -194,6 +194,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/evaluation/OnsetTiming.cpp
     src/platform/evaluation/OnsetTiming.h
     src/platform/evaluation/PerformedOnset.h
+    src/platform/evaluation/TakeReview.cpp
+    src/platform/evaluation/TakeReview.h
     src/platform/midi/MidiEvent.h
     src/platform/midi/MidiEventFifo.h
     src/platform/midi/MidiInputService.cpp
@@ -356,6 +358,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/evaluation/NoteMatchingTests.cpp
     src/tests/platform/evaluation/OnsetDetectorTests.cpp
     src/tests/platform/evaluation/OnsetTimingTests.cpp
+    src/tests/platform/evaluation/TakeReviewTests.cpp
     src/tests/platform/take/TakeAssemblerTests.cpp
     src/tests/platform/take/TakeLifecycleTests.cpp
     src/tests/platform/take/TakeRecorderTests.cpp
@@ -416,4 +419,5 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/evaluation/OnsetDetector.cpp
     src/platform/evaluation/OnsetTiming.cpp
     src/platform/evaluation/NoteMatching.cpp
+    src/platform/evaluation/TakeReview.cpp
 )

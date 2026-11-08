@@ -189,6 +189,15 @@ NoteReport matchNotes(const TimingReport& timing, std::size_t part)
     return report;
 }
 
+NoteReport judgeNotes(
+    const take::Take& take,
+    std::size_t part,
+    const std::vector<PerformedOnset>& onsets,
+    const TimingSettings& settings)
+{
+    return matchNotes(judgeTake(take, part, onsets, settings), part);
+}
+
 NoteReport judgeNotes(const take::Take& take, std::size_t part, const TimingSettings& settings)
 {
     return matchNotes(judgeTake(take, part, settings), part);

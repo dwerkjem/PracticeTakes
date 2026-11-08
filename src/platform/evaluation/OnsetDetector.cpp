@@ -53,7 +53,10 @@ spectralFlux(const float* audio, std::size_t count, const OnsetSettings& setting
         double rise = 0.0;
         for (std::size_t bin = 0; bin < magnitude.size(); ++bin)
         {
-            magnitude[bin] = std::log1p(10.0f * std::abs(buffer[bin]));
+            // Not std::abs, whose hypot guards against overflow this cannot have.
+            const float re = buffer[bin].real();
+            const float im = buffer[bin].imag();
+            magnitude[bin] = std::log1p(10.0f * std::sqrt((re * re) + (im * im)));
             rise += std::max(0.0f, magnitude[bin] - previous[bin]);
         }
         flux[hop] = hop == 0 ? 0.0 : rise;

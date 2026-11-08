@@ -1,3 +1,4 @@
+#include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include "platform/evaluation/OnsetDetector.h"
@@ -119,4 +120,24 @@ TEST_CASE("nothing to analyse is no onsets, not an error", "[evaluation][onsets]
     CHECK(detectOnsets(nullptr, 0, rate, 0).empty());
     const std::vector<float> one(1, 0.5f);
     CHECK(detectOnsets(one.data(), one.size(), 0.0, 0).empty());
+}
+
+// A three-minute take is the longest a review judges on the message thread when
+// the take ends (take-review design.md decision 1).
+TEST_CASE("onset detection over a three-minute take", "[.benchmark][evaluation][onsets]")
+{
+    std::vector<float> audio(static_cast<std::size_t>(180.0 * rate), 0.0F);
+    for (std::size_t start = 0; start + 22050 < audio.size(); start += 22050)
+    {
+        for (std::size_t index = start; index < start + 22050; ++index)
+        {
+            const double seconds = static_cast<double>(index - start) / rate;
+            audio[index] = static_cast<float>(
+                0.5 * std::exp(-seconds * 6.0) * std::sin(twoPi * 330.0 * seconds));
+        }
+    }
+    BENCHMARK("detect onsets, 180 s")
+    {
+        return detectOnsets(audio.data(), audio.size(), rate, 0).size();
+    };
 }
