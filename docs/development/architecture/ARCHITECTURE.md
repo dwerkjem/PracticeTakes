@@ -161,18 +161,20 @@ keyed by tool id; workspace topology, floating bounds, focus, and settings
 payloads are keyed by *instance* id.
 
 `ToolInstanceId` is a string. The first instance of a tool is spelled exactly as
-the tool id — `"tuner"` — and a later one would be `"tuner#2"`. Because every
-shipped tool is single-instance, every id written today is byte-identical to
-what the pre-registry code wrote, so `WorkspaceCatalog` stays at version 1 and
-existing saved workspaces load unchanged.
+the tool id — `"tuner"` — and a later one is `"tuner#2"`. The first instance's
+id is byte-identical to what the pre-registry code wrote, so `WorkspaceCatalog`
+stays at version 1 and existing saved workspaces load unchanged.
 
 Each `ToolDefinition` declares an instance policy of `single` or `multi`, and
-the shell enforces it: opening an already-open single-instance tool focuses it
-rather than duplicating it. **Every shipped tool is `single`.** `multi` is
-implemented and tested but deliberately unexercised in production — the
-deduplication in `WorkspaceNormalizer` and `WorkspaceSnapshotApply` already keys
-on instance ids, so enabling a duplicatable tool later does not mean revisiting
-the workspace model or migrating the persisted format.
+the shell enforces it. "Open or focus" focuses a tool's first live instance;
+only "Open another" creates a second, and only for a `multi` tool. The three
+microphone tools (tuner, spectrogram, harmonic analyzer) are `multi`; the score
+view and target note are `single`. An instance can be renamed, and the label is
+stored in the workspace's optional `toolLabels`, written only when non-empty.
+Because each microphone instance takes one of `AudioInputService`'s eight
+preallocated consumer slots, the shell asks `freeConsumerSlots()` (message
+thread only) before creating one, and refuses with a reason when none is free;
+the audio callback is unchanged. See `openspec/specs/tool-registry/spec.md`.
 
 ### Services and lifetime
 

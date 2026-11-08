@@ -131,6 +131,10 @@ class MainComponent final
         // The settings this instance last reported, kept for the same reason.
         // Opaque here: only the tool that produced it can read it.
         std::optional<ToolSettingsPayload> savedSettings;
+
+        // The user's name for this instance, already sanitised. Empty means it
+        // shows its default name ("Tuner", "Tuner 2").
+        std::string label;
     };
     class SettingsWindow;
     class FeedbackWindow;
@@ -160,11 +164,20 @@ class MainComponent final
     void openTool(
         const ToolInstanceId& instance,
         WorkspaceToolState::Presentation presentation = WorkspaceToolState::Presentation::docked);
-    // Opens a tool by id, honouring its instance policy: a single-instance
-    // tool that is already live is focused rather than duplicated.
+    // Opens a tool by id, or focuses it: the first live instance when there is
+    // one, otherwise the first instance. Never creates a second copy -- that is
+    // openAnotherInstance.
     void openToolById(
         std::string_view toolId,
         WorkspaceToolState::Presentation presentation = WorkspaceToolState::Presentation::docked);
+    // "Open another": a new instance of a multi-instance tool, when its policy
+    // and the free audio consumer slots allow (multi-instance-tools).
+    void openAnotherInstance(std::string_view toolId);
+    [[nodiscard]] bool mayOpenAnotherInstance(std::string_view toolId) const;
+    void showRenameToolDialog(const ToolInstanceId& instance);
+    void renameTool(const ToolInstanceId& instance, const juce::String& requestedName);
+    // The open instances of one tool, lowest ordinal first.
+    [[nodiscard]] std::vector<ToolInstanceId> openInstancesOf(std::string_view toolId) const;
     void presentTool(const ToolInstanceId& instance, WorkspaceToolState::Presentation presentation);
     void constructToolPresentation(
         const ToolInstanceId& instance,
@@ -239,8 +252,9 @@ class MainComponent final
     [[nodiscard]] const LiveTool* findLiveTool(const ToolInstanceId& instance) const;
     [[nodiscard]] LiveTool* findLiveTool(WorkspaceLayoutState::Tool handle);
     [[nodiscard]] const ToolDefinition* definitionFor(const ToolInstanceId& instance) const;
-    // The instance id a single-instance tool always uses, and the id the next
-    // instance of a multi-instance tool would take.
+    // The instance "open or focus" means: the first live instance of the tool,
+    // or its first instance when none is live. Every caller that wants "the
+    // tuner" -- settings, presets, legacy state, the test channel -- wants this.
     [[nodiscard]] ToolInstanceId instanceIdToOpen(std::string_view toolId) const;
     [[nodiscard]] juce::String toolName(const ToolInstanceId& instance) const;
     [[nodiscard]] bool toolIsOpen(const ToolInstanceId& instance) const;

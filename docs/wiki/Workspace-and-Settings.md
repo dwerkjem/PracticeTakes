@@ -12,6 +12,8 @@ and its history.
   send it back to a floating window.
 - Split dividers are resizable.
 - **Tools → Arrange workspace** does the same things from the keyboard.
+- A tuner, spectrogram or harmonic analyzer can be open more than once, and each
+  copy docks, floats and tiles on its own. See [[Tools]].
 
 | Tiled | Tabbed |
 |---|---|

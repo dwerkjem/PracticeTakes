@@ -72,13 +72,23 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
 
     // Reset first, so states do not accumulate across a run and each one is
     // reached the same way regardless of what preceded it.
-    for (const auto& definition : builtInToolRegistry().tools())
+    // Every open instance, not one per tool: a state can open a second copy of
+    // a multi-instance tool, and the next state must not inherit it.
+    std::vector<ToolInstanceId> openInstances;
+    for (const auto& live : liveTools)
     {
-        const auto instance = instanceIdToOpen(definition.id);
-        if (toolIsOpen(instance))
+        if (live.state.isOpen())
         {
-            closeTool(instance);
+            openInstances.push_back(live.id);
         }
+    }
+    for (const auto& instance : openInstances)
+    {
+        closeTool(instance);
+    }
+    for (auto& live : liveTools)
+    {
+        live.label.clear();
     }
 
     if (settingsWindow != nullptr)
@@ -120,16 +130,18 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     for (const std::string& name : state.tools)
     {
         // Resolved through the catalog, including its aliases, so the approved
-        // list can keep using a tool's historical name.
-        const auto toolId = builtInToolRegistry().catalog().resolve(name);
-        if (!toolId.has_value())
+        // list can keep using a tool's historical name. A name may also carry
+        // an ordinal ("tuner#2"), for a state showing two copies of one tool.
+        const auto resolved = builtInToolRegistry().catalog().resolveInstance(ToolInstanceId(name));
+        if (!resolved.has_value())
         {
             // The approved list named a tool this build does not have, which
             // means the two have drifted. Failing is the point.
             return false;
         }
 
-        const auto instance = instanceIdToOpen(*toolId);
+        const auto instance =
+            resolved->ordinal().value_or(1) > 1 ? *resolved : instanceIdToOpen(resolved->toolId());
         openTool(instance, presentation);
         opened.push_back(instance);
     }

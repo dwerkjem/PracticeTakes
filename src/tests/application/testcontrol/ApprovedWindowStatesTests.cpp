@@ -88,8 +88,17 @@ TEST_CASE("states only name tools the application has", "[testcontrol][approved]
     {
         for (const std::string& tool : state.tools)
         {
+            // A name may carry an ordinal ("tuner#2") for a state that shows a
+            // second copy -- allowed only for a tool that may have one.
             INFO("state " << state.id << " tool " << tool);
-            CHECK(builtInToolCatalog().resolve(tool).has_value());
+            const auto instance = builtInToolCatalog().resolveInstance(ToolInstanceId(tool));
+            REQUIRE(instance.has_value());
+            if (instance->ordinal().value_or(1) > 1)
+            {
+                const auto* definition = builtInToolCatalog().findForInstance(*instance);
+                REQUIRE(definition != nullptr);
+                CHECK(definition->instancePolicy == ToolInstancePolicy::multi);
+            }
         }
     }
 }

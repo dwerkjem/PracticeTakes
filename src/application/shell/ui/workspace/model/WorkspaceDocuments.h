@@ -146,7 +146,7 @@ struct WorkspaceSnapshot
     // The user's name for an instance, keyed by instance id. Absent means the
     // instance shows its default name ("Tuner", "Tuner 2"). Stored only when
     // non-empty, so a workspace nobody renamed anything in serialises exactly
-    // as it did before labels existed (openspec/changes/multi-instance-tools).
+    // as it did before labels existed (openspec/changes/archive/2026-11-08-multi-instance-tools).
     std::map<std::string, std::string> toolLabels;
 
     [[nodiscard]] WorkspaceToolPresentation presentationOf(const std::string& toolId) const

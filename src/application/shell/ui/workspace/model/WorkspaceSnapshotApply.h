@@ -31,6 +31,9 @@ class WorkspaceSnapshotApply
         WorkspaceToolState::Presentation presentation = WorkspaceToolState::Presentation::closed;
         WorkspaceBounds floatingBounds;
         std::optional<ToolSettingsPayload> settings;
+        // The instance's label in the applied workspace; empty for the default
+        // name. Like settings, a label belongs to the workspace it was given in.
+        std::string label;
     };
 
     struct Plan
@@ -49,6 +52,60 @@ class WorkspaceSnapshotApply
         std::function<void()> rebuildPresentation;
         std::function<void(const std::optional<std::string>&)> restoreFocus;
     };
+
+    // Every instance a snapshot places, canonical and in the order it appears:
+    // the dock tree depth-first, then the floating windows. The shell gives each
+    // of these a live entry before planning, so a workspace holding "tuner#2"
+    // can be placed even when no second tuner is open yet. Ids the catalog
+    // cannot resolve are left out; the plan deals with them.
+    [[nodiscard]] static std::vector<std::string>
+    referencedInstances(const WorkspaceSnapshot& snapshot, const ToolCatalog& registry)
+    {
+        std::vector<std::string> ids;
+        const auto add = [&ids, &registry](const std::string& id)
+        {
+            const auto resolved = registry.resolveInstance(ToolInstanceId(id));
+            if (resolved.has_value() &&
+                std::find(ids.begin(), ids.end(), resolved->value()) == ids.end())
+            {
+                ids.push_back(resolved->value());
+            }
+        };
+        const auto walk = [&add](const WorkspaceNode& node, const auto& self) -> void
+        {
+            if (node.kind == WorkspaceNodeKind::leaf)
+            {
+                add(node.toolId);
+            }
+            else if (node.kind == WorkspaceNodeKind::tabs)
+            {
+                for (const auto& tab : node.tabs)
+                {
+                    add(tab);
+                }
+            }
+            else
+            {
+                if (node.first != nullptr)
+                {
+                    self(*node.first, self);
+                }
+                if (node.second != nullptr)
+                {
+                    self(*node.second, self);
+                }
+            }
+        };
+        if (snapshot.dockRoot.has_value())
+        {
+            walk(*snapshot.dockRoot, walk);
+        }
+        for (const auto& floating : snapshot.floating)
+        {
+            add(floating.toolId);
+        }
+        return ids;
+    }
 
     [[nodiscard]] static std::optional<Plan> plan(
         const WorkspaceSnapshot& snapshot,
@@ -110,6 +167,11 @@ class WorkspaceSnapshotApply
                 settings != snapshot.toolSettings.end())
             {
                 directive.settings = settings->second;
+            }
+            if (const auto label = snapshot.toolLabels.find(binding.id);
+                label != snapshot.toolLabels.end())
+            {
+                directive.label = label->second;
             }
             result.tools.push_back(std::move(directive));
         }

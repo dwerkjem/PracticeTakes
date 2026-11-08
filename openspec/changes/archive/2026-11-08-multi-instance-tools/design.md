@@ -124,7 +124,7 @@ A new `ToolDefinition::usesAudioInput` flag, set for the three microphone tools,
 tells it which tools those are. When no slot is free, "Open another" is disabled
 with the text "Open another (no audio capacity left)". Restoring a workspace
 that holds more microphone instances than there are slots opens the instances in
-workspace order and leaves the rest closed, the way restoration already skips a
+order the shell lists them and leaves the rest closed, the way restoration already skips a
 tool it can't open. It does not assert.
 
 Eight slots allow seven microphone tool instances at most, because
@@ -174,9 +174,9 @@ code, outside `PracticeTakesTests`. They are verified with the testing suite's
   the shell creates tools. A test asserts that the shell refuses before
   `addListener` would fail.
 - **A workspace naming more microphone instances than there are slots opens
-  partially.** → Mitigation: it opens in workspace order, and the layout keeps
-  the closed instances' places, as restoration already does for a tool it
-  can't open.
+  partially.** → Mitigation: it opens what fits. The rest are left
+  closed and taken out of the tiling tree, as closing them would, so the
+  restore completes and the user can reopen them once a slot is free.
 - **Labels are user text in the workspace.** → Mitigation: length-capped,
   trimmed, control characters removed, and never interpreted.
 

@@ -7,7 +7,7 @@
 // What an instance of a tool is called.
 //
 // Split out of MainComponent so the naming rules can be tested without a
-// display (openspec/changes/multi-instance-tools). A user's label, when set,
+// display (openspec/changes/archive/2026-11-08-multi-instance-tools). A user's label, when set,
 // wins; otherwise the first instance keeps the tool's plain name -- which is
 // what every existing workspace and screenshot expects -- and each later one
 // carries its ordinal.

@@ -413,6 +413,25 @@
       "windowTitle": ""
     },
     {
+      "id": "two-tuners-split",
+      "description": "Two tuners tiled side by side, both reading the same tone",
+      "tools": ["tuner", "tuner#2"],
+      "toolIds": ["tuner", "tuner#2"],
+      "presentation": "docked",
+      "arrangement": "split",
+      "geometry": "normal",
+      "microphone": "available",
+      "settingsOpen": false,
+      "settingsPanel": "",
+      "feedbackOpen": false,
+      "toneHz": 440,
+      "toolView": "",
+      "scoreFixture": "",
+      "showScoreImportSummary": true,
+      "holdScoreImportInProgress": false,
+      "windowTitle": ""
+    },
+    {
       "id": "three-tools-tabbed",
       "description": "All three tools sharing one tab strip",
       "tools": ["tuner", "spectrogram", "harmonics"],

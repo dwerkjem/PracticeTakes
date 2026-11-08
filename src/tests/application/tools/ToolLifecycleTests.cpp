@@ -183,9 +183,10 @@ TEST_CASE("an unregistered tool allocates no instance", "[tools][policy]")
     CHECK_FALSE(ToolInstanceAllocator::nextInstanceId(catalog, "no-such-tool", isLive).has_value());
 }
 
-TEST_CASE("every shipped tool allocates its single instance", "[tools][policy]")
+TEST_CASE("every shipped tool allocates by its declared policy", "[tools][policy]")
 {
-    const auto isLive = [](const ToolInstanceId&) { return true; };
+    // Only the first instance of each tool is live.
+    const auto isLive = [](const ToolInstanceId& id) { return id.ordinal().value_or(1) == 1; };
 
     for (const auto& definition : builtInToolCatalog().tools())
     {
@@ -193,9 +194,27 @@ TEST_CASE("every shipped tool allocates its single instance", "[tools][policy]")
         const auto instance =
             ToolInstanceAllocator::nextInstanceId(builtInToolCatalog(), definition.id, isLive);
         REQUIRE(instance.has_value());
-        // Even with everything live, a single-instance tool returns its one id.
-        CHECK(instance->value() == definition.id);
+        if (definition.instancePolicy == ToolInstancePolicy::single)
+        {
+            // A single-instance tool always returns its one id.
+            CHECK(instance->value() == definition.id);
+        }
+        else
+        {
+            // A multi-instance tool's next copy is its second.
+            CHECK(instance->value() == definition.id + "#2");
+        }
     }
+}
+
+TEST_CASE("the microphone tools are multi-instance and the score tools are not", "[tools][policy]")
+{
+    const auto& catalog = builtInToolCatalog();
+    CHECK(catalog.find("tuner")->instancePolicy == ToolInstancePolicy::multi);
+    CHECK(catalog.find("spectrogram")->instancePolicy == ToolInstancePolicy::multi);
+    CHECK(catalog.find("harmonic-analyzer")->instancePolicy == ToolInstancePolicy::multi);
+    CHECK(catalog.find("score-view")->instancePolicy == ToolInstancePolicy::single);
+    CHECK(catalog.find("target-note")->instancePolicy == ToolInstancePolicy::single);
 }
 
 TEST_CASE(

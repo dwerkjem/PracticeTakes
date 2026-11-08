@@ -89,7 +89,8 @@ The shell SHALL NOT create an instance of a tool that takes an audio consumer
 unless the shared audio input service has a free consumer slot. When none is
 free, "Open another" SHALL be disabled and SHALL say that there is no audio
 capacity left. Restoring a workspace SHALL open audio-consuming instances in
-workspace order while slots remain, and leave the rest closed, without failing
+the order the shell lists them while slots remain, and leave the rest closed and
+out of the tiling tree, without failing
 the restore. The number of consumer slots, their preallocation and the audio
 callback SHALL be unchanged.
 
@@ -102,7 +103,7 @@ callback SHALL be unchanged.
 #### Scenario: An oversized workspace restores what fits
 - **WHEN** a workspace holding more microphone instances than there are free
   slots is applied
-- **THEN** instances open in workspace order until the slots are used, the
+- **THEN** instances open until the slots are used, the
   rest stay closed, and the workspace is otherwise restored
 
 ### Requirement: Several instances of one tool survive save and restore
