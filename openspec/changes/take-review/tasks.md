@@ -1,7 +1,7 @@
 ## 1. Review model
 
-- [ ] 1.1 `TakeReview.h` (JUCE-free): `reviewRows` and `bestPartFor`. Tests.
-- [ ] 1.2 `TakeRecorder`: the review, reviewing on keep, choosing the take and
+- [x] 1.1 `TakeReview.h` (JUCE-free): `reviewRows` and `bestPartFor`. Tests.
+- [x] 1.2 `TakeRecorder`: the review, reviewing on keep, choosing the take and
       part, and `keep`. Tests.
 
 ## 2. On the score

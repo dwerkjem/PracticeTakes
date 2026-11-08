@@ -60,3 +60,29 @@ The tool is single-instance and reads no audio.
 `TakeRecorder::keep(shared_ptr<const Take>)` adds an ended take to the list,
 assigns it an id, and reviews it as decision 2 says. The capture harness builds
 a keyboard take from the open score, with known mistakes, and keeps it.
+
+## Decided while building
+
+### Judging runs on a worker thread
+
+When a take ends, the recorder judges it on a worker thread (`std::async`), and
+its timer takes the result. A keyboard take is judged in microseconds, but a
+microphone take's onsets are not. Onset detection over a three-minute take
+took 31 s in a Debug build and 2.7 s optimised. Two changes cut that:
+
+- The FFT multiplies its complex numbers by hand, and magnitudes skip
+  `std::hypot`. This brought it to 1.2 s optimised; the `[.benchmark]` case in
+  `OnsetDetectorTests.cpp` tracks it.
+- A take's onsets are found once (`onsetsOf`), not once per part.
+
+1.2 s is still far too long for the message thread.
+
+The worker reads only a kept take, which nothing changes again: the take, its
+score and its table are all immutable. Only the newest request's result is
+taken, and an older one is dropped when it finishes. A future made by
+`std::async` waits when it is destroyed, so one is never destroyed before it is
+ready, except in the recorder's destructor at shutdown.
+
+While a different take is being judged, there is no review at all: the old
+take's marks would be wrong for the new one. While only the part changes, the
+old review stays until the new one arrives.
