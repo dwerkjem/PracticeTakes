@@ -31,9 +31,9 @@ branch (or asking Dependabot to rebase) makes the current workflows report.
 |---|---|---|
 | Scan commits for secret content | Secret scan | every pull request |
 | Reject tracked plaintext secrets | Secret scan | every pull request |
-| Linux x64 | Build desktop packages | every pull request |
-| Windows x64 | Build desktop packages | every pull request |
-| macOS Apple Silicon ARM64 | Build desktop packages | every pull request |
+| Linux x64 | Build desktop packages | every pull request; builds unless only documentation changed |
+| Windows x64 | Build desktop packages | every pull request; builds unless only documentation changed |
+| macOS Apple Silicon ARM64 | Build desktop packages | every pull request; builds unless only documentation changed |
 | Format and lint changed C++ | C++ quality check | when C++ or its tooling changed |
 | Address and Undefined | Sanitizers | when C++ or its tooling changed |
 | Realtime | Sanitizers | when C++ or its tooling changed |
@@ -62,6 +62,25 @@ can make a pull request slower, never let it through unchecked.
 
 When a workflow's push filter changes, change the list in its `changes` job to
 match — the two are kept side by side for that reason.
+
+### The desktop build skips documentation-only changes differently
+
+The three platform builds skip a pull request that touches nothing they read
+(the list is [`desktop_build_paths.txt`](../../../tools/scripts/ci/desktop_build_paths.txt):
+everything except documentation, OpenSpec and repository plumbing). Two things
+about them differ from the checks above, and both are deliberate:
+
+- **The job runs and its steps skip**, rather than the job skipping. A skipped
+  matrix job reports under its unexpanded name, `Linux ${{ matrix.arch }}`, so
+  the required `Linux x64` would never report. Each job therefore starts, says
+  in its log that there was nothing to build, and passes under its real name.
+- **The decision compares commits with git** instead of calling
+  `changed-paths.yml`, which needs `pull-requests: read`. The release workflow
+  calls the build with `contents: read` only, and a job asking for more would
+  stop every release from starting.
+
+The decision fails open the same way: anything but a clear "false" builds. A
+push to `main`, a release and a manual run always build.
 
 ## The push token
 
