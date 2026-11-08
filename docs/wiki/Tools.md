@@ -60,6 +60,13 @@ application shares, which the tuner will show beside its own reading
 
 ## Coming next
 
-Each analysis tool that is still planned is built together with the evaluation
-that needs it: a loudness meter, a sustain and legato analyzer, and a tempo and
-rhythm-stability tool. The [[Roadmap]] has the order.
+- **The same tools on a recording.** Record a take, or open an audio file, and
+  look at it with every tool above, exactly as you would live: play it, pause
+  it, scrub it. Graphs show a whole take at once, with the score's target notes
+  laid over the pitch curve
+  ([#291](https://github.com/dwerkjem/PracticeTakes/issues/291)).
+- **More analysis tools**, each built together with the evaluation that needs
+  it: a loudness meter, a sustain and legato analyzer, and a tempo and
+  rhythm-stability tool.
+
+The [[Roadmap]] has the order.
