@@ -15,21 +15,21 @@
 
 - [x] 3.1 `AppLookAndFeel` applies the scale to widget fonts (decision 3).
 - [x] 3.2 `ToolComponent::setTextScale`, pushed by the shell like the theme.
-- [ ] 3.3 Convert the shell and Settings window call sites to roles; their
+- [x] 3.3 Convert the shell and Settings window call sites to roles; their
       fixed heights follow the text (decision 4).
-- [ ] 3.4 Convert each tool's call sites to roles, one commit per tool; their
+- [x] 3.4 Convert each tool's call sites to roles, one commit per tool; their
       fixed heights and compact thresholds follow the text.
 
 ## 4. The setting
 
-- [ ] 4.1 Text size in Settings → Appearance, with the preview of every role
+- [x] 4.1 Text size in Settings → Appearance, with the preview of every role
       at the chosen size; changing it relays out every window at once.
 
 ## 5. Verification and docs
 
 - [ ] 5.1 Full capture at 100%, compared with the approved references:
       nothing moves.
-- [ ] 5.2 Approved states for 80% and 150%. Capture them, read every picture,
+- [x] 5.2 Approved states for 80% and 150%. Capture them, read every picture,
       and fix anything clipped.
 - [x] 5.3 The wiki (Workspace and Settings: Appearance), and
       ARCHITECTURE.md on how text size reaches a tool.
