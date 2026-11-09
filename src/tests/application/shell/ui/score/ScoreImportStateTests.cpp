@@ -169,3 +169,18 @@ TEST_CASE("the holder a tool reads agrees with the state", "[score][import][stat
         CHECK_FALSE(state.currentScoreHolder().hasScore());
     }
 }
+
+TEST_CASE("the open score's summary outlives a later import that failed", "[score][import][state]")
+{
+    // #350: the Score View reads back the summary of the score it shows, not
+    // of whatever file was tried last.
+    ScoreImportState state;
+    CHECK_FALSE(state.currentScoreSummary().succeeded);
+
+    state.apply(importOf("Gymnopédie"));
+    state.apply(failureOf(MusicXmlImportStatus::malformedXml, "Unexpected end of document"));
+
+    CHECK_FALSE(state.summary().succeeded);
+    CHECK(state.currentScoreSummary().succeeded);
+    CHECK(state.currentScoreSummary().detail != "Unexpected end of document");
+}

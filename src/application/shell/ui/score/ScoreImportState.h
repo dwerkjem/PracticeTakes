@@ -49,6 +49,7 @@ class ScoreImportState
         if (result.score != nullptr)
         {
             currentScore.publish(result.score);
+            openScoreSummary = lastSummary;
         }
 
         return lastSummary;
@@ -85,8 +86,18 @@ class ScoreImportState
         return hasSummary;
     }
 
+    // The summary of the import that produced the score now open: what the
+    // Score View's "N import diagnostics" reads back (#350). A later import
+    // that failed leaves it as it was, as it leaves the score. Empty, and
+    // `succeeded` false, before the first successful import.
+    [[nodiscard]] const ScoreImportSummary& currentScoreSummary() const noexcept
+    {
+        return openScoreSummary;
+    }
+
   private:
     score::CurrentScore currentScore;
     ScoreImportSummary lastSummary;
+    ScoreImportSummary openScoreSummary;
     bool hasSummary = false;
 };

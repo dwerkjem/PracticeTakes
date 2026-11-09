@@ -37,7 +37,8 @@ const ToolRegistry& builtInToolRegistry()
              [](const ToolServices& services)
              {
                  return std::make_unique<ScoreViewComponent>(
-                     services.currentScore, services.clock, services.takes, services.target);
+                     services.currentScore, services.clock, services.takes, services.target,
+                     services.showScoreImportSummary);
              }},
             {"note-view",
              [](const ToolServices& services)

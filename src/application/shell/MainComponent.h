@@ -236,6 +236,9 @@ class MainComponent final
     // non-modal: an import is not a question the user has to answer.
     void showScoreImportWindow();
     void closeScoreImportWindow();
+    // The open score's import summary, again: the Score View's diagnostics
+    // label (#350). Nothing when no score is open.
+    void showCurrentScoreImportSummary();
 
     void showFeedback(const juce::String& context = {});
     void recordSuccessfulToolUse();

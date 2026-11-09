@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include <JuceHeader.h>
 
 #include "../../application/theme/Theme.h"
@@ -56,10 +58,17 @@ class ScoreViewComponent final
         const score::CurrentScore& sharedCurrentScore,
         transport::PracticeClock& practiceClock,
         take::TakeRecorder& takeRecorder,
-        pitch::CurrentTarget& applicationTarget);
+        pitch::CurrentTarget& applicationTarget,
+        std::function<void()> showImportSummary = {});
     ~ScoreViewComponent() override;
 
     void paint(juce::Graphics& graphics) override;
+
+    // "N import diagnostics" on the title strip is a link to the import
+    // summary (#350).
+    void mouseMove(const juce::MouseEvent& event) override;
+    void mouseExit(const juce::MouseEvent& event) override;
+    void mouseUp(const juce::MouseEvent& event) override;
     void resized() override;
     bool keyPressed(const juce::KeyPress& key) override;
     void setTheme(Theme theme) override;
@@ -294,6 +303,14 @@ class ScoreViewComponent final
 
     // Shown while following is suspended and the clock plays.
     juce::TextButton followButton{"Follow"};
+
+    // Opens the open score's import summary; empty does nothing (#350).
+    std::function<void()> onShowImportSummary;
+
+    // Where "N import diagnostics" was last drawn, empty when it was not, and
+    // whether the mouse is over it.
+    juce::Rectangle<int> diagnosticsLink;
+    bool diagnosticsLinkHovered = false;
 
     // Where the score's title goes: the title strip less the controls.
     juce::Rectangle<int> titleTextBounds;

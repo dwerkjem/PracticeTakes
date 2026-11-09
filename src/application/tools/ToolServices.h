@@ -2,6 +2,8 @@
 
 #include "../theme/ThemeType.h"
 
+#include <functional>
+
 namespace score
 {
 class CurrentScore;
@@ -85,4 +87,10 @@ struct ToolServices
     // ToolComponent::setTheme rather than by re-reading this, because a change
     // has to trigger a repaint and not just update state.
     Theme initialTheme = Theme::light;
+
+    // Show the import summary of the score now open, the window Open Score
+    // showed: what the Score View's "N import diagnostics" opens (#350). The
+    // shell's window, so a tool asks for it rather than drawing its own. Empty
+    // does nothing.
+    std::function<void()> showScoreImportSummary;
 };

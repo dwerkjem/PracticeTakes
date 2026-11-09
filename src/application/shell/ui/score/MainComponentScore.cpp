@@ -245,6 +245,17 @@ void MainComponent::showScoreImportWindow()
     scoreImportWindow->toFront(true);
 }
 
+void MainComponent::showCurrentScoreImportSummary()
+{
+    if (!scoreImport.hasScore())
+    {
+        return;
+    }
+    showScoreImportWindow();
+    scoreImportWindow->showSummary(scoreImport.currentScoreSummary());
+    scoreImportWindow->toFront(true);
+}
+
 void MainComponent::closeScoreImportWindow()
 {
     scoreImportWindow.reset();
