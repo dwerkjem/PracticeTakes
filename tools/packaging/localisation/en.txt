@@ -1,5 +1,5 @@
 # The English catalogue: every sentence Practice Takes shows a user, by
-# identifier (openspec/changes/internationalization).
+# identifier (openspec/changes/archive/2026-11-09-internationalization).
 #
 # Why here. Catalogues are packaging input -- data embedded in the binary at
 # build time, beside the fonts, icons and sample score in tools/packaging --

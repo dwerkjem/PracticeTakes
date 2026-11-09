@@ -315,7 +315,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 addChildComponent(languageNote);
 
                 // Note names, which are a musician's training rather than a
-                // language (openspec/changes/internationalization decision 5).
+                // language (openspec/changes/archive/2026-11-09-internationalization decision 5).
                 namingLabel.setText(
                     l10n::text("settings.appearance.naming"), juce::dontSendNotification);
                 appearance::setIcon(namingLabel, appearance::Icon::music);

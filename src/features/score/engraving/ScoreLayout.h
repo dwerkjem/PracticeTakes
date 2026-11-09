@@ -768,7 +768,7 @@ struct ScoreLayout
 
     // Everything in the open score this pass did not draw, as findings meant
     // to be shown to a user: each a catalogue identifier and what it names,
-    // put into words by the view (openspec/changes/internationalization).
+    // put into words by the view (openspec/changes/archive/2026-11-09-internationalization).
     //
     // This list is the reason a first pass of a renderer is an acceptable thing
     // to ship. #200's acceptance criteria already state the rule in the general

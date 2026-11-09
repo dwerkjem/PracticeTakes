@@ -67,7 +67,7 @@ struct Diagnostic
 
     // What happened, as a catalogue identifier ("score.import.slur"), with the
     // values its sentence names. This layer composes no prose
-    // (openspec/changes/internationalization, decision 4): the shell renders
+    // (openspec/changes/archive/2026-11-09-internationalization, decision 4): the shell renders
     // it, and a test asserts the finding rather than a wording.
     std::string code;
     l10n::NamedArguments arguments;

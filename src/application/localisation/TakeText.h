@@ -7,7 +7,7 @@
 
 // The words for what the platform layer reports about takes, which keeps
 // those as data so that it stays JUCE-free and composes no prose
-// (openspec/changes/internationalization, decision 4).
+// (openspec/changes/archive/2026-11-09-internationalization, decision 4).
 namespace l10n
 {
 // What the transport says about a take: "Counting in", "Recording 0:12",

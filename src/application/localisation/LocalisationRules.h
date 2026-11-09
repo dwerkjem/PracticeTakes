@@ -8,7 +8,7 @@
 #include <vector>
 
 // The parts of localisation that are rules rather than text
-// (openspec/changes/internationalization, decisions 3 and 6): named
+// (openspec/changes/archive/2026-11-09-internationalization, decisions 3 and 6): named
 // placeholders, plural categories, and how a number is written. No JUCE
 // dependency, so each rule is tested on its own.
 namespace l10n

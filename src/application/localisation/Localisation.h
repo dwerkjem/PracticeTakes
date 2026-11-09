@@ -13,7 +13,8 @@
 #include <utility>
 #include <vector>
 
-// User-facing text, addressed by identifier (openspec/changes/internationalization).
+// User-facing text, addressed by identifier
+// (openspec/changes/archive/2026-11-09-internationalization).
 //
 // Every string the application shows is an entry in a catalogue, looked up by
 // a stable identifier such as "score.import.slur.unsupported" -- never by its

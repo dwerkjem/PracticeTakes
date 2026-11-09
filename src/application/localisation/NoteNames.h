@@ -7,7 +7,7 @@
 
 // How notes are named on screen: the reader's naming convention and octave
 // numbering, chosen in Settings and independent of the interface language
-// (openspec/changes/internationalization, decision 5). The rule is
+// (openspec/changes/archive/2026-11-09-internationalization, decision 5). The rule is
 // score::pitchName; this holds the choice, as l10n::current() holds the
 // language. Message thread.
 namespace l10n

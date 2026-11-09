@@ -3,7 +3,7 @@
 
 Every sentence Practice Takes shows a user is an entry in a catalogue under
 ``tools/packaging/localisation/``, addressed by identifier
-(openspec/changes/internationalization). Two things go wrong silently there,
+(openspec/changes/archive/2026-11-09-internationalization). Two things go wrong silently there,
 so both fail this check instead:
 
 1. Code references an identifier the English catalogue does not define. The

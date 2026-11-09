@@ -5,7 +5,7 @@
 #include "Pitch.h"
 
 // How a musician names a pitch (no JUCE dependency):
-// openspec/changes/internationalization, decision 5.
+// openspec/changes/archive/2026-11-09-internationalization, decision 5.
 //
 // Two choices, each a reader's own and independent of the interface language
 // and of each other. The naming convention is the letters: "H" is not the

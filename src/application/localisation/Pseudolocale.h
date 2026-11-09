@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-// The pseudolocale (openspec/changes/internationalization, decision 7).
+// The pseudolocale (openspec/changes/archive/2026-11-09-internationalization, decision 7).
 //
 // Generated from the English catalogue, never written: every entry longer by
 // about 40%, its letters accented, and bracketed -- "[Šéţţîñĝš ~~~~]" -- so a

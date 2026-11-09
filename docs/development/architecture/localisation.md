@@ -2,7 +2,7 @@
 
 How Practice Takes addresses the text it shows a user, and what it never
 translates. The proposal and its reasoning are in
-`openspec/changes/internationalization/`; this page is the working reference.
+`openspec/changes/archive/2026-11-09-internationalization/`; this page is the working reference.
 
 ## Text is addressed by identifier
 
