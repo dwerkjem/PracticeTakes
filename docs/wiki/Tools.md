@@ -32,7 +32,7 @@ many cents sharp or flat it is.
   goes away: there is nothing to correct. The tighter zones inside it stay
   faintly tinted, so you can still see the target; the looser ones outside it
   are turned off and leave only a dotted line, in their own colour, where each
-  begins. Red is kept very faint. The graph keeps the note's zones in view while
+  begins. Red is there only while you're in it, and then only faintly. The graph keeps the note's zones in view while
   you sing, and a marker on the bar and on the graph's newest point, and the
   meter's needle, take the colour of the zone you're in.
 - **The tool's ... menu** changes how that looks, for each tuner:

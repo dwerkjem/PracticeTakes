@@ -80,14 +80,18 @@ std::optional<AppDefaults::TunerSettings> decode(const std::optional<ToolSetting
     for (const AppDefaults::TunerNumberField& field : AppDefaults::tunerNumberFields)
     {
         const juce::Identifier key(juce::String(field.key.data(), field.key.size()));
-        if (!field.required && !decoded.getDynamicObject()->hasProperty(key))
-        {
-            continue;
-        }
         const auto value = boundedPayloadNumber(decoded[key], field.minimum, field.maximum);
         if (!value.has_value())
         {
-            return std::nullopt;
+            // A required field that is missing or bad means the payload is not
+            // a tuner's. An optional one -- a look added after a release --
+            // takes its default instead: missing from an older workspace, or a
+            // value a newer build added, it must not cost every other setting.
+            if (field.required)
+            {
+                return std::nullopt;
+            }
+            continue;
         }
         settings.*field.member = *value;
     }

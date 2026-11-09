@@ -182,11 +182,13 @@ void drawSign(
 }
 
 // Red covers everything past the out-of-tune limit -- on a graph, most of the
-// plot -- so it is kept very faint, lit or not.
+// plot -- so it is kept very faint when lit, and invisible otherwise: when the
+// pitch is not in it (tuner::BandLook::hidden), and on the half of it the
+// pitch is not on.
 constexpr float outsideLitAlpha = 0.14f;
-constexpr float outsideTintedAlpha = 0.05f;
+constexpr float outsideTintedAlpha = 0.0f;
 constexpr float graphOutsideLitAlpha = 0.09f;
-constexpr float graphOutsideTintedAlpha = 0.03f;
+constexpr float graphOutsideTintedAlpha = 0.0f;
 
 // How strongly one half of a band is filled.
 [[nodiscard]] float fillAlpha(
@@ -246,7 +248,7 @@ void drawZoneStrips(
 
     for (auto band = bands.rbegin(); band != bands.rend(); ++band)
     {
-        if (band->look == tuner::BandLook::dotted)
+        if (band->look == tuner::BandLook::dotted || band->look == tuner::BandLook::hidden)
         {
             continue;
         }
@@ -510,7 +512,7 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
         5.0f);
 
     // The zones, each as wide as its range, loosest first so the tighter ones
-    // sit on top (tuner-intonation-zones).
+    // sit on top.
     const auto xOf = [&barBounds, scaleCents](double cents)
     {
         return juce::jmap(
@@ -526,7 +528,7 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
         const auto colour = intonationZoneColour(band->zone);
         for (const double side : {-1.0, 1.0})
         {
-            if (band->look == tuner::BandLook::dotted)
+            if (band->look == tuner::BandLook::dotted || band->look == tuner::BandLook::hidden)
             {
                 continue;
             }
@@ -669,7 +671,7 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
         const auto colour = intonationZoneColour(band->zone);
         for (const double side : {-1.0, 1.0})
         {
-            if (band->look == tuner::BandLook::dotted)
+            if (band->look == tuner::BandLook::dotted || band->look == tuner::BandLook::hidden)
             {
                 continue;
             }
@@ -993,8 +995,8 @@ void TunerComponent::drawCompactBar(
     compact::Shape shape) const
 {
     // A bar along the long axis with the reading in the middle of it. The
-    // -50..+50 tick labels go: five numbers do not fit across 180px, and the
-    // position of the marker already carries what they said.
+    // tick labels go: five numbers do not fit across 180px, and the position
+    // of the marker already carries what they said.
     const auto palette = tunerPaletteFor(currentTheme);
     const auto vertical = shape == compact::Shape::vertical;
     const auto inTune = isNearPerfect();
@@ -1031,16 +1033,19 @@ void TunerComponent::drawCompactBar(
 
     if (hasSignal)
     {
-        const auto cents = static_cast<float>(juce::jlimit(-50.0, 50.0, displayedCents));
+        // The same scale as the full bar, from the ... menu, so a reading sits
+        // in the same place whichever size the tuner is.
+        const auto scale = static_cast<float>(scaleSlider.getValue());
+        const auto cents = juce::jlimit(-scale, scale, static_cast<float>(displayedCents));
 
         // Sharp is up on a vertical bar and right on a horizontal one, which is
         // the direction each of those already means elsewhere in the tool.
         const auto position =
             vertical ? juce::jmap(
-                           cents, -50.0f, 50.0f, static_cast<float>(plot.getBottom()),
+                           cents, -scale, scale, static_cast<float>(plot.getBottom()),
                            static_cast<float>(plot.getY()))
                      : juce::jmap(
-                           cents, -50.0f, 50.0f, static_cast<float>(plot.getX()),
+                           cents, -scale, scale, static_cast<float>(plot.getX()),
                            static_cast<float>(plot.getRight()));
 
         graphics.setColour(inTune ? palette.inTune : palette.accent);

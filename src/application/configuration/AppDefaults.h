@@ -217,6 +217,21 @@ inline constexpr std::array presets{
     return generalInstrumentTuner;
 }
 
+// A preset applied to a tuner keeps the tuner's look -- its scale, signs,
+// halves, marker and offset, chosen from its ... menu -- and changes only how
+// it reads pitch. A preset is about the material, not about how the tuner is
+// drawn.
+[[nodiscard]] constexpr TunerSettings
+presetKeepingLook(TunerSettings preset, const TunerSettings& current)
+{
+    preset.scaleCents = current.scaleCents;
+    preset.signs = current.signs;
+    preset.bothHalvesLit = current.bothHalvesLit;
+    preset.marker = current.marker;
+    preset.offsetShown = current.offsetShown;
+    return preset;
+}
+
 [[nodiscard]] constexpr TunerSettings tunerDefaults()
 {
     return generalInstrumentTuner;

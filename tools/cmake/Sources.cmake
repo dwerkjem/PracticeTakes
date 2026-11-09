@@ -97,6 +97,7 @@ set(PRACTICE_TAKES_SOURCES
     src/application/theme/AppLookAndFeel.cpp
     src/application/theme/MiniStaff.cpp
     src/application/theme/MiniStaff.h
+    src/application/theme/PlusOrMinusCents.h
     src/application/theme/Theme.cpp
     src/application/theme/Theme.h
     src/application/theme/ThemeType.h

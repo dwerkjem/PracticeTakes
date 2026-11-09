@@ -56,7 +56,7 @@ TEST_CASE("the tuner's red band begins at the singer's out-of-tune limit", "[tun
     CHECK(bands[2].outerCents == 45.0);
     CHECK(bands[3].innerCents == 45.0);
     CHECK(bands[2].look == BandLook::lit);
-    CHECK(bands[3].look == BandLook::dotted);
+    CHECK(bands[3].look == BandLook::hidden);
 }
 
 TEST_CASE("the tuner's near-perfect band follows the singer's setting", "[tuner][zones]")
@@ -68,11 +68,11 @@ TEST_CASE("the tuner's near-perfect band follows the singer's setting", "[tuner]
     CHECK(bands[0].look == BandLook::lit);
 }
 
-TEST_CASE("with no signal every tuner zone is tinted and none is lit", "[tuner][zones]")
+TEST_CASE("with no signal nothing is lit, and red is not there at all", "[tuner][zones]")
 {
     CHECK(
         looksOf(zoneBands(std::nullopt, limits(5.0, 25.0))) ==
-        std::vector{BandLook::tinted, BandLook::tinted, BandLook::tinted, BandLook::tinted});
+        std::vector{BandLook::tinted, BandLook::tinted, BandLook::tinted, BandLook::hidden});
 }
 
 TEST_CASE(
@@ -85,19 +85,19 @@ TEST_CASE(
     {
         CHECK(
             looksOf(zoneBands(-3.0, usual)) ==
-            std::vector{BandLook::lit, BandLook::dotted, BandLook::dotted, BandLook::dotted});
+            std::vector{BandLook::lit, BandLook::dotted, BandLook::dotted, BandLook::hidden});
     }
     SECTION("acceptable: near perfect stays tinted inside it, the looser two are dotted")
     {
         CHECK(
             looksOf(zoneBands(12.0, usual)) ==
-            std::vector{BandLook::tinted, BandLook::lit, BandLook::dotted, BandLook::dotted});
+            std::vector{BandLook::tinted, BandLook::lit, BandLook::dotted, BandLook::hidden});
     }
-    SECTION("near but off: both tighter bands are tinted, red is dotted")
+    SECTION("near but off: both tighter bands are tinted, red is hidden")
     {
         CHECK(
             looksOf(zoneBands(-30.0, usual)) ==
-            std::vector{BandLook::tinted, BandLook::tinted, BandLook::lit, BandLook::dotted});
+            std::vector{BandLook::tinted, BandLook::tinted, BandLook::lit, BandLook::hidden});
     }
     SECTION("outside: red is lit, every tighter band tinted")
     {

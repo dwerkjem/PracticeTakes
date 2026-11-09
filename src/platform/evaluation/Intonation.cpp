@@ -115,6 +115,10 @@ Intonation judgeIntonation(
         result.sustainFrames > 0
             ? static_cast<double>(sure.size()) / static_cast<double>(result.sustainFrames)
             : 0.0;
+    // The limits in order, so the verdict and the zone's colour use the same
+    // tolerance even when the settings were given out of order.
+    const auto limits = settings.zoneLimits();
+
     if (sure.size() < settings.minimumSureFrames || share < settings.minimumSureShare)
     {
         return result;
@@ -128,7 +132,7 @@ Intonation judgeIntonation(
     for (const double cents : sure)
     {
         distances.push_back(std::abs(cents - result.cents));
-        if (std::abs(cents) <= settings.toleranceCents)
+        if (std::abs(cents) <= limits.toleranceCents)
         {
             ++inTolerance;
         }
@@ -147,7 +151,7 @@ Intonation judgeIntonation(
         }
     }
 
-    result.zone = pitch::zoneOf(result.cents, settings.zoneLimits());
+    result.zone = pitch::zoneOf(result.cents, limits);
     const double size = std::abs(result.cents);
     if (size > settings.wrongCents)
     {
@@ -155,7 +159,7 @@ Intonation judgeIntonation(
         result.sungMidi = writtenMidi + (12 * result.octave) +
                           static_cast<int>(std::lround(result.cents / 100.0));
     }
-    else if (size <= settings.toleranceCents)
+    else if (size <= limits.toleranceCents)
     {
         result.verdict = IntonationVerdict::inTune;
     }
