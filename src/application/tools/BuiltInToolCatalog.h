@@ -59,6 +59,15 @@
             {900, 480},
             /* readsAudioSamples: pitch comes from SharedPitchAnalysis */ false},
         ToolDefinition{
+            "now-next",
+            "Now & Next",
+            {"performance-view"},
+            ToolInstancePolicy::multi,
+            // NowNextComponent::settingsVersion: look-ahead, contrast, part.
+            1,
+            {900, 460},
+            /* readsAudioSamples: it reads the clock and the score only */ false},
+        ToolDefinition{
             "take-review",
             "Take Review",
             {"review"},

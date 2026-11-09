@@ -804,6 +804,26 @@ TEST_CASE(
     CHECK(AppSettings::load(reader).state.inTuneCents == Catch::Approx(25.0));
 }
 
+TEST_CASE(
+    "the target following the score survives a round trip, and is on by default",
+    "[settings][persistence]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile reader(temporary.path, settingsOptions());
+        CHECK(AppSettings::load(reader).state.targetFollowsScore);
+    }
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        AppSettings::State expected;
+        expected.targetFollowsScore = false;
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    CHECK_FALSE(AppSettings::load(reader).state.targetFollowsScore);
+}
+
 TEST_CASE("a chosen target and keeping it survive a round trip", "[settings][persistence]")
 {
     TemporarySettingsFile temporary;

@@ -174,6 +174,9 @@ set(PRACTICE_TAKES_SOURCES
     src/features/notes/NoteViewComponent.cpp
     src/features/notes/NoteViewComponent.h
     src/features/notes/NoteViewModel.h
+    src/features/nownext/NowNextComponent.cpp
+    src/features/nownext/NowNextComponent.h
+    src/features/nownext/NowNextModel.h
     src/features/performance/ApplicationLaunchTimer.cpp
     src/features/performance/ApplicationLaunchTimer.h
     src/features/feedback/FeedbackComponent.cpp
@@ -222,6 +225,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/pitch/ReferencePitch.h
     src/platform/pitch/SteadyReading.h
     src/platform/pitch/TargetChoice.h
+    src/platform/pitch/TargetFollowing.h
     src/platform/pitch/TargetReading.h
     src/platform/score/CurrentScore.h
     src/platform/score/Diagnostic.h
@@ -229,6 +233,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/score/Measure.h
     src/platform/score/MusicalTime.h
     src/platform/score/Pitch.h
+    src/platform/score/PartTimeline.cpp
+    src/platform/score/PartTimeline.h
     src/platform/score/PitchNames.h
     src/platform/score/Score.h
     src/platform/score/ScoreAttributes.h
@@ -268,6 +274,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/take/TakeRecorder.cpp
     src/platform/take/TakeRecorder.h
     src/platform/take/TakeStatus.h
+    src/platform/transport/AudibleTick.h
     src/platform/transport/ClockCommandQueue.h
     src/platform/transport/ClockMath.h
     src/platform/transport/ClockRenderer.cpp
@@ -334,6 +341,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/analysis/tuner/TunerSettingsCodecTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
     src/tests/features/notes/NoteViewModelTests.cpp
+    src/tests/features/nownext/NowNextModelTests.cpp
     src/tests/features/score/MusicFontTests.cpp
     src/tests/features/score/ScoreViewSettingsTests.cpp
     src/tests/features/score/SmuflGlyphsTests.cpp
@@ -371,9 +379,11 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/pitch/ReferencePitchTests.cpp
     src/tests/platform/pitch/SteadyReadingTests.cpp
     src/tests/platform/pitch/TargetChoiceTests.cpp
+    src/tests/platform/pitch/TargetFollowingTests.cpp
     src/tests/platform/pitch/TargetReadingTests.cpp
     src/tests/platform/score/CurrentScoreTests.cpp
     src/tests/platform/score/MusicalTimeTests.cpp
+    src/tests/platform/score/PartTimelineTests.cpp
     src/tests/platform/score/PitchNamesTests.cpp
     src/tests/platform/score/PitchTests.cpp
     src/tests/platform/score/ScoreInvariantsTests.cpp
@@ -464,6 +474,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/evaluation/OnsetTiming.cpp
     src/platform/evaluation/Intonation.cpp
     src/platform/evaluation/NoteMatching.cpp
+    src/platform/score/PartTimeline.cpp
     src/platform/evaluation/PitchContour.cpp
     src/platform/evaluation/TakeReview.cpp
 )

@@ -71,6 +71,10 @@ struct State
     juce::String chosenTargetSounding;
     juce::String chosenTargetWritten;
     bool keepTargetWhenScoreOpens = false;
+
+    // Whether a score's target follows the note being sung while the clock
+    // plays (now-and-next).
+    bool targetFollowsScore = true;
     AppDefaults::TunerSettings tuner = AppDefaults::tunerDefaults();
     juce::String tunerBounds;
     juce::String spectrogramBounds;

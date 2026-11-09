@@ -6,6 +6,7 @@
 #include "../../features/analysis/spectrogram/SpectrogramComponent.h"
 #include "../../features/analysis/tuner/TunerComponent.h"
 #include "../../features/notes/NoteViewComponent.h"
+#include "../../features/nownext/NowNextComponent.h"
 #include "../../features/review/TakeReviewComponent.h"
 #include "../../features/score/ScoreViewComponent.h"
 
@@ -43,6 +44,17 @@ const ToolRegistry& builtInToolRegistry()
                      services.pitchAnalysis, services.referencePitch, services.target,
                      services.midi, [&takes = services.takes]
                      { return takes.intonationSettings().toleranceCents; });
+             }},
+            {"now-next",
+             [](const ToolServices& services)
+             {
+                 return std::make_unique<NowNextComponent>(
+                     services.currentScore, services.clock,
+                     [&audio = services.audio]
+                     {
+                         auto* device = audio.deviceManager().getCurrentAudioDevice();
+                         return device != nullptr ? device->getOutputLatencyInSamples() : 0;
+                     });
              }},
             {"take-review", [](const ToolServices& services)
              { return std::make_unique<TakeReviewComponent>(services.takes, services.clock); }},

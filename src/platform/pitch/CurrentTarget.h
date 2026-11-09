@@ -85,6 +85,10 @@ class CurrentTarget
     // (Settings -> Practice; target-note-picker decision 4).
     bool keepChosenWhenScoreOpens = false;
 
+    // Whether a target from the score follows the note being sung while the
+    // clock plays (Settings -> Practice; now-and-next decision 5).
+    bool followScoreWhilePlaying = true;
+
     // Whether a score now opening replaces the target: always, unless the
     // target was chosen and the player asked to keep it.
     [[nodiscard]] bool scoreReplacesTarget() const noexcept

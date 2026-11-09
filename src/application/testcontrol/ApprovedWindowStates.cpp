@@ -99,7 +99,9 @@ const std::vector<ApprovedWindowState>& states()
          WorkspaceArrangement::tabbed, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "All three tools sharing one tab strip"},
         {"all-tools-docked",
-         Tools{"tuner", "spectrogram", "harmonics", "score-view", "take-review", "note-view"},
+         Tools{
+             "tuner", "spectrogram", "harmonics", "score-view", "take-review", "note-view",
+             "now-next"},
          ToolPresentation::docked, WorkspaceArrangement::split, WindowGeometry::normal,
          MicrophoneCondition::available, false, "", false,
          "Every tool tiled at once -- the three live-audio tools, the Score View, and the take "
@@ -449,6 +451,25 @@ const std::vector<ApprovedWindowState>& states()
         {"note-view-empty", Tools{"note-view"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "The Note View before anything is sung or a score opened"},
+        // Now & Next (now-and-next): the sample's voice, the clock resting at
+        // bar 2, with the current note and the notes coming.
+        {"now-next", Tools{"now-next"}, ToolPresentation::docked, WorkspaceArrangement::single,
+         WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
+         "Now & Next: the note at the cursor large, with its lyric, staff and time, and the "
+         "notes coming, with rests, repeats and breaths",
+         0.0, "", bundledSampleFixtureName(), false, false, false, 1},
+        {"now-next-contrast", Tools{"now-next"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false, "Now & Next in high contrast, for a music stand", 0.0, "high-contrast",
+         bundledSampleFixtureName(), false, false, false, 1},
+        // At the very start: the strip has a rest, then a breath mark before
+        // the next phrase.
+        {"now-next-start", Tools{"now-next"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "Now & Next at the start of the song: a rest in the strip and a breath mark before "
+         "the next phrase",
+         0.0, "", bundledSampleFixtureName(), false, false, false, 0},
         // The Take Review tool before any take: what most sessions see first.
         {"take-review-empty", Tools{"take-review"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
