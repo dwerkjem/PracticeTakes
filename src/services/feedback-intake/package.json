@@ -14,7 +14,7 @@
     "build:docker": "esbuild src/docker-server.ts --bundle --platform=node --format=esm --loader:.html=text --loader:.css=text --loader:.js=text --outfile=dist/docker-server.js"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261030.1",
+    "@cloudflare/workers-types": "^5.20261106.1",
     "@types/node": "26.6.6",
     "@vitest/coverage-v8": "5.1.0",
     "esbuild": "^0.28.2",
