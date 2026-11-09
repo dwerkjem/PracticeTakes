@@ -4,7 +4,7 @@
       tuner unchanged.
 - [x] 1.2 `pitch::staffStepsOf` with treble 8vb; `NoteViewModel` (window, key
       geometry, trail, shading). Tests.
-- [ ] 1.3 `ToolServices::midi`.
+- [x] 1.3 `ToolServices::midi`.
 
 ## 2. The tool
 

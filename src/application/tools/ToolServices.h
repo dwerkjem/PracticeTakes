@@ -24,6 +24,7 @@ class CurrentTarget;
 } // namespace pitch
 
 class AudioInputService;
+class MidiInputService;
 class SharedPitchAnalysis;
 
 // The shared services every tool is built against.
@@ -75,6 +76,10 @@ struct ToolServices
     // opened, and by the player through a tool: the tuner's picker and the
     // Score View's menu (target-note-picker).
     pitch::CurrentTarget& target;
+
+    // The MIDI keyboard. A tool that wants its keys registers a consumer of
+    // its own, as the take recorder does (note-view design.md decision 4).
+    MidiInputService& midi;
 
     // The theme a tool should start in. Later changes arrive through
     // ToolComponent::setTheme rather than by re-reading this, because a change
