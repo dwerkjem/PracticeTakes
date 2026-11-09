@@ -8,6 +8,10 @@ release version, it also synchronizes the `version-string` in `tools/vcpkg.json`
 
 Do not copy the version into `CMakeLists.txt` or C++ source files.
 
+For a minor release, work through the
+[minor release checklist](MINOR_RELEASE_CHECKLIST.md): it puts the steps below
+in order with the checks the workflow cannot make for you.
+
 ## Automated release
 
 1. Merge the intended changes into `main`.
