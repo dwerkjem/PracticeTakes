@@ -224,6 +224,10 @@ marks, with each part named beside its staves.
 - **Parts** shows and hides individual parts.
 - **Fit width** and **Fit page** (Page view) size the page to the panel's width,
   or show the whole page at once.
+- **Notes under the score** say where the drawing differs from the file (beams
+  grouped by the time signature, say). The **×** at their right dismisses them
+  and gives their room to the score; a dismissed note stays dismissed for every
+  score until **Show dismissed notes** in the **…** menu brings them back.
 
 ### Following the practice clock
 

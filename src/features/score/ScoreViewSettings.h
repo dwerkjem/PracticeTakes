@@ -7,6 +7,7 @@
 #include <array>
 #include <cstddef>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -70,6 +71,12 @@ struct Settings
     // (openspec/changes/archive/2026-11-08-take-review/design.md, decision 3).
     bool showReview = true;
 
+    // The notices the reader dismissed from the strip under the score, by
+    // their catalogue identifiers, in the order dismissed. A notice describes
+    // what the engraver does rather than one file, so a dismissed one stays
+    // dismissed for every score until the menu shows them again.
+    std::vector<std::string> dismissedNotices;
+
     bool operator==(const Settings&) const = default;
 };
 
@@ -87,7 +94,9 @@ inline constexpr int settingsVersion = 1;
 // "view=page;size=7" -- the view by name and the size in pixels per space --
 // then, when any part is hidden, ";hidden=P1:Voice,P3:Alto"; then, each only
 // when it is not the default, ";ahead=3", ";follow=0", ";fit=page" and
-// ";review=0". A part's id is an
+// ";review=0", and ";dismissed=a.b,c.d" when any notice is dismissed. A
+// notice's identifier holds only letters, digits, `.` and `-`, and one that
+// does not is dropped rather than escaped. A part's id is an
 // XML name and never holds `:` `,` `;` or `=`; its name can, so the name is
 // percent-encoded for those and `%`. A version without hidden parts ignores the
 // key, which is why adding it did not need a new `settingsVersion`.

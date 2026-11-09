@@ -6,8 +6,8 @@ using appearance::Icon;
 
 TEST_CASE("every icon is embedded and parses", "[theme][icons]")
 {
-    for (int index = static_cast<int>(Icon::globe);
-         index <= static_cast<int>(Icon::slidersVertical); ++index)
+    for (int index = static_cast<int>(Icon::globe); index <= static_cast<int>(Icon::presentation);
+         ++index)
     {
         const auto icon = static_cast<Icon>(index);
         CAPTURE(index);

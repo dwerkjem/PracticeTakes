@@ -378,6 +378,17 @@ const std::vector<ApprovedWindowState>& states()
          false, "", false,
          "The score view with the sample's voice hidden: the piano alone, in Page view", 0.0,
          "view=page;hidden=P1:Voice", bundledSampleFixtureName(), false},
+        // The sample with every notice under it dismissed: the strip gone
+        // and its room given to the score.
+        {"score-view-notices-dismissed", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view with the notes under the score dismissed: the strip gone, the score "
+         "taller",
+         0.0,
+         "view=page;dismissed=score.notice.key-cancel,score.notice.beams-at-rests,"
+         "score.notice.beams-by-time",
+         bundledSampleFixtureName(), false},
         // The practice clock playing the sample, with the transport in the
         // control strip: the one state where the clock is running
         // (practice-clock).

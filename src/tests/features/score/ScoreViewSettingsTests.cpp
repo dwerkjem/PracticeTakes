@@ -180,3 +180,25 @@ TEST_CASE("cursor settings that cannot be read fall back", "[score][view-setting
     CHECK(decoded("view=page;size=7;fit=sideways").pageFit == score_view::PageFit::width);
     CHECK(decoded("view=vertical;size=7;fit=page").view == score_view::ViewMode::vertical);
 }
+
+TEST_CASE("dismissed notices are remembered by identifier", "[score][view-settings][notices]")
+{
+    score_view::Settings settings;
+    CHECK(score_view::encode(settings).data.find("dismissed") == std::string::npos);
+
+    settings.dismissedNotices = {"score.engraving.beams-at-rests", "score.view.notice.oversize"};
+    const auto payload = score_view::encode(settings);
+    CHECK(
+        payload.data.find(";dismissed=score.engraving.beams-at-rests,score.view.notice.oversize") !=
+        std::string::npos);
+    CHECK(score_view::decode(payload) == settings);
+
+    // Anything that is not an identifier is dropped, not escaped, either way.
+    settings.dismissedNotices = {"a;b", "good.one", ""};
+    CHECK(
+        score_view::decode(score_view::encode(settings)).dismissedNotices ==
+        std::vector<std::string>{"good.one"});
+    CHECK(
+        score_view::decode({score_view::settingsVersion, "view=page;size=7;dismissed=x.y,,a=b"})
+            .dismissedNotices == std::vector<std::string>{"x.y"});
+}

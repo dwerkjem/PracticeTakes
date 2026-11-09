@@ -1,6 +1,7 @@
 #include "ScoreViewComponent.h"
 #include "../../application/localisation/Localisation.h"
 #include "../../application/localisation/NoteNames.h"
+#include "../../application/theme/Icons.h"
 #include "NoticeText.h"
 
 #include "../../platform/evaluation/TakeReview.h"
@@ -526,6 +527,10 @@ ScoreViewComponent::ScoreViewComponent(
         followButton, "score-view-follow", l10n::text("score.view.follow-again"),
         [this] { resumeFollowing(); });
     followButton.setVisible(false);
+    setUpButton(
+        dismissNoticesButton, "score-view-dismiss-notices", l10n::text("score.view.notice.dismiss"),
+        [this] { dismissNotices(); });
+    appearance::setIcon(dismissNoticesButton, appearance::Icon::close);
 
     for (juce::Label* label : {&sizeLabel, &pageLabel})
     {
@@ -619,6 +624,7 @@ void ScoreViewComponent::refreshFromCurrentScore()
     // A different score starts at its beginning.
     currentPage = 0;
     relayout(std::nullopt, true);
+    updateNoticeStrip();
     scrollProgrammatically(0, 0);
 
     // The clock may already be somewhere in it -- moved the moment it opened,
@@ -1125,7 +1131,22 @@ void ScoreViewComponent::resized()
     // does not move the staff. A strip that appeared only when a notice did
     // would reflow everything the moment a file finished loading, and which
     // files have notices is a property of the files rather than of the tool.
-    bounds.removeFromBottom(scaledHeight(noticeStripHeight));
+    // A reader who has dismissed notices has said they would rather have the
+    // room (wantsNoticeStrip).
+    noticeStripBounds = {};
+    if (noticeStripReserved)
+    {
+        noticeStripBounds = bounds.removeFromBottom(scaledHeight(noticeStripHeight));
+    }
+    const int dismissSize = scaledHeight(22);
+    dismissNoticesButton.setBounds(
+        noticeStripBounds.getRight() - canvasMargin - dismissSize, noticeStripBounds.getY() + 4,
+        dismissSize, dismissSize);
+    const bool dismissable =
+        noticeStripReserved && layout.outcome == engraving::LayoutOutcome::laidOut &&
+        std::ranges::any_of(
+            shownNotices(), [](const ShownNotice& shown) { return shown.dismissable; });
+    dismissNoticesButton.setVisible(dismissable);
 
     const std::optional<std::size_t> keep = measureInView();
     viewport.setBounds(bounds);
@@ -1221,6 +1242,7 @@ void ScoreViewComponent::resetToDefaults()
     renderedScore = nullptr;
     refreshFromCurrentScore();
     relayout(std::nullopt, true);
+    updateNoticeStrip();
     repaint();
 }
 
@@ -1234,6 +1256,7 @@ void ScoreViewComponent::applySettings(const ToolSettingsPayload& payload)
     const std::optional<std::size_t> keep = measureInView();
     settings = score_view::decode(payload);
     relayout(keep);
+    updateNoticeStrip();
 
     // The look-ahead and the review are not part of the layout, so a relayout
     // that found nothing changed did not reach the marks.
@@ -1271,6 +1294,7 @@ bool ScoreViewComponent::showView(const juce::String& view)
     const std::optional<std::size_t> keep = measureInView();
     settings = wanted;
     relayout(keep);
+    updateNoticeStrip();
 
     return true;
 }
@@ -1746,6 +1770,12 @@ std::vector<ToolComponent::MenuEntry> ScoreViewComponent::optionsMenuEntries()
         l10n::text("score.view.menu.follow"), [this] { setFollow(!settings.follow); },
         settings.follow});
 
+    // Notices dismissed from the strip under the score come back from here.
+    MenuEntry showNotices{
+        l10n::text("score.view.menu.show-notices"), [this] { showDismissedNotices(); }, false};
+    showNotices.enabled = !settings.dismissedNotices.empty();
+    entries.push_back(std::move(showNotices));
+
     // The take under review (take-review decision 3).
     entries.push_back(MenuEntry{
         l10n::text("score.view.menu.take-review"), [this] { setShowReview(!settings.showReview); },
@@ -1754,16 +1784,26 @@ std::vector<ToolComponent::MenuEntry> ScoreViewComponent::optionsMenuEntries()
     return entries;
 }
 
-juce::String ScoreViewComponent::noticeText() const
+std::vector<ScoreViewComponent::ShownNotice> ScoreViewComponent::shownNotices() const
 {
-    juce::StringArray lines;
+    std::vector<ShownNotice> shown;
+    const auto add = [this, &shown](std::string code, juce::String text, bool dismissable)
+    {
+        if (dismissable &&
+            std::ranges::find(settings.dismissedNotices, code) != settings.dismissedNotices.end())
+        {
+            return;
+        }
+        shown.push_back({std::move(code), std::move(text), dismissable});
+    };
 
     // First, because it explains everything else on the page. Without the
     // font the staff, stems and beams still draw and every symbol is missing,
     // which would otherwise look like a score with no notes in it.
     if (!musicFont.isLoaded())
     {
-        lines.add(l10n::text("score.view.notice.no-music-font"));
+        add("score.view.notice.no-music-font", l10n::text("score.view.notice.no-music-font"),
+            false);
     }
 
     const bool anyOversize = std::any_of(
@@ -1771,15 +1811,61 @@ juce::String ScoreViewComponent::noticeText() const
 
     if (settings.view == score_view::ViewMode::page && anyOversize)
     {
-        lines.add(l10n::text("score.view.notice.oversize"));
+        add("score.view.notice.oversize", l10n::text("score.view.notice.oversize"), true);
     }
 
     for (const engraving::Notice& notice : layout.notices)
     {
-        lines.add(score_view::noticeText(notice));
+        add(notice.code, score_view::noticeText(notice), true);
     }
 
+    return shown;
+}
+
+juce::String ScoreViewComponent::noticeText() const
+{
+    juce::StringArray lines;
+    for (const ShownNotice& shown : shownNotices())
+    {
+        lines.add(shown.text);
+    }
     return lines.joinIntoString("  ");
+}
+
+bool ScoreViewComponent::wantsNoticeStrip() const
+{
+    return settings.dismissedNotices.empty() || !shownNotices().empty();
+}
+
+void ScoreViewComponent::updateNoticeStrip()
+{
+    const bool wanted = wantsNoticeStrip();
+    if (wanted != noticeStripReserved)
+    {
+        noticeStripReserved = wanted;
+    }
+    // Laid out again either way: the dismiss button comes and goes with
+    // what the strip holds, even when the strip itself stays.
+    resized();
+    repaint();
+}
+
+void ScoreViewComponent::dismissNotices()
+{
+    for (const ShownNotice& shown : shownNotices())
+    {
+        if (shown.dismissable)
+        {
+            settings.dismissedNotices.push_back(shown.code);
+        }
+    }
+    updateNoticeStrip();
+}
+
+void ScoreViewComponent::showDismissedNotices()
+{
+    settings.dismissedNotices.clear();
+    updateNoticeStrip();
 }
 
 void ScoreViewComponent::paintMessage(
@@ -1882,13 +1968,17 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
 
     const juce::String notices = noticeText();
 
-    if (notices.isEmpty())
+    if (notices.isEmpty() || noticeStripBounds.isEmpty())
     {
         return;
     }
 
-    const juce::Rectangle<int> strip =
-        bounds.removeFromBottom(scaledHeight(noticeStripHeight)).reduced(canvasMargin, 4);
+    juce::Rectangle<int> strip = noticeStripBounds.reduced(canvasMargin, 4);
+    if (dismissNoticesButton.isVisible())
+    {
+        // The text stops short of the close button rather than running under it.
+        strip.setRight(dismissNoticesButton.getX() - 6);
+    }
 
     graphics.setColour(colours.panel);
     graphics.fillRect(strip.expanded(canvasMargin, 2));

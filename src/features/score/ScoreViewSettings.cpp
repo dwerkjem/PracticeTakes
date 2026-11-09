@@ -29,6 +29,21 @@ namespace
 
 // Digits, then optionally a point and digits. Anything else -- a sign, an
 // exponent, a stray character -- is not a size.
+// A catalogue identifier, which is all a dismissed notice is saved as.
+[[nodiscard]] bool isNoticeCode(std::string_view code)
+{
+    return !code.empty() &&
+           std::all_of(
+               code.begin(), code.end(),
+               [](char character)
+               {
+                   return (character >= 'a' && character <= 'z') ||
+                          (character >= 'A' && character <= 'Z') ||
+                          (character >= '0' && character <= '9') || character == '.' ||
+                          character == '-';
+               });
+}
+
 [[nodiscard]] std::optional<double> parseSize(std::string_view text)
 {
     double value = 0.0;
@@ -275,6 +290,17 @@ ToolSettingsPayload encode(const Settings& settings)
     {
         data += ";review=0";
     }
+    bool firstDismissed = true;
+    for (const std::string& code : settings.dismissedNotices)
+    {
+        if (!isNoticeCode(code))
+        {
+            continue;
+        }
+        data += firstDismissed ? ";dismissed=" : ",";
+        data += code;
+        firstDismissed = false;
+    }
 
     return {settingsVersion, data};
 }
@@ -327,6 +353,20 @@ Settings decode(const ToolSettingsPayload& payload)
             else if (key == "review")
             {
                 settings.showReview = value != "0";
+            }
+            else if (key == "dismissed")
+            {
+                std::size_t from = 0;
+                while (from <= value.size())
+                {
+                    const std::size_t comma = std::min(value.find(',', from), value.size());
+                    const std::string_view code = value.substr(from, comma - from);
+                    if (isNoticeCode(code))
+                    {
+                        settings.dismissedNotices.emplace_back(code);
+                    }
+                    from = comma + 1;
+                }
             }
             else if (key == "fit")
             {

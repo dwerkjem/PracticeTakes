@@ -246,7 +246,28 @@ class ScoreViewComponent final
         const juce::String& heading,
         const juce::String& detail) const;
 
+    // A line of the strip under the score: what it says, and the identifier
+    // a dismissal is remembered by. The missing music font cannot be
+    // dismissed, since it explains a page with no symbols on it.
+    struct ShownNotice
+    {
+        std::string code;
+        juce::String text;
+        bool dismissable = true;
+    };
+
+    [[nodiscard]] std::vector<ShownNotice> shownNotices() const;
     [[nodiscard]] juce::String noticeText() const;
+
+    // The strip is reserved whether or not anything is in it, so opening a
+    // score does not move the staff -- until the reader dismisses a notice.
+    // From then it is there only while something undismissed is. Decided when
+    // the score or the dismissals change, never on a resize, so a page that
+    // becomes oversize as the panel shrinks cannot flap it.
+    [[nodiscard]] bool wantsNoticeStrip() const;
+    void updateNoticeStrip();
+    void dismissNotices();
+    void showDismissedNotices();
 
     const score::CurrentScore& currentScore;
 
@@ -304,6 +325,11 @@ class ScoreViewComponent final
 
     // Shown while following is suspended and the clock plays.
     juce::TextButton followButton{l10n::text("score.view.follow")};
+
+    // Closes the notice strip, beside its text.
+    juce::TextButton dismissNoticesButton;
+    bool noticeStripReserved = true;
+    juce::Rectangle<int> noticeStripBounds;
 
     // Opens the open score's import summary; empty does nothing (#350).
     std::function<void()> onShowImportSummary;

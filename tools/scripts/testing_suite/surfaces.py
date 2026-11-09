@@ -1383,6 +1383,29 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The sample with every note under the score dismissed: the strip goes and
+    # the score takes its room.
+    Surface(
+        state="score-view-notices-dismissed",
+        title="The score view with its notes dismissed",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "no-strip",
+                "Is there no strip of notes under the score, and does the page reach down "
+                "into the room it took?",
+            ),
+            Question(
+                "dismiss-and-restore",
+                "On the sample in Page view, click the close button at the right of the notes "
+                "under the score: do they go, and does the score grow into the room? Then "
+                "open the ... menu and choose Show dismissed notes: do they come back?",
+                behavioural=True,
+            ),
+        ),
+    ),
     # The song with its voice hidden from the Parts menu
     # (openspec/changes/archive/2026-11-06-score-part-selection).
     Surface(

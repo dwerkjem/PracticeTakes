@@ -19,7 +19,7 @@ struct Entry
     std::string_view resource;
 };
 
-constexpr std::array<Entry, 48> resources{{
+constexpr std::array<Entry, 50> resources{{
     {Icon::globe, "globe_svg"},
     {Icon::palette, "palette_svg"},
     {Icon::audioLines, "audiolines_svg"},
@@ -68,6 +68,8 @@ constexpr std::array<Entry, 48> resources{{
     {Icon::check, "check_svg"},
     {Icon::repeat, "repeat_svg"},
     {Icon::slidersVertical, "slidersvertical_svg"},
+    {Icon::close, "x_svg"},
+    {Icon::presentation, "presentation_svg"},
 }};
 
 [[nodiscard]] std::unique_ptr<juce::Drawable> parse(Icon icon, juce::Colour colour)
