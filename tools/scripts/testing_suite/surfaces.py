@@ -415,7 +415,8 @@ SURFACES: tuple[Surface, ...] = (
         extras=(
             Question(
                 "all-live",
-                "Do all three audio tools respond to sound at the same time?",
+                "Do the audio tools (the tuner, spectrogram, harmonic analyzer and input "
+                "level) all respond to sound at the same time?",
                 behavioural=True,
             ),
         ),
@@ -578,6 +579,21 @@ SURFACES: tuple[Surface, ...] = (
         title="Settings: practice presets",
         area="settings",
         modes=frozenset({FULL}),
+        warmup_seconds=2.5,
+        extras=(
+            # #381: the meter beside the threshold.
+            Question(
+                "level-beside-threshold",
+                "Beside Ignore sound below, is there a level bar reading the tone, green past a "
+                "line, with figures under it, and does the line sit at the slider's value?",
+            ),
+            Question(
+                "line-follows-slider",
+                "Change Ignore sound below: does the line move with it at once, and does a sound "
+                "under it stay grey and one over it turn green?",
+                behavioural=True,
+            ),
+        ),
     ),
     Surface(
         state="settings-reset",
@@ -1171,6 +1187,51 @@ SURFACES: tuple[Surface, ...] = (
                 "rest-and-breath",
                 "Is the first note large, and does the strip show a dimmed rest and then a "
                 "breath mark before the next phrase's first note?",
+            ),
+        ),
+    ),
+    # The Input Level tool (#381).
+    Surface(
+        state="input-level",
+        title="The Input Level tool reading a tone",
+        modes=frozenset({FULL}),
+        warmup_seconds=2.5,
+        extras=(
+            Question(
+                "level-peak-line",
+                "Is the level shown large, with a bar green past the threshold's line, a peak "
+                "mark, figures from -80 to 0 under it, and the peak and Ignore sound below "
+                "written beneath?",
+            ),
+            Question(
+                "says-it-counts",
+                "Does it say the tone is loud enough to count as playing or singing?",
+            ),
+            Question(
+                "quiet-room",
+                "With a real microphone in a quiet room, does silence sit grey under the line and "
+                "say it is too quiet to count, and does singing cross the line?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    Surface(
+        state="input-level-vertical",
+        title="The Input Level tool set upright",
+        modes=frozenset({FULL}),
+        warmup_seconds=2.5,
+        extras=(
+            Question(
+                "upright",
+                "Does the bar run bottom to top down the left, figures beside it, with the "
+                "level, the words and the peak to its right?",
+            ),
+            Question(
+                "menu-switches",
+                "In the tool's ... menu, does Orientation offer Automatic, Horizontal and "
+                "Vertical, tick the current one, switch at once, and keep the choice after a "
+                "restart?",
+                behavioural=True,
             ),
         ),
     ),

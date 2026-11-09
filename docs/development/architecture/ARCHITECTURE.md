@@ -9,6 +9,11 @@ The source tree groups code first by architectural role, then by feature:
 - `src/application/theme` owns shared palettes and look-and-feel behavior, and
   `MiniStaff`, the small five-line staff the Note View, Now & Next and the
   target picker each draw a pitch on, so no tool reaches into another for it.
+- `src/application/widgets` holds components that both the shell and a tool
+  put on screen, so neither reaches into the other: `InputLevelMeter`, the
+  microphone's level against "Ignore sound below", drawn in Settings → Practice
+  and by the Input Level tool (#381). Drawing-only helpers stay in `theme`; a
+  component that reads a service of its own lives here.
 - `src/application/shell` coordinates windows, menus, audio state, appearance,
   and workspace layout. Its `ui` and `state` branches keep immediate folder
   fan-out small. `MainComponent` implementations live beside the shell
@@ -181,7 +186,7 @@ microphone tools (tuner, spectrogram, harmonic analyzer) are `multi`; the score
 view and target note are `single`. An instance can be renamed, and the label is
 stored in the workspace's optional `toolLabels`, written only when non-empty.
 There are at most six copies of a tool. A tool that reads samples (the
-spectrogram and the harmonic analyzer) takes one of `AudioInputService`'s
+spectrogram, the harmonic analyzer and the Input Level) takes one of `AudioInputService`'s
 sixteen preallocated sample streams, so the shell asks `freeConsumerSlots()`
 (message thread only) before creating one, and refuses with an explanation of
 who holds them. The tuner reads pitch from `SharedPitchAnalysis` and is a
@@ -297,6 +302,17 @@ only. Both come from the `system-wide-target-note` change.
   across the keyboard, keeps the trail, and shades a lit key. It reads held
   keys through `ToolServices::midi`, a consumer of its own on
   `MidiInputService`.
+- **Input Level** (`src/features/level`, #381) shows the microphone's level
+  against the take's threshold, `OnsetSettings::minimumLevelDb`.
+  - `LevelMeter` (`src/platform/audio`, JUCE-free) measures the RMS of the
+    onset detector's own 1024-sample window, so a sound over the line is one a
+    take would hear. A sample peak would read several dB louder for the same
+    voice, and the line would lie. It rises at once, falls at 30 dB a second,
+    and holds its peak for a second and a half.
+  - `InputLevelMeter` (`src/application/widgets`) is the bar, reading its own
+    sample stream. The tool holds one for as long as it is open and declares
+    `readsAudioSamples`; Settings holds one only while the meter is showing,
+    and says so when none is free rather than taking one.
 - **Now & Next** (`src/features/nownext`, the `now-and-next` change) shows the
   note being sung now and the ones coming.
   - `score::PartTimeline` (JUCE-free) turns a part's first voice into notes,

@@ -83,6 +83,7 @@ Live tools for any voice or instrument. No score needed.
 
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
+| Input level meter | The microphone's level and its peak, with the line a take ignores sound below | ✅ | [#381](https://github.com/dwerkjem/PracticeTakes/issues/381) |
 | Loudness meter | Peak, RMS and LUFS loudness | Beta 1 | [#25](https://github.com/dwerkjem/PracticeTakes/issues/25) |
 | Sustain and decay | How a note holds and fades | Beta 1 | [#27](https://github.com/dwerkjem/PracticeTakes/issues/27) |
 
