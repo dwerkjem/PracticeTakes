@@ -209,7 +209,8 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   JUCE-free layout pass turning a `Score` into glyphs with positions in staff
   spaces, where every engraving rule worth asserting lives; see
   `docs/development/architecture/notation-engraving.md`), `review` (the Take
-  Review tool, listing the take under review), `feedback`, `performance`
+  Review tool, listing the take under review), `notes` (the Note View: the note
+  being sung on a keyboard and a staff, against the target), `feedback`, `performance`
   (launch timing).
 - `src/platform` — shared infrastructure: `audio/` (`AudioInputService`,
   `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`, `RealtimeRenderer`),

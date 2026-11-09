@@ -50,6 +50,15 @@
             1,
             {1060, 620}},
         ToolDefinition{
+            "note-view",
+            "Note View",
+            {},
+            ToolInstancePolicy::multi,
+            // NoteViewComponent::settingsVersion: the clef.
+            1,
+            {900, 480},
+            /* readsAudioSamples: pitch comes from SharedPitchAnalysis */ false},
+        ToolDefinition{
             "take-review",
             "Take Review",
             {"review"},

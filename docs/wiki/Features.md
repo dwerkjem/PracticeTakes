@@ -60,7 +60,7 @@ Live tools for any voice or instrument. No score needed.
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
 | Tuner | The note you're on, its frequency, and how many cents sharp or flat, with a pitch graph | ✅ | — |
-| Note view | The note you're on, lit up on a piano keyboard and drawn on a staff, beside your target, with a short trail | MVP | [#297](https://github.com/dwerkjem/PracticeTakes/issues/297) |
+| Note view | The note you're on, lit up on a piano keyboard and drawn on a staff, beside your target, with a short trail | ✅ | [#297](https://github.com/dwerkjem/PracticeTakes/issues/297) |
 
 #### The note you aim for
 

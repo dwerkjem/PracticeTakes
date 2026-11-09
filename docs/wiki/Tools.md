@@ -70,6 +70,25 @@ change it in **Settings → Practice** (from 415 to 466 Hz).
 
 ![The tuner with a target: Target E4, 16 cents flat, from the sample song](images/tuner-target.png)
 
+## Note View
+
+Shows the note you're singing or playing the way a musician thinks of it:
+- **On a keyboard:** the key you're on lights up, green when you're within 5
+  cents and turning amber as you drift up to half a semitone off. The target's
+  key has a ring.
+- **On a staff:** your note and the target side by side. The clef follows the
+  note, or **Clef** in the **...** menu fixes it as treble, bass, or treble an
+  octave down for tenor voices and guitar.
+- **A trail:** the last three seconds of pitch drawn above the keys, so a scoop
+  up to a note, or a drift off it, shows as a shape. The target's line runs
+  down to its key.
+- **The keys held** on a MIDI keyboard light blue, so it serves the piano too.
+
+It reads pitch exactly as the tuner does, against the same reference pitch and
+target. Small and docked, it shows the keyboard alone.
+
+![The Note View: F4 lit amber just above the target E4, the staff with both notes, and the trail wobbling around them](images/note-view.png)
+
 ## Spectrogram
 
 A scrolling frequency view of the microphone. It is useful for looking at

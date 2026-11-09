@@ -5,6 +5,7 @@
 #include "../../features/analysis/harmonics/HarmonicAnalyzerComponent.h"
 #include "../../features/analysis/spectrogram/SpectrogramComponent.h"
 #include "../../features/analysis/tuner/TunerComponent.h"
+#include "../../features/notes/NoteViewComponent.h"
 #include "../../features/review/TakeReviewComponent.h"
 #include "../../features/score/ScoreViewComponent.h"
 
@@ -34,6 +35,13 @@ const ToolRegistry& builtInToolRegistry()
              {
                  return std::make_unique<ScoreViewComponent>(
                      services.currentScore, services.clock, services.takes, services.target);
+             }},
+            {"note-view",
+             [](const ToolServices& services)
+             {
+                 return std::make_unique<NoteViewComponent>(
+                     services.pitchAnalysis, services.referencePitch, services.target,
+                     services.midi);
              }},
             {"take-review", [](const ToolServices& services)
              { return std::make_unique<TakeReviewComponent>(services.takes, services.clock); }},

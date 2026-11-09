@@ -1048,6 +1048,42 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The Note View (note-view).
+    Surface(
+        state="note-view",
+        title="The Note View",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "key-and-target",
+                "Is the key being sung lit, shaded between green and amber, and the target's "
+                "key ringed, distinguishable at a glance?",
+            ),
+            Question(
+                "staff-and-trail",
+                "Does the staff show the sung note and the target side by side, and the trail "
+                "show the tone's wobble as a continuous line above the keys?",
+            ),
+            Question(
+                "keys-held",
+                "With a MIDI keyboard, are held keys lit blue, and does a slide sung from one "
+                "note to another draw as one line?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    Surface(
+        state="note-view-empty",
+        title="The Note View with nothing sung",
+        modes=frozenset({FULL}),
+        extras=(
+            Question(
+                "says-what-to-do",
+                "Does it ask for a note to be sung or played, and say why there is no target?",
+            ),
+        ),
+    ),
     # The Take Review tool before any take.
     Surface(
         state="take-review-empty",

@@ -107,16 +107,41 @@ namespace pitch
 enum class StaffClef
 {
     treble,
-    bass
+    bass,
+
+    // Treble an octave down: tenor voices and guitar.
+    trebleOctaveDown
 };
+
+// The pitch on a clef's middle line, counted in letters (octave times seven
+// plus the letter): B4 for treble, D3 for bass, B3 for treble an octave down.
+[[nodiscard]] constexpr int middleLineLetters(StaffClef clef) noexcept
+{
+    switch (clef)
+    {
+    case StaffClef::treble:
+        return (4 * 7) + 6;
+    case StaffClef::bass:
+        return (3 * 7) + 1;
+    case StaffClef::trebleOctaveDown:
+        return (3 * 7) + 6;
+    }
+    return (4 * 7) + 6;
+}
+
+// How many lines-and-spaces above a clef's middle line a pitch sits (below,
+// when negative). The accidental does not move it.
+[[nodiscard]] constexpr int staffStepsOf(const score::Pitch& pitch, StaffClef clef) noexcept
+{
+    return (pitch.octave * 7) + static_cast<int>(pitch.step) - middleLineLetters(clef);
+}
 
 // The pitch on a staff `steps` lines-and-spaces above its middle line (below,
 // when negative), with `alter` from the accidental chosen.
 [[nodiscard]] inline std::optional<score::Pitch>
 pitchAtStaffPosition(StaffClef clef, int steps, int alter)
 {
-    // B4 on the treble's middle line, D3 on the bass's, counted in letters.
-    const int middle = clef == StaffClef::treble ? (4 * 7) + 6 : (3 * 7) + 1;
+    const int middle = middleLineLetters(clef);
     const int letters = middle + steps;
     if (letters < 0)
     {
