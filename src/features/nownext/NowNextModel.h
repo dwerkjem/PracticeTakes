@@ -76,7 +76,7 @@ struct View
         }
         if (part != 0)
         {
-            const auto* found = std::find_if(
+            const auto found = std::find_if(
                 fractions.begin(), fractions.end(),
                 [part](const Fraction& fraction) { return fraction.twentyFourths == part; });
             text = found == fractions.end() ? decimal() : text + found->glyph;
