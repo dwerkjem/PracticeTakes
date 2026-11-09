@@ -82,6 +82,9 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/ui/workspace/shell/MainComponentWorkspaceManagement.cpp
     src/application/shell/ui/workspace/shell/MainComponentWorkspacePresentation.cpp
     src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp
+    src/application/localisation/Localisation.cpp
+    src/application/localisation/Localisation.h
+    src/application/localisation/LocalisationRules.h
     src/application/testcontrol/ApprovedWindowStates.cpp
     src/application/testcontrol/ApprovedWindowStates.h
     src/application/testcontrol/SyntheticTake.h
@@ -333,6 +336,8 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotApplyTests.cpp
     src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp
     src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
+    src/tests/application/localisation/LocalisationRulesTests.cpp
+    src/tests/application/localisation/LocalisationTests.cpp
     src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp
     src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp
     src/tests/application/testcontrol/SyntheticTakeTests.cpp
@@ -438,6 +443,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/application/configuration/SettingsPersistence.cpp
     src/application/configuration/SettingsTransferCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.cpp
+    src/application/localisation/Localisation.cpp
     src/application/shell/ui/score/BundledSampleScore.cpp
     src/application/shell/ui/score/ScoreImportSummary.cpp
     src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp

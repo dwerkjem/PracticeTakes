@@ -10,6 +10,7 @@ on:
       - ".github/workflows/python-check.yml"
       - "src/tests/**"
       - "src/**"
+      - "tools/packaging/localisation/**"
       - ".gitignore"
 
 permissions:
@@ -39,6 +40,8 @@ jobs:
         # src/tests/ would never trigger the job that rejects it.
         src/tests/**
         src/**
+        # The localisation check below reads the catalogues beside src/.
+        tools/packaging/localisation/**
         # The ignored-includes check below reads .gitignore, so a new rule
         # that hides a header under src/ has to be able to fail it.
         .gitignore
@@ -75,3 +78,11 @@ jobs:
       # fails on the include rather than on another machine's missing file.
       - name: Check no include in src/ names a file Git ignores
         run: python3 tools/scripts/quality/check_ignored_includes.py
+
+      # Every identifier the code shows a user must be in the English
+      # catalogue, or the user reads the identifier; every one there must be
+      # used, or it is translated five times for nothing. Also keeps
+      # application/testcontrol, which the capture harness matches on, out of
+      # it.
+      - name: Check the text catalogues against the code
+        run: python3 tools/scripts/quality/check_localisation.py

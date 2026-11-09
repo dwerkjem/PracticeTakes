@@ -1,0 +1,77 @@
+# Localisation
+
+How Practice Takes addresses the text it shows a user, and what it never
+translates. The proposal and its reasoning are in
+`openspec/changes/internationalization/`; this page is the working reference.
+
+## Text is addressed by identifier
+
+Every sentence a user sees is an entry in a catalogue under
+`tools/packaging/localisation/`, one file per language (`en.txt`, `de.txt`),
+embedded in the binary as `PracticeTakesCatalogues`. Code asks for it by a
+stable identifier, never by its English:
+
+```cpp
+#include "application/localisation/Localisation.h"
+
+label.setText(l10n::text("settings.appearance.theme"), juce::dontSendNotification);
+l10n::format("score.where", {{"bar", juce::String(bar)}, {"part", partName}});
+l10n::plural("score.import.bars", count);   // "score.import.bars.one" / ".other"
+l10n::number(frequency, 1);                 // 440.0, or 440,0 in German
+```
+
+- **`text`**: the chosen language's entry, else English's, else the identifier
+  itself — visibly wrong, and caught in CI before it ships.
+- **`format`**: `{name}` placeholders filled by name, so a translation puts
+  them in its own order. Never build a sentence by concatenation: word order
+  is not shared between languages.
+- **`plural`**: the form the language's plural rule picks (`.one`, `.other`,
+  and `.few`/`.many` for a language that has them), with `{count}` filled in.
+  Never test `count == 1`; French puts zero with one.
+- **`number`**: the language's decimal separator and grouping. Units read the
+  same everywhere (Hz, cents, BPM) are not translated.
+
+An identifier kept in a table and looked up later is marked where it is
+written, with `l10n::key("…")` or `l10n::pluralKey("…")`. They do nothing at
+run time; they are how the check finds it.
+
+The rules that are not text — plural categories, placeholder filling, number
+formatting — are in the JUCE-free `LocalisationRules.h`.
+
+## The check
+
+`tools/scripts/quality/check_localisation.py` runs in the Python quality
+check and fails when:
+
+- code references an identifier `en.txt` does not define;
+- `en.txt` defines one nothing in `src/` references (a reference in a comment
+  or a test does not count);
+- a translation defines one English does not, or a catalogue defines one twice;
+- anything under `src/application/testcontrol` uses `l10n` at all.
+
+A reference is a string literal as the first argument of a qualified
+`l10n::text`/`format`/`plural`/`key`/`pluralKey` call. Pass a variable and
+the check cannot see the key, so mark it with `l10n::key` where it is written.
+
+## What is never localised
+
+Some text looks like interface text and is not. It stays a literal, in
+English, whatever language the interface is in:
+
+- **Approved-state names and descriptions** in `src/application/testcontrol`.
+  The capture harness matches on them: translating one breaks `list-states`
+  and every capture with it. Enforced by the check above.
+- **Log and developer-facing text**: `DBG`, `juce::Logger`, assertion
+  messages, test-control replies, command-line usage. Its reader is a
+  developer reading a bug report, who needs the same words whatever the
+  reporter's language.
+- **The feedback service's operator messages** in `src/services/feedback-intake`.
+  Its reader is the operator, not the person who sent the feedback.
+- **MusicXML element and attribute names.** `<slur>` is a tag, not a word; a
+  diagnostic names it as written in the file, inside a translated sentence.
+- **Settings keys**, and every other identifier written to disk: workspace and
+  tool-settings property names, tool type identifiers, `.ptsettings` fields. A
+  key is a storage identifier, and translating it would make a file
+  unreadable by a copy of the application configured for another language.
+- **Musical naming.** "H" is not the German for "B" but a different naming
+  system, chosen as its own preference; see `score::PitchNaming`.

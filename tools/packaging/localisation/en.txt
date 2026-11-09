@@ -1,0 +1,23 @@
+# The English catalogue: every sentence Practice Takes shows a user, by
+# identifier (openspec/changes/internationalization).
+#
+# Why here. Catalogues are packaging input -- data embedded in the binary at
+# build time, beside the fonts, icons and sample score in tools/packaging --
+# not source, so they do not belong under src/, and the repository root takes
+# no new entries. One file per language, named by its code: de.txt, fr.txt.
+# CMake embeds every *.txt in this directory as PracticeTakesCatalogues.
+#
+# Format. JUCE's LocalisedStrings: one `"identifier" = "text"` per line, a
+# `language:` line naming the language, and anything else -- these lines --
+# ignored. Inside the quotes, \" is a quote and \n a line break. Placeholders
+# are named, {bar}, so a translation can put them in its own order. A quantity
+# has one entry per plural form: "x.one", "x.other", and "x.few"/"x.many" for a
+# language that has them.
+#
+# English is a language like any other and the one every other falls back to:
+# a key missing from a translation shows its English. A key missing here shows
+# as the identifier itself, which the check in CI turns into a failed build
+# (tools/scripts/quality/check_localisation.py), as it does a key here that
+# nothing uses.
+
+language: English

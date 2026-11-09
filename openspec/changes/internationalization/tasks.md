@@ -3,19 +3,19 @@
 Shippable on its own. Nothing visibly changes; every string becomes
 addressable.
 
-- [ ] 1.1 `src/application/localisation/`: `Catalogue` (load, lookup, fall back
+- [x] 1.1 `src/application/localisation/`: `Catalogue` (load, lookup, fall back
       English-ward), built on `juce::LocalisedStrings` and keyed on identifiers
       rather than English source.
-- [ ] 1.2 `l10n::text(key)` and `l10n::format(key, named arguments)` with
+- [x] 1.2 `l10n::text(key)` and `l10n::format(key, named arguments)` with
       `{name}` placeholders a translator can reorder.
-- [ ] 1.3 `l10n::plural(key, count, ...)` selecting by CLDR category. Only
+- [x] 1.3 `l10n::plural(key, count, ...)` selecting by CLDR category. Only
       `one`/`other` are populated, with French's zero-is-one rule; the signature
       must not change when `few`/`many` are added.
-- [ ] 1.4 `l10n::number()` for decimal separator and grouping, since `440.0 Hz`
+- [x] 1.4 `l10n::number()` for decimal separator and grouping, since `440.0 Hz`
       is `440,0 Hz` in four of the five target languages.
-- [ ] 1.5 Decide where catalogues live, against the repository-root constraint,
+- [x] 1.5 Decide where catalogues live, against the repository-root constraint,
       and say why in the file that holds them.
-- [ ] 1.6 Tests: fallback order, a missing key, placeholder reordering, plural
+- [x] 1.6 Tests: fallback order, a missing key, placeholder reordering, plural
       selection per language, and that an unknown locale degrades to English
       rather than failing to start.
 
@@ -23,23 +23,23 @@ addressable.
 
 Before the sweep, so the sweep is verified as it happens rather than after.
 
-- [ ] 2.1 A check that every key referenced in code exists in the English
+- [x] 2.1 A check that every key referenced in code exists in the English
       catalogue. Failing the build is the point: the alternative is a user
       reading `score.import.slur.unsupported`.
-- [ ] 2.2 A check that every catalogue key is referenced by something, so dead
+- [x] 2.2 A check that every catalogue key is referenced by something, so dead
       strings are not re-translated five times.
-- [ ] 2.3 Wire both into the Python quality gate beside
+- [x] 2.3 Wire both into the Python quality gate beside
       `check_test_layout.py`, and into CI.
-- [ ] 2.4 Tests for the checkers themselves, including the case that matters:
+- [x] 2.4 Tests for the checkers themselves, including the case that matters:
       a key used only inside a comment or a test must not count as used.
 
 ## 3. The exclusions, written down and enforced
 
-- [ ] 3.1 Record what is never localised: approved-state names and descriptions
+- [x] 3.1 Record what is never localised: approved-state names and descriptions
       in `application/testcontrol`, log and developer-facing text, the
       `feedback-intake` worker's operator messages, MusicXML element names
       (`<slur>` is a tag, not a word), and settings keys.
-- [ ] 3.2 Make the testcontrol exclusion enforceable rather than remembered —
+- [x] 3.2 Make the testcontrol exclusion enforceable rather than remembered —
       the capture harness matches on those strings, so translating one breaks
       `list-states` and every capture with it.
 

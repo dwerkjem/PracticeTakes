@@ -176,6 +176,33 @@ The recommendation is that they travel and that the import summary says so,
 since the summary already reports what it changed — but this is a decision
 against an existing capability, so it is raised rather than settled here.
 
+## Implementation notes
+
+Decisions made while building it that the sections above did not settle.
+
+- **Identifiers are string literals, not an enum.** Decision 3's sketch writes
+  `Key::scoreImportLocation`; the code writes `l10n::format("score.where", …)`.
+  An enum would be a second list of every key to keep in step with the
+  catalogue, edited in a header every file includes. The literal is checked
+  instead: `check_localisation.py` reads the first argument of every
+  qualified `l10n::` call, and a key held in a table is marked where it is
+  written with `l10n::key("…")`, a no-op the check can see.
+- **Catalogues live in `tools/packaging/localisation/`** (task 1.5), beside the
+  fonts, icons and sample score: they are packaging input embedded at build
+  time, not source, and the root takes no new entries. Every `*.txt` there is
+  embedded, by file name, so adding a language is adding a file. The reason is
+  repeated in `en.txt`'s header, where a translator will look.
+- **A plural prefers the chosen language's own `other` to English's form.**
+  A language that does not distinguish a singular gives only `other`; falling
+  through to English's `one` would put an English sentence in the middle of
+  it. The order is chosen form, chosen `other`, English form, English `other`.
+- **The language code decides plurals and numbers even where its catalogue
+  falls back.** An untranslated sentence in a German interface still counts
+  `1.200` German-style; a code with no catalogue at all runs wholly in English.
+- **The testcontrol exclusion is enforced by the same check** (task 3.2): any
+  `l10n::` use or `Localisation.h` include under `src/application/testcontrol`
+  fails it, before the capture harness would.
+
 ## Risks
 
 - **A mechanical change across nearly every UI file.** It conflicts with
