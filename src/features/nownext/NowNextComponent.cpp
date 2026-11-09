@@ -574,8 +574,20 @@ void NowNextComponent::paintStaff(
     const pitch::StaffClef clef =
         reference >= 57 ? pitch::StaffClef::treble : pitch::StaffClef::bass;
 
-    // Every pitch of the chord at the staff's centre, filled in the accent.
-    const float x = area.getCentreX();
+    // Larger than the Note View's, since the card can be read from across a
+    // room, with ledger lines reaching a little wider.
+    MiniStaffStyle style;
+    style.lines = palette.foreground.withAlpha(0.75f);
+    style.label = palette.muted;
+    style.labelFontHeight = textSize(appearance::TextRole::axis);
+    style.maxSpacing = 16.0f;
+    style.ledgerReach = 1.2f;
+    style.font = &musicFont.get();
+
+    // Every pitch of the chord at the centre of the staff after its clef,
+    // filled in the accent.
+    const float clefRight = area.getX() + miniStaffClefWidth(area, style);
+    const float x = clefRight + ((area.getRight() - clefRight) * 0.5f);
     std::vector<MiniStaffNote> heads;
     heads.reserve(item.pitches.size());
     for (const score::Pitch& written : item.pitches)
@@ -588,13 +600,5 @@ void NowNextComponent::paintStaff(
         heads.push_back({spelled, x, palette.accent, true});
     }
 
-    // Larger than the Note View's, since the card can be read from across a
-    // room, with ledger lines reaching a little wider.
-    MiniStaffStyle style;
-    style.lines = palette.foreground.withAlpha(0.75f);
-    style.label = palette.muted;
-    style.labelFontHeight = textSize(appearance::TextRole::axis);
-    style.maxSpacing = 16.0f;
-    style.ledgerReach = 1.2f;
     drawMiniStaff(graphics, area, clef, heads, style);
 }

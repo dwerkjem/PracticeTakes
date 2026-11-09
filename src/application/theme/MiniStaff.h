@@ -2,6 +2,7 @@
 
 #include "../../platform/pitch/TargetChoice.h"
 #include "../../platform/score/Pitch.h"
+#include "MusicFont.h"
 
 #include <juce_graphics/juce_graphics.h>
 
@@ -62,13 +63,29 @@ struct MiniStaffStyle
 
     // A sharp or flat to the left of a head whose pitch is altered.
     bool accidentals = true;
+
+    // The music font, to draw the clef's own glyph at the staff's start in
+    // the lines' colour, in place of its name. None writes the name instead
+    // (`label`), for a caller with no room for a clef: the picker's grand
+    // staff, labelled in its margin.
+    const MusicFont* font = nullptr;
 };
 
-// "Treble", "Bass" or "Treble 8vb", in the interface's language.
+// "Treble", "Bass" or "Tenor" (the treble clef an octave down, as a tenor
+// part is written), in the interface's language.
 [[nodiscard]] juce::String miniStaffClefName(pitch::StaffClef clef);
 
 // The line spacing a staff in `area` is drawn with.
 [[nodiscard]] float miniStaffSpacing(juce::Rectangle<float> area, const MiniStaffStyle& style);
+
+// How far from the area's left the clef reaches, so the heads go right of it:
+// nothing without a font.
+[[nodiscard]] float miniStaffClefWidth(juce::Rectangle<float> area, const MiniStaffStyle& style);
+
+// The staff position under `y` in a staff drawn across `area`, in steps from
+// the middle line (up is positive), to the nearest line or space.
+[[nodiscard]] int
+miniStaffStepsAt(juce::Rectangle<float> area, const MiniStaffStyle& style, float y);
 
 // The ledger lines a note `steps` above the middle line needs, as steps from
 // the middle line: none inside the staff, then every line out to the note

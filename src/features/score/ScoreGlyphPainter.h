@@ -4,8 +4,8 @@
 
 #include "../../application/theme/Theme.h"
 
-#include "MusicFont.h"
-#include "SmuflGlyphs.h"
+#include "../../application/theme/MusicFont.h"
+#include "SmuflEngraving.h"
 #include "engraving/ScoreLayout.h"
 
 // Drawing the glyphs a `ScoreLayout` names.

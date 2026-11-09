@@ -4,9 +4,7 @@
 #include <optional>
 #include <vector>
 
-#include "engraving/Accidental.h"
-#include "engraving/NoteValue.h"
-#include "platform/score/ScoreAttributes.h"
+#include "../../platform/score/ScoreAttributes.h"
 
 // Which music-font glyph draws each thing the layout names (no JUCE
 // dependency).
@@ -104,8 +102,6 @@ enum class Glyph : char32_t
     return static_cast<char32_t>(glyph);
 }
 
-[[nodiscard]] Glyph noteheadFor(engraving::NoteheadKind head);
-
 // The flag for a stem carrying `flags` of them, pointing up or down. SMuFL
 // draws a sixteenth's two hooks as one glyph, not one hook twice, so this is a
 // lookup by count rather than a repetition.
@@ -113,11 +109,6 @@ enum class Glyph : char32_t
 // Nothing for zero flags, and nothing beyond five: a 256th is legal and the
 // layout never produces one, since `NoteValue` stops at the 128th.
 [[nodiscard]] std::optional<Glyph> flagFor(int flags, bool stemUp);
-
-[[nodiscard]] Glyph restFor(engraving::WrittenValue value);
-
-// Nothing for `none`, which is a note that draws no accidental.
-[[nodiscard]] std::optional<Glyph> accidentalFor(engraving::AccidentalKind kind);
 
 // The clef sign, carrying its octave change where SMuFL has a glyph for it.
 //

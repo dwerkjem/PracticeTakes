@@ -1,55 +1,67 @@
-# Tools
+#Tools
 
-Every tool opens from the **Tools** menu, can be docked in the main window or
-floated in its own, and keeps running while you move it. Every microphone tool
-shares the one input chosen in **Settings → Audio**. Each tool's options menu
-also has **Give feedback on this tool**.
+Every tool opens from the **Tools **menu, can be docked in the main window or floated in its own,
+    and keeps running while you
+            move it.Every microphone tool shares the one input chosen in **Settings → Audio *
+                *.Each tool's options menu also has **Give feedback on this tool **.
 
-## Tuner
+        ##Tuner
 
-Listens to the microphone and shows the detected note, its frequency, and how
-many cents sharp or flat it is.
+            Listens to the microphone and shows the detected note,
+    its frequency,
+    and how many cents sharp or
+        flat it is.
 
-![The tuner in its graph view, reading A4: the pitch line drifts above and below a thin lit green band on A4, with dotted blue, amber and red lines where each looser zone begins](images/tuner-graph.png)
+            ![ The tuner in its graph view, reading
+               A4:the pitch line drifts above and below a thin lit green band on A4,
+                  with dotted blue,
+                  amber and red lines where each looser zone begins ](images / tuner - graph.png)
 
-- **Display mode** picks one of three views:
-  - **Graph**, pitch over time, so drift within a held note is visible (above);
-  - **Bar**, the cents offset as a dot on a line, from −50 to +50 (one note)
-    unless you change its scale;
-  - **Meter**, a needle between *flat* and *sharp*.
-- **The zones** show where you need to be, on all three views: bands around
-  the note, each as wide as its range either side of it, all set in
-  **Settings → Practice** and all plus or minus:
-  - **green**, near perfect, within **Near perfect within** (±5 cents by
-    default: from 5 cents flat to 5 cents sharp);
-  - **blue**, in tune, within **In tune within** (±25 cents);
-  - **amber**, near but off, out to **Out of tune beyond** (±40 cents);
-  - **red**, out of tune: everything past that.
+            - **Display mode * *picks one of three views : -**Graph **,
+    pitch over time, so drift within a held note is visible(above);
+- **Bar **,
+    the cents offset as a dot on a line, from −50 to + 50(one note)unless you change its scale;
+- **Meter **,
+    a needle between *flat * and *sharp *.- **The zones **show where you need to be, on all three
+    views:bands around the note, each as wide as its range either side of it,
+          all set in **Settings → Practice **and all plus or
+    minus:-**green **, near perfect,
+          within **Near perfect within **(±5 cents by default:from 5 cents flat to 5 cents sharp);
+- **blue **, in tune, within **In tune within **(±25 cents);
+- **amber **, near but off, out to **Out of tune beyond **(±40 cents);
+- **red **,
+    out of
+    tune:everything past that.
 
-  Only the half of the zone you're in lights, the sharp half or the flat half,
-  and it carries a **♯** or a **♭**, half the height of the note name, so you
-  know which way to go as well as how far. On pitch, in the green, the sign
-  goes away: there is nothing to correct. The tighter zones inside it stay
-  faintly tinted, so you can still see the target; the looser ones outside it
-  are turned off and leave only a dotted line, in their own colour, where each
-  begins. Red is there only while you're in it, and then only faintly. The graph keeps the note's zones in view while
-  you sing, and a marker on the bar and on the graph's newest point, and the
-  meter's needle, take the colour of the zone you're in.
-- **With a target note**, the zones are measured against the target rather
-  than the note you're nearest: the bar and the meter are centred on it, the
-  graph's axis is centred on its line, and singing a semitone off is red
-  however in tune that other note is. Past either end of the bar or the meter
-  an arrow at that end shows which side you're on.
-- **The tool's ... menu** changes how that looks, for each tuner:
-  - **Centre on the target note** (on by default): off, the tuner reads
-    against the nearest note even with a target chosen;
-  - **Signs**: *Off*, *Sharp and flat* (the default), or *Arrows: which way to
-    go*, an arrow pointing back toward the note: left on the bar and the meter
-    when you're sharp and right when you're flat, and down or up on the graph,
-    whose pitch runs up the screen;
-  - **Show how far off**, which writes the cents in the lit half, *−18 ¢*,
-    beside the sign (off by default; the line above the display always gives
-    the exact reading);
+             Only the half of the zone you're in lights, the sharp half or the flat half, and it
+                 carries a **♯** or
+             a **♭**,
+         half the height of the note name, so you know which way to go as well as how far.On pitch,
+         in the green, the sign goes
+    away:there is nothing to correct.The tighter zones inside it stay faintly tinted,
+         so you can still see the target;
+the looser ones outside it are turned off and leave only a dotted line, in their own colour,
+    where each begins.Red
+        is there only while you 're in it, and then only faintly. The graph keeps the note' s
+            zones in view while you sing,
+    and a marker on the bar and on the
+            graph's newest point, and the meter 's needle, take the colour of the zone you' re in.-
+        **With a target note **,
+    the zones are measured against the target rather than the note
+            you're nearest: the bar and the meter are centred on it, the graph's axis is centred on its line, and singing a semitone off is red however
+                in tune that other note is.Past either end of the bar or
+        the meter an arrow at that end shows which side you're on. -
+            **The tool's ... menu** changes how that looks, for each tuner: -
+            **Centre on the target note **(on by default)
+    : off,
+the tuner reads against the nearest note even with a target chosen;
+- ** Signs* *:*Off*, *Sharp and flat*(the default), or *
+       Arrows:which way to go*, an arrow pointing back toward the
+         note:left on the bar and the meter when you 're sharp and right when you' re flat,
+              and down or up on the graph, whose pitch runs up the screen;
+- **Show how far off **,
+    which writes the cents in the lit half, *−18 ¢*,
+    beside the sign(off by default; the line above the display always gives the exact reading);
   - **Light both halves**, for a symmetric look that lights the whole zone;
   - **Marker**, what marks where you are on the bar and the graph: *Off*,
     *Dot* (the default), *Arrow*, *Line*, *Ring*, *Diamond* or *Crosshair*.
@@ -80,18 +92,21 @@ Above the reading, the tuner names the note you're aiming at and where you are
 against it:
 - *Target E4 · on it*, within your near-perfect range (±5 cents by default),
   in green;
-- *Target E4 · 16 ¢ flat*, within half a semitone;
-- *Target E4 · 2 semitones below*, further away.
+  - *Target E4 · 16 ¢ flat *, within half a semitone;
+  - *Target E4 · 2 semitones below *,
+      further away.
 
-When a score opens, the target is its first note: the first note of its first
-part that plays one note at a time, such as the voice of a song. A piano piece
-has none, and the tuner says so, because a target is one note.
+      When a score opens,
+      the target is its first
+      note:the first note of its first part that plays one note at a time,
+           such as the voice of a song.A piano piece has none, and the tuner says so,
+           because a target is one note.
 
-**Choose the target yourself** by clicking the target line, or with **Choose
-target…** in the tuner's **...** menu:
-- **click a key** on the keyboard;
-- **click the staff**, after choosing ♭, ♮ or ♯ beside it;
-- **type a name**, such as *F#4* or *Bb3*, and press **Set**;
+               **Choose the target yourself **by clicking the target line,
+           or with **Choose target… **in the tuner's **...** menu: -
+                   **click a key **on the keyboard;
+  - **click the staff **, after choosing ♭, ♮ or ♯ beside it;
+  - **type a name **, such as *F #4 * or *Bb3 *, and press **Set **;
 - **sing or play it**, then press **Use the note I'm on**. It works once you
   have held one note steadily, within 30 cents, for a moment;
 - **step** a semitone up or down, or a step of the score's key.
@@ -127,14 +142,18 @@ Shows the note you're singing or playing the way a musician thinks of it:
   off (out to **Out of tune beyond**, ±40 cents by default), **red** past that,
   and grey while nothing is sung. The key, the trail and your note on the staff take the same colour.
   Without a target, the colours are against the note you're nearest.
-- **On a staff:** your note and the target side by side. The clef follows the
-  note, or **Clef** in the **...** menu fixes it as treble, bass, or treble an
-  octave down for tenor voices and guitar.
+- **On a staff:** your note and the target side by side, after the clef. The clef follows the
+  note, or **Clef** in the **...** menu fixes it as treble, bass, or tenor (the
+  treble clef with an 8 below, for tenor voices and guitar).
 - **A trail:** the last three seconds of pitch drawn above the keys, so a scoop
   up to a note, or a drift off it, shows as a shape. The target's line runs
   down to its key.
 - **The keys held** on a MIDI keyboard light purple, so it serves the piano
   too.
+- **Choose the target here:** click a key, or a line or space on the staff, and
+  that note becomes the target. The key or the note a click would choose shows
+  faintly as you move over it. A key is spelled as the open score's key would
+  spell it: with flats in a flat key, sharps otherwise.
 
 It reads pitch exactly as the tuner does, against the same reference pitch and
 target. Small and docked, it shows the keyboard alone.

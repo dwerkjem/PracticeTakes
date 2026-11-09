@@ -22,7 +22,7 @@ constexpr juce::uint32 heldColour = 0xff9b6bd6;
 NoteViewComponent::NoteViewComponent(
     SharedPitchAnalysis& sharedPitchAnalysis,
     const pitch::ReferencePitch& applicationReferencePitch,
-    const pitch::CurrentTarget& applicationTarget,
+    pitch::CurrentTarget& applicationTarget,
     MidiInputService& midiInputService,
     std::function<pitch::ZoneLimits()> zoneLimitsSource)
     : pitchAnalysis(sharedPitchAnalysis), referencePitch(applicationReferencePitch),
@@ -215,31 +215,161 @@ float NoteViewComponent::xOf(double midiPitch, juce::Rectangle<int> area) const
            (static_cast<float>(along) * static_cast<float>(area.getWidth()));
 }
 
-void NoteViewComponent::paint(juce::Graphics& graphics)
+NoteViewComponent::Areas NoteViewComponent::areas() const
 {
-    const AppPalette colours = palette();
-    graphics.fillAll(colours.background);
-
+    Areas result;
     auto bounds = getLocalBounds().reduced(12);
-    paintReading(graphics, bounds.removeFromTop(scaledHeight(30)));
+    result.reading = bounds.removeFromTop(scaledHeight(30));
     bounds.removeFromTop(6);
 
     // Small and docked: the keyboard alone (design decision 5).
     const bool compact = getWidth() < scaledHeight(240) || getHeight() < scaledHeight(160);
     if (compact)
     {
-        paintKeyboard(graphics, bounds);
-        return;
+        result.keyboard = bounds;
+        return result;
     }
 
     // The staff to the left; the trail above the keys to the right, sharing
     // their width so a line in the trail sits over its key.
-    paintStaff(graphics, bounds.removeFromLeft(std::min(160, bounds.getWidth() / 4)));
+    result.staff = bounds.removeFromLeft(std::min(160, bounds.getWidth() / 4));
     bounds.removeFromLeft(10);
     const int keyboardHeight = std::min(90, std::max(48, bounds.getHeight() / 3));
-    paintKeyboard(graphics, bounds.removeFromBottom(keyboardHeight));
+    result.keyboard = bounds.removeFromBottom(keyboardHeight);
     bounds.removeFromBottom(2);
-    paintTrail(graphics, bounds);
+    result.trail = bounds;
+    return result;
+}
+
+void NoteViewComponent::paint(juce::Graphics& graphics)
+{
+    const AppPalette colours = palette();
+    graphics.fillAll(colours.background);
+
+    const Areas parts = areas();
+    paintReading(graphics, parts.reading);
+    if (!parts.staff.isEmpty())
+    {
+        paintStaff(graphics, parts.staff);
+    }
+    paintKeyboard(graphics, parts.keyboard);
+    if (!parts.trail.isEmpty())
+    {
+        paintTrail(graphics, parts.trail);
+    }
+}
+
+pitch::StaffClef NoteViewComponent::staffClef() const
+{
+    const auto aimingAt = target.target();
+    return clefFor(currentNote.value_or(aimingAt != nullptr ? aimingAt->midiNoteNumber : 60));
+}
+
+MiniStaffStyle NoteViewComponent::staffStyle() const
+{
+    const AppPalette colours = palette();
+    MiniStaffStyle style;
+    style.lines = colours.foreground.withAlpha(0.75f);
+    style.label = colours.muted;
+    style.labelFontHeight = textSize(appearance::TextRole::axis);
+    style.font = &musicFont.get();
+    return style;
+}
+
+float NoteViewComponent::targetHeadX(juce::Rectangle<int> staff) const
+{
+    // The target hollow on the left, the note being sung filled on the right,
+    // across the staff's lines after the clef (inset four pixels at the end).
+    const float left =
+        static_cast<float>(staff.getX()) + miniStaffClefWidth(staff.toFloat(), staffStyle());
+    const float width = std::max(0.0f, static_cast<float>(staff.getRight()) - 4.0f - left);
+    return left + (width * 0.35f);
+}
+
+float NoteViewComponent::sungHeadX(juce::Rectangle<int> staff) const
+{
+    const float left =
+        static_cast<float>(staff.getX()) + miniStaffClefWidth(staff.toFloat(), staffStyle());
+    const float width = std::max(0.0f, static_cast<float>(staff.getRight()) - 4.0f - left);
+    return left + (width * 0.7f);
+}
+
+std::optional<int> NoteViewComponent::keyUnder(juce::Point<float> point) const
+{
+    const juce::Rectangle<float> keys = areas().keyboard.toFloat();
+    if (!keys.contains(point) || keys.getWidth() <= 0.0f || keys.getHeight() <= 0.0f)
+    {
+        return std::nullopt;
+    }
+    return notes::keyAt(
+        window, (point.x - keys.getX()) / keys.getWidth(),
+        (point.y - keys.getY()) / keys.getHeight());
+}
+
+std::optional<score::Pitch> NoteViewComponent::staffNoteUnder(juce::Point<float> point) const
+{
+    const juce::Rectangle<float> staff = areas().staff.toFloat();
+    if (!staff.contains(point))
+    {
+        return std::nullopt;
+    }
+    // Out to four ledger lines either side, as far as a click on the staff
+    // can sensibly mean a note.
+    const int steps = miniStaffStepsAt(staff, staffStyle(), point.y);
+    if (std::abs(steps) > 12)
+    {
+        return std::nullopt;
+    }
+    return pitch::pitchAtStaffPosition(staffClef(), steps, 0);
+}
+
+void NoteViewComponent::updateHover(juce::Point<float> point)
+{
+    const std::optional<int> key = keyUnder(point);
+    const std::optional<score::Pitch> note = key.has_value() ? std::nullopt : staffNoteUnder(point);
+    setMouseCursor(
+        key.has_value() || note.has_value() ? juce::MouseCursor::PointingHandCursor
+                                            : juce::MouseCursor::NormalCursor);
+    if (key != hoverKey || note != hoverStaffNote)
+    {
+        hoverKey = key;
+        hoverStaffNote = note;
+        repaint();
+    }
+}
+
+void NoteViewComponent::mouseMove(const juce::MouseEvent& event)
+{
+    updateHover(event.position);
+}
+
+void NoteViewComponent::mouseExit(const juce::MouseEvent&)
+{
+    hoverKey.reset();
+    hoverStaffNote.reset();
+    repaint();
+}
+
+void NoteViewComponent::mouseDown(const juce::MouseEvent& event)
+{
+    if (!event.mods.isLeftButtonDown())
+    {
+        return;
+    }
+    if (const std::optional<int> key = keyUnder(event.position))
+    {
+        // A key has no spelling, so it is spelled as the open score's key
+        // would spell it: flats in a flat key, sharps otherwise.
+        if (const auto spelled = pitch::spellForKey(*key, target.keyFifths))
+        {
+            target.publish(pitch::chosenTarget(*spelled, *spelled, "Chosen on the Note View"));
+        }
+    }
+    else if (const std::optional<score::Pitch> note = staffNoteUnder(event.position))
+    {
+        target.publish(pitch::chosenTarget(*note, *note, "Chosen on the Note View"));
+    }
+    repaint();
 }
 
 void NoteViewComponent::paintReading(juce::Graphics& graphics, juce::Rectangle<int> area) const
@@ -275,20 +405,21 @@ void NoteViewComponent::paintStaff(juce::Graphics& graphics, juce::Rectangle<int
 {
     const AppPalette colours = palette();
     const auto aimingAt = target.target();
-    const int reference = currentNote.value_or(aimingAt != nullptr ? aimingAt->midiNoteNumber : 60);
-    const pitch::StaffClef staffClef = clefFor(reference);
+    const MiniStaffStyle style = staffStyle();
 
-    // The target hollow on the left, the note being sung filled on the right,
-    // across the staff's lines (inset four pixels each side).
-    const float left = static_cast<float>(area.getX()) + 4.0f;
-    const float width = static_cast<float>(area.getWidth()) - 8.0f;
     std::vector<MiniStaffNote> heads;
     if (aimingAt != nullptr)
     {
         if (const auto spelled = pitch::parseNoteName(aimingAt->name))
         {
-            heads.push_back({*spelled, left + (width * 0.35f), colours.accent, false});
+            heads.push_back({*spelled, targetHeadX(area), colours.accent, false});
         }
+    }
+    // Where a click would put the target, faintly, in its place.
+    if (hoverStaffNote.has_value())
+    {
+        heads.push_back(
+            {*hoverStaffNote, targetHeadX(area), colours.accent.withAlpha(0.4f), false});
     }
     if (currentNote.has_value())
     {
@@ -296,16 +427,12 @@ void NoteViewComponent::paintStaff(juce::Graphics& graphics, juce::Rectangle<int
         {
             const auto shade = zone();
             heads.push_back(
-                {*spelled, left + (width * 0.7f),
+                {*spelled, sungHeadX(area),
                  shade.has_value() ? intonationZoneColour(*shade) : colours.foreground, true});
         }
     }
 
-    MiniStaffStyle style;
-    style.lines = colours.foreground.withAlpha(0.75f);
-    style.label = colours.muted;
-    style.labelFontHeight = textSize(appearance::TextRole::axis);
-    drawMiniStaff(graphics, area.toFloat(), staffClef, heads, style);
+    drawMiniStaff(graphics, area.toFloat(), staffClef(), heads, style);
 }
 
 void NoteViewComponent::paintTrail(juce::Graphics& graphics, juce::Rectangle<int> area) const
@@ -413,6 +540,11 @@ void NoteViewComponent::paintKeyboard(juce::Graphics& graphics, juce::Rectangle<
         if (heldKeys.count(key) != 0)
         {
             return juce::Colour(heldColour);
+        }
+        // The key a click would choose.
+        if (hoverKey == key)
+        {
+            return normal.interpolatedWith(colours.accent, 0.35f);
         }
         return normal;
     };
