@@ -64,8 +64,8 @@ struct MiniStaffStyle
     bool accidentals = true;
 };
 
-// "Treble", "Bass" or "Treble 8vb".
-[[nodiscard]] const char* miniStaffClefName(pitch::StaffClef clef) noexcept;
+// "Treble", "Bass" or "Treble 8vb", in the interface's language.
+[[nodiscard]] juce::String miniStaffClefName(pitch::StaffClef clef);
 
 // The line spacing a staff in `area` is drawn with.
 [[nodiscard]] float miniStaffSpacing(juce::Rectangle<float> area, const MiniStaffStyle& style);

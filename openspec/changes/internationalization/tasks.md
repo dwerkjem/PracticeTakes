@@ -98,16 +98,16 @@ Can run in parallel with sections 1-5; it shares no code with them.
 
 ## 7. The pseudolocale
 
-- [ ] 7.1 A generated pseudolocale: every string expanded about 40% and
+- [x] 7.1 A generated pseudolocale: every string expanded about 40% and
       bracketed. Generated, never hand-written.
-- [ ] 7.2 A capture pass in it. The sweep itself stays English — five languages
+- [x] 7.2 A capture pass in it. The sweep itself stays English — five languages
       across 40 surfaces is a grid nobody reviews, and an unreviewed capture is
       worth nothing.
-- [ ] 7.3 Fix what it finds, which will be truncation, clipping and unwrapped
+- [x] 7.3 Fix what it finds, which will be truncation, clipping and unwrapped
       text. Expect the settings pages and the import report to be worst.
-- [ ] 7.4 Note that any string appearing *unbracketed* is one the sweep missed —
+- [x] 7.4 Note that any string appearing *unbracketed* is one the sweep missed —
       a literal-finder that costs nothing.
-- [ ] 7.5 Leave the golden-image validation in English: it compares pixels, and
+- [x] 7.5 Leave the golden-image validation in English: it compares pixels, and
       translated text makes that comparison meaningless rather than informative.
 
 ## 8. Raise the settings-transfer question

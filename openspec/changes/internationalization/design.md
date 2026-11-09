@@ -271,6 +271,31 @@ Decisions made while building it that the sections above did not settle.
   in the settings file. They do not travel in `.ptsettings` until task 8.1 is
   decided, and the wiki says so.
 
+- **The pseudolocale is generated at run time** from the English catalogue
+  (`pseudolocale::transform`, behind `setLanguage("qps-ploc")`), not written to
+  a file: it cannot go stale, and needs nothing at build time. Its window
+  titles reach the capture harness through the approved-states manifest,
+  computed by the same function, so there is one implementation.
+- **What the first pseudolocale pass found** (92 surfaces, light, default size):
+  - Missed strings: the mini staff's clef names (fixed), and JUCE's own
+    `AudioDeviceSelectorComponent` words in Settings > Audio ("Output:",
+    "Input:", "Test", "<< none >>"). Those come from JUCE's `TRANS`, keyed on
+    English; translating them needs a JUCE `LocalisedStrings` mapping fed
+    from the catalogue, which is left for the first real translation.
+  - Fixed: the Settings label columns (now as wide as their widest label),
+    the transport strip's buttons and readout (grown by how much longer the
+    language's words are than English's, so English is unchanged; past the
+    window's width it falls back to its compact form and the menus narrow, as
+    it always did).
+  - Left, and why: the tuner's advanced value boxes and the spectrogram's
+    axis labels clip a long unit (each a fixed column sized for a number);
+    the Settings tabs wrap at 150%; punctuation-only entries (", ", " · ")
+    are bracketed like words, which makes the review rows noisier than any
+    real language would. None changes what a translation can say, and each is
+    cheaper to size against a real translation than against a generated one.
+  - Not a localisation finding: a floating tool's "Drag" handle covers the
+    start of a left-aligned heading in English too; filed separately.
+
 ## Risks
 
 - **A mechanical change across nearly every UI file.** It conflicts with

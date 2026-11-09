@@ -124,7 +124,7 @@ class MainTitleBar final : public juce::Component
             {
                 const int menusAtFull = 4 * menuWidth + 3 * gap + transportGap;
                 const int shortfall =
-                    px(TransportStrip::compactWidth) - (bounds.getWidth() - menusAtFull);
+                    transportStrip.requiredWidth(false) - (bounds.getWidth() - menusAtFull);
                 if (shortfall > 0)
                 {
                     width = std::max(px(64), menuWidth - (shortfall + 3) / 4);
@@ -142,9 +142,9 @@ class MainTitleBar final : public juce::Component
         }
 
         const int available = bounds.getWidth();
-        const int stripWidth = available >= px(TransportStrip::fullWidth)
-                                   ? px(TransportStrip::fullWidth)
-                                   : std::min(available, px(TransportStrip::compactWidth));
+        const int full = transportStrip.requiredWidth(true);
+        const int stripWidth =
+            available >= full ? full : std::min(available, transportStrip.requiredWidth(false));
         transportStrip.setBounds(bounds.removeFromLeft(std::max(0, stripWidth)));
     }
 

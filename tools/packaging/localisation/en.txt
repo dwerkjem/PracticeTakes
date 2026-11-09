@@ -879,3 +879,8 @@ language: English
 "window.feedback" = "Send feedback"
 "window.score-import" = "Score import"
 "window.settings" = "Settings"
+
+# The small staff several tools draw
+"staff.clef.bass" = "Bass"
+"staff.clef.treble" = "Treble"
+"staff.clef.treble-octave-down" = "Treble 8vb"

@@ -1,20 +1,22 @@
 #include "MiniStaff.h"
 
+#include "../localisation/Localisation.h"
+
 #include <algorithm>
 #include <cstdlib>
 
-const char* miniStaffClefName(pitch::StaffClef clef) noexcept
+juce::String miniStaffClefName(pitch::StaffClef clef)
 {
     switch (clef)
     {
     case pitch::StaffClef::treble:
-        return "Treble";
+        break;
     case pitch::StaffClef::bass:
-        return "Bass";
+        return l10n::text("staff.clef.bass");
     case pitch::StaffClef::trebleOctaveDown:
-        return "Treble 8vb";
+        return l10n::text("staff.clef.treble-octave-down");
     }
-    return "Treble";
+    return l10n::text("staff.clef.treble");
 }
 
 float miniStaffSpacing(juce::Rectangle<float> area, const MiniStaffStyle& style)

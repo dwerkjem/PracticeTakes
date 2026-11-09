@@ -10,7 +10,11 @@
 #include "../../../theme/AppLookAndFeel.h"
 #include "PlaybackMixPanel.h"
 
+#include <algorithm>
+#include <cmath>
 #include <functional>
+#include <initializer_list>
+#include <string_view>
 
 // The practice clock's controls, in the main window's control strip: play or
 // pause, stop, where the clock is, the tempo scale, the metronome and the loop
@@ -27,10 +31,21 @@ class TransportStrip final
       private juce::Timer
 {
   public:
-    // Widths the control strip lays this out at: everything, or without the
-    // readout when the window is narrow.
-    static constexpr int fullWidth = 576;
-    static constexpr int compactWidth = 414;
+    // The width this needs: everything, or without the readout when the
+    // window is narrow. 576 and 414 for English at 100%; it grows with the text
+    // size and with a language whose words are longer.
+    [[nodiscard]] int requiredWidth(bool withReadout)
+    {
+        constexpr int gap = 4;
+        const Widths widths = controlWidths();
+        int total = widths.record + widths.play + widths.stop + widths.tempo + widths.click +
+                    widths.loop + widths.mix + 6 * gap;
+        if (withReadout)
+        {
+            total += widths.readout + gap;
+        }
+        return total;
+    }
 
     // How long the readout says how the last take ended before going back to
     // where the clock is.
@@ -139,34 +154,98 @@ class TransportStrip final
     void resized() override
     {
         // Widths for text at 100 percent, grown with the text size.
-        const auto px = [this](int base) { return appearance::scaledFor(*this, base); };
         auto bounds = getLocalBounds();
         constexpr int gap = 4;
-        const bool compact = getWidth() < px(fullWidth);
+        const Widths widths = controlWidths();
+        const bool compact = getWidth() < requiredWidth(true);
 
-        recordButton.setBounds(bounds.removeFromLeft(px(56)));
+        recordButton.setBounds(bounds.removeFromLeft(widths.record));
         bounds.removeFromLeft(gap);
-        playButton.setBounds(bounds.removeFromLeft(px(56)));
+        playButton.setBounds(bounds.removeFromLeft(widths.play));
         bounds.removeFromLeft(gap);
-        stopButton.setBounds(bounds.removeFromLeft(px(46)));
+        stopButton.setBounds(bounds.removeFromLeft(widths.stop));
         bounds.removeFromLeft(gap);
 
         positionLabel.setVisible(!compact);
         if (!compact)
         {
-            positionLabel.setBounds(bounds.removeFromLeft(px(158)));
+            positionLabel.setBounds(bounds.removeFromLeft(widths.readout));
             bounds.removeFromLeft(gap);
         }
 
-        tempoSlider.setBounds(bounds.removeFromLeft(px(92)));
+        tempoSlider.setBounds(bounds.removeFromLeft(widths.tempo));
         bounds.removeFromLeft(gap);
-        clickButton.setBounds(bounds.removeFromLeft(px(48)));
+        clickButton.setBounds(bounds.removeFromLeft(widths.click));
         bounds.removeFromLeft(gap);
-        loopButton.setBounds(bounds.removeFromLeft(px(46)));
+        loopButton.setBounds(bounds.removeFromLeft(widths.loop));
         bounds.removeFromLeft(gap);
-        mixButton.setBounds(bounds.removeFromLeft(px(44)));
+        mixButton.setBounds(bounds.removeFromLeft(widths.mix));
     }
 
+  private:
+    struct Widths
+    {
+        int record = 0;
+        int play = 0;
+        int stop = 0;
+        int readout = 0;
+        int tempo = 0;
+        int click = 0;
+        int loop = 0;
+        int mix = 0;
+    };
+
+    // Each control's width: its English width at 100%, grown with the text
+    // size, and grown again by however much longer the language's words are
+    // than English's -- so English lays out exactly as it always has. A button
+    // that changes its words -- Record and Finish, Play and Pause -- takes the
+    // longer, so the strip does not shift as it plays.
+    [[nodiscard]] Widths controlWidths()
+    {
+        const auto px = [this](int base) { return appearance::scaledFor(*this, base); };
+        const int height = std::max(1, getHeight() > 0 ? getHeight() : px(30));
+        const auto needs =
+            [this, height,
+             &px](juce::TextButton& button, int base, std::initializer_list<std::string_view> keys)
+        {
+            const juce::Font font = getLookAndFeel().getTextButtonFont(button, height);
+            float growth = 1.0f;
+            for (const auto key : keys)
+            {
+                const float english =
+                    juce::GlyphArrangement::getStringWidth(font, l10n::englishText(key));
+                const float here = juce::GlyphArrangement::getStringWidth(font, l10n::text(key));
+                if (english > 0.0f)
+                {
+                    growth = std::max(growth, here / english);
+                }
+            }
+            return static_cast<int>(std::ceil(static_cast<float>(px(base)) * growth));
+        };
+
+        Widths widths;
+        widths.record =
+            needs(recordButton, 56, {l10n::key("transport.record"), l10n::key("transport.finish")});
+        widths.play =
+            needs(playButton, 56, {l10n::key("transport.play"), l10n::key("transport.pause")});
+        widths.stop = needs(stopButton, 46, {l10n::key("transport.stop")});
+        widths.click = needs(clickButton, 48, {l10n::key("transport.click")});
+        widths.loop = needs(loopButton, 46, {l10n::key("transport.loop")});
+        widths.mix = needs(mixButton, 44, {l10n::key("transport.mix")});
+        widths.tempo = px(92);
+
+        // The readout, grown as "Bar 3, beat 2" is in this language.
+        const juce::Font font = positionLabel.getFont();
+        const float english =
+            juce::GlyphArrangement::getStringWidth(font, l10n::englishText("transport.position"));
+        const float here =
+            juce::GlyphArrangement::getStringWidth(font, l10n::text("transport.position"));
+        const float growth = english > 0.0f ? std::max(1.0f, here / english) : 1.0f;
+        widths.readout = static_cast<int>(std::ceil(static_cast<float>(px(158)) * growth));
+        return widths;
+    }
+
+  public:
     // What the readout says for a position: "Bar 3, beat 2", or the count-in.
     [[nodiscard]] static juce::String describe(const transport::ClockPosition& position)
     {

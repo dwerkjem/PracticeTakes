@@ -78,6 +78,10 @@ class Localisation
     // failed build before it can reach anybody.
     [[nodiscard]] juce::String text(std::string_view key) const;
 
+    // The English entry, whatever language is chosen: what a layout sized for
+    // English measures a translation against.
+    [[nodiscard]] juce::String englishText(std::string_view key) const;
+
     // text(key) with each {name} filled by name, in whatever order the
     // language puts them.
     [[nodiscard]] juce::String format(std::string_view key, Arguments arguments) const;
@@ -124,6 +128,11 @@ bool setLanguage(std::string_view code);
 [[nodiscard]] inline juce::String text(std::string_view key)
 {
     return current().text(key);
+}
+
+[[nodiscard]] inline juce::String englishText(std::string_view key)
+{
+    return current().englishText(key);
 }
 
 [[nodiscard]] inline juce::String format(std::string_view key, Arguments arguments)

@@ -11,7 +11,9 @@
 #include "../../../../platform/take/TakeRecorder.h"
 
 #include <algorithm>
+#include <cmath>
 #include <functional>
+#include <initializer_list>
 #include <utility>
 #include <vector>
 
@@ -58,6 +60,26 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             [[nodiscard]] int px(int base) const
             {
                 return appearance::scaledFor(*this, base);
+            }
+
+            // The width of a column of labels: `base` at 100 percent, grown with
+            // the text size, or what the widest of `labels` needs in this
+            // language, whichever is wider -- but never more than half the
+            // panel, past which a label shrinks its letters as before.
+            [[nodiscard]] int
+            labelColumn(int base, std::initializer_list<juce::Label*> labels) const
+            {
+                int widest = px(base);
+                for (juce::Label* label : labels)
+                {
+                    const juce::Font font = label->getLookAndFeel().getLabelFont(*label);
+                    const int needed =
+                        static_cast<int>(std::ceil(
+                            juce::GlyphArrangement::getStringWidth(font, label->getText()))) +
+                        px(12);
+                    widest = std::max(widest, needed);
+                }
+                return std::min(widest, std::max(px(base), getWidth() / 2));
             }
 
             // The last row ends at `y`; a part below it that takes whatever
@@ -315,23 +337,25 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 description.setBounds(bounds.removeFromTop(px(42)));
                 bounds.removeFromTop(px(18));
 
+                const int column =
+                    labelColumn(130, {&themeLabel, &textSizeLabel, &namingLabel, &octavesLabel});
                 auto themeRow = bounds.removeFromTop(px(36));
-                themeLabel.setBounds(themeRow.removeFromLeft(px(130)));
+                themeLabel.setBounds(themeRow.removeFromLeft(column));
                 themeBox.setBounds(themeRow.removeFromLeft(px(240)));
                 bounds.removeFromTop(px(12));
 
                 auto sizeRow = bounds.removeFromTop(px(36));
-                textSizeLabel.setBounds(sizeRow.removeFromLeft(px(130)));
+                textSizeLabel.setBounds(sizeRow.removeFromLeft(column));
                 textSizeBox.setBounds(sizeRow.removeFromLeft(px(240)));
                 bounds.removeFromTop(px(12));
 
                 auto namingRow = bounds.removeFromTop(px(36));
-                namingLabel.setBounds(namingRow.removeFromLeft(px(130)));
+                namingLabel.setBounds(namingRow.removeFromLeft(column));
                 namingBox.setBounds(namingRow.removeFromLeft(px(240)));
                 bounds.removeFromTop(px(12));
 
                 auto octavesRow = bounds.removeFromTop(px(36));
-                octavesLabel.setBounds(octavesRow.removeFromLeft(px(130)));
+                octavesLabel.setBounds(octavesRow.removeFromLeft(column));
                 octavesBox.setBounds(octavesRow.removeFromLeft(px(240)));
                 bounds.removeFromTop(px(18));
 
@@ -495,20 +519,22 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 microphoneButton.setBounds(bounds.removeFromTop(px(36)).removeFromLeft(px(260)));
                 bounds.removeFromTop(px(10));
 
+                const int column =
+                    labelColumn(130, {&inputGainLabel, &inputLevelLabel, &metronomeVolumeLabel});
                 auto gainRow = bounds.removeFromTop(px(36));
-                inputGainLabel.setBounds(gainRow.removeFromLeft(px(130)));
+                inputGainLabel.setBounds(gainRow.removeFromLeft(column));
                 inputGainSlider.setBounds(gainRow.removeFromLeft(px(360)));
                 bounds.removeFromTop(px(8));
 
                 auto levelRow = bounds.removeFromTop(px(24));
-                inputLevelLabel.setBounds(levelRow.removeFromLeft(px(130)));
+                inputLevelLabel.setBounds(levelRow.removeFromLeft(column));
                 inputLevelMeter.setBounds(levelRow.removeFromLeft(px(360)));
                 bounds.removeFromTop(px(6));
                 bufferingStatusLabel.setBounds(bounds.removeFromTop(px(26)));
                 bounds.removeFromTop(px(8));
 
                 auto metronomeRow = bounds.removeFromTop(px(36));
-                metronomeVolumeLabel.setBounds(metronomeRow.removeFromLeft(px(130)));
+                metronomeVolumeLabel.setBounds(metronomeRow.removeFromLeft(column));
                 metronomeVolumeSlider.setBounds(metronomeRow.removeFromLeft(px(360)));
                 accentToggle.setBounds(bounds.removeFromTop(px(28)).removeFromLeft(px(360)));
                 metronomeStatusLabel.setBounds(bounds.removeFromTop(px(26)));
@@ -715,7 +741,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 bounds.removeFromTop(px(12));
 
                 auto deviceRow = bounds.removeFromTop(px(36));
-                deviceLabel.setBounds(deviceRow.removeFromLeft(px(130)));
+                deviceLabel.setBounds(deviceRow.removeFromLeft(labelColumn(130, {&deviceLabel})));
                 deviceBox.setBounds(deviceRow.removeFromLeft(px(320)));
                 deviceRow.removeFromLeft(px(10));
                 refreshButton.setBounds(deviceRow.removeFromLeft(px(110)));
@@ -727,7 +753,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 bounds.removeFromTop(px(10));
                 auto thresholdRow = bounds.removeFromTop(px(30));
-                thresholdLabel.setBounds(thresholdRow.removeFromLeft(px(170)));
+                thresholdLabel.setBounds(
+                    thresholdRow.removeFromLeft(labelColumn(170, {&thresholdLabel})));
                 thresholdSlider.setBounds(thresholdRow.removeFromLeft(px(380)));
 
                 bounds.removeFromTop(px(10));
@@ -1285,33 +1312,36 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 description.setBounds(bounds.removeFromTop(px(48)));
                 bounds.removeFromTop(px(18));
 
+                const int column = labelColumn(
+                    150, {&presetLabel, &countInLabel, &referenceLabel, &nearPerfectLabel,
+                          &toleranceLabel, &outOfTuneLabel, &minimumLevelLabel});
                 auto presetRow = bounds.removeFromTop(px(36));
-                presetLabel.setBounds(presetRow.removeFromLeft(px(150)));
+                presetLabel.setBounds(presetRow.removeFromLeft(column));
                 presetBox.setBounds(presetRow.removeFromLeft(px(280)));
                 bounds.removeFromTop(px(12));
 
                 auto countInRow = bounds.removeFromTop(px(36));
-                countInLabel.setBounds(countInRow.removeFromLeft(px(150)));
+                countInLabel.setBounds(countInRow.removeFromLeft(column));
                 countInBox.setBounds(countInRow.removeFromLeft(px(280)));
                 bounds.removeFromTop(px(12));
 
                 auto referenceRow = bounds.removeFromTop(px(36));
-                referenceLabel.setBounds(referenceRow.removeFromLeft(px(150)));
+                referenceLabel.setBounds(referenceRow.removeFromLeft(column));
                 referenceSlider.setBounds(referenceRow.removeFromLeft(px(180)));
                 bounds.removeFromTop(px(12));
 
                 auto nearPerfectRow = bounds.removeFromTop(px(36));
-                nearPerfectLabel.setBounds(nearPerfectRow.removeFromLeft(px(150)));
+                nearPerfectLabel.setBounds(nearPerfectRow.removeFromLeft(column));
                 nearPerfectSlider.setBounds(nearPerfectRow.removeFromLeft(px(180)));
                 bounds.removeFromTop(px(12));
 
                 auto toleranceRow = bounds.removeFromTop(px(36));
-                toleranceLabel.setBounds(toleranceRow.removeFromLeft(px(150)));
+                toleranceLabel.setBounds(toleranceRow.removeFromLeft(column));
                 toleranceSlider.setBounds(toleranceRow.removeFromLeft(px(180)));
                 bounds.removeFromTop(px(12));
 
                 auto outOfTuneRow = bounds.removeFromTop(px(36));
-                outOfTuneLabel.setBounds(outOfTuneRow.removeFromLeft(px(150)));
+                outOfTuneLabel.setBounds(outOfTuneRow.removeFromLeft(column));
                 outOfTuneSlider.setBounds(outOfTuneRow.removeFromLeft(px(180)));
                 bounds.removeFromTop(px(12));
 
@@ -1319,7 +1349,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 // bar.
                 auto minimumLevelRow = bounds.removeFromTop(px(44));
                 minimumLevelLabel.setBounds(
-                    minimumLevelRow.removeFromLeft(px(150)).withSizeKeepingCentre(px(150), px(36)));
+                    minimumLevelRow.removeFromLeft(column).withSizeKeepingCentre(column, px(36)));
                 minimumLevelSlider.setBounds(
                     minimumLevelRow.removeFromLeft(px(180)).withSizeKeepingCentre(px(180), px(36)));
                 minimumLevelRow.removeFromLeft(px(16));

@@ -59,6 +59,18 @@ A reference is a string literal as the first argument of a qualified
 `l10n::text`/`format`/`plural`/`key`/`pluralKey` call. Pass a variable and
 the check cannot see the key, so mark it with `l10n::key` where it is written.
 
+## Checking a layout without a translator
+
+`l10n::setLanguage("qps-ploc")`, or `--language qps-ploc` on the command line,
+runs in a pseudolocale generated from English (`Pseudolocale.h`): every entry
+accented, about 40% longer and bracketed. `test-suite capture --pseudolocale
+--scratch` captures every surface in it. Read the pictures for two things:
+text that is clipped, truncated or not wrapped, and text that is not bracketed,
+which is text the catalogue does not hold. A layout sized for English should
+grow by how much longer a language's text is than English's, so that English
+lays out exactly as before -- the transport strip does this with
+`l10n::englishText`, the Settings panels with their label column.
+
 ## What is never localised
 
 Some text looks like interface text and is not. It stays a literal, in

@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "application/localisation/Localisation.h"
 #include "application/theme/MiniStaff.h"
 
 #include <array>
@@ -36,9 +37,10 @@ const juce::Colour noteColour(0xff00ff00);
 
 TEST_CASE("a mini staff names its clef", "[theme][ministaff]")
 {
-    CHECK(std::string(miniStaffClefName(pitch::StaffClef::treble)) == "Treble");
-    CHECK(std::string(miniStaffClefName(pitch::StaffClef::bass)) == "Bass");
-    CHECK(std::string(miniStaffClefName(pitch::StaffClef::trebleOctaveDown)) == "Treble 8vb");
+    REQUIRE(l10n::setLanguage("en"));
+    CHECK(miniStaffClefName(pitch::StaffClef::treble) == "Treble");
+    CHECK(miniStaffClefName(pitch::StaffClef::bass) == "Bass");
+    CHECK(miniStaffClefName(pitch::StaffClef::trebleOctaveDown) == "Treble 8vb");
 }
 
 TEST_CASE(

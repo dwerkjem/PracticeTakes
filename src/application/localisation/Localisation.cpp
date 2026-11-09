@@ -78,6 +78,15 @@ juce::String Localisation::text(std::string_view key) const
     return juce::String(std::string(key));
 }
 
+juce::String Localisation::englishText(std::string_view key) const
+{
+    if (const auto* found = english.find(key))
+    {
+        return *found;
+    }
+    return juce::String(std::string(key));
+}
+
 juce::String Localisation::format(std::string_view key, Arguments arguments) const
 {
     NamedArguments named;
