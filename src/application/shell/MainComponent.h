@@ -55,6 +55,10 @@ class MainComponent final
       private juce::ChangeListener
 {
   public:
+    // Where the settings file is, for anything that must read it before the
+    // window exists -- the interface language, at startup.
+    [[nodiscard]] static juce::PropertiesFile::Options settingsStorageOptions();
+
     // `declineAudioInput` is passed straight to AudioInputService: open no
     // input device at all, leaving the generated tone as the only producer.
     // See that constructor for why a capture instance wants it.
@@ -327,6 +331,14 @@ class MainComponent final
     // The note naming was changed in Settings: saved, and everything that names
     // a note redrawn.
     void noteNamingChanged();
+
+    // The interface language chosen ("" for Automatic): saved, for the next
+    // start -- every label takes its words when it is made.
+    void chooseLanguage(const juce::String& code);
+    void showLanguageRestartNote() const;
+
+    // Language chosen in Settings, as stored; "" is Automatic.
+    juce::String chosenLanguage;
 
     // A size laid out for 100 percent, grown with the text size.
     [[nodiscard]] int scaled(int base) const noexcept

@@ -1,5 +1,7 @@
 #include "AppLookAndFeel.h"
 
+#include "Icons.h"
+
 #include <PracticeTakesFonts.h>
 
 namespace
@@ -59,6 +61,18 @@ void AppLookAndFeel::drawButtonText(
     bool shouldDrawButtonAsHighlighted,
     bool shouldDrawButtonAsDown)
 {
+    if (appearance::iconOf(button) != appearance::Icon::none)
+    {
+        appearance::drawIconButtonText(
+            graphics, button, getTextButtonFont(button, button.getHeight()),
+            button
+                .findColour(
+                    button.getToggleState() ? juce::TextButton::textColourOnId
+                                            : juce::TextButton::textColourOffId)
+                .withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.5f));
+        return;
+    }
+
     if (!button.getProperties()[leftAlignedTextProperty])
     {
         juce::LookAndFeel_V4::drawButtonText(
@@ -86,6 +100,27 @@ void AppLookAndFeel::drawButtonText(
             button.getButtonText(), leftAlignedTextIndent, yIndent, textWidth,
             button.getHeight() - yIndent * 2, juce::Justification::centredLeft, 1);
     }
+}
+
+void TitleStripLookAndFeel::drawButtonText(
+    juce::Graphics& graphics,
+    juce::TextButton& button,
+    bool shouldDrawButtonAsHighlighted,
+    bool shouldDrawButtonAsDown)
+{
+    if (appearance::iconOf(button) == appearance::Icon::none)
+    {
+        juce::LookAndFeel_V4::drawButtonText(
+            graphics, button, shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
+        return;
+    }
+    appearance::drawIconButtonText(
+        graphics, button, getTextButtonFont(button, button.getHeight()),
+        button
+            .findColour(
+                button.getToggleState() ? juce::TextButton::textColourOnId
+                                        : juce::TextButton::textColourOffId)
+            .withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.5f));
 }
 
 void AppLookAndFeel::setTextScale(int percent) noexcept
@@ -156,7 +191,8 @@ void AppLookAndFeel::drawToggleButton(
     bool shouldDrawButtonAsHighlighted,
     bool shouldDrawButtonAsDown)
 {
-    if (textScalePercent == appearance::TextScale::defaultPercent)
+    if (textScalePercent == appearance::TextScale::defaultPercent &&
+        appearance::iconOf(button) == appearance::Icon::none)
     {
         juce::LookAndFeel_V4::drawToggleButton(
             graphics, button, shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
@@ -174,16 +210,60 @@ void AppLookAndFeel::drawToggleButton(
         tickWidth, tickWidth, button.getToggleState(), button.isEnabled(),
         shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
 
-    graphics.setColour(button.findColour(juce::ToggleButton::textColourId));
-    graphics.setFont(juce::FontOptions(fontSize));
-    if (!button.isEnabled())
+    auto textArea = button.getLocalBounds()
+                        .withTrimmedLeft(juce::roundToInt(tickWidth) + 10)
+                        .withTrimmedRight(2);
+    const auto colour = button.findColour(juce::ToggleButton::textColourId)
+                            .withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.5f);
+    if (const auto icon = appearance::iconOf(button); icon != appearance::Icon::none)
     {
-        graphics.setOpacity(0.5f);
+        const float iconSize = fontSize * 1.15f;
+        appearance::drawIcon(
+            graphics, icon,
+            textArea.removeFromLeft(juce::roundToInt(iconSize))
+                .toFloat()
+                .withSizeKeepingCentre(iconSize, iconSize),
+            colour);
+        textArea.removeFromLeft(juce::roundToInt(iconSize * 0.4f));
     }
+
+    graphics.setColour(colour);
+    graphics.setFont(juce::FontOptions(fontSize));
+    graphics.drawFittedText(button.getButtonText(), textArea, juce::Justification::centredLeft, 10);
+}
+
+void AppLookAndFeel::drawLabel(juce::Graphics& graphics, juce::Label& label)
+{
+    const auto icon = appearance::iconOf(label);
+    if (icon == appearance::Icon::none || label.isBeingEdited())
+    {
+        juce::LookAndFeel_V4::drawLabel(graphics, label);
+        return;
+    }
+
+    // LookAndFeel_V4::drawLabel, with the icon before the words.
+    graphics.fillAll(label.findColour(juce::Label::backgroundColourId));
+    const auto alpha = label.isEnabled() ? 1.0f : 0.5f;
+    const juce::Font font(getLabelFont(label));
+    const auto colour = label.findColour(juce::Label::textColourId).withMultipliedAlpha(alpha);
+    auto textArea = getLabelBorderSize(label).subtractedFrom(label.getLocalBounds());
+    const float iconSize =
+        std::min(static_cast<float>(textArea.getHeight()), font.getHeight() * 1.15f);
+    appearance::drawIcon(
+        graphics, icon,
+        textArea.removeFromLeft(juce::roundToInt(iconSize))
+            .toFloat()
+            .withSizeKeepingCentre(iconSize, iconSize),
+        colour);
+    textArea.removeFromLeft(juce::roundToInt(iconSize * 0.45f));
+
+    graphics.setColour(colour);
+    graphics.setFont(font);
     graphics.drawFittedText(
-        button.getButtonText(),
-        button.getLocalBounds()
-            .withTrimmedLeft(juce::roundToInt(tickWidth) + 10)
-            .withTrimmedRight(2),
-        juce::Justification::centredLeft, 10);
+        label.getText(), textArea, label.getJustificationType(),
+        juce::jmax(
+            1, static_cast<int>(static_cast<float>(textArea.getHeight()) / font.getHeight())),
+        label.getMinimumHorizontalScale());
+    graphics.setColour(label.findColour(juce::Label::outlineColourId).withMultipliedAlpha(alpha));
+    graphics.drawRect(label.getLocalBounds());
 }

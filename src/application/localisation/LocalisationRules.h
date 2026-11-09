@@ -68,6 +68,37 @@ enum class PluralCategory
     return end == std::string_view::npos ? code : code.substr(0, end);
 }
 
+// Which language to run in: the one chosen in Settings when there is a
+// catalogue for it; otherwise -- "Automatic", or a choice whose catalogue is
+// gone -- the system's language when there is one for that; otherwise English.
+// `available` holds language codes ("en", "de") with catalogues.
+[[nodiscard]] inline std::string chooseLanguage(
+    std::string_view chosen,
+    std::string_view system,
+    const std::vector<std::string>& available)
+{
+    const auto has = [&available](std::string_view code)
+    {
+        for (const std::string& candidate : available)
+        {
+            if (candidate == languageOf(code))
+            {
+                return true;
+            }
+        }
+        return false;
+    };
+    if (!chosen.empty() && has(chosen))
+    {
+        return std::string(chosen);
+    }
+    if (!system.empty() && has(system))
+    {
+        return std::string(system);
+    }
+    return "en";
+}
+
 // Which form a whole-number count takes. French puts zero with one ("0
 // mesure"); the others give one alone to one.
 [[nodiscard]] inline PluralCategory

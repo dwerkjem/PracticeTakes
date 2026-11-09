@@ -203,6 +203,16 @@ juce_add_binary_data(PracticeTakesCatalogues
     SOURCES ${PRACTICE_TAKES_CATALOGUES}
 )
 
+# The interface icons (Lucide, ISC): see tools/packaging/icons/ui/README.md.
+file(GLOB PRACTICE_TAKES_UI_ICONS CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/packaging/icons/ui/*.svg")
+
+juce_add_binary_data(PracticeTakesUiIcons
+    HEADER_NAME PracticeTakesUiIcons.h
+    NAMESPACE PracticeTakesUiIcons
+    SOURCES ${PRACTICE_TAKES_UI_ICONS}
+)
+
 # The space-free binary name is what the Debian package, the NSIS installer,
 # and the tooling scripts under tools/scripts/ all expect. Apple is deliberately
 # excluded: juce_add_gui_app names both the bundle and its executable after
@@ -298,6 +308,7 @@ target_link_libraries(PracticeTakes
         PracticeTakesCatalogues
         PracticeTakesFonts
         PracticeTakesSamples
+        PracticeTakesUiIcons
         juce::juce_audio_utils
         juce::juce_dsp
         juce::juce_gui_extra
@@ -387,6 +398,7 @@ if(BUILD_TESTING)
             Catch2::Catch2WithMain
             PracticeTakesCatalogues
             PracticeTakesFonts
+            PracticeTakesUiIcons
             PracticeTakesSamples
             juce::juce_audio_devices
             juce::juce_data_structures

@@ -11,6 +11,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 // User-facing text, addressed by identifier (openspec/changes/internationalization).
 //
@@ -118,6 +119,17 @@ class Localisation
 // The application's: the embedded English catalogue, and whatever language
 // setLanguage chose. Message thread.
 [[nodiscard]] Localisation& current();
+
+// A language the application carries a catalogue for: its code, and its name
+// as its own speakers write it ("Deutsch"), from the catalogue's `language:`.
+struct LanguageChoice
+{
+    std::string code;
+    juce::String name;
+};
+
+// Every embedded language, English first.
+[[nodiscard]] std::vector<LanguageChoice> availableLanguages();
 
 // Chooses the embedded catalogue for `code`, or the pseudolocale for
 // pseudolocale::code. An unknown code runs in English rather than failing (and

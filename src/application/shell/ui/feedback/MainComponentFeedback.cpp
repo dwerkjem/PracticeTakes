@@ -20,7 +20,9 @@ void MainComponent::showHelpMenu()
 {
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
-    menu.addItem(sendFeedbackMenuItemId, l10n::text("menu.help.feedback"));
+    const auto ink = appLookAndFeel.findColour(juce::PopupMenu::textColourId);
+    menu.addItem(appearance::menuItem(
+        sendFeedbackMenuItemId, l10n::text("menu.help.feedback"), appearance::Icon::message, ink));
     menu.addSeparator();
     menu.addItem(
         feedbackInvitationsMenuItemId,

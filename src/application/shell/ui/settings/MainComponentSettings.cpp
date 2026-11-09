@@ -22,6 +22,8 @@ constexpr int darkSettingsMenuItemId = 3;
 constexpr int muteSettingsMenuItemId = 4;
 constexpr int normalFullscreenMenuItemId = 5;
 constexpr int kioskFullscreenMenuItemId = 6;
+// Automatic, then each language in availableLanguages' order.
+constexpr int firstLanguageMenuItemId = 100;
 
 [[nodiscard]] juce::Rectangle<int> validWindowBounds(const juce::String& storedBounds)
 {
@@ -55,25 +57,70 @@ void MainComponent::showSettingsMenu()
         kioskFullscreenMenuItemId, l10n::text("menu.settings.fullscreen.kiosk"), true,
         selectedFullscreenMode == AppSettings::FullscreenMode::kiosk);
 
+    // The language, by its globe, each listed by its own name: the one menu a
+    // reader may need without being able to read the rest of it.
+    juce::PopupMenu languageMenu;
+    std::vector<juce::String> languageCodes{juce::String()};
+    languageMenu.addItem(
+        firstLanguageMenuItemId, l10n::text("settings.appearance.language.automatic"), true,
+        chosenLanguage.isEmpty());
+    for (const auto& language : l10n::availableLanguages())
+    {
+        languageCodes.emplace_back(language.code);
+        languageMenu.addItem(
+            firstLanguageMenuItemId + static_cast<int>(languageCodes.size()) - 1, language.name,
+            true, chosenLanguage == juce::String(language.code));
+    }
+
+    const auto ink = appLookAndFeel.findColour(juce::PopupMenu::textColourId);
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
-    menu.addSubMenu(l10n::text("settings.appearance.title"), appearanceMenu);
-    menu.addSubMenu(l10n::text("menu.settings.fullscreen"), fullscreenMenu);
-    menu.addItem(
-        muteSettingsMenuItemId,
-        l10n::text(
-            audioInputService.isMuted() ? l10n::key("settings.audio.microphone.unmute")
-                                        : l10n::key("settings.audio.microphone.mute")));
+    menu.addSubMenu(
+        l10n::text("settings.appearance.language"), languageMenu, true,
+        appearance::iconForMenu(appearance::Icon::globe, ink));
+    menu.addSubMenu(
+        l10n::text("settings.appearance.title"), appearanceMenu, true,
+        appearance::iconForMenu(appearance::Icon::palette, ink));
+    menu.addSubMenu(
+        l10n::text("menu.settings.fullscreen"), fullscreenMenu, true,
+        appearance::iconForMenu(appearance::Icon::maximize, ink));
+    {
+        const bool muted = audioInputService.isMuted();
+        juce::PopupMenu::Item mute(l10n::text(
+            muted ? l10n::key("settings.audio.microphone.unmute")
+                  : l10n::key("settings.audio.microphone.mute")));
+        mute.itemID = muteSettingsMenuItemId;
+        mute.image = appearance::iconForMenu(
+            muted ? appearance::Icon::microphone : appearance::Icon::microphoneOff, ink);
+        menu.addItem(std::move(mute));
+    }
     menu.addSeparator();
-    menu.addItem(openSettingsMenuItemId, l10n::text("menu.settings.open"));
+    {
+        juce::PopupMenu::Item open(l10n::text("menu.settings.open"));
+        open.itemID = openSettingsMenuItemId;
+        open.image = appearance::iconForMenu(appearance::Icon::settings, ink);
+        menu.addItem(std::move(open));
+    }
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(
         juce::PopupMenu::Options().withTargetComponent(&settingsButton).withMinimumWidth(230),
-        [safeThis](int selectedItemId)
+        [safeThis, languageCodes](int selectedItemId)
         {
             if (safeThis == nullptr)
             {
+                return;
+            }
+
+            const int language = selectedItemId - firstLanguageMenuItemId;
+            if (language >= 0 && language < static_cast<int>(languageCodes.size()))
+            {
+                const auto& code = languageCodes[static_cast<std::size_t>(language)];
+                if (code != safeThis->chosenLanguage)
+                {
+                    safeThis->chooseLanguage(code);
+                    safeThis->showLanguageRestartNote();
+                }
                 return;
             }
 
@@ -235,6 +282,15 @@ void MainComponent::showSettings()
             }
         });
 
+    settingsWindow->setLanguageHandler(
+        chosenLanguage,
+        [safeThis](const juce::String& code)
+        {
+            if (safeThis != nullptr)
+            {
+                safeThis->chooseLanguage(code);
+            }
+        });
     settingsWindow->setNamingHandler(
         [safeThis]
         {
@@ -592,6 +648,7 @@ void MainComponent::resetAll()
     setTheme(AppDefaults::theme);
     setTextScale(appearance::TextScale::defaultPercent);
     l10n::setNoteNaming({});
+    chosenLanguage = {};
     if (settingsWindow != nullptr)
     {
         settingsWindow->showNaming();
@@ -644,6 +701,7 @@ AppSettings::State MainComponent::captureSettingsState()
     state.theme = currentTheme;
     state.textScalePercent = appLookAndFeel.textScale();
     state.noteNaming = static_cast<int>(l10n::noteNaming().naming);
+    state.language = chosenLanguage;
     state.octaveNumbering = static_cast<int>(l10n::noteNaming().octaves);
     state.microphoneMuted =
         sessionMicrophoneMuteEnabled ? persistedMicrophoneMuted : audioInputService.isMuted();
@@ -724,6 +782,7 @@ void MainComponent::loadSettings()
     // Set before anything is laid out, so the first layout is at this size.
     appLookAndFeel.setTextScale(loaded.state.textScalePercent);
     titleStripLookAndFeel.setTextScale(loaded.state.textScalePercent);
+    chosenLanguage = loaded.state.language;
     l10n::setNoteNaming(
         {static_cast<score::NoteNaming>(loaded.state.noteNaming),
          static_cast<score::OctaveNumbering>(loaded.state.octaveNumbering)});

@@ -67,6 +67,12 @@ void MainComponent::updateMicrophoneStateControl()
         break;
     }
 
+    appearance::setIcon(
+        microphoneButton,
+        audioInputService.inputState() == AudioInputService::InputState::muted ||
+                audioInputService.inputState() == AudioInputService::InputState::disconnected
+            ? appearance::Icon::microphoneOff
+            : appearance::Icon::microphone);
     microphoneButton.setButtonText(text);
     microphoneButton.setTooltip(tooltip);
     microphoneButton.setColour(juce::TextButton::buttonColourId, colour.withAlpha(0.75f));

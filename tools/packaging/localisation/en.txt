@@ -884,3 +884,9 @@ language: English
 "staff.clef.bass" = "Bass"
 "staff.clef.treble" = "Treble"
 "staff.clef.treble-octave-down" = "Treble 8vb"
+
+# The interface language
+"settings.appearance.language" = "Language"
+"settings.appearance.language.automatic" = "Automatic (the system's language)"
+"settings.appearance.language.restart" = "Restart Practice Takes to change the language."
+"settings.appearance.language.tooltip" = "The language Practice Takes speaks. Each is listed by its own name. Note names are chosen below, separately"

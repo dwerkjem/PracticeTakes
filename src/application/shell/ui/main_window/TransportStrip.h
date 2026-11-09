@@ -86,6 +86,7 @@ class TransportStrip final
         stopButton.setComponentID("transport-stop");
         stopButton.setTooltip(l10n::text("transport.stop.tooltip"));
         stopButton.onClick = [this] { clock.stop(); };
+        appearance::setIcon(stopButton, appearance::Icon::stop);
         addAndMakeVisible(stopButton);
 
         positionLabel.setComponentID("transport-position");
@@ -119,6 +120,7 @@ class TransportStrip final
                 onSettingsChanged();
             }
         };
+        appearance::setIcon(clickButton, appearance::Icon::drum);
         addAndMakeVisible(clickButton);
 
         loopButton.setComponentID("transport-loop");
@@ -126,6 +128,7 @@ class TransportStrip final
         loopButton.setToggleState(clock.loopEnabled(), juce::dontSendNotification);
         loopButton.setTooltip(l10n::text("transport.loop.tooltip"));
         loopButton.onClick = [this] { clock.setLoopEnabled(loopButton.getToggleState()); };
+        appearance::setIcon(loopButton, appearance::Icon::repeat);
         addAndMakeVisible(loopButton);
 
         // The score's sound, and each part's and hand's
@@ -133,6 +136,7 @@ class TransportStrip final
         mixButton.setComponentID("transport-mix");
         mixButton.setTooltip(l10n::text("transport.mix.tooltip"));
         mixButton.onClick = [this] { showMix(); };
+        appearance::setIcon(mixButton, appearance::Icon::slidersVertical);
         addAndMakeVisible(mixButton);
 
         clock.addListener(this);
@@ -335,6 +339,7 @@ class TransportStrip final
         const bool running = position.state == transport::ClockState::playing;
         playButton.setButtonText(
             l10n::text(running ? l10n::key("transport.pause") : l10n::key("transport.play")));
+        appearance::setIcon(playButton, running ? appearance::Icon::pause : appearance::Icon::play);
         playButton.setTooltip(l10n::text(
             running ? l10n::key("transport.pause.tooltip") : l10n::key("transport.play.tooltip")));
         positionLabel.setText(readout(position), juce::dontSendNotification);
@@ -345,6 +350,8 @@ class TransportStrip final
         const std::optional<std::string> blocked = takes.whyCannotStart();
         recordButton.setButtonText(
             l10n::text(recording ? l10n::key("transport.finish") : l10n::key("transport.record")));
+        appearance::setIcon(
+            recordButton, recording ? appearance::Icon::check : appearance::Icon::circleDot);
         recordButton.setEnabled(recording || !blocked.has_value());
         recordButton.setTooltip(
             recording ? l10n::text("transport.finish.tooltip")

@@ -1064,3 +1064,30 @@ TEST_CASE(
     CHECK(loaded.noteNaming == 0);
     CHECK(loaded.octaveNumbering == 0);
 }
+
+TEST_CASE(
+    "the chosen language survives a round trip, and nonsense is not one",
+    "[settings][persistence][language]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        CHECK(AppSettings::load(writer).state.language.isEmpty());
+        AppSettings::State expected;
+        expected.language = "de";
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    {
+        juce::PropertiesFile reader(temporary.path, settingsOptions());
+        CHECK(AppSettings::load(reader).state.language == "de");
+        CHECK(AppSettings::storedLanguage(reader) == "de");
+    }
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.setValue("appearance.language", "../../etc");
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    CHECK(AppSettings::storedLanguage(reader).isEmpty());
+}

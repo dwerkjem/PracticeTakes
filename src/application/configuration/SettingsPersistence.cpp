@@ -14,6 +14,7 @@ constexpr auto schemaKey = "settings.schema";
 constexpr auto themeKey = "global.theme";
 constexpr auto textScaleKey = "appearance.textScale";
 constexpr auto noteNamingKey = "appearance.noteNaming";
+constexpr auto languageKey = "appearance.language";
 constexpr auto octaveNumberingKey = "appearance.octaveNumbering";
 constexpr auto microphoneMutedKey = "audio.muted";
 constexpr auto audioStateKey = "audio.deviceState";
@@ -68,6 +69,7 @@ constexpr const char* ownedKeys[] = {
     textScaleKey,
     noteNamingKey,
     octaveNumberingKey,
+    languageKey,
     microphoneMutedKey,
     audioStateKey,
     audioInputGainKey,
@@ -326,6 +328,7 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
         AppDefaults::highestMinimumLevelDb);
     result.state.countInWhenRecordingDuringPlayback =
         properties.getBoolValue(countInWhenPlayingKey, false);
+    result.state.language = storedLanguage(properties);
     result.state.chosenTargetSounding = properties.getValue(chosenTargetSoundingKey);
     result.state.chosenTargetWritten = properties.getValue(chosenTargetWrittenKey);
     result.state.keepTargetWhenScoreOpens = properties.getBoolValue(keepTargetKey, false);
@@ -390,6 +393,15 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
     return result;
 }
 
+juce::String AppSettings::storedLanguage(const juce::PropertySet& properties)
+{
+    // A code is letters, digits, '-' and '_'; anything else is not one.
+    const auto stored = properties.getValue(languageKey).trim();
+    return stored.containsOnly("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
+               ? stored
+               : juce::String();
+}
+
 void AppSettings::store(juce::PropertySet& properties, const State& state)
 {
     properties.setValue(schemaKey, AppDefaults::schemaVersion);
@@ -415,6 +427,7 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(outOfTuneCentsKey, state.outOfTuneCents);
     properties.setValue(minimumLevelKey, state.minimumLevelDb);
     properties.setValue(countInWhenPlayingKey, state.countInWhenRecordingDuringPlayback);
+    properties.setValue(languageKey, state.language);
     properties.setValue(chosenTargetSoundingKey, state.chosenTargetSounding);
     properties.setValue(chosenTargetWrittenKey, state.chosenTargetWritten);
     properties.setValue(keepTargetKey, state.keepTargetWhenScoreOpens);

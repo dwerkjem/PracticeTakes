@@ -15,6 +15,25 @@ void MainComponent::setTheme(Theme theme)
     applyAppearance();
 }
 
+void MainComponent::chooseLanguage(const juce::String& code)
+{
+    if (code == chosenLanguage)
+    {
+        return;
+    }
+    chosenLanguage = code;
+    saveSettings(false);
+}
+
+void MainComponent::showLanguageRestartNote() const
+{
+    // In the language chosen *from*, which is the one on screen; the globe and
+    // the restart arrow say it to anyone who cannot read that.
+    juce::AlertWindow::showMessageBoxAsync(
+        juce::MessageBoxIconType::InfoIcon, l10n::text("settings.appearance.language"),
+        l10n::text("settings.appearance.language.restart"), l10n::text("workspace.alert.ok"));
+}
+
 void MainComponent::noteNamingChanged()
 {
     saveSettings(false);

@@ -98,6 +98,19 @@ std::string MainComponent::findSoundFont()
     return {};
 }
 
+juce::PropertiesFile::Options MainComponent::settingsStorageOptions()
+{
+    juce::PropertiesFile::Options storageOptions;
+    storageOptions.applicationName = "PracticeTakes";
+    storageOptions.filenameSuffix = ".settings";
+    storageOptions.folderName = settingsFolderName();
+    storageOptions.osxLibrarySubFolder = "Application Support";
+    storageOptions.commonToAllUsers = false;
+    storageOptions.millisecondsBeforeSaving = -1;
+    storageOptions.storageFormat = juce::PropertiesFile::storeAsXML;
+    return storageOptions;
+}
+
 MainComponent::MainComponent(bool muteMicrophoneForSession, bool declineAudioInput)
     // Declaration order, not argument order: audioInputService is declared well
     // before sessionMicrophoneMuteEnabled, so the parameter is used directly
@@ -107,14 +120,7 @@ MainComponent::MainComponent(bool muteMicrophoneForSession, bool declineAudioInp
     setOpaque(true);
     audioInputService.addChangeListener(this);
 
-    juce::PropertiesFile::Options storageOptions;
-    storageOptions.applicationName = "PracticeTakes";
-    storageOptions.filenameSuffix = ".settings";
-    storageOptions.folderName = settingsFolderName();
-    storageOptions.osxLibrarySubFolder = "Application Support";
-    storageOptions.commonToAllUsers = false;
-    storageOptions.millisecondsBeforeSaving = -1;
-    storageOptions.storageFormat = juce::PropertiesFile::storeAsXML;
+    const auto storageOptions = settingsStorageOptions();
     migrateLegacySettingsFile(storageOptions.getDefaultFile());
     applicationProperties.setStorageParameters(storageOptions);
     loadSettings();
@@ -156,6 +162,10 @@ MainComponent::~MainComponent()
 
 void MainComponent::configureTopButtons()
 {
+    appearance::setIcon(fileButton, appearance::Icon::folderOpen);
+    appearance::setIcon(settingsButton, appearance::Icon::settings);
+    appearance::setIcon(toolsButton, appearance::Icon::wrench);
+    appearance::setIcon(helpButton, appearance::Icon::help);
     fileButton.setTooltip(l10n::text("title.file.tooltip"));
     fileButton.onClick = [this] { showFileMenu(); };
     settingsButton.onClick = [this] { showSettingsMenu(); };

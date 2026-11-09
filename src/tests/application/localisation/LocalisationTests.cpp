@@ -162,3 +162,11 @@ TEST_CASE("the English catalogue is embedded", "[localisation]")
     REQUIRE(data != nullptr);
     CHECK(Catalogue::parse(juce::String::fromUTF8(data, size)).languageName() == "English");
 }
+
+TEST_CASE("the embedded languages are listed by their own names, English first", "[localisation]")
+{
+    const auto languages = l10n::availableLanguages();
+    REQUIRE_FALSE(languages.empty());
+    CHECK(languages.front().code == "en");
+    CHECK(languages.front().name == "English");
+}

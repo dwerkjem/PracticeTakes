@@ -44,6 +44,18 @@ puts it into words.
 The rules that are not text — plural categories, placeholder filling, number
 formatting — are in the JUCE-free `LocalisationRules.h`.
 
+## Which language runs
+
+The language is chosen before any window is built, because every label takes
+its words when it is made: `main.cpp` takes `--language` from the command line,
+else the language chosen in Settings (`appearance.language`, read with
+`AppSettings::storedLanguage`), else the system's when there is a catalogue for
+it, else English (`l10n::chooseLanguage`). A change in Settings is saved and
+takes effect at the next start. `l10n::availableLanguages` lists the embedded
+catalogues by their own names (each catalogue's `language:` line), so the
+setting -- marked with a globe icon, which reads in any language -- lists a
+language the way its speakers write it.
+
 ## The check
 
 `tools/scripts/quality/check_localisation.py` runs in the Python quality

@@ -54,6 +54,7 @@ class MainTitleBar final : public juce::Component
         // click on it is legitimately unavailable in a wide window -- which the
         // channel reports as a failure rather than a silent no-op.
         hamburgerButton.setButtonText(l10n::text("title.menu"));
+        appearance::setIcon(hamburgerButton, appearance::Icon::menu);
         hamburgerButton.setTooltip(l10n::text("title.menu.tooltip"));
         hamburgerButton.setComponentID("hamburger-button");
         hamburgerButton.onClick = [this] { showCollapsedMenu(); };
@@ -69,6 +70,9 @@ class MainTitleBar final : public juce::Component
 
     void setFullscreen(bool isFullscreen)
     {
+        appearance::setIcon(
+            fullscreenButton,
+            isFullscreen ? appearance::Icon::minimize : appearance::Icon::maximize);
         fullscreenButton.setButtonText(l10n::text(
             isFullscreen ? l10n::key("title.fullscreen.restore") : l10n::key("title.fullscreen")));
         fullscreenButton.setTooltip(l10n::text(
@@ -161,12 +165,21 @@ class MainTitleBar final : public juce::Component
         };
 
         juce::PopupMenu menu;
-        menu.addItem(file, l10n::text("title.file"), false);
-        menu.addItem(settings, l10n::text("title.settings"));
-        menu.addItem(tools, l10n::text("title.tools"));
-        menu.addItem(help, l10n::text("title.help"));
+        const auto ink = getLookAndFeel().findColour(juce::PopupMenu::textColourId);
+        auto fileItem =
+            appearance::menuItem(file, l10n::text("title.file"), appearance::Icon::folderOpen, ink);
+        fileItem.isEnabled = false;
+        menu.addItem(std::move(fileItem));
+        menu.addItem(appearance::menuItem(
+            settings, l10n::text("title.settings"), appearance::Icon::settings, ink));
+        menu.addItem(
+            appearance::menuItem(tools, l10n::text("title.tools"), appearance::Icon::wrench, ink));
+        menu.addItem(
+            appearance::menuItem(help, l10n::text("title.help"), appearance::Icon::help, ink));
         menu.addSeparator();
-        menu.addItem(microphone, microphoneButton.getButtonText());
+        menu.addItem(appearance::menuItem(
+            microphone, microphoneButton.getButtonText(), appearance::iconOf(microphoneButton),
+            ink));
 
         const auto safeThis = juce::Component::SafePointer<MainTitleBar>(this);
         menu.showMenuAsync(

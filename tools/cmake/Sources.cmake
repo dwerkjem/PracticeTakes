@@ -105,6 +105,8 @@ set(PRACTICE_TAKES_SOURCES
     src/application/testcontrol/TestControlSession.h
     src/application/testcontrol/TestControlTarget.h
     src/application/theme/AppLookAndFeel.cpp
+    src/application/theme/Icons.cpp
+    src/application/theme/Icons.h
     src/application/theme/MiniStaff.cpp
     src/application/theme/MiniStaff.h
     src/application/theme/PlusOrMinusCents.h
@@ -357,6 +359,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/testcontrol/SyntheticTakeTests.cpp
     src/tests/application/testcontrol/ApprovedStatesManifestTests.cpp
     src/tests/application/theme/AppLookAndFeelTests.cpp
+    src/tests/application/theme/IconsTests.cpp
     src/tests/application/theme/MiniStaffTests.cpp
     src/tests/application/tools/CompactPresentationTests.cpp
     src/tests/application/tools/ToolCatalogTests.cpp
@@ -472,6 +475,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/application/testcontrol/TestControlCommand.cpp
     src/application/testcontrol/TestControlSession.cpp
     src/application/theme/AppLookAndFeel.cpp
+    src/application/theme/Icons.cpp
     src/application/theme/MiniStaff.cpp
     src/application/theme/Theme.cpp
     src/features/analysis/harmonics/HarmonicAnalyzer.cpp

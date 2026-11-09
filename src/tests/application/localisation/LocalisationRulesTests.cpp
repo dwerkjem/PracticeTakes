@@ -3,6 +3,8 @@
 #include "application/localisation/LocalisationRules.h"
 
 #include <limits>
+#include <string>
+#include <vector>
 
 using l10n::formatNamed;
 using l10n::formatNumber;
@@ -105,4 +107,17 @@ TEST_CASE("a number that is not one is still written", "[localisation]")
     CHECK(formatNumber(std::numeric_limits<double>::quiet_NaN(), 1, english) == "NaN");
     CHECK(formatNumber(std::numeric_limits<double>::infinity(), 1, english) == "\xE2\x88\x9E");
     CHECK(formatNumber(-std::numeric_limits<double>::infinity(), 1, english) == "-\xE2\x88\x9E");
+}
+
+TEST_CASE("the language chosen, the system's, or English", "[localisation]")
+{
+    const std::vector<std::string> available{"en", "de"};
+    CHECK(l10n::chooseLanguage("de", "fr", available) == "de");
+    CHECK(l10n::chooseLanguage("de-AT", "fr", available) == "de-AT");
+    // Automatic: the system's, when there is a catalogue for it.
+    CHECK(l10n::chooseLanguage("", "de", available) == "de");
+    CHECK(l10n::chooseLanguage("", "fr", available) == "en");
+    // A choice whose catalogue is gone falls back the same way.
+    CHECK(l10n::chooseLanguage("it", "de", available) == "de");
+    CHECK(l10n::chooseLanguage("", "", {}) == "en");
 }

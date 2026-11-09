@@ -4,6 +4,7 @@
 
 #include <PracticeTakesCatalogues.h>
 
+#include <algorithm>
 #include <memory>
 
 namespace l10n
@@ -166,6 +167,33 @@ namespace
     return Catalogue::parse(juce::String::fromUTF8(data, size));
 }
 } // namespace
+
+std::vector<LanguageChoice> availableLanguages()
+{
+    std::vector<LanguageChoice> languages;
+    for (int index = 0; index < PracticeTakesCatalogues::namedResourceListSize; ++index)
+    {
+        const std::string resource = PracticeTakesCatalogues::namedResourceList[index];
+        constexpr std::string_view suffix = "_txt";
+        if (resource.size() <= suffix.size() ||
+            resource.compare(resource.size() - suffix.size(), suffix.size(), suffix) != 0)
+        {
+            continue;
+        }
+        const std::string code = resource.substr(0, resource.size() - suffix.size());
+        if (const auto catalogue = embedded(code))
+        {
+            languages.push_back(
+                {code, catalogue->languageName().isNotEmpty() ? catalogue->languageName()
+                                                              : juce::String(code)});
+        }
+    }
+    std::stable_sort(
+        languages.begin(), languages.end(),
+        [](const LanguageChoice& left, const LanguageChoice& right)
+        { return left.code == "en" && right.code != "en"; });
+    return languages;
+}
 
 Localisation& current()
 {

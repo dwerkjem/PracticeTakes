@@ -179,7 +179,9 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   `.ptsettings` import/export/transaction codecs.
 - `src/application/theme` — shared palettes and look-and-feel (which also holds
   the text size), `TextScale.h` (the JUCE-free text-size rule and the role
-  table: draw text by role, never by point size), and `MiniStaff`, the small
+  table: draw text by role, never by point size), `Icons.h` (the Lucide
+  icons from `tools/packaging/icons/ui`: `appearance::setIcon` on a button,
+  label, toggle or menu item puts one beside its words), and `MiniStaff`, the small
   staff with a notehead that several tools draw.
 - `src/application/localisation` — every user-facing string by identifier:
   `l10n::text/format/plural/number`, reading the catalogues embedded from

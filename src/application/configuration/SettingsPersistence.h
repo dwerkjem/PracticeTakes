@@ -87,6 +87,12 @@ struct State
 
     // A target the player chose, as its sounding and written names ("Bb3"),
     // empty for none; and whether opening a score keeps it (target-note-picker).
+    // The interface language's code ("de"), or empty for Automatic: the
+    // system's language when there is a catalogue for it. Read before any
+    // window is built (AppSettings::storedLanguage), since every label takes
+    // its words when it is made.
+    juce::String language;
+
     juce::String chosenTargetSounding;
     juce::String chosenTargetWritten;
     bool keepTargetWhenScoreOpens = false;
@@ -122,5 +128,8 @@ struct LoadResult
 
 [[nodiscard]] LoadResult load(const juce::PropertiesFile& properties);
 void store(juce::PropertySet& properties, const State& state);
+
+// The stored language alone, for startup.
+[[nodiscard]] juce::String storedLanguage(const juce::PropertySet& properties);
 void clearOwnedValues(juce::PropertySet& properties);
 } // namespace AppSettings

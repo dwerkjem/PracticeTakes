@@ -73,9 +73,13 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 for (juce::Label* label : labels)
                 {
                     const juce::Font font = label->getLookAndFeel().getLabelFont(*label);
+                    const float icon = appearance::iconOf(*label) != appearance::Icon::none
+                                           ? font.getHeight() * 1.6f
+                                           : 0.0f;
                     const int needed =
                         static_cast<int>(std::ceil(
-                            juce::GlyphArrangement::getStringWidth(font, label->getText()))) +
+                            juce::GlyphArrangement::getStringWidth(font, label->getText()) +
+                            icon)) +
                         px(12);
                     widest = std::max(widest, needed);
                 }
@@ -233,6 +237,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 themeLabel.setText(
                     l10n::text("settings.appearance.theme"), juce::dontSendNotification);
+                appearance::setIcon(themeLabel, appearance::Icon::sunMoon);
                 addAndMakeVisible(themeLabel);
 
                 themeBox.addItem(
@@ -254,6 +259,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 // note and the notation size themselves to their panes.
                 textSizeLabel.setText(
                     l10n::text("settings.appearance.textsize"), juce::dontSendNotification);
+                appearance::setIcon(textSizeLabel, appearance::Icon::textSize);
                 addAndMakeVisible(textSizeLabel);
                 for (int percent = appearance::TextScale::minimumPercent;
                      percent <= appearance::TextScale::maximumPercent;
@@ -273,10 +279,46 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 };
                 addAndMakeVisible(textSizeBox);
 
+                // The interface language, found by its globe in any language.
+                // Each is listed by its own name, so a reader finds theirs.
+                languageLabel.setText(
+                    l10n::text("settings.appearance.language"), juce::dontSendNotification);
+                appearance::setIcon(languageLabel, appearance::Icon::globe);
+                addAndMakeVisible(languageLabel);
+                languageBox.setComponentID("settings-language");
+                languageCodes.emplace_back();
+                languageBox.addItem(l10n::text("settings.appearance.language.automatic"), 1);
+                for (const auto& language : l10n::availableLanguages())
+                {
+                    languageCodes.emplace_back(language.code);
+                    languageBox.addItem(language.name, static_cast<int>(languageCodes.size()));
+                }
+                languageBox.setTooltip(l10n::text("settings.appearance.language.tooltip"));
+                languageBox.setSelectedId(1, juce::dontSendNotification);
+                languageBox.onChange = [this]
+                {
+                    const int index = languageBox.getSelectedId() - 1;
+                    if (index < 0 || index >= static_cast<int>(languageCodes.size()))
+                    {
+                        return;
+                    }
+                    languageNote.setVisible(true);
+                    if (onLanguageChanged)
+                    {
+                        onLanguageChanged(languageCodes[static_cast<std::size_t>(index)]);
+                    }
+                };
+                addAndMakeVisible(languageBox);
+                languageNote.setText(
+                    l10n::text("settings.appearance.language.restart"), juce::dontSendNotification);
+                appearance::setIcon(languageNote, appearance::Icon::rotate);
+                addChildComponent(languageNote);
+
                 // Note names, which are a musician's training rather than a
                 // language (openspec/changes/internationalization decision 5).
                 namingLabel.setText(
                     l10n::text("settings.appearance.naming"), juce::dontSendNotification);
+                appearance::setIcon(namingLabel, appearance::Icon::music);
                 addAndMakeVisible(namingLabel);
                 namingBox.setComponentID("settings-note-naming");
                 namingBox.addItem(l10n::text("settings.appearance.naming.english"), 1);
@@ -286,6 +328,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 addAndMakeVisible(namingBox);
                 octavesLabel.setText(
                     l10n::text("settings.appearance.octaves"), juce::dontSendNotification);
+                appearance::setIcon(octavesLabel, appearance::Icon::listOrdered);
                 addAndMakeVisible(octavesLabel);
                 octavesBox.setComponentID("settings-octave-numbering");
                 octavesBox.addItem(l10n::text("settings.appearance.octaves.scientific"), 1);
@@ -337,8 +380,16 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 description.setBounds(bounds.removeFromTop(px(42)));
                 bounds.removeFromTop(px(18));
 
-                const int column =
-                    labelColumn(130, {&themeLabel, &textSizeLabel, &namingLabel, &octavesLabel});
+                const int column = labelColumn(
+                    130,
+                    {&languageLabel, &themeLabel, &textSizeLabel, &namingLabel, &octavesLabel});
+                auto languageRow = bounds.removeFromTop(px(36));
+                languageLabel.setBounds(languageRow.removeFromLeft(column));
+                languageBox.setBounds(languageRow.removeFromLeft(px(240)));
+                languageRow.removeFromLeft(px(12));
+                languageNote.setBounds(languageRow);
+                bounds.removeFromTop(px(12));
+
                 auto themeRow = bounds.removeFromTop(px(36));
                 themeLabel.setBounds(themeRow.removeFromLeft(column));
                 themeBox.setBounds(themeRow.removeFromLeft(px(240)));
@@ -385,10 +436,33 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::Label octavesLabel;
             juce::ComboBox octavesBox;
 
+            juce::Label languageLabel;
+            juce::ComboBox languageBox;
+            juce::Label languageNote;
+            std::vector<juce::String> languageCodes;
+
           public:
             // Called after the naming is changed here, so the shell can save it
             // and redraw what names notes.
             std::function<void()> onNamingChanged;
+
+            // Called with the language chosen here ("" for Automatic).
+            std::function<void(const juce::String&)> onLanguageChanged;
+
+            // Shows `chosen` ("" for Automatic) as the choice in force.
+            void showLanguage(const juce::String& chosen)
+            {
+                for (std::size_t index = 0; index < languageCodes.size(); ++index)
+                {
+                    if (languageCodes[index] == chosen)
+                    {
+                        languageBox.setSelectedId(
+                            static_cast<int>(index) + 1, juce::dontSendNotification);
+                        return;
+                    }
+                }
+                languageBox.setSelectedId(1, juce::dontSendNotification);
+            }
 
             // What is in force: set elsewhere too, by a reset.
             void showNaming()
@@ -436,6 +510,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 inputGainLabel.setText(
                     l10n::text("settings.audio.input-volume"), juce::dontSendNotification);
+                appearance::setIcon(inputGainLabel, appearance::Icon::volume);
                 addAndMakeVisible(inputGainLabel);
                 inputGainSlider.setRange(0.0, 200.0, 1.0);
                 inputGainSlider.setSliderStyle(juce::Slider::LinearHorizontal);
@@ -454,6 +529,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 inputLevelLabel.setText(
                     l10n::text("settings.audio.input-level"), juce::dontSendNotification);
+                appearance::setIcon(inputLevelLabel, appearance::Icon::activity);
                 addAndMakeVisible(inputLevelLabel);
                 inputLevelMeter.setPercentageDisplay(false);
                 inputLevelMeter.setTitle(l10n::text("settings.audio.input-level.title"));
@@ -464,6 +540,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 metronomeVolumeLabel.setText(
                     l10n::text("settings.audio.metronome-volume"), juce::dontSendNotification);
+                appearance::setIcon(metronomeVolumeLabel, appearance::Icon::drum);
                 addAndMakeVisible(metronomeVolumeLabel);
                 metronomeVolumeSlider.setRange(0.0, 100.0, 1.0);
                 metronomeVolumeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
@@ -489,6 +566,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     clock.setAccentEnabled(accentToggle.getToggleState());
                     notifyMetronomeChanged();
                 };
+                appearance::setIcon(accentToggle, appearance::Icon::tally);
                 addAndMakeVisible(accentToggle);
 
                 metronomeStatusLabel.setJustificationType(juce::Justification::centredLeft);
@@ -598,6 +676,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             void updateMicrophoneControls()
             {
                 const auto isMuted = audioInputService.isMuted();
+                appearance::setIcon(
+                    microphoneButton,
+                    isMuted ? appearance::Icon::microphoneOff : appearance::Icon::microphone);
                 microphoneButton.setButtonText(
                     isMuted ? l10n::text("settings.audio.microphone.unmute")
                             : l10n::text("settings.audio.microphone.mute"));
@@ -667,6 +748,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 configureDescription(description, l10n::text("settings.midi.description"));
 
                 deviceLabel.setText(l10n::text("settings.midi.device"), juce::dontSendNotification);
+                appearance::setIcon(deviceLabel, appearance::Icon::keyboardMusic);
                 addAndMakeVisible(deviceLabel);
 
                 deviceBox.setTextWhenNothingSelected(l10n::text("settings.midi.device.prompt"));
@@ -678,6 +760,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 refreshButton.setButtonText(l10n::text("settings.midi.rescan"));
                 refreshButton.setTitle(l10n::text("settings.midi.rescan.title"));
                 refreshButton.onClick = [this] { rebuildDeviceList(); };
+                appearance::setIcon(refreshButton, appearance::Icon::refresh);
                 addAndMakeVisible(refreshButton);
 
                 statusLabel.setJustificationType(juce::Justification::topLeft);
@@ -688,6 +771,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 thresholdLabel.setText(
                     l10n::text("settings.midi.pedal-threshold"), juce::dontSendNotification);
+                appearance::setIcon(thresholdLabel, appearance::Icon::footprints);
                 addAndMakeVisible(thresholdLabel);
 
                 // A number the user can see, because the point of the setting is
@@ -1116,6 +1200,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 presetLabel.setText(
                     l10n::text("settings.practice.preset"), juce::dontSendNotification);
+                appearance::setIcon(presetLabel, appearance::Icon::sliders);
                 addAndMakeVisible(presetLabel);
                 for (const AppDefaults::PresetDefinition& preset : AppDefaults::presets)
                 {
@@ -1135,6 +1220,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 countInLabel.setText(
                     l10n::text("settings.practice.count-in"), juce::dontSendNotification);
+                appearance::setIcon(countInLabel, appearance::Icon::timer);
                 addAndMakeVisible(countInLabel);
                 countInBox.addItem(l10n::text("settings.practice.count-in.none"), 1);
                 for (int bars = 1; bars <= transport::maximumCountInBars; ++bars)
@@ -1157,6 +1243,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 // The application's A4 (system-wide-target-note decision 1).
                 referenceLabel.setText(
                     l10n::text("settings.practice.reference"), juce::dontSendNotification);
+                appearance::setIcon(referenceLabel, appearance::Icon::waveform);
                 addAndMakeVisible(referenceLabel);
                 referenceSlider.setComponentID("settings-reference-pitch");
                 referenceSlider.setSliderStyle(juce::Slider::IncDecButtons);
@@ -1184,6 +1271,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 // others stop at it.
                 nearPerfectLabel.setText(
                     l10n::text("settings.practice.near-perfect"), juce::dontSendNotification);
+                appearance::setIcon(nearPerfectLabel, appearance::Icon::crosshair);
                 addAndMakeVisible(nearPerfectLabel);
                 nearPerfectSlider.setComponentID("settings-near-perfect-cents");
                 nearPerfectSlider.setSliderStyle(juce::Slider::IncDecButtons);
@@ -1195,6 +1283,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 toleranceLabel.setText(
                     l10n::text("settings.practice.in-tune"), juce::dontSendNotification);
+                appearance::setIcon(toleranceLabel, appearance::Icon::circleCheck);
                 addAndMakeVisible(toleranceLabel);
                 toleranceSlider.setComponentID("settings-in-tune-cents");
                 toleranceSlider.setSliderStyle(juce::Slider::IncDecButtons);
@@ -1206,6 +1295,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 outOfTuneLabel.setText(
                     l10n::text("settings.practice.out-of-tune"), juce::dontSendNotification);
+                appearance::setIcon(outOfTuneLabel, appearance::Icon::circleAlert);
                 addAndMakeVisible(outOfTuneLabel);
                 outOfTuneSlider.setComponentID("settings-out-of-tune-cents");
                 outOfTuneSlider.setSliderStyle(juce::Slider::IncDecButtons);
@@ -1219,6 +1309,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 // it the room is never an attack, so never an extra note.
                 minimumLevelLabel.setText(
                     l10n::text("settings.practice.minimum-level"), juce::dontSendNotification);
+                appearance::setIcon(minimumLevelLabel, appearance::Icon::volumeOff);
                 addAndMakeVisible(minimumLevelLabel);
                 minimumLevelSlider.setComponentID("settings-minimum-level");
                 minimumLevelSlider.setSliderStyle(juce::Slider::IncDecButtons);
@@ -1269,6 +1360,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                         onCountInChanged();
                     }
                 };
+                appearance::setIcon(keepTargetToggle, appearance::Icon::pin);
                 addAndMakeVisible(keepTargetToggle);
 
                 // Whether a score's target follows the note being sung while
@@ -1285,6 +1377,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                         onCountInChanged();
                     }
                 };
+                appearance::setIcon(followToggle, appearance::Icon::locate);
                 addAndMakeVisible(followToggle);
 
                 // Record pressed during playback (#361): on from here, or a
@@ -1302,6 +1395,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                         onCountInChanged();
                     }
                 };
+                appearance::setIcon(countInWhenPlayingToggle, appearance::Icon::circleDot);
                 addAndMakeVisible(countInWhenPlayingToggle);
             }
 
@@ -1444,6 +1538,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 feedbackButton.setButtonText(l10n::text("settings.reset.feedback"));
                 feedbackButton.setTitle(l10n::text("settings.reset.feedback.title"));
                 feedbackButton.onClick = std::move(feedbackHandler);
+                appearance::setIcon(feedbackButton, appearance::Icon::message);
                 addAndMakeVisible(feedbackButton);
 
                 resetHeading.setText(
@@ -1451,15 +1546,19 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 resetHeading.setFont(
                     appearance::labelFont(appearance::TextRole::menu, juce::Font::bold));
                 addAndMakeVisible(resetHeading);
+                appearance::setIcon(resetToolButton, appearance::Icon::wrench);
                 configureResetButton(
                     resetToolButton, l10n::text("settings.reset.tool"),
                     l10n::text("settings.reset.tool.question"), std::move(resetToolHandler));
+                appearance::setIcon(resetAudioButton, appearance::Icon::volume);
                 configureResetButton(
                     resetAudioButton, l10n::text("settings.reset.audio"),
                     l10n::text("settings.reset.audio.question"), std::move(resetAudioHandler));
+                appearance::setIcon(resetLayoutButton, appearance::Icon::layout);
                 configureResetButton(
                     resetLayoutButton, l10n::text("settings.reset.layout"),
                     l10n::text("settings.reset.layout.question"), std::move(resetLayoutHandler));
+                appearance::setIcon(resetAllButton, appearance::Icon::rotate);
                 configureResetButton(
                     resetAllButton, l10n::text("settings.reset.all"),
                     l10n::text("settings.reset.all.question"), std::move(resetAllHandler));
@@ -1604,21 +1703,40 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             categoryTabs.addTab(
                 l10n::text("settings.reset.title"), juce::Colours::transparentBlack, &resetScroll,
                 false);
+            // Each category by its picture as well as its name.
+            {
+                constexpr appearance::Icon tabIcons[] = {
+                    appearance::Icon::palette, appearance::Icon::audioLines,
+                    appearance::Icon::piano, appearance::Icon::target, appearance::Icon::lifeBuoy};
+                auto& bar = categoryTabs.getTabbedButtonBar();
+                for (int index = 0; index < bar.getNumTabs() && index < 5; ++index)
+                {
+                    if (auto* tab = bar.getTabButton(index))
+                    {
+                        auto* icon = new appearance::TabIcon(tabIcons[index]);
+                        icon->setSize(30, 30);
+                        tab->setExtraComponent(icon, juce::TabBarButton::beforeText);
+                    }
+                }
+            }
             addAndMakeVisible(categoryTabs);
 
             saveButton.setButtonText(l10n::text("settings.save"));
             saveButton.setTitle(l10n::text("settings.save.title"));
             saveButton.onClick = std::move(saveHandler);
+            appearance::setIcon(saveButton, appearance::Icon::save);
             addAndMakeVisible(saveButton);
 
             exportButton.setButtonText(l10n::text("settings.export"));
             exportButton.setTitle(l10n::text("settings.export.title"));
             exportButton.onClick = std::move(exportHandler);
+            appearance::setIcon(exportButton, appearance::Icon::upload);
             addAndMakeVisible(exportButton);
 
             importButton.setButtonText(l10n::text("settings.import"));
             importButton.setTitle(l10n::text("settings.import.title"));
             importButton.onClick = std::move(importHandler);
+            appearance::setIcon(importButton, appearance::Icon::download);
             addAndMakeVisible(importButton);
         }
 
@@ -1634,6 +1752,16 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             auto bounds = getLocalBounds().reduced(12);
             auto footer = bounds.removeFromBottom(px(48));
             categoryTabs.setTabBarDepth(px(42));
+            // The tabs' icons grow with their captions.
+            auto& bar = categoryTabs.getTabbedButtonBar();
+            for (int index = 0; index < bar.getNumTabs(); ++index)
+            {
+                if (auto* tab = bar.getTabButton(index);
+                    tab != nullptr && tab->getExtraComponent() != nullptr)
+                {
+                    tab->getExtraComponent()->setSize(px(30), px(30));
+                }
+            }
             categoryTabs.setBounds(bounds);
             footer.removeFromTop(10);
             saveButton.setBounds(footer.removeFromRight(px(180)));
@@ -1663,6 +1791,14 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         void setNamingHandler(std::function<void()> handler)
         {
             appearancePanel.onNamingChanged = std::move(handler);
+        }
+
+        void setLanguageHandler(
+            const juce::String& chosen,
+            std::function<void(const juce::String&)> handler)
+        {
+            appearancePanel.showLanguage(chosen);
+            appearancePanel.onLanguageChanged = std::move(handler);
         }
 
         void showNaming()
@@ -1772,6 +1908,16 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         if (auto* content = dynamic_cast<Content*>(getContentComponent()))
         {
             content->setNamingHandler(std::move(handler));
+        }
+    }
+
+    // The language in force ("" for Automatic), and who is told of a change.
+    void
+    setLanguageHandler(const juce::String& chosen, std::function<void(const juce::String&)> handler)
+    {
+        if (auto* content = dynamic_cast<Content*>(getContentComponent()))
+        {
+            content->setLanguageHandler(chosen, std::move(handler));
         }
     }
 

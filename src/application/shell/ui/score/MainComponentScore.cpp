@@ -32,8 +32,12 @@ void MainComponent::showFileMenu()
 {
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
-    menu.addItem(openScoreMenuItemId, l10n::text("menu.file.open-score"));
-    menu.addItem(openSampleScoreMenuItemId, bundled_sample::menuLabel());
+    const auto ink = appLookAndFeel.findColour(juce::PopupMenu::textColourId);
+    menu.addItem(appearance::menuItem(
+        openScoreMenuItemId, l10n::text("menu.file.open-score"), appearance::Icon::folderOpen,
+        ink));
+    menu.addItem(appearance::menuItem(
+        openSampleScoreMenuItemId, bundled_sample::menuLabel(), appearance::Icon::music, ink));
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(
