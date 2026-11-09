@@ -805,6 +805,66 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "the near-perfect limit survives a round trip, and defaults to 5 cents",
+    "[settings][persistence]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        AppSettings::State expected;
+        expected.nearPerfectCents = 8.0;
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    {
+        juce::PropertiesFile reader(temporary.path, settingsOptions());
+        CHECK(AppSettings::load(reader).state.nearPerfectCents == Catch::Approx(8.0));
+    }
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.setValue("practice.nearPerfectCents", 90.0);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    CHECK(AppSettings::load(reader).state.nearPerfectCents == Catch::Approx(5.0));
+}
+
+TEST_CASE(
+    "a 0.6.0 settings file, with no near-perfect key, loads with the bands in order",
+    "[settings][persistence]")
+{
+    TemporarySettingsFile temporary;
+    {
+        // 0.6.0 allowed in tune within up to 50 cents, the near-note limit
+        // itself, and wrote no near-perfect key.
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.setValue("practice.inTuneCents", 50.0);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto state = AppSettings::load(reader).state;
+    CHECK(state.nearPerfectCents == Catch::Approx(5.0));
+    CHECK(state.inTuneCents == Catch::Approx(49.0));
+}
+
+TEST_CASE(
+    "crossed limits in a settings file load with near perfect inside in tune within",
+    "[settings][persistence]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.setValue("practice.inTuneCents", 8.0);
+        writer.setValue("practice.nearPerfectCents", 15.0);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto state = AppSettings::load(reader).state;
+    CHECK(state.inTuneCents == Catch::Approx(8.0));
+    CHECK(state.nearPerfectCents == Catch::Approx(7.0));
+}
+
+TEST_CASE(
     "the target following the score survives a round trip, and is on by default",
     "[settings][persistence]")
 {

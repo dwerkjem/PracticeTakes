@@ -50,9 +50,11 @@ TunerComponent::TunerComponent(
     AudioInputService& sharedAudioInputService,
     SharedPitchAnalysis& sharedPitchAnalysis,
     const pitch::ReferencePitch& applicationReferencePitch,
-    pitch::CurrentTarget& applicationTarget)
+    pitch::CurrentTarget& applicationTarget,
+    std::function<pitch::ZoneLimits()> zoneLimitsSource)
     : audioInputService(sharedAudioInputService), pitchAnalysis(sharedPitchAnalysis),
-      referencePitch(applicationReferencePitch), target(applicationTarget)
+      referencePitch(applicationReferencePitch), target(applicationTarget),
+      limits(std::move(zoneLimitsSource))
 {
     setOpaque(true);
 
@@ -511,7 +513,8 @@ juce::String TunerComponent::targetText() const
     }
     return juce::String::fromUTF8(
         pitch::readAgainstTarget(
-            *aimingAt, heardPitch(hasSignal, hasLockedMidiNote, lockedMidiNote, displayedCents))
+            *aimingAt, heardPitch(hasSignal, hasLockedMidiNote, lockedMidiNote, displayedCents),
+            zoneLimits().nearPerfectCents)
             .text.c_str());
 }
 
@@ -520,7 +523,8 @@ bool TunerComponent::onTarget() const
     const std::shared_ptr<const pitch::Target> aimingAt = target.target();
     return aimingAt != nullptr &&
            pitch::readAgainstTarget(
-               *aimingAt, heardPitch(hasSignal, hasLockedMidiNote, lockedMidiNote, displayedCents))
+               *aimingAt, heardPitch(hasSignal, hasLockedMidiNote, lockedMidiNote, displayedCents),
+               zoneLimits().nearPerfectCents)
                    .standing == pitch::TargetStanding::onIt;
 }
 

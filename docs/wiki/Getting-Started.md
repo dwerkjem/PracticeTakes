@@ -167,7 +167,8 @@ bar 9.
 A take from the microphone is judged for timing, and each single note for
 **how in tune it was**, against the reference pitch you sang at:
 
-- **In tune** is a **green** ring within 5 cents (near perfect), and a **blue**
+- **In tune** is a **green** ring when near perfect (within ±5 cents unless you
+  change it), and a **blue**
   ring further off but still inside your acceptable range. **Sharp** or
   **flat** is an **amber** ring with an arrow above (sharp) or below (flat) and
   the cents beside it: *+35*. A note nearer another note than the written one
@@ -183,8 +184,14 @@ A take from the microphone is judged for timing, and each single note for
 - Sing a treble line an octave down and it is still in tune; the list adds
   *an octave low*.
 - **Settings → Practice → In tune within** sets how close counts as in tune:
-  25 cents (a quarter of a semitone) unless you change it, from 5 to 50.
-  Changing it judges the take under review again.
+  ±25 cents (a quarter of a semitone either way) unless you change it, from ±2
+  to ±49. Changing it judges the take under review again. **Near perfect
+  within** sets the green band inside it: ±5 cents unless you change it, from
+  ±1 to ±20. Both are plus or minus: ±5 means from 5 cents flat to 5 cents
+  sharp. Each
+  stays inside the next: near perfect is always tighter than in tune, and in
+  tune always tighter than half a semitone, where a note is nearer the next
+  one.
 
 A chord heard through the microphone is judged for timing only: one voice is
 one pitch.

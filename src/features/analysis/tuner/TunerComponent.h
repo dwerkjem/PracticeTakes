@@ -11,7 +11,9 @@
 #include "../../../platform/pitch/CurrentTarget.h"
 #include "../../../platform/pitch/PitchTracker.h"
 #include "../../../platform/pitch/SteadyReading.h"
+#include "TunerZones.h"
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -28,7 +30,8 @@ class TunerComponent final
         AudioInputService& sharedAudioInputService,
         SharedPitchAnalysis& sharedPitchAnalysis,
         const pitch::ReferencePitch& applicationReferencePitch,
-        pitch::CurrentTarget& applicationTarget);
+        pitch::CurrentTarget& applicationTarget,
+        std::function<pitch::ZoneLimits()> zoneLimitsSource);
     ~TunerComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -169,12 +172,19 @@ class TunerComponent final
         compact::Shape shape) const;
     void drawCompactReading(juce::Graphics& graphics, juce::Rectangle<int> area) const;
     [[nodiscard]] juce::String directionLabel() const;
+
+    // The singer's near-perfect and in-tune limits, as Settings → Practice
+    // sets them, in order; the defaults without a source.
+    [[nodiscard]] pitch::ZoneLimits zoneLimits() const;
+    [[nodiscard]] bool isNearPerfect() const;
+    [[nodiscard]] std::vector<tuner::ZoneBand> currentBands() const;
     void drawSelectedDisplay(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
 
     AudioInputService& audioInputService;
     SharedPitchAnalysis& pitchAnalysis;
     const pitch::ReferencePitch& referencePitch;
     pitch::CurrentTarget& target;
+    std::function<pitch::ZoneLimits()> limits;
     pitch::SteadyReading steadyReading;
 
     juce::Label displayModeLabel;

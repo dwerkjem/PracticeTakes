@@ -26,6 +26,7 @@ constexpr auto playbackEnabledKey = "playback.enabled";
 constexpr auto playbackVolumeKey = "playback.volume";
 constexpr auto referencePitchKey = "practice.referencePitchHz";
 constexpr auto inTuneCentsKey = "practice.inTuneCents";
+constexpr auto nearPerfectCentsKey = "practice.nearPerfectCents";
 constexpr auto chosenTargetSoundingKey = "practice.chosenTarget";
 constexpr auto chosenTargetWrittenKey = "practice.chosenTargetWritten";
 constexpr auto keepTargetKey = "practice.keepTargetWhenScoreOpens";
@@ -72,6 +73,7 @@ constexpr const char* ownedKeys[] = {
     playbackVolumeKey,
     referencePitchKey,
     inTuneCentsKey,
+    nearPerfectCentsKey,
     chosenTargetSoundingKey,
     chosenTargetWrittenKey,
     keepTargetKey,
@@ -276,9 +278,19 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
         boundedValue(properties, playbackVolumeKey, AppDefaults::Playback::volume, 0.0, 1.0);
     result.state.referencePitchHz =
         boundedValue(properties, referencePitchKey, AppDefaults::referencePitchHz, 415.0, 466.0);
-    result.state.inTuneCents = boundedValue(
-        properties, inTuneCentsKey, AppDefaults::inTuneCents, AppDefaults::minimumInTuneCents,
-        AppDefaults::maximumInTuneCents);
+    {
+        // Each read in its own range, then put in order: a file written by
+        // hand, or by 0.6.0 with no near-perfect key, can disagree with itself.
+        const auto limits = pitch::orderedLimits(
+            {boundedValue(
+                 properties, nearPerfectCentsKey, AppDefaults::nearPerfectCents,
+                 AppDefaults::minimumNearPerfectCents, AppDefaults::maximumNearPerfectCents),
+             boundedValue(
+                 properties, inTuneCentsKey, AppDefaults::inTuneCents,
+                 AppDefaults::minimumInTuneCents, AppDefaults::maximumInTuneCents)});
+        result.state.inTuneCents = limits.toleranceCents;
+        result.state.nearPerfectCents = limits.nearPerfectCents;
+    }
     result.state.chosenTargetSounding = properties.getValue(chosenTargetSoundingKey);
     result.state.chosenTargetWritten = properties.getValue(chosenTargetWrittenKey);
     result.state.keepTargetWhenScoreOpens = properties.getBoolValue(keepTargetKey, false);
@@ -357,6 +369,7 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(playbackVolumeKey, state.playbackVolume);
     properties.setValue(referencePitchKey, state.referencePitchHz);
     properties.setValue(inTuneCentsKey, state.inTuneCents);
+    properties.setValue(nearPerfectCentsKey, state.nearPerfectCents);
     properties.setValue(chosenTargetSoundingKey, state.chosenTargetSounding);
     properties.setValue(chosenTargetWrittenKey, state.chosenTargetWritten);
     properties.setValue(keepTargetKey, state.keepTargetWhenScoreOpens);

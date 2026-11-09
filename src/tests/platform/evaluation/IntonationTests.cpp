@@ -97,6 +97,22 @@ TEST_CASE("the tolerance decides sharp from in tune", "[evaluation][intonation]"
         pitch::IntonationZone::nearButOff);
 }
 
+TEST_CASE(
+    "the near-perfect limit decides green from blue, not the verdict",
+    "[evaluation][intonation]")
+{
+    const PitchContour contour = contourOf(0, second, [](double) { return 8.0; });
+    IntonationSettings wide;
+    wide.nearPerfectCents = 10.0;
+
+    const Intonation usual = judgeIntonation(contour, 0, second, 69, 440.0, rate);
+    const Intonation widened = judgeIntonation(contour, 0, second, 69, 440.0, rate, wide);
+    CHECK(usual.zone == pitch::IntonationZone::acceptable);
+    CHECK(widened.zone == pitch::IntonationZone::nearPerfect);
+    CHECK(usual.verdict == IntonationVerdict::inTune);
+    CHECK(widened.verdict == IntonationVerdict::inTune);
+}
+
 TEST_CASE("a scoop into the note does not decide it", "[evaluation][intonation]")
 {
     // A semitone up from below over the first 100 ms, then held in tune, then

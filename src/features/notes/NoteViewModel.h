@@ -87,7 +87,8 @@ struct KeyWindow
     std::optional<double> sungMidi,
     double centsFromNearest,
     std::optional<int> targetMidi,
-    double toleranceCents) noexcept
+    double toleranceCents,
+    double nearPerfectCents = pitch::nearPerfectCents) noexcept
 {
     if (!sungMidi.has_value())
     {
@@ -96,7 +97,7 @@ struct KeyWindow
     const double cents =
         targetMidi.has_value() ? 100.0 * (*sungMidi - static_cast<double>(*targetMidi))
                                : centsFromNearest;
-    return pitch::zoneOf(cents, toleranceCents);
+    return pitch::zoneOf(cents, toleranceCents, nearPerfectCents);
 }
 
 struct TrailPoint

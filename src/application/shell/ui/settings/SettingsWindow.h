@@ -840,31 +840,41 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 };
                 addAndMakeVisible(referenceSlider);
 
-                // How close a sung note must be (sung-pitch-judging decision 7).
+                // The two zone limits, near perfect inside in tune within
+                // (sung-pitch-judging decision 7). Each slider's range stops a
+                // cent short of the other's value, so the bands cannot cross;
+                // pitch::orderedLimits holds the order wherever else they are set.
+                nearPerfectLabel.setText("Near perfect within", juce::dontSendNotification);
+                addAndMakeVisible(nearPerfectLabel);
+                nearPerfectSlider.setComponentID("settings-near-perfect-cents");
+                nearPerfectSlider.setSliderStyle(juce::Slider::IncDecButtons);
+                nearPerfectSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
+                showAsPlusOrMinusCents(nearPerfectSlider);
+                nearPerfectSlider.setTooltip(
+                    "How close a note must be to count as near perfect, plus or minus: 5 "
+                    "means from 5 cents flat to 5 cents sharp. The innermost, green band on "
+                    "the tuner and in the Note View. Always tighter than In tune within");
+                nearPerfectSlider.onValueChange = [this]
+                { applyZoneLimits(nearPerfectSlider.getValue(), toleranceSlider.getValue()); };
+                addAndMakeVisible(nearPerfectSlider);
+
                 toleranceLabel.setText("In tune within", juce::dontSendNotification);
                 addAndMakeVisible(toleranceLabel);
                 toleranceSlider.setComponentID("settings-in-tune-cents");
                 toleranceSlider.setSliderStyle(juce::Slider::IncDecButtons);
-                toleranceSlider.setRange(
-                    evaluation::minimumToleranceCents, evaluation::maximumToleranceCents, 1.0);
                 toleranceSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
-                toleranceSlider.setTextValueSuffix(juce::String::fromUTF8(" \xC2\xA2"));
-                toleranceSlider.setValue(
-                    recorder.intonationSettings().toleranceCents, juce::dontSendNotification);
+                showAsPlusOrMinusCents(toleranceSlider);
                 toleranceSlider.setTooltip(
-                    "How far a sung note may be from the written pitch, either way, and still "
-                    "be in tune when a take is judged: 25 cents is a quarter of a semitone");
+                    "How far a sung note may be from the written pitch, plus or minus, and "
+                    "still be in tune when a take is judged: 25 means from 25 cents flat to 25 "
+                    "cents sharp, a quarter of a semitone each way. Always wider than Near "
+                    "perfect within and narrower than 50 cents, where a note is nearer the "
+                    "next one");
                 toleranceSlider.onValueChange = [this]
-                {
-                    evaluation::IntonationSettings settings = recorder.intonationSettings();
-                    settings.toleranceCents = toleranceSlider.getValue();
-                    recorder.setIntonation(settings);
-                    if (onCountInChanged)
-                    {
-                        onCountInChanged();
-                    }
-                };
+                { applyZoneLimits(nearPerfectSlider.getValue(), toleranceSlider.getValue()); };
                 addAndMakeVisible(toleranceSlider);
+
+                showZoneLimits(recorder.intonationSettings().zoneLimits());
 
                 // Whether opening a score replaces a target the player chose
                 // (target-note-picker decision 4).
@@ -925,6 +935,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 referenceSlider.setBounds(referenceRow.removeFromLeft(180));
                 bounds.removeFromTop(12);
 
+                auto nearPerfectRow = bounds.removeFromTop(36);
+                nearPerfectLabel.setBounds(nearPerfectRow.removeFromLeft(150));
+                nearPerfectSlider.setBounds(nearPerfectRow.removeFromLeft(180));
+                bounds.removeFromTop(12);
+
                 auto toleranceRow = bounds.removeFromTop(36);
                 toleranceLabel.setBounds(toleranceRow.removeFromLeft(150));
                 toleranceSlider.setBounds(toleranceRow.removeFromLeft(180));
@@ -935,6 +950,52 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             }
 
           private:
+            // "±5 ¢": each limit is a distance either side of the note, not a
+            // width centred on it. Typing a bare number still works.
+            static void showAsPlusOrMinusCents(juce::Slider& slider)
+            {
+                slider.textFromValueFunction = [](double value)
+                {
+                    return juce::String::fromUTF8("\xC2\xB1") +
+                           juce::String(juce::roundToInt(value)) +
+                           juce::String::fromUTF8(" \xC2\xA2");
+                };
+                slider.valueFromTextFunction = [](const juce::String& text)
+                { return text.retainCharacters("0123456789.").getDoubleValue(); };
+                slider.updateText();
+            }
+
+            // Both sliders to these limits, each ranged so it cannot pass the
+            // other.
+            void showZoneLimits(pitch::ZoneLimits limits)
+            {
+                nearPerfectSlider.setRange(
+                    pitch::minimumNearPerfectCents,
+                    std::min(
+                        pitch::maximumNearPerfectCents,
+                        limits.toleranceCents - pitch::bandGapCents),
+                    1.0);
+                toleranceSlider.setRange(
+                    limits.nearPerfectCents + pitch::bandGapCents, pitch::maximumToleranceCents,
+                    1.0);
+                nearPerfectSlider.setValue(limits.nearPerfectCents, juce::dontSendNotification);
+                toleranceSlider.setValue(limits.toleranceCents, juce::dontSendNotification);
+            }
+
+            void applyZoneLimits(double nearPerfect, double tolerance)
+            {
+                const auto limits = pitch::orderedLimits({nearPerfect, tolerance});
+                evaluation::IntonationSettings settings = recorder.intonationSettings();
+                settings.nearPerfectCents = limits.nearPerfectCents;
+                settings.toleranceCents = limits.toleranceCents;
+                recorder.setIntonation(settings);
+                showZoneLimits(limits);
+                if (onCountInChanged)
+                {
+                    onCountInChanged();
+                }
+            }
+
             juce::Label heading;
             juce::Label description;
             juce::Label presetLabel;
@@ -949,6 +1010,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::ComboBox countInBox;
             juce::Label referenceLabel;
             juce::Slider referenceSlider;
+            juce::Label nearPerfectLabel;
+            juce::Slider nearPerfectSlider;
             juce::Label toleranceLabel;
             juce::Slider toleranceSlider;
             juce::ToggleButton keepTargetToggle{"Keep my target when a score opens"};

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../platform/midi/MidiMessageTranslation.h"
+#include "../../platform/pitch/IntonationZone.h"
 #include "../theme/ThemeType.h"
 
 #include <array>
@@ -37,8 +38,17 @@ inline constexpr double referencePitchHz = 440.0;
 // How close a sung note must be to be in tune, in cents either way
 // (openspec/changes/archive/2026-11-09-sung-pitch-judging, decision 4). Local, like the reference.
 inline constexpr double inTuneCents = 25.0;
-inline constexpr double minimumInTuneCents = 5.0;
+// What a saved value may be and still be read. 50 is accepted because 0.6.0
+// allowed it; loading then holds it below the near-note limit
+// (pitch::orderedLimits), so it comes back as 49 rather than as the default.
+inline constexpr double minimumInTuneCents = pitch::minimumToleranceCents;
 inline constexpr double maximumInTuneCents = 50.0;
+
+// How close a sung note must be to be near perfect, in cents either way: the
+// innermost zone, always inside "in tune within". Local, like it.
+inline constexpr double nearPerfectCents = pitch::nearPerfectCents;
+inline constexpr double minimumNearPerfectCents = pitch::minimumNearPerfectCents;
+inline constexpr double maximumNearPerfectCents = pitch::maximumNearPerfectCents;
 
 namespace Playback
 {

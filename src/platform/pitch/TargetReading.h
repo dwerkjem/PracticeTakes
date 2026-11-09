@@ -12,7 +12,8 @@
 // openspec/changes/archive/2026-11-08-system-wide-target-note/design.md, decision 4.
 namespace pitch
 {
-// The tuner's own in-tune band, so "on it" and the tuner's green agree.
+// The tuner's own in-tune band by default, so "on it" and the tuner's green
+// agree; the tuner passes the singer's near-perfect limit.
 inline constexpr double onTargetCents = 5.0;
 
 enum class TargetStanding
@@ -37,9 +38,11 @@ struct TargetReading
 };
 
 // `heardMidi` is the pitch being heard as a fractional MIDI number, or none
-// while nothing is.
-[[nodiscard]] inline TargetReading
-readAgainstTarget(const Target& target, std::optional<double> heardMidi)
+// while nothing is. Within `onCents` either way is on it.
+[[nodiscard]] inline TargetReading readAgainstTarget(
+    const Target& target,
+    std::optional<double> heardMidi,
+    double onCents = onTargetCents)
 {
     TargetReading reading;
     reading.text = "Target " + target.name;
@@ -51,7 +54,7 @@ readAgainstTarget(const Target& target, std::optional<double> heardMidi)
     const double semitones = *heardMidi - static_cast<double>(target.midiNoteNumber);
     const double cents = semitones * 100.0;
     const std::string separator = " \xC2\xB7 ";
-    if (std::abs(cents) <= onTargetCents)
+    if (std::abs(cents) <= onCents)
     {
         reading.standing = TargetStanding::onIt;
         reading.text += separator + "on it";

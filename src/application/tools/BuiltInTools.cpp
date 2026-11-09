@@ -22,7 +22,8 @@ const ToolRegistry& builtInToolRegistry()
              {
                  return std::make_unique<TunerComponent>(
                      services.audio, services.pitchAnalysis, services.referencePitch,
-                     services.target);
+                     services.target,
+                     [&takes = services.takes] { return takes.intonationSettings().zoneLimits(); });
              }},
             {"spectrogram", [](const ToolServices& services)
              { return std::make_unique<SpectrogramComponent>(services.audio); }},
@@ -42,8 +43,8 @@ const ToolRegistry& builtInToolRegistry()
              {
                  return std::make_unique<NoteViewComponent>(
                      services.pitchAnalysis, services.referencePitch, services.target,
-                     services.midi, [&takes = services.takes]
-                     { return takes.intonationSettings().toleranceCents; });
+                     services.midi,
+                     [&takes = services.takes] { return takes.intonationSettings().zoneLimits(); });
              }},
             {"now-next",
              [](const ToolServices& services)

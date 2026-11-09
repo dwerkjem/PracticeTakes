@@ -19,6 +19,10 @@ struct IntonationSettings
     // In tune within this many cents either way; the singer's setting.
     double toleranceCents = 25.0;
 
+    // Near perfect within this many cents either way; the singer's setting
+    // too. Only which zone a note is coloured by depends on it.
+    double nearPerfectCents = pitch::nearPerfectCents;
+
     // Further than this from the written pitch is nearer another note.
     double wrongCents = 50.0;
 
@@ -44,10 +48,18 @@ struct IntonationSettings
     double extraToMs = 200.0;
 
     [[nodiscard]] bool operator==(const IntonationSettings&) const = default;
+
+    // The two limits the zones are drawn and judged by.
+    [[nodiscard]] pitch::ZoneLimits zoneLimits() const noexcept
+    {
+        return pitch::orderedLimits({nearPerfectCents, toleranceCents});
+    }
 };
 
-inline constexpr double minimumToleranceCents = 5.0;
-inline constexpr double maximumToleranceCents = 50.0;
+// In tune within stays strictly between near perfect and the near-note limit
+// (pitch::orderedLimits).
+inline constexpr double minimumToleranceCents = pitch::minimumToleranceCents;
+inline constexpr double maximumToleranceCents = pitch::maximumToleranceCents;
 inline constexpr double defaultToleranceCents = 25.0;
 
 enum class IntonationVerdict
