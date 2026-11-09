@@ -338,7 +338,8 @@ const std::vector<ApprovedWindowState>& states()
          false, "", false,
          "The score view with the practice clock at bar 6: the cursor, the note sounding and "
          "the next two ringed",
-         0.0, "", bundledSampleFixtureName(), false, false, false, 5},
+         // Look-ahead is off by default (#351); this picture is of it on.
+         0.0, "view=page;ahead=2", bundledSampleFixtureName(), false, false, false, 5},
         // A take being recorded from the tone, with the transport saying so:
         // the one state where a take runs (takes).
         {"take-recording", Tools{"score-view"}, ToolPresentation::docked,

@@ -233,7 +233,7 @@ the Score View follows it:
 - A **cursor** marks where the clock is, moving through each note as it sounds.
 - The **notes sounding** are tinted, and the **notes coming next** are ringed.
   **Look ahead** in the options menu sets how many onsets ahead, from none to
-  four (two by default). Only the parts you show are marked, so hide the piano
+  four (none by default). Only the parts you show are marked, so hide the piano
   to see only your line.
 - The view **follows the clock**. It turns the page in Page view, steps a
   system at a time in Vertical scroll, and moves a screen at a time in
