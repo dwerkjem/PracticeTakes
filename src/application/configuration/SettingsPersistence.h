@@ -34,10 +34,6 @@ enum class LoadStatus
 struct State
 {
     Theme theme = AppDefaults::theme;
-
-    // The text size, as a percentage of every text role's base size: 80 to
-    // 150 in tens (appearance::TextScale, global-text-size).
-    int textScalePercent = appearance::TextScale::defaultPercent;
     bool microphoneMuted = false;
     double inputGain = AppDefaults::Audio::inputGain;
     juce::String audioDeviceState;
@@ -61,6 +57,11 @@ struct State
     bool metronomeAccent = AppDefaults::Metronome::accent;
     int countInBars = AppDefaults::Metronome::countInBars;
 
+    // The text size, as a percentage of every text role's base size: 80 to
+    // 150 in tens (appearance::TextScale, global-text-size). Beside the
+    // count-in, where an int packs without padding.
+    int textScalePercent = appearance::TextScale::defaultPercent;
+
     // Whether the score plays with the clock, and how loud. Local too.
     bool playbackEnabled = AppDefaults::Playback::enabled;
     double playbackVolume = AppDefaults::Playback::volume;
@@ -78,15 +79,15 @@ struct State
     // A microphone take ignores sound below this, in dBFS, -80 to -20.
     double minimumLevelDb = AppDefaults::minimumLevelDb;
 
-    // Record pressed while the score plays counts in again (stepping back a
-    // bar) rather than recording on from where it is (#361). Off.
-    bool countInWhenRecordingDuringPlayback = false;
-
     // A target the player chose, as its sounding and written names ("Bb3"),
     // empty for none; and whether opening a score keeps it (target-note-picker).
     juce::String chosenTargetSounding;
     juce::String chosenTargetWritten;
     bool keepTargetWhenScoreOpens = false;
+
+    // Record pressed while the score plays counts in again (stepping back a
+    // bar) rather than recording on from where it is (#361). Off.
+    bool countInWhenRecordingDuringPlayback = false;
 
     // Whether a score's target follows the note being sung while the clock
     // plays (now-and-next).

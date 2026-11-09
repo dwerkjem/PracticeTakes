@@ -24,16 +24,16 @@ class PlaybackMixPanel final : public juce::Component
     static constexpr int rowHeight = 28;
     static constexpr int maximumRowsShown = 10;
 
-    // `lookAndFeel` is the transport's, which knows the text size: a call-out
+    // `panelLookAndFeel` is the transport's, which knows the text size: a call-out
     // opens on the desktop, outside the window whose look-and-feel it would
     // otherwise inherit (global-text-size).
     PlaybackMixPanel(
         transport::PracticeClock& practiceClock,
         std::function<void()> settingsHandler,
-        juce::LookAndFeel* lookAndFeel = nullptr)
+        juce::LookAndFeel* panelLookAndFeel = nullptr)
         : clock(practiceClock), onSettingsChanged(std::move(settingsHandler))
     {
-        setLookAndFeel(lookAndFeel);
+        setLookAndFeel(panelLookAndFeel);
         setComponentID("playback-mix");
         const std::optional<std::string> unavailable = clock.whyPlaybackUnavailable();
 

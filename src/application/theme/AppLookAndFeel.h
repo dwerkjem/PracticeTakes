@@ -66,7 +66,7 @@ class AppLookAndFeel final : public juce::LookAndFeel_V4, public TextScaleSource
     }
 
     // JUCE's size `base` at the current text size.
-    [[nodiscard]] juce::Font scaled(juce::Font base) const;
+    [[nodiscard]] juce::Font scaled(const juce::Font& base) const;
 
     // A label's own font, scaled: a component gives a label its role's *base*
     // size and this scales every label once. A combo box and a slider show
@@ -175,7 +175,7 @@ class TitleStripLookAndFeel final : public juce::LookAndFeel_V4, public TextScal
     }
 
   private:
-    [[nodiscard]] juce::Font scaled(juce::Font base) const
+    [[nodiscard]] juce::Font scaled(const juce::Font& base) const
     {
         return textScalePercent == appearance::TextScale::defaultPercent
                    ? base

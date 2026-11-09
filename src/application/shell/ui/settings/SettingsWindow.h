@@ -165,8 +165,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                         juce::String(info.name.data(), info.name.size()), row,
                         juce::Justification::centredLeft, 1, 0.8f);
 
-                    const auto points = [](float size)
-                    { return juce::String(size, size == std::floor(size) ? 0 : 1) + " pt"; };
+                    const auto points = [](float size) { // Whole or half points only, so a half
+                                                         // shows its one decimal.
+                        const bool whole = std::lround(size * 2.0f) % 2 == 0;
+                        return juce::String(size, whole ? 0 : 1) + " pt";
+                    };
                     juce::String sizes = points(info.baseSize);
                     if (scale != appearance::TextScale::defaultPercent)
                     {

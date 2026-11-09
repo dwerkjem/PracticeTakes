@@ -93,7 +93,7 @@ void AppLookAndFeel::setTextScale(int percent) noexcept
     textScalePercent = appearance::TextScale::snapped(static_cast<double>(percent));
 }
 
-juce::Font AppLookAndFeel::scaled(juce::Font base) const
+juce::Font AppLookAndFeel::scaled(const juce::Font& base) const
 {
     if (textScalePercent == appearance::TextScale::defaultPercent)
     {
