@@ -421,7 +421,7 @@ TEST_CASE("a state naming a tool view names a tone as well", "[testcontrol]")
     }
 }
 
-TEST_CASE("a state with a tone opens a tool to hear it", "[testcontrol]")
+TEST_CASE("a state with a tone opens something to hear it", "[testcontrol]")
 {
     for (const auto& state : approvedWindowStates())
     {
@@ -430,8 +430,11 @@ TEST_CASE("a state with a tone opens a tool to hear it", "[testcontrol]")
             continue;
         }
 
+        // A tool, or Settings on its Practice panel, whose level meter beside
+        // Ignore sound below reads the input (#381).
         INFO("state " << state.id);
-        CHECK_FALSE(state.tools.empty());
+        const bool practiceMeter = state.settingsOpen && state.settingsPanel == "practice";
+        CHECK((!state.tools.empty() || practiceMeter));
     }
 }
 

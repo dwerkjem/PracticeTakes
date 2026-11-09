@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../../theme/PlusOrMinusCents.h"
+#include "../../../widgets/InputLevelMeter.h"
 #include "../../MainComponent.h"
 #include "../ShellWindowTitles.h"
 
@@ -766,10 +767,17 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 pitch::ReferencePitch& applicationReferencePitch,
                 pitch::CurrentTarget& applicationTarget,
                 take::TakeRecorder& takeRecorder,
+                AudioInputService& inputService,
+                Theme initialTheme,
                 std::function<void()> countInHandler)
                 : onPreset(std::move(presetHandler)), clock(practiceClock),
                   reference(applicationReferencePitch), target(applicationTarget),
-                  recorder(takeRecorder), onCountInChanged(std::move(countInHandler))
+                  recorder(takeRecorder), onCountInChanged(std::move(countInHandler)),
+                  minimumLevelMeter(
+                      inputService,
+                      [this] { return recorder.minimumLevelDb(); },
+                      InputLevelMeter::Listening::whileShowing,
+                      initialTheme)
             {
                 configureHeading(heading, "Practice");
                 configureDescription(
@@ -912,6 +920,15 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 };
                 addAndMakeVisible(minimumLevelSlider);
 
+                // Beside it, the microphone's level with a line at the
+                // threshold, so it can be set against this room (#381).
+                minimumLevelMeter.setComponentID("settings-minimum-level-meter");
+                minimumLevelMeter.setTooltip(
+                    "Your microphone's level now. Sound in the grey part, under the line, is "
+                    "ignored; sound past the line counts as playing or singing. Set the line "
+                    "just above the room when you are silent");
+                addAndMakeVisible(minimumLevelMeter);
+
                 nearPerfectSlider.setRange(
                     pitch::minimumNearPerfectCents, pitch::maximumNearPerfectCents, 1.0);
                 toleranceSlider.setRange(
@@ -994,13 +1011,24 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 outOfTuneSlider.setBounds(outOfTuneRow.removeFromLeft(180));
                 bounds.removeFromTop(12);
 
-                auto minimumLevelRow = bounds.removeFromTop(36);
-                minimumLevelLabel.setBounds(minimumLevelRow.removeFromLeft(150));
-                minimumLevelSlider.setBounds(minimumLevelRow.removeFromLeft(180));
-                bounds.removeFromTop(12);
+                // Taller than the rows above: the meter's figures go under its
+                // bar.
+                auto minimumLevelRow = bounds.removeFromTop(44);
+                minimumLevelLabel.setBounds(
+                    minimumLevelRow.removeFromLeft(150).withSizeKeepingCentre(150, 36));
+                minimumLevelSlider.setBounds(
+                    minimumLevelRow.removeFromLeft(180).withSizeKeepingCentre(180, 36));
+                minimumLevelRow.removeFromLeft(16);
+                minimumLevelMeter.setBounds(minimumLevelRow.removeFromLeft(320));
+                bounds.removeFromTop(10);
                 keepTargetToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
                 bounds.removeFromTop(6);
                 followToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
+            }
+
+            void setTheme(Theme theme)
+            {
+                minimumLevelMeter.setTheme(theme);
             }
 
           private:
@@ -1051,6 +1079,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::Slider outOfTuneSlider;
             juce::Label minimumLevelLabel;
             juce::Slider minimumLevelSlider;
+            InputLevelMeter minimumLevelMeter;
             juce::ToggleButton keepTargetToggle{"Keep my target when a score opens"};
             juce::ToggleButton followToggle{"Target follows the score as it plays"};
         };
@@ -1184,6 +1213,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                   referencePitch,
                   currentTarget,
                   takeRecorder,
+                  inputService,
+                  initialTheme,
                   std::move(clockSettingsHandler)),
               resetPanel(
                   std::move(feedbackHandler),
@@ -1239,6 +1270,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         void setTheme(Theme theme)
         {
             appearancePanel.setTheme(theme);
+            practicePanel.setTheme(theme);
             categoryTabs.sendLookAndFeelChange();
             repaint();
         }

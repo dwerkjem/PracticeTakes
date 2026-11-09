@@ -5,6 +5,7 @@
 #include "../../features/analysis/harmonics/HarmonicAnalyzerComponent.h"
 #include "../../features/analysis/spectrogram/SpectrogramComponent.h"
 #include "../../features/analysis/tuner/TunerComponent.h"
+#include "../../features/level/InputLevelComponent.h"
 #include "../../features/notes/NoteViewComponent.h"
 #include "../../features/nownext/NowNextComponent.h"
 #include "../../features/review/TakeReviewComponent.h"
@@ -56,6 +57,13 @@ const ToolRegistry& builtInToolRegistry()
                          auto* device = audio.deviceManager().getCurrentAudioDevice();
                          return device != nullptr ? device->getOutputLatencyInSamples() : 0;
                      });
+             }},
+            {"input-level",
+             [](const ToolServices& services)
+             {
+                 return std::make_unique<InputLevelComponent>(
+                     services.audio, [&takes = services.takes] { return takes.minimumLevelDb(); },
+                     services.initialTheme);
              }},
             {"take-review", [](const ToolServices& services)
              { return std::make_unique<TakeReviewComponent>(services.takes, services.clock); }},

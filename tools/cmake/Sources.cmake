@@ -101,6 +101,8 @@ set(PRACTICE_TAKES_SOURCES
     src/application/theme/Theme.cpp
     src/application/theme/Theme.h
     src/application/theme/ThemeType.h
+    src/application/widgets/InputLevelMeter.cpp
+    src/application/widgets/InputLevelMeter.h
     src/application/tools/BuiltInToolCatalog.h
     src/application/tools/BuiltInTools.cpp
     src/application/tools/BuiltInTools.h
@@ -175,6 +177,8 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/StaffGeometry.h
     src/features/score/engraving/StaffPosition.cpp
     src/features/score/engraving/StaffPosition.h
+    src/features/level/InputLevelComponent.cpp
+    src/features/level/InputLevelComponent.h
     src/features/notes/NoteViewComponent.cpp
     src/features/notes/NoteViewComponent.h
     src/features/notes/NoteViewModel.h
@@ -190,6 +194,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/audio/AudioInputService.h
     src/platform/audio/AudioRecoveryPolicy.h
     src/platform/audio/AudioSampleFifo.h
+    src/platform/audio/LevelMeter.cpp
+    src/platform/audio/LevelMeter.h
     src/platform/audio/PitchDetector.cpp
     src/platform/audio/PitchDetector.h
     src/platform/audio/RealtimeRenderer.h
@@ -370,6 +376,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/audio/AudioInputServiceTests.cpp
     src/tests/platform/audio/AudioSampleFifoLoadTests.cpp
     src/tests/platform/audio/AudioSampleFifoTests.cpp
+    src/tests/platform/audio/LevelMeterTests.cpp
     src/tests/platform/audio/SyntheticToneTests.cpp
     src/tests/platform/audio/PitchDetectorTests.cpp
     src/tests/platform/audio/SharedPitchAnalysisTests.cpp
@@ -456,6 +463,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/features/score/engraving/ScoreCursor.cpp
     src/features/score/engraving/ScoreLayoutEngine.cpp
     src/features/score/engraving/StaffPosition.cpp
+    src/platform/audio/LevelMeter.cpp
     src/platform/audio/PitchDetector.cpp
     src/platform/audio/SharedPitchAnalysis.cpp
     src/platform/score/ScoreBuilder.cpp

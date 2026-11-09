@@ -191,6 +191,21 @@ It tells you when it can't give a clean answer, rather than guessing:
 - **"Uncertain or inharmonic input"**: the sound isn't a clean pitched tone.
 - **Clipping**, **muted** and **disconnected** states are shown as they happen.
 
+## Input Level
+
+How loud your microphone is, measured the way a take hears it. The figure is
+the level now; the bar draws it, with a thin mark at the loudest it has been in
+the last moment or two. The line across the bar is **Settings → Practice →
+Ignore sound below**: sound in the grey part, under the line, is ignored by a
+take and never counted as a note; sound that reaches past it, in green, counts
+as playing or singing. The words under the figure say which side of the line you
+are on. Near full scale the bar turns red: a little louder and the input clips.
+
+To set the line for your room, open the tool, stay silent, and raise the line
+until the room sits under it; then sing quietly and check that you cross it.
+The same meter is beside **Ignore sound below** in Settings, so you can do it
+there too.
+
 ## Score View
 
 Draws the open score as engraved notation: staves and grand staves, clefs, key
@@ -267,8 +282,8 @@ saved with the Target Note tool opens a tuner in its place.
 
 ## Two of the same tool
 
-The tuner, the spectrogram, the harmonic analyzer, the Note View and Now & Next
-can each be open more than once: two tuners side by side, or two spectrograms at different settings. Each
+The tuner, the spectrogram, the harmonic analyzer, the Input Level, the Note
+View and Now & Next can each be open more than once: two tuners side by side, or two spectrograms at different settings. Each
 copy has its own settings, its own analysis and its own place in the workspace.
 
 - **Tools → *tool* → Open another** opens a new copy. **Open or focus** still
@@ -287,8 +302,9 @@ copy has its own settings, its own analysis and its own place in the workspace.
 You can have up to six copies of each tool. At six, **Open another** is greyed
 out and says *6 is the most*.
 
-Spectrograms and harmonic analyzers each take one of 16 audio streams from the
-microphone. Tuners don't take one, because all tuners share one pitch reading.
+Spectrograms, harmonic analyzers and Input Levels each take one of 16 audio
+streams from the microphone, and the meter in **Settings → Practice** takes one
+while it is on screen. Tuners don't take one, because all tuners share one pitch reading.
 If the streams ever run out, **Open another** says *no audio stream free*.
 Choosing it tells you which tools are using them, so you know what to close.
 

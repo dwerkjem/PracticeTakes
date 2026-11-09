@@ -101,11 +101,9 @@ const std::vector<ApprovedWindowState>& states()
         {"all-tools-docked",
          Tools{
              "tuner", "spectrogram", "harmonics", "score-view", "take-review", "note-view",
-             "now-next"},
+             "now-next", "input-level"},
          ToolPresentation::docked, WorkspaceArrangement::split, WindowGeometry::normal,
-         MicrophoneCondition::available, false, "", false,
-         "Every tool tiled at once -- the three live-audio tools, the Score View, and the take "
-         "review"},
+         MicrophoneCondition::available, false, "", false, "Every tool tiled at once"},
 
         // --- Window geometry ---
         {"narrow-window", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
@@ -191,7 +189,10 @@ const std::vector<ApprovedWindowState>& states()
          true,
          "practice",
          false,
-         "The settings window showing practice presets"},
+         "The settings window showing practice presets, with the level meter beside Ignore "
+         "sound below reading a tone",
+         // A tone, so the meter beside the threshold has a level to show.
+         440.0},
         {"settings-reset",
          {},
          ToolPresentation::none,
@@ -470,6 +471,14 @@ const std::vector<ApprovedWindowState>& states()
          "Now & Next at the start of the song: a rest in the strip and a breath mark before "
          "the next phrase",
          0.0, "", bundledSampleFixtureName(), false, false, false, 0},
+        // The Input Level tool (#381): a tone well over the default threshold,
+        // so the bar is past the line and the words say it counts.
+        {"input-level", Tools{"input-level"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The Input Level tool reading a tone: the level, its peak, and the line at Ignore "
+         "sound below",
+         440.0, ""},
         // The Take Review tool before any take: what most sessions see first.
         {"take-review-empty", Tools{"take-review"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,

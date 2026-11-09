@@ -68,6 +68,15 @@
             {900, 460},
             /* readsAudioSamples: it reads the clock and the score only */ false},
         ToolDefinition{
+            "input-level",
+            "Input Level",
+            {},
+            ToolInstancePolicy::multi,
+            std::nullopt,
+            {720, 300},
+            // Its own stream, measured as a take's attacks are (#381).
+            /* readsAudioSamples */ true},
+        ToolDefinition{
             "take-review",
             "Take Review",
             {"review"},

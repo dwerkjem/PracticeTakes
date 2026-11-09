@@ -179,6 +179,9 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   `.ptsettings` import/export/transaction codecs.
 - `src/application/theme` — shared palettes and look-and-feel, and `MiniStaff`,
   the small staff with a notehead that several tools draw.
+- `src/application/widgets` — components both the shell and a tool put on
+  screen: `InputLevelMeter`, the microphone's level against "Ignore sound
+  below", in Settings → Practice and the Input Level tool.
 - `src/application/shell` — window/menu/audio-state/workspace coordination.
   `shell/ui/{main_window,feedback,settings,workspace}` and `shell/state/{appearance,audio}`
   keep this from becoming one monolithic folder; `MainComponent` is split
@@ -210,12 +213,14 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   JUCE-free layout pass turning a `Score` into glyphs with positions in staff
   spaces, where every engraving rule worth asserting lives; see
   `docs/development/architecture/notation-engraving.md`), `review` (the Take
-  Review tool, listing the take under review), `notes` (the Note View: the note
+  Review tool, listing the take under review), `level` (the Input Level tool:
+  the microphone's level against the take's threshold), `notes` (the Note View: the note
   being sung on a keyboard and a staff, against the target), `nownext` (Now &
   Next: the current note and the ones coming, following the clock, from
   `score::PartTimeline`), `feedback`, `performance` (launch timing).
 - `src/platform` — shared infrastructure: `audio/` (`AudioInputService`,
-  `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`, `RealtimeRenderer`),
+  `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`, `RealtimeRenderer`,
+  and `LevelMeter`, the JUCE-free level measured as the onset detector does),
   `pitch/` (the application's reference pitch and current target note, both
   JUCE-free; see ARCHITECTURE.md § The target note and the reference pitch),
   `transport/` (the practice clock: JUCE-free `ClockMath.h` holding every

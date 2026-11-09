@@ -198,7 +198,9 @@ A take from the microphone is judged for timing, and each single note for
 - **Settings → Practice → Ignore sound below** is the quietest sound a
   microphone take counts: −45 dB unless you change it. The room, breathing or a
   chair below it is never heard as a note, so never an extra one. Raise it in
-  a noisy room; lower it if your quiet notes are missed.
+  a noisy room; lower it if your quiet notes are missed. The meter beside it
+  shows your microphone's level against that line: stay silent and set the
+  line just above the room. The **Input Level** tool shows the same.
 
 A chord heard through the microphone is judged for timing only: one voice is
 one pitch.
