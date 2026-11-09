@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../platform/evaluation/OnsetDetector.h"
 #include "../../platform/midi/MidiMessageTranslation.h"
 #include "../../platform/pitch/IntonationZone.h"
 #include "../theme/ThemeType.h"
@@ -56,6 +57,14 @@ inline constexpr double maximumNearPerfectCents = pitch::maximumNearPerfectCents
 inline constexpr double outOfTuneCents = pitch::outOfTuneCents;
 inline constexpr double minimumOutOfTuneCents = pitch::minimumOutOfTuneCents;
 inline constexpr double maximumOutOfTuneCents = pitch::maximumOutOfTuneCents;
+
+// The quietest sound a microphone take counts as playing or singing, in dB
+// below full scale: below it the room is not an attack and never an extra
+// note (#349). Local, like the tolerances: it depends on this microphone and
+// this room.
+inline constexpr double minimumLevelDb = evaluation::OnsetSettings::defaultMinimumLevelDb;
+inline constexpr double lowestMinimumLevelDb = evaluation::OnsetSettings::lowestMinimumLevelDb;
+inline constexpr double highestMinimumLevelDb = evaluation::OnsetSettings::highestMinimumLevelDb;
 
 namespace Playback
 {

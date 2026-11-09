@@ -28,6 +28,7 @@ constexpr auto referencePitchKey = "practice.referencePitchHz";
 constexpr auto inTuneCentsKey = "practice.inTuneCents";
 constexpr auto nearPerfectCentsKey = "practice.nearPerfectCents";
 constexpr auto outOfTuneCentsKey = "practice.outOfTuneCents";
+constexpr auto minimumLevelKey = "practice.minimumLevelDb";
 constexpr auto chosenTargetSoundingKey = "practice.chosenTarget";
 constexpr auto chosenTargetWrittenKey = "practice.chosenTargetWritten";
 constexpr auto keepTargetKey = "practice.keepTargetWhenScoreOpens";
@@ -76,6 +77,7 @@ constexpr const char* ownedKeys[] = {
     inTuneCentsKey,
     nearPerfectCentsKey,
     outOfTuneCentsKey,
+    minimumLevelKey,
     chosenTargetSoundingKey,
     chosenTargetWrittenKey,
     keepTargetKey,
@@ -298,6 +300,9 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
         result.state.nearPerfectCents = limits.nearPerfectCents;
         result.state.outOfTuneCents = limits.outOfTuneCents;
     }
+    result.state.minimumLevelDb = boundedValue(
+        properties, minimumLevelKey, AppDefaults::minimumLevelDb, AppDefaults::lowestMinimumLevelDb,
+        AppDefaults::highestMinimumLevelDb);
     result.state.chosenTargetSounding = properties.getValue(chosenTargetSoundingKey);
     result.state.chosenTargetWritten = properties.getValue(chosenTargetWrittenKey);
     result.state.keepTargetWhenScoreOpens = properties.getBoolValue(keepTargetKey, false);
@@ -382,6 +387,7 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(inTuneCentsKey, state.inTuneCents);
     properties.setValue(nearPerfectCentsKey, state.nearPerfectCents);
     properties.setValue(outOfTuneCentsKey, state.outOfTuneCents);
+    properties.setValue(minimumLevelKey, state.minimumLevelDb);
     properties.setValue(chosenTargetSoundingKey, state.chosenTargetSounding);
     properties.setValue(chosenTargetWrittenKey, state.chosenTargetWritten);
     properties.setValue(keepTargetKey, state.keepTargetWhenScoreOpens);

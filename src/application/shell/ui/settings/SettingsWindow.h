@@ -887,6 +887,31 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 outOfTuneSlider.onValueChange = [this] { applyZoneLimits(); };
                 addAndMakeVisible(outOfTuneSlider);
 
+                // The quietest sound a microphone take counts (#349): below
+                // it the room is never an attack, so never an extra note.
+                minimumLevelLabel.setText("Ignore sound below", juce::dontSendNotification);
+                addAndMakeVisible(minimumLevelLabel);
+                minimumLevelSlider.setComponentID("settings-minimum-level");
+                minimumLevelSlider.setSliderStyle(juce::Slider::IncDecButtons);
+                minimumLevelSlider.setRange(
+                    AppDefaults::lowestMinimumLevelDb, AppDefaults::highestMinimumLevelDb, 1.0);
+                minimumLevelSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
+                minimumLevelSlider.setTextValueSuffix(" dB");
+                minimumLevelSlider.setValue(recorder.minimumLevelDb(), juce::dontSendNotification);
+                minimumLevelSlider.setTooltip(
+                    "Sound quieter than this is not playing or singing: the room, breathing, a "
+                    "chair. It is never heard as a note. Raise it if a take finds extra notes "
+                    "in a noisy room; lower it if quiet notes are missed");
+                minimumLevelSlider.onValueChange = [this]
+                {
+                    recorder.setMinimumLevelDb(minimumLevelSlider.getValue());
+                    if (onCountInChanged)
+                    {
+                        onCountInChanged();
+                    }
+                };
+                addAndMakeVisible(minimumLevelSlider);
+
                 nearPerfectSlider.setRange(
                     pitch::minimumNearPerfectCents, pitch::maximumNearPerfectCents, 1.0);
                 toleranceSlider.setRange(
@@ -968,6 +993,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 outOfTuneLabel.setBounds(outOfTuneRow.removeFromLeft(150));
                 outOfTuneSlider.setBounds(outOfTuneRow.removeFromLeft(180));
                 bounds.removeFromTop(12);
+
+                auto minimumLevelRow = bounds.removeFromTop(36);
+                minimumLevelLabel.setBounds(minimumLevelRow.removeFromLeft(150));
+                minimumLevelSlider.setBounds(minimumLevelRow.removeFromLeft(180));
+                bounds.removeFromTop(12);
                 keepTargetToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
                 bounds.removeFromTop(6);
                 followToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
@@ -1019,6 +1049,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::Slider toleranceSlider;
             juce::Label outOfTuneLabel;
             juce::Slider outOfTuneSlider;
+            juce::Label minimumLevelLabel;
+            juce::Slider minimumLevelSlider;
             juce::ToggleButton keepTargetToggle{"Keep my target when a score opens"};
             juce::ToggleButton followToggle{"Target follows the score as it plays"};
         };

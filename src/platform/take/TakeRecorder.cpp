@@ -19,6 +19,7 @@ constexpr std::size_t keyBufferSize = 256;
 [[nodiscard]] TakeReview judge(
     std::shared_ptr<const Take> take,
     std::optional<std::size_t> part,
+    evaluation::TimingSettings timing,
     evaluation::IntonationSettings intonation)
 {
     TakeReview review;
@@ -28,11 +29,12 @@ constexpr std::size_t keyBufferSize = 256;
         if (part.has_value())
         {
             review.part = *part;
-            review.report = evaluation::judgeNotes(*review.take, *part, {}, intonation);
+            review.report = evaluation::judgeNotes(*review.take, *part, timing, intonation);
         }
         else
         {
-            evaluation::ReviewedPart best = evaluation::bestPartFor(*review.take, {}, intonation);
+            evaluation::ReviewedPart best =
+                evaluation::bestPartFor(*review.take, timing, intonation);
             review.part = best.part;
             review.report = std::move(best.report);
         }
@@ -273,8 +275,8 @@ bool TakeRecorder::reviewTake(std::uint64_t id, std::optional<std::size_t> part)
         reviewed.reset();
     }
     requested = Requested{id, part};
-    judging.push_back(
-        Judging{++nextRequest, std::async(std::launch::async, judge, take, part, intonation)});
+    judging.push_back(Judging{
+        ++nextRequest, std::async(std::launch::async, judge, take, part, timing, intonation)});
     notify();
     return true;
 }
@@ -286,7 +288,11 @@ void TakeRecorder::setIntonation(const evaluation::IntonationSettings& settings)
         return;
     }
     intonation = settings;
+    rejudge();
+}
 
+void TakeRecorder::rejudge()
+{
     // Judged again against the part it is already reviewed against, or the
     // part asked for.
     if (requested.has_value())
@@ -302,6 +308,21 @@ void TakeRecorder::setIntonation(const evaluation::IntonationSettings& settings)
 const evaluation::IntonationSettings& TakeRecorder::intonationSettings() const noexcept
 {
     return intonation;
+}
+
+void TakeRecorder::setMinimumLevelDb(double level)
+{
+    if (level == timing.onsets.minimumLevelDb)
+    {
+        return;
+    }
+    timing.onsets.minimumLevelDb = level;
+    rejudge();
+}
+
+double TakeRecorder::minimumLevelDb() const noexcept
+{
+    return timing.onsets.minimumLevelDb;
 }
 
 const TakeReview* TakeRecorder::review() const noexcept

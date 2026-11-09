@@ -189,10 +189,10 @@ PitchContour contourOf(const take::Take& take)
     return pitchContourOf(take.audio.data(), take.audio.size(), take.sampleRate, take.audioStart);
 }
 
-TakeEvidence evidenceOf(const take::Take& take)
+TakeEvidence evidenceOf(const take::Take& take, const OnsetSettings& onsets)
 {
     TakeEvidence evidence;
-    evidence.onsets = onsetsOf(take);
+    evidence.onsets = onsetsOf(take, onsets);
     evidence.contour = contourOf(take);
     return evidence;
 }
@@ -363,6 +363,6 @@ NoteReport judgeNotes(
     const TimingSettings& timing,
     const IntonationSettings& intonation)
 {
-    return judgeNotes(take, part, evidenceOf(take), timing, intonation);
+    return judgeNotes(take, part, evidenceOf(take, timing.onsets), timing, intonation);
 }
 } // namespace evaluation

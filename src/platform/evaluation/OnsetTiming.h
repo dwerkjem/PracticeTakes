@@ -8,6 +8,7 @@
 #include "../take/Take.h"
 #include "../transport/ClockMath.h"
 #include "ExpectedAttacks.h"
+#include "OnsetDetector.h"
 #include "PerformedOnset.h"
 
 // Aligning performed onsets to expected attacks, and judging each attack early,
@@ -35,6 +36,9 @@ struct TimingSettings
     // left over rather than pulling a real note's match away.
     double missingCost = 1.0;
     double extraCost = 0.6;
+
+    // How a microphone take's onsets are found, its quietest sound included.
+    OnsetSettings onsets;
 };
 
 enum class TimingVerdict
@@ -141,7 +145,8 @@ attacksInTake(const take::Take& take, std::vector<ExpectedAttack> attacks);
 // events, otherwise its microphone's. The microphone's take the longest to find
 // (about a second for three minutes, optimised), and are the same for every
 // part, so a caller judging several parts finds them once.
-[[nodiscard]] std::vector<PerformedOnset> onsetsOf(const take::Take& take);
+[[nodiscard]] std::vector<PerformedOnset>
+onsetsOf(const take::Take& take, const OnsetSettings& settings = {});
 
 // A take's timing against one part of its score, from `onsets` (`onsetsOf`
 // the take). Latency is `latencyFramesOf`.

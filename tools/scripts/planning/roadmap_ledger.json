@@ -63,6 +63,13 @@
     {"issue": 114, "size": 0.5, "release": "foundation"},
     {"issue": 135, "size": 1.5, "release": "foundation"},
     {"issue": 284, "size": 0.25, "release": "foundation"},
+    {"issue": 349, "size": 0.5, "release": "foundation"},
+    {"issue": 350, "size": 0.25, "release": "foundation"},
+    {"issue": 351, "size": 0.25, "release": "foundation"},
+    {"issue": 361, "size": 0.5, "release": "foundation"},
+    {"issue": 372, "size": 0.25, "release": "foundation"},
+    {"issue": 380, "size": 0.25, "release": "foundation"},
+    {"issue": 381, "size": 1.0, "release": "foundation"},
 
     {"issue": 36, "size": 2.5, "release": "mvp", "note": "shared: the practice clock"},
     {"issue": 33, "size": 1.25, "release": "mvp", "note": "shared; the half still open"},
