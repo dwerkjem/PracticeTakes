@@ -46,6 +46,18 @@ their proportions.
 - **Exemptions stay explicit:** the few sizes that follow their pane (the
   tuner's note name and signs, the notation) keep computing their own size and
   are not roles.
+- **One role per size in use (decided in implementation):** the code drew
+  sixteen distinct sizes, from 9 to 34 points, not six. Six broad roles would
+  have moved text by a point or two at 100%, against the goal that 100%
+  changes nothing. So the table has a named role for each size in use, plus
+  JUCE's own sizes for menus (17), buttons and choices (16) and labels (15),
+  each named for what is drawn at it. Two roles may share a size
+  (subheadings and buttons, both 16). Folding sizes together is a later,
+  visible design choice, not something to slip into this change.
+- **Labels set base sizes:** a `juce::Label` is given its role's *base* size,
+  and the look-and-feel scales every label's font. Text a component paints
+  itself is drawn at the scaled size. One rule each way, so nothing is scaled
+  twice.
 
 ### 3. How it reaches each component
 - **Widgets:** `AppLookAndFeel` holds the current scale and applies it in its
@@ -79,3 +91,21 @@ their proportions.
 - **Converting 72 call sites** is mechanical but wide. Doing it role by role,
   one commit per area (shell, Settings, each tool), keeps each step
   reviewable, and the 100% capture shows anything that moved.
+
+## Verification (5.1)
+
+The full capture at 100 percent, every surface in both themes, was compared
+with `main` pixel for pixel. Every difference is one of:
+- **The new setting**: the Appearance panel, which Settings opens on.
+- **A fix found at 150**: the Score View's title no longer runs under "N import
+  diagnostics" in a narrow pane (Take Review's capture shows it).
+- **Hover**: a button under the pointer the harness leaves parked is drawn
+  highlighted. The scrolling Settings panels lay out on opening, which makes
+  JUCE notice the stationary pointer; the button is the same.
+- **A moving signal**: the spectrogram, analyser, tuner, Note View, level
+  meter and playing clock differ as much as `main` differs from itself
+  between two captures.
+
+The run also found that changing the size left the title strip's old, larger
+text behind where nothing new covered it; the whole window is now repainted
+on a change.

@@ -177,8 +177,10 @@ subdirectory is the right answer when a subject grows. Add it to the index in
 - `src/bootstrap` — JUCE application entry, owns the top-level `DocumentWindow`.
 - `src/application/configuration` — settings persistence, defaults, portable
   `.ptsettings` import/export/transaction codecs.
-- `src/application/theme` — shared palettes and look-and-feel, and `MiniStaff`,
-  the small staff with a notehead that several tools draw.
+- `src/application/theme` — shared palettes and look-and-feel (which also holds
+  the text size), `TextScale.h` (the JUCE-free text-size rule and the role
+  table: draw text by role, never by point size), and `MiniStaff`, the small
+  staff with a notehead that several tools draw.
 - `src/application/widgets` — components both the shell and a tool put on
   screen: `InputLevelMeter`, the microphone's level against "Ignore sound
   below", in Settings → Practice and the Input Level tool.

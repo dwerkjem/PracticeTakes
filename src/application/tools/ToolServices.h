@@ -93,4 +93,8 @@ struct ToolServices
     // shell's window, so a tool asks for it rather than drawing its own. Empty
     // does nothing.
     std::function<void()> showScoreImportSummary;
+
+    // The text size a tool should start at (global-text-size). Later changes
+    // arrive through ToolComponent::setTextScale, as the theme's do.
+    int initialTextScale = 100;
 };

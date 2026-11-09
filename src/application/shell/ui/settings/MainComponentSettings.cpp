@@ -128,6 +128,15 @@ void MainComponent::showSettings()
                 safeThis->setTheme(theme);
             }
         },
+        appLookAndFeel.textScale(),
+        [safeThis](int percent)
+        {
+            if (safeThis != nullptr)
+            {
+                safeThis->setTextScale(percent);
+                safeThis->saveSettings(false);
+            }
+        },
         [safeThis](AppDefaults::Preset preset)
         {
             if (safeThis != nullptr)
@@ -493,6 +502,7 @@ bool MainComponent::applyTransferredSettings(const SettingsTransferModel& model)
 {
     const auto& state = model.state;
     setTheme(state.theme);
+    setTextScale(state.textScalePercent);
     selectedFullscreenMode = state.fullscreenMode;
     feedbackInvitationsDisabledState = model.feedbackInvitationsDisabled;
     audioInputService.setMuted(state.microphoneMuted);
@@ -557,6 +567,7 @@ void MainComponent::resetLayout()
 void MainComponent::resetAll()
 {
     setTheme(AppDefaults::theme);
+    setTextScale(appearance::TextScale::defaultPercent);
     selectedFullscreenMode = AppSettings::FullscreenMode::normal;
     resetAudio();
     currentTool = instanceIdToOpen(defaultToolId);
@@ -603,6 +614,7 @@ AppSettings::State MainComponent::captureSettingsState()
 
     AppSettings::State state;
     state.theme = currentTheme;
+    state.textScalePercent = appLookAndFeel.textScale();
     state.microphoneMuted =
         sessionMicrophoneMuteEnabled ? persistedMicrophoneMuted : audioInputService.isMuted();
     state.inputGain = audioInputService.inputGain();
@@ -679,6 +691,9 @@ void MainComponent::loadSettings()
     const auto loaded = AppSettings::load(*settingsFile);
     automaticSettingsSaveEnabled = loaded.status != AppSettings::LoadStatus::newerSchema;
     currentTheme = loaded.state.theme;
+    // Set before anything is laid out, so the first layout is at this size.
+    appLookAndFeel.setTextScale(loaded.state.textScalePercent);
+    titleStripLookAndFeel.setTextScale(loaded.state.textScalePercent);
     audioInputService.setMuted(loaded.state.microphoneMuted);
     audioInputService.setInputGain(static_cast<float>(loaded.state.inputGain));
     applyLegacyToolState(loaded.state);

@@ -995,3 +995,38 @@ TEST_CASE(
     juce::PropertiesFile reader(temporary.path, settingsOptions());
     CHECK(AppSettings::load(reader).state.countInWhenRecordingDuringPlayback);
 }
+
+TEST_CASE(
+    "the text size survives a round trip, and a missing or odd one loads at 100",
+    "[settings][persistence][text-size]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        CHECK(AppSettings::load(writer).state.textScalePercent == 100);
+        AppSettings::State expected;
+        expected.textScalePercent = 120;
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    {
+        juce::PropertiesFile reader(temporary.path, settingsOptions());
+        CHECK(AppSettings::load(reader).state.textScalePercent == 120);
+    }
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.setValue("appearance.textScale", 1000);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    {
+        juce::PropertiesFile reader(temporary.path, settingsOptions());
+        CHECK(AppSettings::load(reader).state.textScalePercent == 150);
+    }
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.setValue("appearance.textScale", 104);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    CHECK(AppSettings::load(reader).state.textScalePercent == 100);
+}

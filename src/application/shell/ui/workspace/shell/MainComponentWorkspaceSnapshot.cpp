@@ -141,7 +141,8 @@ bool MainComponent::applyWorkspaceSnapshot(const WorkspaceSnapshot& snapshot)
                         currentTarget,
                         midiInputService,
                         currentTheme,
-                        [this] { showCurrentScoreImportSummary(); }};
+                        [this] { showCurrentScoreImportSummary(); },
+                        appLookAndFeel.textScale()};
                     entry->component = builtInToolRegistry().create(entry->id.toolId(), services);
                 }
                 if (entry->component != nullptr && entry->savedSettings.has_value())

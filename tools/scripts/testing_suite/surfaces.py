@@ -549,9 +549,22 @@ SURFACES: tuple[Surface, ...] = (
         area="settings",
         modes=frozenset({FULL}),
         instruction="Change the theme, and look at a tool with it applied.",
-        extras=(Question(
-                "theme-applies", "Did the theme apply everywhere?", behavioural=True
-            ),),
+        extras=(
+            Question("theme-applies", "Did the theme apply everywhere?", behavioural=True),
+            # global-text-size.
+            Question(
+                "text-size-preview",
+                "Under Text size, is every size of text listed, each drawn at its own size "
+                "with its point size beside it?",
+            ),
+            Question(
+                "text-size-applies",
+                "Choose 150%: do the preview, the menus, the title strip, the Settings rows and "
+                "every open tool's text grow at once, nothing clipped, and does 100% put them "
+                "back exactly?",
+                behavioural=True,
+            ),
+        ),
     ),
     Surface(
         state="settings-open",
@@ -1503,6 +1516,41 @@ SURFACES: tuple[Surface, ...] = (
         ),
     ),
 )
+
+
+def _text_size_surfaces(base: tuple[Surface, ...]) -> tuple[Surface, ...]:
+    """The text size's surfaces (global-text-size).
+
+    Each is an approved state copied at 80 or 150 percent, so it is taken the
+    way its surface at 100 is -- the same area and warm-up -- and asked the one
+    thing the size changes: whether everything still fits.
+    """
+    made = []
+    for state in approved_states.manifest().states:
+        if state.text_scale_percent == 100:
+            continue
+        stem = state.id.rsplit("-text-", 1)[0]
+        source = next((surface for surface in base if surface.state == stem), None)
+        made.append(
+            Surface(
+                state=state.id,
+                title=f"{source.title if source else stem}, text at {state.text_scale_percent}%",
+                area=source.area if source else "workspace",
+                modes=frozenset({FULL}),
+                warmup_seconds=source.warmup_seconds if source else 0.0,
+                extras=(
+                    Question(
+                        "text-fits",
+                        "Does every label, button, menu and readout fit at this text size, "
+                        "with nothing clipped or overlapping?",
+                    ),
+                ),
+            )
+        )
+    return tuple(made)
+
+
+SURFACES = SURFACES + _text_size_surfaces(SURFACES)
 
 
 def questions_for(surface: Surface) -> tuple[Question, ...]:

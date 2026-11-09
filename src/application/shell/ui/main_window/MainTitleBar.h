@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../../theme/AppLookAndFeel.h"
+
 #include <JuceHeader.h>
 
 #include "TransportStrip.h"
@@ -81,15 +83,18 @@ class MainTitleBar final : public juce::Component
 
     void resized() override
     {
+        // Widths for text at 100 percent, grown with the text size: at 150 the
+        // menus collapse into one button sooner, so the strip still fits.
+        const auto px = [this](int base) { return appearance::scaledFor(*this, base); };
         auto bounds = getLocalBounds().reduced(6, 5);
-        constexpr int menuWidth = 96;
+        const int menuWidth = px(96);
         constexpr int gap = 4;
-        constexpr int windowButtonWidth = 76;
+        const int windowButtonWidth = px(76);
 
         fullscreenButton.setBounds(bounds.removeFromRight(windowButtonWidth));
         bounds.removeFromRight(gap);
 
-        const auto useCollapsedMenu = getWidth() < 900;
+        const auto useCollapsedMenu = getWidth() < px(900);
         hamburgerButton.setVisible(useCollapsedMenu);
         for (auto* button :
              {&fileButton, &settingsButton, &toolsButton, &helpButton, &microphoneButton})
@@ -100,12 +105,12 @@ class MainTitleBar final : public juce::Component
         constexpr int transportGap = 12;
         if (useCollapsedMenu)
         {
-            hamburgerButton.setBounds(bounds.removeFromLeft(76));
+            hamburgerButton.setBounds(bounds.removeFromLeft(px(76)));
             bounds.removeFromLeft(transportGap);
         }
         else
         {
-            microphoneButton.setBounds(bounds.removeFromRight(190));
+            microphoneButton.setBounds(bounds.removeFromRight(px(190)));
             bounds.removeFromRight(transportGap);
 
             // While the transport shows, the menus give up width before it
@@ -116,10 +121,10 @@ class MainTitleBar final : public juce::Component
             {
                 const int menusAtFull = 4 * menuWidth + 3 * gap + transportGap;
                 const int shortfall =
-                    TransportStrip::compactWidth - (bounds.getWidth() - menusAtFull);
+                    px(TransportStrip::compactWidth) - (bounds.getWidth() - menusAtFull);
                 if (shortfall > 0)
                 {
-                    width = std::max(64, menuWidth - (shortfall + 3) / 4);
+                    width = std::max(px(64), menuWidth - (shortfall + 3) / 4);
                 }
             }
 
@@ -134,9 +139,9 @@ class MainTitleBar final : public juce::Component
         }
 
         const int available = bounds.getWidth();
-        const int stripWidth = available >= TransportStrip::fullWidth
-                                   ? TransportStrip::fullWidth
-                                   : std::min(available, TransportStrip::compactWidth);
+        const int stripWidth = available >= px(TransportStrip::fullWidth)
+                                   ? px(TransportStrip::fullWidth)
+                                   : std::min(available, px(TransportStrip::compactWidth));
         transportStrip.setBounds(bounds.removeFromLeft(std::max(0, stripWidth)));
     }
 

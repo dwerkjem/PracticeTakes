@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../../theme/AppLookAndFeel.h"
+
 #include <JuceHeader.h>
 
 #include "../../../../platform/transport/PracticeClock.h"
@@ -22,9 +24,16 @@ class PlaybackMixPanel final : public juce::Component
     static constexpr int rowHeight = 28;
     static constexpr int maximumRowsShown = 10;
 
-    PlaybackMixPanel(transport::PracticeClock& practiceClock, std::function<void()> settingsHandler)
+    // `panelLookAndFeel` is the transport's, which knows the text size: a call-out
+    // opens on the desktop, outside the window whose look-and-feel it would
+    // otherwise inherit (global-text-size).
+    PlaybackMixPanel(
+        transport::PracticeClock& practiceClock,
+        std::function<void()> settingsHandler,
+        juce::LookAndFeel* panelLookAndFeel = nullptr)
         : clock(practiceClock), onSettingsChanged(std::move(settingsHandler))
     {
+        setLookAndFeel(panelLookAndFeel);
         setComponentID("playback-mix");
         const std::optional<std::string> unavailable = clock.whyPlaybackUnavailable();
 
@@ -74,34 +83,45 @@ class PlaybackMixPanel final : public juce::Component
         addAndMakeVisible(viewport);
 
         const int shown = std::min(static_cast<int>(rows.size()), maximumRowsShown);
-        const int noteHeight = note.getText().isEmpty() ? 0 : 40;
-        setSize(panelWidth, 12 + 28 + 32 + noteHeight + (shown * rowHeight) + 8);
+        const int noteHeight = note.getText().isEmpty() ? 0 : px(40);
+        setSize(px(panelWidth), 12 + px(28) + px(32) + noteHeight + (shown * px(rowHeight)) + 8);
+    }
+
+    ~PlaybackMixPanel() override
+    {
+        setLookAndFeel(nullptr);
     }
 
     void resized() override
     {
         auto bounds = getLocalBounds().reduced(10, 6);
-        playButton.setBounds(bounds.removeFromTop(28));
-        auto volume = bounds.removeFromTop(32);
-        volumeLabel.setBounds(volume.removeFromLeft(64));
+        playButton.setBounds(bounds.removeFromTop(px(28)));
+        auto volume = bounds.removeFromTop(px(32));
+        volumeLabel.setBounds(volume.removeFromLeft(px(64)));
         volumeSlider.setBounds(volume);
         if (note.getText().isNotEmpty())
         {
-            note.setBounds(bounds.removeFromTop(40));
+            note.setBounds(bounds.removeFromTop(px(40)));
         }
         viewport.setBounds(bounds);
+        const int row = px(rowHeight);
         list.setSize(
             bounds.getWidth() -
                 (rows.size() > maximumRowsShown ? viewport.getScrollBarThickness() : 0),
-            static_cast<int>(rows.size()) * rowHeight);
+            static_cast<int>(rows.size()) * row);
         for (std::size_t index = 0; index < rows.size(); ++index)
         {
-            rows[index]->setBounds(
-                0, static_cast<int>(index) * rowHeight, list.getWidth(), rowHeight);
+            rows[index]->setBounds(0, static_cast<int>(index) * row, list.getWidth(), row);
         }
     }
 
   private:
+    // A size laid out for 100 percent, grown with the text size.
+    [[nodiscard]] int px(int base) const
+    {
+        return appearance::scaledFor(*this, base);
+    }
+
     // A track: its name, and Mute and Solo.
     class Row final : public juce::Component
     {
@@ -142,9 +162,9 @@ class PlaybackMixPanel final : public juce::Component
         void resized() override
         {
             auto bounds = getLocalBounds().reduced(0, 2);
-            solo.setBounds(bounds.removeFromRight(48));
+            solo.setBounds(bounds.removeFromRight(appearance::scaledFor(*this, 48)));
             bounds.removeFromRight(4);
-            mute.setBounds(bounds.removeFromRight(52));
+            mute.setBounds(bounds.removeFromRight(appearance::scaledFor(*this, 52)));
             label.setBounds(bounds);
         }
 

@@ -100,6 +100,8 @@ set(PRACTICE_TAKES_SOURCES
     src/application/theme/PlusOrMinusCents.h
     src/application/theme/Theme.cpp
     src/application/theme/Theme.h
+    src/application/theme/TextFonts.h
+    src/application/theme/TextScale.h
     src/application/theme/ThemeType.h
     src/application/widgets/InputLevelMeter.cpp
     src/application/widgets/InputLevelMeter.h
@@ -348,6 +350,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/testcontrol/TestControlClickerTests.cpp
     src/tests/application/testcontrol/TestControlCommandTests.cpp
     src/tests/application/testcontrol/TestControlSessionTests.cpp
+    src/tests/application/theme/TextScaleTests.cpp
     src/tests/application/theme/ThemeContrastTests.cpp
     src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
     src/tests/features/analysis/tuner/TunerSettingsCodecTests.cpp

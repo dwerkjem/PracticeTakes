@@ -65,7 +65,7 @@ juce::Component* MainComponent::buildWorkspaceNode(const WorkspaceLayoutState::N
                     safeThis->recordToolFocus(entry->id);
                 }
             });
-        tabs->setTabBarDepth(38);
+        tabs->setTabBarDepth(scaled(38));
         tabs->setLookAndFeel(&appLookAndFeel);
 
         for (size_t index = 0; index < node->tabs.size(); ++index)

@@ -100,10 +100,12 @@ class MainComponent::ToolWindow final : public juce::DocumentWindow
     void resized() override
     {
         DocumentWindow::resized();
+        // Sizes for text at 100 percent, grown with the text size.
+        const auto px = [this](int base) { return appearance::scaledFor(*this, base); };
         auto handleBounds = getLocalBounds().reduced(8);
-        auto toolBar = handleBounds.removeFromTop(28);
-        dragHandle.setBounds(toolBar.removeFromLeft(60));
-        optionsButton.setBounds(toolBar.removeFromRight(38));
+        auto toolBar = handleBounds.removeFromTop(px(28));
+        dragHandle.setBounds(toolBar.removeFromLeft(px(60)));
+        optionsButton.setBounds(toolBar.removeFromRight(px(38)));
         dragHandle.toFront(false);
         optionsButton.toFront(false);
     }

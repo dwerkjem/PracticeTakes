@@ -55,7 +55,7 @@ TakeReviewComponent::TakeReviewComponent(
 
     list.setComponentID("take-review-list");
     list.setModel(this);
-    list.setRowHeight(rowHeight);
+    list.setRowHeight(scaledHeight(rowHeight));
     list.setTitle("Results");
     addAndMakeVisible(list);
 
@@ -155,11 +155,11 @@ void TakeReviewComponent::refresh()
 void TakeReviewComponent::resized()
 {
     auto bounds = getLocalBounds().reduced(12);
-    auto header = bounds.removeFromTop(headerHeight);
-    auto choosers = header.removeFromTop(26);
-    takeChooser.setBounds(choosers.removeFromLeft(120));
-    choosers.removeFromLeft(8);
-    partChooser.setBounds(choosers.removeFromLeft(180));
+    auto header = bounds.removeFromTop(scaledHeight(headerHeight));
+    auto choosers = header.removeFromTop(scaledHeight(26));
+    takeChooser.setBounds(choosers.removeFromLeft(scaledHeight(120)));
+    choosers.removeFromLeft(scaledHeight(8));
+    partChooser.setBounds(choosers.removeFromLeft(scaledHeight(180)));
     list.setBounds(bounds);
 }
 
@@ -177,32 +177,34 @@ void TakeReviewComponent::paint(juce::Graphics& graphics)
         auto header = bounds;
         if (takeChooser.isVisible())
         {
-            header.removeFromTop(34);
+            header.removeFromTop(scaledHeight(34));
         }
         graphics.setColour(colours.foreground);
-        graphics.setFont(juce::FontOptions(18.0f, juce::Font::bold));
+        graphics.setFont(textFont(appearance::TextRole::heading, juce::Font::bold));
         const bool judging = takes.isJudging();
         graphics.drawText(
-            judging ? "Judging the take" : "No take to review", header.removeFromTop(26),
-            juce::Justification::centredLeft);
+            judging ? "Judging the take" : "No take to review",
+            header.removeFromTop(scaledHeight(26)), juce::Justification::centredLeft);
         graphics.setColour(colours.muted);
-        graphics.setFont(juce::FontOptions(14.0f));
+        graphics.setFont(textFont(appearance::TextRole::control));
         graphics.drawFittedText(
             judging ? "Its results appear here in a moment."
                     : "Open a score, press Record in the transport and play. When the take "
                       "ends, every note is listed here and marked on the Score View.",
-            header.removeFromTop(140), juce::Justification::topLeft, 8, 1.0f);
+            header.removeFromTop(scaledHeight(140)), juce::Justification::topLeft, 8, 1.0f);
         return;
     }
 
-    auto header = bounds.removeFromTop(headerHeight);
-    header.removeFromTop(34);
+    auto header = bounds.removeFromTop(scaledHeight(headerHeight));
+    header.removeFromTop(scaledHeight(34));
     graphics.setColour(colours.foreground);
-    graphics.setFont(juce::FontOptions(16.0f, juce::Font::bold));
-    graphics.drawText(heading, header.removeFromTop(24), juce::Justification::centredLeft, true);
+    graphics.setFont(textFont(appearance::TextRole::subheading, juce::Font::bold));
+    graphics.drawText(
+        heading, header.removeFromTop(scaledHeight(24)), juce::Justification::centredLeft, true);
     graphics.setColour(colours.muted);
-    graphics.setFont(juce::FontOptions(14.0f));
-    graphics.drawText(summary, header.removeFromTop(22), juce::Justification::centredLeft, true);
+    graphics.setFont(textFont(appearance::TextRole::control));
+    graphics.drawText(
+        summary, header.removeFromTop(scaledHeight(22)), juce::Justification::centredLeft, true);
 }
 
 int TakeReviewComponent::getNumRows()
@@ -269,7 +271,7 @@ void TakeReviewComponent::paintListBoxItem(
     graphics.fillEllipse(10.0f, (static_cast<float>(height) - dot) * 0.5f, dot, dot);
 
     graphics.setColour(row.mistake ? colours.foreground : colours.muted);
-    graphics.setFont(juce::FontOptions(14.0f));
+    graphics.setFont(textFont(appearance::TextRole::control));
     graphics.drawText(
         juce::String::fromUTF8(row.text.c_str()), 28, 0, width - 32, height,
         juce::Justification::centredLeft, true);
@@ -295,4 +297,11 @@ void TakeReviewComponent::goTo(int row)
         return;
     }
     clock.seek(static_cast<score::Tick>(rows[static_cast<std::size_t>(row)].tick));
+}
+
+void TakeReviewComponent::textScaleChanged()
+{
+    // The rows hold text, so they grow with it (global-text-size).
+    list.setRowHeight(scaledHeight(rowHeight));
+    ToolComponent::textScaleChanged();
 }

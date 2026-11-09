@@ -152,8 +152,9 @@ void HarmonicAnalyzerComponent::drawCompactHarmonics(juce::Graphics& graphics, c
             ? juce::String(currentResult.fundamentalHz, 1) + " Hz"
             : (audioErrorMessage.isNotEmpty() ? audioErrorMessage : juce::String("--"));
     graphics.setColour(appPalette.foreground);
-    graphics.setFont(juce::FontOptions(13.0f, juce::Font::bold));
-    graphics.drawText(heading, bounds.removeFromTop(16), juce::Justification::centred);
+    graphics.setFont(textFont(appearance::TextRole::body, juce::Font::bold));
+    graphics.drawText(
+        heading, bounds.removeFromTop(scaledHeight(16)), juce::Justification::centred);
 
     bounds.removeFromTop(2);
     graphics.setColour(palette.panel);
@@ -220,7 +221,7 @@ void HarmonicAnalyzerComponent::paint(juce::Graphics& graphics)
     const auto appPalette = appPaletteFor(currentTheme);
     graphics.fillAll(palette.background);
 
-    const auto shape = compact::shapeFor(getWidth(), getHeight());
+    const auto shape = compactShape(getWidth(), getHeight());
 
     if (shape != compact::Shape::full)
     {
@@ -230,17 +231,18 @@ void HarmonicAnalyzerComponent::paint(juce::Graphics& graphics)
     }
 
     auto bounds = getLocalBounds().reduced(18);
-    auto status = bounds.removeFromTop(52);
+    auto status = bounds.removeFromTop(scaledHeight(52));
     graphics.setColour(appPalette.foreground);
-    graphics.setFont(juce::FontOptions(22.0f, juce::Font::bold));
+    graphics.setFont(textFont(appearance::TextRole::panelHeading, juce::Font::bold));
     const auto fundamentalText =
         currentResult.fundamentalHz > 0.0
             ? "Fundamental " + juce::String(currentResult.fundamentalHz, 1) + " Hz"
             : "Listening for a sustained pitch";
-    graphics.drawText(fundamentalText, status.removeFromTop(28), juce::Justification::centredLeft);
+    graphics.drawText(
+        fundamentalText, status.removeFromTop(scaledHeight(28)), juce::Justification::centredLeft);
 
     graphics.setColour(currentResult.isPitched ? palette.muted : juce::Colours::orange);
-    graphics.setFont(juce::FontOptions(14.0f));
+    graphics.setFont(textFont(appearance::TextRole::control));
     juce::String detail;
     if (audioErrorMessage.isNotEmpty())
     {
@@ -268,18 +270,20 @@ void HarmonicAnalyzerComponent::paint(juce::Graphics& graphics)
     for (int harmonic = 0; harmonic < HarmonicAnalyzer::harmonicCount; ++harmonic)
     {
         const auto amplitude = currentResult.relativeAmplitudes[static_cast<std::size_t>(harmonic)];
-        const auto height = amplitude * static_cast<float>(currentBarsBounds.getHeight() - 30);
+        const int labelRoom = scaledHeight(22);
+        const auto height =
+            amplitude * static_cast<float>(currentBarsBounds.getHeight() - scaledHeight(30));
         const auto x = static_cast<float>(currentBarsBounds.getX()) +
                        static_cast<float>(harmonic) * barWidth + 5.0f;
         graphics.setColour(harmonicColour(harmonic));
         graphics.fillRoundedRectangle(
-            x, static_cast<float>(currentBarsBounds.getBottom()) - 22.0f - height, barWidth - 10.0f,
-            height, 3.0f);
+            x, static_cast<float>(currentBarsBounds.getBottom() - labelRoom) - height,
+            barWidth - 10.0f, height, 3.0f);
         graphics.drawText(
             "H" + juce::String(harmonic + 1),
             juce::Rectangle<int>{
-                static_cast<int>(x), currentBarsBounds.getBottom() - 21,
-                static_cast<int>(barWidth - 10.0f), 18},
+                static_cast<int>(x), currentBarsBounds.getBottom() - labelRoom + 1,
+                static_cast<int>(barWidth - 10.0f), labelRoom - 4},
             juce::Justification::centred);
     }
 
@@ -287,14 +291,14 @@ void HarmonicAnalyzerComponent::paint(juce::Graphics& graphics)
     graphics.fillRoundedRectangle(historyBounds.toFloat(), 8.0f);
     graphics.setColour(palette.muted);
     graphics.drawText(
-        "Relative harmonic amplitudes over time", historyBounds.reduced(8).removeFromTop(20),
-        juce::Justification::centredLeft);
+        "Relative harmonic amplitudes over time",
+        historyBounds.reduced(8).removeFromTop(scaledHeight(20)), juce::Justification::centredLeft);
     if (historyCount < 2)
     {
         return;
     }
 
-    const auto graph = historyBounds.reduced(10).withTrimmedTop(22);
+    const auto graph = historyBounds.reduced(10).withTrimmedTop(scaledHeight(22));
     for (int harmonic = 0; harmonic < HarmonicAnalyzer::harmonicCount; ++harmonic)
     {
         juce::Path path;
@@ -327,7 +331,7 @@ void HarmonicAnalyzerComponent::paint(juce::Graphics& graphics)
 void HarmonicAnalyzerComponent::resized()
 {
     auto bounds = getLocalBounds().reduced(18);
-    bounds.removeFromTop(60);
+    bounds.removeFromTop(scaledHeight(60));
     currentBarsBounds = bounds.removeFromTop(std::min(230, bounds.getHeight() / 2));
     bounds.removeFromTop(10);
     historyBounds = bounds;

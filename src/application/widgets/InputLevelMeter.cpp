@@ -1,6 +1,7 @@
 #include "InputLevelMeter.h"
 
 #include "../../platform/evaluation/OnsetDetector.h"
+#include "../theme/AppLookAndFeel.h"
 #include "../theme/Theme.h"
 
 #include <algorithm>
@@ -13,8 +14,8 @@ namespace
 constexpr double scaleStepDb = 20.0;
 
 // Room the figures take, beside or under the bar.
-constexpr float scaleDepth = 16.0f;
-constexpr float scaleWidth = 30.0f;
+constexpr float baseScaleDepth = 16.0f;
+constexpr float baseScaleWidth = 30.0f;
 
 // How far the threshold's line stands out past the bar's edges.
 constexpr float lineOverhang = 4.0f;
@@ -200,6 +201,12 @@ float InputLevelMeter::proportionFor(double db) noexcept
 
 void InputLevelMeter::paint(juce::Graphics& graphics)
 {
+    // The figures' room grows with their text (global-text-size).
+    const float textFactor = static_cast<float>(
+        appearance::TextScale::factor(std::max(100, appearance::textScaleOf(*this))));
+    const float scaleDepth = baseScaleDepth * textFactor;
+    const float scaleWidth = baseScaleWidth * textFactor;
+
     const auto palette = tunerPaletteFor(theme);
     auto area = getLocalBounds().toFloat();
 
@@ -313,7 +320,7 @@ void InputLevelMeter::paint(juce::Graphics& graphics)
     if (!unavailable.isEmpty())
     {
         graphics.setColour(palette.muted);
-        graphics.setFont(juce::FontOptions(13.0f));
+        graphics.setFont(appearance::fontFor(*this, appearance::TextRole::body));
         graphics.drawFittedText(
             unavailable, bar.toNearestInt().reduced(6, 0), juce::Justification::centred, 2);
     }
@@ -321,11 +328,11 @@ void InputLevelMeter::paint(juce::Graphics& graphics)
     if (!scaleArea.isEmpty())
     {
         graphics.setColour(palette.muted);
-        graphics.setFont(juce::FontOptions(11.0f));
+        graphics.setFont(appearance::fontFor(*this, appearance::TextRole::axis));
         // Every 20 dB where there is room for the figures, every 40 or only
         // the ends where there is not, so they never run into each other.
         const float length = vertical ? bar.getHeight() : bar.getWidth();
-        const float roomPerFigure = vertical ? 16.0f : 34.0f;
+        const float roomPerFigure = (vertical ? 16.0f : 34.0f) * textFactor;
         double stepDb = scaleStepDb;
         while (stepDb < (highestDb - lowestDb) &&
                length * static_cast<float>(stepDb / (highestDb - lowestDb)) < roomPerFigure)
@@ -341,17 +348,20 @@ void InputLevelMeter::paint(juce::Graphics& graphics)
             if (vertical)
             {
                 // Kept inside the strip, so the ends' figures are not cut off.
-                const float top =
-                    std::clamp(at - 7.0f, scaleArea.getY(), scaleArea.getBottom() - 14.0f);
+                const float top = std::clamp(
+                    at - (7.0f * textFactor), scaleArea.getY(),
+                    scaleArea.getBottom() - (14.0f * textFactor));
                 graphics.drawText(
-                    text, juce::Rectangle<float>(scaleArea.getX(), top, scaleWidth - 4.0f, 14.0f),
+                    text,
+                    juce::Rectangle<float>(
+                        scaleArea.getX(), top, scaleWidth - 4.0f, 14.0f * textFactor),
                     juce::Justification::centredRight, false);
             }
             else
             {
                 // The ends' figures sit inside the bar's ends, the rest
                 // centred on their mark.
-                const float width = 34.0f;
+                const float width = 34.0f * textFactor;
                 auto box = juce::Rectangle<float>(
                     at - (width / 2.0f), scaleArea.getY(), width, scaleArea.getHeight());
                 auto justification = juce::Justification::centred;

@@ -37,6 +37,17 @@ class RecordingTool final : public ToolComponent
         stored.clear();
     }
 
+    void textScaleChanged() override
+    {
+        events.push_back("textScale " + std::to_string(textScale()));
+    }
+
+    // What the tool would draw its body text at.
+    [[nodiscard]] float bodySize() const noexcept
+    {
+        return textSize(appearance::TextRole::body);
+    }
+
     [[nodiscard]] std::optional<ToolSettingsPayload> captureSettings() const override
     {
         events.push_back("captureSettings");
@@ -296,4 +307,21 @@ TEST_CASE("only the tools that run their own FFT read audio samples", "[tools][c
     CHECK(catalog.find("spectrogram")->readsAudioSamples);
     CHECK(catalog.find("harmonic-analyzer")->readsAudioSamples);
     CHECK_FALSE(catalog.find("score-view")->readsAudioSamples);
+}
+
+TEST_CASE("a tool hears the text size once per change, snapped", "[tools][text-size]")
+{
+    std::vector<std::string> log;
+    RecordingTool tool(log);
+    log.clear();
+
+    CHECK(tool.textScale() == 100);
+    CHECK(tool.bodySize() == 13.0f);
+
+    tool.setTextScale(150);
+    tool.setTextScale(150);
+    tool.setTextScale(133);
+    CHECK(log == std::vector<std::string>{"textScale 150", "textScale 130"});
+    CHECK(tool.textScale() == 130);
+    CHECK(tool.bodySize() == 17.0f); // 16.9
 }

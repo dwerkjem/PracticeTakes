@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 
+#include "../../../application/theme/AppLookAndFeel.h"
 #include "../../../application/theme/MiniStaff.h"
 #include "../../../application/theme/Theme.h"
 #include "../../../platform/pitch/CurrentTarget.h"
@@ -36,7 +37,7 @@ class TargetPickerPanel final
     {
         setComponentID("target-picker");
 
-        heading.setFont(juce::FontOptions(16.0f, juce::Font::bold));
+        heading.setFont(appearance::labelFont(appearance::TextRole::subheading, juce::Font::bold));
         addAndMakeVisible(heading);
 
         keyboardState.addListener(this);
@@ -230,7 +231,7 @@ class TargetPickerPanel final
             // The grand staff is labelled in the margin, above the treble and
             // below the bass, rather than above each staff.
             graphics.setColour(style.lines);
-            graphics.setFont(juce::FontOptions(12.0f));
+            graphics.setFont(appearance::fontFor(*this, appearance::TextRole::small));
             graphics.drawText(
                 miniStaffClefName(pitch::StaffClef::treble), 0,
                 static_cast<int>(trebleMiddle() - 30.0f), 60, 14, juce::Justification::left);

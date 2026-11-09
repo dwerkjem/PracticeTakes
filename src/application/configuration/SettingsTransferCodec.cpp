@@ -230,6 +230,7 @@ SettingsTransferEncodeResult SettingsTransferCodec::encode(const SettingsTransfe
 
     auto appearance = std::make_unique<juce::DynamicObject>();
     appearance->setProperty("theme", themeName(model.state.theme));
+    appearance->setProperty("textScale", model.state.textScalePercent);
     settings->setProperty("appearance", appearance.release());
 
     auto audio = std::make_unique<juce::DynamicObject>();
@@ -462,6 +463,16 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
     }
 
     model.state.theme = parsedTheme;
+    // Optional: a bundle from before the setting carries none, and imports at
+    // 100. A value that is there but not a number is as good as missing.
+    {
+        double textScale = static_cast<double>(appearance::TextScale::defaultPercent);
+        if (hasProperty(*appearance, "textScale"))
+        {
+            static_cast<void>(readNumber(property(*appearance, "textScale"), textScale));
+        }
+        model.state.textScalePercent = appearance::TextScale::snapped(textScale);
+    }
     model.state.microphoneMuted = microphoneMuted;
     model.state.inputGain = inputGain;
     model.state.audioDeviceState = juce::String::fromUTF8(deviceState.c_str());

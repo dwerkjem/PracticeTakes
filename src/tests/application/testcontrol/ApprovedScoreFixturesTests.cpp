@@ -84,7 +84,8 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
 
     for (const ApprovedWindowState& state : approvedWindowStates())
     {
-        if (!state.scoreFixture.empty())
+        // The text size's copies are the same surfaces at another size.
+        if (!state.scoreFixture.empty() && state.textScalePercent == 100)
         {
             naming.insert(state.id);
         }
@@ -785,7 +786,7 @@ TEST_CASE("only the transport state plays the clock", "[testcontrol][approved][s
 
     for (const ApprovedWindowState& state : approvedWindowStates())
     {
-        if (state.clockPlaying)
+        if (state.clockPlaying && state.textScalePercent == 100)
         {
             // A clock with no score has nothing to play, so a state that asks
             // for one playing has to open a score.

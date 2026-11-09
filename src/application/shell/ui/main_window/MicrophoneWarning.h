@@ -18,14 +18,14 @@ class MainComponent::MicrophoneWarning final : public juce::Component
         // "no usable input" and only one of them is anything the reader can act
         // on, which is the whole reason this text is not fixed.
 
-        title.setFont(juce::FontOptions(16.0f, juce::Font::bold));
+        title.setFont(appearance::labelFont(appearance::TextRole::subheading, juce::Font::bold));
         addAndMakeVisible(title);
 
         message.setText(
             "Choose an input device in Settings to use the tuner and "
             "spectrogram.",
             juce::dontSendNotification);
-        message.setFont(juce::FontOptions(13.0f));
+        message.setFont(appearance::labelFont(appearance::TextRole::body));
         message.setJustificationType(juce::Justification::centredLeft);
         addAndMakeVisible(message);
 
@@ -107,17 +107,24 @@ class MainComponent::MicrophoneWarning final : public juce::Component
             juce::dontSendNotification);
     }
 
+    void lookAndFeelChanged() override
+    {
+        resized();
+    }
+
     void resized() override
     {
+        // Sizes for text at 100 percent, grown with the text size.
+        const auto px = [this](int base) { return appearance::scaledFor(*this, base); };
         auto bounds = getLocalBounds().reduced(18, 14);
         bounds.removeFromLeft(42); // Reserve room for the warning icon.
 
-        auto buttons = bounds.removeFromBottom(30);
-        dismissButton.setBounds(buttons.removeFromRight(88));
+        auto buttons = bounds.removeFromBottom(px(30));
+        dismissButton.setBounds(buttons.removeFromRight(px(88)));
         buttons.removeFromRight(8);
-        settingsButton.setBounds(buttons.removeFromRight(122));
+        settingsButton.setBounds(buttons.removeFromRight(px(122)));
 
-        title.setBounds(bounds.removeFromTop(24));
+        title.setBounds(bounds.removeFromTop(px(24)));
         message.setBounds(bounds);
     }
 

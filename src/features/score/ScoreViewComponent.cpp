@@ -527,7 +527,7 @@ ScoreViewComponent::ScoreViewComponent(
     for (juce::Label* label : {&sizeLabel, &pageLabel})
     {
         label->setJustificationType(juce::Justification::centred);
-        label->setFont(juce::FontOptions(12.0f));
+        label->setFont(appearance::labelFont(appearance::TextRole::small));
         label->setInterceptsMouseClicks(false, false);
         addAndMakeVisible(*label);
     }
@@ -1096,22 +1096,23 @@ void ScoreViewComponent::resized()
 {
     juce::Rectangle<int> bounds = getLocalBounds();
 
-    juce::Rectangle<int> title = bounds.removeFromTop(titleStripHeight).reduced(canvasMargin, 2);
+    juce::Rectangle<int> title =
+        bounds.removeFromTop(scaledHeight(titleStripHeight)).reduced(canvasMargin, 2);
 
     // Layout and resizing move the view; neither is the reader scrolling.
     const juce::ScopedValueSetter<bool> quiet(scrollingProgrammatically, true);
 
-    enlargeButton.setBounds(title.removeFromRight(controlButtonWidth));
-    sizeLabel.setBounds(title.removeFromRight(sizeLabelWidth));
-    shrinkButton.setBounds(title.removeFromRight(controlButtonWidth));
+    enlargeButton.setBounds(title.removeFromRight(scaledHeight(controlButtonWidth)));
+    sizeLabel.setBounds(title.removeFromRight(scaledHeight(sizeLabelWidth)));
+    shrinkButton.setBounds(title.removeFromRight(scaledHeight(controlButtonWidth)));
     title.removeFromRight(controlGap);
-    nextPageButton.setBounds(title.removeFromRight(controlButtonWidth));
-    pageLabel.setBounds(title.removeFromRight(pageLabelWidth));
-    previousPageButton.setBounds(title.removeFromRight(controlButtonWidth));
+    nextPageButton.setBounds(title.removeFromRight(scaledHeight(controlButtonWidth)));
+    pageLabel.setBounds(title.removeFromRight(scaledHeight(pageLabelWidth)));
+    previousPageButton.setBounds(title.removeFromRight(scaledHeight(controlButtonWidth)));
     title.removeFromRight(controlGap);
     if (followButton.isVisible())
     {
-        followButton.setBounds(title.removeFromRight(followButtonWidth));
+        followButton.setBounds(title.removeFromRight(scaledHeight(followButtonWidth)));
         title.removeFromRight(controlGap);
     }
     titleTextBounds = title;
@@ -1120,7 +1121,7 @@ void ScoreViewComponent::resized()
     // does not move the staff. A strip that appeared only when a notice did
     // would reflow everything the moment a file finished loading, and which
     // files have notices is a property of the files rather than of the tool.
-    bounds.removeFromBottom(noticeStripHeight);
+    bounds.removeFromBottom(scaledHeight(noticeStripHeight));
 
     const std::optional<std::size_t> keep = measureInView();
     viewport.setBounds(bounds);
@@ -1777,13 +1778,14 @@ void ScoreViewComponent::paintMessage(
     const AppPalette colours = palette();
 
     graphics.setColour(colours.foreground);
-    graphics.setFont(juce::FontOptions(18.0f, juce::Font::bold));
-    graphics.drawText(heading, bounds.removeFromTop(26), juce::Justification::centredLeft);
+    graphics.setFont(textFont(appearance::TextRole::heading, juce::Font::bold));
+    graphics.drawText(
+        heading, bounds.removeFromTop(scaledHeight(26)), juce::Justification::centredLeft);
 
     bounds.removeFromTop(6);
 
     graphics.setColour(colours.muted);
-    graphics.setFont(juce::FontOptions(14.0f));
+    graphics.setFont(textFont(appearance::TextRole::control));
     graphics.drawFittedText(detail, bounds, juce::Justification::topLeft, 4);
 }
 
@@ -1815,17 +1817,15 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
 
     // The title strip: what is being drawn, and which part of it. The controls
     // to its right are components of their own.
-    bounds.removeFromTop(titleStripHeight);
+    bounds.removeFromTop(scaledHeight(titleStripHeight));
     const juce::Rectangle<int> title = titleTextBounds;
 
     graphics.setColour(colours.foreground);
-    graphics.setFont(juce::FontOptions(13.0f, juce::Font::bold));
+    graphics.setFont(textFont(appearance::TextRole::body, juce::Font::bold));
 
     const juce::String heading =
         juce::String(layout.scoreTitle.empty() ? "Untitled score" : layout.scoreTitle) + "  -  " +
         juce::String(layout.partName);
-
-    graphics.drawText(heading, title, juce::Justification::centredLeft, true);
 
     diagnosticsLink = {};
     if (renderedScore != nullptr && !renderedScore->diagnostics.empty())
@@ -1836,11 +1836,20 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
         const juce::String text =
             juce::String(static_cast<int>(renderedScore->diagnostics.size())) +
             " import diagnostic" + (renderedScore->diagnostics.size() == 1 ? "" : "s");
-        const juce::Font font(juce::FontOptions(12.0f));
+        const juce::Font font(textFont(appearance::TextRole::small));
         const int width =
             static_cast<int>(std::ceil(juce::GlyphArrangement::getStringWidth(font, text))) + 2;
-        diagnosticsLink = title.withLeft(std::max(title.getX(), title.getRight() - width))
-                              .withSizeKeepingCentre(std::min(width, title.getWidth()), 18);
+        diagnosticsLink =
+            title.withLeft(std::max(title.getX(), title.getRight() - width))
+                .withSizeKeepingCentre(std::min(width, title.getWidth()), scaledHeight(18));
+        // The title stops short of the link rather than running under it, as
+        // it would in a narrow pane or at a large text size.
+        graphics.setColour(colours.foreground);
+        graphics.setFont(textFont(appearance::TextRole::body, juce::Font::bold));
+        graphics.drawText(
+            heading, title.withRight(std::max(title.getX(), diagnosticsLink.getX() - 8)),
+            juce::Justification::centredLeft, true);
+
         graphics.setColour(
             diagnosticsLinkHovered ? colours.warning.brighter(0.25f) : colours.warning);
         graphics.setFont(font);
@@ -1852,6 +1861,10 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
                 1);
         }
     }
+    else
+    {
+        graphics.drawText(heading, title, juce::Justification::centredLeft, true);
+    }
 
     const juce::String notices = noticeText();
 
@@ -1861,12 +1874,12 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
     }
 
     const juce::Rectangle<int> strip =
-        bounds.removeFromBottom(noticeStripHeight).reduced(canvasMargin, 4);
+        bounds.removeFromBottom(scaledHeight(noticeStripHeight)).reduced(canvasMargin, 4);
 
     graphics.setColour(colours.panel);
     graphics.fillRect(strip.expanded(canvasMargin, 2));
 
     graphics.setColour(colours.muted);
-    graphics.setFont(juce::FontOptions(11.5f));
+    graphics.setFont(textFont(appearance::TextRole::caption));
     graphics.drawFittedText(notices, strip, juce::Justification::topLeft, 3);
 }

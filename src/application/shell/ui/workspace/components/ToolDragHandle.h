@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 
+#include "../../../../theme/AppLookAndFeel.h"
+
 #include <functional>
 #include <utility>
 
@@ -22,7 +24,8 @@ class ToolDragHandle final : public juce::Component
         graphics.setColour(findColour(juce::TextButton::buttonColourId));
         graphics.fillRoundedRectangle(bounds, 4.0f);
         graphics.setColour(findColour(juce::TextButton::textColourOffId));
-        graphics.setFont(juce::FontOptions(14.0f, juce::Font::bold));
+        graphics.setFont(
+            appearance::fontFor(*this, appearance::TextRole::control, juce::Font::bold));
         graphics.drawText("Drag", getLocalBounds(), juce::Justification::centred);
     }
 

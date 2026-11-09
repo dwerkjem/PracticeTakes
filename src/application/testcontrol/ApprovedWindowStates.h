@@ -198,6 +198,10 @@ struct ApprovedWindowState
     //
     // Appended last, for the reason the comments above give.
     bool sungTake = false;
+
+    // The text size the picture is taken at, as a percentage
+    // (global-text-size). 100 for every state but the ones about the size.
+    int textScalePercent = 100;
 };
 
 // An object that can be asked to act, as though clicked.
