@@ -74,9 +74,12 @@ constexpr std::size_t zeroTick = 2;
     return nullptr;
 }
 
-// The lit half's sign, centred on `centre` and `size` tall: a sharp or flat,
-// or -- with `arrows` -- an arrow the way to go, down when sharp and up when
-// flat. Drawn as a shape rather than a character, so it is the same size and
+// The lit half's sign, centred on `centre` and `size` across: a sharp or
+// flat, or -- with `arrows` -- an arrow the way to go, toward lower pitch when
+// sharp and higher when flat. `pitchAcross` says which way pitch runs where it
+// is drawn: across on the bar, the dial and a vertical graph, so the arrow
+// points left or right there; up on a horizontal graph, so it points down or
+// up. Drawn as a shape rather than a character, so it is the same size and
 // weight whatever the font has.
 void drawSign(
     juce::Graphics& graphics,
@@ -84,7 +87,8 @@ void drawSign(
     juce::Point<float> centre,
     float size,
     juce::Colour colour,
-    bool arrows)
+    bool arrows,
+    bool pitchAcross)
 {
     graphics.setColour(colour);
     if (!arrows)
@@ -96,24 +100,29 @@ void drawSign(
         return;
     }
 
-    // Pointing down for sharp: come down. Up for flat: go up.
-    const auto direction = side == tuner::Side::sharp ? 1.0f : -1.0f;
+    // Toward lower pitch when sharp: left across, down up the screen.
+    const auto towardLower = side == tuner::Side::sharp;
+    const juce::Point<float> along =
+        pitchAcross ? juce::Point<float>(towardLower ? -1.0f : 1.0f, 0.0f)
+                    : juce::Point<float>(0.0f, towardLower ? 1.0f : -1.0f);
+    const juce::Point<float> across(-along.y, along.x);
+
     const auto half = size * 0.5f;
     const auto headLength = size * 0.45f;
     const auto headHalfWidth = size * 0.32f;
     const auto shaftHalfWidth = size * 0.1f;
-    const auto tip = centre + juce::Point<float>(0.0f, direction * half);
-    const auto tail = centre - juce::Point<float>(0.0f, direction * half);
-    const auto neck = tip - juce::Point<float>(0.0f, direction * headLength);
+    const auto tip = centre + along * half;
+    const auto tail = centre - along * half;
+    const auto neck = tip - along * headLength;
 
     juce::Path arrow;
-    arrow.startNewSubPath(tail.x - shaftHalfWidth, tail.y);
-    arrow.lineTo(neck.x - shaftHalfWidth, neck.y);
-    arrow.lineTo(neck.x - headHalfWidth, neck.y);
+    arrow.startNewSubPath(tail - across * shaftHalfWidth);
+    arrow.lineTo(neck - across * shaftHalfWidth);
+    arrow.lineTo(neck - across * headHalfWidth);
     arrow.lineTo(tip);
-    arrow.lineTo(neck.x + headHalfWidth, neck.y);
-    arrow.lineTo(neck.x + shaftHalfWidth, neck.y);
-    arrow.lineTo(tail.x + shaftHalfWidth, tail.y);
+    arrow.lineTo(neck + across * headHalfWidth);
+    arrow.lineTo(neck + across * shaftHalfWidth);
+    arrow.lineTo(tail + across * shaftHalfWidth);
     arrow.closeSubPath();
     graphics.fillPath(arrow);
 }
@@ -244,7 +253,7 @@ void drawZoneStrips(
             graphics, lit->litSide,
             vertical ? juce::Point<float>(middle, plot.getY() + signSize)
                      : juce::Point<float>(plot.getX() + signSize, middle),
-            signSize, intonationZoneColour(lit->zone), arrowSigns);
+            signSize, intonationZoneColour(lit->zone), arrowSigns, vertical);
     }
 }
 
@@ -528,7 +537,7 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
         const auto to = xOf(sideOf(*lit) * lit->outerCents);
         drawSign(
             graphics, lit->litSide, {(from + to) * 0.5f, bandTop - signSize * 0.8f}, signSize,
-            intonationZoneColour(lit->zone), signs == Signs::arrows);
+            intonationZoneColour(lit->zone), signs == Signs::arrows, true);
     }
 
     // The chosen marker: a dot on the bar, an arrow down onto it, or a line
@@ -670,7 +679,7 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
             0.5;
         drawSign(
             graphics, lit->litSide, pointAt(middle, radius - 18.0f - signSize), signSize,
-            intonationZoneColour(lit->zone), signs == Signs::arrows);
+            intonationZoneColour(lit->zone), signs == Signs::arrows, true);
     }
 
     const auto needleAngle = angleOf(hasSignal ? displayedCents : 0.0);

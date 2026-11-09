@@ -36,7 +36,9 @@ many cents sharp or flat it is.
   meter's needle, take the colour of the zone you're in.
 - **The tool's ... menu** changes how that looks, for each tuner:
   - **Signs**: *Off*, *Sharp and flat* (the default), or *Arrows: which way to
-    go*, an arrow pointing down when you're sharp and up when you're flat;
+    go*, an arrow pointing back toward the note: left on the bar and the meter
+    when you're sharp and right when you're flat, and down or up on the graph,
+    whose pitch runs up the screen;
   - **Light both halves**, for a symmetric look that lights the whole zone;
   - **Marker**, what marks where you are on the bar and the graph: *Off*,
     *Dot* (the default), *Arrow*, *Line*, *Ring*, *Diamond* or *Crosshair*.
