@@ -28,7 +28,8 @@ many cents sharp or flat it is.
 
   Only the half of the zone you're in lights, the sharp half or the flat half,
   and it carries a **♯** or a **♭**, half the height of the note name, so you
-  know which way to go as well as how far. The tighter zones inside it stay
+  know which way to go as well as how far. On pitch, in the green, the sign
+  goes away: there is nothing to correct. The tighter zones inside it stay
   faintly tinted, so you can still see the target; the looser ones outside it
   are turned off and leave only a dotted line, in their own colour, where each
   begins. Red is kept very faint. The graph keeps the note's zones in view while

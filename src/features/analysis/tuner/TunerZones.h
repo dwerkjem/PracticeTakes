@@ -27,7 +27,8 @@
 // Only the half of the lit zone the pitch is on lights -- the sharp half or
 // the flat half -- and it carries a sharp or flat sign, so which way to go is
 // as plain as how far. The other half of it stays tinted. Dead on zero both
-// halves light and there is no sign.
+// halves light. On pitch -- near perfect -- there is no sign: there is nothing
+// to correct.
 namespace tuner
 {
 enum class BandLook
@@ -111,5 +112,13 @@ zoneBands(std::optional<double> cents, pitch::ZoneLimits requested)
         }
     }
     return bands;
+}
+
+// Whether this band carries the sharp or flat sign: the lit one, off pitch,
+// with a side to it.
+[[nodiscard]] inline bool carriesSign(const ZoneBand& band) noexcept
+{
+    return band.look == BandLook::lit && band.litSide != Side::both &&
+           band.zone != pitch::IntonationZone::nearPerfect;
 }
 } // namespace tuner

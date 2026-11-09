@@ -61,12 +61,12 @@ constexpr std::size_t zeroTick = 2;
     return {};
 }
 
-// The band that is lit with a side to it, if any.
+// The band that carries the sign, if any: none on pitch.
 [[nodiscard]] const tuner::ZoneBand* litHalfBand(const std::vector<tuner::ZoneBand>& bands)
 {
     for (const auto& band : bands)
     {
-        if (band.look == tuner::BandLook::lit && band.litSide != tuner::Side::both)
+        if (tuner::carriesSign(band))
         {
             return &band;
         }

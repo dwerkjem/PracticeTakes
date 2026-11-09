@@ -142,3 +142,27 @@ TEST_CASE("only the half of the lit zone the pitch is on lights", "[tuner][zones
     CHECK(zoneBands(12.0, usual)[0].litSide == Side::both);
     CHECK(zoneBands(std::nullopt, usual)[1].litSide == Side::both);
 }
+
+TEST_CASE("the sign shows off pitch, and disappears on it", "[tuner][zones]")
+{
+    const auto usual = limits(5.0, 25.0);
+    const auto signs = [&usual](double cents)
+    {
+        int count = 0;
+        for (const auto& band : zoneBands(cents, usual))
+        {
+            count += tuner::carriesSign(band) ? 1 : 0;
+        }
+        return count;
+    };
+
+    CHECK(signs(12.0) == 1);
+    CHECK(signs(-30.0) == 1);
+    CHECK(signs(45.0) == 1);
+
+    // Near perfect is on pitch: its half still lights, but nothing to correct.
+    CHECK(signs(3.0) == 0);
+    CHECK(zoneBands(3.0, usual)[0].litSide == tuner::Side::sharp);
+    CHECK(signs(0.0) == 0);
+    CHECK(signs(5.0) == 0);
+}
