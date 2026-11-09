@@ -119,7 +119,7 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     // before it. A state with a fixture imports it below, which publishes
     // its own target.
     scoreImport.close();
-    currentTarget.keyFifths = 0;
+    applySpellingKey();
     currentTarget.publish(nullptr, std::string(l10n::key("target.none.no-score")));
 
     // The clock at rest, at the score's tempo, with nothing looping: a state

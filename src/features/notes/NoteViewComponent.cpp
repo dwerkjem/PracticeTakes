@@ -359,8 +359,8 @@ void NoteViewComponent::mouseDown(const juce::MouseEvent& event)
     if (const std::optional<int> key = keyUnder(event.position))
     {
         // A key has no spelling, so it is spelled as the open score's key
-        // would spell it: flats in a flat key, sharps otherwise.
-        if (const auto spelled = pitch::spellForKey(*key, target.keyFifths))
+        // would spell it, or the reader's key and accidentals with none.
+        if (const auto spelled = l10n::spellHeard(*key, target.keyFifths))
         {
             target.publish(pitch::chosenTarget(*spelled, *spelled, "Chosen on the Note View"));
         }
@@ -423,7 +423,7 @@ void NoteViewComponent::paintStaff(juce::Graphics& graphics, juce::Rectangle<int
     }
     if (currentNote.has_value())
     {
-        if (const auto spelled = pitch::spellMidi(*currentNote, true))
+        if (const auto spelled = l10n::spellHeard(*currentNote, target.keyFifths))
         {
             const auto shade = zone();
             heads.push_back(

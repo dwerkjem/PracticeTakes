@@ -16,6 +16,8 @@ constexpr auto textScaleKey = "appearance.textScale";
 constexpr auto noteNamingKey = "appearance.noteNaming";
 constexpr auto languageKey = "appearance.language";
 constexpr auto octaveNumberingKey = "appearance.octaveNumbering";
+constexpr auto keySignatureKey = "appearance.keySignature";
+constexpr auto flatsWithoutKeyKey = "appearance.flatsWithoutKey";
 constexpr auto microphoneMutedKey = "audio.muted";
 constexpr auto audioStateKey = "audio.deviceState";
 constexpr auto audioInputGainKey = "audio.inputGain";
@@ -69,6 +71,8 @@ constexpr const char* ownedKeys[] = {
     textScaleKey,
     noteNamingKey,
     octaveNumberingKey,
+    keySignatureKey,
+    flatsWithoutKeyKey,
     languageKey,
     microphoneMutedKey,
     audioStateKey,
@@ -282,6 +286,11 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
     };
     result.state.noteNaming = convention(noteNamingKey);
     result.state.octaveNumbering = convention(octaveNumberingKey);
+    {
+        const int fifths = properties.getIntValue(keySignatureKey, 0);
+        result.state.keySignatureFifths = fifths >= -7 && fifths <= 7 ? fifths : 0;
+    }
+    result.state.flatsWithoutKey = properties.getBoolValue(flatsWithoutKeyKey, false);
     result.state.microphoneMuted = properties.getBoolValue(microphoneMutedKey, false);
     result.state.inputGain =
         boundedValue(properties, audioInputGainKey, AppDefaults::Audio::inputGain, 0.0, 2.0);
@@ -409,6 +418,8 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(textScaleKey, state.textScalePercent);
     properties.setValue(noteNamingKey, state.noteNaming);
     properties.setValue(octaveNumberingKey, state.octaveNumbering);
+    properties.setValue(keySignatureKey, state.keySignatureFifths);
+    properties.setValue(flatsWithoutKeyKey, state.flatsWithoutKey);
     properties.setValue(microphoneMutedKey, state.microphoneMuted);
     properties.setValue(audioInputGainKey, state.inputGain);
     properties.setValue(audioStateKey, state.audioDeviceState);

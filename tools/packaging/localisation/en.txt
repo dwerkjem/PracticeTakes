@@ -897,6 +897,18 @@ language: English
 "staff.clef.treble-octave-down" = "Tenor"
 
 # The interface language
+"settings.appearance.accidentals" = "Sharps or flats"
+"settings.appearance.accidentals.flats" = "Flats"
+"settings.appearance.accidentals.sharps" = "Sharps"
+"settings.appearance.accidentals.tooltip" = "How a note is spelled where no key decides: in C major, or with no score open and C major chosen above. A score's own spelling always comes first"
+"settings.appearance.key" = "Key signature"
+"settings.appearance.key.entry" = "{major} major / {minor} minor ({signs})"
+"settings.appearance.key.flats.one" = "{count} flat"
+"settings.appearance.key.flats.other" = "{count} flats"
+"settings.appearance.key.none" = "no sharps or flats"
+"settings.appearance.key.sharps.one" = "{count} sharp"
+"settings.appearance.key.sharps.other" = "{count} sharps"
+"settings.appearance.key.tooltip" = "The key heard notes and keys you click are spelled in when no score is open. An open score's key, and the notes it writes, always come first"
 "settings.appearance.language" = "Language"
 "settings.appearance.language.automatic" = "Automatic (the system's language)"
 "settings.appearance.language.restart" = "Restart Practice Takes to change the language."

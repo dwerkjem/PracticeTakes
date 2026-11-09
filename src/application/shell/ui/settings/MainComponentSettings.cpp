@@ -644,6 +644,8 @@ void MainComponent::applyPracticePreferences(const AppSettings::State& state)
     l10n::setNoteNaming(
         {static_cast<score::NoteNaming>(state.noteNaming),
          static_cast<score::OctaveNumbering>(state.octaveNumbering)});
+    l10n::setSpelling({state.keySignatureFifths, state.flatsWithoutKey});
+    applySpellingKey();
 
     // The keyboard may not be plugged in yet, and that is not a failure: the
     // service holds the selection and opens it when it appears.
@@ -700,6 +702,8 @@ void MainComponent::resetAll()
     setTheme(AppDefaults::theme);
     setTextScale(appearance::TextScale::defaultPercent);
     l10n::setNoteNaming({});
+    l10n::setSpelling({});
+    applySpellingKey();
     chosenLanguage = {};
     if (settingsWindow != nullptr)
     {
@@ -755,6 +759,8 @@ AppSettings::State MainComponent::captureSettingsState()
     state.noteNaming = static_cast<int>(l10n::noteNaming().naming);
     state.language = chosenLanguage;
     state.octaveNumbering = static_cast<int>(l10n::noteNaming().octaves);
+    state.keySignatureFifths = l10n::spelling().keyFifths;
+    state.flatsWithoutKey = l10n::spelling().flats;
     state.microphoneMuted =
         sessionMicrophoneMuteEnabled ? persistedMicrophoneMuted : audioInputService.isMuted();
     state.inputGain = audioInputService.inputGain();

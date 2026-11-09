@@ -173,12 +173,52 @@ pitchAtStaffPosition(StaffClef clef, int steps, int alter)
 }
 
 // A heard pitch, which has no spelling of its own, spelled as a piece in
-// `keyFifths` would spell it: with flats in a flat key and sharps otherwise. A
-// piece in F minor names its A flat A flat, not G sharp.
-[[nodiscard]] inline std::optional<score::Pitch> spellForKey(int midi, int keyFifths)
+// `keyFifths` would spell it: with flats in a flat key and sharps in a sharp
+// one. A piece in F minor names its A flat A flat, not G sharp. In C major,
+// which has neither, `flatsInC` decides -- the reader's own preference.
+[[nodiscard]] inline std::optional<score::Pitch>
+spellForKey(int midi, int keyFifths, bool flatsInC = false)
 {
-    return spellMidi(midi, keyFifths >= 0);
+    return spellMidi(midi, keyFifths != 0 ? keyFifths > 0 : !flatsInC);
 }
+
+// The tonics of the major and the relative minor key with `fifths` sharps
+// (positive) or flats (negative), -7 to 7: {G, E} for 1, {Bb, G} for -2. A
+// letter and an alteration, so each naming convention can name them.
+struct KeyTonics
+{
+    score::Step majorStep = score::Step::c;
+    int majorAlter = 0;
+    score::Step minorStep = score::Step::a;
+    int minorAlter = 0;
+};
+
+[[nodiscard]] constexpr KeyTonics keyTonics(int fifths) noexcept
+{
+    using score::Step;
+    constexpr Step majorSteps[15] = {
+        Step::c, Step::g, Step::d, Step::a, Step::e, Step::b, Step::f, Step::c,
+        Step::g, Step::d, Step::a, Step::e, Step::b, Step::f, Step::c};
+    constexpr int majorAlters[15] = {-1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 1, 1};
+    constexpr Step minorSteps[15] = {
+        Step::a, Step::e, Step::b, Step::f, Step::c, Step::g, Step::d, Step::a,
+        Step::e, Step::b, Step::f, Step::c, Step::g, Step::d, Step::a};
+    constexpr int minorAlters[15] = {-1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1};
+    const int index = (fifths < -7 ? -7 : (fifths > 7 ? 7 : fifths)) + 7;
+    return {majorSteps[index], majorAlters[index], minorSteps[index], minorAlters[index]};
+}
+
+// How the reader spells a note nothing else spells: the key signature to
+// assume with no score open (-7 to 7 fifths, 0 for C major), and sharps or
+// flats where there is no key to decide. A score's own spelling, and its own
+// key, always come first.
+struct SpellingPreference
+{
+    int keyFifths = 0;
+    bool flats = false;
+
+    bool operator==(const SpellingPreference&) const = default;
+};
 
 // A semitone up, spelled with a sharp, or down, spelled with a flat.
 [[nodiscard]] inline std::optional<score::Pitch>

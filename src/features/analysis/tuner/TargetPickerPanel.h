@@ -84,7 +84,7 @@ class TargetPickerPanel final
         {
             if (const std::optional<int> held = steadyNote ? steadyNote() : std::nullopt)
             {
-                if (const auto sung = pitch::spellMidi(*held, true))
+                if (const auto sung = l10n::spellHeard(*held, target.keyFifths))
                 {
                     choose(*sung, "Sung");
                 }
@@ -339,8 +339,9 @@ class TargetPickerPanel final
         {
             return;
         }
-        // A key has no spelling, so it is spelled with a sharp.
-        if (const auto key = pitch::spellMidi(midiNoteNumber, true))
+        // A key has no spelling, so it is spelled as the score's key would
+        // spell it, or as the reader chose with none open.
+        if (const auto key = l10n::spellHeard(midiNoteNumber, target.keyFifths))
         {
             choose(*key, "Chosen on the keyboard");
         }

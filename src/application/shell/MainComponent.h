@@ -351,6 +351,10 @@ class MainComponent final
     // a note redrawn.
     void noteNamingChanged();
 
+    // With no score open, heard notes are spelled in the reader's key
+    // signature (Settings -> Appearance); this puts it where tools read it.
+    void applySpellingKey();
+
     // The interface language chosen ("" for Automatic): saved, for the next
     // start -- every label takes its words when it is made.
     void chooseLanguage(const juce::String& code);

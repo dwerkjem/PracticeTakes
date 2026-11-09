@@ -11,7 +11,28 @@ score::PitchNamingStyle& chosenStyle()
     static score::PitchNamingStyle style;
     return style;
 }
+
+pitch::SpellingPreference& chosenSpelling()
+{
+    static pitch::SpellingPreference preference;
+    return preference;
+}
 } // namespace
+
+void setSpelling(pitch::SpellingPreference preference)
+{
+    chosenSpelling() = preference;
+}
+
+pitch::SpellingPreference spelling()
+{
+    return chosenSpelling();
+}
+
+std::optional<score::Pitch> spellHeard(int midi, int keyFifths)
+{
+    return pitch::spellForKey(midi, keyFifths, chosenSpelling().flats);
+}
 
 void setNoteNaming(score::PitchNamingStyle style)
 {
@@ -39,7 +60,7 @@ juce::String noteName(std::string_view canonical)
 
 juce::String heardNoteName(int midi, int keyFifths)
 {
-    if (const auto spelled = pitch::spellForKey(midi, keyFifths))
+    if (const auto spelled = spellHeard(midi, keyFifths))
     {
         return noteName(*spelled);
     }

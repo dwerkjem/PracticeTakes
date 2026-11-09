@@ -1066,6 +1066,37 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "the key signature and accidentals survive a round trip, and a key out of range is C",
+    "[settings][persistence][naming]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        const auto loaded = AppSettings::load(writer).state;
+        CHECK(loaded.keySignatureFifths == 0);
+        CHECK_FALSE(loaded.flatsWithoutKey);
+        AppSettings::State expected;
+        expected.keySignatureFifths = -3;
+        expected.flatsWithoutKey = true;
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    {
+        juce::PropertiesFile reader(temporary.path, settingsOptions());
+        const auto loaded = AppSettings::load(reader).state;
+        CHECK(loaded.keySignatureFifths == -3);
+        CHECK(loaded.flatsWithoutKey);
+    }
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.setValue("appearance.keySignature", 9);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    CHECK(AppSettings::load(reader).state.keySignatureFifths == 0);
+}
+
+TEST_CASE(
     "the chosen language survives a round trip, and nonsense is not one",
     "[settings][persistence][language]")
 {

@@ -1,3 +1,4 @@
+#include "../../../localisation/NoteNames.h"
 #include "../../MainComponent.h"
 
 #include "../../ui/feedback/FeedbackWindow.h"
@@ -34,8 +35,19 @@ void MainComponent::showLanguageRestartNote() const
         l10n::text("settings.appearance.language.restart"), l10n::text("workspace.alert.ok"));
 }
 
+void MainComponent::applySpellingKey()
+{
+    // The key heard notes are spelled in: the open score's, which its import
+    // set; with none open, the reader's own key signature.
+    if (!scoreImport.hasScore())
+    {
+        currentTarget.keyFifths = l10n::spelling().keyFifths;
+    }
+}
+
 void MainComponent::noteNamingChanged()
 {
+    applySpellingKey();
     saveSettings(false);
     for (int index = 0; index < juce::TopLevelWindow::getNumTopLevelWindows(); ++index)
     {
