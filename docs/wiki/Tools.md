@@ -35,7 +35,14 @@ many cents sharp or flat it is.
   begins. Red is there only while you're in it, and then only faintly. The graph keeps the note's zones in view while
   you sing, and a marker on the bar and on the graph's newest point, and the
   meter's needle, take the colour of the zone you're in.
+- **With a target note**, the zones are measured against the target rather
+  than the note you're nearest: the bar and the meter are centred on it, the
+  graph's axis is centred on its line, and singing a semitone off is red
+  however in tune that other note is. Past either end of the bar or the meter
+  an arrow at that end shows which side you're on.
 - **The tool's ... menu** changes how that looks, for each tuner:
+  - **Centre on the target note** (on by default): off, the tuner reads
+    against the nearest note even with a target chosen;
   - **Signs**: *Off*, *Sharp and flat* (the default), or *Arrows: which way to
     go*, an arrow pointing back toward the note: left on the bar and the meter
     when you're sharp and right when you're flat, and down or up on the graph,

@@ -189,6 +189,13 @@ class TunerComponent final
     // The singer's near-perfect and in-tune limits, as Settings → Practice
     // sets them, in order; the defaults without a source.
     [[nodiscard]] pitch::ZoneLimits zoneLimits() const;
+
+    // The chosen target note, if there is one; the cents the zones, the sign
+    // and the marker measure (against the target when there is one); and the
+    // note the bands sit round on the graph.
+    [[nodiscard]] std::optional<int> targetMidi() const;
+    [[nodiscard]] double zoneCents() const;
+    [[nodiscard]] std::optional<int> zoneNote() const;
     [[nodiscard]] bool isNearPerfect() const;
     [[nodiscard]] std::vector<tuner::ZoneBand> currentBands() const;
     void drawSelectedDisplay(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
@@ -249,6 +256,9 @@ class TunerComponent final
 
     // From the ... menu: the cents off, written in the lit half.
     bool offsetShown = false;
+
+    // From the ... menu: with a target chosen, centre on it.
+    bool targetCentred = true;
 
     // What marks where the pitch is on the bar and the graph, from the ...
     // menu.

@@ -97,6 +97,11 @@ inline constexpr double marker = 1.0;
 // Whether the lit half also says how far off the pitch is, in cents (1), or
 // not (0). Off by default: the status line already gives the exact reading.
 inline constexpr double offsetShown = 0.0;
+
+// Whether, with a target note chosen, the tuner centres on it (1) -- its zones,
+// sign and marker measuring against the target, the graph's axis centred on
+// its line -- or reads against the nearest note as it does without one (0).
+inline constexpr double targetCentred = 1.0;
 } // namespace Tuner
 
 enum class Preset
@@ -118,6 +123,7 @@ struct TunerSettings
     double bothHalvesLit;
     double marker;
     double offsetShown;
+    double targetCentred;
 };
 
 // The tuner's settings schema: for each numeric setting, the name it is stored
@@ -155,6 +161,7 @@ inline constexpr std::array tunerNumberFields{
     TunerNumberField{"bothHalvesLit", &TunerSettings::bothHalvesLit, 0.0, 1.0, 1.0, false},
     TunerNumberField{"marker", &TunerSettings::marker, 0.0, 6.0, 1.0, false},
     TunerNumberField{"offsetShown", &TunerSettings::offsetShown, 0.0, 1.0, 1.0, false},
+    TunerNumberField{"targetCentred", &TunerSettings::targetCentred, 0.0, 1.0, 1.0, false},
 };
 
 // The schema entry for one setting. Every member of TunerSettings but
@@ -178,7 +185,7 @@ inline constexpr TunerSettings generalInstrumentTuner{
     Tuner::dropoutFrames, Tuner::graphDurationSeconds,
     Tuner::scaleCents,    Tuner::signs,
     Tuner::bothHalvesLit, Tuner::marker,
-    Tuner::offsetShown};
+    Tuner::offsetShown,   Tuner::targetCentred};
 
 // A practice preset, declared once: its identity, the name the Settings window
 // offers it under, and the tuner controls it applies. The Settings window
@@ -198,7 +205,7 @@ inline constexpr std::array presets{
         Preset::voice,
         "Voice practice",
         {Tuner::displayMode, 0.25, 7.0, 0.45, 7.0, 30.0, Tuner::scaleCents, Tuner::signs,
-         Tuner::bothHalvesLit, Tuner::marker, Tuner::offsetShown}},
+         Tuner::bothHalvesLit, Tuner::marker, Tuner::offsetShown, Tuner::targetCentred}},
     PresetDefinition{Preset::generalInstrument, "General instrument", generalInstrumentTuner},
 };
 
@@ -229,6 +236,7 @@ presetKeepingLook(TunerSettings preset, const TunerSettings& current)
     preset.bothHalvesLit = current.bothHalvesLit;
     preset.marker = current.marker;
     preset.offsetShown = current.offsetShown;
+    preset.targetCentred = current.targetCentred;
     return preset;
 }
 
