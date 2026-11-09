@@ -53,6 +53,7 @@ broader music-practice and digital-audio workstation application.
 
 - [Releasing](operations/RELEASING.md) — semantic versions, GitHub release automation, and
   artifact signing
+- [Minor release checklist](operations/MINOR_RELEASE_CHECKLIST.md) — the order to cut a minor release in, and the checks around the workflow it cannot make itself
 - [SOPS secrets](operations/SECRETS.md) — encrypted secret mirrors, synchronization, and conflict resolution
 - [Merging](operations/MERGING.md) — the merge drivers and Git configuration this repository expects, and how to bypass them
 - [Rules on `main`](operations/MAIN_BRANCH_RULES.md) — the checks a pull request needs, which pull requests merge themselves, and the token the release and clang-tidy workflows push with
