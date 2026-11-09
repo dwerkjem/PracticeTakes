@@ -17,7 +17,7 @@
 #include "../tools/BuiltInTools.h"
 #include "../tools/ToolInstanceAllocator.h"
 #include "../tools/ToolInstanceId.h"
-#include "state/target/TargetClockFollower.h"
+#include "state/following/TargetClockFollower.h"
 #include "ui/main_window/TransportStrip.h"
 #include "ui/score/ScoreImportJob.h"
 #include "ui/score/ScoreImportState.h"
