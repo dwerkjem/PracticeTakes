@@ -1,8 +1,8 @@
 ## 1. The rule, JUCE-free
 
-- [ ] 1.1 `appearance::TextScale`: bounds, steps, snapping, scaled size rounded
+- [x] 1.1 `appearance::TextScale`: bounds, steps, snapping, scaled size rounded
       to half a point (decision 1). Tests.
-- [ ] 1.2 The role table: each role's name and base size, matching today's
+- [x] 1.2 The role table: each role's name and base size, matching today's
       sizes exactly (decision 2). Tests.
 
 ## 2. Storing it
