@@ -289,16 +289,16 @@ void NowNextComponent::paint(juce::Graphics& graphics)
     }
 
     auto bounds = getLocalBounds().reduced(12);
-    if (getWidth() < compactWidth || getHeight() < compactHeight)
+    if (getWidth() < scaledHeight(compactWidth) || getHeight() < scaledHeight(compactHeight))
     {
         paintCompact(graphics, bounds);
         return;
     }
 
     // The part, and where the clock is.
-    auto header = bounds.removeFromTop(22);
+    auto header = bounds.removeFromTop(scaledHeight(22));
     graphics.setColour(palette.muted);
-    graphics.setFont(juce::FontOptions(14.0f));
+    graphics.setFont(textFont(appearance::TextRole::control));
     const score::Part& followed = shownScore->parts[part];
     graphics.drawText(
         utf8(followed.name.empty() ? followed.id : followed.name), header,
@@ -316,7 +316,7 @@ void NowNextComponent::paint(juce::Graphics& graphics)
 void NowNextComponent::paintMessage(juce::Graphics& graphics, const juce::String& text) const
 {
     graphics.setColour(colours().muted);
-    graphics.setFont(juce::FontOptions(16.0f));
+    graphics.setFont(textFont(appearance::TextRole::subheading));
     graphics.drawFittedText(text, getLocalBounds().reduced(16), juce::Justification::centred, 3);
 }
 
@@ -332,7 +332,7 @@ void NowNextComponent::paintNow(juce::Graphics& graphics, juce::Rectangle<int> a
     auto inside = area.reduced(18, 14);
 
     // The time bar along the bottom, emptying as the note runs out.
-    auto barArea = inside.removeFromBottom(30);
+    auto barArea = inside.removeFromBottom(scaledHeight(30));
     inside.removeFromBottom(6);
 
     // Nothing sounding: before the first note, in a count-in, or at the end.
@@ -423,7 +423,7 @@ void NowNextComponent::paintNow(juce::Graphics& graphics, juce::Rectangle<int> a
     {
         const double left = transport::secondsBetween(*table, tick, static_cast<double>(item.end));
         graphics.setColour(palette.muted);
-        graphics.setFont(juce::FontOptions(14.0f));
+        graphics.setFont(textFont(appearance::TextRole::control));
         graphics.drawText(
             juce::String(left, 1) + " s left", bar.withTrimmedTop(12.0f),
             juce::Justification::centredRight);
@@ -434,8 +434,9 @@ void NowNextComponent::paintNext(juce::Graphics& graphics, juce::Rectangle<int> 
 {
     const Colours palette = colours();
     graphics.setColour(palette.muted);
-    graphics.setFont(juce::FontOptions(13.0f));
-    graphics.drawText("Next", area.removeFromTop(18), juce::Justification::centredLeft);
+    graphics.setFont(textFont(appearance::TextRole::body));
+    graphics.drawText(
+        "Next", area.removeFromTop(scaledHeight(18)), juce::Justification::centredLeft);
 
     if (view.next.empty())
     {
@@ -446,7 +447,7 @@ void NowNextComponent::paintNext(juce::Graphics& graphics, juce::Rectangle<int> 
     // Cards of equal width; a phrase start takes a breath mark and a gap
     // before it. The strip changes only when "now" moves on (decision 3).
     constexpr int gap = 8;
-    constexpr int breath = 22;
+    const int breath = scaledHeight(22);
     int breaths = 0;
     for (const std::size_t index : view.next)
     {
@@ -463,10 +464,11 @@ void NowNextComponent::paintNext(juce::Graphics& graphics, juce::Rectangle<int> 
         if (item.phraseStart)
         {
             graphics.setColour(palette.accent);
-            graphics.setFont(juce::FontOptions(30.0f, juce::Font::bold));
+            graphics.setFont(textFont(appearance::TextRole::readout, juce::Font::bold));
             graphics.drawText(
                 juce::String::fromUTF8("\xE2\x80\x99"),
-                juce::Rectangle<int>(x, area.getY() - 6, breath, 34), juce::Justification::centred);
+                juce::Rectangle<int>(x, area.getY() - 6, breath, scaledHeight(34)),
+                juce::Justification::centred);
             x += breath;
         }
         const juce::Rectangle<float> card(
@@ -507,11 +509,13 @@ void NowNextComponent::paintNext(juce::Graphics& graphics, juce::Rectangle<int> 
         // A note sung again: a badge in the corner.
         if (item.repeated)
         {
+            const auto badgeScale = static_cast<float>(scaledHeight(100)) / 100.0f;
             const juce::Rectangle<float> badge(
-                card.getRight() - 50.0f, card.getY() + 6.0f, 44.0f, 18.0f);
+                card.getRight() - (50.0f * badgeScale), card.getY() + 6.0f, 44.0f * badgeScale,
+                18.0f * badgeScale);
             graphics.setColour(palette.accent);
             graphics.drawRoundedRectangle(badge, 9.0f, 1.2f);
-            graphics.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+            graphics.setFont(textFont(appearance::TextRole::axis, juce::Font::bold));
             graphics.drawText("again", badge, juce::Justification::centred);
         }
         x += width + gap;
@@ -521,7 +525,7 @@ void NowNextComponent::paintNext(juce::Graphics& graphics, juce::Rectangle<int> 
 void NowNextComponent::paintCompact(juce::Graphics& graphics, juce::Rectangle<int> area) const
 {
     const Colours palette = colours();
-    auto bottom = area.removeFromBottom(std::min(24, area.getHeight() / 4));
+    auto bottom = area.removeFromBottom(std::min(scaledHeight(24), area.getHeight() / 4));
     const juce::String now =
         view.now.has_value() ? nameOf(timeline[*view.now]) : juce::String("--");
     graphics.setColour(palette.foreground);
@@ -540,7 +544,7 @@ void NowNextComponent::paintCompact(juce::Graphics& graphics, juce::Rectangle<in
         bar.withWidth(bar.getWidth() * static_cast<float>(1.0 - view.through)), 3.0f);
 
     graphics.setColour(palette.muted);
-    graphics.setFont(juce::FontOptions(13.0f));
+    graphics.setFont(textFont(appearance::TextRole::body));
     graphics.drawText(
         view.next.empty() ? juce::String() : "Next: " + nameOf(timeline[view.next.front()]), bottom,
         juce::Justification::centred);
@@ -575,6 +579,7 @@ void NowNextComponent::paintStaff(
     MiniStaffStyle style;
     style.lines = palette.foreground.withAlpha(0.75f);
     style.label = palette.muted;
+    style.labelFontHeight = textSize(appearance::TextRole::axis);
     style.maxSpacing = 16.0f;
     style.ledgerReach = 1.2f;
     drawMiniStaff(graphics, area, clef, heads, style);
