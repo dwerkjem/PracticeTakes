@@ -18,7 +18,7 @@
 
 // The Note View: the note being sung or played on a piano keyboard and a staff,
 // against the target, with a trail of the last few seconds
-// (openspec/changes/note-view). What can be tested without a display is in
+// (openspec/changes/archive/2026-11-08-note-view). What can be tested without a display is in
 // NoteViewModel.h.
 class NoteViewComponent final
     : public ToolComponent,

@@ -42,3 +42,16 @@ in a second colour. A tool that never registers sees nothing.
 
 Below 240 × 160 px, the staff and trail give way and only the keyboard and the
 note's name show, like the tuner's compact layout.
+
+## Decided while building
+
+- **The automatic clef follows the pitch**: treble at or above middle C, bass
+  below. Taking the target's part's clef, as decision 3 said, needs the target
+  to carry its clef, and a sung note can be far from the score's line anyway.
+  The menu fixes a clef when automatic is wrong for a voice.
+- **The trail and the keyboard share a column**, the staff beside both, so a
+  line in the trail sits exactly over its key. The first capture had the trail
+  narrower than the keyboard, which put the target's line over the wrong key.
+- **The catalog pins settings version 1** in a comment. The catalog can't
+  include a feature's header, so the Note View's own `settingsVersion` constant
+  is what the payload checks.

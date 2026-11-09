@@ -288,6 +288,13 @@ only. Both come from the `system-wide-target-note` change.
     `engraving/NoteHit.h`.
   - A target records whether it was chosen or came from a score, and a
     setting decides whether opening a score replaces a chosen one.
+- **`PitchTracker`** lives in `src/platform/pitch/`, shared by the tuner and
+  the Note View (`src/features/notes`, the `note-view` change). Both smooth
+  `SharedPitchAnalysis`'s readings the same way, so they agree to the cent.
+  The Note View's JUCE-free model (`NoteViewModel.h`) places keys and pitches
+  across the keyboard, keeps the trail, and shades a lit key. It reads held
+  keys through `ToolServices::midi`, a consumer of its own on
+  `MidiInputService`.
 
 ## Takes
 

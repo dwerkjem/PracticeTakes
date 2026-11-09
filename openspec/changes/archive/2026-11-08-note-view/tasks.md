@@ -15,4 +15,4 @@
 
 ## 3. Docs
 
-- [ ] 3.1 The wiki (Tools: Note View), the Features row, ARCHITECTURE.md.
+- [x] 3.1 The wiki (Tools: Note View), the Features row, ARCHITECTURE.md.

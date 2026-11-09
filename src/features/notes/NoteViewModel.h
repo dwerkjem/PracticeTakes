@@ -9,7 +9,7 @@
 // Everything the Note View draws that can be tested without a display: which
 // keys it shows, where a key or a pitch sits across them, the trail of recent
 // pitch, and how a lit key is shaded (no JUCE dependency).
-// openspec/changes/note-view/design.md, decision 2.
+// openspec/changes/archive/2026-11-08-note-view/design.md, decision 2.
 namespace notes
 {
 inline constexpr double trailSeconds = 3.0;
