@@ -119,10 +119,11 @@ Can run in parallel with sections 1-5; it shares no code with them.
 
 ## 9. Not now, but do not foreclose
 
-- [ ] 9.1 Record what CJK would need: `AppLookAndFeel::getTypefaceForFont`
+- [x] 9.1 Record what CJK would need: `AppLookAndFeel::getTypefaceForFont`
       returns embedded Plex for every font and `AppLookAndFeelTests` asserts it,
       so per-script fallback means changing both, plus several megabytes per
       family in the installer.
-- [ ] 9.2 Record what right-to-left would need, which is more than font
+- [x] 9.2 Record what right-to-left would need, which is more than font
       coverage: mirrored layout, and JUCE support that would not carry it
-      without custom work.
+      without custom work. (Both recorded in
+      docs/development/architecture/localisation.md § Not yet.)

@@ -97,3 +97,36 @@ English, whatever language the interface is in:
   phrase, the phrase is the entry.
 - **Musical naming.** "H" is not the German for "B" but a different naming
   system, chosen as its own preference; see `score::PitchNaming`.
+
+## Not yet: scripts beyond Latin, and right to left
+
+Nothing here forecloses either, but neither works today, and both are more
+than a catalogue.
+
+**Chinese, Japanese, Korean** (and any script IBM Plex Sans does not cover --
+it has Latin, Greek and Cyrillic). `AppLookAndFeel::getTypefaceForFont`
+returns the embedded Plex for every font, and `AppLookAndFeelTests` asserts
+that it does, so a glyph Plex lacks is drawn as a box rather than found in
+another font. Supporting a script means:
+
+- choosing a typeface per script -- by the language chosen, or by falling back
+  glyph by glyph -- in `getTypefaceForFont`, and changing its tests to assert
+  the choice rather than a single family;
+- embedding that family: Plex Sans JP, KR or SC is several megabytes per
+  weight, against 200 KB for each Latin weight now, which the installer
+  carries for every user (`tools/packaging/fonts/README.md` says why fonts are
+  embedded rather than looked up);
+- line breaking: JUCE's `drawFittedText` breaks at spaces, and these scripts
+  do not use them;
+- the pseudolocale, which only lengthens Latin, finds none of it.
+
+**Right to left** (Arabic, Hebrew) needs mirrored layout, which is more than
+font coverage. Every panel lays itself out left to right by hand
+(`removeFromLeft` throughout `resized`), the tool chrome puts its handle and
+menu in fixed corners, and JUCE draws text in a single direction with no
+bidirectional layout of its own beyond what the platform's shaping provides.
+It would mean a layout direction every component consults, mirrored drawing
+for the tuner, staff and meters where direction carries meaning (a sharp is
+still to the right of a pitch line), and custom work in JUCE's text layout.
+The notation itself never mirrors: a score reads left to right in every
+language.
