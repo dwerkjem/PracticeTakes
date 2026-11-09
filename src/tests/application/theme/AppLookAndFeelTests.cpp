@@ -79,3 +79,32 @@ TEST_CASE("the same face is handed out on every call", "[theme][typeface]")
         fixture.lookAndFeel.getTypefaceForFont(font) ==
         fixture.lookAndFeel.getTypefaceForFont(font));
 }
+
+TEST_CASE(
+    "widget fonts are JUCE's own at 100 percent and grow with the text size",
+    "[theme][text-size]")
+{
+    LookAndFeelUnderTest fixture;
+    auto& lookAndFeel = fixture.lookAndFeel;
+    juce::Label label;
+    label.setFont(juce::FontOptions(15.0f));
+    juce::TextButton button;
+
+    // 100: exactly JUCE's, including a button's unrounded height-derived size.
+    CHECK(lookAndFeel.textScale() == 100);
+    CHECK(lookAndFeel.getLabelFont(label).getHeight() == 15.0f);
+    CHECK(lookAndFeel.getPopupMenuFont().getHeight() == 17.0f);
+    CHECK(
+        lookAndFeel.getTextButtonFont(button, 23).getHeight() ==
+        juce::LookAndFeel_V4().getTextButtonFont(button, 23).getHeight());
+
+    // 150: every one half again, to the half point.
+    lookAndFeel.setTextScale(150);
+    CHECK(lookAndFeel.getLabelFont(label).getHeight() == 22.5f);
+    CHECK(lookAndFeel.getPopupMenuFont().getHeight() == 25.5f);
+    CHECK(lookAndFeel.getTextButtonFont(button, 40).getHeight() == 24.0f);
+
+    // A value the setting does not offer is snapped to one it does.
+    lookAndFeel.setTextScale(133);
+    CHECK(lookAndFeel.textScale() == 130);
+}

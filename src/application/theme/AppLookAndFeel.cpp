@@ -87,3 +87,103 @@ void AppLookAndFeel::drawButtonText(
             button.getHeight() - yIndent * 2, juce::Justification::centredLeft, 1);
     }
 }
+
+void AppLookAndFeel::setTextScale(int percent) noexcept
+{
+    textScalePercent = appearance::TextScale::snapped(static_cast<double>(percent));
+}
+
+juce::Font AppLookAndFeel::scaled(juce::Font base) const
+{
+    if (textScalePercent == appearance::TextScale::defaultPercent)
+    {
+        return base;
+    }
+    return base.withHeight(appearance::TextScale::scaled(base.getHeight(), textScalePercent));
+}
+
+juce::Font AppLookAndFeel::getLabelFont(juce::Label& label)
+{
+    return scaled(juce::LookAndFeel_V4::getLabelFont(label));
+}
+
+juce::Font AppLookAndFeel::getTextButtonFont(juce::TextButton& button, int buttonHeight)
+{
+    return scaled(juce::LookAndFeel_V4::getTextButtonFont(button, buttonHeight));
+}
+
+juce::Font AppLookAndFeel::getPopupMenuFont()
+{
+    return scaled(juce::LookAndFeel_V4::getPopupMenuFont());
+}
+
+juce::Font AppLookAndFeel::getMenuBarFont(
+    juce::MenuBarComponent& menuBar,
+    int itemIndex,
+    const juce::String& itemText)
+{
+    return scaled(juce::LookAndFeel_V4::getMenuBarFont(menuBar, itemIndex, itemText));
+}
+
+juce::Font AppLookAndFeel::getTabButtonFont(juce::TabBarButton& button, float height)
+{
+    return scaled(juce::LookAndFeel_V4::getTabButtonFont(button, height));
+}
+
+juce::Font AppLookAndFeel::getAlertWindowTitleFont()
+{
+    return scaled(juce::LookAndFeel_V4::getAlertWindowTitleFont());
+}
+
+juce::Font AppLookAndFeel::getAlertWindowMessageFont()
+{
+    return scaled(juce::LookAndFeel_V4::getAlertWindowMessageFont());
+}
+
+juce::Font AppLookAndFeel::getAlertWindowFont()
+{
+    return scaled(juce::LookAndFeel_V4::getAlertWindowFont());
+}
+
+juce::Font AppLookAndFeel::getSliderPopupFont(juce::Slider& slider)
+{
+    return scaled(juce::LookAndFeel_V4::getSliderPopupFont(slider));
+}
+
+void AppLookAndFeel::drawToggleButton(
+    juce::Graphics& graphics,
+    juce::ToggleButton& button,
+    bool shouldDrawButtonAsHighlighted,
+    bool shouldDrawButtonAsDown)
+{
+    if (textScalePercent == appearance::TextScale::defaultPercent)
+    {
+        juce::LookAndFeel_V4::drawToggleButton(
+            graphics, button, shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
+        return;
+    }
+
+    // LookAndFeel_V4::drawToggleButton, with its text size scaled: the box
+    // grows with the text, so the two stay in proportion.
+    const float fontSize = appearance::TextScale::scaled(
+        juce::jmin(15.0f, static_cast<float>(button.getHeight()) * 0.75f), textScalePercent);
+    const float tickWidth = fontSize * 1.1f;
+
+    drawTickBox(
+        graphics, button, 4.0f, (static_cast<float>(button.getHeight()) - tickWidth) * 0.5f,
+        tickWidth, tickWidth, button.getToggleState(), button.isEnabled(),
+        shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
+
+    graphics.setColour(button.findColour(juce::ToggleButton::textColourId));
+    graphics.setFont(juce::FontOptions(fontSize));
+    if (!button.isEnabled())
+    {
+        graphics.setOpacity(0.5f);
+    }
+    graphics.drawFittedText(
+        button.getButtonText(),
+        button.getLocalBounds()
+            .withTrimmedLeft(juce::roundToInt(tickWidth) + 10)
+            .withTrimmedRight(2),
+        juce::Justification::centredLeft, 10);
+}

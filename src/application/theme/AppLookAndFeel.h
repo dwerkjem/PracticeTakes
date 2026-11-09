@@ -2,6 +2,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "TextScale.h"
+
 // The application look and feel, which exists to put one thing in place: the
 // UI typeface.
 //
@@ -43,6 +45,43 @@ class AppLookAndFeel final : public juce::LookAndFeel_V4
     // Marks a button as one whose text hugs the left edge.
     static void alignButtonTextLeft(juce::Button& button);
 
+    // The text size, as a percentage (appearance::TextScale): every widget
+    // font below is JUCE's own size times this. At 100 they are JUCE's own
+    // exactly, unrounded, so nothing moves until the setting does
+    // (global-text-size decision 3).
+    void setTextScale(int percent) noexcept;
+    [[nodiscard]] int textScale() const noexcept
+    {
+        return textScalePercent;
+    }
+
+    // JUCE's size `base` at the current text size.
+    [[nodiscard]] juce::Font scaled(juce::Font base) const;
+
+    // A label's own font, scaled: a component gives a label its role's *base*
+    // size and this scales every label once. A combo box and a slider show
+    // their text in a label, so they are scaled here too and not again.
+    juce::Font getLabelFont(juce::Label& label) override;
+    juce::Font getTextButtonFont(juce::TextButton& button, int buttonHeight) override;
+    juce::Font getPopupMenuFont() override;
+    juce::Font getMenuBarFont(
+        juce::MenuBarComponent& menuBar,
+        int itemIndex,
+        const juce::String& itemText) override;
+    juce::Font getTabButtonFont(juce::TabBarButton& button, float height) override;
+    juce::Font getAlertWindowTitleFont() override;
+    juce::Font getAlertWindowMessageFont() override;
+    juce::Font getAlertWindowFont() override;
+    juce::Font getSliderPopupFont(juce::Slider& slider) override;
+
+    // JUCE's toggle button draws its text at a size of its own, not through a
+    // font function: this draws it the same way at the scaled size.
+    void drawToggleButton(
+        juce::Graphics& graphics,
+        juce::ToggleButton& button,
+        bool shouldDrawButtonAsHighlighted,
+        bool shouldDrawButtonAsDown) override;
+
     // The family name the embedded faces report, for tests that need to
     // distinguish "the font loaded" from "something loaded".
     [[nodiscard]] static const char* embeddedFamilyName() noexcept;
@@ -62,4 +101,5 @@ class AppLookAndFeel final : public juce::LookAndFeel_V4
   private:
     juce::Typeface::Ptr regular;
     juce::Typeface::Ptr bold;
+    int textScalePercent = appearance::TextScale::defaultPercent;
 };
