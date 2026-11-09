@@ -17,6 +17,7 @@
 #include "../tools/BuiltInTools.h"
 #include "../tools/ToolInstanceAllocator.h"
 #include "../tools/ToolInstanceId.h"
+#include "state/following/TargetClockFollower.h"
 #include "ui/main_window/TransportStrip.h"
 #include "ui/score/ScoreImportJob.h"
 #include "ui/score/ScoreImportState.h"
@@ -400,6 +401,14 @@ class MainComponent final
     // the live tools, which use it.
     take::TakeRecorder takeRecorder{practiceClock, scoreImport.currentScoreHolder(), takeSources()};
     [[nodiscard]] take::TakeSources takeSources();
+
+    // Keeps a score's target on the note being sung while the clock plays
+    // (openspec/changes/archive/2026-11-09-now-and-next, decision 5). After the clock it listens
+    // to and the target it writes.
+    TargetClockFollower targetFollower{
+        practiceClock, scoreImport.currentScoreHolder(), currentTarget,
+        [this] { return outputLatencyFrames(); }};
+    [[nodiscard]] int outputLatencyFrames();
 
     // The clock's controls, which the window's control strip lays out beside
     // the menus. Declared after the clock it listens to, so it stops listening

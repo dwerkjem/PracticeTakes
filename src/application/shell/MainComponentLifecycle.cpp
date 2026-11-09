@@ -178,6 +178,13 @@ void MainComponent::configureTopButtons()
     openSampleButton.setComponentID("open-sample-button");
 }
 
+int MainComponent::outputLatencyFrames()
+{
+    // Called on the message thread, from the clock's notifications.
+    auto* device = audioInputService.deviceManager().getCurrentAudioDevice();
+    return device != nullptr ? device->getOutputLatencyInSamples() : 0;
+}
+
 take::TakeSources MainComponent::takeSources()
 {
     // Called while the recorder is being constructed, before the members

@@ -623,6 +623,7 @@ AppSettings::State MainComponent::captureSettingsState()
     state.referencePitchHz = referencePitch.hertz();
     state.inTuneCents = takeRecorder.intonationSettings().toleranceCents;
     state.keepTargetWhenScoreOpens = currentTarget.keepChosenWhenScoreOpens;
+    state.targetFollowsScore = currentTarget.followScoreWhilePlaying;
     if (const auto target = currentTarget.target();
         target != nullptr && target->origin == pitch::TargetOrigin::chosen)
     {
@@ -705,6 +706,7 @@ void MainComponent::loadSettings()
         takeRecorder.setIntonation(intonation);
     }
     currentTarget.keepChosenWhenScoreOpens = loaded.state.keepTargetWhenScoreOpens;
+    currentTarget.followScoreWhilePlaying = loaded.state.targetFollowsScore;
     if (const auto sounding = pitch::parseNoteName(loaded.state.chosenTargetSounding.toStdString()))
     {
         const auto written = pitch::parseNoteName(loaded.state.chosenTargetWritten.toStdString());

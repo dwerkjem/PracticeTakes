@@ -1123,6 +1123,57 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # Now & Next (now-and-next).
+    Surface(
+        state="now-next",
+        title="Now & Next",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "now-large",
+                "Is the note at bar 2 shown large, with its lyric, a staff with the note, its "
+                "length in beats, and a full time bar?",
+            ),
+            Question(
+                "next-strip",
+                "Do the next notes sit in cards below, a rest dimmed, a repeated note marked "
+                "'again', and a breath mark before a note after a rest?",
+            ),
+            Question(
+                "follows-playing",
+                "Press Play: does the current note change as each note is heard, the time bar "
+                "run down smoothly, and the strip step without sliding? Does the tuner's target "
+                "follow the voice?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    Surface(
+        state="now-next-contrast",
+        title="Now & Next in high contrast",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "contrast",
+                "Is it black, white and yellow, with heavier type, readable at a distance?",
+            ),
+        ),
+    ),
+    Surface(
+        state="now-next-start",
+        title="Now & Next at the start of a song",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "rest-and-breath",
+                "Is the first note large, and does the strip show a dimmed rest and then a "
+                "breath mark before the next phrase's first note?",
+            ),
+        ),
+    ),
     # The Take Review tool before any take.
     Surface(
         state="take-review-empty",

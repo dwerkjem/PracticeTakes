@@ -295,6 +295,18 @@ only. Both come from the `system-wide-target-note` change.
   across the keyboard, keeps the trail, and shades a lit key. It reads held
   keys through `ToolServices::midi`, a consumer of its own on
   `MidiInputService`.
+- **Now & Next** (`src/features/nownext`, the `now-and-next` change) shows the
+  note being sung now and the ones coming.
+  - `score::PartTimeline` (JUCE-free) turns a part's first voice into notes,
+    with ties folded in, and rests, marked with lyrics, repeats and phrase
+    starts.
+  - `transport::audibleTick` extrapolates the clock's frame to now, less the
+    output latency, so the display changes note when the note is heard.
+  - The same audible tick drives `pitch::TargetFollower`. Through the shell's
+    `TargetClockFollower`, a target that came from the score follows the note
+    being sung while the clock plays. A chosen target is never replaced, and
+    `CurrentTarget::followScoreWhilePlaying` (Settings → Practice) turns it
+    off.
 
 ## Takes
 

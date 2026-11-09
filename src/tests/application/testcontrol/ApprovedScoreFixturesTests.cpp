@@ -118,7 +118,10 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
             "tuner-target",
             "tuner-target-a442",
             "target-picker",
-            "note-view"});
+            "note-view",
+            "now-next",
+            "now-next-contrast",
+            "now-next-start"});
 }
 
 // The invariant this started as was "a state naming a score opens nothing

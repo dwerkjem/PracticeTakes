@@ -63,6 +63,11 @@ A target you choose is remembered when you quit. Opening a score replaces it
 with the score's first note, unless **Settings → Practice → Keep my target when
 a score opens** is on.
 
+While the score plays, a target that came from the score **follows the note
+being sung** in its part, so the tuner and the Note View always aim at the
+note you should be on. A target you chose stays put. **Settings → Practice →
+Target follows the score as it plays** turns this off.
+
 ![The target picker under the tuner's target line: a keyboard, a staff, a name field, Use the note I'm on, and step buttons](images/target-picker.png)
 
 The tuner measures against the **reference pitch**, A4 = 440 Hz unless you
@@ -95,6 +100,32 @@ It reads pitch exactly as the tuner does, against the same reference pitch and
 target. Small and docked, it shows the keyboard alone.
 
 ![The Note View: E4 lit amber, 44 cents above the target E4, with the amber acceptable-range band around the target's line and the trail wobbling through it](images/note-view.png)
+
+## Now & Next
+
+The note to sing or play now, and the ones coming, large enough to read from a
+music stand while you perform. It follows the clock: press **Play** or
+**Record** and it moves with the score.
+
+- **Now:** the note's name, large, with its lyric, a staff showing it, and how
+  long it lasts in beats (*¾ beat*, *2 beats*). A bar along the bottom empties
+  as the note runs out, with the seconds left. A rest says **Rest**, and a note
+  held over a tie says *tied* and is shown once, for its whole length.
+- **Next:** the following notes as cards. A rest is dimmed, a note sung again
+  has an **again** badge, and a **’** breath mark and a gap come before each
+  new phrase. The cards change only when the current note does, so they hold
+  still to read.
+- It changes note **when you hear it**: the playback position less your
+  output device's latency.
+- In the **...** menu:
+  - **Look ahead:** how many notes to show (2, 4, 6 or 8).
+  - **Follow part:** the target's part (the first one that plays one note at a
+    time) unless you choose another.
+  - **High contrast:** black, white and yellow, for a stage or a dim room.
+- Small and docked, it shows just the current note, its time bar, and the next
+  note's name.
+
+![Now & Next at the start of a song: E4 large with its lyric, a staff and its time, and the next notes with a rest and a breath mark](images/now-next.png)
 
 ## Spectrogram
 
@@ -228,10 +259,6 @@ would show the same score.
 
 Every planned feature is on the [[Features]] page. Among the first:
 
-- **Choose a target note** on a keyboard, a staff or the score, or by singing it,
-  and **see the note you're on** against it, on a piano keyboard and a staff
-  ([#296](https://github.com/dwerkjem/PracticeTakes/issues/296),
-  [#297](https://github.com/dwerkjem/PracticeTakes/issues/297)).
 - **Your vocal range**, found, kept, and drawn against a piece
   ([#298](https://github.com/dwerkjem/PracticeTakes/issues/298)).
 - **A reference tone or drone** to sing in tune against

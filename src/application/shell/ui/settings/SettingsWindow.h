@@ -883,6 +883,24 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     }
                 };
                 addAndMakeVisible(keepTargetToggle);
+
+                // Whether a score's target follows the note being sung while
+                // the clock plays (now-and-next decision 5).
+                followToggle.setComponentID("settings-target-follows-score");
+                followToggle.setToggleState(
+                    target.followScoreWhilePlaying, juce::dontSendNotification);
+                followToggle.setTooltip(
+                    "On: while the score plays, the target moves to the note being sung, so the "
+                    "tuner and the Note View aim at it. A target you chose stays put");
+                followToggle.onClick = [this]
+                {
+                    target.followScoreWhilePlaying = followToggle.getToggleState();
+                    if (onCountInChanged)
+                    {
+                        onCountInChanged();
+                    }
+                };
+                addAndMakeVisible(followToggle);
             }
 
             void resized() override
@@ -912,6 +930,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 toleranceSlider.setBounds(toleranceRow.removeFromLeft(180));
                 bounds.removeFromTop(12);
                 keepTargetToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
+                bounds.removeFromTop(6);
+                followToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
             }
 
           private:
@@ -932,6 +952,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::Label toleranceLabel;
             juce::Slider toleranceSlider;
             juce::ToggleButton keepTargetToggle{"Keep my target when a score opens"};
+            juce::ToggleButton followToggle{"Target follows the score as it plays"};
         };
 
         class ResetPanel final : public CategoryPanel
