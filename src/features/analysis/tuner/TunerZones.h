@@ -123,6 +123,35 @@ zoneBands(std::optional<double> cents, pitch::ZoneLimits requested)
     return bands;
 }
 
+// The cents the zones are measured in: against the target note when one is
+// chosen, so the bands, the sign and the marker say how far you are from the
+// note you are aiming at; otherwise against the note being read, as the tuner
+// always has. `centsFromLocked` is the reading against `lockedMidi`.
+[[nodiscard]] inline double
+centsAgainst(std::optional<int> targetMidi, int lockedMidi, double centsFromLocked) noexcept
+{
+    if (!targetMidi.has_value())
+    {
+        return centsFromLocked;
+    }
+    return 100.0 * static_cast<double>(lockedMidi - *targetMidi) + centsFromLocked;
+}
+
+// Where a reading sits against a scale reaching `scaleCents` either way: past
+// the sharp end (+1), past the flat end (-1), or on it (0).
+[[nodiscard]] inline int offScale(double cents, double scaleCents) noexcept
+{
+    if (cents > scaleCents)
+    {
+        return 1;
+    }
+    if (cents < -scaleCents)
+    {
+        return -1;
+    }
+    return 0;
+}
+
 // Whether this band carries the sharp or flat sign: the lit one, off pitch,
 // with a side to it.
 [[nodiscard]] inline bool carriesSign(const ZoneBand& band) noexcept

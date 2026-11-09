@@ -173,6 +173,28 @@ void drawSign(
     graphics.fillPath(arrow);
 }
 
+// Past either end of the bar or the dial: an arrow with its tip at `tip`,
+// pointing along `direction` (a unit vector), off the end the reading is past.
+// So a reading the scale cannot show -- two semitones off the target, say --
+// still says which side it is on.
+void drawOffScaleArrow(
+    juce::Graphics& graphics,
+    juce::Point<float> tip,
+    juce::Point<float> direction,
+    juce::Colour fill,
+    juce::Colour edge)
+{
+    const juce::Point<float> across(-direction.y, direction.x);
+    const auto base = tip - direction * 20.0f;
+
+    juce::Path arrow;
+    arrow.addTriangle(tip, base + across * 12.0f, base - across * 12.0f);
+    graphics.setColour(fill);
+    graphics.fillPath(arrow);
+    graphics.setColour(edge);
+    graphics.strokePath(arrow, juce::PathStrokeType(1.5f));
+}
+
 // The note name drawn behind a display, sized from the area it is given so
 // it fills a tall docked pane and still fits the band the bar leaves it. The
 // cap only stops it becoming absurd on a very large display.
@@ -327,15 +349,42 @@ pitch::ZoneLimits TunerComponent::zoneLimits() const
     return limits ? pitch::orderedLimits(limits()) : pitch::ZoneLimits{};
 }
 
+std::optional<int> TunerComponent::targetMidi() const
+{
+    // Not centring on it leaves the tuner reading against the nearest note,
+    // as it does with no target at all.
+    if (!targetCentred)
+    {
+        return std::nullopt;
+    }
+    const auto aimingAt = target.target();
+    return aimingAt != nullptr ? std::optional<int>(aimingAt->midiNoteNumber) : std::nullopt;
+}
+
+double TunerComponent::zoneCents() const
+{
+    return hasLockedMidiNote ? tuner::centsAgainst(targetMidi(), lockedMidiNote, displayedCents)
+                             : displayedCents;
+}
+
+std::optional<int> TunerComponent::zoneNote() const
+{
+    if (const auto aimed = targetMidi())
+    {
+        return aimed;
+    }
+    return hasLockedMidiNote ? std::optional<int>(lockedMidiNote) : std::nullopt;
+}
+
 bool TunerComponent::isNearPerfect() const
 {
-    return std::abs(displayedCents) <= zoneLimits().nearPerfectCents;
+    return std::abs(zoneCents()) <= zoneLimits().nearPerfectCents;
 }
 
 std::vector<tuner::ZoneBand> TunerComponent::currentBands() const
 {
     return tuner::zoneBands(
-        hasSignal ? std::optional<double>(displayedCents) : std::nullopt, zoneLimits());
+        hasSignal ? std::optional<double>(zoneCents()) : std::nullopt, zoneLimits());
 }
 
 //==============================================================================
@@ -378,11 +427,11 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
         // is a reading, so the trace can be seen against where it should be.
         // Only while there is a signal: a lock left over from a pause must
         // not hold the axis open.
-        if (hasSignal && hasLockedMidiNote)
+        if (const auto centre = zoneNote(); hasSignal && centre.has_value())
         {
             const auto halfBand = pitch::nearNoteCents / 100.0;
-            minimumValue = std::min(minimumValue, lockedMidiNote - halfBand);
-            maximumValue = std::max(maximumValue, lockedMidiNote + halfBand);
+            minimumValue = std::min(minimumValue, *centre - halfBand);
+            maximumValue = std::max(maximumValue, *centre + halfBand);
         }
 
         // Snapped to whole semitones, for the same reason the compact graph
@@ -395,6 +444,21 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
         // other.
         minimumValue = std::floor(minimumValue);
         maximumValue = std::ceil(maximumValue);
+    }
+
+    // Centred on the target, when there is one and the tuner centres on it:
+    // its line in the middle, reaching far enough either way for the whole
+    // trace and never less than three semitones. Symmetric whole semitones
+    // round a whole-semitone target, so it stays still as the trace moves.
+    if (const auto aimed = targetMidi())
+    {
+        double reach = 3.0;
+        for (const auto value : validValues)
+        {
+            reach = std::max(reach, std::abs(value - *aimed) + 0.5);
+        }
+        minimumValue = std::floor(*aimed - reach);
+        maximumValue = std::ceil(*aimed + reach);
     }
 
     const auto firstNote = static_cast<int>(std::ceil(minimumValue));
@@ -432,12 +496,12 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
         }
     }
 
-    if (hasLockedMidiNote)
+    if (const auto centre = zoneNote())
     {
         drawZoneStrips(
-            graphics, currentBands(), plotArea.toFloat(), lockedMidiNote, minimumValue,
-            maximumValue, false, bothHalvesLit, signs != Signs::off, signs == Signs::arrows,
-            signHeight(bounds), offsetShown, displayedCents);
+            graphics, currentBands(), plotArea.toFloat(), *centre, minimumValue, maximumValue,
+            false, bothHalvesLit, signs != Signs::off, signs == Signs::arrows, signHeight(bounds),
+            offsetShown, zoneCents());
     }
 
     if (graphHistory.size() < 2 || validValues.empty())
@@ -580,7 +644,7 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
         return;
     }
 
-    const auto indicatorX = xOf(displayedCents);
+    const auto indicatorX = xOf(zoneCents());
 
     // The sign over the lit half: a sharp to come down from, a flat to go up
     // from. Over the band rather than on it, so the dot never hides it.
@@ -599,7 +663,7 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
         {
             drawOffset(
                 graphics, anchor, signDrawn, signSize, intonationZoneColour(lit->zone),
-                displayedCents);
+                zoneCents());
         }
     }
 
@@ -610,6 +674,15 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
         juce::Rectangle<float>::leftTopRightBottom(
             indicatorX, bandTop - 10.0f, indicatorX, bandBottom + 10.0f),
         true);
+
+    if (const auto side = tuner::offScale(zoneCents(), scaleCents); side != 0)
+    {
+        const auto end = static_cast<float>(side > 0 ? barBounds.getRight() : barBounds.getX());
+        const auto outward = static_cast<float>(side);
+        drawOffScaleArrow(
+            graphics, {end + outward * 24.0f, static_cast<float>(centreY)}, {outward, 0.0f},
+            intonationZoneColour(pitch::zoneOf(zoneCents(), zoneLimits())), palette.foreground);
+    }
 }
 
 void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<int> bounds) const
@@ -751,21 +824,33 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
         {
             drawOffset(
                 graphics, anchor, signDrawn, signSize, intonationZoneColour(lit->zone),
-                displayedCents);
+                zoneCents());
         }
     }
 
-    const auto needleAngle = angleOf(hasSignal ? displayedCents : 0.0);
+    const auto needleAngle = angleOf(hasSignal ? zoneCents() : 0.0);
     const auto needleEnd =
         centre + juce::Point<float>(
                      static_cast<float>(std::cos(needleAngle) * (radius - 20.0f)),
                      static_cast<float>(std::sin(needleAngle) * (radius - 20.0f)));
 
     graphics.setColour(
-        hasSignal ? intonationZoneColour(pitch::zoneOf(displayedCents, zoneLimits()))
-                  : palette.muted);
+        hasSignal ? intonationZoneColour(pitch::zoneOf(zoneCents(), zoneLimits())) : palette.muted);
     graphics.drawLine({centre, needleEnd}, 3.0f);
     graphics.fillEllipse(centre.x - 7.0f, centre.y - 7.0f, 14.0f, 14.0f);
+
+    // Past an end of the dial: an arrow there, carrying on along the arc.
+    if (const auto side = tuner::offScale(zoneCents(), scaleCents); hasSignal && side != 0)
+    {
+        const auto angle = angleOf(side * scaleCents);
+        const auto outward = static_cast<float>(side);
+        const juce::Point<float> along(
+            -static_cast<float>(std::sin(angle)) * outward,
+            static_cast<float>(std::cos(angle)) * outward);
+        drawOffScaleArrow(
+            graphics, pointAt(angle, radius) + along * 26.0f, along,
+            intonationZoneColour(pitch::zoneOf(zoneCents(), zoneLimits())), palette.foreground);
+    }
 
     graphics.setColour(palette.muted);
     graphics.setFont(juce::FontOptions(12.0f));
@@ -863,11 +948,11 @@ void TunerComponent::drawCompactGraph(
     // The zones around the note being read, kept in range while there is a
     // reading -- only then, for the reason above: a lock that outlives the
     // singing must not hold the axis.
-    if (hasData && hasSignal && hasLockedMidiNote)
+    if (const auto centre = zoneNote(); hasData && hasSignal && centre.has_value())
     {
         const auto halfBand = pitch::nearNoteCents / 100.0;
-        lowest = std::min(lowest, lockedMidiNote - halfBand);
-        highest = std::max(highest, lockedMidiNote + halfBand);
+        lowest = std::min(lowest, *centre - halfBand);
+        highest = std::max(highest, *centre + halfBand);
     }
 
     // Air in whole semitones, and the ends snapped to them.
@@ -884,6 +969,18 @@ void TunerComponent::drawCompactGraph(
     // Quantised, the range is exactly the same from frame to frame for as long
     // as the trace stays inside it, and steps by one whole line when it does
     // not -- so a line means one fixed pitch for as long as it is on screen.
+    // Centred on the target, as the full graph is, when it centres on one.
+    if (const auto aimed = targetMidi())
+    {
+        double reach = span * 0.5;
+        if (hasData)
+        {
+            reach = std::max({reach, *aimed - lowest, highest - *aimed});
+        }
+        lowest = *aimed - reach;
+        highest = *aimed + reach;
+    }
+
     lowest = std::floor(lowest) - 1.0;
     highest = std::ceil(highest) + 1.0;
 
@@ -927,13 +1024,13 @@ void TunerComponent::drawCompactGraph(
         }
     }
 
-    if (hasLockedMidiNote)
+    if (const auto centre = zoneNote())
     {
         drawZoneStrips(
-            graphics, currentBands(), plot.toFloat(), lockedMidiNote, lowest, highest, vertical,
+            graphics, currentBands(), plot.toFloat(), *centre, lowest, highest, vertical,
             bothHalvesLit, signs != Signs::off, signs == Signs::arrows,
             std::min(signHeight(bounds), 0.3f * static_cast<float>(plot.getHeight())), offsetShown,
-            displayedCents);
+            zoneCents());
     }
 
     if (graphHistory.size() >= 2)
@@ -1036,7 +1133,7 @@ void TunerComponent::drawCompactBar(
         // The same scale as the full bar, from the ... menu, so a reading sits
         // in the same place whichever size the tuner is.
         const auto scale = static_cast<float>(scaleSlider.getValue());
-        const auto cents = juce::jlimit(-scale, scale, static_cast<float>(displayedCents));
+        const auto cents = juce::jlimit(-scale, scale, static_cast<float>(zoneCents()));
 
         // Sharp is up on a vertical bar and right on a horizontal one, which is
         // the direction each of those already means elsewhere in the tool.
@@ -1120,8 +1217,8 @@ void TunerComponent::drawCompactMeter(
 
 juce::String TunerComponent::directionLabel() const
 {
-    return displayedCents > 0 ? juce::String::fromUTF8("\xe2\x96\xb2  sharp")
-                              : juce::String::fromUTF8("\xe2\x96\xbc  flat");
+    return zoneCents() > 0 ? juce::String::fromUTF8("\xe2\x96\xb2  sharp")
+                           : juce::String::fromUTF8("\xe2\x96\xbc  flat");
 }
 
 void TunerComponent::drawCompactReading(juce::Graphics& graphics, juce::Rectangle<int> area) const
@@ -1152,9 +1249,9 @@ void TunerComponent::drawCompactReading(juce::Graphics& graphics, juce::Rectangl
     const juce::Font noteFont(juce::FontOptions(noteHeight, juce::Font::bold));
     const juce::Font arrowFont(juce::FontOptions(arrowHeight, juce::Font::bold));
 
-    const auto arrow = inTune               ? juce::String()
-                       : displayedCents > 0 ? juce::String::fromUTF8("\xe2\x96\xb2")
-                                            : juce::String::fromUTF8("\xe2\x96\xbc");
+    const auto arrow = inTune            ? juce::String()
+                       : zoneCents() > 0 ? juce::String::fromUTF8("\xe2\x96\xb2")
+                                         : juce::String::fromUTF8("\xe2\x96\xbc");
 
     constexpr float gap = 6.0f;
     const auto noteWidth = juce::GlyphArrangement::getStringWidth(noteFont, displayedNote);
@@ -1300,7 +1397,7 @@ void TunerComponent::drawMarker(
     // In the colour of the zone the pitch is in, outlined so it stays visible
     // on a lit band of the same colour.
     const auto palette = tunerPaletteFor(currentTheme);
-    const auto fill = intonationZoneColour(pitch::zoneOf(displayedCents, zoneLimits()));
+    const auto fill = intonationZoneColour(pitch::zoneOf(zoneCents(), zoneLimits()));
 
     switch (marker)
     {

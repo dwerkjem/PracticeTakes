@@ -166,3 +166,27 @@ TEST_CASE("the sign shows off pitch, and disappears on it", "[tuner][zones]")
     CHECK(signs(0.0) == 0);
     CHECK(signs(5.0) == 0);
 }
+
+TEST_CASE("with a target, the zones measure against it", "[tuner][zones]")
+{
+    // A4 read 10 cents sharp, aiming at G4: two semitones and ten cents sharp.
+    CHECK(tuner::centsAgainst(67, 69, 10.0) == 210.0);
+    // Aiming at the note being read: the reading itself.
+    CHECK(tuner::centsAgainst(69, 69, -7.0) == -7.0);
+    // No target: the reading itself.
+    CHECK(tuner::centsAgainst(std::nullopt, 69, 12.0) == 12.0);
+
+    // Two semitones off the target is out of tune however close to A4 it is.
+    const auto bands = zoneBands(tuner::centsAgainst(67, 69, 1.0), limits(5.0, 25.0));
+    CHECK(bands[3].look == BandLook::lit);
+    CHECK(bands[3].litSide == tuner::Side::sharp);
+}
+
+TEST_CASE("a reading past either end of the scale says which end", "[tuner][zones]")
+{
+    CHECK(tuner::offScale(0.0, 50.0) == 0);
+    CHECK(tuner::offScale(50.0, 50.0) == 0);
+    CHECK(tuner::offScale(50.5, 50.0) == 1);
+    CHECK(tuner::offScale(-210.0, 50.0) == -1);
+    CHECK(tuner::offScale(30.0, 20.0) == 1);
+}

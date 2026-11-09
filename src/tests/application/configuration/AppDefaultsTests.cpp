@@ -103,11 +103,11 @@ TEST_CASE("An unknown preset id applies the defaults", "[defaults][tuner]")
 
 TEST_CASE("The tuner schema covers every numeric setting once", "[defaults][tuner]")
 {
-    // TunerSettings has ten numeric members besides displayMode; an eleventh
+    // TunerSettings has eleven numeric members besides displayMode; a twelfth
     // with no schema entry would be written by no codec and checked by no
     // reader.
-    static_assert(sizeof(AppDefaults::TunerSettings) == sizeof(double) * 11);
-    REQUIRE(AppDefaults::tunerNumberFields.size() == 10);
+    static_assert(sizeof(AppDefaults::TunerSettings) == sizeof(double) * 12);
+    REQUIRE(AppDefaults::tunerNumberFields.size() == 11);
 
     for (std::size_t i = 0; i < AppDefaults::tunerNumberFields.size(); ++i)
     {
@@ -152,6 +152,8 @@ TEST_CASE("The tuner schema keeps the ranges each reader had", "[defaults][tuner
     CHECK_FALSE(AppDefaults::tunerField(&TunerSettings::marker).required);
     CHECK(range(&TunerSettings::offsetShown) == std::array{0.0, 1.0, 1.0});
     CHECK_FALSE(AppDefaults::tunerField(&TunerSettings::offsetShown).required);
+    CHECK(range(&TunerSettings::targetCentred) == std::array{0.0, 1.0, 1.0});
+    CHECK_FALSE(AppDefaults::tunerField(&TunerSettings::targetCentred).required);
     CHECK(AppDefaults::tunerDisplayModeMinimum == 1);
     CHECK(AppDefaults::tunerDisplayModeMaximum == 3);
 }
@@ -183,6 +185,7 @@ TEST_CASE("A preset changes how a tuner reads, not how it looks", "[defaults][tu
     current.bothHalvesLit = 1.0;
     current.marker = 6.0;
     current.offsetShown = 1.0;
+    current.targetCentred = 0.0;
 
     const auto voice = AppDefaults::tunerPreset(AppDefaults::Preset::voice);
     const auto applied = AppDefaults::presetKeepingLook(voice, current);
@@ -195,4 +198,5 @@ TEST_CASE("A preset changes how a tuner reads, not how it looks", "[defaults][tu
     CHECK(applied.bothHalvesLit == Catch::Approx(1.0));
     CHECK(applied.marker == Catch::Approx(6.0));
     CHECK(applied.offsetShown == Catch::Approx(1.0));
+    CHECK(applied.targetCentred == Catch::Approx(0.0));
 }

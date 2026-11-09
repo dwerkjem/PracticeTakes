@@ -320,7 +320,7 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
         // No pre-workspace key: these files predate the settings.
         AppDefaults::Tuner::scaleCents, AppDefaults::Tuner::signs,
         AppDefaults::Tuner::bothHalvesLit, AppDefaults::Tuner::marker,
-        AppDefaults::Tuner::offsetShown};
+        AppDefaults::Tuner::offsetShown, AppDefaults::Tuner::targetCentred};
     result.state.fullscreenMode = loadFullscreenMode(properties);
 
     if (!isCurrentSchema)

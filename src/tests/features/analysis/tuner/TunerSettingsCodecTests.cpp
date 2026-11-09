@@ -60,7 +60,7 @@ TEST_CASE("A tuner payload keeps the names and order it was always written in", 
         names == std::vector<std::string>{
                      "displayMode", "easing", "averaging", "noteSwitchSemitones", "dropoutFrames",
                      "graphDurationSeconds", "scaleCents", "signs", "bothHalvesLit", "marker",
-                     "offsetShown"});
+                     "offsetShown", "targetCentred"});
 }
 
 TEST_CASE("A tuner payload with a required value outside its range is refused", "[tuner][codec]")
@@ -130,6 +130,7 @@ TEST_CASE(
     CHECK(decoded->bothHalvesLit == Approx(0.0));
     CHECK(decoded->marker == Approx(1.0));
     CHECK(decoded->offsetShown == Approx(0.0));
+    CHECK(decoded->targetCentred == Approx(1.0));
 }
 
 TEST_CASE("A tuner's scale, signs, halves and marker survive a round trip", "[tuner][codec]")
@@ -140,6 +141,7 @@ TEST_CASE("A tuner's scale, signs, halves and marker survive a round trip", "[tu
     settings.bothHalvesLit = 1.0;
     settings.marker = 5.0;
     settings.offsetShown = 1.0;
+    settings.targetCentred = 0.0;
 
     const auto decoded = TunerSettingsCodec::decode(TunerSettingsCodec::encode(settings));
     REQUIRE(decoded.has_value());
@@ -148,6 +150,7 @@ TEST_CASE("A tuner's scale, signs, halves and marker survive a round trip", "[tu
     CHECK(decoded->bothHalvesLit == Approx(1.0));
     CHECK(decoded->marker == Approx(5.0));
     CHECK(decoded->offsetShown == Approx(1.0));
+    CHECK(decoded->targetCentred == Approx(0.0));
 }
 
 TEST_CASE("A missing or other-version tuner payload gives the defaults", "[tuner][codec]")
