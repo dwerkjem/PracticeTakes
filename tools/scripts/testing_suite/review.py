@@ -182,6 +182,26 @@ def review_state(questions: list[dict]) -> str:
     return "reviewed" if answered == len(questions) else "part reviewed"
 
 
+# The two values of the "answered" facet. One facet with two values, because
+# within a facet two chosen values both have to hold: "unreviewed" and "part
+# reviewed" from the review facet cannot be asked for together, and "not
+# completely answered" is exactly that pair -- the pass that is left to do.
+COMPLETELY_ANSWERED = "completely answered"
+NOT_COMPLETELY_ANSWERED = "not completely answered"
+
+
+def answered_state(questions: list[dict]) -> str:
+    """Whether every question on this capture has an answer.
+
+    A capture with nothing to answer is complete: there is nothing left to do
+    on it, and a filter for what is left must not offer it.
+    """
+    if all(question["verdict"] for question in questions):
+        return COMPLETELY_ANSWERED
+
+    return NOT_COMPLETELY_ANSWERED
+
+
 def facets_of(capture, questions: list[dict] | None = None, tags: list[str] | None = None) -> dict:
     """What a reviewer can filter this capture by.
 
@@ -207,6 +227,7 @@ def facets_of(capture, questions: list[dict] | None = None, tags: list[str] | No
         # The three that make a second pass finishable: what is left to do, how
         # what is done came out, and what somebody marked on the way past.
         "review": review_state(questions),
+        "answered": answered_state(questions),
         "verdict": verdict_of(questions),
         "tag": list(tags) if tags else ["untagged"],
         "capture": "failed" if capture.failure else ("flagged" if capture.notice else "ok"),

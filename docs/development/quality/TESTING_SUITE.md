@@ -403,6 +403,7 @@ its count:
 | Facet | Values |
 |---|---|
 | `review` | unreviewed · part reviewed · reviewed |
+| `answered` | completely answered · not completely answered (a capture with nothing to answer is complete) |
 | `verdict` | unanswered · passed · skipped · failed |
 | `tag` | whatever you have applied, plus `untagged` |
 | `capture` | ok · flagged · failed |
@@ -428,6 +429,19 @@ left to do.
 
 What you have chosen shows as chips under the menus — click one to drop it —
 with a count of how many captures the filters are hiding.
+
+**Only not completely answered**, beside the unanswered count, is one click for
+the pass that is left: `answered: not completely answered`, every capture never
+looked at or only partly answered. It is the same filter the menu offers, so
+the two agree.
+
+**Your place is an image, not a scroll offset.** Answering, commenting,
+changing a filter, a job finishing, and leaving the window and coming back all
+put the image you were on (the one you last touched, or the first one showing)
+back where it was on screen, and again as late images load. If a filter now
+hides it — you answered the last question with *only not completely answered*
+on — the next one in the set takes its place. Closing the zoom lands on the
+image you were last looking at. Scrolling yourself always wins.
 
 ### Judging from the zoom
 

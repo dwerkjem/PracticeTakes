@@ -652,6 +652,8 @@ button:hover { border-color: var(--accent); }
    wrap rather than run off the side, and buttons a finger can hit. The
    selection bar stays pinned under the header, as on a desktop. */
 #multi-toggle.active { border-color: var(--accent); color: var(--accent); }
+#only-unanswered.active { border-color: var(--accent); color: var(--accent); }
+.outstanding-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
 /* Hidden by the attribute first, for the reason #stale-server gives; and off
    altogether on a wide screen, where the toolbar itself stays in view. */

@@ -295,6 +295,27 @@ class VerdictFacetTests(ReviewTestCase):
         self.assertEqual(review.review_state(self.answered("pass", "")), "part reviewed")
         self.assertEqual(review.review_state(self.answered("pass", "skip")), "reviewed")
 
+    def test_not_completely_answered_is_unreviewed_and_part_reviewed_together(self) -> None:
+        self.assertEqual(review.answered_state(self.answered("", "")), review.NOT_COMPLETELY_ANSWERED)
+        self.assertEqual(
+            review.answered_state(self.answered("pass", "")), review.NOT_COMPLETELY_ANSWERED)
+        self.assertEqual(
+            review.answered_state(self.answered("pass", "fail")), review.COMPLETELY_ANSWERED)
+
+    def test_nothing_to_answer_is_completely_answered(self) -> None:
+        self.assertEqual(review.answered_state([]), review.COMPLETELY_ANSWERED)
+
+    def test_the_answered_facet_follows_scoring(self) -> None:
+        capture_id = self.add_capture(SHELL)
+
+        def facet() -> str:
+            view = review.run_view(self.store, self.run_id)
+            return view["groups"][0]["captures"][0]["facets"]["answered"]
+
+        self.assertEqual(facet(), review.NOT_COMPLETELY_ANSWERED)
+        review.score_many(self.store, [capture_id], "pass")
+        self.assertEqual(facet(), review.COMPLETELY_ANSWERED)
+
     def test_an_unreviewed_capture_says_so(self) -> None:
         capture_id = self.add_capture(SHELL)
         view = review.run_view(self.store, self.run_id)

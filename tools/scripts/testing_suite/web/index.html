@@ -109,7 +109,13 @@
            becomes finishable. -->
       <div id="launch-banner" class="launch" hidden></div>
       <div id="filters"></div>
-      <div id="outstanding" class="muted small"></div>
+      <div class="outstanding-row">
+        <!-- The pass that is left: every capture with a question still open,
+             whether it was never looked at or only partly answered. -->
+        <button type="button" id="only-unanswered" aria-pressed="false" hidden
+                title="Show only captures with a question still unanswered. Click again to show everything.">only not completely answered</button>
+        <span id="outstanding" class="muted small"></span>
+      </div>
       <div id="grid" aria-label="Captured surfaces"></div>
     </main>
 
