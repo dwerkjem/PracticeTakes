@@ -29,9 +29,34 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
     }
 }
 
+void MainComponent::setDemoMode(bool on)
+{
+    if (demoMode == on)
+    {
+        return;
+    }
+    demoMode = on;
+    updateMicrophoneStateControl();
+    updateMicrophoneWarning();
+}
+
 void MainComponent::updateMicrophoneStateControl()
 {
     const auto palette = appPaletteFor(currentTheme);
+    if (demoMode)
+    {
+        // Where the microphone's state would be: what the application is in
+        // instead. Clicking it leaves.
+        appearance::setIcon(microphoneButton, appearance::Icon::presentation);
+        microphoneButton.setButtonText(l10n::text("demo.button"));
+        microphoneButton.setTooltip(l10n::text("demo.button.tooltip"));
+        microphoneButton.setColour(
+            juce::TextButton::buttonColourId, palette.accent.withAlpha(0.75f));
+        microphoneButton.setColour(juce::TextButton::buttonOnColourId, palette.accent);
+        microphoneButton.setColour(juce::TextButton::textColourOffId, palette.foreground);
+        microphoneButton.setColour(juce::TextButton::textColourOnId, palette.foreground);
+        return;
+    }
     auto colour = palette.accent;
     juce::String text;
     juce::String tooltip;
@@ -136,7 +161,11 @@ void MainComponent::updateMicrophoneWarning()
     // most of those leave the warning exactly where it was.
     const bool wasVisible = microphoneWarning->isVisible();
 
-    if (hasUsableMicrophone())
+    if (demoMode)
+    {
+        microphoneWarning->setVisible(false);
+    }
+    else if (hasUsableMicrophone())
     {
         isMicrophoneWarningDismissed = false;
         microphoneWarning->setVisible(false);

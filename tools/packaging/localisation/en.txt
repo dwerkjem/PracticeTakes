@@ -635,6 +635,9 @@ language: English
 "tool.rename.title" = "Rename {name}"
 
 # The main window: title bar, transport, microphone, first launch
+"demo.button" = "Demo mode"
+"demo.button.tooltip" = "Demo mode: microphone warnings are hidden. Click to leave demo mode"
+"demo.menu" = "Demo mode"
 "microphone.button.active" = "Mic active - Mute"
 "microphone.button.active.tooltip" = "Mute the microphone for every analysis tool"
 "microphone.button.clipping" = "Mic clipping - Mute"

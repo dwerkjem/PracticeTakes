@@ -108,7 +108,9 @@ start_app()
     local home=$1
     local log=$2
     shift 2
-    HOME="$home" "$app" --mute-microphone "$@" > "$log" 2>&1 &
+    # Demo mode, like every capture the testing suite takes: no "No microphone
+    # detected" warning over the picture, whether or not this machine has one.
+    HOME="$home" "$app" --mute-microphone --demo-mode "$@" > "$log" 2>&1 &
     active_pid=$!
 }
 

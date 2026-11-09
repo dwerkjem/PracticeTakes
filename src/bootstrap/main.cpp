@@ -104,6 +104,10 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         // driving the control channel against a real microphone by hand is worth
         // keeping possible, and conflating them would remove it silently.
         const auto declineAudioInput = arguments.contains("--no-audio-input");
+        // Demo mode: no "No microphone detected" warning, and the microphone
+        // button says Demo mode. For showing the application, and for every
+        // capture the testing suite takes, where no microphone is the point.
+        const auto demoMode = arguments.contains("--demo-mode");
         juce::String uiValidationScenario;
         if (const auto scenarioIndex = arguments.indexOf("--ui-validation-scenario");
             scenarioIndex >= 0 && scenarioIndex + 1 < arguments.size())
@@ -154,8 +158,8 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         const auto windowTitle = getApplicationName() + " v" + getApplicationVersion();
 
         mainWindow = std::make_unique<MainWindow>(
-            windowTitle, muteMicrophoneForSession, declineAudioInput, uiValidationScenario,
-            testControlState, testControlChannelRequested);
+            windowTitle, muteMicrophoneForSession, declineAudioInput, demoMode,
+            uiValidationScenario, testControlState, testControlChannelRequested);
     }
 
     void shutdown() override
@@ -240,6 +244,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             const juce::String& title,
             bool muteMicrophoneForSession,
             bool declineAudioInput,
+            bool demoMode,
             const juce::String& uiValidationScenario,
             const juce::String& testControlState,
             bool testControlChannelRequested)
@@ -257,6 +262,7 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             auto ownedContent =
                 std::make_unique<MainComponent>(muteMicrophoneForSession, declineAudioInput);
             content = ownedContent.get();
+            content->setDemoMode(demoMode);
             auto controlStrip = content->createTitleBar([this] { toggleFullscreen(); });
             titleBar = controlStrip.get();
             frame = new WindowFrame(std::move(ownedContent), std::move(controlStrip));

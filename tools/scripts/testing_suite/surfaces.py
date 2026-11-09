@@ -156,6 +156,13 @@ class Surface:
     # the microphone is held for one surface rather than for the whole run.
     needs_input_device: bool = False
 
+    # Capture this surface outside demo mode, against the harness's default of
+    # `--demo-mode`. Demo mode hides the "No microphone detected" warning and
+    # has the microphone button say Demo mode, which is what every picture
+    # wants -- except one whose subject is the microphone's state: the warning,
+    # or the button and frame of a muted microphone.
+    shows_microphone: bool = False
+
     # Something the tester must do by hand before answering, because it is an
     # interaction rather than a state. The harness prompts and waits; it does
     # not simulate it.
@@ -463,6 +470,7 @@ SURFACES: tuple[Surface, ...] = (
         title="Global microphone mute engaged",
         area="audio",
         modes=frozenset({FULL}),
+        shows_microphone=True,
         extras=(
             Question("mute-obvious", "Is it obvious at a glance that input is muted?"),
             Question(
@@ -475,6 +483,7 @@ SURFACES: tuple[Surface, ...] = (
         title="Every tool at once, microphone muted",
         area="audio",
         modes=frozenset({FULL}),
+        shows_microphone=True,
         extras=(
             Question(
                 "all-silent",
@@ -488,6 +497,7 @@ SURFACES: tuple[Surface, ...] = (
         title="The no-usable-input warning",
         area="audio",
         modes=frozenset({FULL}),
+        shows_microphone=True,
         extras=(
             Question("actionable", "Does the warning say what to do about it?"),
             Question(
@@ -1561,6 +1571,7 @@ def _text_size_surfaces(base: tuple[Surface, ...]) -> tuple[Surface, ...]:
                 area=source.area if source else "workspace",
                 modes=frozenset({FULL}),
                 warmup_seconds=source.warmup_seconds if source else 0.0,
+                shows_microphone=source.shows_microphone if source else False,
                 extras=(
                     Question(
                         "text-fits",

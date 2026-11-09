@@ -63,6 +63,16 @@ Every setting, settings tab and menu has an icon beside its words, so a
 control can be found by its picture. In the title bar the transport's
 buttons are icons alone; hold the pointer over one for its name.
 
+## Demo mode
+
+**Settings → Demo mode** is for showing Practice Takes to someone, on a
+machine with no microphone or one you'd rather not use. It hides the **No
+microphone detected** warning, and the microphone button in the title bar says
+**Demo mode** instead. Click that button, or choose **Demo mode** again, to
+leave. It lasts until you leave it or quit, and is never saved. Starting with
+`--demo-mode` turns it on from the beginning. Every screenshot on this wiki is
+taken in demo mode.
+
 ## Moving settings to another machine
 
 **Settings → Export settings** writes a human-readable `.ptsettings` file. It

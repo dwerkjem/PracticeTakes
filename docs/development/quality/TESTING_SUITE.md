@@ -335,6 +335,14 @@ never written, and this is the only audio callback the application registers.
 attempt no recovery, scan for no device changes, leaving the generated tone as
 the only producer into the analysis path.
 
+**Every capture is in demo mode** (`--demo-mode`), so no picture carries the
+"No microphone detected" warning that an instance with no device would
+otherwise show, and the microphone button reads *Demo mode*. A surface whose
+subject is the microphone's state -- the warning, or a muted microphone --
+sets `shows_microphone=True` and is captured outside it; the pass restarts
+into that mode and back, as it does for `needs_input_device`. The golden-image
+script launches in demo mode too.
+
 One process at a time can hold the input device, so a capture run and a live
 application used to compete for it and the live application lost
 ([#176](https://github.com/dwerkjem/PracticeTakes/issues/176)). A capture

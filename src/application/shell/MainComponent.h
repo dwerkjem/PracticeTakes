@@ -63,6 +63,16 @@ class MainComponent final
     // input device at all, leaving the generated tone as the only producer.
     // See that constructor for why a capture instance wants it.
     explicit MainComponent(bool muteMicrophoneForSession = false, bool declineAudioInput = false);
+
+    // Demo mode hides the "No microphone detected" warning and has the
+    // microphone button say Demo mode; clicking it, or the Settings menu,
+    // leaves. For the session only: never saved, so it cannot outlive the
+    // demonstration it was turned on for.
+    void setDemoMode(bool on);
+    [[nodiscard]] bool isDemoMode() const noexcept
+    {
+        return demoMode;
+    }
     ~MainComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -202,6 +212,7 @@ class MainComponent final
     // Leaves the application with no target note, from the Tools menu or any
     // tool's own menu, and saves that.
     void clearTarget();
+
     void renameTool(const ToolInstanceId& instance, const juce::String& requestedName);
     // The open instances of one tool, lowest ordinal first.
     [[nodiscard]] std::vector<ToolInstanceId> openInstancesOf(std::string_view toolId) const;
@@ -528,6 +539,7 @@ class MainComponent final
     AppSettings::FullscreenMode selectedFullscreenMode = AppSettings::FullscreenMode::normal;
     juce::Rectangle<int> savedSettingsBounds;
     bool isMicrophoneWarningDismissed = false;
+    bool demoMode = false;
 
 #if PRACTICE_TAKES_ENABLE_TEST_CONTROL
     // The approved state last applied, or empty when the application is not in

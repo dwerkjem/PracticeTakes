@@ -172,7 +172,15 @@ void MainComponent::configureTopButtons()
     toolsButton.onClick = [this] { showToolsMenu(); };
     helpButton.onClick = [this] { showHelpMenu(); };
     microphoneButton.setTitle(l10n::text("microphone.button.title"));
-    microphoneButton.onClick = [this] { audioInputService.toggleMuted(); };
+    microphoneButton.onClick = [this]
+    {
+        if (demoMode)
+        {
+            setDemoMode(false);
+            return;
+        }
+        audioInputService.toggleMuted();
+    };
     openSampleButton.setTooltip(bundled_sample::menuLabel());
     openSampleButton.onClick = [this] { openSampleScore(); };
     addChildComponent(openSampleButton);
