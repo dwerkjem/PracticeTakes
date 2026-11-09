@@ -24,7 +24,7 @@ class MainComponent::ScoreImportWindow final : public juce::DocumentWindow
   public:
     explicit ScoreImportWindow(std::function<void()> closeHandler)
         : DocumentWindow(
-              juce::String(shellwindows::scoreImport.data(), shellwindows::scoreImport.size()),
+              l10n::text(shellwindows::scoreImportKey),
               juce::Colours::darkgrey,
               juce::DocumentWindow::allButtons),
           onClose(std::move(closeHandler))

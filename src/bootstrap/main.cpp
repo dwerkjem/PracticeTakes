@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <iostream>
 
+#include "../application/localisation/Localisation.h"
 #include "../application/shell/MainComponent.h"
 #include "../application/shell/WorkspaceStartupSequence.h"
 #include "../application/shell/ui/main_window/MainTitleBar.h"
@@ -114,6 +115,16 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             testControlState = arguments[stateIndex + 1];
         }
         const auto testControlChannelRequested = arguments.contains("--test-control");
+
+        // The interface language, before anything is built that reads it. No
+        // language is shipped yet but English (internationalization); the
+        // pseudolocale, qps-ploc, is what a capture pass checks layouts in.
+        // An unknown code runs in English.
+        if (const auto languageIndex = arguments.indexOf("--language");
+            languageIndex >= 0 && languageIndex + 1 < arguments.size())
+        {
+            l10n::setLanguage(arguments[languageIndex + 1].toStdString());
+        }
 
 #if !PRACTICE_TAKES_ENABLE_TEST_CONTROL
         if (testControlState.isNotEmpty() || testControlChannelRequested)

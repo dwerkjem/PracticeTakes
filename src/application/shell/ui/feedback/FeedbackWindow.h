@@ -15,7 +15,7 @@ class MainComponent::FeedbackWindow final : public juce::DocumentWindow
         const juce::String& initialContext,
         std::function<void()> closeHandler)
         : DocumentWindow(
-              juce::String(shellwindows::feedback.data(), shellwindows::feedback.size()),
+              l10n::text(shellwindows::feedbackKey),
               juce::Colours::darkgrey,
               juce::DocumentWindow::allButtons),
           onClose(std::move(closeHandler))

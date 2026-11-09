@@ -241,6 +241,7 @@ class CapturePass:
         display: str = "",
         lock: threading.Lock | None = None,
         audio_gate: threading.Lock | None = None,
+        window_titles: dict[str, str] | None = None,
     ) -> None:
         self.store = store
         self.run_id = run_id
@@ -270,6 +271,10 @@ class CapturePass:
         # after -- buys nothing but the deadline again each time.
         self.channel_broken = False
         self.driver.default_timeout = COMMAND_TIMEOUT_SECONDS
+        # A window's title as the application under test shows it, by its
+        # English title: the pseudolocale's, in a `--pseudolocale` run. Empty
+        # in English, where they are the same.
+        self.window_titles = window_titles or {}
 
     # --- X plumbing ---------------------------------------------------------
 
@@ -294,6 +299,7 @@ class CapturePass:
         one, and the capture silently photographs the wrong thing.
         """
         chosen = title or self.window_title or ""
+        chosen = self.window_titles.get(chosen, chosen)
 
         return ["--title", chosen] if chosen else []
 

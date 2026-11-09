@@ -38,7 +38,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "tuner-docked",
@@ -65,7 +66,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "tuner-in-tune",
@@ -92,7 +94,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "tuner-sharp",
@@ -119,7 +122,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "tuner-flat",
@@ -146,7 +150,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "tuner-bar",
@@ -173,7 +178,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "tuner-meter",
@@ -200,7 +206,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "tuner-advanced",
@@ -227,7 +234,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "spectrogram-tone",
@@ -254,7 +262,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "harmonics-tone",
@@ -281,7 +290,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "all-tools-tone",
@@ -308,7 +318,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "tuner-floating",
@@ -335,7 +346,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Tuner"
+      "windowTitle": "Tuner",
+      "pseudolocaleWindowTitle": "[Tüñér ~~]"
     },
     {
       "id": "spectrogram-docked",
@@ -362,7 +374,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "spectrogram-floating",
@@ -389,7 +402,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Spectrogram"
+      "windowTitle": "Spectrogram",
+      "pseudolocaleWindowTitle": "[Spéçtrögrám ~~~~~]"
     },
     {
       "id": "harmonics-docked",
@@ -416,7 +430,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "harmonics-floating",
@@ -443,7 +458,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Harmonic Analyzer"
+      "windowTitle": "Harmonic Analyzer",
+      "pseudolocaleWindowTitle": "[Hármöñîç Áñálýzér ~~~~~~~]"
     },
     {
       "id": "score-view-empty",
@@ -470,7 +486,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "two-tools-split",
@@ -497,7 +514,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "two-tools-tabbed",
@@ -524,7 +542,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "tuner-harmonics-split",
@@ -551,7 +570,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "two-tuners-split",
@@ -578,7 +598,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "three-tools-tabbed",
@@ -605,7 +626,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "all-tools-docked",
@@ -632,7 +654,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "narrow-window",
@@ -659,7 +682,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "fullscreen",
@@ -686,7 +710,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "narrow-empty",
@@ -713,7 +738,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "microphone-muted",
@@ -740,7 +766,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "muted-all-tools",
@@ -767,7 +794,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "microphone-warning",
@@ -794,7 +822,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "settings-open",
@@ -821,7 +850,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Settings"
+      "windowTitle": "Settings",
+      "pseudolocaleWindowTitle": "[Séttîñgs ~~~~]"
     },
     {
       "id": "settings-audio-device",
@@ -848,7 +878,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Settings"
+      "windowTitle": "Settings",
+      "pseudolocaleWindowTitle": "[Séttîñgs ~~~~]"
     },
     {
       "id": "settings-appearance",
@@ -875,7 +906,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Settings"
+      "windowTitle": "Settings",
+      "pseudolocaleWindowTitle": "[Séttîñgs ~~~~]"
     },
     {
       "id": "settings-midi",
@@ -902,7 +934,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Settings"
+      "windowTitle": "Settings",
+      "pseudolocaleWindowTitle": "[Séttîñgs ~~~~]"
     },
     {
       "id": "settings-practice",
@@ -929,7 +962,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Settings"
+      "windowTitle": "Settings",
+      "pseudolocaleWindowTitle": "[Séttîñgs ~~~~]"
     },
     {
       "id": "settings-reset",
@@ -956,7 +990,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Settings"
+      "windowTitle": "Settings",
+      "pseudolocaleWindowTitle": "[Séttîñgs ~~~~]"
     },
     {
       "id": "feedback-over-tool",
@@ -983,7 +1018,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Send feedback"
+      "windowTitle": "Send feedback",
+      "pseudolocaleWindowTitle": "[Séñd féédbáçk ~~~~~~]"
     },
     {
       "id": "feedback-open",
@@ -1010,7 +1046,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Send feedback"
+      "windowTitle": "Send feedback",
+      "pseudolocaleWindowTitle": "[Séñd féédbáçk ~~~~~~]"
     },
     {
       "id": "score-import-clean",
@@ -1037,7 +1074,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Score import"
+      "windowTitle": "Score import",
+      "pseudolocaleWindowTitle": "[Sçöré împört ~~~~~]"
     },
     {
       "id": "score-import-diagnostics",
@@ -1064,7 +1102,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Score import"
+      "windowTitle": "Score import",
+      "pseudolocaleWindowTitle": "[Sçöré împört ~~~~~]"
     },
     {
       "id": "score-view-notation",
@@ -1091,7 +1130,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "score-view-notation-large",
@@ -1118,7 +1158,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Score View"
+      "windowTitle": "Score View",
+      "pseudolocaleWindowTitle": "[Sçöré Vîéw ~~~~]"
     },
     {
       "id": "score-view-grand-staff",
@@ -1145,7 +1186,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "score-view-engraving",
@@ -1172,7 +1214,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "score-view-sample",
@@ -1199,7 +1242,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "score-view-page",
@@ -1226,7 +1270,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "score-view-part-hidden",
@@ -1253,7 +1298,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "transport-playing",
@@ -1280,7 +1326,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "score-view-cursor",
@@ -1307,7 +1354,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "take-recording",
@@ -1334,7 +1382,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "take-review",
@@ -1361,7 +1410,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "take-review-sung",
@@ -1388,7 +1438,8 @@
       "referencePitchHz": 0,
       "sungTake": true,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "playback-mix",
@@ -1415,7 +1466,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "tuner-target",
@@ -1442,7 +1494,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "tuner-target-a442",
@@ -1469,7 +1522,8 @@
       "referencePitchHz": 442,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "target-picker",
@@ -1496,7 +1550,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "note-view",
@@ -1523,7 +1578,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "note-view-empty",
@@ -1550,7 +1606,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "now-next",
@@ -1577,7 +1634,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "now-next-contrast",
@@ -1604,7 +1662,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "now-next-start",
@@ -1631,7 +1690,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "input-level",
@@ -1658,7 +1718,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "input-level-vertical",
@@ -1685,7 +1746,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "take-review-empty",
@@ -1712,7 +1774,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "score-view-vertical",
@@ -1739,7 +1802,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "score-view-horizontal",
@@ -1766,7 +1830,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "score-import-in-progress",
@@ -1793,7 +1858,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 100,
-      "windowTitle": "Score import"
+      "windowTitle": "Score import",
+      "pseudolocaleWindowTitle": "[Sçöré împört ~~~~~]"
     },
     {
       "id": "empty-text-150",
@@ -1820,7 +1886,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "tuner-docked-text-150",
@@ -1847,7 +1914,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "tuner-bar-text-150",
@@ -1874,7 +1942,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "tuner-advanced-text-150",
@@ -1901,7 +1970,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "spectrogram-tone-text-150",
@@ -1928,7 +1998,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "harmonics-tone-text-150",
@@ -1955,7 +2026,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "two-tools-tabbed-text-150",
@@ -1982,7 +2054,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "all-tools-docked-text-150",
@@ -2009,7 +2082,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "narrow-window-text-150",
@@ -2036,7 +2110,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "microphone-warning-text-150",
@@ -2063,7 +2138,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "settings-appearance-text-150",
@@ -2090,7 +2166,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": "Settings"
+      "windowTitle": "Settings",
+      "pseudolocaleWindowTitle": "[Séttîñgs ~~~~]"
     },
     {
       "id": "settings-audio-device-text-150",
@@ -2117,7 +2194,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": "Settings"
+      "windowTitle": "Settings",
+      "pseudolocaleWindowTitle": "[Séttîñgs ~~~~]"
     },
     {
       "id": "settings-midi-text-150",
@@ -2144,7 +2222,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": "Settings"
+      "windowTitle": "Settings",
+      "pseudolocaleWindowTitle": "[Séttîñgs ~~~~]"
     },
     {
       "id": "settings-practice-text-150",
@@ -2171,7 +2250,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": "Settings"
+      "windowTitle": "Settings",
+      "pseudolocaleWindowTitle": "[Séttîñgs ~~~~]"
     },
     {
       "id": "settings-reset-text-150",
@@ -2198,7 +2278,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": "Settings"
+      "windowTitle": "Settings",
+      "pseudolocaleWindowTitle": "[Séttîñgs ~~~~]"
     },
     {
       "id": "transport-playing-text-150",
@@ -2225,7 +2306,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "score-view-cursor-text-150",
@@ -2252,7 +2334,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "take-review-text-150",
@@ -2279,7 +2362,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "note-view-text-150",
@@ -2306,7 +2390,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "now-next-text-150",
@@ -2333,7 +2418,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "input-level-text-150",
@@ -2360,7 +2446,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 150,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "empty-text-80",
@@ -2387,7 +2474,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 80,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "all-tools-docked-text-80",
@@ -2414,7 +2502,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 80,
-      "windowTitle": ""
+      "windowTitle": "",
+      "pseudolocaleWindowTitle": ""
     },
     {
       "id": "settings-practice-text-80",
@@ -2441,7 +2530,8 @@
       "referencePitchHz": 0,
       "sungTake": false,
       "textScalePercent": 80,
-      "windowTitle": "Settings"
+      "windowTitle": "Settings",
+      "pseudolocaleWindowTitle": "[Séttîñgs ~~~~]"
     }
   ]
 }

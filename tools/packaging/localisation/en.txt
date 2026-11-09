@@ -874,3 +874,8 @@ language: English
 "settings.appearance.octaves.scientific" = "Middle C is C4"
 "settings.appearance.octaves.tooltip" = "Where octave numbers start: scientific (C4), as on many keyboards (C3), or Helmholtz primes"
 "settings.appearance.octaves.yamaha" = "Middle C is C3"
+
+# The shell's own windows: their titles, which the capture harness finds them by
+"window.feedback" = "Send feedback"
+"window.score-import" = "Score import"
+"window.settings" = "Settings"

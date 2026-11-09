@@ -32,6 +32,10 @@ class Catalogue
   public:
     [[nodiscard]] static Catalogue parse(const juce::String& text);
 
+    // The pseudolocale: every entry of `english`, transformed
+    // (pseudolocale::transform). Generated each time, so it is never stale.
+    [[nodiscard]] static Catalogue pseudolocalised(const Catalogue& english);
+
     [[nodiscard]] const juce::String* find(std::string_view key) const;
 
     [[nodiscard]] const juce::String& languageName() const noexcept
@@ -111,8 +115,9 @@ class Localisation
 // setLanguage chose. Message thread.
 [[nodiscard]] Localisation& current();
 
-// Chooses the embedded catalogue for `code`. An unknown code runs in English
-// rather than failing (and returns false).
+// Chooses the embedded catalogue for `code`, or the pseudolocale for
+// pseudolocale::code. An unknown code runs in English rather than failing (and
+// returns false).
 bool setLanguage(std::string_view code);
 
 // The application's text, shortened for the call sites.

@@ -116,5 +116,31 @@ class HistoryLimitTests(unittest.TestCase):
         self.assertEqual(len(self.run_history(2)), 2)
 
 
+class PseudolocaleTests(unittest.TestCase):
+    """A capture in the generated pseudolocale (internationalization 7)."""
+
+    def test_english_launches_with_no_language(self) -> None:
+        self.assertEqual(main_module._language_arguments(SimpleNamespace(pseudolocale=False)), ())
+        self.assertEqual(main_module._window_titles(SimpleNamespace(pseudolocale=False)), {})
+
+    def test_the_pseudolocale_is_asked_for_and_its_titles_looked_up(self) -> None:
+        arguments = SimpleNamespace(pseudolocale=True)
+
+        self.assertEqual(main_module._language_arguments(arguments), ("--language", "qps-ploc"))
+
+        titles = main_module._window_titles(arguments)
+        # Every window a state is a picture of has its pseudolocale title, and
+        # it is bracketed, so it cannot be mistaken for the English one.
+        self.assertIn(surfaces.SETTINGS_WINDOW, titles)
+        for english, pseudo in titles.items():
+            self.assertTrue(pseudo.startswith("[") and pseudo.endswith("]"), (english, pseudo))
+
+    def test_a_pseudolocale_capture_must_be_scratch(self) -> None:
+        arguments = SimpleNamespace(pseudolocale=True, scratch=False)
+
+        with patch.object(surfaces, "validate", return_value=[]):
+            self.assertEqual(main_module.command_capture(arguments), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

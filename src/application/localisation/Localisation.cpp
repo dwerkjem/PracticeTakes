@@ -1,5 +1,7 @@
 #include "Localisation.h"
 
+#include "Pseudolocale.h"
+
 #include <PracticeTakesCatalogues.h>
 
 #include <memory>
@@ -18,6 +20,18 @@ Catalogue Catalogue::parse(const juce::String& text)
     {
         catalogue.values.emplace(
             mappings.getAllKeys()[index].toStdString(), mappings.getAllValues()[index]);
+    }
+    return catalogue;
+}
+
+Catalogue Catalogue::pseudolocalised(const Catalogue& english)
+{
+    Catalogue catalogue;
+    catalogue.name = "Pseudolocale";
+    for (const auto& [key, value] : english.values)
+    {
+        catalogue.values.emplace(
+            key, juce::String::fromUTF8(pseudolocale::transform(value.toStdString()).c_str()));
     }
     return catalogue;
 }
@@ -152,6 +166,13 @@ Localisation& current()
 
 bool setLanguage(std::string_view code)
 {
+    if (code == pseudolocale::code)
+    {
+        const auto english = embedded("en");
+        const auto pseudo = Catalogue::pseudolocalised(english.value_or(Catalogue{}));
+        current().choose(code, &pseudo);
+        return true;
+    }
     if (languageOf(code) == "en")
     {
         current().choose(code, nullptr);

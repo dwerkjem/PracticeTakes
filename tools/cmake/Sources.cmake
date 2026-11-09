@@ -89,6 +89,7 @@ set(PRACTICE_TAKES_SOURCES
     src/application/localisation/NoteNames.cpp
     src/application/localisation/NoteNames.h
     src/application/localisation/PlaybackText.h
+    src/application/localisation/Pseudolocale.h
     src/application/localisation/TakeText.cpp
     src/application/localisation/TakeText.h
     src/application/testcontrol/ApprovedWindowStates.cpp
@@ -349,6 +350,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/localisation/LocalisationTests.cpp
     src/tests/application/localisation/NoteNamesTests.cpp
     src/tests/application/localisation/PlaybackTextTests.cpp
+    src/tests/application/localisation/PseudolocaleTests.cpp
     src/tests/application/localisation/TakeTextTests.cpp
     src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp
     src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp

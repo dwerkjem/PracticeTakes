@@ -1,5 +1,6 @@
 #include "ApprovedStatesManifest.h"
 
+#include "../localisation/Pseudolocale.h"
 #include "../shell/ui/ShellWindowTitles.h"
 #include "../tools/BuiltInToolCatalog.h"
 
@@ -172,7 +173,12 @@ void appendState(std::string& out, const ApprovedWindowState& state)
     out += indent + "\"referencePitchHz\": " + number(state.referencePitchHz) + ",\n";
     out += indent + "\"sungTake\": " + boolean(state.sungTake) + ",\n";
     out += indent + "\"textScalePercent\": " + std::to_string(state.textScalePercent) + ",\n";
-    out += indent + "\"windowTitle\": " + quoted(windowTitleOf(state)) + "\n";
+    const std::string title = windowTitleOf(state);
+    out += indent + "\"windowTitle\": " + quoted(title) + ",\n";
+    // How the same window is titled in the pseudolocale, which a capture pass
+    // in it finds the window by.
+    out += indent + "\"pseudolocaleWindowTitle\": " +
+           quoted(title.empty() ? std::string{} : pseudolocale::transform(title)) + "\n";
     out += "    }";
 }
 } // namespace

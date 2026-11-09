@@ -1699,7 +1699,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         std::function<void()> resetAllHandler,
         std::function<void()> closeHandler)
         : DocumentWindow(
-              juce::String(shellwindows::settings.data(), shellwindows::settings.size()),
+              l10n::text(shellwindows::settingsKey),
               juce::Colours::darkgrey,
               juce::DocumentWindow::allButtons),
           onClose(std::move(closeHandler))
