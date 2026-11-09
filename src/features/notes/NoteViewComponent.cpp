@@ -1,8 +1,10 @@
 #include "NoteViewComponent.h"
 
+#include "../../application/theme/MiniStaff.h"
 #include "../../platform/score/PitchNames.h"
 
 #include <cmath>
+#include <vector>
 
 namespace
 {
@@ -267,66 +269,16 @@ void NoteViewComponent::paintStaff(juce::Graphics& graphics, juce::Rectangle<int
     const int reference = currentNote.value_or(aimingAt != nullptr ? aimingAt->midiNoteNumber : 60);
     const pitch::StaffClef staffClef = clefFor(reference);
 
-    const float spacing = std::clamp(static_cast<float>(area.getHeight()) / 14.0f, 5.0f, 10.0f);
-    const float middle = static_cast<float>(area.getCentreY());
+    // The target hollow on the left, the note being sung filled on the right,
+    // across the staff's lines (inset four pixels each side).
     const float left = static_cast<float>(area.getX()) + 4.0f;
-    const float right = static_cast<float>(area.getRight()) - 4.0f;
-
-    graphics.setColour(colours.foreground.withAlpha(0.75f));
-    for (int line = -2; line <= 2; ++line)
-    {
-        graphics.drawHorizontalLine(
-            static_cast<int>(middle - (static_cast<float>(line) * spacing)), left, right);
-    }
-    graphics.setFont(juce::FontOptions(11.0f));
-    graphics.setColour(colours.muted);
-    const char* clefName = staffClef == pitch::StaffClef::treble ? "Treble"
-                           : staffClef == pitch::StaffClef::bass ? "Bass"
-                                                                 : "Treble 8vb";
-    // Just above the staff, clear of any ledger lines a high note needs.
-    graphics.drawText(
-        clefName, juce::Rectangle<float>(left, middle - (spacing * 7.0f), right - left, 14.0f),
-        juce::Justification::centredLeft);
-
-    const auto head = [&](const score::Pitch& note, float x, juce::Colour colour, bool filled)
-    {
-        const int steps = pitch::staffStepsOf(note, staffClef);
-        const float y = middle - (static_cast<float>(steps) * spacing * 0.5f);
-        graphics.setColour(colours.foreground.withAlpha(0.75f));
-        for (int ledger = 6; ledger <= std::abs(steps); ledger += 2)
-        {
-            const float ledgerY =
-                middle - (static_cast<float>(steps > 0 ? ledger : -ledger) * spacing * 0.5f);
-            graphics.drawHorizontalLine(static_cast<int>(ledgerY), x - spacing, x + spacing);
-        }
-        const juce::Rectangle<float> ellipse(
-            x - (spacing * 0.65f), y - (spacing * 0.5f), spacing * 1.3f, spacing);
-        graphics.setColour(colour);
-        if (filled)
-        {
-            graphics.fillEllipse(ellipse);
-        }
-        else
-        {
-            graphics.drawEllipse(ellipse, 2.0f);
-        }
-        if (note.alter != 0)
-        {
-            graphics.setFont(juce::FontOptions(spacing * 1.6f));
-            graphics.drawText(
-                juce::String::fromUTF8(note.alter > 0 ? "\xE2\x99\xAF" : "\xE2\x99\xAD"),
-                juce::Rectangle<float>(
-                    x - (spacing * 2.6f), y - spacing, spacing * 1.6f, spacing * 2.0f),
-                juce::Justification::centred);
-        }
-    };
-
-    const float width = right - left;
+    const float width = static_cast<float>(area.getWidth()) - 8.0f;
+    std::vector<MiniStaffNote> heads;
     if (aimingAt != nullptr)
     {
         if (const auto spelled = pitch::parseNoteName(aimingAt->name))
         {
-            head(*spelled, left + (width * 0.35f), colours.accent, false);
+            heads.push_back({*spelled, left + (width * 0.35f), colours.accent, false});
         }
     }
     if (currentNote.has_value())
@@ -334,11 +286,16 @@ void NoteViewComponent::paintStaff(juce::Graphics& graphics, juce::Rectangle<int
         if (const auto spelled = pitch::spellMidi(*currentNote, true))
         {
             const auto shade = zone();
-            head(
-                *spelled, left + (width * 0.7f),
-                shade.has_value() ? intonationZoneColour(*shade) : colours.foreground, true);
+            heads.push_back(
+                {*spelled, left + (width * 0.7f),
+                 shade.has_value() ? intonationZoneColour(*shade) : colours.foreground, true});
         }
     }
+
+    MiniStaffStyle style;
+    style.lines = colours.foreground.withAlpha(0.75f);
+    style.label = colours.muted;
+    drawMiniStaff(graphics, area.toFloat(), staffClef, heads, style);
 }
 
 void NoteViewComponent::paintTrail(juce::Graphics& graphics, juce::Rectangle<int> area) const

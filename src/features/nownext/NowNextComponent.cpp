@@ -1,5 +1,6 @@
 #include "NowNextComponent.h"
 
+#include "../../application/theme/MiniStaff.h"
 #include "../../platform/pitch/TargetChoice.h"
 #include "../../platform/score/PitchNames.h"
 #include "../../platform/score/TargetNoteSelection.h"
@@ -7,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace
 {
@@ -554,24 +556,10 @@ void NowNextComponent::paintStaff(
     const pitch::StaffClef clef =
         reference >= 57 ? pitch::StaffClef::treble : pitch::StaffClef::bass;
 
-    const float spacing = std::clamp(area.getHeight() / 14.0f, 5.0f, 16.0f);
-    const float middle = area.getCentreY();
-    const float left = area.getX() + 4.0f;
-    const float right = area.getRight() - 4.0f;
-    graphics.setColour(palette.foreground.withAlpha(0.75f));
-    for (int line = -2; line <= 2; ++line)
-    {
-        graphics.drawHorizontalLine(
-            static_cast<int>(middle - (static_cast<float>(line) * spacing)), left, right);
-    }
-    graphics.setColour(palette.muted);
-    graphics.setFont(juce::FontOptions(11.0f));
-    graphics.drawText(
-        clef == pitch::StaffClef::treble ? "Treble" : "Bass",
-        juce::Rectangle<float>(left, middle - (spacing * 7.0f), right - left, 14.0f),
-        juce::Justification::centredLeft);
-
-    const float x = (left + right) * 0.5f;
+    // Every pitch of the chord at the staff's centre, filled in the accent.
+    const float x = area.getCentreX();
+    std::vector<MiniStaffNote> heads;
+    heads.reserve(item.pitches.size());
     for (const score::Pitch& written : item.pitches)
     {
         score::Pitch spelled = written;
@@ -579,28 +567,15 @@ void NowNextComponent::paintStaff(
         {
             spelled = pitch::spellMidi(written.midiNoteNumber, true).value_or(written);
         }
-        const int steps = pitch::staffStepsOf(spelled, clef);
-        const float y = middle - (static_cast<float>(steps) * spacing * 0.5f);
-        graphics.setColour(palette.foreground.withAlpha(0.75f));
-        for (int ledger = 6; ledger <= std::abs(steps); ledger += 2)
-        {
-            const float ledgerY =
-                middle - (static_cast<float>(steps > 0 ? ledger : -ledger) * spacing * 0.5f);
-            graphics.drawHorizontalLine(
-                static_cast<int>(ledgerY), x - spacing * 1.2f, x + spacing * 1.2f);
-        }
-        const juce::Rectangle<float> head(
-            x - spacing * 0.65f, y - spacing * 0.5f, spacing * 1.3f, spacing);
-        graphics.setColour(palette.accent);
-        graphics.fillEllipse(head);
-        if (spelled.alter != 0)
-        {
-            graphics.setFont(juce::FontOptions(spacing * 1.6f));
-            graphics.drawText(
-                juce::String::fromUTF8(spelled.alter > 0 ? "\xE2\x99\xAF" : "\xE2\x99\xAD"),
-                juce::Rectangle<float>(
-                    x - (spacing * 2.6f), y - spacing, spacing * 1.6f, spacing * 2.0f),
-                juce::Justification::centred);
-        }
+        heads.push_back({spelled, x, palette.accent, true});
     }
+
+    // Larger than the Note View's, since the card can be read from across a
+    // room, with ledger lines reaching a little wider.
+    MiniStaffStyle style;
+    style.lines = palette.foreground.withAlpha(0.75f);
+    style.label = palette.muted;
+    style.maxSpacing = 16.0f;
+    style.ledgerReach = 1.2f;
+    drawMiniStaff(graphics, area, clef, heads, style);
 }
