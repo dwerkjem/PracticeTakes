@@ -66,26 +66,27 @@ buttons are icons alone; hold the pointer over one for its name.
 ## Moving settings to another machine
 
 **Settings → Export settings** writes a human-readable `.ptsettings` file. It
-contains your appearance, audio, fullscreen, feedback-invitation, tool,
-active-workspace and named-workspace settings.
+contains every setting: appearance, the language and how notes are named,
+audio (the input and output devices), the metronome, count-in and playback,
+practice (reference pitch, the intonation limits, "Ignore sound below" and the
+target note's options), the MIDI keyboard and its pedal threshold, fullscreen,
+feedback invitations, tools, the active workspace and the named workspaces.
 
-It deliberately leaves out:
-- the language, and how notes are named and their octaves numbered, for now:
-  whether those travel with the rest is still being decided;
+It leaves out what is not a setting:
+- the note you chose to practise;
 - feedback text and contact details;
 - installation identity, use counters and invitation history;
-- logs, benchmarks and analysis data;
-- your MIDI keyboard and pedal setting, because those belong to the machine the
-  keyboard is plugged into;
-- your output device, the metronome's volume, accent and switch, the
-  count-in, playing the score, the reference pitch and the near-perfect, in-tune and out-of-tune limits,
-  for the same reason:
-  they belong to this machine's speakers and your habits on it. Importing a file keeps this machine's output device.
+- logs, benchmarks and analysis data.
 
 **Import** checks and migrates the file, then shows what it would replace.
-Nothing changes until you confirm. A confirmed import replaces your supported
-preferences and all named workspaces, and takes effect at once.
+Nothing changes until you confirm. A confirmed import replaces every setting
+and all named workspaces, and takes effect at once — except the language,
+which changes the next time Practice Takes starts; the confirmation says so
+when the file's language differs from yours. A file exported by an older
+version, before every setting travelled, keeps this machine's values for the
+ones it does not hold.
 
 A file from a newer, unsupported version is refused with a compatibility error,
 and nothing is changed. A missing audio device or an off-screen window position
-falls back to a safe choice without rejecting the rest of the import.
+falls back to a safe choice without rejecting the rest of the import, and a MIDI
+keyboard that is not plugged in is remembered and opens when it is.

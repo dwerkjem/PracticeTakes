@@ -112,10 +112,11 @@ Can run in parallel with sections 1-5; it shares no code with them.
 
 ## 8. Raise the settings-transfer question
 
-- [ ] 8.1 Decide, against the existing `settings-transfer` capability, whether
+- [x] 8.1 Decide, against the existing `settings-transfer` capability, whether
       language and naming travel in an exported `.ptsettings`. Recommendation:
       they do, and the import summary says so. This is a decision against an
-      existing spec, so it is asked rather than assumed.
+      existing spec, so it is asked rather than assumed. (Decided: every
+      setting travels, the devices too — design.md § 8.)
 
 ## 9. Not now, but do not foreclose
 

@@ -167,8 +167,9 @@ language: English
 "settings.import.done.message" = "Your settings and workspaces were imported successfully."
 "settings.import.failed" = "Settings import failed"
 "settings.import.failed.no-settings-file" = "The application settings file is unavailable."
-"settings.import.summary" = "This replaces supported preferences and all named workspaces.\n\nTheme: {theme}\nAudio: Microphone {microphone}, input gain {gain}\nActive workspace: {workspace}\nNamed workspaces: {workspaces}"
+"settings.import.summary" = "This replaces every setting and all named workspaces.\n\nTheme: {theme}\nAudio: Microphone {microphone}, input gain {gain}\nActive workspace: {workspace}\nNamed workspaces: {workspaces}"
 "settings.import.summary.customized-workspace" = "Customized workspace"
+"settings.import.summary.language" = "The language changes when Practice Takes next starts."
 "settings.import.summary.enabled" = "enabled"
 "settings.import.summary.muted" = "muted"
 

@@ -215,6 +215,10 @@ class MainComponent final
     void showSettingsImportResult(const SettingsImportResult& result);
     void exportSettings();
     [[nodiscard]] bool applyTransferredSettings(const SettingsTransferModel& model);
+    // Language, note naming, the MIDI keyboard and pedal, metronome, playback,
+    // reference pitch, intonation, the level floor and the target's flags:
+    // what loading and importing settings both apply.
+    void applyPracticePreferences(const AppSettings::State& state);
     void closeSettings();
     void showHelpMenu();
 

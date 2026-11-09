@@ -46,12 +46,11 @@ struct State
     juce::String midiInputDeviceName;
 
     // Where the sustain pedal counts as down: at or above this, 1-127. A
-    // preference about a particular keyboard's pedal, which is why -- like the
-    // device selection -- it is not carried in a settings transfer file.
+    // preference about a particular keyboard's pedal; it travels in a settings
+    // transfer file with the device selection, like every setting.
     int midiPedalDownThreshold = AppDefaults::Midi::pedalDownThreshold;
 
-    // The practice clock's metronome, and how many bars it counts in. Local to
-    // this machine and not carried in a transfer file, like the MIDI keyboard.
+    // The practice clock's metronome, and how many bars it counts in.
     bool metronomeEnabled = AppDefaults::Metronome::enabled;
     double metronomeVolume = AppDefaults::Metronome::volume;
     bool metronomeAccent = AppDefaults::Metronome::accent;
@@ -68,7 +67,7 @@ struct State
     int noteNaming = 0;
     int octaveNumbering = 0;
 
-    // Whether the score plays with the clock, and how loud. Local too.
+    // Whether the score plays with the clock, and how loud.
     bool playbackEnabled = AppDefaults::Playback::enabled;
     double playbackVolume = AppDefaults::Playback::volume;
 

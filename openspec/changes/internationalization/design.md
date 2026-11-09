@@ -164,7 +164,7 @@ that proves naming and language are genuinely independent.
 The golden-image validation stays English-only: it compares pixels, and
 translated text makes that comparison meaningless rather than informative.
 
-### 8. The settings transfer question is left open deliberately
+### 8. The settings transfer question was raised, not assumed
 
 Language and naming are preferences, so they belong in settings. Whether they
 travel in an exported `.ptsettings` is a real question with an existing spec
@@ -175,6 +175,14 @@ surprise of a different kind from having the theme change.
 The recommendation is that they travel and that the import summary says so,
 since the summary already reports what it changed — but this is a decision
 against an existing capability, so it is raised rather than settled here.
+
+**Decided (task 8.1):** the maintainer's answer was that *all* settings travel,
+not only these two. That widens the question beyond language: the MIDI
+keyboard and pedal threshold, the output device, the metronome, playback,
+reference pitch, intonation limits, the level floor and the target's flags had
+been kept out of the bundle on purpose, as belonging to the machine. They now
+travel with the rest, and a device that is not on the importing machine falls
+back as a missing input always has. See the implementation note below.
 
 ## Implementation notes
 
@@ -268,8 +276,31 @@ Decisions made while building it that the sections above did not settle.
   double flat; **Helmholtz** uses primes (c′ c″ c‴) above the small octave
   and commas below the great one.
 - **The preferences live in Appearance** (Note names, Octave numbers), saved
-  in the settings file. They do not travel in `.ptsettings` until task 8.1 is
-  decided, and the wiki says so.
+  in the settings file, and travel in `.ptsettings` (task 8.1).
+- **Every setting travels in `.ptsettings` (task 8.1).** The bundle gains the
+  language, note naming and octave numbering under `appearance`, and new
+  `metronome`, `playback`, `practice` and `midi` sections; the audio device
+  state keeps its output device. Decisions the answer did not settle:
+  - *No schema bump.* The sections are additive and an older Practice Takes
+    reads only what it knows, so a new bundle still imports there (without the
+    new settings) instead of being refused as newer.
+  - *An older bundle resets nothing it never held.* Its lack of a `practice`
+    section marks it (`carriesAllSettings`), and
+    `SettingsTransferCodec::withLocalPreferences` fills those settings, and
+    the output device it left out, from this machine before confirmation.
+    This also fixes a latent fault: an import used to persist defaults for
+    the MIDI and metronome settings while leaving them live, so they reset
+    at the next launch.
+  - *The chosen target note stays.* It is what is being practised now, not a
+    preference, so no bundle carries it and an import keeps it.
+  - *Values are read into range* as the settings file reads them, and a
+    language code that is not `[A-Za-z0-9-_]` reads as Automatic.
+  - *The language changes at the next launch*, like choosing it in Settings;
+    the import summary says so when the bundle's differs. Everything else
+    takes effect at once, and an open Settings window is rebuilt to show it.
+  - *A device that is absent falls back*: the default input, and a MIDI
+    keyboard held as a selection that opens when plugged in.
+    `AudioDeviceStateTransfer::withoutOutputDevice` went with the exclusion.
 
 - **The pseudolocale is generated at run time** from the English catalogue
   (`pseudolocale::transform`, behind `setLanguage("qps-ploc")`), not written to

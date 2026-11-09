@@ -607,32 +607,171 @@ TEST_CASE(
     CHECK_FALSE(reservedName.model.has_value());
 }
 
-TEST_CASE("a transfer file carries no metronome or output device", "[settings][transfer]")
+TEST_CASE("every setting travels in a transfer file, the devices too", "[settings][transfer]")
 {
     SettingsTransferModel exported;
-    exported.applicationVersion = "1.2.3-test";
-    exported.state.metronomeEnabled = false;
-    exported.state.metronomeVolume = 0.2;
-    exported.state.metronomeAccent = false;
-    exported.state.countInBars = 4;
-    exported.state.audioDeviceState =
+    auto& state = exported.state;
+    state.language = "de";
+    state.noteNaming = 1;
+    state.octaveNumbering = 2;
+    state.metronomeEnabled = false;
+    state.metronomeVolume = 0.2;
+    state.metronomeAccent = false;
+    state.countInBars = 4;
+    state.playbackEnabled = false;
+    state.playbackVolume = 0.35;
+    state.referencePitchHz = 442.0;
+    state.nearPerfectCents = 3.0;
+    state.inTuneCents = 12.0;
+    state.outOfTuneCents = 30.0;
+    state.minimumLevelDb = -45.0;
+    state.keepTargetWhenScoreOpens = true;
+    state.targetFollowsScore = false;
+    state.countInWhenRecordingDuringPlayback = true;
+    state.midiInputDeviceIdentifier = "usb-midi-7";
+    state.midiInputDeviceName = "Casio PX-S1100";
+    state.midiPedalDownThreshold = 90;
+    state.audioDeviceState =
         R"(<DEVICESETUP deviceType="ALSA" audioInputDeviceName="Mic" audioOutputDeviceName="Speakers"/>)";
 
-    const auto encoded = SettingsTransferCodec::encode(exported);
-    REQUIRE(encoded.document.has_value());
-
-    // The machine's own preferences, like the MIDI keyboard: none of them in
-    // the file.
-    const std::string& text = *encoded.document;
-    CHECK(text.find("metronome") == std::string::npos);
-    CHECK(text.find("countIn") == std::string::npos);
-    CHECK(text.find("Speakers") == std::string::npos);
-    CHECK(text.find("Mic") != std::string::npos);
-
-    const auto decoded = SettingsTransferCodec::decode(*encoded.document, {{0, 0, 2560, 1440}});
+    const auto decoded =
+        SettingsTransferCodec::decode(encodedDocument(exported), {{0, 0, 2560, 1440}});
     REQUIRE(decoded.model.has_value());
-    CHECK(decoded.model->state.metronomeEnabled == AppDefaults::Metronome::enabled);
-    CHECK(decoded.model->state.countInBars == AppDefaults::Metronome::countInBars);
+    const auto& imported = decoded.model->state;
+    CHECK(decoded.model->carriesAllSettings);
+    CHECK(imported.language == "de");
+    CHECK(imported.noteNaming == 1);
+    CHECK(imported.octaveNumbering == 2);
+    CHECK_FALSE(imported.metronomeEnabled);
+    CHECK(imported.metronomeVolume == Catch::Approx(0.2));
+    CHECK_FALSE(imported.metronomeAccent);
+    CHECK(imported.countInBars == 4);
+    CHECK_FALSE(imported.playbackEnabled);
+    CHECK(imported.playbackVolume == Catch::Approx(0.35));
+    CHECK(imported.referencePitchHz == Catch::Approx(442.0));
+    CHECK(imported.nearPerfectCents == Catch::Approx(3.0));
+    CHECK(imported.inTuneCents == Catch::Approx(12.0));
+    CHECK(imported.outOfTuneCents == Catch::Approx(30.0));
+    CHECK(imported.minimumLevelDb == Catch::Approx(-45.0));
+    CHECK(imported.keepTargetWhenScoreOpens);
+    CHECK_FALSE(imported.targetFollowsScore);
+    CHECK(imported.countInWhenRecordingDuringPlayback);
+    CHECK(imported.midiInputDeviceIdentifier == "usb-midi-7");
+    CHECK(imported.midiInputDeviceName == "Casio PX-S1100");
+    CHECK(imported.midiPedalDownThreshold == 90);
+    CHECK(imported.audioDeviceState.contains("Speakers"));
+    CHECK(imported.audioDeviceState.contains("Mic"));
+}
+
+TEST_CASE(
+    "imported settings are read into range, and a malformed language is Automatic",
+    "[settings][transfer]")
+{
+    auto parsed = parsedDocument(encodedDocument());
+    auto* settings = parsed.getProperty("settings", {}).getDynamicObject();
+    REQUIRE(settings != nullptr);
+    auto* appearance = settings->getProperty("appearance").getDynamicObject();
+    auto* practice = settings->getProperty("practice").getDynamicObject();
+    auto* metronome = settings->getProperty("metronome").getDynamicObject();
+    auto* midi = settings->getProperty("midi").getDynamicObject();
+    REQUIRE(appearance != nullptr);
+    REQUIRE(practice != nullptr);
+    REQUIRE(metronome != nullptr);
+    REQUIRE(midi != nullptr);
+    appearance->setProperty("language", "../../etc");
+    appearance->setProperty("noteNaming", 9);
+    practice->setProperty("referencePitchHz", 1000.0);
+    practice->setProperty("minimumLevelDb", "quiet");
+    metronome->setProperty("countInBars", -3);
+    midi->setProperty("pedalDownThreshold", 400);
+
+    const auto decoded =
+        SettingsTransferCodec::decode(serializedDocument(parsed), {{0, 0, 2560, 1440}});
+    REQUIRE(decoded.model.has_value());
+    const auto& imported = decoded.model->state;
+    CHECK(imported.language.isEmpty());
+    CHECK(imported.noteNaming == 2);
+    CHECK(imported.referencePitchHz == Catch::Approx(466.0));
+    CHECK(imported.minimumLevelDb == Catch::Approx(AppDefaults::minimumLevelDb));
+    CHECK(imported.countInBars == 0);
+    CHECK(imported.midiPedalDownThreshold == 127);
+}
+
+TEST_CASE(
+    "a bundle from before every setting travelled keeps this machine's values",
+    "[settings][transfer]")
+{
+    SettingsTransferModel exported;
+    exported.state.audioDeviceState =
+        R"(<DEVICESETUP deviceType="ALSA" audioInputDeviceName="Mic"/>)";
+    auto parsed = parsedDocument(encodedDocument(exported));
+    auto* settings = parsed.getProperty("settings", {}).getDynamicObject();
+    REQUIRE(settings != nullptr);
+    for (const auto* name : {"metronome", "playback", "practice", "midi"})
+    {
+        REQUIRE(settings->hasProperty(name));
+        settings->removeProperty(name);
+    }
+    auto* appearance = settings->getProperty("appearance").getDynamicObject();
+    REQUIRE(appearance != nullptr);
+    for (const auto* name : {"language", "noteNaming", "octaveNumbering"})
+    {
+        appearance->removeProperty(name);
+    }
+
+    const auto decoded =
+        SettingsTransferCodec::decode(serializedDocument(parsed), {{0, 0, 2560, 1440}});
+    REQUIRE(decoded.model.has_value());
+    CHECK_FALSE(decoded.model->carriesAllSettings);
+
+    AppSettings::State local;
+    local.language = "fr";
+    local.noteNaming = 2;
+    local.metronomeVolume = 0.1;
+    local.referencePitchHz = 440.0 + 3.0;
+    local.midiInputDeviceIdentifier = "here";
+    local.midiPedalDownThreshold = 20;
+    local.chosenTargetSounding = "Bb3";
+    local.audioDeviceState =
+        R"(<DEVICESETUP deviceType="ALSA" audioInputDeviceName="Other" audioOutputDeviceName="Headphones"/>)";
+
+    const auto merged = SettingsTransferCodec::withLocalPreferences(*decoded.model, local);
+    CHECK(merged.carriesAllSettings);
+    CHECK(merged.state.language == "fr");
+    CHECK(merged.state.noteNaming == 2);
+    CHECK(merged.state.metronomeVolume == Catch::Approx(0.1));
+    CHECK(merged.state.referencePitchHz == Catch::Approx(443.0));
+    CHECK(merged.state.midiInputDeviceIdentifier == "here");
+    CHECK(merged.state.midiPedalDownThreshold == 20);
+    CHECK(merged.state.chosenTargetSounding == "Bb3");
+    // The imported input, and this machine's output, which the old bundle
+    // never named.
+    CHECK(merged.state.audioDeviceState.contains("Mic"));
+    CHECK(merged.state.audioDeviceState.contains("Headphones"));
+    CHECK_FALSE(merged.state.audioDeviceState.contains("Other"));
+}
+
+TEST_CASE(
+    "an up-to-date bundle replaces every setting but the chosen target note",
+    "[settings][transfer]")
+{
+    SettingsTransferModel exported;
+    exported.state.language = "de";
+    exported.state.midiPedalDownThreshold = 90;
+    const auto decoded =
+        SettingsTransferCodec::decode(encodedDocument(exported), {{0, 0, 2560, 1440}});
+    REQUIRE(decoded.model.has_value());
+
+    AppSettings::State local;
+    local.language = "fr";
+    local.midiPedalDownThreshold = 20;
+    local.chosenTargetSounding = "Bb3";
+    local.chosenTargetWritten = "C4";
+    const auto merged = SettingsTransferCodec::withLocalPreferences(*decoded.model, local);
+    CHECK(merged.state.language == "de");
+    CHECK(merged.state.midiPedalDownThreshold == 90);
+    CHECK(merged.state.chosenTargetSounding == "Bb3");
+    CHECK(merged.state.chosenTargetWritten == "C4");
 }
 
 TEST_CASE(

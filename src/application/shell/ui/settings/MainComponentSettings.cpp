@@ -168,7 +168,7 @@ void MainComponent::showSettings()
         [safeThis]
         {
             // The metronome and the count-in are saved as they change, like
-            // the MIDI keyboard: local preferences, never exported.
+            // the MIDI keyboard.
             if (safeThis != nullptr)
             {
                 safeThis->saveSettings(false);
@@ -350,6 +350,10 @@ void MainComponent::importSettings()
 
 void MainComponent::confirmSettingsImport(SettingsTransferModel model)
 {
+    // What the bundle does not carry stays as it is here, so confirming an
+    // older bundle resets nothing it never held.
+    model = SettingsTransferCodec::withLocalPreferences(std::move(model), captureSettingsState());
+
     auto activeWorkspace = juce::String{l10n::text("settings.import.summary.customized-workspace")};
     if (const auto& activeSource = model.state.workspaceCatalog.activeSource;
         activeSource.has_value())
@@ -371,7 +375,7 @@ void MainComponent::confirmSettingsImport(SettingsTransferModel model)
         }
     }
 
-    const auto summary = l10n::format(
+    auto summary = l10n::format(
         "settings.import.summary",
         {{"theme",
           l10n::text(
@@ -385,6 +389,11 @@ void MainComponent::confirmSettingsImport(SettingsTransferModel model)
          {"workspace", activeWorkspace},
          {"workspaces",
           l10n::number(static_cast<double>(model.state.workspaceCatalog.named.size()), 0)}});
+    if (model.state.language != chosenLanguage)
+    {
+        // Said in the language on screen now, which is the one being left.
+        summary << "\n\n" << l10n::text("settings.import.summary.language");
+    }
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     juce::AlertWindow::showOkCancelBox(
         juce::MessageBoxIconType::QuestionIcon, l10n::text("settings.import.confirm.title"),
@@ -590,12 +599,10 @@ bool MainComponent::applyTransferredSettings(const SettingsTransferModel& model)
     savedSettingsBounds = validWindowBounds(state.settingsBounds);
     workspaceCatalog = state.workspaceCatalog;
 
-    // The imported input, with this machine's own output kept: a transfer file
-    // carries no output device (AudioDeviceStateTransfer.h).
-    const auto localState = audioInputService.createDeviceState();
-    if (auto audioState = AudioDeviceStateTransfer::withLocalOutputDevice(
-            state.audioDeviceState, localState.get());
-        audioState != nullptr)
+    // Every setting travels, the devices too. One that is not here falls back
+    // as a missing device always does: the default input, and a MIDI keyboard
+    // held as a selection that opens when it is plugged in.
+    if (auto audioState = juce::parseXML(state.audioDeviceState); audioState != nullptr)
     {
         audioInputService.applySavedDeviceState(*audioState);
     }
@@ -603,18 +610,52 @@ bool MainComponent::applyTransferredSettings(const SettingsTransferModel& model)
     {
         audioInputService.resetToDefaultInput();
     }
+    applyPracticePreferences(state);
 
-    // The MIDI selection is deliberately left alone. A transfer file moves
-    // settings between machines, and which MIDI keyboard is plugged into *this*
-    // one is not a setting that travels: importing someone else's would at best
-    // name a device that is not here, and would silently replace a working
-    // selection. The transfer codec therefore does not carry it, and this does
-    // not clear it. The same goes for the pedal threshold: it is calibration for
-    // a particular keyboard's pedal, and equally does not travel.
+    // An open Settings window -- the import is chosen from it -- shows the
+    // values it was built with, so it is rebuilt where it was.
+    if (settingsWindow != nullptr)
+    {
+        closeSettings();
+        showSettings();
+    }
     updateMicrophoneStateControl();
     updateMicrophoneWarning();
 
     return applyWorkspaceSnapshot(workspaceCatalog.active);
+}
+
+void MainComponent::applyPracticePreferences(const AppSettings::State& state)
+{
+    // The language is read at startup, before any window is built; a changed
+    // one shows from the next launch (MainComponentAppearance.cpp).
+    chosenLanguage = state.language;
+    l10n::setNoteNaming(
+        {static_cast<score::NoteNaming>(state.noteNaming),
+         static_cast<score::OctaveNumbering>(state.octaveNumbering)});
+
+    // The keyboard may not be plugged in yet, and that is not a failure: the
+    // service holds the selection and opens it when it appears.
+    midiInputService.selectDevice(state.midiInputDeviceIdentifier, state.midiInputDeviceName);
+    midiPedalDownThreshold = state.midiPedalDownThreshold;
+    practiceClock.setMetronomeEnabled(state.metronomeEnabled);
+    practiceClock.setMetronomeVolume(static_cast<float>(state.metronomeVolume));
+    practiceClock.setAccentEnabled(state.metronomeAccent);
+    practiceClock.setCountInBars(state.countInBars);
+    practiceClock.setPlaybackEnabled(state.playbackEnabled);
+    practiceClock.setPlaybackVolume(static_cast<float>(state.playbackVolume));
+    referencePitch.set(state.referencePitchHz);
+    {
+        evaluation::IntonationSettings intonation = takeRecorder.intonationSettings();
+        intonation.toleranceCents = state.inTuneCents;
+        intonation.nearPerfectCents = state.nearPerfectCents;
+        intonation.outOfTuneCents = state.outOfTuneCents;
+        takeRecorder.setIntonation(intonation);
+    }
+    takeRecorder.setMinimumLevelDb(state.minimumLevelDb);
+    takeRecorder.setCountInWhenPlaying(state.countInWhenRecordingDuringPlayback);
+    currentTarget.keepChosenWhenScoreOpens = state.keepTargetWhenScoreOpens;
+    currentTarget.followScoreWhilePlaying = state.targetFollowsScore;
 }
 
 void MainComponent::resetCurrentTool()
@@ -782,10 +823,6 @@ void MainComponent::loadSettings()
     // Set before anything is laid out, so the first layout is at this size.
     appLookAndFeel.setTextScale(loaded.state.textScalePercent);
     titleStripLookAndFeel.setTextScale(loaded.state.textScalePercent);
-    chosenLanguage = loaded.state.language;
-    l10n::setNoteNaming(
-        {static_cast<score::NoteNaming>(loaded.state.noteNaming),
-         static_cast<score::OctaveNumbering>(loaded.state.octaveNumbering)});
     audioInputService.setMuted(loaded.state.microphoneMuted);
     audioInputService.setInputGain(static_cast<float>(loaded.state.inputGain));
     applyLegacyToolState(loaded.state);
@@ -799,29 +836,7 @@ void MainComponent::loadSettings()
         pendingAudioDeviceState = std::move(xml);
     }
 
-    // The keyboard may not be plugged in yet, and that is not a failure: the
-    // service holds the selection and opens it when it appears.
-    midiInputService.selectDevice(
-        loaded.state.midiInputDeviceIdentifier, loaded.state.midiInputDeviceName);
-    midiPedalDownThreshold = loaded.state.midiPedalDownThreshold;
-    practiceClock.setMetronomeEnabled(loaded.state.metronomeEnabled);
-    practiceClock.setMetronomeVolume(static_cast<float>(loaded.state.metronomeVolume));
-    practiceClock.setAccentEnabled(loaded.state.metronomeAccent);
-    practiceClock.setCountInBars(loaded.state.countInBars);
-    practiceClock.setPlaybackEnabled(loaded.state.playbackEnabled);
-    practiceClock.setPlaybackVolume(static_cast<float>(loaded.state.playbackVolume));
-    referencePitch.set(loaded.state.referencePitchHz);
-    {
-        evaluation::IntonationSettings intonation = takeRecorder.intonationSettings();
-        intonation.toleranceCents = loaded.state.inTuneCents;
-        intonation.nearPerfectCents = loaded.state.nearPerfectCents;
-        intonation.outOfTuneCents = loaded.state.outOfTuneCents;
-        takeRecorder.setIntonation(intonation);
-    }
-    takeRecorder.setMinimumLevelDb(loaded.state.minimumLevelDb);
-    takeRecorder.setCountInWhenPlaying(loaded.state.countInWhenRecordingDuringPlayback);
-    currentTarget.keepChosenWhenScoreOpens = loaded.state.keepTargetWhenScoreOpens;
-    currentTarget.followScoreWhilePlaying = loaded.state.targetFollowsScore;
+    applyPracticePreferences(loaded.state);
     if (const auto sounding = pitch::parseNoteName(loaded.state.chosenTargetSounding.toStdString()))
     {
         const auto written = pitch::parseNoteName(loaded.state.chosenTargetWritten.toStdString());

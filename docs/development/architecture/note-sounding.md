@@ -78,9 +78,9 @@ A changed threshold affects the next decision. Finished notes are not
 re-judged; a `SoundedNote` records what happened, and a caller that wants
 history under another threshold keeps the events.
 
-The threshold is **not** carried in a settings transfer file, and **Reset all**
-does not clear it. It is calibration for a particular keyboard's pedal, the
-same class of setting as the device selection, which also does not travel.
+The threshold travels in a settings transfer file with the device selection,
+as every setting does, and **Reset all** does not clear it: it is calibration
+for a particular keyboard's pedal.
 
 ## Judgement
 

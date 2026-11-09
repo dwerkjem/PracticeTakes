@@ -18,9 +18,8 @@ namespace Audio
 inline constexpr double inputGain = 1.0;
 } // namespace Audio
 
-// The practice clock's metronome and count-in. Preferences about this
-// machine's speakers and this player's habits, so -- like the MIDI keyboard --
-// saved locally and never carried in a settings transfer file.
+// The practice clock's metronome and count-in, which travel in a settings
+// transfer file like every setting.
 namespace Metronome
 {
 // Off until the player turns it on (#380). The count-in clicks either way.
