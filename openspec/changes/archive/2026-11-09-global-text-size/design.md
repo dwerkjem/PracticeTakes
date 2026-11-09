@@ -91,3 +91,21 @@ their proportions.
 - **Converting 72 call sites** is mechanical but wide. Doing it role by role,
   one commit per area (shell, Settings, each tool), keeps each step
   reviewable, and the 100% capture shows anything that moved.
+
+## Verification (5.1)
+
+The full capture at 100 percent, every surface in both themes, was compared
+with `main` pixel for pixel. Every difference is one of:
+- **The new setting**: the Appearance panel, which Settings opens on.
+- **A fix found at 150**: the Score View's title no longer runs under "N import
+  diagnostics" in a narrow pane (Take Review's capture shows it).
+- **Hover**: a button under the pointer the harness leaves parked is drawn
+  highlighted. The scrolling Settings panels lay out on opening, which makes
+  JUCE notice the stationary pointer; the button is the same.
+- **A moving signal**: the spectrogram, analyser, tuner, Note View, level
+  meter and playing clock differ as much as `main` differs from itself
+  between two captures.
+
+The run also found that changing the size left the title strip's old, larger
+text behind where nothing new covered it; the whole window is now repainted
+on a change.

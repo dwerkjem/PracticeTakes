@@ -27,7 +27,7 @@
 
 ## 5. Verification and docs
 
-- [ ] 5.1 Full capture at 100%, compared with the approved references:
+- [x] 5.1 Full capture at 100%, compared with the approved references:
       nothing moves.
 - [x] 5.2 Approved states for 80% and 150%. Capture them, read every picture,
       and fix anything clipped.

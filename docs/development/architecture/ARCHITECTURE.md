@@ -195,7 +195,7 @@ callback is unchanged. See `openspec/specs/tool-registry/spec.md`.
 
 ### Text size
 
-One text size scales every piece of UI text (openspec/changes/global-text-size).
+One text size scales every piece of UI text (openspec/changes/archive/2026-11-09-global-text-size).
 - **The rule** is JUCE-free: `appearance::TextScale` (80 to 150 percent in tens,
   half-point rounding) and the role table in `application/theme/TextScale.h`,
   one named role per size the application draws. Code asks for a role, never a

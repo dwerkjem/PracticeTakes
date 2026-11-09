@@ -4,7 +4,7 @@
 #include <cmath>
 #include <string_view>
 
-// One text size for the whole application (openspec/changes/global-text-size),
+// One text size for the whole application (openspec/changes/archive/2026-11-09-global-text-size),
 // with no JUCE dependency so the rule is tested without a display.
 //
 // The size is a scale, not a point size: the application uses many sizes on

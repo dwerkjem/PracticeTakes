@@ -37,6 +37,18 @@ void MainComponent::setTextScale(int percent)
     {
         parent->resized();
     }
+
+    // Everything at once: a control that moved leaves behind what it drew at
+    // the old size where nothing new covers it, which in the title strip read
+    // as each label drawn twice.
+    if (auto* window = getTopLevelComponent())
+    {
+        window->repaint();
+    }
+    if (settingsWindow != nullptr)
+    {
+        settingsWindow->repaint();
+    }
 }
 
 void MainComponent::applyAppearance()
