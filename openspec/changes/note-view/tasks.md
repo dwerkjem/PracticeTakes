@@ -8,9 +8,9 @@
 
 ## 2. The tool
 
-- [ ] 2.1 `NoteViewComponent`: keyboard, staff, trail, target, held keys, the
+- [x] 2.1 `NoteViewComponent`: keyboard, staff, trail, target, held keys, the
       compact layout, and the clef setting.
-- [ ] 2.2 The catalog entry and factory, `all-tools-docked`, the tool count,
+- [x] 2.2 The catalog entry and factory, `all-tools-docked`, the tool count,
       approved states (with a tone and a target) and surfaces. Captures read.
 
 ## 3. Docs

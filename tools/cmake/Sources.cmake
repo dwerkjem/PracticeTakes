@@ -171,6 +171,8 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/StaffGeometry.h
     src/features/score/engraving/StaffPosition.cpp
     src/features/score/engraving/StaffPosition.h
+    src/features/notes/NoteViewComponent.cpp
+    src/features/notes/NoteViewComponent.h
     src/features/notes/NoteViewModel.h
     src/features/performance/ApplicationLaunchTimer.cpp
     src/features/performance/ApplicationLaunchTimer.h

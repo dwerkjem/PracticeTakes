@@ -99,7 +99,7 @@ const std::vector<ApprovedWindowState>& states()
          WorkspaceArrangement::tabbed, WindowGeometry::normal, MicrophoneCondition::available,
          false, "", false, "All three tools sharing one tab strip"},
         {"all-tools-docked",
-         Tools{"tuner", "spectrogram", "harmonics", "score-view", "take-review"},
+         Tools{"tuner", "spectrogram", "harmonics", "score-view", "take-review", "note-view"},
          ToolPresentation::docked, WorkspaceArrangement::split, WindowGeometry::normal,
          MicrophoneCondition::available, false, "", false,
          "Every tool tiled at once -- the three live-audio tools, the Score View, and the take "
@@ -409,6 +409,17 @@ const std::vector<ApprovedWindowState>& states()
          WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
          "The target picker: a keyboard, a staff, a name, the note being sung, and steps", 334.0,
          "target-picker", bundledSampleFixtureName(), false},
+        // The Note View (note-view): a tone a little under the sample song's
+        // target, on the keyboard, the staff and the trail.
+        {"note-view", Tools{"note-view"}, ToolPresentation::docked, WorkspaceArrangement::single,
+         WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
+         "The Note View: the note being sung lit on a keyboard and drawn on a staff, against "
+         "the target, with its trail",
+         334.0, "", bundledSampleFixtureName(), false},
+        // The Note View with nothing to show: no tone, no score.
+        {"note-view-empty", Tools{"note-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false, "The Note View before anything is sung or a score opened"},
         // The Take Review tool before any take: what most sessions see first.
         {"take-review-empty", Tools{"take-review"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
