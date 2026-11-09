@@ -40,6 +40,9 @@ many cents sharp or flat it is.
     go*, an arrow pointing back toward the note: left on the bar and the meter
     when you're sharp and right when you're flat, and down or up on the graph,
     whose pitch runs up the screen;
+  - **Show how far off**, which writes the cents in the lit half, *−18 ¢*,
+    beside the sign (off by default; the line above the display always gives
+    the exact reading);
   - **Light both halves**, for a symmetric look that lights the whole zone;
   - **Marker**, what marks where you are on the bar and the graph: *Off*,
     *Dot* (the default), *Arrow*, *Line*, *Ring*, *Diamond* or *Crosshair*.

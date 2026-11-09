@@ -93,6 +93,10 @@ inline constexpr double bothHalvesLit = 0.0;
 // What marks where the pitch is on the bar and the graph: 0 nothing, 1 a dot,
 // 2 an arrow, 3 a line across, 4 a ring, 5 a diamond, 6 a crosshair.
 inline constexpr double marker = 1.0;
+
+// Whether the lit half also says how far off the pitch is, in cents (1), or
+// not (0). Off by default: the status line already gives the exact reading.
+inline constexpr double offsetShown = 0.0;
 } // namespace Tuner
 
 enum class Preset
@@ -113,6 +117,7 @@ struct TunerSettings
     double signs;
     double bothHalvesLit;
     double marker;
+    double offsetShown;
 };
 
 // The tuner's settings schema: for each numeric setting, the name it is stored
@@ -149,6 +154,7 @@ inline constexpr std::array tunerNumberFields{
     TunerNumberField{"signs", &TunerSettings::signs, 0.0, 2.0, 1.0, false},
     TunerNumberField{"bothHalvesLit", &TunerSettings::bothHalvesLit, 0.0, 1.0, 1.0, false},
     TunerNumberField{"marker", &TunerSettings::marker, 0.0, 6.0, 1.0, false},
+    TunerNumberField{"offsetShown", &TunerSettings::offsetShown, 0.0, 1.0, 1.0, false},
 };
 
 // The schema entry for one setting. Every member of TunerSettings but
@@ -171,7 +177,8 @@ inline constexpr TunerSettings generalInstrumentTuner{
     Tuner::averaging,     Tuner::noteSwitchSemitones,
     Tuner::dropoutFrames, Tuner::graphDurationSeconds,
     Tuner::scaleCents,    Tuner::signs,
-    Tuner::bothHalvesLit, Tuner::marker};
+    Tuner::bothHalvesLit, Tuner::marker,
+    Tuner::offsetShown};
 
 // A practice preset, declared once: its identity, the name the Settings window
 // offers it under, and the tuner controls it applies. The Settings window
@@ -191,7 +198,7 @@ inline constexpr std::array presets{
         Preset::voice,
         "Voice practice",
         {Tuner::displayMode, 0.25, 7.0, 0.45, 7.0, 30.0, Tuner::scaleCents, Tuner::signs,
-         Tuner::bothHalvesLit, Tuner::marker}},
+         Tuner::bothHalvesLit, Tuner::marker, Tuner::offsetShown}},
     PresetDefinition{Preset::generalInstrument, "General instrument", generalInstrumentTuner},
 };
 

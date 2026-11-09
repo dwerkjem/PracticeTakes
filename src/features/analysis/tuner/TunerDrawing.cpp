@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <utility>
 
 namespace
 {
@@ -61,17 +62,62 @@ constexpr std::size_t zeroTick = 2;
     return {};
 }
 
-// The band that carries the sign, if any: none on pitch.
-[[nodiscard]] const tuner::ZoneBand* litHalfBand(const std::vector<tuner::ZoneBand>& bands)
+// The lit band, if any, whichever side.
+[[nodiscard]] const tuner::ZoneBand* litBand(const std::vector<tuner::ZoneBand>& bands)
 {
     for (const auto& band : bands)
     {
-        if (tuner::carriesSign(band))
+        if (band.look == tuner::BandLook::lit)
         {
             return &band;
         }
     }
     return nullptr;
+}
+
+// The lit half as a range of cents: its side of the band, or the whole band
+// across zero when the pitch is dead on the note.
+[[nodiscard]] std::pair<double, double> litRange(const tuner::ZoneBand& band)
+{
+    if (band.litSide == tuner::Side::both)
+    {
+        return {-band.outerCents, band.outerCents};
+    }
+    const double side = band.litSide == tuner::Side::sharp ? 1.0 : -1.0;
+    return {side * band.innerCents, side * band.outerCents};
+}
+
+// "-18 ¢", "+3 ¢": how far off, in whole cents, with a true minus sign.
+[[nodiscard]] juce::String offsetText(double cents)
+{
+    const auto whole = juce::roundToInt(cents);
+    const auto sign = whole > 0   ? juce::String("+")
+                      : whole < 0 ? juce::String::fromUTF8("\xE2\x88\x92")
+                                  : juce::String();
+    return sign + juce::String(std::abs(whole)) + juce::String::fromUTF8(" \xC2\xA2");
+}
+
+// The cents off, beside a sign at `anchor` when one is drawn there, or centred
+// on `anchor` when not (on pitch there is no sign).
+void drawOffset(
+    juce::Graphics& graphics,
+    juce::Point<float> anchor,
+    bool besideSign,
+    float signSize,
+    juce::Colour colour,
+    double cents)
+{
+    const auto size = std::max(14.0f, signSize * 0.6f);
+    const juce::FontOptions font(size, juce::Font::bold);
+    const auto text = offsetText(cents);
+    const auto width = juce::GlyphArrangement::getStringWidth(font, text) + 4.0f;
+    const auto box =
+        besideSign ? juce::Rectangle<float>(
+                         anchor.x + signSize * 0.8f, anchor.y - size * 0.6f, width, size * 1.2f)
+                   : juce::Rectangle<float>(width, size * 1.2f).withCentre(anchor);
+    graphics.setColour(colour);
+    graphics.setFont(font);
+    graphics.drawText(text, box, juce::Justification::centredLeft);
 }
 
 // The lit half's sign, centred on `centre` and `size` across: a sharp or
@@ -127,11 +173,6 @@ void drawSign(
     graphics.fillPath(arrow);
 }
 
-[[nodiscard]] double sideOf(const tuner::ZoneBand& band)
-{
-    return band.litSide == tuner::Side::sharp ? 1.0 : -1.0;
-}
-
 // The note name drawn behind a display, sized from the area it is given so
 // it fills a tall docked pane and still fits the band the bar leaves it. The
 // cap only stops it becoming absurd on a very large display.
@@ -185,7 +226,9 @@ void drawZoneStrips(
     bool bothHalves,
     bool showSigns,
     bool arrowSigns,
-    float signSize)
+    float signSize,
+    bool showOffset,
+    double cents)
 {
     const juce::Graphics::ScopedSaveState state(graphics);
     graphics.reduceClipRegion(plot.getSmallestIntegerContainer());
@@ -244,16 +287,24 @@ void drawZoneStrips(
 
     // The sign, in the lit half, near the start of the plot where the trace is
     // oldest and least in the way.
-    if (const auto* lit = litHalfBand(bands); showSigns && lit != nullptr)
+    if (const auto* lit = litBand(bands); lit != nullptr)
     {
-        const auto from = at(note + sideOf(*lit) * lit->innerCents / 100.0);
-        const auto to = at(note + sideOf(*lit) * lit->outerCents / 100.0);
-        const auto middle = (from + to) * 0.5f;
-        drawSign(
-            graphics, lit->litSide,
-            vertical ? juce::Point<float>(middle, plot.getY() + signSize)
-                     : juce::Point<float>(plot.getX() + signSize, middle),
-            signSize, intonationZoneColour(lit->zone), arrowSigns, vertical);
+        const auto [low, high] = litRange(*lit);
+        const auto middle = (at(note + low / 100.0) + at(note + high / 100.0)) * 0.5f;
+        const auto anchor = vertical ? juce::Point<float>(middle, plot.getY() + signSize)
+                                     : juce::Point<float>(plot.getX() + signSize, middle);
+        const auto signDrawn = showSigns && tuner::carriesSign(*lit);
+        if (signDrawn)
+        {
+            drawSign(
+                graphics, lit->litSide, anchor, signSize, intonationZoneColour(lit->zone),
+                arrowSigns, vertical);
+        }
+        if (showOffset)
+        {
+            drawOffset(
+                graphics, anchor, signDrawn, signSize, intonationZoneColour(lit->zone), cents);
+        }
     }
 }
 
@@ -384,7 +435,7 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
         drawZoneStrips(
             graphics, currentBands(), plotArea.toFloat(), lockedMidiNote, minimumValue,
             maximumValue, false, bothHalvesLit, signs != Signs::off, signs == Signs::arrows,
-            signHeight(bounds));
+            signHeight(bounds), offsetShown, displayedCents);
     }
 
     if (graphHistory.size() < 2 || validValues.empty())
@@ -531,13 +582,23 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
 
     // The sign over the lit half: a sharp to come down from, a flat to go up
     // from. Over the band rather than on it, so the dot never hides it.
-    if (const auto* lit = litHalfBand(bands); signs != Signs::off && lit != nullptr)
+    if (const auto* lit = litBand(bands); lit != nullptr)
     {
-        const auto from = xOf(sideOf(*lit) * lit->innerCents);
-        const auto to = xOf(sideOf(*lit) * lit->outerCents);
-        drawSign(
-            graphics, lit->litSide, {(from + to) * 0.5f, bandTop - signSize * 0.8f}, signSize,
-            intonationZoneColour(lit->zone), signs == Signs::arrows, true);
+        const auto [low, high] = litRange(*lit);
+        const juce::Point<float> anchor{(xOf(low) + xOf(high)) * 0.5f, bandTop - signSize * 0.8f};
+        const auto signDrawn = signs != Signs::off && tuner::carriesSign(*lit);
+        if (signDrawn)
+        {
+            drawSign(
+                graphics, lit->litSide, anchor, signSize, intonationZoneColour(lit->zone),
+                signs == Signs::arrows, true);
+        }
+        if (offsetShown)
+        {
+            drawOffset(
+                graphics, anchor, signDrawn, signSize, intonationZoneColour(lit->zone),
+                displayedCents);
+        }
     }
 
     // The chosen marker: a dot on the bar, an arrow down onto it, or a line
@@ -672,14 +733,24 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
     }
 
     // The sign just inside the lit half of the arc.
-    if (const auto* lit = litHalfBand(bands); signs != Signs::off && lit != nullptr)
+    if (const auto* lit = litBand(bands); lit != nullptr)
     {
-        const auto middle =
-            (angleOf(sideOf(*lit) * lit->innerCents) + angleOf(sideOf(*lit) * lit->outerCents)) *
-            0.5;
-        drawSign(
-            graphics, lit->litSide, pointAt(middle, radius - 18.0f - signSize), signSize,
-            intonationZoneColour(lit->zone), signs == Signs::arrows, true);
+        const auto [low, high] = litRange(*lit);
+        const auto anchor =
+            pointAt((angleOf(low) + angleOf(high)) * 0.5, radius - 18.0f - signSize);
+        const auto signDrawn = signs != Signs::off && tuner::carriesSign(*lit);
+        if (signDrawn)
+        {
+            drawSign(
+                graphics, lit->litSide, anchor, signSize, intonationZoneColour(lit->zone),
+                signs == Signs::arrows, true);
+        }
+        if (offsetShown)
+        {
+            drawOffset(
+                graphics, anchor, signDrawn, signSize, intonationZoneColour(lit->zone),
+                displayedCents);
+        }
     }
 
     const auto needleAngle = angleOf(hasSignal ? displayedCents : 0.0);
@@ -859,7 +930,8 @@ void TunerComponent::drawCompactGraph(
         drawZoneStrips(
             graphics, currentBands(), plot.toFloat(), lockedMidiNote, lowest, highest, vertical,
             bothHalvesLit, signs != Signs::off, signs == Signs::arrows,
-            std::min(signHeight(bounds), 0.3f * static_cast<float>(plot.getHeight())));
+            std::min(signHeight(bounds), 0.3f * static_cast<float>(plot.getHeight())), offsetShown,
+            displayedCents);
     }
 
     if (graphHistory.size() >= 2)

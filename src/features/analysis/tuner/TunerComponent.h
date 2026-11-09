@@ -247,6 +247,9 @@ class TunerComponent final
     Signs signs = Signs::sharpFlat;
     bool bothHalvesLit = false;
 
+    // From the ... menu: the cents off, written in the lit half.
+    bool offsetShown = false;
+
     // What marks where the pitch is on the bar and the graph, from the ...
     // menu.
     enum class Marker

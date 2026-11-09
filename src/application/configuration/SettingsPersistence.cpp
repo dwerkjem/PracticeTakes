@@ -319,7 +319,8 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
         tunerValue(tunerDurationKey, &AppDefaults::TunerSettings::graphDurationSeconds),
         // No pre-workspace key: these files predate the settings.
         AppDefaults::Tuner::scaleCents, AppDefaults::Tuner::signs,
-        AppDefaults::Tuner::bothHalvesLit, AppDefaults::Tuner::marker};
+        AppDefaults::Tuner::bothHalvesLit, AppDefaults::Tuner::marker,
+        AppDefaults::Tuner::offsetShown};
     result.state.fullscreenMode = loadFullscreenMode(properties);
 
     if (!isCurrentSchema)

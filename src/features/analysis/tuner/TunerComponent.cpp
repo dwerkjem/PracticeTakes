@@ -220,6 +220,7 @@ void TunerComponent::resetToDefaults()
     scaleSlider.setValue(AppDefaults::Tuner::scaleCents);
     signs = static_cast<Signs>(juce::roundToInt(AppDefaults::Tuner::signs));
     bothHalvesLit = AppDefaults::Tuner::bothHalvesLit > 0.5;
+    offsetShown = AppDefaults::Tuner::offsetShown > 0.5;
     marker = static_cast<Marker>(juce::roundToInt(AppDefaults::Tuner::marker));
     areAdvancedSettingsExpanded = false;
     graphHistory.clear();
@@ -245,6 +246,7 @@ void TunerComponent::applySettings(const AppDefaults::TunerSettings& settings)
     scaleSlider.setValue(settings.scaleCents);
     signs = static_cast<Signs>(juce::jlimit(0, 2, juce::roundToInt(settings.signs)));
     bothHalvesLit = settings.bothHalvesLit > 0.5;
+    offsetShown = settings.offsetShown > 0.5;
     marker = static_cast<Marker>(juce::jlimit(0, 6, juce::roundToInt(settings.marker)));
     graphHistory.clear();
     resetPitchTracking();
@@ -256,7 +258,7 @@ AppDefaults::TunerSettings TunerComponent::settings() const
     return {displayModeBox.getSelectedId(), easingSlider.getValue(),    averagingSlider.getValue(),
             thresholdSlider.getValue(),     dropoutSlider.getValue(),   durationSlider.getValue(),
             scaleSlider.getValue(),         static_cast<double>(signs), bothHalvesLit ? 1.0 : 0.0,
-            static_cast<double>(marker)};
+            static_cast<double>(marker),    offsetShown ? 1.0 : 0.0};
 }
 
 std::optional<ToolSettingsPayload> TunerComponent::captureSettings() const
@@ -455,6 +457,13 @@ std::vector<ToolComponent::MenuEntry> TunerComponent::optionsMenuEntries()
              {"Arrows: which way to go", [this] { chooseSigns(Signs::arrows); },
               signs == Signs::arrows},
          }},
+        {"Show how far off",
+         [this]
+         {
+             offsetShown = !offsetShown;
+             repaint();
+         },
+         offsetShown},
         {"Light both halves",
          [this]
          {
