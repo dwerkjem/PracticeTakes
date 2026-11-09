@@ -99,9 +99,12 @@ class ScoreViewComponent final
         // turns and Ctrl/Cmd +/- work without a separate focus step.
         void mouseDown(const juce::MouseEvent& event) override;
 
-        // A click, not a drag, moves the practice clock to the onset under it
-        // (score-cursor decision 6).
+        // A click on a note makes it the target; a double-click moves the
+        // practice clock to the onset under it (score-cursor decision 6, now on
+        // the double-click so one click can choose). A drag does neither: it
+        // is kept for choosing a loop region.
         void mouseUp(const juce::MouseEvent& event) override;
+        void mouseDoubleClick(const juce::MouseEvent& event) override;
 
       private:
         ScoreViewComponent& owner;
@@ -189,6 +192,10 @@ class ScoreViewComponent final
     void
     paintCursorOn(juce::Graphics& graphics, std::size_t index, const SystemOnCanvas& where) const;
 
+    // The target's note outlined, when it is a note of this score.
+    void
+    paintTargetOn(juce::Graphics& graphics, std::size_t index, const SystemOnCanvas& where) const;
+
     // The review's marks on one system, over the cursor.
     void
     paintReviewOn(juce::Graphics& graphics, std::size_t index, const SystemOnCanvas& where) const;
@@ -197,6 +204,21 @@ class ScoreViewComponent final
 
     // A right-click: aim at the note under the pointer, or move the clock
     // there (target-note-picker decision 6).
+    // The note under a point on the canvas: its whole chord, which of the
+    // chord's notes the point is on, and where it is ("Voice, bar 3").
+    struct NoteUnder
+    {
+        std::vector<score::Note> chord;
+        std::size_t clicked = 0;
+        std::string source;
+        std::size_t partIndex = 0;
+        score::NoteRef ref;
+    };
+    [[nodiscard]] std::optional<NoteUnder> noteUnder(juce::Point<float> point) const;
+
+    // Makes the note under `point` the target, if there is one.
+    void aimAtNoteUnder(juce::Point<float> point);
+
     void showNoteMenu(juce::Point<float> point);
     void showGoToBar();
     void goToBar(const juce::String& text);
@@ -298,6 +320,9 @@ class ScoreViewComponent final
 
     take::TakeRecorder& takes;
     pitch::CurrentTarget& target;
+
+    // The target last outlined, to repaint when another tool moves it.
+    std::shared_ptr<const pitch::Target> outlinedTarget;
 
     // The take under review's marks on the current layout; empty when none
     // are drawn.

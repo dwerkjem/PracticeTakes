@@ -64,6 +64,10 @@ TEST_CASE("the target at a tick is the note sung there, from the score", "[pitch
     CHECK(second->name == "F#4");
     CHECK(second->origin == TargetOrigin::score);
     CHECK(second->source == "Voice, bar 1");
+    // The second note of the bar, which is what the Score View outlines.
+    REQUIRE(second->place.has_value());
+    CHECK(second->place->partIndex == 0);
+    CHECK(second->place->note.eventIndex == 1);
 
     CHECK(targetAtTick(*source, 0, timeline, 2.5 * quarter) == nullptr);
     CHECK(targetAtTick(*source, 0, timeline, 9.0 * quarter) == nullptr);

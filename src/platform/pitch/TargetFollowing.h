@@ -41,6 +41,7 @@ namespace pitch
     const score::Part& part = source.parts[partIndex];
     const score::NoteRef& ref = *item.ref;
     score::Pitch written = sounding;
+    score::NoteRef place = ref;
     std::string bar = std::to_string(ref.measureIndex + 1);
     if (ref.measureIndex < part.measures.size())
     {
@@ -52,12 +53,13 @@ namespace pitch
         if (ref.voiceIndex < measure.voices.size() &&
             ref.eventIndex < measure.voices[ref.voiceIndex].events.size())
         {
-            for (const score::Note& note :
-                 measure.voices[ref.voiceIndex].events[ref.eventIndex].notes)
+            const auto& notes = measure.voices[ref.voiceIndex].events[ref.eventIndex].notes;
+            for (std::size_t index = 0; index < notes.size(); ++index)
             {
-                if (note.sounding.midiNoteNumber == sounding.midiNoteNumber)
+                if (notes[index].sounding.midiNoteNumber == sounding.midiNoteNumber)
                 {
-                    written = note.written;
+                    written = notes[index].written;
+                    place.noteIndex = index;
                 }
             }
         }
@@ -79,6 +81,7 @@ namespace pitch
     target->soundsAsWritten = written.midiNoteNumber == sounding.midiNoteNumber;
     target->source = part.name + ", bar " + bar;
     target->origin = TargetOrigin::score;
+    target->place = Target::ScorePlace{partIndex, place};
     return target;
 }
 

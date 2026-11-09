@@ -96,8 +96,10 @@ target…** in the tuner's **...** menu:
   have held one note steadily, within 30 cents, for a moment;
 - **step** a semitone up or down, or a step of the score's key.
 
-In the Score View, **right-click a note** and choose **Aim at G4**. For a chord,
-pick which of its notes.
+In the Score View, **click a note** to aim at it, or **right-click** it and
+choose **Aim at G4**; for a chord, the right-click menu lists each of its notes.
+The target is outlined in violet on the score whenever it is one of the score's
+notes, however it was chosen, and moves with it as the score plays.
 
 **Clear the target** to practise with none: **Clear target note** at the
 bottom of the **Tools** menu, or in any tool's **...** menu (and its
@@ -255,8 +257,10 @@ the Score View follows it:
   following, and a **Follow** button appears in the header until you press it
   or play again. **Follow the practice clock** in the options menu turns it off
   altogether.
-- **Click a note** to move the clock there, and **Go to bar…** to move it to a
-  bar by its printed number. Every Score View, and the transport, follow.
+- **Double-click** in the score to move the clock there (a single click on a
+  note makes it the target instead), and **Go to bar…** to move it to a bar by
+  its printed number. Every Score View, and the transport, follow. Dragging
+  across the score is kept for choosing a loop, which is to come.
 
 ![The score view with the clock at bar 6: a band over the first beat, its notes tinted and the next two onsets ringed](images/score-cursor.png)
 

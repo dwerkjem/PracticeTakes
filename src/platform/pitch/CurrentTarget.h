@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -40,13 +41,26 @@ struct Target
     std::string source;
 
     TargetOrigin origin = TargetOrigin::score;
+
+    // The note in the open score it is, when it is one: a note clicked in the
+    // Score View, the score's first note, or the one the clock is on. What the
+    // Score View outlines. Empty for a target from a key, a name or a voice.
+    struct ScorePlace
+    {
+        std::size_t partIndex = 0;
+        score::NoteRef note;
+    };
+    std::optional<ScorePlace> place;
 };
 
 // A target the player chose: from a key, a staff, a name, their own voice, or a
 // note in the score. `written` differs from `sounding` only for a transposing
 // part's note.
-[[nodiscard]] inline std::shared_ptr<const Target>
-chosenTarget(const score::Pitch& sounding, const score::Pitch& written, std::string source)
+[[nodiscard]] inline std::shared_ptr<const Target> chosenTarget(
+    const score::Pitch& sounding,
+    const score::Pitch& written,
+    std::string source,
+    std::optional<Target::ScorePlace> place = std::nullopt)
 {
     auto target = std::make_shared<Target>();
     target->midiNoteNumber = sounding.midiNoteNumber;
@@ -55,6 +69,7 @@ chosenTarget(const score::Pitch& sounding, const score::Pitch& written, std::str
     target->soundsAsWritten = sounding == written;
     target->source = std::move(source);
     target->origin = TargetOrigin::chosen;
+    target->place = place;
     return target;
 }
 
@@ -145,6 +160,7 @@ targetFromScore(const std::shared_ptr<const score::Score>& score)
     target->source = note.partName + ", bar " +
                      (note.printedBarNumber.empty() ? std::to_string(note.location.measureIndex + 1)
                                                     : note.printedBarNumber);
+    target->place = Target::ScorePlace{note.partIndex, note.location};
     return {std::move(target), {}};
 }
 } // namespace pitch

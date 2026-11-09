@@ -58,6 +58,16 @@ constexpr double verticalFollowPlace = 0.25;
 // notehead, centred on it, and a band about as wide as one.
 constexpr double markWidth = 1.75;
 constexpr double markHeight = 1.3;
+
+// The target's outline, in staff spaces, and its colour: violet, apart from
+// the clock's blue and the review's green, amber and red.
+constexpr double targetOutlineWidth = 2.3;
+constexpr double targetOutlineHeight = 1.8;
+
+[[nodiscard]] juce::Colour targetOutlineColour(Theme theme)
+{
+    return theme == Theme::dark ? juce::Colour(0xffb69cff) : juce::Colour(0xff7c3aed);
+}
 constexpr double cursorBandWidth = 1.6;
 
 // The review's marks (take-review decision 3): a ring a little larger than the
@@ -101,6 +111,9 @@ void ScoreViewComponent::Canvas::mouseDown(const juce::MouseEvent& event)
     owner.grabKeyboardFocus();
 }
 
+// One click on a note aims at it, as Aim at in the right-click menu does. A
+// double-click moves the playhead to where it lands. A drag does neither: it
+// is kept for choosing a loop region by sweeping across bars, which is to come.
 void ScoreViewComponent::Canvas::mouseUp(const juce::MouseEvent& event)
 {
     if (event.mouseWasDraggedSinceMouseDown())
@@ -110,6 +123,15 @@ void ScoreViewComponent::Canvas::mouseUp(const juce::MouseEvent& event)
     if (event.mods.isPopupMenu())
     {
         owner.showNoteMenu(event.position);
+        return;
+    }
+    owner.aimAtNoteUnder(event.position);
+}
+
+void ScoreViewComponent::Canvas::mouseDoubleClick(const juce::MouseEvent& event)
+{
+    if (event.mods.isPopupMenu())
+    {
         return;
     }
     owner.seekToCanvasPoint(event.position);
@@ -137,6 +159,7 @@ void ScoreViewComponent::Canvas::paint(juce::Graphics& graphics)
                 scoreNotationPaletteFor(owner.currentTheme));
             painter.drawSystem(owner.layout.systems.at(index), where->originX, where->originY);
             owner.paintCursorOn(graphics, index, *where);
+            owner.paintTargetOn(graphics, index, *where);
             owner.paintReviewOn(graphics, index, *where);
         }
     };
@@ -316,6 +339,47 @@ void ScoreViewComponent::paintCursorOn(
             graphics.setColour(colours.accent.withAlpha(upcomingAlpha));
             graphics.drawEllipse(mark, ring);
         }
+    }
+}
+
+void ScoreViewComponent::paintTargetOn(
+    juce::Graphics& graphics,
+    std::size_t index,
+    const SystemOnCanvas& where) const
+{
+    const auto aimingAt = target.target();
+    if (aimingAt == nullptr || !aimingAt->place.has_value())
+    {
+        return;
+    }
+    const pitch::Target::ScorePlace& place = *aimingAt->place;
+    const engraving::System& system = layout.systems.at(index);
+    const double px = where.pixelsPerSpace;
+    const double noteheadMiddle = engraving::LayoutOptions{}.noteheadWidth / 2.0;
+
+    for (const engraving::NoteheadGlyph& head : system.noteheads)
+    {
+        const auto staff = static_cast<std::size_t>(std::max(0, head.staff));
+        if (staff >= system.staffParts.size() || system.staffParts.at(staff) != place.partIndex ||
+            !(head.source == place.note))
+        {
+            continue;
+        }
+        const double offset =
+            staff < system.staffOffsets.size() ? system.staffOffsets.at(staff) : 0.0;
+        const double centreX = where.originX + ((head.x + noteheadMiddle) * px);
+        const double centreY =
+            where.originY + ((offset + engraving::spacesBelowTopLine(head.position)) * px);
+        // A rounded outline a little outside the clock's rings, so the target
+        // reads as chosen whether or not the clock is on it.
+        const juce::Rectangle<float> around(
+            static_cast<float>(centreX - (targetOutlineWidth * px * 0.5)),
+            static_cast<float>(centreY - (targetOutlineHeight * px * 0.5)),
+            static_cast<float>(targetOutlineWidth * px),
+            static_cast<float>(targetOutlineHeight * px));
+        graphics.setColour(targetOutlineColour(currentTheme));
+        graphics.drawRoundedRectangle(
+            around, static_cast<float>(0.5 * px), static_cast<float>(std::max(2.0, 0.22 * px)));
     }
 }
 
@@ -606,6 +670,14 @@ AppPalette ScoreViewComponent::palette() const
 void ScoreViewComponent::timerCallback()
 {
     refreshFromCurrentScore();
+
+    // The target is the application's: the tuner, the Note View or the clock
+    // following the score can move it, and its outline moves with it.
+    if (const auto aimingAt = target.target(); aimingAt != outlinedTarget)
+    {
+        outlinedTarget = aimingAt;
+        canvas.repaint();
+    }
 }
 
 void ScoreViewComponent::refreshFromCurrentScore()
@@ -1509,9 +1581,9 @@ void ScoreViewComponent::seekToCanvasPoint(juce::Point<float> point)
     }
 }
 
-void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
+std::optional<ScoreViewComponent::NoteUnder>
+ScoreViewComponent::noteUnder(juce::Point<float> point) const
 {
-    juce::PopupMenu menu;
     for (std::size_t index = 0; index < layout.systems.size() && renderedScore != nullptr; ++index)
     {
         const std::optional<SystemOnCanvas> where = systemOnCanvas(index);
@@ -1525,14 +1597,14 @@ void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
         const std::optional<std::size_t> head = engraving::noteheadAt(system, x, y);
         if (!head.has_value())
         {
-            break;
+            return std::nullopt;
         }
         const engraving::NoteheadGlyph& glyph = system.noteheads.at(*head);
         const auto staff = static_cast<std::size_t>(std::max(0, glyph.staff));
         if (staff >= system.staffParts.size() ||
             system.staffParts.at(staff) >= renderedScore->parts.size())
         {
-            break;
+            return std::nullopt;
         }
         const score::Part& part = renderedScore->parts.at(system.staffParts.at(staff));
         const score::NoteRef& ref = glyph.source;
@@ -1540,16 +1612,50 @@ void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
             ref.voiceIndex >= part.measures[ref.measureIndex].voices.size() ||
             ref.eventIndex >= part.measures[ref.measureIndex].voices[ref.voiceIndex].events.size())
         {
-            break;
+            return std::nullopt;
         }
         const score::Measure& measure = part.measures[ref.measureIndex];
         const score::ScoreEvent& event = measure.voices[ref.voiceIndex].events[ref.eventIndex];
-        const std::string source =
-            (part.name.empty() ? part.id : part.name) + ", bar " + measure.printedNumber;
-
-        // Every note of a chord: which one is the player's choice.
-        for (const score::Note& note : event.notes)
+        if (event.notes.empty())
         {
+            return std::nullopt;
+        }
+        return NoteUnder{
+            event.notes, std::min(ref.noteIndex, event.notes.size() - 1),
+            (part.name.empty() ? part.id : part.name) + ", bar " + measure.printedNumber,
+            system.staffParts.at(staff), ref};
+    }
+    return std::nullopt;
+}
+
+void ScoreViewComponent::aimAtNoteUnder(juce::Point<float> point)
+{
+    if (const std::optional<NoteUnder> under = noteUnder(point))
+    {
+        const score::Note& note = under->chord.at(under->clicked);
+        score::NoteRef ref = under->ref;
+        ref.noteIndex = under->clicked;
+        target.publish(pitch::chosenTarget(
+            note.sounding, note.written, under->source,
+            pitch::Target::ScorePlace{under->partIndex, ref}));
+        canvas.repaint();
+    }
+}
+
+void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
+{
+    juce::PopupMenu menu;
+    if (const std::optional<NoteUnder> under = noteUnder(point))
+    {
+        const std::vector<score::Note>& notes = under->chord;
+        const std::string& source = under->source;
+        // Every note of a chord: which one is the player's choice.
+        for (std::size_t index = 0; index < notes.size(); ++index)
+        {
+            const score::Note& note = notes.at(index);
+            score::NoteRef ref = under->ref;
+            ref.noteIndex = index;
+            const pitch::Target::ScorePlace place{under->partIndex, ref};
             const juce::String written(l10n::noteName(note.written));
             const juce::String label =
                 score::soundsAsWritten(note)
@@ -1558,10 +1664,13 @@ void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
                           "score.view.aim-at.transposed",
                           {{"note", written}, {"sounding", l10n::noteName(note.sounding)}});
             menu.addItem(
-                label, [this, note, source]
-                { target.publish(pitch::chosenTarget(note.sounding, note.written, source)); });
+                label,
+                [this, note, source, place]
+                {
+                    target.publish(pitch::chosenTarget(note.sounding, note.written, source, place));
+                    canvas.repaint();
+                });
         }
-        break;
     }
 
     menu.addItem(l10n::text("score.view.move-clock"), [this, point] { seekToCanvasPoint(point); });
