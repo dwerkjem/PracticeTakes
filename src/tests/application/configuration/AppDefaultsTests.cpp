@@ -174,3 +174,25 @@ TEST_CASE("Every preset is inside the tuner schema's ranges", "[defaults][tuner]
         }
     }
 }
+
+TEST_CASE("A preset changes how a tuner reads, not how it looks", "[defaults][tuner]")
+{
+    AppDefaults::TunerSettings current = AppDefaults::tunerDefaults();
+    current.scaleCents = 20.0;
+    current.signs = 2.0;
+    current.bothHalvesLit = 1.0;
+    current.marker = 6.0;
+    current.offsetShown = 1.0;
+
+    const auto voice = AppDefaults::tunerPreset(AppDefaults::Preset::voice);
+    const auto applied = AppDefaults::presetKeepingLook(voice, current);
+
+    CHECK(applied.easing == Catch::Approx(voice.easing));
+    CHECK(applied.averaging == Catch::Approx(voice.averaging));
+    CHECK(applied.graphDurationSeconds == Catch::Approx(voice.graphDurationSeconds));
+    CHECK(applied.scaleCents == Catch::Approx(20.0));
+    CHECK(applied.signs == Catch::Approx(2.0));
+    CHECK(applied.bothHalvesLit == Catch::Approx(1.0));
+    CHECK(applied.marker == Catch::Approx(6.0));
+    CHECK(applied.offsetShown == Catch::Approx(1.0));
+}

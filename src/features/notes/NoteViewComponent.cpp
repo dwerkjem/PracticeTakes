@@ -56,10 +56,11 @@ double NoteViewComponent::toleranceCents() const
 std::optional<pitch::IntonationZone> NoteViewComponent::zone() const
 {
     const auto aimingAt = target.target();
+    const auto limits = zoneLimits();
     return notes::currentZone(
         currentPitch, currentCents,
         aimingAt != nullptr ? std::optional<int>(aimingAt->midiNoteNumber) : std::nullopt,
-        zoneLimits().toleranceCents, zoneLimits().nearPerfectCents, zoneLimits().outOfTuneCents);
+        limits.toleranceCents, limits.nearPerfectCents, limits.outOfTuneCents);
 }
 
 void NoteViewComponent::setTheme(Theme theme)

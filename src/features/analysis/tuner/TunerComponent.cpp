@@ -1,5 +1,7 @@
 #include "TunerComponent.h"
 
+#include "../../../application/theme/PlusOrMinusCents.h"
+
 #include "../../../platform/pitch/TargetReading.h"
 #include "TargetPickerPanel.h"
 
@@ -109,14 +111,7 @@ TunerComponent::TunerComponent(
     configureFromSchema(durationSlider, &AppDefaults::TunerSettings::graphDurationSeconds, " sec");
     configureFromSchema(scaleSlider, &AppDefaults::TunerSettings::scaleCents, "");
     // "±50 ¢": how far either way the bar and the dial reach.
-    scaleSlider.textFromValueFunction = [](double value)
-    {
-        return juce::String::fromUTF8("\xC2\xB1") + juce::String(juce::roundToInt(value)) +
-               juce::String::fromUTF8(" \xC2\xA2");
-    };
-    scaleSlider.valueFromTextFunction = [](const juce::String& text)
-    { return text.retainCharacters("0123456789.").getDoubleValue(); };
-    scaleSlider.updateText();
+    showAsPlusOrMinusCents(scaleSlider);
     scaleSlider.setTooltip(
         "How far either way the bar and the dial reach, in cents: 50 is one note, flat "
         "to sharp");
@@ -232,7 +227,7 @@ void TunerComponent::resetToDefaults()
 
 void TunerComponent::applyPreset(AppDefaults::Preset preset)
 {
-    applySettings(AppDefaults::tunerPreset(preset));
+    applySettings(AppDefaults::presetKeepingLook(AppDefaults::tunerPreset(preset), settings()));
 }
 
 void TunerComponent::applySettings(const AppDefaults::TunerSettings& settings)
