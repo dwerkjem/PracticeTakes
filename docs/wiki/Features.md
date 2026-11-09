@@ -330,7 +330,7 @@ Anything you can look at live, you can look at on a recording
 
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
-| Mute you can see | Being muted obvious at a glance | Foundation | [#114](https://github.com/dwerkjem/PracticeTakes/issues/114) |
+| Mute you can see | Being muted obvious at a glance | ✅ | [#114](https://github.com/dwerkjem/PracticeTakes/issues/114) |
 | Tool categories and favourites | Find tools faster as there are more of them | 1.0 | [#134](https://github.com/dwerkjem/PracticeTakes/issues/134) |
 | Keyboard shortcuts | Shortcuts for the shell and tools, and an editor for them | 1.0 | [#140](https://github.com/dwerkjem/PracticeTakes/issues/140), [#141](https://github.com/dwerkjem/PracticeTakes/issues/141) |
 
