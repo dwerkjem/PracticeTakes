@@ -39,7 +39,10 @@ void MusicXmlDiagnosticSink::add(
     key += code;
     for (const auto& [name, value] : arguments)
     {
-        key += '\0' + name + '=' + value;
+        key += '\0';
+        key += name;
+        key += '=';
+        key += value;
     }
     const auto existing = seen_.find(key);
 

@@ -112,7 +112,7 @@ std::vector<ReviewRow> reviewRows(const take::Take& take, const NoteReport& repo
                       result.outcome == NoteOutcome::missed || offPitch(result) ||
                       result.timing == TimingVerdict::early || result.timing == TimingVerdict::late;
 
-        rows.push_back(std::move(row));
+        rows.push_back(row);
     }
 
     const std::int64_t latency = latencyFramesOf(take);
@@ -130,7 +130,7 @@ std::vector<ReviewRow> reviewRows(const take::Take& take, const NoteReport& repo
             row.bar = beat.bar;
             row.beat = beat.beat;
         }
-        rows.push_back(std::move(row));
+        rows.push_back(row);
     }
 
     // Time order; a written note before an extra at the same frame, and the

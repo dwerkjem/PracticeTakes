@@ -9,7 +9,7 @@ namespace l10n
 // part on two staves its hand, on more its staff.
 [[nodiscard]] inline juce::String trackName(const transport::TrackLabel& label)
 {
-    const juce::String part =
+    juce::String part =
         label.partName.empty()
             ? l10n::format(
                   "playback.track.part",
