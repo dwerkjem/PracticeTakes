@@ -221,6 +221,13 @@ class WorkspaceLayoutState
     //    nothing, or float the tool in its own window).
     // If `tool` is already present elsewhere in the tree, it is moved rather
     // than duplicated.
+    //
+    // Dropped onto its own pane (`target == tool`), a tab leaves its tab group
+    // and tiles with the tab to its left -- or, the first tab, the one to its
+    // right -- which stays shown in the group (#355). An edge zone puts it on
+    // that side of the group; the centre keeps the tabs' order, so it lands to
+    // the right of the tab it was to the right of. A pane that is not in a
+    // tab group has nothing to tile with, and stays where it is.
     void insert(Tool tool, std::optional<Tool> target, DropZone zone) noexcept
     {
         if (zone == DropZone::none || zone == DropZone::floating)
@@ -229,6 +236,7 @@ class WorkspaceLayoutState
         }
         if (target.has_value() && *target == tool)
         {
+            tileOutOfTabs(tool, zone);
             return;
         }
 
@@ -317,6 +325,36 @@ class WorkspaceLayoutState
     [[nodiscard]] NodeId allocateNodeId() noexcept
     {
         return nextNodeId++;
+    }
+
+    // A tab dropped onto its own pane: see insert.
+    void tileOutOfTabs(Tool tool, DropZone zone) noexcept
+    {
+        Node* group = find(root.get(), tool);
+        if (group == nullptr || group->kind != NodeKind::tabs || group->tabs.size() < 2)
+        {
+            return;
+        }
+        const auto at = static_cast<std::size_t>(
+            std::find(group->tabs.begin(), group->tabs.end(), tool) - group->tabs.begin());
+        const bool hasLeft = at > 0;
+        const Tool neighbour = hasLeft ? group->tabs[at - 1] : group->tabs[at + 1];
+        if (zone == DropZone::centre)
+        {
+            zone = hasLeft ? DropZone::right : DropZone::left;
+        }
+
+        remove(tool);
+        Node* rest = find(root.get(), neighbour);
+        if (rest == nullptr)
+        {
+            return;
+        }
+        if (rest->kind == NodeKind::tabs)
+        {
+            rest->activeTab = neighbour;
+        }
+        convertToSplit(*rest, tool, zone);
     }
 
     void assignFreshIds(Node* node) noexcept
