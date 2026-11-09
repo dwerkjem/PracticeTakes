@@ -112,7 +112,7 @@ void InputLevelComponent::setOrientation(input_level::Orientation choice)
 void InputLevelComponent::resized()
 {
     auto bounds = getLocalBounds();
-    const auto shape = compact::shapeFor(bounds.getWidth(), bounds.getHeight());
+    const auto shape = compactShape(bounds.getWidth(), bounds.getHeight());
     compactLayout = shape != compact::Shape::full;
     const bool vertical =
         input_level::drawsVertically(orientation, shape == compact::Shape::vertical);
@@ -121,49 +121,50 @@ void InputLevelComponent::resized()
     if (!compactLayout && !vertical)
     {
         bounds = bounds.reduced(22, 18);
-        levelArea = bounds.removeFromTop(46);
-        statusArea = bounds.removeFromTop(26);
-        bounds.removeFromTop(14);
+        levelArea = bounds.removeFromTop(scaledHeight(46));
+        statusArea = bounds.removeFromTop(scaledHeight(26));
+        bounds.removeFromTop(scaledHeight(14));
         meter.setShowsScale(true);
-        meter.setBounds(bounds.removeFromTop(std::min(76, std::max(40, bounds.getHeight() - 52))));
-        bounds.removeFromTop(10);
-        detailArea = bounds.removeFromTop(42);
+        meter.setBounds(bounds.removeFromTop(std::min(
+            scaledHeight(76), std::max(scaledHeight(40), bounds.getHeight() - scaledHeight(52)))));
+        bounds.removeFromTop(scaledHeight(10));
+        detailArea = bounds.removeFromTop(scaledHeight(42));
     }
     else if (!compactLayout)
     {
         // Upright with room to spare: the bar down the left, the words beside it.
         bounds = bounds.reduced(22, 18);
         meter.setShowsScale(true);
-        meter.setBounds(bounds.removeFromLeft(96));
-        bounds.removeFromLeft(24);
-        levelArea = bounds.removeFromTop(46);
-        statusArea = bounds.removeFromTop(44);
-        bounds.removeFromTop(14);
-        detailArea = bounds.removeFromTop(64);
+        meter.setBounds(bounds.removeFromLeft(scaledHeight(96)));
+        bounds.removeFromLeft(scaledHeight(24));
+        levelArea = bounds.removeFromTop(scaledHeight(46));
+        statusArea = bounds.removeFromTop(scaledHeight(44));
+        bounds.removeFromTop(scaledHeight(14));
+        detailArea = bounds.removeFromTop(scaledHeight(64));
     }
     else if (vertical)
     {
         bounds = bounds.reduced(8);
-        levelArea = bounds.removeFromTop(28);
+        levelArea = bounds.removeFromTop(scaledHeight(28));
         statusArea = {};
         detailArea = {};
-        meter.setShowsScale(bounds.getWidth() >= 64);
-        meter.setBounds(
-            bounds.withSizeKeepingCentre(std::min(bounds.getWidth(), 90), bounds.getHeight()));
+        meter.setShowsScale(bounds.getWidth() >= scaledHeight(64));
+        meter.setBounds(bounds.withSizeKeepingCentre(
+            std::min(bounds.getWidth(), scaledHeight(90)), bounds.getHeight()));
     }
     else
     {
         bounds = bounds.reduced(8);
         // The figure above the bar when there is height for both, so the bar
         // keeps the pane's whole width; beside it in a strip.
-        levelArea = bounds.getHeight() >= 80
-                        ? bounds.removeFromTop(26)
-                        : bounds.removeFromLeft(std::min(110, bounds.getWidth() / 3));
+        levelArea = bounds.getHeight() >= scaledHeight(80)
+                        ? bounds.removeFromTop(scaledHeight(26))
+                        : bounds.removeFromLeft(std::min(scaledHeight(110), bounds.getWidth() / 3));
         statusArea = {};
         detailArea = {};
-        meter.setShowsScale(bounds.getHeight() >= 44);
-        meter.setBounds(
-            bounds.withSizeKeepingCentre(bounds.getWidth(), std::min(bounds.getHeight(), 64)));
+        meter.setShowsScale(bounds.getHeight() >= scaledHeight(44));
+        meter.setBounds(bounds.withSizeKeepingCentre(
+            bounds.getWidth(), std::min(bounds.getHeight(), scaledHeight(64))));
     }
 }
 
@@ -179,7 +180,9 @@ void InputLevelComponent::paint(juce::Graphics& graphics)
 
     // The level, large.
     graphics.setColour(palette.foreground);
-    graphics.setFont(juce::FontOptions(compactLayout ? 16.0f : 34.0f, juce::Font::bold));
+    graphics.setFont(textFont(
+        compactLayout ? appearance::TextRole::subheading : appearance::TextRole::display,
+        juce::Font::bold));
     graphics.drawFittedText(
         reason.isEmpty() ? figure(reading.levelDb)
                          : juce::String(juce::CharPointer_UTF8("\xe2\x80\x94")),
@@ -192,7 +195,7 @@ void InputLevelComponent::paint(juce::Graphics& graphics)
     }
 
     // Which side of the line the sound is, in words.
-    graphics.setFont(juce::FontOptions(15.0f));
+    graphics.setFont(textFont(appearance::TextRole::label));
     if (!reason.isEmpty())
     {
         graphics.setColour(palette.muted);
@@ -209,23 +212,24 @@ void InputLevelComponent::paint(juce::Graphics& graphics)
 
     // The peak and the threshold, and where to change it.
     graphics.setColour(palette.muted);
-    graphics.setFont(juce::FontOptions(13.0f));
+    graphics.setFont(textFont(appearance::TextRole::body));
     auto detail = detailArea;
     const juce::String peak =
         "Peak " + (reason.isEmpty() ? figure(reading.peakDb) : juce::String("not measured"));
     const juce::String below = "Ignore sound below " + figure(limit);
     // One line each where the words are beside an upright bar and narrow.
-    if (detail.getHeight() >= 60)
+    if (detail.getHeight() >= scaledHeight(60))
     {
         graphics.drawFittedText(
-            peak, detail.removeFromTop(20), juce::Justification::centredLeft, 1);
+            peak, detail.removeFromTop(scaledHeight(20)), juce::Justification::centredLeft, 1);
         graphics.drawFittedText(
-            below, detail.removeFromTop(20), juce::Justification::centredLeft, 1);
+            below, detail.removeFromTop(scaledHeight(20)), juce::Justification::centredLeft, 1);
     }
     else
     {
         graphics.drawFittedText(
-            peak + "     " + below, detail.removeFromTop(20), juce::Justification::centredLeft, 1);
+            peak + "     " + below, detail.removeFromTop(scaledHeight(20)),
+            juce::Justification::centredLeft, 1);
     }
     graphics.drawFittedText(
         "Set the line in Settings, Practice.", detail, juce::Justification::centredLeft, 1);
