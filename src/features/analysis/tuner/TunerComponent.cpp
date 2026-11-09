@@ -71,6 +71,7 @@ TunerComponent::TunerComponent(
     configureLabel(thresholdLabel, "Note switch");
     configureLabel(dropoutLabel, "Dropout hold");
     configureLabel(durationLabel, "Graph duration");
+    configureLabel(scaleLabel, "Bar/dial scale");
 
     displayModeBox.addItem("Graph", static_cast<int>(DisplayMode::graph));
     displayModeBox.addItem("Bar", static_cast<int>(DisplayMode::bar));
@@ -106,6 +107,20 @@ TunerComponent::TunerComponent(
     configureFromSchema(thresholdSlider, &AppDefaults::TunerSettings::noteSwitchSemitones, " st");
     configureFromSchema(dropoutSlider, &AppDefaults::TunerSettings::dropoutFrames, " frames");
     configureFromSchema(durationSlider, &AppDefaults::TunerSettings::graphDurationSeconds, " sec");
+    configureFromSchema(scaleSlider, &AppDefaults::TunerSettings::scaleCents, "");
+    // "±50 ¢": how far either way the bar and the dial reach.
+    scaleSlider.textFromValueFunction = [](double value)
+    {
+        return juce::String::fromUTF8("\xC2\xB1") + juce::String(juce::roundToInt(value)) +
+               juce::String::fromUTF8(" \xC2\xA2");
+    };
+    scaleSlider.valueFromTextFunction = [](const juce::String& text)
+    { return text.retainCharacters("0123456789.").getDoubleValue(); };
+    scaleSlider.updateText();
+    scaleSlider.setTooltip(
+        "How far either way the bar and the dial reach, in cents: 50 is one note, flat "
+        "to sharp");
+    scaleSlider.onValueChange = [this] { repaint(); };
 
     clearGraphButton.onClick = [this]
     {
@@ -202,6 +217,7 @@ void TunerComponent::resetToDefaults()
     thresholdSlider.setValue(AppDefaults::Tuner::noteSwitchSemitones);
     dropoutSlider.setValue(AppDefaults::Tuner::dropoutFrames);
     durationSlider.setValue(AppDefaults::Tuner::graphDurationSeconds);
+    scaleSlider.setValue(AppDefaults::Tuner::scaleCents);
     areAdvancedSettingsExpanded = false;
     graphHistory.clear();
     resetPitchTracking();
@@ -223,6 +239,7 @@ void TunerComponent::applySettings(const AppDefaults::TunerSettings& settings)
     thresholdSlider.setValue(settings.noteSwitchSemitones);
     dropoutSlider.setValue(settings.dropoutFrames);
     durationSlider.setValue(settings.graphDurationSeconds);
+    scaleSlider.setValue(settings.scaleCents);
     graphHistory.clear();
     resetPitchTracking();
     repaint();
@@ -231,7 +248,8 @@ void TunerComponent::applySettings(const AppDefaults::TunerSettings& settings)
 AppDefaults::TunerSettings TunerComponent::settings() const
 {
     return {displayModeBox.getSelectedId(), easingSlider.getValue(),  averagingSlider.getValue(),
-            thresholdSlider.getValue(),     dropoutSlider.getValue(), durationSlider.getValue()};
+            thresholdSlider.getValue(),     dropoutSlider.getValue(), durationSlider.getValue(),
+            scaleSlider.getValue()};
 }
 
 std::optional<ToolSettingsPayload> TunerComponent::captureSettings() const
@@ -272,7 +290,7 @@ void TunerComponent::applyThemeToControls()
 
     for (auto* label :
          {&displayModeLabel, &easingLabel, &averagingLabel, &thresholdLabel, &dropoutLabel,
-          &durationLabel})
+          &durationLabel, &scaleLabel})
     {
         label->setColour(juce::Label::textColourId, palette.muted);
     }
@@ -291,7 +309,8 @@ void TunerComponent::applyThemeToControls()
     displayModeBox.setColour(juce::ComboBox::arrowColourId, palette.foreground);
 
     for (auto* slider :
-         {&easingSlider, &averagingSlider, &thresholdSlider, &dropoutSlider, &durationSlider})
+         {&easingSlider, &averagingSlider, &thresholdSlider, &dropoutSlider, &durationSlider,
+          &scaleSlider})
     {
         slider->setColour(juce::Slider::backgroundColourId, palette.panel);
         slider->setColour(juce::Slider::trackColourId, palette.accent.withAlpha(0.75f));
@@ -322,9 +341,10 @@ void TunerComponent::configureSlider(
 
 void TunerComponent::updateAdvancedSettingsVisibility()
 {
-    for (auto* component : std::array<juce::Component*, 10>{
+    for (auto* component : std::array<juce::Component*, 12>{
              &easingLabel, &easingSlider, &averagingLabel, &averagingSlider, &thresholdLabel,
-             &thresholdSlider, &dropoutLabel, &dropoutSlider, &durationLabel, &durationSlider})
+             &thresholdSlider, &dropoutLabel, &dropoutSlider, &durationLabel, &durationSlider,
+             &scaleLabel, &scaleSlider})
     {
         component->setVisible(areAdvancedSettingsExpanded);
     }
@@ -339,6 +359,10 @@ void TunerComponent::updateGraphControlAvailability()
 
     durationLabel.setEnabled(isGraphSelected);
     durationSlider.setEnabled(isGraphSelected);
+
+    // The scale is the bar's and the dial's; the graph's axis follows the trace.
+    scaleLabel.setEnabled(!isGraphSelected);
+    scaleSlider.setEnabled(!isGraphSelected);
     clearGraphButton.setVisible(areAdvancedSettingsExpanded && isGraphSelected);
 }
 
@@ -346,9 +370,9 @@ int TunerComponent::controlAreaHeight() const
 {
     // A stacked row is taller than an inline one, so the room reserved here has
     // to be asked the same question resized() asks -- otherwise the display is
-    // sized for five short rows and five tall ones are drawn under it.
+    // sized for six short rows and six tall ones are drawn under it.
     const auto rowHeight = advancedRowsStack() ? stackedAdvancedRowHeight : advancedRowHeight;
-    const auto expandedRowsHeight = 5 * rowHeight + 8 + 36;
+    const auto expandedRowsHeight = 6 * rowHeight + 8 + 36;
 
     // Nothing but the advanced rows, and only while they are open. The mode
     // chooser is on the header line when the tuner is docked, and the tuner

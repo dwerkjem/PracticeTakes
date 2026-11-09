@@ -3,6 +3,7 @@
 #include "../../../platform/pitch/IntonationZone.h"
 
 #include <cmath>
+#include <limits>
 #include <optional>
 #include <vector>
 
@@ -11,13 +12,16 @@
 //
 // The zones nest around 0 cents, each as wide as its own range: near perfect
 // out to the singer's near-perfect limit, acceptable out to their "in tune
-// within", near-but-off out to pitch::nearNoteCents. The limits are put in
-// order first (pitch::orderedLimits), so each band sits strictly inside the
-// next and all three are always there.
+// within", near-but-off out to their "out of tune beyond", and outside -- red
+// -- everything beyond that, to the edge of whatever draws it. The limits are put
+// in order first (pitch::orderedLimits), so each band sits strictly inside the
+// next and all four are always there.
 //
 // The zone the pitch is in is lit. The tighter zones inside it stay faintly
 // tinted, so the target is always visible; the looser zones outside it are
-// turned off and leave only a dotted line at their edge. With no signal
+// turned off and leave only a dotted line where each begins (its inner edge),
+// in its own colour -- so no two lines fall on the same place, and red's
+// begins where the singer's out-of-tune limit is. With no signal
 // nothing is lit and every zone is tinted; outside every zone, likewise.
 namespace tuner
 {
@@ -33,7 +37,8 @@ struct ZoneBand
     pitch::IntonationZone zone;
 
     // The band covers innerCents..outerCents on each side of 0; the
-    // near-perfect band's inner edge is 0.
+    // near-perfect band's inner edge is 0, and the outside band's outer edge
+    // is infinite: a display draws it to its own edge.
     double innerCents;
     double outerCents;
 
@@ -56,7 +61,7 @@ struct ZoneBand
     return 3;
 }
 
-// The three bands to draw, tightest first. `cents` is the reading against its
+// The four bands to draw, tightest first. `cents` is the reading against its
 // note, or nothing when there is no signal.
 [[nodiscard]] inline std::vector<ZoneBand>
 zoneBands(std::optional<double> cents, pitch::ZoneLimits requested)
@@ -67,8 +72,10 @@ zoneBands(std::optional<double> cents, pitch::ZoneLimits requested)
         {pitch::IntonationZone::nearPerfect, 0.0, limits.nearPerfectCents, BandLook::tinted},
         {pitch::IntonationZone::acceptable, limits.nearPerfectCents, limits.toleranceCents,
          BandLook::tinted},
-        {pitch::IntonationZone::nearButOff, limits.toleranceCents, pitch::nearNoteCents,
-         BandLook::tinted}};
+        {pitch::IntonationZone::nearButOff, limits.toleranceCents, limits.outOfTuneCents,
+         BandLook::tinted},
+        {pitch::IntonationZone::outside, limits.outOfTuneCents,
+         std::numeric_limits<double>::infinity(), BandLook::tinted}};
 
     if (!cents.has_value() || !std::isfinite(*cents))
     {

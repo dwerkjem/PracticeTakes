@@ -1,6 +1,7 @@
 #include "TunerComponent.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 namespace
@@ -12,6 +13,23 @@ constexpr float tintedBandAlpha = 0.16f;
 constexpr float dottedEdgeAlpha = 0.9f;
 constexpr float edgeDashes[] = {3.0f, 3.0f};
 
+// Where the bar and the dial put their ticks and labels: both ends, the
+// halfway points and zero, whatever the scale.
+[[nodiscard]] std::array<double, 5> scaleTicks(double scaleCents)
+{
+    return {-scaleCents, -scaleCents / 2.0, 0.0, scaleCents / 2.0, scaleCents};
+}
+
+// The middle one of scaleTicks().
+constexpr std::size_t zeroTick = 2;
+
+// "+25", "-12.5", "0": a whole number of cents without a point.
+[[nodiscard]] juce::String tickLabel(double cents)
+{
+    const auto whole = std::abs(cents - std::round(cents)) < 0.01;
+    return juce::String(cents > 0.0 ? "+" : "") + juce::String(cents, whole ? 0 : 1);
+}
+
 // On a graph the trace runs across the bands, so they are quieter there.
 constexpr float graphLitBandAlpha = 0.32f;
 constexpr float graphTintedBandAlpha = 0.10f;
@@ -19,7 +37,7 @@ constexpr float graphTintedBandAlpha = 0.10f;
 // The zones as strips around `note` across a pitch graph, whose pitch axis
 // runs `lowest` to `highest` in semitones: up the plot, or across it when
 // `vertical` (a vertical pane runs time down and pitch across). Fills first,
-// then the looser zones' dotted edges. Clipped to the plot, so a band past the
+// then a dotted line where each looser zone begins. Clipped to the plot, so a band past the
 // range is cut off rather than drawn over the labels.
 void drawZoneStrips(
     juce::Graphics& graphics,
@@ -33,8 +51,9 @@ void drawZoneStrips(
     const juce::Graphics::ScopedSaveState state(graphics);
     graphics.reduceClipRegion(plot.getSmallestIntegerContainer());
 
-    const auto at = [&](double midi)
+    const auto at = [&](double unclamped)
     {
+        const auto midi = juce::jlimit(lowest, highest, unclamped);
         return vertical ? juce::jmap(
                               static_cast<float>(midi), static_cast<float>(lowest),
                               static_cast<float>(highest), plot.getX(), plot.getRight())
@@ -75,7 +94,7 @@ void drawZoneStrips(
         graphics.setColour(intonationZoneColour(band.zone).withAlpha(dottedEdgeAlpha));
         for (const double side : {-1.0, 1.0})
         {
-            const auto edge = at(note + side * band.outerCents / 100.0);
+            const auto edge = at(note + side * band.innerCents / 100.0);
             graphics.drawDashedLine(
                 vertical ? juce::Line<float>(edge, plot.getY(), edge, plot.getBottom())
                          : juce::Line<float>(plot.getX(), edge, plot.getRight(), edge),
@@ -257,6 +276,10 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
 {
     const auto palette = tunerPaletteFor(currentTheme);
 
+    // How far either way it reaches, from the tuner's ... menu: ±50 cents, one
+    // note, unless changed. A reading past the end sits at the end.
+    const auto scaleCents = scaleSlider.getValue();
+
     auto barBounds = bounds.reduced(28, 34);
     const auto centreY = barBounds.getCentreY();
 
@@ -268,10 +291,11 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
 
     // The zones, each as wide as its range, loosest first so the tighter ones
     // sit on top (tuner-intonation-zones).
-    const auto xOf = [&barBounds](double cents)
+    const auto xOf = [&barBounds, scaleCents](double cents)
     {
         return juce::jmap(
-            static_cast<float>(juce::jlimit(-50.0, 50.0, cents)), -50.0f, 50.0f,
+            static_cast<float>(juce::jlimit(-scaleCents, scaleCents, cents)),
+            static_cast<float>(-scaleCents), static_cast<float>(scaleCents),
             static_cast<float>(barBounds.getX()), static_cast<float>(barBounds.getRight()));
     };
     const auto bandTop = static_cast<float>(centreY) - 14.0f;
@@ -296,22 +320,23 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
     }
 
     graphics.setFont(juce::FontOptions(12.0f));
-    for (const auto cents : {-50, -25, 0, 25, 50})
+    const auto ticks = scaleTicks(scaleCents);
+    for (std::size_t tick = 0; tick < ticks.size(); ++tick)
     {
-        const auto x = juce::jmap(
-            static_cast<float>(cents), -50.0f, 50.0f, static_cast<float>(barBounds.getX()),
-            static_cast<float>(barBounds.getRight()));
+        const auto cents = ticks[tick];
+        const auto x = xOf(cents);
 
-        graphics.setColour(cents == 0 ? palette.foreground : palette.muted);
+        graphics.setColour(tick == zeroTick ? palette.foreground : palette.muted);
         graphics.drawVerticalLine(
             static_cast<int>(std::round(x)), static_cast<float>(centreY) - 18.0f,
             static_cast<float>(centreY) + 18.0f);
         graphics.drawText(
-            juce::String(cents > 0 ? "+" : "") + juce::String(cents), static_cast<int>(x) - 24,
-            centreY + 22, 48, 18, juce::Justification::centred);
+            tickLabel(cents), static_cast<int>(x) - 24, centreY + 22, 48, 18,
+            juce::Justification::centred);
     }
 
-    // The looser zones' edges, over the ticks so one on a tick still shows.
+    // Where each looser zone begins, over the ticks so a line on a tick
+    // still shows.
     for (const auto& band : bands)
     {
         if (band.look != tuner::BandLook::dotted)
@@ -321,7 +346,7 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
         graphics.setColour(intonationZoneColour(band.zone).withAlpha(dottedEdgeAlpha));
         for (const double side : {-1.0, 1.0})
         {
-            const auto x = xOf(side * band.outerCents);
+            const auto x = xOf(side * band.innerCents);
             graphics.drawDashedLine(
                 {x, bandTop - 10.0f, x, bandBottom + 10.0f}, edgeDashes, 2, 2.0f);
         }
@@ -332,9 +357,7 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
         return;
     }
 
-    const auto indicatorX = juce::jmap(
-        static_cast<float>(juce::jlimit(-50.0, 50.0, displayedCents)), -50.0f, 50.0f,
-        static_cast<float>(barBounds.getX()), static_cast<float>(barBounds.getRight()));
+    const auto indicatorX = xOf(displayedCents);
 
     // In the colour of its zone, outlined so it stays visible on the lit band.
     const auto indicator =
@@ -348,6 +371,7 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
 void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<int> bounds) const
 {
     const auto palette = tunerPaletteFor(currentTheme);
+    const auto scaleCents = scaleSlider.getValue();
 
     const auto centre = juce::Point<float>(
         static_cast<float>(bounds.getCentreX()), static_cast<float>(bounds.getBottom() - 24));
@@ -380,9 +404,13 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
     graphics.strokePath(arc, juce::PathStrokeType(5.0f));
 
     // The zones as arcs just inside the rim, each as wide as its range, and a
-    // dotted radial edge for the looser ones (tuner-intonation-zones).
-    const auto angleOf = [](double cents)
-    { return juce::jmap(juce::jlimit(-50.0, 50.0, cents), -50.0, 50.0, startAngle, endAngle); };
+    // dotted radial line where each looser one begins.
+    const auto angleOf = [scaleCents](double cents)
+    {
+        return juce::jmap(
+            juce::jlimit(-scaleCents, scaleCents, cents), -scaleCents, scaleCents, startAngle,
+            endAngle);
+    };
     const auto pointAt = [&centre](double angle, float distance)
     {
         return centre + juce::Point<float>(
@@ -425,10 +453,10 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
     }
 
     graphics.setFont(juce::FontOptions(12.0f));
-    for (const auto cents : {-50, -25, 0, 25, 50})
+    const auto ticks = scaleTicks(scaleCents);
+    for (std::size_t tick = 0; tick < ticks.size(); ++tick)
     {
-        const auto angle =
-            juce::jmap(static_cast<double>(cents), -50.0, 50.0, startAngle, endAngle);
+        const auto angle = angleOf(ticks[tick]);
         const auto outerPoint = centre + juce::Point<float>(
                                              static_cast<float>(std::cos(angle) * radius),
                                              static_cast<float>(std::sin(angle) * radius));
@@ -437,11 +465,11 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
                          static_cast<float>(std::cos(angle) * (radius - 15.0f)),
                          static_cast<float>(std::sin(angle) * (radius - 15.0f)));
 
-        graphics.setColour(cents == 0 ? palette.foreground : palette.muted);
-        graphics.drawLine({innerPoint, outerPoint}, cents == 0 ? 2.0f : 1.0f);
+        graphics.setColour(tick == zeroTick ? palette.foreground : palette.muted);
+        graphics.drawLine({innerPoint, outerPoint}, tick == zeroTick ? 2.0f : 1.0f);
     }
 
-    // The looser zones' edges, over the rim and the ticks.
+    // Where each looser zone begins, over the rim and the ticks.
     for (const auto& band : bands)
     {
         if (band.look != tuner::BandLook::dotted)
@@ -451,15 +479,14 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
         graphics.setColour(intonationZoneColour(band.zone).withAlpha(dottedEdgeAlpha));
         for (const double side : {-1.0, 1.0})
         {
-            const auto angle = angleOf(side * band.outerCents);
+            const auto angle = angleOf(side * band.innerCents);
             graphics.drawDashedLine(
                 {pointAt(angle, radius - 30.0f), pointAt(angle, radius + 10.0f)}, edgeDashes, 2,
                 2.0f);
         }
     }
 
-    const auto needleCents = hasSignal ? juce::jlimit(-50.0, 50.0, displayedCents) : 0.0;
-    const auto needleAngle = juce::jmap(needleCents, -50.0, 50.0, startAngle, endAngle);
+    const auto needleAngle = angleOf(hasSignal ? displayedCents : 0.0);
     const auto needleEnd =
         centre + juce::Point<float>(
                      static_cast<float>(std::cos(needleAngle) * (radius - 20.0f)),
@@ -1067,6 +1094,7 @@ void TunerComponent::resized()
     placeSliderRow(thresholdLabel, thresholdSlider);
     placeSliderRow(dropoutLabel, dropoutSlider);
     placeSliderRow(durationLabel, durationSlider);
+    placeSliderRow(scaleLabel, scaleSlider);
 
     bounds.removeFromTop(8);
 

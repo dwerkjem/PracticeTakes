@@ -79,9 +79,12 @@ std::optional<AppDefaults::TunerSettings> decode(const std::optional<ToolSetting
     settings.displayMode = *displayMode;
     for (const AppDefaults::TunerNumberField& field : AppDefaults::tunerNumberFields)
     {
-        const auto value = boundedPayloadNumber(
-            decoded[juce::Identifier(juce::String(field.key.data(), field.key.size()))],
-            field.minimum, field.maximum);
+        const juce::Identifier key(juce::String(field.key.data(), field.key.size()));
+        if (!field.required && !decoded.getDynamicObject()->hasProperty(key))
+        {
+            continue;
+        }
+        const auto value = boundedPayloadNumber(decoded[key], field.minimum, field.maximum);
         if (!value.has_value())
         {
             return std::nullopt;

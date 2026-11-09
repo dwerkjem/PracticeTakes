@@ -59,7 +59,7 @@ TEST_CASE("A tuner payload keeps the names and order it was always written in", 
     CHECK(
         names == std::vector<std::string>{
                      "displayMode", "easing", "averaging", "noteSwitchSemitones", "dropoutFrames",
-                     "graphDurationSeconds"});
+                     "graphDurationSeconds", "scaleCents"});
 }
 
 TEST_CASE("A tuner payload with a value outside its range is refused", "[tuner][codec]")
@@ -84,11 +84,15 @@ TEST_CASE("A tuner payload with a value outside its range is refused", "[tuner][
     CHECK_FALSE(TunerSettingsCodec::decode(withProperty("displayMode", 1.5)).has_value());
 }
 
-TEST_CASE("A tuner payload missing a field is refused", "[tuner][codec]")
+TEST_CASE("A tuner payload missing a required field is refused", "[tuner][codec]")
 {
     for (const AppDefaults::TunerNumberField& field : AppDefaults::tunerNumberFields)
     {
         INFO(field.key);
+        if (!field.required)
+        {
+            continue;
+        }
 
         juce::var object = parsed(TunerSettingsCodec::encode(AppDefaults::tunerDefaults()));
         object.getDynamicObject()->removeProperty(
@@ -98,6 +102,33 @@ TEST_CASE("A tuner payload missing a field is refused", "[tuner][codec]")
                         ToolSettingsPayload{1, juce::JSON::toString(object).toStdString()})
                         .has_value());
     }
+}
+
+TEST_CASE(
+    "A 0.6.0 tuner payload, with no scale, restores with the one-note scale",
+    "[tuner][codec]")
+{
+    // Every field 0.6.0 wrote, none of them the default, and no scaleCents.
+    const auto decoded = TunerSettingsCodec::decode(ToolSettingsPayload{
+        1, R"({"displayMode":2,"easing":0.4,"averaging":8,"noteSwitchSemitones":0.7,)"
+           R"("dropoutFrames":6,"graphDurationSeconds":25})"});
+
+    REQUIRE(decoded.has_value());
+    CHECK(decoded->displayMode == 2);
+    CHECK(decoded->averaging == Approx(8.0));
+    CHECK(decoded->graphDurationSeconds == Approx(25.0));
+    CHECK(decoded->scaleCents == Approx(AppDefaults::Tuner::scaleCents));
+    CHECK(AppDefaults::Tuner::scaleCents == Approx(50.0));
+}
+
+TEST_CASE("A tuner's scale survives a round trip", "[tuner][codec]")
+{
+    AppDefaults::TunerSettings settings = AppDefaults::tunerDefaults();
+    settings.scaleCents = 25.0;
+
+    const auto decoded = TunerSettingsCodec::decode(TunerSettingsCodec::encode(settings));
+    REQUIRE(decoded.has_value());
+    CHECK(decoded->scaleCents == Approx(25.0));
 }
 
 TEST_CASE("A missing or other-version tuner payload gives the defaults", "[tuner][codec]")

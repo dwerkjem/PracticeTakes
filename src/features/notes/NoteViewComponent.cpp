@@ -59,7 +59,7 @@ std::optional<pitch::IntonationZone> NoteViewComponent::zone() const
     return notes::currentZone(
         currentPitch, currentCents,
         aimingAt != nullptr ? std::optional<int>(aimingAt->midiNoteNumber) : std::nullopt,
-        zoneLimits().toleranceCents, zoneLimits().nearPerfectCents);
+        zoneLimits().toleranceCents, zoneLimits().nearPerfectCents, zoneLimits().outOfTuneCents);
 }
 
 void NoteViewComponent::setTheme(Theme theme)

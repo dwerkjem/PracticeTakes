@@ -27,6 +27,7 @@ constexpr auto playbackVolumeKey = "playback.volume";
 constexpr auto referencePitchKey = "practice.referencePitchHz";
 constexpr auto inTuneCentsKey = "practice.inTuneCents";
 constexpr auto nearPerfectCentsKey = "practice.nearPerfectCents";
+constexpr auto outOfTuneCentsKey = "practice.outOfTuneCents";
 constexpr auto chosenTargetSoundingKey = "practice.chosenTarget";
 constexpr auto chosenTargetWrittenKey = "practice.chosenTargetWritten";
 constexpr auto keepTargetKey = "practice.keepTargetWhenScoreOpens";
@@ -74,6 +75,7 @@ constexpr const char* ownedKeys[] = {
     referencePitchKey,
     inTuneCentsKey,
     nearPerfectCentsKey,
+    outOfTuneCentsKey,
     chosenTargetSoundingKey,
     chosenTargetWrittenKey,
     keepTargetKey,
@@ -280,16 +282,21 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
         boundedValue(properties, referencePitchKey, AppDefaults::referencePitchHz, 415.0, 466.0);
     {
         // Each read in its own range, then put in order: a file written by
-        // hand, or by 0.6.0 with no near-perfect key, can disagree with itself.
+        // hand, or by 0.6.0 with neither the near-perfect nor the out-of-tune
+        // key, can disagree with itself.
         const auto limits = pitch::orderedLimits(
             {boundedValue(
                  properties, nearPerfectCentsKey, AppDefaults::nearPerfectCents,
                  AppDefaults::minimumNearPerfectCents, AppDefaults::maximumNearPerfectCents),
              boundedValue(
                  properties, inTuneCentsKey, AppDefaults::inTuneCents,
-                 AppDefaults::minimumInTuneCents, AppDefaults::maximumInTuneCents)});
+                 AppDefaults::minimumInTuneCents, AppDefaults::maximumInTuneCents),
+             boundedValue(
+                 properties, outOfTuneCentsKey, AppDefaults::outOfTuneCents,
+                 AppDefaults::minimumOutOfTuneCents, AppDefaults::maximumOutOfTuneCents)});
         result.state.inTuneCents = limits.toleranceCents;
         result.state.nearPerfectCents = limits.nearPerfectCents;
+        result.state.outOfTuneCents = limits.outOfTuneCents;
     }
     result.state.chosenTargetSounding = properties.getValue(chosenTargetSoundingKey);
     result.state.chosenTargetWritten = properties.getValue(chosenTargetWrittenKey);
@@ -309,7 +316,9 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
         tunerValue(tunerAveragingKey, &AppDefaults::TunerSettings::averaging),
         tunerValue(tunerThresholdKey, &AppDefaults::TunerSettings::noteSwitchSemitones),
         tunerValue(tunerDropoutKey, &AppDefaults::TunerSettings::dropoutFrames),
-        tunerValue(tunerDurationKey, &AppDefaults::TunerSettings::graphDurationSeconds)};
+        tunerValue(tunerDurationKey, &AppDefaults::TunerSettings::graphDurationSeconds),
+        // No pre-workspace key: these files predate the setting.
+        AppDefaults::Tuner::scaleCents};
     result.state.fullscreenMode = loadFullscreenMode(properties);
 
     if (!isCurrentSchema)
@@ -370,6 +379,7 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(referencePitchKey, state.referencePitchHz);
     properties.setValue(inTuneCentsKey, state.inTuneCents);
     properties.setValue(nearPerfectCentsKey, state.nearPerfectCents);
+    properties.setValue(outOfTuneCentsKey, state.outOfTuneCents);
     properties.setValue(chosenTargetSoundingKey, state.chosenTargetSounding);
     properties.setValue(chosenTargetWrittenKey, state.chosenTargetWritten);
     properties.setValue(keepTargetKey, state.keepTargetWhenScoreOpens);

@@ -200,11 +200,13 @@ class TunerComponent final
     juce::Label thresholdLabel;
     juce::Label dropoutLabel;
     juce::Label durationLabel;
+    juce::Label scaleLabel;
     juce::Slider easingSlider;
     juce::Slider averagingSlider;
     juce::Slider thresholdSlider;
     juce::Slider dropoutSlider;
     juce::Slider durationSlider;
+    juce::Slider scaleSlider;
     juce::TextButton clearGraphButton{"Clear graph"};
 
     PitchTracker pitchTracker;

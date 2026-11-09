@@ -23,6 +23,11 @@ struct IntonationSettings
     // too. Only which zone a note is coloured by depends on it.
     double nearPerfectCents = pitch::nearPerfectCents;
 
+    // Out of tune -- red -- past this many cents either way; the singer's
+    // setting, no wider than wrongCents. Like near perfect, it only decides a
+    // note's zone: "wrong" still means nearer another note.
+    double outOfTuneCents = pitch::outOfTuneCents;
+
     // Further than this from the written pitch is nearer another note.
     double wrongCents = 50.0;
 
@@ -52,7 +57,7 @@ struct IntonationSettings
     // The two limits the zones are drawn and judged by.
     [[nodiscard]] pitch::ZoneLimits zoneLimits() const noexcept
     {
-        return pitch::orderedLimits({nearPerfectCents, toleranceCents});
+        return pitch::orderedLimits({nearPerfectCents, toleranceCents, outOfTuneCents});
     }
 };
 

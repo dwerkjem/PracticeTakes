@@ -46,7 +46,7 @@ Your layout is restored the next time you start Practice Takes.
 | **Appearance** | The theme, **Dark** or **Light**, for every open window |
 | **Audio** | Mute, input volume, the live input level, buffer health, the metronome's volume and accent (and why it's silent, if it is), and the input and output devices |
 | **MIDI** | The keyboard and the sustain pedal (see [[MIDI Keyboard]]) |
-| **Practice** | Practice presets, which set the tuner's behaviour for the material you're practising; how many bars the metronome counts in; the **reference pitch**, A4 = 440 Hz by default, from 415 to 466 Hz; **Near perfect within**, the green zone, ±5 cents by default (5 cents flat to 5 cents sharp), from ±1 to ±20; **In tune within**, how close a sung note must be to count as in tune, ±25 cents by default, from ±2 to ±49 and always wider than near perfect; whether a target you chose is kept when a score opens; and whether a score's target **follows the note being sung** while the score plays (on by default) |
+| **Practice** | Practice presets, which set the tuner's behaviour for the material you're practising; how many bars the metronome counts in; the **reference pitch**, A4 = 440 Hz by default, from 415 to 466 Hz; **Near perfect within**, the green zone, ±5 cents by default (5 cents flat to 5 cents sharp), from ±1 to ±20; **In tune within**, how close a sung note must be to count as in tune, ±25 cents by default, from ±2 to ±49 and always wider than near perfect; **Out of tune beyond**, where amber turns red, ±40 cents by default, up to ±50 and always wider than in tune; whether a target you chose is kept when a score opens; and whether a score's target **follows the note being sung** while the score plays (on by default) |
 | **Reset & support** | **Send feedback**, and reset the current tool, the audio settings, the layout, or all settings, each after a confirmation |
 
 **Import settings**, **Export settings** and **Save settings** sit along the
@@ -67,7 +67,7 @@ It deliberately leaves out:
 - your MIDI keyboard and pedal setting, because those belong to the machine the
   keyboard is plugged into;
 - your output device, the metronome's volume, accent and switch, the
-  count-in, playing the score, the reference pitch and the near-perfect and in-tune tolerances,
+  count-in, playing the score, the reference pitch and the near-perfect, in-tune and out-of-tune limits,
   for the same reason:
   they belong to this machine's speakers and your habits on it. Importing a file keeps this machine's output device.
 

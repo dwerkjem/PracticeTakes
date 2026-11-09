@@ -854,8 +854,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     "How close a note must be to count as near perfect, plus or minus: 5 "
                     "means from 5 cents flat to 5 cents sharp. The innermost, green band on "
                     "the tuner and in the Note View. Always tighter than In tune within");
-                nearPerfectSlider.onValueChange = [this]
-                { applyZoneLimits(nearPerfectSlider.getValue(), toleranceSlider.getValue()); };
+                nearPerfectSlider.onValueChange = [this] { applyZoneLimits(); };
                 addAndMakeVisible(nearPerfectSlider);
 
                 toleranceLabel.setText("In tune within", juce::dontSendNotification);
@@ -868,11 +867,22 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     "How far a sung note may be from the written pitch, plus or minus, and "
                     "still be in tune when a take is judged: 25 means from 25 cents flat to 25 "
                     "cents sharp, a quarter of a semitone each way. Always wider than Near "
-                    "perfect within and narrower than 50 cents, where a note is nearer the "
-                    "next one");
-                toleranceSlider.onValueChange = [this]
-                { applyZoneLimits(nearPerfectSlider.getValue(), toleranceSlider.getValue()); };
+                    "perfect within and narrower than Out of tune beyond");
+                toleranceSlider.onValueChange = [this] { applyZoneLimits(); };
                 addAndMakeVisible(toleranceSlider);
+
+                outOfTuneLabel.setText("Out of tune beyond", juce::dontSendNotification);
+                addAndMakeVisible(outOfTuneLabel);
+                outOfTuneSlider.setComponentID("settings-out-of-tune-cents");
+                outOfTuneSlider.setSliderStyle(juce::Slider::IncDecButtons);
+                outOfTuneSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
+                showAsPlusOrMinusCents(outOfTuneSlider);
+                outOfTuneSlider.setTooltip(
+                    "Past how far, plus or minus, a note is out of tune: the red zone on the "
+                    "tuner and in the Note View. Between In tune within and this it is near "
+                    "but off, in amber. At most 50 cents, where a note is nearer the next one");
+                outOfTuneSlider.onValueChange = [this] { applyZoneLimits(); };
+                addAndMakeVisible(outOfTuneSlider);
 
                 showZoneLimits(recorder.intonationSettings().zoneLimits());
 
@@ -944,6 +954,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 toleranceLabel.setBounds(toleranceRow.removeFromLeft(150));
                 toleranceSlider.setBounds(toleranceRow.removeFromLeft(180));
                 bounds.removeFromTop(12);
+
+                auto outOfTuneRow = bounds.removeFromTop(36);
+                outOfTuneLabel.setBounds(outOfTuneRow.removeFromLeft(150));
+                outOfTuneSlider.setBounds(outOfTuneRow.removeFromLeft(180));
+                bounds.removeFromTop(12);
                 keepTargetToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
                 bounds.removeFromTop(6);
                 followToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
@@ -965,8 +980,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 slider.updateText();
             }
 
-            // Both sliders to these limits, each ranged so it cannot pass the
-            // other.
+            // The three sliders to these limits, each ranged so it cannot pass
+            // its neighbour.
             void showZoneLimits(pitch::ZoneLimits limits)
             {
                 nearPerfectSlider.setRange(
@@ -976,18 +991,24 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                         limits.toleranceCents - pitch::bandGapCents),
                     1.0);
                 toleranceSlider.setRange(
-                    limits.nearPerfectCents + pitch::bandGapCents, pitch::maximumToleranceCents,
-                    1.0);
+                    limits.nearPerfectCents + pitch::bandGapCents,
+                    limits.outOfTuneCents - pitch::bandGapCents, 1.0);
+                outOfTuneSlider.setRange(
+                    limits.toleranceCents + pitch::bandGapCents, pitch::maximumOutOfTuneCents, 1.0);
                 nearPerfectSlider.setValue(limits.nearPerfectCents, juce::dontSendNotification);
                 toleranceSlider.setValue(limits.toleranceCents, juce::dontSendNotification);
+                outOfTuneSlider.setValue(limits.outOfTuneCents, juce::dontSendNotification);
             }
 
-            void applyZoneLimits(double nearPerfect, double tolerance)
+            void applyZoneLimits()
             {
-                const auto limits = pitch::orderedLimits({nearPerfect, tolerance});
+                const auto limits = pitch::orderedLimits(
+                    {nearPerfectSlider.getValue(), toleranceSlider.getValue(),
+                     outOfTuneSlider.getValue()});
                 evaluation::IntonationSettings settings = recorder.intonationSettings();
                 settings.nearPerfectCents = limits.nearPerfectCents;
                 settings.toleranceCents = limits.toleranceCents;
+                settings.outOfTuneCents = limits.outOfTuneCents;
                 recorder.setIntonation(settings);
                 showZoneLimits(limits);
                 if (onCountInChanged)
@@ -1014,6 +1035,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::Slider nearPerfectSlider;
             juce::Label toleranceLabel;
             juce::Slider toleranceSlider;
+            juce::Label outOfTuneLabel;
+            juce::Slider outOfTuneSlider;
             juce::ToggleButton keepTargetToggle{"Keep my target when a score opens"};
             juce::ToggleButton followToggle{"Target follows the score as it plays"};
         };

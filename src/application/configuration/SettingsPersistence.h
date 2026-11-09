@@ -63,10 +63,12 @@ struct State
     // A4 in hertz, 415-466.
     double referencePitchHz = AppDefaults::referencePitchHz;
 
-    // A sung note is in tune within this many cents, 2-49, and near perfect
-    // within this many, 1-20 and always below it (pitch::orderedLimits).
+    // A sung note is in tune within this many cents, 2-49; near perfect
+    // within this many, 1-20 and always below it; and out of tune past this
+    // many, 3-50 and always above it (pitch::orderedLimits). All either way.
     double inTuneCents = AppDefaults::inTuneCents;
     double nearPerfectCents = AppDefaults::nearPerfectCents;
+    double outOfTuneCents = AppDefaults::outOfTuneCents;
 
     // A target the player chose, as its sounding and written names ("Bb3"),
     // empty for none; and whether opening a score keeps it (target-note-picker).

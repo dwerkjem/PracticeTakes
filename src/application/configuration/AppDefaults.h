@@ -50,6 +50,13 @@ inline constexpr double nearPerfectCents = pitch::nearPerfectCents;
 inline constexpr double minimumNearPerfectCents = pitch::minimumNearPerfectCents;
 inline constexpr double maximumNearPerfectCents = pitch::maximumNearPerfectCents;
 
+// Past how many cents, either way, a sung note is out of tune: where the amber
+// zone turns red, always outside "in tune within" and no wider than a note
+// nearer the next one. Local, like it.
+inline constexpr double outOfTuneCents = pitch::outOfTuneCents;
+inline constexpr double minimumOutOfTuneCents = pitch::minimumOutOfTuneCents;
+inline constexpr double maximumOutOfTuneCents = pitch::maximumOutOfTuneCents;
+
 namespace Playback
 {
 inline constexpr bool enabled = false;
@@ -72,6 +79,9 @@ inline constexpr double averaging = 5.0;
 inline constexpr double noteSwitchSemitones = 0.55;
 inline constexpr double dropoutFrames = 4.0;
 inline constexpr double graphDurationSeconds = 20.0;
+
+// How far either way the bar and the dial reach: one note, ±50 cents.
+inline constexpr double scaleCents = pitch::nearNoteCents;
 } // namespace Tuner
 
 enum class Preset
@@ -88,6 +98,7 @@ struct TunerSettings
     double noteSwitchSemitones;
     double dropoutFrames;
     double graphDurationSeconds;
+    double scaleCents;
 };
 
 // The tuner's settings schema: for each numeric setting, the name it is stored
@@ -102,6 +113,11 @@ struct TunerNumberField
     double minimum;
     double maximum;
     double step;
+
+    // Whether a payload must carry it. A field added after a release is not:
+    // a workspace saved before it has no such key, and takes the default
+    // rather than losing every other setting with it.
+    bool required = true;
 };
 
 inline constexpr int tunerDisplayModeMinimum = 1;
@@ -114,6 +130,8 @@ inline constexpr std::array tunerNumberFields{
     TunerNumberField{"noteSwitchSemitones", &TunerSettings::noteSwitchSemitones, 0.1, 1.5, 0.05},
     TunerNumberField{"dropoutFrames", &TunerSettings::dropoutFrames, 1.0, 20.0, 1.0},
     TunerNumberField{"graphDurationSeconds", &TunerSettings::graphDurationSeconds, 5.0, 60.0, 1.0},
+    // Added in 0.7.0.
+    TunerNumberField{"scaleCents", &TunerSettings::scaleCents, 10.0, 100.0, 5.0, false},
 };
 
 // The schema entry for one setting. Every member of TunerSettings but
@@ -133,7 +151,8 @@ inline constexpr std::array tunerNumberFields{
 // The general-instrument values, which are also the tuner's defaults.
 inline constexpr TunerSettings generalInstrumentTuner{
     Tuner::displayMode,         Tuner::easing,        Tuner::averaging,
-    Tuner::noteSwitchSemitones, Tuner::dropoutFrames, Tuner::graphDurationSeconds};
+    Tuner::noteSwitchSemitones, Tuner::dropoutFrames, Tuner::graphDurationSeconds,
+    Tuner::scaleCents};
 
 // A practice preset, declared once: its identity, the name the Settings window
 // offers it under, and the tuner controls it applies. The Settings window
@@ -152,7 +171,7 @@ inline constexpr std::array presets{
     PresetDefinition{
         Preset::voice,
         "Voice practice",
-        {Tuner::displayMode, 0.25, 7.0, 0.45, 7.0, 30.0}},
+        {Tuner::displayMode, 0.25, 7.0, 0.45, 7.0, 30.0, Tuner::scaleCents}},
     PresetDefinition{Preset::generalInstrument, "General instrument", generalInstrumentTuner},
 };
 

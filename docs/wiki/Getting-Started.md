@@ -187,10 +187,12 @@ A take from the microphone is judged for timing, and each single note for
   ±25 cents (a quarter of a semitone either way) unless you change it, from ±2
   to ±49. Changing it judges the take under review again. **Near perfect
   within** sets the green band inside it: ±5 cents unless you change it, from
-  ±1 to ±20. Both are plus or minus: ±5 means from 5 cents flat to 5 cents
-  sharp. Each
-  stays inside the next: near perfect is always tighter than in tune, and in
-  tune always tighter than half a semitone, where a note is nearer the next
+  ±1 to ±20. **Out of tune beyond** sets where the live colours in the tuner
+  and the Note View turn from amber to red: ±40 cents unless you change it,
+  up to ±50. All three are plus or minus: ±5 means from 5 cents flat to 5
+  cents sharp. Each stays inside the next: near perfect is always tighter than
+  in tune, and in tune always tighter than out of tune. A sharp or flat note
+  in the review is still amber; red there means a wrong note, nearer another
   one.
 
 A chord heard through the microphone is judged for timing only: one voice is

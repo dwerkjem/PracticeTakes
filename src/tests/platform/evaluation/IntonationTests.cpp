@@ -98,6 +98,22 @@ TEST_CASE("the tolerance decides sharp from in tune", "[evaluation][intonation]"
 }
 
 TEST_CASE(
+    "the out-of-tune limit decides amber from red, not the verdict",
+    "[evaluation][intonation]")
+{
+    const PitchContour contour = contourOf(0, second, [](double) { return 45.0; });
+    IntonationSettings wide;
+    wide.outOfTuneCents = 50.0;
+
+    const Intonation usual = judgeIntonation(contour, 0, second, 69, 440.0, rate);
+    const Intonation widened = judgeIntonation(contour, 0, second, 69, 440.0, rate, wide);
+    CHECK(usual.zone == pitch::IntonationZone::outside);
+    CHECK(widened.zone == pitch::IntonationZone::nearButOff);
+    CHECK(usual.verdict == IntonationVerdict::sharp);
+    CHECK(widened.verdict == IntonationVerdict::sharp);
+}
+
+TEST_CASE(
     "the near-perfect limit decides green from blue, not the verdict",
     "[evaluation][intonation]")
 {
