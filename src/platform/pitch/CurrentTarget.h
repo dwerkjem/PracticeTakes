@@ -69,6 +69,14 @@ class CurrentTarget
         reason = current != nullptr ? std::string{} : std::move(reasonWhenNone);
     }
 
+    // No target, because the player asked for none. Nothing replaces it until
+    // they choose one or a score opens: a score's target follows the clock
+    // only while the target came from the score.
+    void clear()
+    {
+        publish(nullptr, std::string(l10n::key("target.none.cleared")));
+    }
+
     [[nodiscard]] std::shared_ptr<const Target> target() const
     {
         return current;

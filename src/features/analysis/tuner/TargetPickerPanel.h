@@ -91,6 +91,15 @@ class TargetPickerPanel final
         };
         addAndMakeVisible(singButton);
 
+        clearButton.setComponentID("target-clear");
+        clearButton.setTooltip(l10n::text("target.clear.tooltip"));
+        clearButton.onClick = [this]
+        {
+            target.clear();
+            refresh();
+        };
+        addAndMakeVisible(clearButton);
+
         const auto step = [this](juce::TextButton& button, const char* id, auto move)
         {
             button.setComponentID(id);
@@ -161,6 +170,8 @@ class TargetPickerPanel final
         nameButton.setBounds(nameRow.removeFromLeft(56));
         nameRow.removeFromLeft(12);
         singButton.setBounds(nameRow.removeFromLeft(170));
+        nameRow.removeFromLeft(12);
+        clearButton.setBounds(nameRow.removeFromLeft(110));
         bounds.removeFromTop(8);
 
         auto stepRow = bounds.removeFromTop(30);
@@ -344,6 +355,7 @@ class TargetPickerPanel final
     void timerCallback() override
     {
         singButton.setEnabled(steadyNote && steadyNote().has_value());
+        clearButton.setEnabled(target.target() != nullptr);
         showTargetOnKeyboard();
     }
 
@@ -427,6 +439,7 @@ class TargetPickerPanel final
     juce::TextEditor nameEditor;
     juce::TextButton nameButton{l10n::text("target.name.set")};
     juce::TextButton singButton{l10n::text("target.sing")};
+    juce::TextButton clearButton{l10n::text("target.clear.short")};
     juce::TextButton semitoneDown{l10n::text("target.semitone-down")};
     juce::TextButton semitoneUp{l10n::text("target.semitone-up")};
     juce::TextButton keyDown{l10n::text("target.key-down")};

@@ -198,6 +198,10 @@ class MainComponent final
     [[nodiscard]] AudioStreamUse::Use audioStreamUse() const;
     void showNoAudioStreamAlert() const;
     void showRenameToolDialog(const ToolInstanceId& instance);
+
+    // Leaves the application with no target note, from the Tools menu or any
+    // tool's own menu, and saves that.
+    void clearTarget();
     void renameTool(const ToolInstanceId& instance, const juce::String& requestedName);
     // The open instances of one tool, lowest ordinal first.
     [[nodiscard]] std::vector<ToolInstanceId> openInstancesOf(std::string_view toolId) const;

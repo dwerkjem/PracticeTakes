@@ -112,3 +112,20 @@ TEST_CASE("a target chosen from a transposing part keeps both names", "[pitch][t
     CHECK(target->writtenName == "D5");
     CHECK_FALSE(target->soundsAsWritten);
 }
+
+TEST_CASE("a cleared target is none, and says the player cleared it", "[pitch][target]")
+{
+    pitch::CurrentTarget target;
+    score::Pitch g4;
+    g4.step = score::Step::g;
+    g4.octave = 4;
+    g4.midiNoteNumber = 67;
+    target.publish(pitch::chosenTarget(g4, g4, "test"));
+    REQUIRE(target.target() != nullptr);
+
+    target.clear();
+    CHECK(target.target() == nullptr);
+    CHECK(target.whyNone() == "target.none.cleared");
+    // Nothing chosen any more, so a score opening replaces it.
+    CHECK(target.scoreReplacesTarget());
+}

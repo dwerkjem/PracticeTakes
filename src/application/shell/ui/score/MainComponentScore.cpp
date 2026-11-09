@@ -265,3 +265,11 @@ void MainComponent::closeScoreImportWindow()
 {
     scoreImportWindow.reset();
 }
+
+void MainComponent::clearTarget()
+{
+    currentTarget.clear();
+    // The chosen target is saved, so a cleared one is too: it does not come
+    // back at the next launch.
+    saveSettings(false);
+}

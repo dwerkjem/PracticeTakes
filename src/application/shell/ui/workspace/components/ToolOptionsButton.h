@@ -36,6 +36,7 @@ class ToolOptionsButton final : public juce::TextButton
         giveFeedback,
         close,
         rename,
+        clearTarget,
 
         // The tool's own entries are numbered from here, so adding a shell item
         // above can never collide with them.
@@ -49,6 +50,14 @@ class ToolOptionsButton final : public juce::TextButton
     void setRenameHandler(std::function<void()> handler)
     {
         onRename = std::move(handler);
+    }
+
+    // Adds "Clear target note" to every tool's menu, enabled while there is a
+    // target: the target is the application's, so any tool can drop it.
+    void setClearTargetHandler(std::function<void()> handler, std::function<bool()> available)
+    {
+        onClearTarget = std::move(handler);
+        hasTarget = std::move(available);
     }
 
     // Shown by the button, and by a right-click on the tool -- which is the only
@@ -92,6 +101,11 @@ class ToolOptionsButton final : public juce::TextButton
             menu.addSeparator();
         }
 
+        if (onClearTarget)
+        {
+            menu.addItem(clearTarget, l10n::text("target.clear"), hasTarget ? hasTarget() : true);
+            menu.addSeparator();
+        }
         menu.addItem(changePresentation, presentationAction);
         if (onRename)
         {
@@ -132,6 +146,10 @@ class ToolOptionsButton final : public juce::TextButton
                 {
                     action = safeThis->onRename;
                 }
+                else if (selectedItemId == clearTarget)
+                {
+                    action = safeThis->onClearTarget;
+                }
                 else if (selectedItemId >= firstToolEntry)
                 {
                     // Re-asked rather than captured: the menu was built when it
@@ -165,5 +183,7 @@ class ToolOptionsButton final : public juce::TextButton
     std::function<void()> onFeedback;
     std::function<void()> onClose;
     std::function<void()> onRename;
+    std::function<void()> onClearTarget;
+    std::function<bool()> hasTarget;
     std::function<std::vector<ToolComponent::MenuEntry>()> toolEntries;
 };

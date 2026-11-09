@@ -1565,6 +1565,10 @@ void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
     }
 
     menu.addItem(l10n::text("score.view.move-clock"), [this, point] { seekToCanvasPoint(point); });
+    if (target.target() != nullptr)
+    {
+        menu.addItem(l10n::text("target.clear"), [this] { target.clear(); });
+    }
     menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&canvas).withMousePosition());
 }
 
