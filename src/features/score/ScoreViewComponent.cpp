@@ -1827,8 +1827,6 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
         juce::String(layout.scoreTitle.empty() ? "Untitled score" : layout.scoreTitle) + "  -  " +
         juce::String(layout.partName);
 
-    graphics.drawText(heading, title, juce::Justification::centredLeft, true);
-
     diagnosticsLink = {};
     if (renderedScore != nullptr && !renderedScore->diagnostics.empty())
     {
@@ -1844,6 +1842,14 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
         diagnosticsLink =
             title.withLeft(std::max(title.getX(), title.getRight() - width))
                 .withSizeKeepingCentre(std::min(width, title.getWidth()), scaledHeight(18));
+        // The title stops short of the link rather than running under it, as
+        // it would in a narrow pane or at a large text size.
+        graphics.setColour(colours.foreground);
+        graphics.setFont(textFont(appearance::TextRole::body, juce::Font::bold));
+        graphics.drawText(
+            heading, title.withRight(std::max(title.getX(), diagnosticsLink.getX() - 8)),
+            juce::Justification::centredLeft, true);
+
         graphics.setColour(
             diagnosticsLinkHovered ? colours.warning.brighter(0.25f) : colours.warning);
         graphics.setFont(font);
@@ -1854,6 +1860,10 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
                 diagnosticsLink.getX(), diagnosticsLink.getBottom() - 2, diagnosticsLink.getWidth(),
                 1);
         }
+    }
+    else
+    {
+        graphics.drawText(heading, title, juce::Justification::centredLeft, true);
     }
 
     const juce::String notices = noticeText();

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 
 namespace
 {
@@ -271,6 +272,11 @@ void SpectrogramComponent::drawFrequencyGrid(
     graphics.setFont(textFont(
         shape == compact::Shape::full ? appearance::TextRole::axis : appearance::TextRole::tiny));
 
+    // The top of the last label drawn, going up the plot: a label that would
+    // run into it is left off, as happens when a short pane is drawn at a
+    // large text size. Its line is still drawn.
+    int lastLabelTop = std::numeric_limits<int>::max();
+
     for (const auto frequency : frequencyGridLines)
     {
         if (frequency >= maximumVisibleFrequency())
@@ -326,10 +332,15 @@ void SpectrogramComponent::drawFrequencyGrid(
             graphics.drawHorizontalLine(
                 static_cast<int>(y), static_cast<float>(spectrogramBounds.getX()),
                 static_cast<float>(spectrogramBounds.getRight()));
-            graphics.drawText(
-                frequencyLabel(frequency), spectrogramBounds.getX() + 4,
-                static_cast<int>(y) - scaledHeight(13), scaledHeight(50), scaledHeight(12),
-                juce::Justification::centredLeft);
+            const int labelTop = static_cast<int>(y) - scaledHeight(13);
+            const int labelHeight = scaledHeight(12);
+            if (labelTop + labelHeight <= lastLabelTop)
+            {
+                graphics.drawText(
+                    frequencyLabel(frequency), spectrogramBounds.getX() + 4, labelTop,
+                    scaledHeight(50), labelHeight, juce::Justification::centredLeft);
+                lastLabelTop = labelTop;
+            }
         }
     }
 }
