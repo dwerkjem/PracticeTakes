@@ -278,16 +278,6 @@ TEST_CASE("reset returns the tracker to its initial state", "[tuner][pitch-track
     CHECK(update.accepted);
 }
 
-TEST_CASE("Note names cover the octave and its boundaries", "[tuner][pitch-tracker]")
-{
-    CHECK(noteNameForMidi(69) == "A4");
-    CHECK(noteNameForMidi(60) == "C4");
-    CHECK(noteNameForMidi(61) == "C#4");
-    CHECK(noteNameForMidi(59) == "B3");
-    CHECK(noteNameForMidi(12) == "C0");
-    CHECK(noteNameForMidi(0) == "C-1");
-}
-
 TEST_CASE("the tracker reads against the application's reference", "[tuner][tracker][reference]")
 {
     // A442: a 442 Hz tone is A4 in tune, and 440 Hz is A4 about 8 cents flat.

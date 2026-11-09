@@ -1,3 +1,4 @@
+#include "../../../localisation/Localisation.h"
 #include "../../MainComponent.h"
 
 #include <algorithm>
@@ -19,12 +20,15 @@ void MainComponent::showHelpMenu()
 {
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
-    menu.addItem(sendFeedbackMenuItemId, "Send feedback");
+    const auto ink = appLookAndFeel.findColour(juce::PopupMenu::textColourId);
+    menu.addItem(appearance::menuItem(
+        sendFeedbackMenuItemId, l10n::text("menu.help.feedback"), appearance::Icon::message, ink));
     menu.addSeparator();
     menu.addItem(
         feedbackInvitationsMenuItemId,
-        feedbackInvitationsDisabled() ? "Enable feedback invitations"
-                                      : "Disable feedback invitations");
+        l10n::text(
+            feedbackInvitationsDisabled() ? l10n::key("menu.help.invitations.enable")
+                                          : l10n::key("menu.help.invitations.disable")));
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(
@@ -130,9 +134,9 @@ void MainComponent::maybeOfferFeedbackInvitation()
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     juce::AlertWindow::showYesNoCancelBox(
-        juce::MessageBoxIconType::QuestionIcon, "Help improve Practice Takes",
-        "Would you like to share feedback about the tools you have tried?", "Give feedback",
-        "Not now", "Never ask again", nullptr,
+        juce::MessageBoxIconType::QuestionIcon, l10n::text("feedback.invitation.title"),
+        l10n::text("feedback.invitation.message"), l10n::text("feedback.invitation.give"),
+        l10n::text("feedback.invitation.not-now"), l10n::text("feedback.invitation.never"), nullptr,
         juce::ModalCallbackFunction::create(
             [safeThis](int result)
             {

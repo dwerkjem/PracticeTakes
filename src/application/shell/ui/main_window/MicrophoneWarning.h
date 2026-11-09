@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../../localisation/Localisation.h"
 #include "../../MainComponent.h"
 
 #include <functional>
@@ -13,7 +14,7 @@ class MainComponent::MicrophoneWarning final : public juce::Component
     {
         setInterceptsMouseClicks(true, true);
 
-        title.setText("No microphone detected", juce::dontSendNotification);
+        title.setText(l10n::text("microphone.warning.none"), juce::dontSendNotification);
         // Set again by `describe` when the situation is the other one. Both are
         // "no usable input" and only one of them is anything the reader can act
         // on, which is the whole reason this text is not fixed.
@@ -21,15 +22,12 @@ class MainComponent::MicrophoneWarning final : public juce::Component
         title.setFont(appearance::labelFont(appearance::TextRole::subheading, juce::Font::bold));
         addAndMakeVisible(title);
 
-        message.setText(
-            "Choose an input device in Settings to use the tuner and "
-            "spectrogram.",
-            juce::dontSendNotification);
+        message.setText(l10n::text("microphone.warning.none.message"), juce::dontSendNotification);
         message.setFont(appearance::labelFont(appearance::TextRole::body));
         message.setJustificationType(juce::Justification::centredLeft);
         addAndMakeVisible(message);
 
-        settingsButton.setButtonText("Open Settings");
+        settingsButton.setButtonText(l10n::text("microphone.warning.open-settings"));
         settingsButton.onClick = [this]
         {
             if (onOpenSettings)
@@ -39,7 +37,7 @@ class MainComponent::MicrophoneWarning final : public juce::Component
         };
         addAndMakeVisible(settingsButton);
 
-        dismissButton.setButtonText("Dismiss");
+        dismissButton.setButtonText(l10n::text("microphone.warning.dismiss"));
         dismissButton.onClick = [this]
         {
             if (onDismiss)
@@ -96,14 +94,14 @@ class MainComponent::MicrophoneWarning final : public juce::Component
     void describe(bool isOpening)
     {
         title.setText(
-            isOpening ? "Waiting for the microphone" : "No microphone detected",
+            l10n::text(
+                isOpening ? l10n::key("microphone.warning.opening")
+                          : l10n::key("microphone.warning.none")),
             juce::dontSendNotification);
         message.setText(
-            isOpening ? "The input device has not answered yet. Something else may be "
-                        "holding it -- another copy of Practice Takes, or another "
-                        "application."
-                      : "Choose an input device in Settings to use the tuner and "
-                        "spectrogram.",
+            l10n::text(
+                isOpening ? l10n::key("microphone.warning.opening.message")
+                          : l10n::key("microphone.warning.none.message")),
             juce::dontSendNotification);
     }
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../localisation/LocalisationRules.h"
+
 #include <array>
 #include <cmath>
 #include <string_view>
@@ -88,7 +90,7 @@ struct TextRoleInfo
 {
     TextRole role;
 
-    // What the Settings preview calls it.
+    // The catalogue identifier of what the Settings preview calls it.
     std::string_view name;
 
     // The base size, in points, at 100%.
@@ -96,23 +98,23 @@ struct TextRoleInfo
 };
 
 inline constexpr std::array<TextRoleInfo, 17> textRoles{{
-    {TextRole::tiny, "Tiny labels in a small pane", 9.0f},
-    {TextRole::fine, "Key names", 10.0f},
-    {TextRole::axis, "Axis and tick labels", 11.0f},
-    {TextRole::caption, "Notes under the score", 11.5f},
-    {TextRole::small, "Small print", 12.0f},
-    {TextRole::body, "Body text", 13.0f},
-    {TextRole::control, "Lists and readouts", 14.0f},
-    {TextRole::prompt, "Prompts", 14.5f},
-    {TextRole::label, "Labels and status", 15.0f},
-    {TextRole::button, "Buttons and choices", 16.0f},
-    {TextRole::subheading, "Subheadings", 16.0f},
-    {TextRole::menu, "Menus and messages", 17.0f},
-    {TextRole::heading, "Tool headings", 18.0f},
-    {TextRole::title, "Titles", 20.0f},
-    {TextRole::panelHeading, "Large headings", 22.0f},
-    {TextRole::readout, "Large readouts", 30.0f},
-    {TextRole::display, "The level", 34.0f},
+    {TextRole::tiny, l10n::key("settings.appearance.textsize.role.tiny"), 9.0f},
+    {TextRole::fine, l10n::key("settings.appearance.textsize.role.fine"), 10.0f},
+    {TextRole::axis, l10n::key("settings.appearance.textsize.role.axis"), 11.0f},
+    {TextRole::caption, l10n::key("settings.appearance.textsize.role.caption"), 11.5f},
+    {TextRole::small, l10n::key("settings.appearance.textsize.role.small"), 12.0f},
+    {TextRole::body, l10n::key("settings.appearance.textsize.role.body"), 13.0f},
+    {TextRole::control, l10n::key("settings.appearance.textsize.role.control"), 14.0f},
+    {TextRole::prompt, l10n::key("settings.appearance.textsize.role.prompt"), 14.5f},
+    {TextRole::label, l10n::key("settings.appearance.textsize.role.label"), 15.0f},
+    {TextRole::button, l10n::key("settings.appearance.textsize.role.button"), 16.0f},
+    {TextRole::subheading, l10n::key("settings.appearance.textsize.role.subheading"), 16.0f},
+    {TextRole::menu, l10n::key("settings.appearance.textsize.role.menu"), 17.0f},
+    {TextRole::heading, l10n::key("settings.appearance.textsize.role.heading"), 18.0f},
+    {TextRole::title, l10n::key("settings.appearance.textsize.role.title"), 20.0f},
+    {TextRole::panelHeading, l10n::key("settings.appearance.textsize.role.panel-heading"), 22.0f},
+    {TextRole::readout, l10n::key("settings.appearance.textsize.role.readout"), 30.0f},
+    {TextRole::display, l10n::key("settings.appearance.textsize.role.display"), 34.0f},
 }};
 
 [[nodiscard]] constexpr const TextRoleInfo& roleInfo(TextRole role) noexcept

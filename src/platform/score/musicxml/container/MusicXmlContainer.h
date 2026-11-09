@@ -4,6 +4,7 @@
 
 #include <string>
 
+#include "../../../../application/localisation/LocalisationRules.h"
 #include "platform/score/musicxml/MusicXmlImportResult.h"
 
 // Turning a path into the text of one MusicXML document.
@@ -34,6 +35,7 @@ struct MusicXmlDocumentSource
     std::string rootEntryName;
 
     std::string error;
+    l10n::NamedArguments errorArguments;
 };
 
 // Read `file` and return the MusicXML document text inside it.

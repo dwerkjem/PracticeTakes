@@ -9,6 +9,8 @@
 #include "../../../configuration/SettingsImportTransaction.h"
 #include "../../../configuration/SettingsTransferCodec.h"
 #include "../../../configuration/SettingsTransferFile.h"
+#include "../../../localisation/Localisation.h"
+#include "../../../localisation/NoteNames.h"
 #include "../workspace/components/ToolWindow.h"
 #include "SettingsWindow.h"
 
@@ -20,6 +22,8 @@ constexpr int darkSettingsMenuItemId = 3;
 constexpr int muteSettingsMenuItemId = 4;
 constexpr int normalFullscreenMenuItemId = 5;
 constexpr int kioskFullscreenMenuItemId = 6;
+// Automatic, then each language in availableLanguages' order.
+constexpr int firstLanguageMenuItemId = 100;
 
 [[nodiscard]] juce::Rectangle<int> validWindowBounds(const juce::String& storedBounds)
 {
@@ -39,34 +43,84 @@ void MainComponent::showSettingsMenu()
 {
     juce::PopupMenu appearanceMenu;
     appearanceMenu.addItem(
-        lightSettingsMenuItemId, "Light theme", true, currentTheme == Theme::light);
-    appearanceMenu.addItem(darkSettingsMenuItemId, "Dark theme", true, currentTheme == Theme::dark);
+        lightSettingsMenuItemId, l10n::text("menu.settings.theme.light"), true,
+        currentTheme == Theme::light);
+    appearanceMenu.addItem(
+        darkSettingsMenuItemId, l10n::text("menu.settings.theme.dark"), true,
+        currentTheme == Theme::dark);
 
     juce::PopupMenu fullscreenMenu;
     fullscreenMenu.addItem(
-        normalFullscreenMenuItemId, "Normal fullscreen", true,
+        normalFullscreenMenuItemId, l10n::text("menu.settings.fullscreen.normal"), true,
         selectedFullscreenMode == AppSettings::FullscreenMode::normal);
     fullscreenMenu.addItem(
-        kioskFullscreenMenuItemId, "Kiosk fullscreen", true,
+        kioskFullscreenMenuItemId, l10n::text("menu.settings.fullscreen.kiosk"), true,
         selectedFullscreenMode == AppSettings::FullscreenMode::kiosk);
 
+    // The language, by its globe, each listed by its own name: the one menu a
+    // reader may need without being able to read the rest of it.
+    juce::PopupMenu languageMenu;
+    std::vector<juce::String> languageCodes{juce::String()};
+    languageMenu.addItem(
+        firstLanguageMenuItemId, l10n::text("settings.appearance.language.automatic"), true,
+        chosenLanguage.isEmpty());
+    for (const auto& language : l10n::availableLanguages())
+    {
+        languageCodes.emplace_back(language.code);
+        languageMenu.addItem(
+            firstLanguageMenuItemId + static_cast<int>(languageCodes.size()) - 1, language.name,
+            true, chosenLanguage == juce::String(language.code));
+    }
+
+    const auto ink = appLookAndFeel.findColour(juce::PopupMenu::textColourId);
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
-    menu.addSubMenu("Appearance", appearanceMenu);
-    menu.addSubMenu("Fullscreen mode", fullscreenMenu);
-    menu.addItem(
-        muteSettingsMenuItemId,
-        audioInputService.isMuted() ? "Unmute microphone" : "Mute microphone");
+    menu.addSubMenu(
+        l10n::text("settings.appearance.language"), languageMenu, true,
+        appearance::iconForMenu(appearance::Icon::globe, ink));
+    menu.addSubMenu(
+        l10n::text("settings.appearance.title"), appearanceMenu, true,
+        appearance::iconForMenu(appearance::Icon::palette, ink));
+    menu.addSubMenu(
+        l10n::text("menu.settings.fullscreen"), fullscreenMenu, true,
+        appearance::iconForMenu(appearance::Icon::maximize, ink));
+    {
+        const bool muted = audioInputService.isMuted();
+        juce::PopupMenu::Item mute(l10n::text(
+            muted ? l10n::key("settings.audio.microphone.unmute")
+                  : l10n::key("settings.audio.microphone.mute")));
+        mute.itemID = muteSettingsMenuItemId;
+        mute.image = appearance::iconForMenu(
+            muted ? appearance::Icon::microphone : appearance::Icon::microphoneOff, ink);
+        menu.addItem(std::move(mute));
+    }
     menu.addSeparator();
-    menu.addItem(openSettingsMenuItemId, "Open full settings...");
+    {
+        juce::PopupMenu::Item open(l10n::text("menu.settings.open"));
+        open.itemID = openSettingsMenuItemId;
+        open.image = appearance::iconForMenu(appearance::Icon::settings, ink);
+        menu.addItem(std::move(open));
+    }
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(
         juce::PopupMenu::Options().withTargetComponent(&settingsButton).withMinimumWidth(230),
-        [safeThis](int selectedItemId)
+        [safeThis, languageCodes](int selectedItemId)
         {
             if (safeThis == nullptr)
             {
+                return;
+            }
+
+            const int language = selectedItemId - firstLanguageMenuItemId;
+            if (language >= 0 && language < static_cast<int>(languageCodes.size()))
+            {
+                const auto& code = languageCodes[static_cast<std::size_t>(language)];
+                if (code != safeThis->chosenLanguage)
+                {
+                    safeThis->chooseLanguage(code);
+                    safeThis->showLanguageRestartNote();
+                }
                 return;
             }
 
@@ -114,7 +168,7 @@ void MainComponent::showSettings()
         [safeThis]
         {
             // The metronome and the count-in are saved as they change, like
-            // the MIDI keyboard: local preferences, never exported.
+            // the MIDI keyboard.
             if (safeThis != nullptr)
             {
                 safeThis->saveSettings(false);
@@ -228,6 +282,24 @@ void MainComponent::showSettings()
             }
         });
 
+    settingsWindow->setLanguageHandler(
+        chosenLanguage,
+        [safeThis](const juce::String& code)
+        {
+            if (safeThis != nullptr)
+            {
+                safeThis->chooseLanguage(code);
+            }
+        });
+    settingsWindow->setNamingHandler(
+        [safeThis]
+        {
+            if (safeThis != nullptr)
+            {
+                safeThis->noteNamingChanged();
+            }
+        });
+
     const auto palette = appPaletteFor(currentTheme);
     settingsWindow->applyAppearance(&appLookAndFeel, palette.background, currentTheme);
     if (!savedSettingsBounds.isEmpty())
@@ -240,8 +312,8 @@ void MainComponent::showSettings()
 void MainComponent::importSettings()
 {
     settingsTransferChooser = std::make_unique<juce::FileChooser>(
-        "Import settings", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
-        "*.ptsettings", true);
+        l10n::text("settings.import"),
+        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.ptsettings", true);
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     settingsTransferChooser->launchAsync(
         juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
@@ -268,8 +340,8 @@ void MainComponent::importSettings()
             if (staged.status != SettingsImportStageStatus::ready || !staged.model.has_value())
             {
                 juce::AlertWindow::showMessageBoxAsync(
-                    juce::MessageBoxIconType::WarningIcon, "Settings import failed",
-                    juce::String::fromUTF8(staged.error.c_str()));
+                    juce::MessageBoxIconType::WarningIcon, l10n::text("settings.import.failed"),
+                    l10n::text(staged.error));
                 return;
             }
             safeThis->confirmSettingsImport(*staged.model);
@@ -278,13 +350,17 @@ void MainComponent::importSettings()
 
 void MainComponent::confirmSettingsImport(SettingsTransferModel model)
 {
-    auto activeWorkspace = juce::String{"Customized workspace"};
+    // What the bundle does not carry stays as it is here, so confirming an
+    // older bundle resets nothing it never held.
+    model = SettingsTransferCodec::withLocalPreferences(std::move(model), captureSettingsState());
+
+    auto activeWorkspace = juce::String{l10n::text("settings.import.summary.customized-workspace")};
     if (const auto& activeSource = model.state.workspaceCatalog.activeSource;
         activeSource.has_value())
     {
         if (const auto* builtIn = WorkspaceBuiltIns::find(*activeSource))
         {
-            activeWorkspace = builtIn->name;
+            activeWorkspace = l10n::text(WorkspaceBuiltIns::nameKey(builtIn->id));
         }
         else
         {
@@ -299,17 +375,30 @@ void MainComponent::confirmSettingsImport(SettingsTransferModel model)
         }
     }
 
-    const auto summary =
-        "This replaces supported preferences and all named workspaces.\n\nTheme: " +
-        juce::String(model.state.theme == Theme::dark ? "Dark" : "Light") + "\nAudio: Microphone " +
-        (model.state.microphoneMuted ? "muted" : "enabled") + ", input gain " +
-        juce::String(model.state.inputGain, 2) + "\nActive workspace: " + activeWorkspace +
-        "\nNamed workspaces: " +
-        juce::String(static_cast<int>(model.state.workspaceCatalog.named.size()));
+    auto summary = l10n::format(
+        "settings.import.summary",
+        {{"theme",
+          l10n::text(
+              model.state.theme == Theme::dark ? l10n::key("settings.appearance.theme.dark")
+                                               : l10n::key("settings.appearance.theme.light"))},
+         {"microphone",
+          l10n::text(
+              model.state.microphoneMuted ? l10n::key("settings.import.summary.muted")
+                                          : l10n::key("settings.import.summary.enabled"))},
+         {"gain", l10n::number(model.state.inputGain, 2)},
+         {"workspace", activeWorkspace},
+         {"workspaces",
+          l10n::number(static_cast<double>(model.state.workspaceCatalog.named.size()), 0)}});
+    if (model.state.language != chosenLanguage)
+    {
+        // Said in the language on screen now, which is the one being left.
+        summary << "\n\n" << l10n::text("settings.import.summary.language");
+    }
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     juce::AlertWindow::showOkCancelBox(
-        juce::MessageBoxIconType::QuestionIcon, "Replace settings?", summary, "Import", "Cancel",
-        this,
+        juce::MessageBoxIconType::QuestionIcon, l10n::text("settings.import.confirm.title"),
+        summary, l10n::text("settings.import.confirm.import"),
+        l10n::text("settings.import.confirm.cancel"), this,
         juce::ModalCallbackFunction::create(
             [safeThis, model = std::move(model)](int response)
             {
@@ -326,8 +415,8 @@ void MainComponent::executeSettingsImport(const SettingsTransferModel& model)
     if (settingsFile == nullptr)
     {
         juce::AlertWindow::showMessageBoxAsync(
-            juce::MessageBoxIconType::WarningIcon, "Settings import failed",
-            "The application settings file is unavailable.");
+            juce::MessageBoxIconType::WarningIcon, l10n::text("settings.import.failed"),
+            l10n::text("settings.import.failed.no-settings-file"));
         return;
     }
 
@@ -357,11 +446,10 @@ void MainComponent::showSettingsImportResult(const SettingsImportResult& result)
     juce::AlertWindow::showMessageBoxAsync(
         result.status == SettingsImportStatus::imported ? juce::MessageBoxIconType::InfoIcon
                                                         : juce::MessageBoxIconType::WarningIcon,
-        result.status == SettingsImportStatus::imported ? "Settings imported"
-                                                        : "Settings import failed",
-        result.status == SettingsImportStatus::imported
-            ? "Your settings and workspaces were imported successfully."
-            : juce::String::fromUTF8(result.error.c_str()));
+        result.status == SettingsImportStatus::imported ? l10n::text("settings.import.done")
+                                                        : l10n::text("settings.import.failed"),
+        result.status == SettingsImportStatus::imported ? l10n::text("settings.import.done.message")
+                                                        : l10n::text(result.error));
 }
 
 void MainComponent::exportSettings()
@@ -376,13 +464,13 @@ void MainComponent::exportSettings()
     if (encoded.status != SettingsTransferEncodeStatus::encoded || !encoded.document.has_value())
     {
         juce::AlertWindow::showMessageBoxAsync(
-            juce::MessageBoxIconType::WarningIcon, "Settings export failed",
-            juce::String::fromUTF8(encoded.error.c_str()));
+            juce::MessageBoxIconType::WarningIcon, l10n::text("settings.export.failed"),
+            l10n::text(encoded.error));
         return;
     }
 
     settingsTransferChooser = std::make_unique<juce::FileChooser>(
-        "Export settings",
+        l10n::text("settings.export"),
         juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
             .getChildFile("practice-takes.ptsettings"),
         "*.ptsettings", true);
@@ -409,11 +497,11 @@ void MainComponent::exportSettings()
                     ? juce::MessageBoxIconType::InfoIcon
                     : juce::MessageBoxIconType::WarningIcon,
                 result.status == SettingsTransferExportStatus::exported
-                    ? "Settings exported"
-                    : "Settings export failed",
+                    ? l10n::text("settings.export.done")
+                    : l10n::text("settings.export.failed"),
                 result.status == SettingsTransferExportStatus::exported
-                    ? "Your portable settings were exported successfully."
-                    : juce::String::fromUTF8(result.error.c_str()));
+                    ? l10n::text("settings.export.done.message")
+                    : l10n::text(result.error));
         });
 }
 
@@ -511,12 +599,10 @@ bool MainComponent::applyTransferredSettings(const SettingsTransferModel& model)
     savedSettingsBounds = validWindowBounds(state.settingsBounds);
     workspaceCatalog = state.workspaceCatalog;
 
-    // The imported input, with this machine's own output kept: a transfer file
-    // carries no output device (AudioDeviceStateTransfer.h).
-    const auto localState = audioInputService.createDeviceState();
-    if (auto audioState = AudioDeviceStateTransfer::withLocalOutputDevice(
-            state.audioDeviceState, localState.get());
-        audioState != nullptr)
+    // Every setting travels, the devices too. One that is not here falls back
+    // as a missing device always does: the default input, and a MIDI keyboard
+    // held as a selection that opens when it is plugged in.
+    if (auto audioState = juce::parseXML(state.audioDeviceState); audioState != nullptr)
     {
         audioInputService.applySavedDeviceState(*audioState);
     }
@@ -524,18 +610,52 @@ bool MainComponent::applyTransferredSettings(const SettingsTransferModel& model)
     {
         audioInputService.resetToDefaultInput();
     }
+    applyPracticePreferences(state);
 
-    // The MIDI selection is deliberately left alone. A transfer file moves
-    // settings between machines, and which MIDI keyboard is plugged into *this*
-    // one is not a setting that travels: importing someone else's would at best
-    // name a device that is not here, and would silently replace a working
-    // selection. The transfer codec therefore does not carry it, and this does
-    // not clear it. The same goes for the pedal threshold: it is calibration for
-    // a particular keyboard's pedal, and equally does not travel.
+    // An open Settings window -- the import is chosen from it -- shows the
+    // values it was built with, so it is rebuilt where it was.
+    if (settingsWindow != nullptr)
+    {
+        closeSettings();
+        showSettings();
+    }
     updateMicrophoneStateControl();
     updateMicrophoneWarning();
 
     return applyWorkspaceSnapshot(workspaceCatalog.active);
+}
+
+void MainComponent::applyPracticePreferences(const AppSettings::State& state)
+{
+    // The language is read at startup, before any window is built; a changed
+    // one shows from the next launch (MainComponentAppearance.cpp).
+    chosenLanguage = state.language;
+    l10n::setNoteNaming(
+        {static_cast<score::NoteNaming>(state.noteNaming),
+         static_cast<score::OctaveNumbering>(state.octaveNumbering)});
+
+    // The keyboard may not be plugged in yet, and that is not a failure: the
+    // service holds the selection and opens it when it appears.
+    midiInputService.selectDevice(state.midiInputDeviceIdentifier, state.midiInputDeviceName);
+    midiPedalDownThreshold = state.midiPedalDownThreshold;
+    practiceClock.setMetronomeEnabled(state.metronomeEnabled);
+    practiceClock.setMetronomeVolume(static_cast<float>(state.metronomeVolume));
+    practiceClock.setAccentEnabled(state.metronomeAccent);
+    practiceClock.setCountInBars(state.countInBars);
+    practiceClock.setPlaybackEnabled(state.playbackEnabled);
+    practiceClock.setPlaybackVolume(static_cast<float>(state.playbackVolume));
+    referencePitch.set(state.referencePitchHz);
+    {
+        evaluation::IntonationSettings intonation = takeRecorder.intonationSettings();
+        intonation.toleranceCents = state.inTuneCents;
+        intonation.nearPerfectCents = state.nearPerfectCents;
+        intonation.outOfTuneCents = state.outOfTuneCents;
+        takeRecorder.setIntonation(intonation);
+    }
+    takeRecorder.setMinimumLevelDb(state.minimumLevelDb);
+    takeRecorder.setCountInWhenPlaying(state.countInWhenRecordingDuringPlayback);
+    currentTarget.keepChosenWhenScoreOpens = state.keepTargetWhenScoreOpens;
+    currentTarget.followScoreWhilePlaying = state.targetFollowsScore;
 }
 
 void MainComponent::resetCurrentTool()
@@ -568,6 +688,12 @@ void MainComponent::resetAll()
 {
     setTheme(AppDefaults::theme);
     setTextScale(appearance::TextScale::defaultPercent);
+    l10n::setNoteNaming({});
+    chosenLanguage = {};
+    if (settingsWindow != nullptr)
+    {
+        settingsWindow->showNaming();
+    }
     selectedFullscreenMode = AppSettings::FullscreenMode::normal;
     resetAudio();
     currentTool = instanceIdToOpen(defaultToolId);
@@ -615,6 +741,9 @@ AppSettings::State MainComponent::captureSettingsState()
     AppSettings::State state;
     state.theme = currentTheme;
     state.textScalePercent = appLookAndFeel.textScale();
+    state.noteNaming = static_cast<int>(l10n::noteNaming().naming);
+    state.language = chosenLanguage;
+    state.octaveNumbering = static_cast<int>(l10n::noteNaming().octaves);
     state.microphoneMuted =
         sessionMicrophoneMuteEnabled ? persistedMicrophoneMuted : audioInputService.isMuted();
     state.inputGain = audioInputService.inputGain();
@@ -707,29 +836,7 @@ void MainComponent::loadSettings()
         pendingAudioDeviceState = std::move(xml);
     }
 
-    // The keyboard may not be plugged in yet, and that is not a failure: the
-    // service holds the selection and opens it when it appears.
-    midiInputService.selectDevice(
-        loaded.state.midiInputDeviceIdentifier, loaded.state.midiInputDeviceName);
-    midiPedalDownThreshold = loaded.state.midiPedalDownThreshold;
-    practiceClock.setMetronomeEnabled(loaded.state.metronomeEnabled);
-    practiceClock.setMetronomeVolume(static_cast<float>(loaded.state.metronomeVolume));
-    practiceClock.setAccentEnabled(loaded.state.metronomeAccent);
-    practiceClock.setCountInBars(loaded.state.countInBars);
-    practiceClock.setPlaybackEnabled(loaded.state.playbackEnabled);
-    practiceClock.setPlaybackVolume(static_cast<float>(loaded.state.playbackVolume));
-    referencePitch.set(loaded.state.referencePitchHz);
-    {
-        evaluation::IntonationSettings intonation = takeRecorder.intonationSettings();
-        intonation.toleranceCents = loaded.state.inTuneCents;
-        intonation.nearPerfectCents = loaded.state.nearPerfectCents;
-        intonation.outOfTuneCents = loaded.state.outOfTuneCents;
-        takeRecorder.setIntonation(intonation);
-    }
-    takeRecorder.setMinimumLevelDb(loaded.state.minimumLevelDb);
-    takeRecorder.setCountInWhenPlaying(loaded.state.countInWhenRecordingDuringPlayback);
-    currentTarget.keepChosenWhenScoreOpens = loaded.state.keepTargetWhenScoreOpens;
-    currentTarget.followScoreWhilePlaying = loaded.state.targetFollowsScore;
+    applyPracticePreferences(loaded.state);
     if (const auto sounding = pitch::parseNoteName(loaded.state.chosenTargetSounding.toStdString()))
     {
         const auto written = pitch::parseNoteName(loaded.state.chosenTargetWritten.toStdString());

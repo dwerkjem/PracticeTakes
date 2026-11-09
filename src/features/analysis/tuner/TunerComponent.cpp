@@ -2,9 +2,12 @@
 
 #include "../../../application/theme/PlusOrMinusCents.h"
 
+#include "../../../application/localisation/NoteNames.h"
 #include "../../../platform/pitch/TargetReading.h"
 #include "TargetPickerPanel.h"
+#include "TargetReadingText.h"
 
+#include "../../../application/localisation/Localisation.h"
 #include "TunerSettingsCodec.h"
 
 #include "application/theme/AppLookAndFeel.h"
@@ -43,9 +46,9 @@ class TunerComponent::ModeChooser final : public juce::Component
 #include <limits>
 
 // The thresholds that decide a glide from a misdetection, the smoothing, and
-// the note lock all live in PitchTracker now. noteNameForMidi comes from the
-// same header, so this file and TunerDrawing.cpp cannot disagree about the name
-// of a note -- they held separate identical copies before.
+// the note lock all live in PitchTracker now. A note is named by
+// l10n::heardNoteName in both this file and TunerDrawing.cpp, so they cannot
+// disagree about the name of a note -- they held separate copies before.
 
 //==============================================================================
 TunerComponent::TunerComponent(
@@ -67,17 +70,18 @@ TunerComponent::TunerComponent(
         addAndMakeVisible(label);
     };
 
-    configureLabel(displayModeLabel, "Display mode");
-    configureLabel(easingLabel, "Pitch easing");
-    configureLabel(averagingLabel, "Average window");
-    configureLabel(thresholdLabel, "Note switch");
-    configureLabel(dropoutLabel, "Dropout hold");
-    configureLabel(durationLabel, "Graph duration");
-    configureLabel(scaleLabel, "Bar/dial scale");
+    configureLabel(displayModeLabel, l10n::text("tuner.advanced.display-mode"));
+    configureLabel(easingLabel, l10n::text("tuner.advanced.easing"));
+    configureLabel(averagingLabel, l10n::text("tuner.advanced.averaging"));
+    configureLabel(thresholdLabel, l10n::text("tuner.advanced.note-switch"));
+    configureLabel(dropoutLabel, l10n::text("tuner.advanced.dropout"));
+    configureLabel(durationLabel, l10n::text("tuner.advanced.duration"));
+    configureLabel(scaleLabel, l10n::text("tuner.advanced.scale"));
 
-    displayModeBox.addItem("Graph", static_cast<int>(DisplayMode::graph));
-    displayModeBox.addItem("Bar", static_cast<int>(DisplayMode::bar));
-    displayModeBox.addItem("Meter", static_cast<int>(DisplayMode::meter));
+    displayModeBox.addItem(l10n::text("tuner.view.graph"), static_cast<int>(DisplayMode::graph));
+    // The tuner's bar view: a horizontal bar, not a measure ("score.bar").
+    displayModeBox.addItem(l10n::text("tuner.view.bar"), static_cast<int>(DisplayMode::bar));
+    displayModeBox.addItem(l10n::text("tuner.view.meter"), static_cast<int>(DisplayMode::meter));
     displayModeBox.setSelectedId(AppDefaults::Tuner::displayMode, juce::dontSendNotification);
     displayModeBox.onChange = [this]
     {
@@ -105,16 +109,22 @@ TunerComponent::TunerComponent(
             suffix);
     };
     configureFromSchema(easingSlider, &AppDefaults::TunerSettings::easing, "");
-    configureFromSchema(averagingSlider, &AppDefaults::TunerSettings::averaging, " samples");
-    configureFromSchema(thresholdSlider, &AppDefaults::TunerSettings::noteSwitchSemitones, " st");
-    configureFromSchema(dropoutSlider, &AppDefaults::TunerSettings::dropoutFrames, " frames");
-    configureFromSchema(durationSlider, &AppDefaults::TunerSettings::graphDurationSeconds, " sec");
+    configureFromSchema(
+        averagingSlider, &AppDefaults::TunerSettings::averaging,
+        l10n::text("tuner.advanced.averaging.suffix"));
+    configureFromSchema(
+        thresholdSlider, &AppDefaults::TunerSettings::noteSwitchSemitones,
+        l10n::text("tuner.advanced.note-switch.suffix"));
+    configureFromSchema(
+        dropoutSlider, &AppDefaults::TunerSettings::dropoutFrames,
+        l10n::text("tuner.advanced.dropout.suffix"));
+    configureFromSchema(
+        durationSlider, &AppDefaults::TunerSettings::graphDurationSeconds,
+        l10n::text("tuner.advanced.duration.suffix"));
     configureFromSchema(scaleSlider, &AppDefaults::TunerSettings::scaleCents, "");
     // "±50 ¢": how far either way the bar and the dial reach.
     showAsPlusOrMinusCents(scaleSlider);
-    scaleSlider.setTooltip(
-        "How far either way the bar and the dial reach, in cents: 50 is one note, flat "
-        "to sharp");
+    scaleSlider.setTooltip(l10n::text("tuner.advanced.scale.tooltip"));
     scaleSlider.onValueChange = [this] { repaint(); };
 
     clearGraphButton.onClick = [this]
@@ -431,12 +441,15 @@ std::vector<ToolComponent::MenuEntry> TunerComponent::optionsMenuEntries()
     { displayModeBox.setSelectedId(static_cast<int>(mode), juce::sendNotificationSync); };
 
     return {
-        {"Graph", [selectMode] { selectMode(DisplayMode::graph); },
+        {l10n::text("tuner.view.graph"), [selectMode] { selectMode(DisplayMode::graph); },
          currentMode == DisplayMode::graph},
-        {"Bar", [selectMode] { selectMode(DisplayMode::bar); }, currentMode == DisplayMode::bar},
-        {"Meter", [selectMode] { selectMode(DisplayMode::meter); },
+        {l10n::text("tuner.view.bar"), [selectMode] { selectMode(DisplayMode::bar); },
+         currentMode == DisplayMode::bar},
+        {l10n::text("tuner.view.meter"), [selectMode] { selectMode(DisplayMode::meter); },
          currentMode == DisplayMode::meter},
-        {areAdvancedSettingsExpanded ? "Hide advanced settings" : "Advanced settings",
+        {l10n::text(
+             areAdvancedSettingsExpanded ? l10n::key("tuner.menu.advanced.hide")
+                                         : l10n::key("tuner.menu.advanced.show")),
          [this]
          {
              areAdvancedSettingsExpanded = !areAdvancedSettingsExpanded;
@@ -444,53 +457,60 @@ std::vector<ToolComponent::MenuEntry> TunerComponent::optionsMenuEntries()
              resized();
              repaint();
          }},
-        {"Signs",
+        {l10n::text("tuner.menu.signs"),
          {},
          false,
          true,
          {
-             {"Off", [this] { chooseSigns(Signs::off); }, signs == Signs::off},
-             {"Sharp and flat", [this] { chooseSigns(Signs::sharpFlat); },
+             {l10n::text("tuner.menu.off"), [this] { chooseSigns(Signs::off); },
+              signs == Signs::off},
+             {l10n::text("tuner.menu.signs.sharp-flat"), [this] { chooseSigns(Signs::sharpFlat); },
               signs == Signs::sharpFlat},
-             {"Arrows: which way to go", [this] { chooseSigns(Signs::arrows); },
+             {l10n::text("tuner.menu.signs.arrows"), [this] { chooseSigns(Signs::arrows); },
               signs == Signs::arrows},
          }},
-        {"Centre on the target note",
+        {l10n::text("tuner.menu.centre"),
          [this]
          {
              targetCentred = !targetCentred;
              repaint();
          },
          targetCentred},
-        {"Show how far off",
+        {l10n::text("tuner.menu.offset"),
          [this]
          {
              offsetShown = !offsetShown;
              repaint();
          },
          offsetShown},
-        {"Light both halves",
+        {l10n::text("tuner.menu.both-halves"),
          [this]
          {
              bothHalvesLit = !bothHalvesLit;
              repaint();
          },
          bothHalvesLit},
-        {"Marker",
+        {l10n::text("tuner.menu.marker"),
          {},
          false,
          true,
          {
-             {"Off", [this] { chooseMarker(Marker::off); }, marker == Marker::off},
-             {"Dot", [this] { chooseMarker(Marker::dot); }, marker == Marker::dot},
-             {"Arrow", [this] { chooseMarker(Marker::arrow); }, marker == Marker::arrow},
-             {"Line", [this] { chooseMarker(Marker::line); }, marker == Marker::line},
-             {"Ring", [this] { chooseMarker(Marker::ring); }, marker == Marker::ring},
-             {"Diamond", [this] { chooseMarker(Marker::diamond); }, marker == Marker::diamond},
-             {"Crosshair", [this] { chooseMarker(Marker::crosshair); },
-              marker == Marker::crosshair},
+             {l10n::text("tuner.menu.off"), [this] { chooseMarker(Marker::off); },
+              marker == Marker::off},
+             {l10n::text("tuner.menu.marker.dot"), [this] { chooseMarker(Marker::dot); },
+              marker == Marker::dot},
+             {l10n::text("tuner.menu.marker.arrow"), [this] { chooseMarker(Marker::arrow); },
+              marker == Marker::arrow},
+             {l10n::text("tuner.menu.marker.line"), [this] { chooseMarker(Marker::line); },
+              marker == Marker::line},
+             {l10n::text("tuner.menu.marker.ring"), [this] { chooseMarker(Marker::ring); },
+              marker == Marker::ring},
+             {l10n::text("tuner.menu.marker.diamond"), [this] { chooseMarker(Marker::diamond); },
+              marker == Marker::diamond},
+             {l10n::text("tuner.menu.marker.crosshair"),
+              [this] { chooseMarker(Marker::crosshair); }, marker == Marker::crosshair},
          }},
-        {juce::String::fromUTF8("Choose target\xe2\x80\xa6"), [this] { openTargetPicker(); }}};
+        {l10n::text("tuner.menu.choose-target"), [this] { openTargetPicker(); }}};
 }
 
 void TunerComponent::chooseMarker(Marker chosen)
@@ -560,7 +580,7 @@ juce::String TunerComponent::statusText() const
     // empty tool asking to be used.
     if (!hasSignal && !hasGraphHistory())
     {
-        return "Play or sing a sustained note";
+        return l10n::text("tuner.status.prompt");
     }
 
     // Blank rather than a placeholder: the status line still holds its row
@@ -575,9 +595,10 @@ juce::String TunerComponent::statusText() const
     // One space, not the three the design's HTML carries -- a browser collapses
     // runs of whitespace and renders exactly one, which is what the reference
     // actually shows. JUCE draws all three.
-    const auto centsSign = displayedCents > 0.0 ? "+" : "";
-    return juce::String(displayedFrequency, 1) + " Hz " + centsSign +
-           juce::String(displayedCents, 1) + " cents";
+    const auto centsSign = displayedCents > 0.0 ? juce::String("+") : juce::String();
+    return l10n::format(
+        "tuner.status.reading", {{"frequency", l10n::number(displayedFrequency, 1)},
+                                 {"cents", centsSign + l10n::number(displayedCents, 1)}});
 }
 
 namespace
@@ -598,13 +619,13 @@ juce::String TunerComponent::targetText() const
     const std::shared_ptr<const pitch::Target> aimingAt = target.target();
     if (aimingAt == nullptr)
     {
-        return juce::String::fromUTF8(target.whyNone().c_str());
+        return l10n::text(target.whyNone());
     }
-    return juce::String::fromUTF8(
+    return tuner::targetReadingText(
+        *aimingAt,
         pitch::readAgainstTarget(
             *aimingAt, heardPitch(hasSignal, hasLockedMidiNote, lockedMidiNote, displayedCents),
-            zoneLimits().nearPerfectCents)
-            .text.c_str());
+            zoneLimits().nearPerfectCents));
 }
 
 bool TunerComponent::onTarget() const
@@ -641,16 +662,16 @@ void TunerComponent::audioInputStateChanged(AudioInputService::InputState state)
     switch (state)
     {
     case AudioInputService::InputState::disconnected:
-        audioErrorMessage = "Microphone disconnected.";
+        audioErrorMessage = l10n::text("audio.input.disconnected");
         break;
     case AudioInputService::InputState::opening:
-        audioErrorMessage = "Waiting for the microphone.";
+        audioErrorMessage = l10n::text("audio.input.opening");
         break;
     case AudioInputService::InputState::muted:
-        audioErrorMessage = "Microphone muted.";
+        audioErrorMessage = l10n::text("audio.input.muted");
         break;
     case AudioInputService::InputState::clipping:
-        audioErrorMessage = "Microphone input is clipping.";
+        audioErrorMessage = l10n::text("audio.input.clipping");
         break;
     case AudioInputService::InputState::active:
         audioErrorMessage.clear();
@@ -695,7 +716,7 @@ void TunerComponent::applyTrackerUpdate(const PitchTracker::Update& update)
     lockedMidiNote = update.displayedMidiNote;
     hasLockedMidiNote = update.hasDisplayedNote;
     displayedNote = update.hasDisplayedNote
-                        ? juce::String(noteNameForMidi(update.displayedMidiNote))
+                        ? l10n::heardNoteName(update.displayedMidiNote, target.keyFifths)
                         : juce::String("--");
     steadyReading.update(
         update.hasSignal && update.hasDisplayedNote ? std::optional<int>(update.displayedMidiNote)

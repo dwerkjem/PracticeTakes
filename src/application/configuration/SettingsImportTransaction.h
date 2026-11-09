@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../localisation/LocalisationRules.h"
 #include "SettingsTransferCodec.h"
 
 #include <juce_core/juce_core.h>
@@ -63,7 +64,7 @@ class SettingsImportTransaction
         {
             return {
                 .status = SettingsImportStatus::applyFailed,
-                .error = "Settings import is not available"};
+                .error = std::string(l10n::key("settings.import.error.unavailable"))};
         }
 
         const ScopedSaveSuppression saveSuppression(automaticSaveEnabled);
@@ -74,12 +75,11 @@ class SettingsImportTransaction
             {
                 return {
                     .status = SettingsImportStatus::rollbackFailed,
-                    .error = "Settings import failed and the previous live settings could not be "
-                             "restored"};
+                    .error = std::string(l10n::key("settings.import.error.rollback-failed"))};
             }
             return {
                 .status = SettingsImportStatus::applyFailed,
-                .error = "The imported settings could not be applied"};
+                .error = std::string(l10n::key("settings.import.error.not-applied"))};
         }
         if (!callbacks.persist(candidate))
         {
@@ -87,12 +87,12 @@ class SettingsImportTransaction
             {
                 return {
                     .status = SettingsImportStatus::rollbackFailed,
-                    .error = "Settings import could not be saved and the previous live settings "
-                             "could not be restored"};
+                    .error =
+                        std::string(l10n::key("settings.import.error.not-saved-rollback-failed"))};
             }
             return {
                 .status = SettingsImportStatus::persistenceFailed,
-                .error = "The imported settings could not be saved"};
+                .error = std::string(l10n::key("settings.import.error.not-saved"))};
         }
 
         return {.status = SettingsImportStatus::imported, .error = {}};
@@ -114,7 +114,7 @@ class SettingsImportTransaction
             return {
                 .status = SettingsImportStageStatus::ioError,
                 .model = {},
-                .error = "The settings file could not be read"};
+                .error = std::string(l10n::key("settings.import.error.unreadable"))};
         }
 
         juce::MemoryBlock data;
@@ -126,7 +126,7 @@ class SettingsImportTransaction
             return {
                 .status = SettingsImportStageStatus::tooLarge,
                 .model = {},
-                .error = "The settings file is too large"};
+                .error = std::string(l10n::key("settings.import.error.too-large"))};
         }
 
         const auto decoded = SettingsTransferCodec::decode(

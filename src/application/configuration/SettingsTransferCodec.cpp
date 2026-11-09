@@ -1,5 +1,7 @@
 #include "SettingsTransferCodec.h"
 
+#include "../../platform/pitch/IntonationZone.h"
+#include "../localisation/LocalisationRules.h"
 #include "AudioDeviceStateTransfer.h"
 
 #include <juce_core/juce_core.h>
@@ -168,17 +170,17 @@ validateImportedWorkspaceNames(const juce::var& workspaceValue, std::string& err
             juce::String::fromUTF8(name.c_str()).trim().toLowerCase().toStdString();
         if (!ids.insert(id).second)
         {
-            error = "Settings transfer contains duplicate workspace IDs";
+            error = std::string(l10n::key("settings.transfer.error.duplicate-workspace-ids"));
             return false;
         }
         if (!names.insert(foldedName).second)
         {
-            error = "Settings transfer contains duplicate workspace names";
+            error = std::string(l10n::key("settings.transfer.error.duplicate-workspace-names"));
             return false;
         }
         if (reservedNames.contains(foldedName))
         {
-            error = "Settings transfer contains a reserved built-in workspace name";
+            error = std::string(l10n::key("settings.transfer.error.reserved-workspace-name"));
             return false;
         }
     }
@@ -196,6 +198,101 @@ validateImportedWorkspaceNames(const juce::var& workspaceValue, std::string& err
         return AppSettings::RecentTool::harmonics;
     }
     return AppSettings::RecentTool::tuner;
+}
+
+// The settings a bundle carries since every setting travels: in range as the
+// settings file reads them (AppSettings::load), and the defaults for any one
+// missing. A bundle with no `practice` section is from before, and says so.
+void readAllSettings(
+    const juce::DynamicObject& settings,
+    const juce::DynamicObject& appearance,
+    SettingsTransferModel& model)
+{
+    auto& state = model.state;
+    model.carriesAllSettings = hasProperty(settings, "practice");
+
+    const auto section = [&settings](const char* name) -> const juce::DynamicObject*
+    { return hasProperty(settings, name) ? property(settings, name).getDynamicObject() : nullptr; };
+    const auto number = [](const juce::DynamicObject* object, const char* name, double fallback,
+                           double lowest, double highest)
+    {
+        double value = fallback;
+        if (object != nullptr && hasProperty(*object, name) &&
+            readNumber(property(*object, name), value) && std::isfinite(value))
+        {
+            return juce::jlimit(lowest, highest, value);
+        }
+        return fallback;
+    };
+    const auto boolean = [](const juce::DynamicObject* object, const char* name, bool fallback)
+    {
+        bool value = fallback;
+        if (object != nullptr && hasProperty(*object, name) &&
+            readBoolean(property(*object, name), value))
+        {
+            return value;
+        }
+        return fallback;
+    };
+    const auto text = [](const juce::DynamicObject* object, const char* name)
+    {
+        std::string value;
+        if (object != nullptr && hasProperty(*object, name) &&
+            readString(property(*object, name), value))
+        {
+            return juce::String::fromUTF8(value.c_str());
+        }
+        return juce::String();
+    };
+
+    const juce::String language = text(&appearance, "language");
+    state.language =
+        language.containsOnly("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
+            ? language
+            : juce::String();
+    state.noteNaming = static_cast<int>(number(&appearance, "noteNaming", 0.0, 0.0, 2.0));
+    state.octaveNumbering = static_cast<int>(number(&appearance, "octaveNumbering", 0.0, 0.0, 2.0));
+
+    const auto* metronome = section("metronome");
+    state.metronomeEnabled = boolean(metronome, "enabled", AppDefaults::Metronome::enabled);
+    state.metronomeVolume = number(metronome, "volume", AppDefaults::Metronome::volume, 0.0, 1.0);
+    state.metronomeAccent = boolean(metronome, "accent", AppDefaults::Metronome::accent);
+    state.countInBars = static_cast<int>(
+        number(metronome, "countInBars", AppDefaults::Metronome::countInBars, 0.0, 4.0));
+
+    const auto* playback = section("playback");
+    state.playbackEnabled = boolean(playback, "enabled", AppDefaults::Playback::enabled);
+    state.playbackVolume = number(playback, "volume", AppDefaults::Playback::volume, 0.0, 1.0);
+
+    const auto* practice = section("practice");
+    state.referencePitchHz =
+        number(practice, "referencePitchHz", AppDefaults::referencePitchHz, 415.0, 466.0);
+    const auto limits = pitch::orderedLimits(
+        {number(
+             practice, "nearPerfectCents", AppDefaults::nearPerfectCents,
+             AppDefaults::minimumNearPerfectCents, AppDefaults::maximumNearPerfectCents),
+         number(
+             practice, "inTuneCents", AppDefaults::inTuneCents, AppDefaults::minimumInTuneCents,
+             AppDefaults::maximumInTuneCents),
+         number(
+             practice, "outOfTuneCents", AppDefaults::outOfTuneCents,
+             AppDefaults::minimumOutOfTuneCents, AppDefaults::maximumOutOfTuneCents)});
+    state.inTuneCents = limits.toleranceCents;
+    state.nearPerfectCents = limits.nearPerfectCents;
+    state.outOfTuneCents = limits.outOfTuneCents;
+    state.minimumLevelDb = number(
+        practice, "minimumLevelDb", AppDefaults::minimumLevelDb, AppDefaults::lowestMinimumLevelDb,
+        AppDefaults::highestMinimumLevelDb);
+    state.keepTargetWhenScoreOpens = boolean(practice, "keepTargetWhenScoreOpens", false);
+    state.targetFollowsScore = boolean(practice, "targetFollowsScore", true);
+    state.countInWhenRecordingDuringPlayback =
+        boolean(practice, "countInWhenRecordingDuringPlayback", false);
+
+    const auto* midi = section("midi");
+    state.midiInputDeviceIdentifier = text(midi, "deviceIdentifier");
+    state.midiInputDeviceName = text(midi, "deviceName");
+    state.midiPedalDownThreshold = static_cast<int>(
+        number(midi, "pedalDownThreshold", AppDefaults::Midi::pedalDownThreshold, 0.0, 127.0));
 }
 
 [[nodiscard]] juce::var encodeWorkspaceCatalog(const WorkspaceCatalog& catalog)
@@ -218,7 +315,7 @@ SettingsTransferEncodeResult SettingsTransferCodec::encode(const SettingsTransfe
         return {
             .status = SettingsTransferEncodeStatus::invalidModel,
             .document = std::nullopt,
-            .error = "Settings transfer model schema is unsupported"};
+            .error = std::string(l10n::key("settings.transfer.error.model-unsupported"))};
     }
 
     auto root = std::make_unique<juce::DynamicObject>();
@@ -228,19 +325,52 @@ SettingsTransferEncodeResult SettingsTransferCodec::encode(const SettingsTransfe
 
     auto settings = std::make_unique<juce::DynamicObject>();
 
+    const auto& state = model.state;
     auto appearance = std::make_unique<juce::DynamicObject>();
-    appearance->setProperty("theme", themeName(model.state.theme));
-    appearance->setProperty("textScale", model.state.textScalePercent);
+    appearance->setProperty("theme", themeName(state.theme));
+    appearance->setProperty("textScale", state.textScalePercent);
+    appearance->setProperty("language", state.language);
+    appearance->setProperty("noteNaming", state.noteNaming);
+    appearance->setProperty("octaveNumbering", state.octaveNumbering);
     settings->setProperty("appearance", appearance.release());
 
+    // Every setting travels, the devices too: an import on a machine without
+    // them falls back as a missing device always has.
     auto audio = std::make_unique<juce::DynamicObject>();
-    audio->setProperty("microphoneMuted", model.state.microphoneMuted);
-    audio->setProperty("inputGain", model.state.inputGain);
-    // Without the output device: the speakers belong to this machine, like
-    // the MIDI keyboard, and do not travel (AudioDeviceStateTransfer.h).
-    audio->setProperty(
-        "deviceState", AudioDeviceStateTransfer::withoutOutputDevice(model.state.audioDeviceState));
+    audio->setProperty("microphoneMuted", state.microphoneMuted);
+    audio->setProperty("inputGain", state.inputGain);
+    audio->setProperty("deviceState", state.audioDeviceState);
     settings->setProperty("audio", audio.release());
+
+    auto metronome = std::make_unique<juce::DynamicObject>();
+    metronome->setProperty("enabled", state.metronomeEnabled);
+    metronome->setProperty("volume", state.metronomeVolume);
+    metronome->setProperty("accent", state.metronomeAccent);
+    metronome->setProperty("countInBars", state.countInBars);
+    settings->setProperty("metronome", metronome.release());
+
+    auto playback = std::make_unique<juce::DynamicObject>();
+    playback->setProperty("enabled", state.playbackEnabled);
+    playback->setProperty("volume", state.playbackVolume);
+    settings->setProperty("playback", playback.release());
+
+    auto practice = std::make_unique<juce::DynamicObject>();
+    practice->setProperty("referencePitchHz", state.referencePitchHz);
+    practice->setProperty("nearPerfectCents", state.nearPerfectCents);
+    practice->setProperty("inTuneCents", state.inTuneCents);
+    practice->setProperty("outOfTuneCents", state.outOfTuneCents);
+    practice->setProperty("minimumLevelDb", state.minimumLevelDb);
+    practice->setProperty("keepTargetWhenScoreOpens", state.keepTargetWhenScoreOpens);
+    practice->setProperty("targetFollowsScore", state.targetFollowsScore);
+    practice->setProperty(
+        "countInWhenRecordingDuringPlayback", state.countInWhenRecordingDuringPlayback);
+    settings->setProperty("practice", practice.release());
+
+    auto midi = std::make_unique<juce::DynamicObject>();
+    midi->setProperty("deviceIdentifier", state.midiInputDeviceIdentifier);
+    midi->setProperty("deviceName", state.midiInputDeviceName);
+    midi->setProperty("pedalDownThreshold", state.midiPedalDownThreshold);
+    settings->setProperty("midi", midi.release());
 
     auto window = std::make_unique<juce::DynamicObject>();
     window->setProperty("fullscreenMode", fullscreenModeName(model.state.fullscreenMode));
@@ -266,7 +396,7 @@ SettingsTransferEncodeResult SettingsTransferCodec::encode(const SettingsTransfe
         return {
             .status = SettingsTransferEncodeStatus::tooLarge,
             .document = std::nullopt,
-            .error = "Settings transfer document exceeds the 4 MiB limit"};
+            .error = std::string(l10n::key("settings.transfer.error.too-large"))};
     }
 
     return {
@@ -285,7 +415,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::tooLarge,
             .model = std::nullopt,
-            .error = "Settings transfer document exceeds the 4 MiB limit"};
+            .error = std::string(l10n::key("settings.transfer.error.too-large"))};
     }
 
     juce::var parsed;
@@ -295,7 +425,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = parseResult.getErrorMessage().toStdString()};
+            .error = std::string(l10n::key("settings.transfer.error.not-json"))};
     }
 
     const auto* root = parsed.getDynamicObject();
@@ -309,7 +439,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = "Settings transfer document is missing required fields"};
+            .error = std::string(l10n::key("settings.transfer.error.missing-fields"))};
     }
 
     if (format != formatMarker)
@@ -317,21 +447,21 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = "Settings transfer format marker is invalid"};
+            .error = std::string(l10n::key("settings.transfer.error.not-a-settings-file"))};
     }
     if (schemaVersion > SettingsTransferModel::currentSchemaVersion)
     {
         return {
             .status = SettingsTransferDecodeStatus::newerSchema,
             .model = std::nullopt,
-            .error = "Settings transfer uses a newer schema"};
+            .error = std::string(l10n::key("settings.transfer.error.newer"))};
     }
     if (schemaVersion < 1)
     {
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = "Settings transfer schema is unsupported"};
+            .error = std::string(l10n::key("settings.transfer.error.unsupported"))};
     }
 
     SettingsTransferModel model;
@@ -341,7 +471,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = "Settings transfer applicationVersion is invalid"};
+            .error = std::string(l10n::key("settings.transfer.error.version"))};
     }
 
     const auto* settings = property(*root, "settings").getDynamicObject();
@@ -352,7 +482,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = "Settings transfer settings section is incomplete"};
+            .error = std::string(l10n::key("settings.transfer.error.incomplete"))};
     }
 
     const auto* appearance = property(*settings, "appearance").getDynamicObject();
@@ -364,7 +494,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = "Settings transfer sections must be objects"};
+            .error = std::string(l10n::key("settings.transfer.error.sections"))};
     }
 
     std::string theme;
@@ -396,7 +526,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = "Settings transfer primitive fields are invalid"};
+            .error = std::string(l10n::key("settings.transfer.error.fields"))};
     }
 
     const auto* floatingBounds =
@@ -414,7 +544,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
             return {
                 .status = SettingsTransferDecodeStatus::invalid,
                 .model = std::nullopt,
-                .error = "Settings transfer tuner floating bounds are invalid"};
+                .error = std::string(l10n::key("settings.transfer.error.tuner-bounds"))};
         }
         if (hasProperty(*floatingBounds, "spectrogram") &&
             !readString(property(*floatingBounds, "spectrogram"), spectrogramBounds))
@@ -422,7 +552,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
             return {
                 .status = SettingsTransferDecodeStatus::invalid,
                 .model = std::nullopt,
-                .error = "Settings transfer spectrogram floating bounds are invalid"};
+                .error = std::string(l10n::key("settings.transfer.error.spectrogram-bounds"))};
         }
         if (hasProperty(*floatingBounds, "harmonicAnalyzer") &&
             !readString(property(*floatingBounds, "harmonicAnalyzer"), harmonicBounds))
@@ -430,7 +560,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
             return {
                 .status = SettingsTransferDecodeStatus::invalid,
                 .model = std::nullopt,
-                .error = "Settings transfer harmonic floating bounds are invalid"};
+                .error = std::string(l10n::key("settings.transfer.error.harmonics-bounds"))};
         }
     }
 
@@ -473,6 +603,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         }
         model.state.textScalePercent = appearance::TextScale::snapped(textScale);
     }
+    readAllSettings(*settings, *appearance, model);
     model.state.microphoneMuted = microphoneMuted;
     model.state.inputGain = inputGain;
     model.state.audioDeviceState = juce::String::fromUTF8(deviceState.c_str());
@@ -486,4 +617,50 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
     model.feedbackInvitationsDisabled = invitationsDisabled;
 
     return {.status = SettingsTransferDecodeStatus::loaded, .model = std::move(model), .error = {}};
+}
+
+SettingsTransferModel SettingsTransferCodec::withLocalPreferences(
+    SettingsTransferModel imported,
+    const AppSettings::State& local)
+{
+    auto& state = imported.state;
+    // The note being practised is what this machine is doing now, not a
+    // preference, so no bundle carries it and an import keeps it.
+    state.chosenTargetSounding = local.chosenTargetSounding;
+    state.chosenTargetWritten = local.chosenTargetWritten;
+    if (imported.carriesAllSettings)
+    {
+        return imported;
+    }
+    state.language = local.language;
+    state.noteNaming = local.noteNaming;
+    state.octaveNumbering = local.octaveNumbering;
+    state.metronomeEnabled = local.metronomeEnabled;
+    state.metronomeVolume = local.metronomeVolume;
+    state.metronomeAccent = local.metronomeAccent;
+    state.countInBars = local.countInBars;
+    state.playbackEnabled = local.playbackEnabled;
+    state.playbackVolume = local.playbackVolume;
+    state.referencePitchHz = local.referencePitchHz;
+    state.nearPerfectCents = local.nearPerfectCents;
+    state.inTuneCents = local.inTuneCents;
+    state.outOfTuneCents = local.outOfTuneCents;
+    state.minimumLevelDb = local.minimumLevelDb;
+    state.keepTargetWhenScoreOpens = local.keepTargetWhenScoreOpens;
+    state.targetFollowsScore = local.targetFollowsScore;
+    state.countInWhenRecordingDuringPlayback = local.countInWhenRecordingDuringPlayback;
+    state.midiInputDeviceIdentifier = local.midiInputDeviceIdentifier;
+    state.midiInputDeviceName = local.midiInputDeviceName;
+    state.midiPedalDownThreshold = local.midiPedalDownThreshold;
+    // A bundle from before outputs travelled names none: this machine's stays.
+    if (const auto local_ = juce::parseXML(local.audioDeviceState))
+    {
+        if (auto merged = AudioDeviceStateTransfer::withLocalOutputDevice(
+                state.audioDeviceState, local_.get()))
+        {
+            state.audioDeviceState = merged->toString(juce::XmlElement::TextFormat().singleLine());
+        }
+    }
+    imported.carriesAllSettings = true;
+    return imported;
 }

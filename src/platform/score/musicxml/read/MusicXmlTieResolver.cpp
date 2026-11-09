@@ -1,4 +1,5 @@
 #include "MusicXmlTieResolver.h"
+#include "application/localisation/LocalisationRules.h"
 
 #include <map>
 #include <utility>
@@ -69,8 +70,7 @@ void resolveTies(
                         {
                             context.diagnostics.addRepair(
                                 locationOf(part, part.measures[measureIndex], voice.number), "tie",
-                                "A tie ends on a note that nothing ties to, so the tie was "
-                                "dropped.");
+                                l10n::key("score.import.repair.tie-no-start"));
                         }
                         else
                         {
@@ -93,7 +93,7 @@ void resolveTies(
     {
         context.diagnostics.addRepair(
             locationOf(part, part.measures[reference.measureIndex], key.first), "tie",
-            "A tie starts on a note and never ends, so the tie was dropped.");
+            l10n::key("score.import.repair.tie-no-end"));
     }
 }
 } // namespace score::musicxml

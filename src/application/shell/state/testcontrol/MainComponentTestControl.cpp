@@ -244,31 +244,9 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
 
         if (!state.settingsPanel.empty())
         {
-            // Panel names are the tab captions in SettingsWindow. Mapping them
-            // here rather than storing captions in the approved list keeps the
-            // list independent of the UI's wording.
-            juce::String panel;
-
-            if (state.settingsPanel == "audio-device")
-            {
-                panel = "Audio";
-            }
-            else if (state.settingsPanel == "appearance")
-            {
-                panel = "Appearance";
-            }
-            else if (state.settingsPanel == "midi")
-            {
-                panel = "MIDI";
-            }
-            else if (state.settingsPanel == "practice")
-            {
-                panel = "Practice";
-            }
-            else if (state.settingsPanel == "reset")
-            {
-                panel = "Reset & support";
-            }
+            // The approved list names a panel by identifier, which
+            // SettingsWindow matches without reading its translated caption.
+            const juce::String panel(state.settingsPanel);
 
             if (panel.isEmpty() || settingsWindow == nullptr || !settingsWindow->showPanel(panel))
             {

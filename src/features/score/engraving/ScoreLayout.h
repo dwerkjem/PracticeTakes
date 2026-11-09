@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -8,6 +10,7 @@
 #include "NoteValue.h"
 #include "StaffGeometry.h"
 #include "StaffPosition.h"
+#include "application/localisation/LocalisationRules.h"
 #include "platform/score/LyricSyllable.h"
 #include "platform/score/ScoreAttributes.h"
 #include "platform/score/ScoreEvent.h"
@@ -27,6 +30,22 @@
 // multiplies by one scale factor, and that factor is zoom.
 namespace engraving
 {
+// One thing the layout did not draw, or drew differently, said to a reader.
+struct Notice
+{
+    // A catalogue identifier: a plural one when `count` is set.
+    std::string code;
+    l10n::NamedArguments arguments;
+
+    // Arguments whose values are themselves catalogue identifiers -- a phrase
+    // such as "a percussion clef" -- rendered before they are placed.
+    l10n::NamedArguments phraseArguments;
+
+    std::optional<std::int64_t> count;
+
+    [[nodiscard]] bool operator==(const Notice&) const = default;
+};
+
 enum class BarlineKind
 {
     single,
@@ -747,13 +766,14 @@ struct ScoreLayout
     // `System::staffLyricVerses`.
     int lyricVerseCount = 0;
 
-    // Everything in the open score this pass did not draw, as sentences meant
-    // to be shown to a user.
+    // Everything in the open score this pass did not draw, as findings meant
+    // to be shown to a user: each a catalogue identifier and what it names,
+    // put into words by the view (openspec/changes/archive/2026-11-09-internationalization).
     //
     // This list is the reason a first pass of a renderer is an acceptable thing
     // to ship. #200's acceptance criteria already state the rule in the general
     // case: content must be "either rendered correctly or reported, never
     // silently misplaced".
-    std::vector<std::string> notices;
+    std::vector<Notice> notices;
 };
 } // namespace engraving

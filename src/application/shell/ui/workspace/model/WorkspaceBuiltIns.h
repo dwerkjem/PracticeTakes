@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../../../localisation/LocalisationRules.h"
 #include "WorkspaceDocuments.h"
 
 #include <string_view>
@@ -80,6 +81,30 @@ class WorkspaceBuiltIns
             return definitions;
         }();
         return builtIns;
+    }
+
+    // The catalogue identifier of a built-in workspace's name, as shown.
+    // `name` stays in English: it is what a user's own workspace may not be
+    // called, in a settings file read by a copy in any language.
+    [[nodiscard]] static std::string_view nameKey(std::string_view id)
+    {
+        if (id == "pitch-practice")
+        {
+            return l10n::key("workspace.built-in.pitch-practice");
+        }
+        if (id == "vocal-warm-up")
+        {
+            return l10n::key("workspace.built-in.vocal-warm-up");
+        }
+        if (id == "spectrum-analysis")
+        {
+            return l10n::key("workspace.built-in.spectrum-analysis");
+        }
+        if (id == "performance-preparation")
+        {
+            return l10n::key("workspace.built-in.performance-preparation");
+        }
+        return {};
     }
 
     [[nodiscard]] static const NamedWorkspace* find(std::string_view id)

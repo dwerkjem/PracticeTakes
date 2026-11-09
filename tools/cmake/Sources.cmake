@@ -79,9 +79,19 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/ui/workspace/shell/MainComponentWorkspaceDrag.cpp
     src/application/shell/ui/workspace/shell/MainComponentWorkspaceLayout.cpp
     src/application/shell/ui/workspace/shell/MainComponentWorkspaceMenu.cpp
+    src/application/shell/ui/workspace/shell/WorkspaceActionText.h
     src/application/shell/ui/workspace/shell/MainComponentWorkspaceManagement.cpp
     src/application/shell/ui/workspace/shell/MainComponentWorkspacePresentation.cpp
     src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp
+    src/application/localisation/Localisation.cpp
+    src/application/localisation/Localisation.h
+    src/application/localisation/LocalisationRules.h
+    src/application/localisation/NoteNames.cpp
+    src/application/localisation/NoteNames.h
+    src/application/localisation/PlaybackText.h
+    src/application/localisation/Pseudolocale.h
+    src/application/localisation/TakeText.cpp
+    src/application/localisation/TakeText.h
     src/application/testcontrol/ApprovedWindowStates.cpp
     src/application/testcontrol/ApprovedWindowStates.h
     src/application/testcontrol/SyntheticTake.h
@@ -95,6 +105,8 @@ set(PRACTICE_TAKES_SOURCES
     src/application/testcontrol/TestControlSession.h
     src/application/testcontrol/TestControlTarget.h
     src/application/theme/AppLookAndFeel.cpp
+    src/application/theme/Icons.cpp
+    src/application/theme/Icons.h
     src/application/theme/MiniStaff.cpp
     src/application/theme/MiniStaff.h
     src/application/theme/PlusOrMinusCents.h
@@ -123,6 +135,7 @@ set(PRACTICE_TAKES_SOURCES
     src/features/analysis/harmonics/HarmonicAnalyzerComponent.cpp
     src/features/analysis/harmonics/HarmonicAnalyzerComponent.h
     src/features/analysis/tuner/TargetPickerPanel.h
+    src/features/analysis/tuner/TargetReadingText.h
     src/features/analysis/tuner/TunerComponent.cpp
     src/features/analysis/tuner/TunerComponent.h
     src/features/analysis/tuner/TunerSettingsCodec.cpp
@@ -133,6 +146,7 @@ set(PRACTICE_TAKES_SOURCES
     src/features/review/TakeReviewComponent.h
     src/features/score/MusicFont.cpp
     src/features/score/MusicFont.h
+    src/features/score/NoticeText.h
     src/features/score/ScoreGlyphPainter.cpp
     src/features/score/ScoreGlyphPainter.h
     src/features/score/ScoreViewComponent.cpp
@@ -249,6 +263,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/score/PartTimeline.cpp
     src/platform/score/PartTimeline.h
     src/platform/score/PitchNames.h
+    src/platform/score/PitchNaming.h
     src/platform/score/Score.h
     src/platform/score/ScoreAttributes.h
     src/platform/score/ScoreBuilder.cpp
@@ -333,11 +348,18 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotApplyTests.cpp
     src/tests/application/shell/ui/workspace/model/WorkspaceSnapshotCaptureTests.cpp
     src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
+    src/tests/application/localisation/LocalisationRulesTests.cpp
+    src/tests/application/localisation/LocalisationTests.cpp
+    src/tests/application/localisation/NoteNamesTests.cpp
+    src/tests/application/localisation/PlaybackTextTests.cpp
+    src/tests/application/localisation/PseudolocaleTests.cpp
+    src/tests/application/localisation/TakeTextTests.cpp
     src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp
     src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp
     src/tests/application/testcontrol/SyntheticTakeTests.cpp
     src/tests/application/testcontrol/ApprovedStatesManifestTests.cpp
     src/tests/application/theme/AppLookAndFeelTests.cpp
+    src/tests/application/theme/IconsTests.cpp
     src/tests/application/theme/MiniStaffTests.cpp
     src/tests/application/tools/CompactPresentationTests.cpp
     src/tests/application/tools/ToolCatalogTests.cpp
@@ -355,6 +377,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
     src/tests/features/analysis/tuner/TunerSettingsCodecTests.cpp
     src/tests/features/analysis/tuner/TunerZonesTests.cpp
+    src/tests/features/analysis/tuner/TargetReadingTextTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
     src/tests/features/level/InputLevelSettingsTests.cpp
     src/tests/features/notes/NoteViewModelTests.cpp
@@ -402,6 +425,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/score/CurrentScoreTests.cpp
     src/tests/platform/score/MusicalTimeTests.cpp
     src/tests/platform/score/PartTimelineTests.cpp
+    src/tests/platform/score/PitchNamingTests.cpp
     src/tests/platform/score/PitchNamesTests.cpp
     src/tests/platform/score/PitchTests.cpp
     src/tests/platform/score/ScoreInvariantsTests.cpp
@@ -438,6 +462,9 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/application/configuration/SettingsPersistence.cpp
     src/application/configuration/SettingsTransferCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.cpp
+    src/application/localisation/Localisation.cpp
+    src/application/localisation/NoteNames.cpp
+    src/application/localisation/TakeText.cpp
     src/application/shell/ui/score/BundledSampleScore.cpp
     src/application/shell/ui/score/ScoreImportSummary.cpp
     src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
@@ -448,6 +475,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/application/testcontrol/TestControlCommand.cpp
     src/application/testcontrol/TestControlSession.cpp
     src/application/theme/AppLookAndFeel.cpp
+    src/application/theme/Icons.cpp
     src/application/theme/MiniStaff.cpp
     src/application/theme/Theme.cpp
     src/features/analysis/harmonics/HarmonicAnalyzer.cpp

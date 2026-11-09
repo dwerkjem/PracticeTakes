@@ -1,3 +1,4 @@
+#include "../../../localisation/Localisation.h"
 #include "../../MainComponent.h"
 
 #include "BundledSampleScore.h"
@@ -31,8 +32,12 @@ void MainComponent::showFileMenu()
 {
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
-    menu.addItem(openScoreMenuItemId, "Open score...");
-    menu.addItem(openSampleScoreMenuItemId, bundled_sample::menuLabel());
+    const auto ink = appLookAndFeel.findColour(juce::PopupMenu::textColourId);
+    menu.addItem(appearance::menuItem(
+        openScoreMenuItemId, l10n::text("menu.file.open-score"), appearance::Icon::folderOpen,
+        ink));
+    menu.addItem(appearance::menuItem(
+        openSampleScoreMenuItemId, bundled_sample::menuLabel(), appearance::Icon::music, ink));
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(
@@ -58,8 +63,9 @@ void MainComponent::showFileMenu()
 void MainComponent::openScore()
 {
     scoreChooser = std::make_unique<juce::FileChooser>(
-        "Open score", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
-        scoreFilePatterns, true);
+        l10n::text("score.open.title"),
+        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), scoreFilePatterns,
+        true);
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     scoreChooser->launchAsync(
@@ -97,11 +103,10 @@ void MainComponent::openSampleScore()
         // Said, not swallowed: a button that does nothing when clicked is the
         // failure this command exists to prevent for a new user.
         juce::AlertWindow::showMessageBoxAsync(
-            juce::MessageBoxIconType::WarningIcon, "The sample score could not be opened",
-            "Practice Takes could not write the sample score to " +
-                bundled_sample::defaultFolder().getFullPathName() +
-                ". Check that the folder can be written to, or open a MusicXML file of "
-                "your own with File > Open score.");
+            juce::MessageBoxIconType::WarningIcon, l10n::text("score.sample.unwritable"),
+            l10n::format(
+                "score.sample.unwritable.message",
+                {{"folder", bundled_sample::defaultFolder().getFullPathName()}}));
 
         return;
     }

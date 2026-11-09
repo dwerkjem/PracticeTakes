@@ -446,16 +446,16 @@ TEST_CASE("a diagnostic naming a missing entity loses that field", "[score][inva
     diagnostic.location.partId = "P99";
     diagnostic.location.measureNumber = "404";
     diagnostic.location.voice = 12;
-    diagnostic.message = "still worth showing";
+    diagnostic.code = "still.worth.showing";
     score.diagnostics.push_back(diagnostic);
 
     CHECK(enforceDiagnosticLocations(score) == 3);
 
     const Diagnostic& repaired = score.diagnostics.front();
 
-    // The message survives -- it just cannot be pinned to a location.
+    // The finding survives -- it just cannot be pinned to a location.
     CHECK_FALSE(hasLocation(repaired.location));
-    CHECK(repaired.message == "still worth showing");
+    CHECK(repaired.code == "still.worth.showing");
 }
 
 // --- The whole pass and the builder --------------------------------------------
@@ -553,7 +553,7 @@ TEST_CASE("diagnostics recorded during construction survive the build", "[score]
     Diagnostic unsupported;
     unsupported.severity = DiagnosticSeverity::unsupported;
     unsupported.elementName = "transpose";
-    unsupported.message = "transposing instruments are not supported";
+    unsupported.code = "score.import.unsupported.transpose";
     unsupported.location.partId = "P1";
     builder.addDiagnostic(unsupported);
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../application/localisation/Localisation.h"
 #include <functional>
 
 #include <JuceHeader.h>
@@ -302,7 +303,7 @@ class ScoreViewComponent final
     juce::TextButton nextPageButton{juce::String::fromUTF8("\xe2\x80\xba")};
 
     // Shown while following is suspended and the clock plays.
-    juce::TextButton followButton{"Follow"};
+    juce::TextButton followButton{l10n::text("score.view.follow")};
 
     // Opens the open score's import summary; empty does nothing (#350).
     std::function<void()> onShowImportSummary;

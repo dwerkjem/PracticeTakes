@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../../localisation/Localisation.h"
 #include "../../MainComponent.h"
 #include "../ShellWindowTitles.h"
 
@@ -23,7 +24,7 @@ class MainComponent::ScoreImportWindow final : public juce::DocumentWindow
   public:
     explicit ScoreImportWindow(std::function<void()> closeHandler)
         : DocumentWindow(
-              juce::String(shellwindows::scoreImport.data(), shellwindows::scoreImport.size()),
+              l10n::text(shellwindows::scoreImportKey),
               juce::Colours::darkgrey,
               juce::DocumentWindow::allButtons),
           onClose(std::move(closeHandler))
@@ -112,7 +113,9 @@ class MainComponent::ScoreImportWindow final : public juce::DocumentWindow
         void showProgress(const juce::String& fileName)
         {
             headline.setText(
-                fileName.isEmpty() ? "Reading the score..." : "Reading " + fileName + "...",
+                fileName.isEmpty()
+                    ? l10n::text("score.import.reading")
+                    : l10n::format("score.import.reading.file", {{"file", fileName}}),
                 juce::dontSendNotification);
             body.setText({}, false);
         }

@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include "platform/score/musicxml/MusicXmlDiagnosticSink.h"
 #include "platform/score/musicxml/MusicXmlImporter.h"
 #include "support/MusicXmlFixtures.h"
 
@@ -154,6 +156,10 @@ TEST_CASE(
     REQUIRE(slur != nullptr);
     CHECK(slur->occurrences == 8);
     CHECK(slur->severity == DiagnosticSeverity::unsupported);
+
+    // A slur was unsupported in bar 1: the finding, not a sentence about it.
+    CHECK(slur->code == "score.import.unsupported.slur");
+    CHECK(slur->location.measureNumber == std::optional<std::string>{"1"});
 
     // The first sighting's location is kept, so the report still points
     // somewhere rather than nowhere.
@@ -308,4 +314,23 @@ TEST_CASE(
             { return candidate.printedNumber == *diagnostic.location.measureNumber; });
         CHECK(measureNamed != part->measures.end());
     }
+}
+
+TEST_CASE(
+    "findings are the same when their code and arguments are, whatever the wording",
+    "[score][musicxml][diagnostics]")
+{
+    MusicXmlDiagnosticSink sink;
+    DiagnosticLocation bar;
+    bar.measureNumber = "3";
+
+    sink.addRepair(bar, "metronome", "score.import.repair.tempo-disagrees", {{"engraved", "60"}});
+    sink.addRepair(bar, "metronome", "score.import.repair.tempo-disagrees", {{"engraved", "60"}});
+    sink.addRepair(bar, "metronome", "score.import.repair.tempo-disagrees", {{"engraved", "72"}});
+
+    const std::vector<Diagnostic> released = sink.release();
+    REQUIRE(released.size() == 2);
+    CHECK(released[0].occurrences == 2);
+    CHECK(argumentOf(released[0], "engraved") == "60");
+    CHECK(argumentOf(released[1], "engraved") == "72");
 }

@@ -33,6 +33,13 @@ struct SettingsTransferModel
     AppSettings::State state;
     bool feedbackInvitationsDisabled = false;
 
+    // Whether the bundle carries every setting -- the language, note naming,
+    // metronome, playback, practice and MIDI ones -- or only what a bundle
+    // from before they travelled did. An import of an older one keeps this
+    // machine's values for those rather than resetting them
+    // (SettingsTransferCodec::withLocalPreferences).
+    bool carriesAllSettings = true;
+
     // No operator== here on purpose. `AppSettings::State` compares nothing of
     // its own, so a defaulted comparison on this type is implicitly deleted --
     // present in the header, absent at every call site, and it fails to
@@ -68,4 +75,10 @@ class SettingsTransferCodec
         std::string_view document,
         const std::vector<WorkspaceBounds>& displayAreas,
         const ToolCatalog& registry = builtInToolCatalog());
+
+    // `imported`, with this machine's `local` values for what it does not
+    // carry: the chosen target note always, and every setting an older
+    // bundle predates.
+    [[nodiscard]] static SettingsTransferModel
+    withLocalPreferences(SettingsTransferModel imported, const AppSettings::State& local);
 };

@@ -5,10 +5,16 @@
 #include "../../../../platform/take/TakeRecorder.h"
 #include "../../../../platform/take/TakeStatus.h"
 #include "../../../../platform/transport/PracticeClock.h"
+#include "../../../localisation/Localisation.h"
+#include "../../../localisation/TakeText.h"
 #include "../../../theme/AppLookAndFeel.h"
 #include "PlaybackMixPanel.h"
 
+#include <algorithm>
+#include <cmath>
 #include <functional>
+#include <initializer_list>
+#include <string_view>
 
 // The practice clock's controls, in the main window's control strip: play or
 // pause, stop, where the clock is, the tempo scale, the metronome and the loop
@@ -25,10 +31,21 @@ class TransportStrip final
       private juce::Timer
 {
   public:
-    // Widths the control strip lays this out at: everything, or without the
-    // readout when the window is narrow.
-    static constexpr int fullWidth = 576;
-    static constexpr int compactWidth = 414;
+    // The width this needs: everything, or without the readout when the
+    // window is narrow. 576 and 414 for English at 100%; it grows with the text
+    // size and with a language whose words are longer.
+    [[nodiscard]] int requiredWidth(bool withReadout)
+    {
+        constexpr int gap = 4;
+        const Widths widths = controlWidths();
+        int total = widths.record + widths.play + widths.stop + widths.tempo + widths.click +
+                    widths.loop + widths.mix + 6 * gap;
+        if (withReadout)
+        {
+            total += widths.readout + gap;
+        }
+        return total;
+    }
 
     // How long the readout says how the last take ended before going back to
     // where the clock is.
@@ -62,18 +79,19 @@ class TransportStrip final
         // Component ids let the development-only test control channel click
         // these by name.
         playButton.setComponentID("transport-play");
-        playButton.setTooltip("Play from here, counting in first (Settings > Practice)");
+        playButton.setTooltip(l10n::text("transport.play.tooltip"));
         playButton.onClick = [this] { clock.togglePlay(); };
         addAndMakeVisible(playButton);
 
         stopButton.setComponentID("transport-stop");
-        stopButton.setTooltip("Stop, and go back to the start of the loop or the score");
+        stopButton.setTooltip(l10n::text("transport.stop.tooltip"));
         stopButton.onClick = [this] { clock.stop(); };
+        appearance::setIcon(stopButton, appearance::Icon::stop);
         addAndMakeVisible(stopButton);
 
         positionLabel.setComponentID("transport-position");
         positionLabel.setJustificationType(juce::Justification::centred);
-        positionLabel.setTooltip("Where the practice clock is in the score");
+        positionLabel.setTooltip(l10n::text("transport.position.tooltip"));
         addAndMakeVisible(positionLabel);
 
         tempoSlider.setComponentID("transport-tempo");
@@ -85,7 +103,7 @@ class TransportStrip final
         tempoSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 52, 24);
         tempoSlider.setTextValueSuffix("%");
         tempoSlider.setValue(clock.scalePercent(), juce::dontSendNotification);
-        tempoSlider.setTooltip("Tempo, as a percentage of the score's own");
+        tempoSlider.setTooltip(l10n::text("transport.tempo.tooltip"));
         tempoSlider.onValueChange = [this]
         { clock.setScalePercent(static_cast<int>(tempoSlider.getValue())); };
         addAndMakeVisible(tempoSlider);
@@ -93,7 +111,7 @@ class TransportStrip final
         clickButton.setComponentID("transport-click");
         clickButton.setClickingTogglesState(true);
         clickButton.setToggleState(clock.metronomeEnabled(), juce::dontSendNotification);
-        clickButton.setTooltip("Sound the metronome on every beat");
+        clickButton.setTooltip(l10n::text("transport.click.tooltip"));
         clickButton.onClick = [this]
         {
             clock.setMetronomeEnabled(clickButton.getToggleState());
@@ -102,20 +120,23 @@ class TransportStrip final
                 onSettingsChanged();
             }
         };
+        appearance::setIcon(clickButton, appearance::Icon::drum);
         addAndMakeVisible(clickButton);
 
         loopButton.setComponentID("transport-loop");
         loopButton.setClickingTogglesState(true);
         loopButton.setToggleState(clock.loopEnabled(), juce::dontSendNotification);
-        loopButton.setTooltip("Loop the region, or the whole score when none is set");
+        loopButton.setTooltip(l10n::text("transport.loop.tooltip"));
         loopButton.onClick = [this] { clock.setLoopEnabled(loopButton.getToggleState()); };
+        appearance::setIcon(loopButton, appearance::Icon::repeat);
         addAndMakeVisible(loopButton);
 
         // The score's sound, and each part's and hand's
         // (openspec/changes/archive/2026-11-08-score-playback).
         mixButton.setComponentID("transport-mix");
-        mixButton.setTooltip("Hear the score, and mute or solo each part or hand");
+        mixButton.setTooltip(l10n::text("transport.mix.tooltip"));
         mixButton.onClick = [this] { showMix(); };
+        appearance::setIcon(mixButton, appearance::Icon::slidersVertical);
         addAndMakeVisible(mixButton);
 
         clock.addListener(this);
@@ -137,34 +158,98 @@ class TransportStrip final
     void resized() override
     {
         // Widths for text at 100 percent, grown with the text size.
-        const auto px = [this](int base) { return appearance::scaledFor(*this, base); };
         auto bounds = getLocalBounds();
         constexpr int gap = 4;
-        const bool compact = getWidth() < px(fullWidth);
+        const Widths widths = controlWidths();
+        const bool compact = getWidth() < requiredWidth(true);
 
-        recordButton.setBounds(bounds.removeFromLeft(px(56)));
+        recordButton.setBounds(bounds.removeFromLeft(widths.record));
         bounds.removeFromLeft(gap);
-        playButton.setBounds(bounds.removeFromLeft(px(56)));
+        playButton.setBounds(bounds.removeFromLeft(widths.play));
         bounds.removeFromLeft(gap);
-        stopButton.setBounds(bounds.removeFromLeft(px(46)));
+        stopButton.setBounds(bounds.removeFromLeft(widths.stop));
         bounds.removeFromLeft(gap);
 
         positionLabel.setVisible(!compact);
         if (!compact)
         {
-            positionLabel.setBounds(bounds.removeFromLeft(px(158)));
+            positionLabel.setBounds(bounds.removeFromLeft(widths.readout));
             bounds.removeFromLeft(gap);
         }
 
-        tempoSlider.setBounds(bounds.removeFromLeft(px(92)));
+        tempoSlider.setBounds(bounds.removeFromLeft(widths.tempo));
         bounds.removeFromLeft(gap);
-        clickButton.setBounds(bounds.removeFromLeft(px(48)));
+        clickButton.setBounds(bounds.removeFromLeft(widths.click));
         bounds.removeFromLeft(gap);
-        loopButton.setBounds(bounds.removeFromLeft(px(46)));
+        loopButton.setBounds(bounds.removeFromLeft(widths.loop));
         bounds.removeFromLeft(gap);
-        mixButton.setBounds(bounds.removeFromLeft(px(44)));
+        mixButton.setBounds(bounds.removeFromLeft(widths.mix));
     }
 
+  private:
+    struct Widths
+    {
+        int record = 0;
+        int play = 0;
+        int stop = 0;
+        int readout = 0;
+        int tempo = 0;
+        int click = 0;
+        int loop = 0;
+        int mix = 0;
+    };
+
+    // Each control's width: its English width at 100%, grown with the text
+    // size, and grown again by however much longer the language's words are
+    // than English's -- so English lays out exactly as it always has. A button
+    // that changes its words -- Record and Finish, Play and Pause -- takes the
+    // longer, so the strip does not shift as it plays.
+    [[nodiscard]] Widths controlWidths()
+    {
+        const auto px = [this](int base) { return appearance::scaledFor(*this, base); };
+        const int height = std::max(1, getHeight() > 0 ? getHeight() : px(30));
+        const auto needs =
+            [this, height,
+             &px](juce::TextButton& button, int base, std::initializer_list<std::string_view> keys)
+        {
+            const juce::Font font = getLookAndFeel().getTextButtonFont(button, height);
+            float growth = 1.0f;
+            for (const auto key : keys)
+            {
+                const float english =
+                    juce::GlyphArrangement::getStringWidth(font, l10n::englishText(key));
+                const float here = juce::GlyphArrangement::getStringWidth(font, l10n::text(key));
+                if (english > 0.0f)
+                {
+                    growth = std::max(growth, here / english);
+                }
+            }
+            return static_cast<int>(std::ceil(static_cast<float>(px(base)) * growth));
+        };
+
+        Widths widths;
+        widths.record =
+            needs(recordButton, 56, {l10n::key("transport.record"), l10n::key("transport.finish")});
+        widths.play =
+            needs(playButton, 56, {l10n::key("transport.play"), l10n::key("transport.pause")});
+        widths.stop = needs(stopButton, 46, {l10n::key("transport.stop")});
+        widths.click = needs(clickButton, 48, {l10n::key("transport.click")});
+        widths.loop = needs(loopButton, 46, {l10n::key("transport.loop")});
+        widths.mix = needs(mixButton, 44, {l10n::key("transport.mix")});
+        widths.tempo = px(92);
+
+        // The readout, grown as "Bar 3, beat 2" is in this language.
+        const juce::Font font = positionLabel.getFont();
+        const float english =
+            juce::GlyphArrangement::getStringWidth(font, l10n::englishText("transport.position"));
+        const float here =
+            juce::GlyphArrangement::getStringWidth(font, l10n::text("transport.position"));
+        const float growth = english > 0.0f ? std::max(1.0f, here / english) : 1.0f;
+        widths.readout = static_cast<int>(std::ceil(static_cast<float>(px(158)) * growth));
+        return widths;
+    }
+
+  public:
     // What the readout says for a position: "Bar 3, beat 2", or the count-in.
     [[nodiscard]] static juce::String describe(const transport::ClockPosition& position)
     {
@@ -174,10 +259,12 @@ class TransportStrip final
         }
         if (position.countingIn)
         {
-            return "Count-in " + juce::String(position.beat + 1);
+            return l10n::format(
+                "transport.position.count-in", {{"beat", juce::String(position.beat + 1)}});
         }
-        return "Bar " + juce::String(position.bar + 1) + ", beat " +
-               juce::String(position.beat + 1);
+        return l10n::format(
+            "transport.position",
+            {{"bar", juce::String(position.bar + 1)}, {"beat", juce::String(position.beat + 1)}});
     }
 
     // Open the Mix popup under its button, inside the window so a capture
@@ -225,13 +312,13 @@ class TransportStrip final
     {
         if (const take::Take* live = takes.current())
         {
-            return juce::String(take::describe(*live));
+            return l10n::takeStatus(*live);
         }
         if (const take::Take* ended = takes.lastEnded();
             ended != nullptr && ended->id == announcedTake &&
             juce::Time::getMillisecondCounter() < announceUntil)
         {
-            return juce::String(take::describe(*ended));
+            return l10n::takeStatus(*ended);
         }
         return describe(position);
     }
@@ -250,23 +337,28 @@ class TransportStrip final
         }
 
         const bool running = position.state == transport::ClockState::playing;
-        playButton.setButtonText(running ? "Pause" : "Play");
-        playButton.setTooltip(
-            running ? "Pause, holding the position"
-                    : "Play from here, counting in first (Settings > Practice)");
+        playButton.setButtonText(
+            l10n::text(running ? l10n::key("transport.pause") : l10n::key("transport.play")));
+        appearance::setIcon(playButton, running ? appearance::Icon::pause : appearance::Icon::play);
+        playButton.setTooltip(l10n::text(
+            running ? l10n::key("transport.pause.tooltip") : l10n::key("transport.play.tooltip")));
         positionLabel.setText(readout(position), juce::dontSendNotification);
         positionLabel.setTooltip(positionLabel.getText());
 
         // Record, or Finish while a take records, red so it cannot be missed.
         const bool recording = takes.isRecording();
         const std::optional<std::string> blocked = takes.whyCannotStart();
-        recordButton.setButtonText(recording ? "Finish" : "Record");
+        recordButton.setButtonText(
+            l10n::text(recording ? l10n::key("transport.finish") : l10n::key("transport.record")));
+        appearance::setIcon(
+            recordButton, recording ? appearance::Icon::check : appearance::Icon::circleDot);
         recordButton.setEnabled(recording || !blocked.has_value());
         recordButton.setTooltip(
-            recording             ? "Finish the take, keeping what was played"
-            : blocked.has_value() ? "Recording is unavailable: " + juce::String(*blocked)
-            : running             ? "Record a take from here, carrying on as it plays"
-                      : "Record a take from the microphone and keyboard, counting in first");
+            recording ? l10n::text("transport.finish.tooltip")
+            : blocked.has_value()
+                ? l10n::format("transport.record.unavailable", {{"reason", l10n::text(*blocked)}})
+            : running ? l10n::text("transport.record.while-playing.tooltip")
+                      : l10n::text("transport.record.tooltip"));
         recordButton.setColour(
             juce::TextButton::buttonColourId,
             recording ? juce::Colour::fromRGB(196, 43, 43)
@@ -294,12 +386,12 @@ class TransportStrip final
     std::function<void()> onSettingsChanged;
     std::uint64_t announcedTake = 0;
     juce::uint32 announceUntil = 0;
-    juce::TextButton recordButton{"Record"};
-    juce::TextButton playButton{"Play"};
-    juce::TextButton stopButton{"Stop"};
+    juce::TextButton recordButton{l10n::text("transport.record")};
+    juce::TextButton playButton{l10n::text("transport.play")};
+    juce::TextButton stopButton{l10n::text("transport.stop")};
     juce::Label positionLabel;
     juce::Slider tempoSlider;
-    juce::TextButton clickButton{"Click"};
-    juce::TextButton loopButton{"Loop"};
-    juce::TextButton mixButton{"Mix"};
+    juce::TextButton clickButton{l10n::text("transport.click")};
+    juce::TextButton loopButton{l10n::text("transport.loop")};
+    juce::TextButton mixButton{l10n::text("transport.mix")};
 };

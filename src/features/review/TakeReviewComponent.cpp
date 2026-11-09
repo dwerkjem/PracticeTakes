@@ -1,4 +1,6 @@
 #include "TakeReviewComponent.h"
+#include "../../application/localisation/Localisation.h"
+#include "../../application/localisation/TakeText.h"
 
 #include "../../platform/take/TakeStatus.h"
 
@@ -16,7 +18,8 @@ constexpr juce::uint32 timingColour = 0xffe08a1e;
     {
         return juce::String::fromUTF8(score.parts[part].name.c_str());
     }
-    return "Part " + juce::String(static_cast<int>(part) + 1);
+    return l10n::format(
+        "review.part.numbered", {{"number", juce::String(static_cast<int>(part) + 1)}});
 }
 } // namespace
 
@@ -28,7 +31,7 @@ TakeReviewComponent::TakeReviewComponent(
     setComponentID("take-review-tool");
 
     takeChooser.setComponentID("take-review-take");
-    takeChooser.setTooltip("The take to review");
+    takeChooser.setTooltip(l10n::text("review.take.tooltip"));
     takeChooser.onChange = [this]
     {
         const int id = takeChooser.getSelectedId();
@@ -41,7 +44,7 @@ TakeReviewComponent::TakeReviewComponent(
     addAndMakeVisible(takeChooser);
 
     partChooser.setComponentID("take-review-part");
-    partChooser.setTooltip("The part the take is judged against");
+    partChooser.setTooltip(l10n::text("review.part.tooltip"));
     partChooser.onChange = [this]
     {
         const int id = partChooser.getSelectedId();
@@ -56,7 +59,7 @@ TakeReviewComponent::TakeReviewComponent(
     list.setComponentID("take-review-list");
     list.setModel(this);
     list.setRowHeight(scaledHeight(rowHeight));
-    list.setTitle("Results");
+    list.setTitle(l10n::text("review.results"));
     addAndMakeVisible(list);
 
     takes.addListener(this);
@@ -107,7 +110,8 @@ void TakeReviewComponent::refresh()
     for (auto entry = kept.rbegin(); entry != kept.rend(); ++entry)
     {
         takeChooser.addItem(
-            "Take " + juce::String(static_cast<juce::int64>((*entry)->id)),
+            l10n::format(
+                "review.take", {{"number", juce::String(static_cast<juce::int64>((*entry)->id))}}),
             static_cast<int>((*entry)->id));
     }
     takeChooser.setEnabled(!kept.empty());
@@ -127,20 +131,26 @@ void TakeReviewComponent::refresh()
 
     if (review != nullptr)
     {
-        heading = juce::String::fromUTF8(take::describe(*review->take).c_str());
+        heading = l10n::takeStatus(*review->take);
         if (review->take->score != nullptr)
         {
-            heading += juce::String::fromUTF8(" \xC2\xB7 ") +
-                       partNameOf(*review->take->score, review->part);
+            heading +=
+                l10n::text("review.separator") + partNameOf(*review->take->score, review->part);
         }
-        summary = juce::String::fromUTF8(evaluation::summaryLine(review->report).c_str());
+        summary = l10n::reviewSummary(review->report);
         rows = evaluation::reviewRows(*review->take, review->report);
+        rowTexts.clear();
+        for (const evaluation::ReviewRow& row : rows)
+        {
+            rowTexts.add(l10n::reviewRow(*review->take, review->report, row));
+        }
     }
     else
     {
         heading = {};
         summary = {};
         rows.clear();
+        rowTexts.clear();
     }
 
     // Nothing to choose between before the first take.
@@ -183,14 +193,13 @@ void TakeReviewComponent::paint(juce::Graphics& graphics)
         graphics.setFont(textFont(appearance::TextRole::heading, juce::Font::bold));
         const bool judging = takes.isJudging();
         graphics.drawText(
-            judging ? "Judging the take" : "No take to review",
+            l10n::text(judging ? l10n::key("review.judging") : l10n::key("review.none")),
             header.removeFromTop(scaledHeight(26)), juce::Justification::centredLeft);
         graphics.setColour(colours.muted);
         graphics.setFont(textFont(appearance::TextRole::control));
         graphics.drawFittedText(
-            judging ? "Its results appear here in a moment."
-                    : "Open a score, press Record in the transport and play. When the take "
-                      "ends, every note is listed here and marked on the Score View.",
+            l10n::text(
+                judging ? l10n::key("review.judging.detail") : l10n::key("review.none.detail")),
             header.removeFromTop(scaledHeight(140)), juce::Justification::topLeft, 8, 1.0f);
         return;
     }
@@ -273,8 +282,7 @@ void TakeReviewComponent::paintListBoxItem(
     graphics.setColour(row.mistake ? colours.foreground : colours.muted);
     graphics.setFont(textFont(appearance::TextRole::control));
     graphics.drawText(
-        juce::String::fromUTF8(row.text.c_str()), 28, 0, width - 32, height,
-        juce::Justification::centredLeft, true);
+        rowTexts[rowNumber], 28, 0, width - 32, height, juce::Justification::centredLeft, true);
 }
 
 void TakeReviewComponent::listBoxItemClicked(int row, const juce::MouseEvent& event)
@@ -286,8 +294,8 @@ void TakeReviewComponent::listBoxItemClicked(int row, const juce::MouseEvent& ev
 juce::String TakeReviewComponent::getTooltipForRow(int row)
 {
     juce::ignoreUnused(row);
-    return clock.isLocked() ? "A take is recording; the clock cannot move"
-                            : "Move the practice clock here";
+    return l10n::text(
+        clock.isLocked() ? l10n::key("review.row.locked") : l10n::key("review.row.move-clock"));
 }
 
 void TakeReviewComponent::goTo(int row)

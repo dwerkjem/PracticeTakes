@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../../../localisation/Localisation.h"
 #include "../../../MainComponent.h"
 #include "ToolDragHandle.h"
 #include "ToolOptionsButton.h"
@@ -23,7 +24,7 @@ class MainComponent::ToolWindow final : public juce::DocumentWindow
         : DocumentWindow(title, juce::Colours::darkgrey, juce::DocumentWindow::allButtons),
           contentComponent(&content), onDrag(dragHandler), dragHandle(std::move(dragHandler)),
           optionsButton(
-              "Dock in workspace",
+              l10n::text("menu.tools.dock"),
               std::move(dockHandler),
               std::move(feedbackHandler),
               closeHandler,

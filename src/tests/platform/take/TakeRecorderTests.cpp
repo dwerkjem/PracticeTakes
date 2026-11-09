@@ -131,7 +131,7 @@ TEST_CASE("a take cannot start without a score or a source, and says why", "[tak
 
     fixture.microphoneMuted = true;
     REQUIRE(fixture.recorder->whyCannotStart().has_value());
-    CHECK(*fixture.recorder->whyCannotStart() == "the microphone is muted and no keyboard is open");
+    CHECK(*fixture.recorder->whyCannotStart() == "take.cannot-start.muted");
     CHECK_FALSE(fixture.recorder->start());
 
     fixture.keyboardOpen = true;
@@ -140,7 +140,7 @@ TEST_CASE("a take cannot start without a score or a source, and says why", "[tak
     fixture.currentScore.publish(nullptr);
     fixture.tick();
     REQUIRE(fixture.recorder->whyCannotStart().has_value());
-    CHECK(*fixture.recorder->whyCannotStart() == "open a score first");
+    CHECK(*fixture.recorder->whyCannotStart() == "take.cannot-start.no-score");
 }
 
 TEST_CASE("a take counts in, records to the end of the piece and is complete", "[take][recorder]")
@@ -256,7 +256,7 @@ TEST_CASE("opening another score fails the take, keeping it", "[take][recorder]"
     REQUIRE(fixture.recorder->takes().size() == 1);
     const Take& take = *fixture.recorder->takes().front();
     CHECK(take.state() == TakeState::failed);
-    CHECK(take.lifecycle.failureReason() == "another score was opened");
+    CHECK(take.lifecycle.failureReason() == "take.failed.score-changed");
     CHECK_FALSE(take.audio.empty());
     CHECK_FALSE(fixture.clock->isLocked());
 }

@@ -2,6 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "Icons.h"
 #include "TextFonts.h"
 #include "TextScale.h"
 
@@ -92,6 +93,10 @@ class AppLookAndFeel final : public juce::LookAndFeel_V4, public TextScaleSource
         bool shouldDrawButtonAsHighlighted,
         bool shouldDrawButtonAsDown) override;
 
+    // A label with an icon (appearance::setIcon) draws it before its words;
+    // any other label is drawn as JUCE draws it.
+    void drawLabel(juce::Graphics& graphics, juce::Label& label) override;
+
     // The family name the embedded faces report, for tests that need to
     // distinguish "the font loaded" from "something loaded".
     [[nodiscard]] static const char* embeddedFamilyName() noexcept;
@@ -173,6 +178,14 @@ class TitleStripLookAndFeel final : public juce::LookAndFeel_V4, public TextScal
     {
         return scaled(juce::LookAndFeel_V4::getPopupMenuFont());
     }
+
+    // A button with an icon (appearance::setIcon) draws it before its words,
+    // or alone where the words do not fit.
+    void drawButtonText(
+        juce::Graphics& graphics,
+        juce::TextButton& button,
+        bool shouldDrawButtonAsHighlighted,
+        bool shouldDrawButtonAsDown) override;
 
   private:
     [[nodiscard]] juce::Font scaled(const juce::Font& base) const

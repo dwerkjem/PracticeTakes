@@ -1,6 +1,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include "features/score/NoticeText.h"
 #include "features/score/engraving/ScoreLayoutEngine.h"
 
 #include "support/ScoreFixtures.h"
@@ -160,8 +161,10 @@ scoreOf(std::vector<score::Measure> measures, int staffCount = 1)
 [[nodiscard]] bool anyNoticeContains(const ScoreLayout& layout, const std::string& fragment)
 {
     return std::any_of(
-        layout.notices.begin(), layout.notices.end(), [&fragment](const std::string& notice)
-        { return notice.find(fragment) != std::string::npos; });
+        layout.notices.begin(), layout.notices.end(),
+        [&fragment](const Notice& notice) {
+            return score_view::noticeText(notice).toStdString().find(fragment) != std::string::npos;
+        });
 }
 } // namespace
 

@@ -1,3 +1,4 @@
+#include "../../../localisation/Localisation.h"
 #include "../../MainComponent.h"
 
 #include "../../ui/main_window/MicrophoneWarning.h"
@@ -38,34 +39,40 @@ void MainComponent::updateMicrophoneStateControl()
     switch (audioInputService.inputState())
     {
     case AudioInputService::InputState::disconnected:
-        text = "Mic disconnected";
-        tooltip = "No microphone is available; open Settings to choose an input";
+        text = l10n::text("microphone.button.disconnected");
+        tooltip = l10n::text("microphone.button.disconnected.tooltip");
         colour = palette.muted;
         break;
     case AudioInputService::InputState::opening:
         // Not the same as having none, and the difference is what somebody
         // needs told: nothing to plug in would fix this, and the application
         // has not stopped working.
-        text = "Opening mic...";
-        tooltip = "Waiting for the input device. Something else may be holding it";
+        text = l10n::text("microphone.button.opening");
+        tooltip = l10n::text("microphone.button.opening.tooltip");
         colour = palette.warning;
         break;
     case AudioInputService::InputState::muted:
-        text = "Mic muted - Unmute";
-        tooltip = "Resume audio analysis using the selected microphone";
+        text = l10n::text("microphone.button.muted");
+        tooltip = l10n::text("microphone.button.muted.tooltip");
         colour = palette.warning;
         break;
     case AudioInputService::InputState::clipping:
-        text = "Mic clipping - Mute";
-        tooltip = "The microphone level is clipping; click to mute all analysis tools";
+        text = l10n::text("microphone.button.clipping");
+        tooltip = l10n::text("microphone.button.clipping.tooltip");
         colour = juce::Colours::red;
         break;
     case AudioInputService::InputState::active:
-        text = "Mic active - Mute";
-        tooltip = "Mute the microphone for every analysis tool";
+        text = l10n::text("microphone.button.active");
+        tooltip = l10n::text("microphone.button.active.tooltip");
         break;
     }
 
+    appearance::setIcon(
+        microphoneButton,
+        audioInputService.inputState() == AudioInputService::InputState::muted ||
+                audioInputService.inputState() == AudioInputService::InputState::disconnected
+            ? appearance::Icon::microphoneOff
+            : appearance::Icon::microphone);
     microphoneButton.setButtonText(text);
     microphoneButton.setTooltip(tooltip);
     microphoneButton.setColour(juce::TextButton::buttonColourId, colour.withAlpha(0.75f));
@@ -100,7 +107,7 @@ void MainComponent::paintMutedFrame(juce::Graphics& graphics) const
     // The label sits on the frame's top edge, at the left, where the eye
     // starts reading the workspace. Its text takes black or white, whichever
     // reads on the warning colour of the current theme.
-    const juce::String label{"Microphone muted"};
+    const juce::String label{l10n::text("microphone.muted-frame")};
     const juce::Font font{
         appearance::fontFor(*this, appearance::TextRole::small, juce::Font::bold)};
     const auto labelHeight = static_cast<float>(scaled(18));

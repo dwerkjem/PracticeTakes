@@ -4,14 +4,22 @@
 #include <array>
 #include <cmath>
 
+#include "../pitch/TargetChoice.h"
 #include "../score/PitchNames.h"
 
 namespace evaluation
 {
 namespace
 {
-// The sounding pitch a result was written as, spelled as the file spelled it.
-[[nodiscard]] std::string writtenName(const take::Take& take, const NoteResult& result)
+[[nodiscard]] bool offPitch(const NoteResult& result)
+{
+    return result.intonation.has_value() &&
+           (result.intonation->verdict == IntonationVerdict::sharp ||
+            result.intonation->verdict == IntonationVerdict::flat);
+}
+} // namespace
+
+std::string writtenNameOf(const take::Take& take, const NoteResult& result)
 {
     if (take.score != nullptr && result.part < take.score->parts.size())
     {
@@ -39,109 +47,7 @@ namespace
     return keyName(result.writtenMidi);
 }
 
-// "an octave low", "2 octaves high"; nothing in the written octave.
-[[nodiscard]] std::string octaveText(int octave)
-{
-    if (octave == 0)
-    {
-        return {};
-    }
-    const int size = std::abs(octave);
-    std::string text = size == 1 ? "an octave" : std::to_string(size) + " octaves";
-    text += octave < 0 ? " low" : " high";
-    return text;
-}
-
-// A sung note's verdict: "in tune", "18 ¢ sharp", "pitch uncertain".
-[[nodiscard]] std::string intonationText(const Intonation& intonation)
-{
-    const std::string cents = std::to_string(std::lround(std::abs(intonation.cents))) + " \xC2\xA2";
-    switch (intonation.verdict)
-    {
-    case IntonationVerdict::inTune:
-    {
-        // Within the range, but not near perfect: how far, signed.
-        if (intonation.zone != pitch::IntonationZone::acceptable)
-        {
-            return "in tune";
-        }
-        const long rounded = std::lround(intonation.cents);
-        return "in tune, " + std::string(rounded < 0 ? "\xE2\x88\x92" : "+") +
-               std::to_string(std::abs(rounded)) + " \xC2\xA2";
-    }
-    case IntonationVerdict::sharp:
-        return cents + " sharp";
-    case IntonationVerdict::flat:
-        return cents + " flat";
-    case IntonationVerdict::uncertain:
-        return "pitch uncertain";
-    case IntonationVerdict::wrong:
-        return {};
-    }
-    return {};
-}
-
-[[nodiscard]] std::string outcomeText(const NoteResult& result)
-{
-    const bool sung = result.intonation.has_value();
-    switch (result.outcome)
-    {
-    case NoteOutcome::correct:
-        return sung ? intonationText(*result.intonation) : "correct";
-    case NoteOutcome::wrong:
-        if (!result.playedMidi.has_value())
-        {
-            return "wrong";
-        }
-        return (sung ? "wrong, sang " : "wrong, played ") + keyName(*result.playedMidi);
-    case NoteOutcome::missed:
-        return "missed";
-    case NoteOutcome::pitchNotJudged:
-        return sung ? intonationText(*result.intonation) : "played";
-    }
-    return {};
-}
-
-[[nodiscard]] bool offPitch(const NoteResult& result)
-{
-    return result.intonation.has_value() &&
-           (result.intonation->verdict == IntonationVerdict::sharp ||
-            result.intonation->verdict == IntonationVerdict::flat);
-}
-
-[[nodiscard]] std::string timingText(TimingVerdict verdict, double errorMs)
-{
-    const long rounded = std::lround(std::abs(errorMs));
-    switch (verdict)
-    {
-    case TimingVerdict::early:
-        return std::to_string(rounded) + " ms early";
-    case TimingVerdict::late:
-        return std::to_string(rounded) + " ms late";
-    case TimingVerdict::onTime:
-        return "on time";
-    case TimingVerdict::absent:
-        return {};
-    }
-    return {};
-}
-
-const std::string separator = " \xC2\xB7 ";
-
-[[nodiscard]] std::string place(std::int64_t bar, int beat)
-{
-    return "Bar " + std::to_string(bar + 1) + ", beat " + std::to_string(beat + 1);
-}
-
-// The on-time and early/late moments: a chord's notes share one.
-struct MomentCounts
-{
-    std::size_t early = 0;
-    std::size_t onTime = 0;
-    std::size_t late = 0;
-};
-
-[[nodiscard]] MomentCounts momentsOf(const NoteReport& report)
+MomentCounts momentsOf(const NoteReport& report)
 {
     MomentCounts counts;
     std::optional<score::Tick> last;
@@ -169,15 +75,18 @@ struct MomentCounts
     }
     return counts;
 }
-} // namespace
 
 std::string keyName(int midi)
 {
-    static const std::array<const char*, 12> names{
-        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    // Spelled with sharps, as a key with none would spell it, and named by the
+    // one naming path (score::pitchName); a number outside MIDI's range is
+    // named by its pitch class and octave all the same.
     const int pitchClass = ((midi % 12) + 12) % 12;
     const int octave = (midi - pitchClass) / 12 - 1;
-    return std::string(names.at(static_cast<std::size_t>(pitchClass))) + std::to_string(octave);
+    const auto spelled = pitch::spellMidi(pitchClass + 12, true);
+    score::Pitch named = spelled.value_or(score::Pitch{});
+    named.octave = octave;
+    return score::spelledName(named);
 }
 
 std::vector<ReviewRow> reviewRows(const take::Take& take, const NoteReport& report)
@@ -203,23 +112,7 @@ std::vector<ReviewRow> reviewRows(const take::Take& take, const NoteReport& repo
                       result.outcome == NoteOutcome::missed || offPitch(result) ||
                       result.timing == TimingVerdict::early || result.timing == TimingVerdict::late;
 
-        // The octave is said only of a note whose pitch was judged.
-        const bool judged = result.intonation.has_value() &&
-                            result.intonation->verdict != IntonationVerdict::uncertain &&
-                            result.intonation->verdict != IntonationVerdict::wrong;
-        row.text = place(row.bar, row.beat);
-        for (const std::string& part :
-             {writtenName(take, result), outcomeText(result),
-              judged ? octaveText(result.intonation->octave) : std::string{},
-              timingText(result.timing, result.timingErrorMs)})
-        {
-            if (!part.empty())
-            {
-                row.text += separator;
-                row.text += part;
-            }
-        }
-        rows.push_back(std::move(row));
+        rows.push_back(row);
     }
 
     const std::int64_t latency = latencyFramesOf(take);
@@ -237,15 +130,7 @@ std::vector<ReviewRow> reviewRows(const take::Take& take, const NoteReport& repo
             row.bar = beat.bar;
             row.beat = beat.beat;
         }
-        row.text = place(row.bar, row.beat);
-        if (extra.midi.has_value())
-        {
-            row.text += separator;
-            row.text += keyName(*extra.midi);
-        }
-        row.text += separator;
-        row.text += "extra";
-        rows.push_back(std::move(row));
+        rows.push_back(row);
     }
 
     // Time order; a written note before an extra at the same frame, and the
@@ -254,46 +139,6 @@ std::vector<ReviewRow> reviewRows(const take::Take& take, const NoteReport& repo
         rows.begin(), rows.end(),
         [](const ReviewRow& left, const ReviewRow& right) { return left.frame < right.frame; });
     return rows;
-}
-
-std::string summaryLine(const NoteReport& report)
-{
-    const MomentCounts moments = momentsOf(report);
-    const NoteSummary& summary = report.summary;
-
-    // A sung take's correct notes are told by how in tune they were, and its
-    // uncertain ones apart from the chords nobody judged (decision 8).
-    const bool sung = summary.inTune + summary.sharp + summary.flat + summary.uncertain > 0;
-    const std::size_t otherCorrect =
-        summary.correct - (summary.inTune + summary.sharp + summary.flat);
-    const std::array<std::pair<std::size_t, const char*>, 11> parts{{
-        {sung ? summary.inTune : 0, "in tune"},
-        {sung ? summary.sharp : 0, "sharp"},
-        {sung ? summary.flat : 0, "flat"},
-        {sung ? otherCorrect : summary.correct, "correct"},
-        {summary.wrong, "wrong"},
-        {summary.missed, "missed"},
-        {sung ? summary.uncertain : 0, "uncertain"},
-        {summary.pitchNotJudged - (sung ? summary.uncertain : 0), "played"},
-        {summary.extra, "extra"},
-        {moments.early, "early"},
-        {moments.late, "late"},
-    }};
-
-    std::string line;
-    for (const auto& [count, name] : parts)
-    {
-        if (count == 0)
-        {
-            continue;
-        }
-        if (!line.empty())
-        {
-            line += separator;
-        }
-        line += std::to_string(count) + " " + name;
-    }
-    return line.empty() ? "Nothing to judge" : line;
 }
 
 std::size_t matchScore(const NoteReport& report)

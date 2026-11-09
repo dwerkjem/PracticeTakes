@@ -13,6 +13,9 @@ namespace
 constexpr auto schemaKey = "settings.schema";
 constexpr auto themeKey = "global.theme";
 constexpr auto textScaleKey = "appearance.textScale";
+constexpr auto noteNamingKey = "appearance.noteNaming";
+constexpr auto languageKey = "appearance.language";
+constexpr auto octaveNumberingKey = "appearance.octaveNumbering";
 constexpr auto microphoneMutedKey = "audio.muted";
 constexpr auto audioStateKey = "audio.deviceState";
 constexpr auto audioInputGainKey = "audio.inputGain";
@@ -64,6 +67,9 @@ constexpr const char* ownedKeys[] = {
     schemaKey,
     themeKey,
     textScaleKey,
+    noteNamingKey,
+    octaveNumberingKey,
+    languageKey,
     microphoneMutedKey,
     audioStateKey,
     audioInputGainKey,
@@ -267,6 +273,15 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
     // the nearest size the setting offers, or 100.
     result.state.textScalePercent = appearance::TextScale::snapped(properties.getDoubleValue(
         textScaleKey, static_cast<double>(appearance::TextScale::defaultPercent)));
+    // Unknown values -- a file from a later version with a convention this one
+    // lacks -- fall back to the default rather than to a neighbour.
+    const auto convention = [&properties](const char* key)
+    {
+        const int stored = properties.getIntValue(key, 0);
+        return stored >= 0 && stored <= 2 ? stored : 0;
+    };
+    result.state.noteNaming = convention(noteNamingKey);
+    result.state.octaveNumbering = convention(octaveNumberingKey);
     result.state.microphoneMuted = properties.getBoolValue(microphoneMutedKey, false);
     result.state.inputGain =
         boundedValue(properties, audioInputGainKey, AppDefaults::Audio::inputGain, 0.0, 2.0);
@@ -313,6 +328,7 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
         AppDefaults::highestMinimumLevelDb);
     result.state.countInWhenRecordingDuringPlayback =
         properties.getBoolValue(countInWhenPlayingKey, false);
+    result.state.language = storedLanguage(properties);
     result.state.chosenTargetSounding = properties.getValue(chosenTargetSoundingKey);
     result.state.chosenTargetWritten = properties.getValue(chosenTargetWrittenKey);
     result.state.keepTargetWhenScoreOpens = properties.getBoolValue(keepTargetKey, false);
@@ -377,11 +393,22 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
     return result;
 }
 
+juce::String AppSettings::storedLanguage(const juce::PropertySet& properties)
+{
+    // A code is letters, digits, '-' and '_'; anything else is not one.
+    const auto stored = properties.getValue(languageKey).trim();
+    return stored.containsOnly("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
+               ? stored
+               : juce::String();
+}
+
 void AppSettings::store(juce::PropertySet& properties, const State& state)
 {
     properties.setValue(schemaKey, AppDefaults::schemaVersion);
     properties.setValue(themeKey, static_cast<int>(state.theme));
     properties.setValue(textScaleKey, state.textScalePercent);
+    properties.setValue(noteNamingKey, state.noteNaming);
+    properties.setValue(octaveNumberingKey, state.octaveNumbering);
     properties.setValue(microphoneMutedKey, state.microphoneMuted);
     properties.setValue(audioInputGainKey, state.inputGain);
     properties.setValue(audioStateKey, state.audioDeviceState);
@@ -400,6 +427,7 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(outOfTuneCentsKey, state.outOfTuneCents);
     properties.setValue(minimumLevelKey, state.minimumLevelDb);
     properties.setValue(countInWhenPlayingKey, state.countInWhenRecordingDuringPlayback);
+    properties.setValue(languageKey, state.language);
     properties.setValue(chosenTargetSoundingKey, state.chosenTargetSounding);
     properties.setValue(chosenTargetWrittenKey, state.chosenTargetWritten);
     properties.setValue(keepTargetKey, state.keepTargetWhenScoreOpens);

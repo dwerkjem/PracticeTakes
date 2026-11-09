@@ -1,5 +1,7 @@
 #include "NoteViewComponent.h"
 
+#include "../../application/localisation/Localisation.h"
+#include "../../application/localisation/NoteNames.h"
 #include "../../application/theme/MiniStaff.h"
 #include "../../platform/score/PitchNames.h"
 
@@ -11,10 +13,9 @@ namespace
 // Purple, so a held key is never read as one of the four zone colours.
 constexpr juce::uint32 heldColour = 0xff9b6bd6;
 
-[[nodiscard]] juce::String nameOfMidi(int midi)
+[[nodiscard]] juce::String nameOfMidi(int midi, int keyFifths)
 {
-    const auto spelled = pitch::spellMidi(midi, true);
-    return spelled.has_value() ? juce::String(score::spelledName(*spelled)) : juce::String("--");
+    return l10n::heardNoteName(midi, keyFifths);
 }
 } // namespace
 
@@ -107,7 +108,7 @@ void NoteViewComponent::applySettings(const ToolSettingsPayload& payload)
 
 std::vector<ToolComponent::MenuEntry> NoteViewComponent::optionsMenuEntries()
 {
-    MenuEntry clefMenu{"Clef", {}};
+    MenuEntry clefMenu{l10n::text("notes.menu.clef"), {}};
     const auto choice = [this](const juce::String& label, ClefChoice value)
     {
         return MenuEntry{
@@ -120,9 +121,10 @@ std::vector<ToolComponent::MenuEntry> NoteViewComponent::optionsMenuEntries()
             clef == value};
     };
     clefMenu.submenu = {
-        choice("Automatic", ClefChoice::automatic), choice("Treble", ClefChoice::treble),
-        choice("Bass", ClefChoice::bass),
-        choice("Treble, an octave down", ClefChoice::trebleOctaveDown)};
+        choice(l10n::text("notes.menu.clef.automatic"), ClefChoice::automatic),
+        choice(l10n::text("notes.menu.clef.treble"), ClefChoice::treble),
+        choice(l10n::text("notes.menu.clef.bass"), ClefChoice::bass),
+        choice(l10n::text("notes.menu.clef.treble-octave-down"), ClefChoice::trebleOctaveDown)};
     return {clefMenu};
 }
 
@@ -247,12 +249,12 @@ void NoteViewComponent::paintReading(juce::Graphics& graphics, juce::Rectangle<i
     if (currentNote.has_value())
     {
         const long cents = std::lround(currentCents);
-        text = nameOfMidi(*currentNote) + "  " + (cents > 0 ? "+" : "") + juce::String(cents) +
-               juce::String::fromUTF8(" \xC2\xA2");
+        text = nameOfMidi(*currentNote, target.keyFifths) + "  " + (cents > 0 ? "+" : "") +
+               juce::String(cents) + juce::String::fromUTF8(" \xC2\xA2");
     }
     else
     {
-        text = "Sing or play a note";
+        text = l10n::text("notes.prompt");
     }
     graphics.setColour(colours.foreground);
     graphics.setFont(textFont(appearance::TextRole::heading, juce::Font::bold));
@@ -263,8 +265,9 @@ void NoteViewComponent::paintReading(juce::Graphics& graphics, juce::Rectangle<i
     graphics.setFont(textFont(appearance::TextRole::control));
     const auto aimingAt = target.target();
     graphics.drawText(
-        aimingAt != nullptr ? juce::String::fromUTF8(("Target " + aimingAt->name).c_str())
-                            : juce::String::fromUTF8(target.whyNone().c_str()),
+        aimingAt != nullptr
+            ? l10n::format("target.heading", {{"note", l10n::noteName(aimingAt->name)}})
+            : l10n::text(target.whyNone()),
         area, juce::Justification::centredRight, true);
 }
 

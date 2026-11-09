@@ -179,8 +179,17 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   `.ptsettings` import/export/transaction codecs.
 - `src/application/theme` — shared palettes and look-and-feel (which also holds
   the text size), `TextScale.h` (the JUCE-free text-size rule and the role
-  table: draw text by role, never by point size), and `MiniStaff`, the small
+  table: draw text by role, never by point size), `Icons.h` (the Lucide
+  icons from `tools/packaging/icons/ui`: `appearance::setIcon` on a button,
+  label, toggle or menu item puts one beside its words), and `MiniStaff`, the small
   staff with a notehead that several tools draw.
+- `src/application/localisation` — every user-facing string by identifier:
+  `l10n::text/format/plural/number`, reading the catalogues embedded from
+  `tools/packaging/localisation/`. Never write a sentence a user sees as a
+  literal, and never concatenate one; `check_localisation.py` fails CI on a
+  key used but not defined, or defined but not used. What is never
+  translated (testcontrol state names, logs, settings keys, MusicXML element
+  names) is in `docs/development/architecture/localisation.md`.
 - `src/application/widgets` — components both the shell and a tool put on
   screen: `InputLevelMeter`, the microphone's level against "Ignore sound
   below", in Settings → Practice and the Input Level tool.

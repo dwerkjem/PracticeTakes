@@ -15,7 +15,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <string>
+#include <vector>
 
+#include "../application/localisation/Localisation.h"
 #include "../application/shell/MainComponent.h"
 #include "../application/shell/WorkspaceStartupSequence.h"
 #include "../application/shell/ui/main_window/MainTitleBar.h"
@@ -114,6 +117,28 @@ class PracticeTakesApplication final : public juce::JUCEApplication
             testControlState = arguments[stateIndex + 1];
         }
         const auto testControlChannelRequested = arguments.contains("--test-control");
+
+        // The interface language, before anything is built that reads it: one
+        // given on the command line (the pseudolocale, qps-ploc, is what a
+        // capture pass checks layouts in), else the one chosen in Settings,
+        // else the system's when there is a catalogue for it, else English.
+        if (const auto languageIndex = arguments.indexOf("--language");
+            languageIndex >= 0 && languageIndex + 1 < arguments.size())
+        {
+            l10n::setLanguage(arguments[languageIndex + 1].toStdString());
+        }
+        else
+        {
+            const juce::PropertiesFile stored(MainComponent::settingsStorageOptions());
+            std::vector<std::string> available;
+            for (const auto& language : l10n::availableLanguages())
+            {
+                available.push_back(language.code);
+            }
+            l10n::setLanguage(l10n::chooseLanguage(
+                AppSettings::storedLanguage(stored).toStdString(),
+                juce::SystemStats::getUserLanguage().toStdString(), available));
+        }
 
 #if !PRACTICE_TAKES_ENABLE_TEST_CONTROL
         if (testControlState.isNotEmpty() || testControlChannelRequested)

@@ -1,3 +1,4 @@
+#include "../../../application/localisation/NoteNames.h"
 #include "TunerComponent.h"
 
 #include <algorithm>
@@ -332,12 +333,11 @@ void drawZoneStrips(
     }
 }
 
-// The graph's axis labels and the status line's note name must agree. They were
-// byte-identical copies of the same function before, free to drift apart; the
-// single definition now lives beside the tracker that produces the note.
-[[nodiscard]] juce::String noteLabelForMidi(int midiNote)
+// The graph's axis labels and the status line's note name must agree: both are
+// l10n::heardNoteName, in the reader's naming and spelled for the score's key.
+[[nodiscard]] juce::String noteLabelForMidi(int midiNote, int keyFifths)
 {
-    return juce::String(::noteNameForMidi(midiNote));
+    return l10n::heardNoteName(midiNote, keyFifths);
 }
 } // namespace
 
@@ -490,7 +490,7 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
         {
             graphics.setColour(isCurrentNote ? palette.accent : palette.muted);
             graphics.drawFittedText(
-                noteLabelForMidi(midiNote),
+                noteLabelForMidi(midiNote, target.keyFifths),
                 labelArea.withY(static_cast<int>(std::round(y)) - 8).withHeight(16),
                 juce::Justification::centredRight, 1);
         }
@@ -855,10 +855,12 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
     graphics.setColour(palette.muted);
     graphics.setFont(textFont(appearance::TextRole::small));
     graphics.drawText(
-        "FLAT", bounds.removeFromLeft(scaledHeight(74)).removeFromBottom(scaledHeight(24)),
+        l10n::text("tuner.meter.flat"),
+        bounds.removeFromLeft(scaledHeight(74)).removeFromBottom(scaledHeight(24)),
         juce::Justification::centred);
     graphics.drawText(
-        "SHARP", bounds.removeFromRight(scaledHeight(74)).removeFromBottom(scaledHeight(24)),
+        l10n::text("tuner.meter.sharp"),
+        bounds.removeFromRight(scaledHeight(74)).removeFromBottom(scaledHeight(24)),
         juce::Justification::centred);
 }
 
@@ -1214,13 +1216,14 @@ void TunerComponent::drawCompactMeter(
     graphics.setColour(inTune ? palette.inTune : palette.accent);
     graphics.setFont(textFont(appearance::TextRole::control, juce::Font::bold));
     graphics.drawFittedText(
-        inTune ? "in tune" : directionLabel(), directionArea, juce::Justification::centred, 1);
+        inTune ? l10n::text("tuner.direction.in-tune") : directionLabel(), directionArea,
+        juce::Justification::centred, 1);
 }
 
 juce::String TunerComponent::directionLabel() const
 {
-    return zoneCents() > 0 ? juce::String::fromUTF8("\xe2\x96\xb2  sharp")
-                           : juce::String::fromUTF8("\xe2\x96\xbc  flat");
+    return zoneCents() > 0 ? l10n::text("tuner.direction.sharp")
+                           : l10n::text("tuner.direction.flat");
 }
 
 void TunerComponent::drawCompactReading(juce::Graphics& graphics, juce::Rectangle<int> area) const

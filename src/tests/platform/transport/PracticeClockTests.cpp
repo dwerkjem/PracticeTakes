@@ -464,21 +464,20 @@ TEST_CASE(
     REQUIRE(fixture.clock->whyPlaybackUnavailable().has_value());
 
     fixture.clock->loadSoundFont("");
-    CHECK(
-        *fixture.clock->whyPlaybackUnavailable() ==
-        "The sounds were not found beside the application");
+    CHECK(*fixture.clock->whyPlaybackUnavailable() == "playback.unavailable.not-found");
 
     ClockUnderTest broken;
     broken.clock->loadSoundFont("/nonexistent/GeneralUser-GS.sf2");
     for (int attempt = 0;
          attempt < 200 && broken.clock->whyPlaybackUnavailable() ==
-                              std::optional<std::string>("The sounds are still loading");
+                              std::optional<std::string>("playback.unavailable.loading");
          ++attempt)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         broken.clock->poll();
     }
-    CHECK(broken.clock->whyPlaybackUnavailable()->find("could not be read") != std::string::npos);
+    CHECK(*broken.clock->whyPlaybackUnavailable() == "playback.unavailable.unreadable");
+    CHECK(broken.clock->soundFontLocation() == "/nonexistent/GeneralUser-GS.sf2");
 
     ClockUnderTest loaded;
     loaded.clock->loadSoundFont(PRACTICE_TAKES_TEST_SOUNDFONT);

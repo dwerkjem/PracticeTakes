@@ -1,4 +1,5 @@
 #include "ScoreInvariants.h"
+#include "../../application/localisation/LocalisationRules.h"
 
 #include <algorithm>
 #include <string>
@@ -12,13 +13,13 @@ void addRepair(
     Score& score,
     DiagnosticLocation location,
     std::string elementName,
-    std::string message)
+    std::string_view code)
 {
     Diagnostic diagnostic;
     diagnostic.severity = DiagnosticSeverity::repaired;
     diagnostic.location = std::move(location);
     diagnostic.elementName = std::move(elementName);
-    diagnostic.message = std::move(message);
+    diagnostic.code = std::string(code);
 
     score.diagnostics.push_back(std::move(diagnostic));
 }
@@ -87,8 +88,7 @@ int enforceConsistentPitches(Score& score)
                             ++repairs;
                             addRepair(
                                 score, locate(part, measure, voice), "pitch",
-                                "a pitch's number disagreed with its notated spelling; "
-                                "recomputed from the spelling");
+                                l10n::key("score.repair.pitch-spelling"));
                         }
                     }
                 }
@@ -122,7 +122,7 @@ int enforceNonNegativeDurations(Score& score)
                     ++repairs;
                     addRepair(
                         score, locate(part, measure, voice), "duration",
-                        "negative duration clamped to zero");
+                        l10n::key("score.repair.negative-duration"));
                 }
 
                 const auto removed = std::remove_if(
@@ -138,7 +138,7 @@ int enforceNonNegativeDurations(Score& score)
 
                     addRepair(
                         score, locate(part, measure, voice), "note",
-                        "dropped a zero-length event that was not a grace note");
+                        l10n::key("score.repair.zero-length"));
                 }
             }
         }
@@ -174,7 +174,7 @@ int enforceVoiceOrdering(Score& score)
                     ++repairs;
                     addRepair(
                         score, locate(part, measure, voice), "voice",
-                        "events were not in ascending time order; reordered");
+                        l10n::key("score.repair.reordered"));
                 }
 
                 // Truncate anything running into the next event. A grace note
@@ -194,7 +194,7 @@ int enforceVoiceOrdering(Score& score)
                     ++repairs;
                     addRepair(
                         score, locate(part, measure, voice), "note",
-                        "overlapping events in one voice; the earlier was shortened");
+                        l10n::key("score.repair.overlap"));
                 }
             }
         }
@@ -234,7 +234,7 @@ int enforceMeasureBounds(Score& score)
 
                     addRepair(
                         score, locate(part, measure, voice), "measure",
-                        "dropped events starting after the end of the measure");
+                        l10n::key("score.repair.after-measure"));
                 }
 
                 for (ScoreEvent& event : voice.events)
@@ -249,7 +249,7 @@ int enforceMeasureBounds(Score& score)
                     ++repairs;
                     addRepair(
                         score, locate(part, measure, voice), "measure",
-                        "an event ran past the end of the measure; shortened to fit");
+                        l10n::key("score.repair.past-measure"));
                 }
             }
         }
@@ -327,9 +327,7 @@ int enforceMeasureAlignment(Score& score)
             DiagnosticLocation location;
             location.partId = part.id;
 
-            addRepair(
-                score, location, "part",
-                "part had fewer measures than the score; padded with whole-measure rests");
+            addRepair(score, location, "part", l10n::key("score.repair.padded"));
         }
 
         // Recompute index, nominal duration, and start together so a start tick
@@ -390,8 +388,8 @@ int enforceUniquePartIds(Score& score)
 
         addRepair(
             score, location, "score-part",
-            isMissing ? "part had no identifier; generated one"
-                      : "part identifier was already used by another part; generated a new one");
+            isMissing ? l10n::key("score.repair.no-part-id")
+                      : l10n::key("score.repair.duplicate-part-id"));
 
         part.id = generated;
         seen.insert(generated);
@@ -493,7 +491,7 @@ int enforceTieIntegrity(Score& score)
                             ++repairs;
                             addRepair(
                                 score, locate(part, measure, voice), "tie",
-                                "tie start had no matching end; dropped");
+                                l10n::key("score.repair.tie-no-end"));
                         }
 
                         if (check(note.tiedFrom, false))
@@ -501,7 +499,7 @@ int enforceTieIntegrity(Score& score)
                             ++repairs;
                             addRepair(
                                 score, locate(part, measure, voice), "tie",
-                                "tie end had no matching start; dropped");
+                                l10n::key("score.repair.tie-no-start"));
                         }
                     }
                 }
@@ -523,9 +521,7 @@ int enforceTempoMap(Score& score)
         return 0;
     }
 
-    addRepair(
-        score, DiagnosticLocation{}, "sound",
-        "tempo markings were unordered, duplicated, or absent; normalised");
+    addRepair(score, DiagnosticLocation{}, "sound", l10n::key("score.repair.tempo"));
 
     return 1;
 }

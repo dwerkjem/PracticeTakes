@@ -1,5 +1,6 @@
 #include "AudioInputService.h"
 
+#include "../../application/localisation/LocalisationRules.h"
 #include "AudioRecoveryPolicy.h"
 
 #include <algorithm>
@@ -438,7 +439,7 @@ juce::String AudioInputService::outputUnavailableReason() const
     }
     if (inputDeclined)
     {
-        return "this instance opens no audio device";
+        return juce::String(l10n::key("audio.output.declined").data());
     }
     if (const auto reason = outputStatus->get(); reason.isNotEmpty())
     {
@@ -446,9 +447,14 @@ juce::String AudioInputService::outputUnavailableReason() const
     }
     if (device == nullptr || !device->isOpen())
     {
-        return "no audio device is open";
+        return juce::String(l10n::key("audio.output.none-open").data());
     }
-    return "the audio device has no output";
+    return juce::String(l10n::key("audio.output.no-outputs").data());
+}
+
+juce::String AudioInputService::outputUnavailableDetail() const
+{
+    return outputStatus->getDetail();
 }
 
 std::unique_ptr<juce::XmlElement> AudioInputService::createDeviceState() const
@@ -1092,7 +1098,7 @@ void AudioInputService::openDevice(
     {
         // Open, with no output: a machine with none, or an input-only device
         // type. Capture has what it needs; only the metronome is silent.
-        status.set("the audio device has no output");
+        status.set(l10n::key("audio.output.no-outputs").data());
         return;
     }
 
@@ -1117,8 +1123,9 @@ void AudioInputService::openDevice(
         return;
     }
     status.set(
-        error.isNotEmpty() ? "the output could not be opened (" + error + ")"
-                           : juce::String("the output could not be opened"));
+        error.isNotEmpty() ? l10n::key("audio.output.unopened.because").data()
+                           : l10n::key("audio.output.unopened").data(),
+        error);
 }
 
 void AudioInputService::reopenDevice(juce::AudioDeviceManager& deviceManager, OutputStatus& status)
@@ -1148,7 +1155,7 @@ void AudioInputService::reopenDevice(juce::AudioDeviceManager& deviceManager, Ou
             const auto error = deviceManager.setAudioDeviceSetup(setup, true);
             if (error.isEmpty() && hasOpenDevice(deviceManager))
             {
-                status.set("the output \"" + lostOutput + "\" is not available");
+                status.set(l10n::key("audio.output.lost").data(), lostOutput);
             }
         }
         else if (hasOpenOutput(deviceManager))

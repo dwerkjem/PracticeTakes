@@ -1,4 +1,7 @@
 #include "ScoreViewComponent.h"
+#include "../../application/localisation/Localisation.h"
+#include "../../application/localisation/NoteNames.h"
+#include "NoticeText.h"
 
 #include "../../platform/evaluation/TakeReview.h"
 #include "../../platform/score/PitchNames.h"
@@ -371,7 +374,7 @@ void ScoreViewComponent::paintReviewOn(
                 // clear of the chord it is in.
                 const auto height = static_cast<float>(std::max(11.0, 1.7 * px));
                 const juce::Font font(juce::FontOptions(height, juce::Font::bold));
-                const juce::String name(evaluation::keyName(*mark.playedMidi));
+                const juce::String name(l10n::heardNoteName(*mark.playedMidi, target.keyFifths));
                 const float width =
                     juce::GlyphArrangement::getStringWidth(font, name) + (height * 0.5f);
                 const juce::Rectangle<float> tab(
@@ -485,7 +488,7 @@ ScoreViewComponent::ScoreViewComponent(
 
     const auto setUpButton = [this](
                                  juce::TextButton& button, const char* identifier,
-                                 const char* tooltip, std::function<void()> action)
+                                 const juce::String& tooltip, std::function<void()> action)
     {
         button.setComponentID(identifier);
         button.setTooltip(tooltip);
@@ -496,7 +499,7 @@ ScoreViewComponent::ScoreViewComponent(
     };
 
     setUpButton(
-        shrinkButton, "score-view-shrink", "Shrink the music",
+        shrinkButton, "score-view-shrink", l10n::text("score.view.shrink.tooltip"),
         [this]
         {
             if (settings.sizeStep > 0)
@@ -505,10 +508,10 @@ ScoreViewComponent::ScoreViewComponent(
             }
         });
     setUpButton(
-        enlargeButton, "score-view-enlarge", "Enlarge the music",
+        enlargeButton, "score-view-enlarge", l10n::text("score.view.enlarge.tooltip"),
         [this] { setSizeStep(settings.sizeStep + 1); });
     setUpButton(
-        previousPageButton, "score-view-previous-page", "Previous page",
+        previousPageButton, "score-view-previous-page", l10n::text("score.view.previous-page"),
         [this]
         {
             if (currentPage > 0)
@@ -517,10 +520,10 @@ ScoreViewComponent::ScoreViewComponent(
             }
         });
     setUpButton(
-        nextPageButton, "score-view-next-page", "Next page",
+        nextPageButton, "score-view-next-page", l10n::text("score.view.next-page"),
         [this] { turnToPage(currentPage + 1); });
     setUpButton(
-        followButton, "score-view-follow", "Follow the practice clock again",
+        followButton, "score-view-follow", l10n::text("score.view.follow-again"),
         [this] { resumeFollowing(); });
     followButton.setVisible(false);
 
@@ -1002,7 +1005,7 @@ std::optional<ToolComponent::MenuEntry> ScoreViewComponent::partsMenuEntry()
     const std::size_t shownCount =
         selectionApplies ? drawable.size() - hiddenCount : drawable.size();
 
-    MenuEntry heading{"Parts", {}};
+    MenuEntry heading{l10n::text("score.view.menu.parts"), {}};
 
     for (const engraving::PartKey& part : drawable)
     {
@@ -1080,8 +1083,9 @@ void ScoreViewComponent::updateControls()
     previousPageButton.setEnabled(currentPage > 0);
     nextPageButton.setEnabled(currentPage + 1 < pages.size());
     pageLabel.setText(
-        "Page " + juce::String(static_cast<int>(currentPage) + 1) + " of " +
-            juce::String(static_cast<int>(pages.size())),
+        l10n::format(
+            "score.view.page-of", {{"page", juce::String(static_cast<int>(currentPage) + 1)},
+                                   {"pages", juce::String(static_cast<int>(pages.size()))}}),
         juce::dontSendNotification);
 
     const AppPalette colours = palette();
@@ -1522,11 +1526,13 @@ void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
         // Every note of a chord: which one is the player's choice.
         for (const score::Note& note : event.notes)
         {
-            juce::String label = "Aim at " + juce::String(score::spelledName(note.written));
-            if (!score::soundsAsWritten(note))
-            {
-                label += " (sounds " + juce::String(score::spelledName(note.sounding)) + ")";
-            }
+            const juce::String written(l10n::noteName(note.written));
+            const juce::String label =
+                score::soundsAsWritten(note)
+                    ? l10n::format("score.view.aim-at", {{"note", written}})
+                    : l10n::format(
+                          "score.view.aim-at.transposed",
+                          {{"note", written}, {"sounding", l10n::noteName(note.sounding)}});
             menu.addItem(
                 label, [this, note, source]
                 { target.publish(pitch::chosenTarget(note.sounding, note.written, source)); });
@@ -1534,18 +1540,20 @@ void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
         break;
     }
 
-    menu.addItem("Move the clock here", [this, point] { seekToCanvasPoint(point); });
+    menu.addItem(l10n::text("score.view.move-clock"), [this, point] { seekToCanvasPoint(point); });
     menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&canvas).withMousePosition());
 }
 
 void ScoreViewComponent::showGoToBar()
 {
     auto* window = new juce::AlertWindow(
-        "Go to bar", "The bar's number, as printed in the score.", juce::MessageBoxIconType::NoIcon,
-        this);
-    window->addTextEditor("bar", {}, "Bar");
-    window->addButton("Go", 1, juce::KeyPress(juce::KeyPress::returnKey));
-    window->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+        l10n::text("score.view.go-to-bar"), l10n::text("score.view.go-to-bar.prompt"),
+        juce::MessageBoxIconType::NoIcon, this);
+    window->addTextEditor("bar", {}, l10n::text("score.view.go-to-bar.field"));
+    window->addButton(
+        l10n::text("score.view.go-to-bar.go"), 1, juce::KeyPress(juce::KeyPress::returnKey));
+    window->addButton(
+        l10n::text("workspace.dialog.cancel"), 0, juce::KeyPress(juce::KeyPress::escapeKey));
 
     const auto safeThis = juce::Component::SafePointer<ScoreViewComponent>(this);
     window->enterModalState(
@@ -1594,8 +1602,9 @@ void ScoreViewComponent::goToBar(const juce::String& text)
     if (!found.has_value())
     {
         juce::AlertWindow::showMessageBoxAsync(
-            juce::MessageBoxIconType::InfoIcon, "No bar " + wanted,
-            "This score has no bar numbered " + wanted + ".", {}, this);
+            juce::MessageBoxIconType::InfoIcon,
+            l10n::format("score.view.no-bar", {{"bar", wanted}}),
+            l10n::format("score.view.no-bar.message", {{"bar", wanted}}), {}, this);
         return;
     }
 
@@ -1680,12 +1689,14 @@ std::vector<ToolComponent::MenuEntry> ScoreViewComponent::optionsMenuEntries()
     { return MenuEntry{label, [this, view] { setView(view); }, settings.view == view}; };
 
     std::vector<MenuEntry> entries{
-        viewEntry("Page", score_view::ViewMode::page),
-        viewEntry("Vertical scroll", score_view::ViewMode::vertical),
-        viewEntry("Horizontal scroll", score_view::ViewMode::horizontal),
-        MenuEntry{"Enlarge", [this] { setSizeStep(settings.sizeStep + 1); }, false},
+        viewEntry(l10n::text("score.view.menu.page"), score_view::ViewMode::page),
+        viewEntry(l10n::text("score.view.menu.vertical"), score_view::ViewMode::vertical),
+        viewEntry(l10n::text("score.view.menu.horizontal"), score_view::ViewMode::horizontal),
         MenuEntry{
-            "Shrink",
+            l10n::text("score.view.menu.enlarge"), [this] { setSizeStep(settings.sizeStep + 1); },
+            false},
+        MenuEntry{
+            l10n::text("score.view.menu.shrink"),
             [this]
             {
                 if (settings.sizeStep > 0)
@@ -1695,16 +1706,19 @@ std::vector<ToolComponent::MenuEntry> ScoreViewComponent::optionsMenuEntries()
             },
             false},
         MenuEntry{
-            "Default size", [this] { setSizeStep(score_view::defaultSizeStep); },
+            l10n::text("score.view.menu.default-size"),
+            [this] { setSizeStep(score_view::defaultSizeStep); },
             settings.sizeStep == score_view::defaultSizeStep}};
 
     if (settings.view == score_view::ViewMode::page)
     {
         entries.push_back(MenuEntry{
-            "Fit width", [this] { setPageFit(score_view::PageFit::width); },
+            l10n::text("score.view.menu.fit-width"),
+            [this] { setPageFit(score_view::PageFit::width); },
             settings.pageFit == score_view::PageFit::width});
         entries.push_back(MenuEntry{
-            "Fit page", [this] { setPageFit(score_view::PageFit::page); },
+            l10n::text("score.view.menu.fit-page"),
+            [this] { setPageFit(score_view::PageFit::page); },
             settings.pageFit == score_view::PageFit::page});
     }
 
@@ -1714,27 +1728,28 @@ std::vector<ToolComponent::MenuEntry> ScoreViewComponent::optionsMenuEntries()
     }
 
     // The practice clock (score-cursor).
-    MenuEntry goTo{
-        juce::String::fromUTF8("Go to bar\xe2\x80\xa6"), [this] { showGoToBar(); }, false};
+    MenuEntry goTo{l10n::text("score.view.menu.go-to-bar"), [this] { showGoToBar(); }, false};
     goTo.enabled = renderedScore != nullptr && layout.outcome == engraving::LayoutOutcome::laidOut;
     entries.push_back(std::move(goTo));
 
-    MenuEntry lookAhead{"Look ahead", {}};
+    MenuEntry lookAhead{l10n::text("score.view.menu.look-ahead"), {}};
     for (int onsets = 0; onsets <= engraving::maximumLookAhead; ++onsets)
     {
         lookAhead.submenu.push_back(MenuEntry{
-            onsets == 0 ? juce::String("None")
-                        : juce::String(onsets) + (onsets == 1 ? " note" : " notes"),
+            onsets == 0 ? l10n::text("score.view.menu.look-ahead.none")
+                        : l10n::plural("score.view.menu.look-ahead.notes", onsets),
             [this, onsets] { setLookAhead(onsets); }, settings.lookAhead == onsets});
     }
     entries.push_back(std::move(lookAhead));
 
     entries.push_back(MenuEntry{
-        "Follow the practice clock", [this] { setFollow(!settings.follow); }, settings.follow});
+        l10n::text("score.view.menu.follow"), [this] { setFollow(!settings.follow); },
+        settings.follow});
 
     // The take under review (take-review decision 3).
     entries.push_back(MenuEntry{
-        "Show take review", [this] { setShowReview(!settings.showReview); }, settings.showReview});
+        l10n::text("score.view.menu.take-review"), [this] { setShowReview(!settings.showReview); },
+        settings.showReview});
 
     return entries;
 }
@@ -1748,8 +1763,7 @@ juce::String ScoreViewComponent::noticeText() const
     // which would otherwise look like a score with no notes in it.
     if (!musicFont.isLoaded())
     {
-        lines.add("The music font did not load, so noteheads, clefs, accidentals and rests are "
-                  "not drawn.");
+        lines.add(l10n::text("score.view.notice.no-music-font"));
     }
 
     const bool anyOversize = std::any_of(
@@ -1757,13 +1771,12 @@ juce::String ScoreViewComponent::noticeText() const
 
     if (settings.view == score_view::ViewMode::page && anyOversize)
     {
-        lines.add("A line of music too large for the page is on a page of its own, drawn "
-                  "smaller so all of it shows.");
+        lines.add(l10n::text("score.view.notice.oversize"));
     }
 
-    for (const std::string& notice : layout.notices)
+    for (const engraving::Notice& notice : layout.notices)
     {
-        lines.add(juce::String(notice));
+        lines.add(score_view::noticeText(notice));
     }
 
     return lines.joinIntoString("  ");
@@ -1804,13 +1817,13 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
         if (layout.outcome == engraving::LayoutOutcome::noScore)
         {
             paintMessage(
-                graphics, message, "No score open",
-                "Open a MusicXML file with File > Open score, and it is drawn here.");
+                graphics, message, l10n::text("score.view.no-score"),
+                l10n::text("score.view.no-score.message"));
 
             return;
         }
 
-        paintMessage(graphics, message, "Nothing to draw", noticeText());
+        paintMessage(graphics, message, l10n::text("score.view.nothing"), noticeText());
 
         return;
     }
@@ -1823,9 +1836,11 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
     graphics.setColour(colours.foreground);
     graphics.setFont(textFont(appearance::TextRole::body, juce::Font::bold));
 
-    const juce::String heading =
-        juce::String(layout.scoreTitle.empty() ? "Untitled score" : layout.scoreTitle) + "  -  " +
-        juce::String(layout.partName);
+    const juce::String heading = l10n::format(
+        "score.view.heading",
+        {{"title", layout.scoreTitle.empty() ? l10n::text("score.untitled")
+                                             : juce::String(layout.scoreTitle)},
+         {"part", juce::String(layout.partName)}});
 
     diagnosticsLink = {};
     if (renderedScore != nullptr && !renderedScore->diagnostics.empty())
@@ -1833,9 +1848,8 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
         // The importer had something to say about this file, so what is drawn
         // is not a complete rendering of it. The summary window holds the
         // detail, and this opens it (#350): underlined, like a link.
-        const juce::String text =
-            juce::String(static_cast<int>(renderedScore->diagnostics.size())) +
-            " import diagnostic" + (renderedScore->diagnostics.size() == 1 ? "" : "s");
+        const juce::String text = l10n::plural(
+            "score.view.diagnostics", static_cast<std::int64_t>(renderedScore->diagnostics.size()));
         const juce::Font font(textFont(appearance::TextRole::small));
         const int width =
             static_cast<int>(std::ceil(juce::GlyphArrangement::getStringWidth(font, text))) + 2;

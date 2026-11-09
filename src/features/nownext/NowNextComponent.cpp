@@ -1,4 +1,6 @@
 #include "NowNextComponent.h"
+#include "../../application/localisation/Localisation.h"
+#include "../../application/localisation/NoteNames.h"
 
 #include "../../application/theme/MiniStaff.h"
 #include "../../platform/pitch/TargetChoice.h"
@@ -101,11 +103,11 @@ void NowNextComponent::applySettings(const ToolSettingsPayload& payload)
 
 std::vector<ToolComponent::MenuEntry> NowNextComponent::optionsMenuEntries()
 {
-    MenuEntry ahead{"Look ahead", {}};
+    MenuEntry ahead{l10n::text("nownext.menu.look-ahead"), {}};
     for (const std::size_t choice : nownext::lookAheadChoices)
     {
         ahead.submenu.push_back(MenuEntry{
-            juce::String(static_cast<int>(choice)) + " notes",
+            l10n::plural("nownext.menu.look-ahead.notes", static_cast<std::int64_t>(choice)),
             [this, choice]
             {
                 lookAhead = choice;
@@ -114,9 +116,9 @@ std::vector<ToolComponent::MenuEntry> NowNextComponent::optionsMenuEntries()
             lookAhead == choice});
     }
 
-    MenuEntry follow{"Follow part", {}};
+    MenuEntry follow{l10n::text("nownext.menu.follow"), {}};
     follow.submenu.push_back(MenuEntry{
-        "The target's part",
+        l10n::text("nownext.menu.follow.target"),
         [this]
         {
             chosenPartId.reset();
@@ -140,7 +142,7 @@ std::vector<ToolComponent::MenuEntry> NowNextComponent::optionsMenuEntries()
     }
 
     MenuEntry contrast{
-        "High contrast",
+        l10n::text("nownext.menu.high-contrast"),
         [this]
         {
             highContrast = !highContrast;
@@ -244,18 +246,18 @@ juce::String NowNextComponent::nameOf(const score::TimelineItem& item) const
 {
     if (!item.isNote())
     {
-        return "Rest";
+        return l10n::text("nownext.rest");
     }
     juce::StringArray names;
     for (const score::Pitch& pitch : item.pitches)
     {
         if (score::isConsistent(pitch))
         {
-            names.add(utf8(score::spelledName(pitch)));
+            names.add(l10n::noteName(pitch));
         }
         else if (const auto spelled = pitch::spellMidi(pitch.midiNoteNumber, true))
         {
-            names.add(utf8(score::spelledName(*spelled)));
+            names.add(l10n::noteName(*spelled));
         }
     }
     return names.joinIntoString(" ");
@@ -269,7 +271,10 @@ juce::String NowNextComponent::beatsText(const score::TimelineItem& item) const
     }
     const double beats = transport::beatsBetween(
         *table, static_cast<double>(item.start), static_cast<double>(item.end));
-    return utf8(nownext::beatsText(beats));
+    return l10n::plural(
+        "nownext.beats", nownext::beatsPluralCount(beats),
+        {{"beats", utf8(nownext::beatsFigure(
+                       beats, l10n::numberStyleFor(l10n::current().languageCode())))}});
 }
 
 void NowNextComponent::paint(juce::Graphics& graphics)
@@ -279,12 +284,12 @@ void NowNextComponent::paint(juce::Graphics& graphics)
 
     if (scoreHolder.score() == nullptr)
     {
-        paintMessage(graphics, "Open a score to see the notes coming");
+        paintMessage(graphics, l10n::text("nownext.no-score"));
         return;
     }
     if (timeline.empty())
     {
-        paintMessage(graphics, "This part has no notes to follow");
+        paintMessage(graphics, l10n::text("nownext.no-notes"));
         return;
     }
 
@@ -303,7 +308,10 @@ void NowNextComponent::paint(juce::Graphics& graphics)
     graphics.drawText(
         utf8(followed.name.empty() ? followed.id : followed.name), header,
         juce::Justification::centredLeft);
-    const juce::String state = countingIn ? "Counting in" : playing ? "Playing" : "Ready";
+    const juce::String state = l10n::text(
+        countingIn ? l10n::key("nownext.state.counting-in")
+        : playing  ? l10n::key("nownext.state.playing")
+                   : l10n::key("nownext.state.ready"));
     graphics.drawText(state, header, juce::Justification::centredRight);
     bounds.removeFromTop(6);
 
@@ -341,19 +349,21 @@ void NowNextComponent::paintNow(juce::Graphics& graphics, juce::Rectangle<int> a
         graphics.setColour(palette.muted);
         graphics.setFont(juce::FontOptions(
             std::clamp(static_cast<float>(inside.getHeight()) * 0.22f, 16.0f, 40.0f)));
-        juce::String text = "End of the part";
+        juce::String text = l10n::text("nownext.end");
         if (!view.next.empty())
         {
             const score::TimelineItem& first = timeline[view.next.front()];
-            text = "Next: " + nameOf(first);
+            text = l10n::format("nownext.next", {{"note", nameOf(first)}});
             if (table != nullptr && !table->empty())
             {
                 const double beats =
                     transport::beatsBetween(*table, tick, static_cast<double>(first.start));
                 if (beats > 0.0)
                 {
-                    text += "  in " + juce::String(static_cast<int>(std::ceil(beats - 0.01))) +
-                            (beats <= 1.01 ? " beat" : " beats");
+                    text = l10n::plural(
+                        "nownext.next.in-beats",
+                        beats <= 1.01 ? 1 : static_cast<std::int64_t>(std::ceil(beats - 0.01)),
+                        {{"note", nameOf(first)}});
                 }
             }
         }
@@ -398,11 +408,11 @@ void NowNextComponent::paintNow(juce::Graphics& graphics, juce::Rectangle<int> a
     notes.add(beatsText(item));
     if (item.tiedOver)
     {
-        notes.add("tied");
+        notes.add(l10n::text("nownext.tied"));
     }
     if (item.repeated)
     {
-        notes.add("again");
+        notes.add(l10n::text("nownext.again"));
     }
     graphics.setColour(palette.muted);
     graphics.setFont(juce::FontOptions(std::clamp(nameSize * 0.24f, 13.0f, 26.0f)));
@@ -425,8 +435,8 @@ void NowNextComponent::paintNow(juce::Graphics& graphics, juce::Rectangle<int> a
         graphics.setColour(palette.muted);
         graphics.setFont(textFont(appearance::TextRole::control));
         graphics.drawText(
-            juce::String(left, 1) + " s left", bar.withTrimmedTop(12.0f),
-            juce::Justification::centredRight);
+            l10n::format("nownext.seconds-left", {{"seconds", l10n::number(left, 1)}}),
+            bar.withTrimmedTop(12.0f), juce::Justification::centredRight);
     }
 }
 
@@ -436,11 +446,13 @@ void NowNextComponent::paintNext(juce::Graphics& graphics, juce::Rectangle<int> 
     graphics.setColour(palette.muted);
     graphics.setFont(textFont(appearance::TextRole::body));
     graphics.drawText(
-        "Next", area.removeFromTop(scaledHeight(18)), juce::Justification::centredLeft);
+        l10n::text("nownext.heading"), area.removeFromTop(scaledHeight(18)),
+        juce::Justification::centredLeft);
 
     if (view.next.empty())
     {
-        graphics.drawText("Nothing after this", area, juce::Justification::centredLeft);
+        graphics.drawText(
+            l10n::text("nownext.nothing-after"), area, juce::Justification::centredLeft);
         return;
     }
 
@@ -500,7 +512,7 @@ void NowNextComponent::paintNext(juce::Graphics& graphics, juce::Rectangle<int> 
         juce::String detail = beatsText(item);
         if (item.tiedOver)
         {
-            detail += " tied";
+            detail = l10n::format("nownext.detail.tied", {{"beats", detail}});
         }
         graphics.drawFittedText(
             detail, inside.removeFromTop(nameSize * 0.6f).toNearestInt(),
@@ -516,7 +528,7 @@ void NowNextComponent::paintNext(juce::Graphics& graphics, juce::Rectangle<int> 
             graphics.setColour(palette.accent);
             graphics.drawRoundedRectangle(badge, 9.0f, 1.2f);
             graphics.setFont(textFont(appearance::TextRole::axis, juce::Font::bold));
-            graphics.drawText("again", badge, juce::Justification::centred);
+            graphics.drawText(l10n::text("nownext.again"), badge, juce::Justification::centred);
         }
         x += width + gap;
     }
@@ -546,8 +558,10 @@ void NowNextComponent::paintCompact(juce::Graphics& graphics, juce::Rectangle<in
     graphics.setColour(palette.muted);
     graphics.setFont(textFont(appearance::TextRole::body));
     graphics.drawText(
-        view.next.empty() ? juce::String() : "Next: " + nameOf(timeline[view.next.front()]), bottom,
-        juce::Justification::centred);
+        view.next.empty()
+            ? juce::String()
+            : l10n::format("nownext.next", {{"note", nameOf(timeline[view.next.front()])}}),
+        bottom, juce::Justification::centred);
 }
 
 void NowNextComponent::paintStaff(

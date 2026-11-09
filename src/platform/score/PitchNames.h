@@ -3,6 +3,7 @@
 #include <string>
 
 #include "Pitch.h"
+#include "PitchNaming.h"
 
 // Rendering a notated pitch as a readable name (no JUCE dependency).
 //
@@ -11,11 +12,11 @@
 // having everything pitch-shaped in one file.
 //
 // This belongs to the model rather than to a consumer because the model is what
-// keeps the spelling. `noteNameForMidi` in src/features/analysis/tuner is not
-// the same function and cannot be: it starts from a MIDI number, which cannot
-// tell F-sharp from G-flat, and it is private to a tool that a src/features/*
-// tool may not reach into. Deriving a name from the spelling is the model's job,
-// or every consumer writes its own and they disagree about enharmonics.
+// keeps the spelling. A heard note starts from a MIDI number, which cannot tell
+// F-sharp from G-flat, so it is spelled first -- pitch::spellForKey, as the
+// score's key would spell it -- and then named here like any other. Deriving a
+// name from the spelling is the model's job, or every consumer writes its own
+// and they disagree about enharmonics.
 namespace score
 {
 // The accidental part of a name: "#", "b", "##", "bb", or empty.
@@ -67,8 +68,12 @@ namespace score
 //
 // Two pitches that sound the same but are spelled differently name differently,
 // which is the whole reason this takes a Pitch rather than a MIDI number.
+//
+// The canonical name: what a target is stored and parsed back as. It is the
+// default PitchNamingStyle's name, so there is one naming path; what a reader
+// sees follows their own style through l10n::noteName.
 [[nodiscard]] inline std::string spelledName(const Pitch& pitch)
 {
-    return stepName(pitch.step) + accidentalName(pitch.alter) + std::to_string(pitch.octave);
+    return pitchName(pitch, PitchNamingStyle{});
 }
 } // namespace score

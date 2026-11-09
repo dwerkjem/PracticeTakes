@@ -36,6 +36,7 @@ import webbrowser
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import approved_states  # noqa: E402
 import attend as attend_module  # noqa: E402
 import capture as capture_module  # noqa: E402
 import display as display_module  # noqa: E402
@@ -104,11 +105,41 @@ def image_directory(store: Store, run_id: int) -> Path:
 # --- Commands ---------------------------------------------------------------
 
 
+PSEUDOLOCALE = "qps-ploc"
+
+
+def _language_arguments(arguments) -> tuple[str, ...]:
+    """The application's language for a capture: the pseudolocale, or English."""
+    return ("--language", PSEUDOLOCALE) if getattr(arguments, "pseudolocale", False) else ()
+
+
+def _window_titles(arguments) -> dict[str, str]:
+    """English window titles to what a pseudolocale run shows instead."""
+    if not getattr(arguments, "pseudolocale", False):
+        return {}
+
+    return {
+        state.window_title: state.pseudolocale_window_title
+        for state in approved_states.manifest().states
+        if state.window_title and state.pseudolocale_window_title
+    }
+
+
 def command_capture(arguments) -> int:
     problems = surfaces.validate()
 
     if problems:
         print("The surface list is malformed:\n  " + "\n  ".join(problems), file=sys.stderr)
+
+        return 1
+
+    # A pseudolocale capture is for reading layouts, not a record: its images
+    # would sit beside English ones under the same surfaces in the history.
+    if getattr(arguments, "pseudolocale", False) and not arguments.scratch:
+        print(
+            "--pseudolocale captures are not recorded; add --scratch.",
+            file=sys.stderr,
+        )
 
         return 1
 
@@ -295,7 +326,9 @@ def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
     @contextmanager
     def worker(index: int, shared):
         with display_module.virtual_display(publish=False) as screen:
-            driver = ApplicationDriver(arguments.executable, display=screen)
+            driver = ApplicationDriver(
+                arguments.executable, _language_arguments(arguments), display=screen
+            )
 
             # Held until this one answers, which is the proof that it is past
             # startup rather than a guess at how long it takes, and released
@@ -332,6 +365,7 @@ def _capture_in_parallel(arguments, plan, store, resolutions) -> int:
                     display=screen,
                     lock=shared.checks,
                     audio_gate=shared.audio,
+                    window_titles=_window_titles(arguments),
                 )
 
                 yield made
@@ -386,7 +420,7 @@ def _capture_on_current_display(arguments, plan, store, resolutions) -> int:
 
         return 1
 
-    driver = ApplicationDriver(arguments.executable)
+    driver = ApplicationDriver(arguments.executable, _language_arguments(arguments))
 
     try:
         driver.start()
@@ -426,6 +460,7 @@ def _capture_on_current_display(arguments, plan, store, resolutions) -> int:
             tooling=tooling,
             image_directory=image_directory(store, run_id),
             window_title=arguments.window_title,
+            window_titles=_window_titles(arguments),
         )
         result = pass_.run(plan)
     except ChannelError as error:
@@ -935,6 +970,12 @@ def build_parser() -> argparse.ArgumentParser:
     capture_parser.add_argument("--build-config", default="", help="How the build under test was configured.")
     capture_parser.add_argument("--audio-device", default="", help="The input device in use.")
     capture_parser.add_argument("--window-title", default=None, help="Match a specific window title.")
+    capture_parser.add_argument(
+        "--pseudolocale",
+        action="store_true",
+        help="Run the application in the generated pseudolocale (qps-ploc): every string "
+        "longer and bracketed, so clipped, truncated or missed text shows. Needs --scratch.",
+    )
     capture_parser.add_argument(
         "--run", type=int, default=None, help="Resume a run instead of starting one."
     )

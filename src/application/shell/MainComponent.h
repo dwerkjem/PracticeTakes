@@ -11,6 +11,7 @@
 #include "../../platform/transport/PracticeClock.h"
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
+#include "../localisation/Localisation.h"
 #include "../theme/AppLookAndFeel.h"
 #include "../theme/Theme.h"
 #include "../tools/AudioStreamUse.h"
@@ -26,6 +27,7 @@
 #include "ui/workspace/model/WorkspaceLayoutState.h"
 #include "ui/workspace/model/WorkspaceSessionLifecycle.h"
 #include "ui/workspace/model/WorkspaceToolState.h"
+#include "ui/workspace/shell/WorkspaceActionText.h"
 
 #include <cstdint>
 #include <functional>
@@ -53,6 +55,10 @@ class MainComponent final
       private juce::ChangeListener
 {
   public:
+    // Where the settings file is, for anything that must read it before the
+    // window exists -- the interface language, at startup.
+    [[nodiscard]] static juce::PropertiesFile::Options settingsStorageOptions();
+
     // `declineAudioInput` is passed straight to AudioInputService: open no
     // input device at all, leaving the generated tone as the only producer.
     // See that constructor for why a capture instance wants it.
@@ -168,7 +174,7 @@ class MainComponent final
     void saveNamedWorkspace(const juce::String& name, bool confirmed);
     void renameNamedWorkspace(const juce::String& name, bool confirmed);
     void showWorkspaceResult(
-        const juce::String& action,
+        const WorkspaceActionText& action,
         const NamedWorkspaceService::Result& result,
         const juce::String& requestedName = {});
     [[nodiscard]] const NamedWorkspace* activeNamedWorkspace() const;
@@ -209,6 +215,10 @@ class MainComponent final
     void showSettingsImportResult(const SettingsImportResult& result);
     void exportSettings();
     [[nodiscard]] bool applyTransferredSettings(const SettingsTransferModel& model);
+    // Language, note naming, the MIDI keyboard and pedal, metronome, playback,
+    // reference pitch, intonation, the level floor and the target's flags:
+    // what loading and importing settings both apply.
+    void applyPracticePreferences(const AppSettings::State& state);
     void closeSettings();
     void showHelpMenu();
 
@@ -321,6 +331,18 @@ class MainComponent final
     // scales every widget, each tool is told, and every window lays itself
     // out again at once.
     void setTextScale(int percent);
+
+    // The note naming was changed in Settings: saved, and everything that names
+    // a note redrawn.
+    void noteNamingChanged();
+
+    // The interface language chosen ("" for Automatic): saved, for the next
+    // start -- every label takes its words when it is made.
+    void chooseLanguage(const juce::String& code);
+    void showLanguageRestartNote() const;
+
+    // Language chosen in Settings, as stored; "" is Automatic.
+    juce::String chosenLanguage;
 
     // A size laid out for 100 percent, grown with the text size.
     [[nodiscard]] int scaled(int base) const noexcept
@@ -439,15 +461,15 @@ class MainComponent final
     // shell, which owns the settings file.
     TransportStrip transportStrip{practiceClock, takeRecorder, [this] { saveSettings(false); }};
 
-    juce::TextButton fileButton{"File"};
+    juce::TextButton fileButton{l10n::text("title.file")};
 
     // Shown in the empty workspace, under the guidance text, so a first launch
     // has a way to see a score without owning one. Hidden whenever a tool is
     // open: it is part of the guidance, not of the workspace.
-    juce::TextButton openSampleButton{"Open the sample score"};
-    juce::TextButton settingsButton{"Settings"};
-    juce::TextButton toolsButton{"Tools"};
-    juce::TextButton helpButton{"Help"};
+    juce::TextButton openSampleButton{l10n::text("workspace.empty.open-sample")};
+    juce::TextButton settingsButton{l10n::text("title.settings")};
+    juce::TextButton toolsButton{l10n::text("title.tools")};
+    juce::TextButton helpButton{l10n::text("title.help")};
     juce::TextButton microphoneButton;
 
     // Every tool instance the session knows about, live or closed.

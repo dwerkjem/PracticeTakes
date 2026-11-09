@@ -4,6 +4,8 @@
 
 #include <JuceHeader.h>
 
+#include "../../../localisation/PlaybackText.h"
+
 #include "../../../../platform/transport/PracticeClock.h"
 
 #include <functional>
@@ -47,7 +49,7 @@ class PlaybackMixPanel final : public juce::Component
         };
         addAndMakeVisible(playButton);
 
-        volumeLabel.setText("Volume", juce::dontSendNotification);
+        volumeLabel.setText(l10n::text("playback.volume"), juce::dontSendNotification);
         addAndMakeVisible(volumeLabel);
         volumeSlider.setComponentID("mix-volume");
         volumeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
@@ -62,20 +64,28 @@ class PlaybackMixPanel final : public juce::Component
 
         if (unavailable.has_value())
         {
-            note.setText(juce::String(*unavailable) + ".", juce::dontSendNotification);
+            note.setText(
+                l10n::format(
+                    "playback.unavailable.sentence",
+                    {{"reason",
+                      l10n::format(
+                          *unavailable,
+                          {{"path", juce::String::fromUTF8(clock.soundFontLocation().c_str())}})}}),
+                juce::dontSendNotification);
         }
         else if (clock.playbackTracks().empty())
         {
-            note.setText("Open a score to hear it.", juce::dontSendNotification);
+            note.setText(l10n::text("playback.no-score"), juce::dontSendNotification);
         }
         note.setJustificationType(juce::Justification::topLeft);
         addAndMakeVisible(note);
 
-        const auto& names = clock.playbackTrackNames();
+        const auto& labels = clock.playbackTrackLabels();
         for (std::size_t track = 0; track < clock.playbackTracks().size(); ++track)
         {
-            rows.push_back(
-                std::make_unique<Row>(*this, track, track < names.size() ? names[track] : ""));
+            rows.push_back(std::make_unique<Row>(
+                *this, track,
+                track < labels.size() ? l10n::trackName(labels[track]) : juce::String()));
             list.addAndMakeVisible(*rows.back());
         }
         viewport.setViewedComponent(&list, false);
@@ -126,10 +136,10 @@ class PlaybackMixPanel final : public juce::Component
     class Row final : public juce::Component
     {
       public:
-        Row(PlaybackMixPanel& owner, std::size_t trackIndex, const std::string& name)
+        Row(PlaybackMixPanel& owner, std::size_t trackIndex, const juce::String& name)
             : panel(owner), track(trackIndex)
         {
-            label.setText(juce::String::fromUTF8(name.c_str()), juce::dontSendNotification);
+            label.setText(name, juce::dontSendNotification);
             addAndMakeVisible(label);
             for (auto* button : {&mute, &solo})
             {
@@ -150,8 +160,8 @@ class PlaybackMixPanel final : public juce::Component
                 panel.clock.playbackMix().isMuted(track), juce::dontSendNotification);
             solo.setToggleState(
                 panel.clock.playbackMix().isSoloed(track), juce::dontSendNotification);
-            mute.setTooltip("Silence this track");
-            solo.setTooltip("Hear only the soloed tracks");
+            mute.setTooltip(l10n::text("playback.mute.tooltip"));
+            solo.setTooltip(l10n::text("playback.solo.tooltip"));
             mute.onClick = [this] { panel.clock.setTrackMuted(track, mute.getToggleState()); };
             solo.onClick = [this] { panel.clock.setTrackSoloed(track, solo.getToggleState()); };
             const bool usable = !panel.clock.whyPlaybackUnavailable().has_value();
@@ -172,8 +182,8 @@ class PlaybackMixPanel final : public juce::Component
         PlaybackMixPanel& panel;
         std::size_t track;
         juce::Label label;
-        juce::TextButton mute{"Mute"};
-        juce::TextButton solo{"Solo"};
+        juce::TextButton mute{l10n::text("playback.mute")};
+        juce::TextButton solo{l10n::text("playback.solo")};
     };
 
     void saved()
@@ -186,7 +196,7 @@ class PlaybackMixPanel final : public juce::Component
 
     transport::PracticeClock& clock;
     std::function<void()> onSettingsChanged;
-    juce::ToggleButton playButton{"Play the score"};
+    juce::ToggleButton playButton{l10n::text("playback.play")};
     juce::Label volumeLabel;
     juce::Slider volumeSlider;
     juce::Label note;

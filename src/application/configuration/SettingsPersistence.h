@@ -46,12 +46,11 @@ struct State
     juce::String midiInputDeviceName;
 
     // Where the sustain pedal counts as down: at or above this, 1-127. A
-    // preference about a particular keyboard's pedal, which is why -- like the
-    // device selection -- it is not carried in a settings transfer file.
+    // preference about a particular keyboard's pedal; it travels in a settings
+    // transfer file with the device selection, like every setting.
     int midiPedalDownThreshold = AppDefaults::Midi::pedalDownThreshold;
 
-    // The practice clock's metronome, and how many bars it counts in. Local to
-    // this machine and not carried in a transfer file, like the MIDI keyboard.
+    // The practice clock's metronome, and how many bars it counts in.
     bool metronomeEnabled = AppDefaults::Metronome::enabled;
     double metronomeVolume = AppDefaults::Metronome::volume;
     bool metronomeAccent = AppDefaults::Metronome::accent;
@@ -62,7 +61,13 @@ struct State
     // count-in, where an int packs without padding.
     int textScalePercent = appearance::TextScale::defaultPercent;
 
-    // Whether the score plays with the clock, and how loud. Local too.
+    // How notes are named (score::NoteNaming) and their octaves numbered
+    // (score::OctaveNumbering), as stored: each the reader's own, independent
+    // of the interface language. Ints beside the text size, where they pack.
+    int noteNaming = 0;
+    int octaveNumbering = 0;
+
+    // Whether the score plays with the clock, and how loud.
     bool playbackEnabled = AppDefaults::Playback::enabled;
     double playbackVolume = AppDefaults::Playback::volume;
 
@@ -81,6 +86,12 @@ struct State
 
     // A target the player chose, as its sounding and written names ("Bb3"),
     // empty for none; and whether opening a score keeps it (target-note-picker).
+    // The interface language's code ("de"), or empty for Automatic: the
+    // system's language when there is a catalogue for it. Read before any
+    // window is built (AppSettings::storedLanguage), since every label takes
+    // its words when it is made.
+    juce::String language;
+
     juce::String chosenTargetSounding;
     juce::String chosenTargetWritten;
     bool keepTargetWhenScoreOpens = false;
@@ -116,5 +127,8 @@ struct LoadResult
 
 [[nodiscard]] LoadResult load(const juce::PropertiesFile& properties);
 void store(juce::PropertySet& properties, const State& state);
+
+// The stored language alone, for startup.
+[[nodiscard]] juce::String storedLanguage(const juce::PropertySet& properties);
 void clearOwnedValues(juce::PropertySet& properties);
 } // namespace AppSettings

@@ -43,7 +43,7 @@ TEST_CASE(
 {
     pitch::CurrentTarget holder;
     CHECK(holder.target() == nullptr);
-    CHECK(holder.whyNone() == "No score is open");
+    CHECK(holder.whyNone() == "target.none.no-score");
 
     auto target = std::make_shared<pitch::Target>();
     target->name = "B3";
@@ -51,9 +51,9 @@ TEST_CASE(
     CHECK(holder.target() == target);
     CHECK(holder.whyNone().empty());
 
-    holder.publish(nullptr, "Every part plays more than one note at a time; a target is one note");
+    holder.publish(nullptr, "target.none.polyphonic");
     CHECK(holder.target() == nullptr);
-    CHECK(holder.whyNone().find("more than one note") != std::string::npos);
+    CHECK(holder.whyNone() == "target.none.polyphonic");
 }
 
 TEST_CASE("a song's target is its voice; a piano piece has none", "[pitch][target]")
@@ -76,9 +76,9 @@ TEST_CASE("a song's target is its voice; a piano piece has none", "[pitch][targe
         "Piano", {eventOf({pitchFromSpelling(Step::c, 0, 4), pitchFromSpelling(Step::g, 0, 4)})})};
     const auto [none, why] = pitch::targetFromScore(piano);
     CHECK(none == nullptr);
-    CHECK(why == "Every part plays more than one note at a time; a target is one note");
+    CHECK(why == "target.none.polyphonic");
 
-    CHECK(pitch::targetFromScore(nullptr).second == "No score is open");
+    CHECK(pitch::targetFromScore(nullptr).second == "target.none.no-score");
 }
 
 TEST_CASE("a chosen target is kept over a new score only when asked", "[pitch][target]")

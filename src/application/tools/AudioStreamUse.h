@@ -1,8 +1,12 @@
 #pragma once
 
+#include "../localisation/Localisation.h"
+
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -17,7 +21,8 @@ namespace AudioStreamUse
 {
 struct ToolCount
 {
-    std::string displayName;
+    // The plural entry that counts it: toolCountKey.
+    std::string_view countKey;
     std::size_t open = 0;
 };
 
@@ -44,18 +49,11 @@ struct Use
     }
 };
 
-// "1 Spectrogram", "3 Harmonic Analyzers". Display names are plain nouns, so an
-// English plural is the name with an "s".
-[[nodiscard]] inline std::string counted(const ToolCount& tool)
-{
-    return std::to_string(tool.open) + " " + tool.displayName + (tool.open == 1 ? "" : "s");
-}
-
 // "8 Spectrograms, 7 Harmonic Analyzers and shared pitch detection": what is
 // using the streams, largest first, skipping tools with nothing open.
-[[nodiscard]] inline std::string describeUsers(const Use& use)
+[[nodiscard]] inline juce::String describeUsers(const Use& use)
 {
-    std::vector<std::string> parts;
+    juce::StringArray parts;
     auto tools = use.tools;
     std::stable_sort(
         tools.begin(), tools.end(),
@@ -64,43 +62,39 @@ struct Use
     {
         if (tool.open > 0)
         {
-            parts.push_back(counted(tool));
+            parts.add(l10n::plural(tool.countKey, static_cast<std::int64_t>(tool.open)));
         }
     }
 
     const auto other = use.other();
     if (other == 1)
     {
-        parts.emplace_back("shared pitch detection");
+        parts.add(l10n::text("audio-streams.shared-pitch"));
     }
     else if (other > 1)
     {
-        parts.push_back(std::to_string(other) + " other listeners");
+        parts.add(l10n::plural("audio-streams.other", static_cast<std::int64_t>(other)));
     }
 
-    std::string sentence;
-    for (std::size_t index = 0; index < parts.size(); ++index)
+    if (parts.size() <= 1)
     {
-        if (index > 0)
-        {
-            sentence += index + 1 == parts.size() ? " and " : ", ";
-        }
-        sentence += parts[index];
+        return parts.joinIntoString({});
     }
-    return sentence;
+    const auto last = parts[parts.size() - 1];
+    parts.remove(parts.size() - 1);
+    return l10n::format(
+        "list.last",
+        {{"rest", parts.joinIntoString(l10n::text("list.separator"))}, {"last", last}});
 }
 
 // The whole explanation for an alert: how many streams there are, who has them,
 // and what to do.
-[[nodiscard]] inline std::string explainFull(const Use& use)
+[[nodiscard]] inline juce::String explainFull(const Use& use)
 {
-    std::string text = "All " + std::to_string(use.capacity) + " audio streams are in use";
     const auto users = describeUsers(use);
-    if (!users.empty())
-    {
-        text += ", by " + users;
-    }
-    text += ". Close one of them to free a stream. Tuners don't use one.";
-    return text;
+    const auto capacity = l10n::number(static_cast<double>(use.capacity), 0);
+    return users.isEmpty()
+               ? l10n::format("audio-streams.full", {{"capacity", capacity}})
+               : l10n::format("audio-streams.full.by", {{"capacity", capacity}, {"users", users}});
 }
 } // namespace AudioStreamUse

@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 
+#include "../../../../localisation/Localisation.h"
 #include "application/tools/ToolComponent.h"
 #include "application/tools/ToolMenuEntries.h"
 
@@ -23,8 +24,8 @@ class ToolOptionsButton final : public juce::TextButton
           onClose(std::move(closeHandler)), toolEntries(std::move(toolEntryProvider))
     {
         setButtonText("...");
-        setTitle("Tool options");
-        setTooltip("Show tool options");
+        setTitle(l10n::text("tool.options.title"));
+        setTooltip(l10n::text("tool.options.description"));
         onClick = [this] { showOptions(); };
     }
 
@@ -94,11 +95,11 @@ class ToolOptionsButton final : public juce::TextButton
         menu.addItem(changePresentation, presentationAction);
         if (onRename)
         {
-            menu.addItem(rename, "Rename...");
+            menu.addItem(rename, l10n::text("menu.tools.rename"));
         }
-        menu.addItem(giveFeedback, "Give feedback");
+        menu.addItem(giveFeedback, l10n::text("tool.options.feedback"));
         menu.addSeparator();
-        menu.addItem(close, "Close tool");
+        menu.addItem(close, l10n::text("tool.options.close"));
 
         const auto safeThis = juce::Component::SafePointer<ToolOptionsButton>(this);
         menu.showMenuAsync(

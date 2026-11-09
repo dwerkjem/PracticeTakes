@@ -172,6 +172,14 @@ pitchAtStaffPosition(StaffClef clef, int steps, int alter)
                         octave);
 }
 
+// A heard pitch, which has no spelling of its own, spelled as a piece in
+// `keyFifths` would spell it: with flats in a flat key and sharps otherwise. A
+// piece in F minor names its A flat A flat, not G sharp.
+[[nodiscard]] inline std::optional<score::Pitch> spellForKey(int midi, int keyFifths)
+{
+    return spellMidi(midi, keyFifths >= 0);
+}
+
 // A semitone up, spelled with a sharp, or down, spelled with a flat.
 [[nodiscard]] inline std::optional<score::Pitch>
 stepBySemitone(const score::Pitch& from, int direction)

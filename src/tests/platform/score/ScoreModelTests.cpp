@@ -249,7 +249,7 @@ TEST_CASE("a diagnostic can be document-level or located", "[score][model]")
 {
     Diagnostic documentLevel;
     documentLevel.severity = DiagnosticSeverity::info;
-    documentLevel.message = "unrecognised element";
+    documentLevel.code = "score.import.unrecognised-element";
 
     CHECK_FALSE(hasLocation(documentLevel.location));
 

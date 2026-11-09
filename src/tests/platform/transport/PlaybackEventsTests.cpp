@@ -213,10 +213,18 @@ TEST_CASE("a track is named for its part and, on a piano, its hand", "[transport
 
     const std::vector<PlaybackTrack> tracks = playbackTracksOf(source);
     REQUIRE(tracks.size() == 6);
-    CHECK(trackName(source, tracks[0]) == "Voice");
-    CHECK(trackName(source, tracks[1]) == "Piano, right hand");
-    CHECK(trackName(source, tracks[2]) == "Piano, left hand");
-    CHECK(trackName(source, tracks[5]) == "Part 3, staff 3");
+    const TrackLabel voiceLabel = trackLabel(source, tracks[0]);
+    CHECK(voiceLabel.partName == "Voice");
+    CHECK(voiceLabel.staves == 1);
+    const TrackLabel leftHand = trackLabel(source, tracks[2]);
+    CHECK(leftHand.partName == "Piano");
+    CHECK(leftHand.staff == 2);
+    CHECK(leftHand.staves == 2);
+    const TrackLabel third = trackLabel(source, tracks[5]);
+    CHECK(third.partName.empty());
+    CHECK(third.partNumber == 3);
+    CHECK(third.staff == 3);
+    CHECK(third.staves == 3);
 }
 
 TEST_CASE("cue notes are not played", "[transport][playback]")

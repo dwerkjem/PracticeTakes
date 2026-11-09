@@ -88,6 +88,10 @@ class ApprovedState:
     # The top-level window the state is a picture of. Empty for the main one.
     window_title: str
 
+    # The same window's title in the pseudolocale (`--pseudolocale`), as the
+    # application's own transform writes it. Empty for the main one.
+    pseudolocale_window_title: str = ""
+
     @property
     def is_about_its_geometry(self) -> bool:
         return self.geometry != NORMAL_GEOMETRY
@@ -139,6 +143,7 @@ def _state_from(entry: dict) -> ApprovedState:
         sung_take=entry["sungTake"],
         text_scale_percent=int(entry["textScalePercent"]),
         window_title=entry["windowTitle"],
+        pseudolocale_window_title=entry.get("pseudolocaleWindowTitle", ""),
     )
 
 

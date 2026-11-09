@@ -254,7 +254,7 @@ XmlParseResult parseXmlDocument(const std::string& document)
     if (document.empty())
     {
         result.status = XmlParseStatus::empty;
-        result.error = "The document is empty.";
+        result.error = l10n::key("score.import.error.document-empty");
 
         return result;
     }
@@ -268,8 +268,9 @@ XmlParseResult parseXmlDocument(const std::string& document)
         const juce::String& error = parser.getLastParseError();
 
         result.status = XmlParseStatus::malformed;
-        result.error = error.isNotEmpty() ? error.toStdString()
-                                          : std::string{"The document is not valid XML."};
+        result.error = error.isNotEmpty() ? l10n::key("score.import.error.malformed.because")
+                                          : l10n::key("score.import.error.malformed");
+        result.errorArguments = {{"detail", error.toStdString()}};
 
         return result;
     }
@@ -279,7 +280,7 @@ XmlParseResult parseXmlDocument(const std::string& document)
     if (!copyElement(*root, copied, maximumNestingDepth))
     {
         result.status = XmlParseStatus::malformed;
-        result.error = "The document nests elements more deeply than this importer accepts.";
+        result.error = l10n::key("score.import.error.too-deep");
 
         return result;
     }
@@ -287,7 +288,7 @@ XmlParseResult parseXmlDocument(const std::string& document)
     if (copied.name.empty())
     {
         result.status = XmlParseStatus::empty;
-        result.error = "The document contains no XML elements.";
+        result.error = l10n::key("score.import.error.no-elements");
 
         return result;
     }

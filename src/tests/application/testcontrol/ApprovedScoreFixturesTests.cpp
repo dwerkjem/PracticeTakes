@@ -10,6 +10,7 @@
 
 #include "application/shell/ui/score/ScoreImportSummary.h"
 #include "application/testcontrol/ApprovedWindowStates.h"
+#include "features/score/NoticeText.h"
 #include "features/score/ScoreViewSettings.h"
 #include "features/score/engraving/ScoreLayoutEngine.h"
 #include "platform/score/musicxml/MusicXmlImporter.h"
@@ -276,7 +277,7 @@ TEST_CASE("the diagnostic fixture carries the regression picture", "[testcontrol
         }
 
         elements.insert(diagnostic.elementName);
-        messages.insert(diagnostic.message);
+        messages.insert(diagnostic.code);
     }
 
     // Several lines, one message between them, a distinct element name each.
@@ -303,7 +304,7 @@ TEST_CASE("the notation fixture holds what its picture is about", "[testcontrol]
         INFO(
             "unexpected diagnostic on <"
             << diagnostic.elementName << "> in bar "
-            << diagnostic.location.measureNumber.value_or("-") << ": " << diagnostic.message);
+            << diagnostic.location.measureNumber.value_or("-") << ": " << diagnostic.code);
         CHECK(false);
     }
 
@@ -514,7 +515,7 @@ TEST_CASE(
         INFO(
             "unexpected diagnostic on <"
             << diagnostic.elementName << "> in bar "
-            << diagnostic.location.measureNumber.value_or("-") << ": " << diagnostic.message);
+            << diagnostic.location.measureNumber.value_or("-") << ": " << diagnostic.code);
         CHECK(false);
     }
 
@@ -562,8 +563,9 @@ TEST_CASE(
     CHECK(clefsOn(1) == 2);
 
     // Nothing about a missing staff.
-    for (const std::string& notice : layout.notices)
+    for (const engraving::Notice& found : layout.notices)
     {
+        const std::string notice = score_view::noticeText(found).toStdString();
         INFO(notice);
         CHECK(notice.find("staff") == std::string::npos);
     }
@@ -584,7 +586,7 @@ TEST_CASE("the engraving fixture holds what its picture is about", "[testcontrol
         INFO(
             "unexpected diagnostic on <"
             << diagnostic.elementName << "> in bar "
-            << diagnostic.location.measureNumber.value_or("-") << ": " << diagnostic.message);
+            << diagnostic.location.measureNumber.value_or("-") << ": " << diagnostic.code);
         CHECK(false);
     }
 
@@ -720,8 +722,9 @@ TEST_CASE("the engraving fixture holds what its picture is about", "[testcontrol
     CHECK(jumps.at(1).text == "D.S. al Coda");
 
     // Nothing in the fixture is left unreported or unread.
-    for (const std::string& notice : layout.notices)
+    for (const engraving::Notice& found : layout.notices)
     {
+        const std::string notice = score_view::noticeText(found).toStdString();
         INFO(notice);
         CHECK(notice.find("D.C., D.S.") == std::string::npos);
         CHECK(notice.find("endings") == std::string::npos);

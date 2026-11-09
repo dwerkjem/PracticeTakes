@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../localisation/LocalisationRules.h"
 #include <juce_core/juce_core.h>
 
 #include <memory>
@@ -37,7 +38,7 @@ class SettingsTransferFile
         {
             return {
                 .status = SettingsTransferExportStatus::ioError,
-                .error = "The settings export could not be written"};
+                .error = std::string(l10n::key("settings.export.error.not-written"))};
         }
 
         stream->flush();
@@ -45,14 +46,14 @@ class SettingsTransferFile
         {
             return {
                 .status = SettingsTransferExportStatus::ioError,
-                .error = "The settings export could not be flushed"};
+                .error = std::string(l10n::key("settings.export.error.not-flushed"))};
         }
         stream.reset();
         if (!temporary.overwriteTargetFileWithTemporary())
         {
             return {
                 .status = SettingsTransferExportStatus::ioError,
-                .error = "The settings export could not replace the destination file"};
+                .error = std::string(l10n::key("settings.export.error.not-replaced"))};
         }
 
         return {.status = SettingsTransferExportStatus::exported, .error = {}};

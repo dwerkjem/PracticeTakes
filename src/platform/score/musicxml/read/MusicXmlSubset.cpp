@@ -1,24 +1,25 @@
 #include "MusicXmlSubset.h"
+#include "application/localisation/LocalisationRules.h"
 
 namespace score::musicxml
 {
-const std::map<std::string, std::string>& unsupportedConstructs()
+const std::map<std::string, std::string_view>& unsupportedConstructs()
 {
     // design.md § Supported subset for the MVP is the source of this list. If
     // something here becomes part of the model later, it moves out of here --
     // this table and that section are meant to say the same thing.
-    static const std::map<std::string, std::string> constructs{
-        {"slur", "Slurs are phrasing marks; this importer reads only sounding ties."},
-        {"articulations", "Articulation marks are not imported."},
-        {"ornaments", "Ornaments are not imported."},
-        {"technical", "Technical marks such as fingering and bowing are not imported."},
-        {"harmony", "Chord symbols are not imported."},
-        {"figured-bass", "Figured bass is not imported."},
-        {"unpitched", "Percussion and other unpitched notes are not imported."},
-        {"multiple-rest", "Multi-measure rests are imported as ordinary rests."},
-        {"print", "Page and system layout is the renderer's to decide, so it was ignored."},
-        {"defaults", "Engraving defaults such as fonts and page size are not part of the score."},
-        {"part-group", "Instrument bracketing is engraving data and is not imported."},
+    static const std::map<std::string, std::string_view> constructs{
+        {"slur", l10n::key("score.import.unsupported.slur")},
+        {"articulations", l10n::key("score.import.unsupported.articulations")},
+        {"ornaments", l10n::key("score.import.unsupported.ornaments")},
+        {"technical", l10n::key("score.import.unsupported.technical")},
+        {"harmony", l10n::key("score.import.unsupported.harmony")},
+        {"figured-bass", l10n::key("score.import.unsupported.figured-bass")},
+        {"unpitched", l10n::key("score.import.unsupported.unpitched")},
+        {"multiple-rest", l10n::key("score.import.unsupported.multiple-rest")},
+        {"print", l10n::key("score.import.unsupported.print")},
+        {"defaults", l10n::key("score.import.unsupported.defaults")},
+        {"part-group", l10n::key("score.import.unsupported.part-group")},
     };
 
     return constructs;

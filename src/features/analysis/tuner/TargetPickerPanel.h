@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../../application/localisation/Localisation.h"
+#include "../../../application/localisation/NoteNames.h"
 #include <JuceHeader.h>
 
 #include "../../../application/theme/AppLookAndFeel.h"
@@ -69,14 +71,14 @@ class TargetPickerPanel final
         natural.setToggleState(true, juce::dontSendNotification);
 
         nameEditor.setComponentID("target-name");
-        nameEditor.setTextToShowWhenEmpty("F#4, Bb3...", colours.muted);
+        nameEditor.setTextToShowWhenEmpty(l10n::text("target.name.prompt"), colours.muted);
         nameEditor.onReturnKey = [this] { chooseByName(); };
         addAndMakeVisible(nameEditor);
         nameButton.onClick = [this] { chooseByName(); };
         addAndMakeVisible(nameButton);
 
         singButton.setComponentID("target-sing");
-        singButton.setTooltip("Hold a note steadily, then take it as the target");
+        singButton.setTooltip(l10n::text("target.sing.tooltip"));
         singButton.onClick = [this]
         {
             if (const std::optional<int> held = steadyNote ? steadyNote() : std::nullopt)
@@ -116,10 +118,10 @@ class TargetPickerPanel final
         step(
             keyDown, "target-key-down",
             [this](const score::Pitch& p) { return pitch::stepInKey(p, -1, target.keyFifths); });
-        semitoneUp.setTooltip("A semitone up");
-        semitoneDown.setTooltip("A semitone down");
-        keyUp.setTooltip("Up a step of the score's key");
-        keyDown.setTooltip("Down a step of the score's key");
+        semitoneUp.setTooltip(l10n::text("target.semitone-up.tooltip"));
+        semitoneDown.setTooltip(l10n::text("target.semitone-down.tooltip"));
+        keyUp.setTooltip(l10n::text("target.key-up.tooltip"));
+        keyDown.setTooltip(l10n::text("target.key-down.tooltip"));
 
         refresh();
         startTimerHz(10);
@@ -355,7 +357,8 @@ class TargetPickerPanel final
         else
         {
             nameEditor.setText({}, false);
-            nameEditor.setTextToShowWhenEmpty("Not a note name", juce::Colour(0xffd23c3c));
+            nameEditor.setTextToShowWhenEmpty(
+                l10n::text("target.name.invalid"), juce::Colour(0xffd23c3c));
         }
     }
 
@@ -375,8 +378,9 @@ class TargetPickerPanel final
     {
         const auto current = target.target();
         heading.setText(
-            current != nullptr ? juce::String::fromUTF8(("Target " + current->name).c_str())
-                               : juce::String("No target: choose one"),
+            current != nullptr
+                ? l10n::format("target.heading", {{"note", l10n::noteName(current->name)}})
+                : l10n::text("target.heading.none"),
             juce::dontSendNotification);
         staff.shown = currentPitch();
         // A call-out is dark in either theme, so the staff is drawn light.
@@ -421,10 +425,10 @@ class TargetPickerPanel final
     juce::TextButton natural{juce::String::fromUTF8("\xE2\x99\xAE")};
     juce::TextButton sharp{juce::String::fromUTF8("\xE2\x99\xAF")};
     juce::TextEditor nameEditor;
-    juce::TextButton nameButton{"Set"};
-    juce::TextButton singButton{"Use the note I'm on"};
-    juce::TextButton semitoneDown{juce::String::fromUTF8("\xE2\x96\xBC semitone")};
-    juce::TextButton semitoneUp{juce::String::fromUTF8("\xE2\x96\xB2 semitone")};
-    juce::TextButton keyDown{juce::String::fromUTF8("\xE2\x96\xBC key step")};
-    juce::TextButton keyUp{juce::String::fromUTF8("\xE2\x96\xB2 key step")};
+    juce::TextButton nameButton{l10n::text("target.name.set")};
+    juce::TextButton singButton{l10n::text("target.sing")};
+    juce::TextButton semitoneDown{l10n::text("target.semitone-down")};
+    juce::TextButton semitoneUp{l10n::text("target.semitone-up")};
+    juce::TextButton keyDown{l10n::text("target.key-down")};
+    juce::TextButton keyUp{l10n::text("target.key-up")};
 };

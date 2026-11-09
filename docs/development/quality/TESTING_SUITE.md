@@ -244,6 +244,27 @@ where the run lives, and there is nothing in a fresh scratch store to resume.
 built. Nothing warns you, and a capture of a stale binary looks exactly like a
 capture of a current one.
 
+### Capturing in the pseudolocale
+
+`--pseudolocale` runs the application with `--language qps-ploc`: every
+string from the catalogue is generated from its English, accented, about 40%
+longer and bracketed (`[Šéţţîñĝš ~~~~]`). It answers what a translation would
+break -- text clipped, truncated or not wrapped -- without a translator, and any
+text that comes out *unbracketed* was never put in the catalogue. Windows are
+found by their pseudolocale titles, which the approved-states manifest carries
+beside the English ones.
+
+```bash
+uv run test-suite capture --headless --scratch --pseudolocale \
+    --executable build/bin/PracticeTakes --mode full --resolutions default --themes light
+```
+
+It needs `--scratch`: a pseudolocale image is for reading a layout, not a record,
+and would otherwise sit beside the English ones under the same surface. The
+golden-image validation (`run-ui-golden.zsh`) stays English -- it compares
+pixels, and generated text makes that comparison report nothing but text.
+See `docs/development/architecture/localisation.md`.
+
 ### Reviewing a tool's compact form
 
 `slim` (340x780) and `squat` (1100x300) are in `SWEEP_GEOMETRIES` but not in
