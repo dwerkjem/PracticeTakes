@@ -14,7 +14,7 @@
 ## 3. Reaching every component
 
 - [x] 3.1 `AppLookAndFeel` applies the scale to widget fonts (decision 3).
-- [ ] 3.2 `ToolComponent::setTextScale`, pushed by the shell like the theme.
+- [x] 3.2 `ToolComponent::setTextScale`, pushed by the shell like the theme.
 - [ ] 3.3 Convert the shell and Settings window call sites to roles; their
       fixed heights follow the text (decision 4).
 - [ ] 3.4 Convert each tool's call sites to roles, one commit per tool; their

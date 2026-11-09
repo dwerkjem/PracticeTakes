@@ -2,6 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "../theme/TextFonts.h"
 #include "../theme/ThemeType.h"
 #include "ToolSettingsPayload.h"
 
@@ -28,6 +29,27 @@ class ToolComponent : public juce::Component
     virtual void setTheme(Theme theme) = 0;
 
     virtual void resetToDefaults() = 0;
+
+    // The text size, as a percentage of every text role's base size
+    // (global-text-size decision 3): pushed by the shell when the tool is
+    // created and whenever the setting changes, as the theme is. A tool draws
+    // its own text with textFont() and grows fixed heights with
+    // scaledHeight(); widgets follow through the look-and-feel.
+    void setTextScale(int percent)
+    {
+        percent = appearance::TextScale::snapped(static_cast<double>(percent));
+        if (percent == textScalePercent)
+        {
+            return;
+        }
+        textScalePercent = percent;
+        textScaleChanged();
+    }
+
+    [[nodiscard]] int textScale() const noexcept
+    {
+        return textScalePercent;
+    }
 
     // Per-instance settings. The default is a tool that persists nothing and
     // always starts at its defaults, which is what the spectrogram and the
@@ -112,4 +134,35 @@ class ToolComponent : public juce::Component
     {
         return {};
     }
+
+  protected:
+    // `role`'s font at the current text size.
+    [[nodiscard]] juce::FontOptions
+    textFont(appearance::TextRole role, int styleFlags = juce::Font::plain) const
+    {
+        return appearance::textFont(role, textScalePercent, styleFlags);
+    }
+
+    // `role`'s size, in points, at the current text size.
+    [[nodiscard]] float textSize(appearance::TextRole role) const noexcept
+    {
+        return appearance::textSize(role, textScalePercent);
+    }
+
+    // A height laid out for 100 percent, grown with the text.
+    [[nodiscard]] int scaledHeight(int base) const noexcept
+    {
+        return appearance::scaledHeight(base, textScalePercent);
+    }
+
+    // The text size changed: lay out and draw again. A tool that keeps
+    // anything measured from its text overrides this, and calls it.
+    virtual void textScaleChanged()
+    {
+        resized();
+        repaint();
+    }
+
+  private:
+    int textScalePercent = appearance::TextScale::defaultPercent;
 };

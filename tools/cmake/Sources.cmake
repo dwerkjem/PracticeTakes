@@ -100,6 +100,7 @@ set(PRACTICE_TAKES_SOURCES
     src/application/theme/PlusOrMinusCents.h
     src/application/theme/Theme.cpp
     src/application/theme/Theme.h
+    src/application/theme/TextFonts.h
     src/application/theme/TextScale.h
     src/application/theme/ThemeType.h
     src/application/widgets/InputLevelMeter.cpp

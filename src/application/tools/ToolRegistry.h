@@ -91,6 +91,7 @@ class ToolRegistry
         if (component != nullptr)
         {
             component->setTheme(services.initialTheme);
+            component->setTextScale(services.initialTextScale);
         }
         return component;
     }

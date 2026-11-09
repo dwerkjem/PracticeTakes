@@ -334,7 +334,8 @@ void MainComponent::presentTool(
             currentTarget,
             midiInputService,
             currentTheme,
-            [this] { showCurrentScoreImportSummary(); }};
+            [this] { showCurrentScoreImportSummary(); },
+            appLookAndFeel.textScale()};
         entry->component = builtInToolRegistry().create(instance.toolId(), services);
         if (entry->component == nullptr)
         {
@@ -605,5 +606,6 @@ void MainComponent::applyAppearanceToTool(const ToolInstanceId& instance)
     if (entry->component != nullptr)
     {
         entry->component->setTheme(currentTheme);
+        entry->component->setTextScale(appLookAndFeel.textScale());
     }
 }
