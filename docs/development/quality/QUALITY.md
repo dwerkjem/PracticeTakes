@@ -114,6 +114,19 @@ The workflow:
 
 This check analyzes the full repository on every run, not just changed lines, so it catches findings anywhere in `src/`, not only in the diff.
 
+## Headers Git would ignore
+
+A header under a directory `.gitignore` excludes compiles on the machine that wrote it and is missing everywhere else, because `git add` skips it without a word. That happened once: the Python template's unanchored `target/` rule matched `src/application/shell/state/target/`, so `TargetClockFollower.h` was never committed and CI could not find it.
+
+Two things now stand in the way:
+
+- **Root-only rules are anchored.** Every rule in the Python section of `.gitignore` whose tool writes only at the project root (setuptools, buildout, PyBuilder, Flask, virtualenvs, and the like) carries a leading `/`, so `lib/`, `parts/`, `var/`, `target/` and the rest no longer reach into `src/`. Rules for tools that genuinely write in subdirectories — `__pycache__/`, `build/`, `dist/`, `node_modules/`, `.pytest_cache/` — stay unanchored. A comment above the section says which is which; follow it when adding a rule. A source directory that has to be called `build/` gets a root-anchored negation instead (`!/tools/scripts/build/`, `!/docs/development/build/`).
+- **`tools/scripts/quality/check_ignored_includes.py` fails the build.** It resolves every quoted `#include` in `src/` the way the compiler does (beside the including file, then `src/`, then `src/tests/`) and fails when the header it finds is ignored, or, when no header is found, when a candidate path would be ignored. The first catches the problem on the author's machine; the second is how it looks in CI's fresh checkout. Tracked files are never reported, so a deliberately force-added header passes. The `python-check.yml` workflow runs it on every pull request touching `src/`, `tools/scripts/`, or `.gitignore`:
+
+  ```bash
+  python3 tools/scripts/quality/check_ignored_includes.py
+  ```
+
 ## Runtime verification: sanitizers
 
 Everything above inspects source. Sanitizers instrument a build and watch it

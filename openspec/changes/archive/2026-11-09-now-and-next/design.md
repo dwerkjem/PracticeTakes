@@ -104,8 +104,8 @@ still resets it as before.
   bar.
 - **The setting lives on `CurrentTarget`** (`followScoreWhilePlaying`), beside
   `keepChosenWhenScoreOpens`, so the Settings panel and the follower reach it
-  the same way. `TargetClockFollower` in the shell owns the follower and
-  listens to the clock.
+  the same way. `TargetClockFollower`, in `shell/state/following/`, owns the
+  follower and listens to the clock.
 - **The tool reads the output latency** through a function its factory builds
   from `ToolServices::audio`, as the take recorder reads it from the shell.
 - **Played through the microphone with a chord in the part**, the item is the

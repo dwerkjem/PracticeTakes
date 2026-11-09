@@ -75,6 +75,19 @@ vcpkg_installed/
 Testing/
 .cache/
 
+# Python. GitHub's Python template, with one change: a rule whose tool writes
+# only at the project root is anchored there with a leading /. Unanchored, a
+# directory rule matches a directory of that name at any depth, and names such as
+# target/, parts/, lib/ and var/ are plausible source directories -- target/
+# once hid src/application/shell/state/target/ from git add, so a header was
+# never committed. pyproject.toml sits at the root, so setuptools, buildout,
+# PyBuilder, Flask, virtualenv and the rest write there. Rules left unanchored
+# (__pycache__/, build/, dist/, *.egg-info/, .pytest_cache/, .mypy_cache/, ...)
+# belong to tools that genuinely write in subdirectories: next to each package,
+# in each npm workspace, or wherever they are run.
+# tools/scripts/quality/check_ignored_includes.py fails CI when a quoted
+# #include in src/ names an ignored file, so a new collision is caught there.
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -86,18 +99,18 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
-develop-eggs/
+/develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
+/downloads/
+/eggs/
+/.eggs/
+/lib/
+/lib64/
+/parts/
+/sdist/
+/var/
+/wheels/
+/share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -127,7 +140,7 @@ coverage.xml
 *.lcov
 .hypothesis/
 .pytest_cache/
-cover/
+/cover/
 
 # Translations
 *.mo
@@ -140,7 +153,7 @@ db.sqlite3
 db.sqlite3-journal
 
 # Flask stuff:
-instance/
+/instance/
 .webassets-cache
 
 # Scrapy stuff:
@@ -150,14 +163,14 @@ instance/
 docs/_build/
 
 # PyBuilder
-.pybuilder/
-target/
+/.pybuilder/
+/target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
 
 # IPython
-profile_default/
+/profile_default/
 ipython_config.py
 
 # pyenv
@@ -193,7 +206,7 @@ ipython_config.py
 # pdm.lock
 # pdm.toml
 .pdm-python
-.pdm-build/
+/.pdm-build/
 
 # pixi
 #   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
@@ -204,7 +217,7 @@ ipython_config.py
 !.pixi/config.toml
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
+/__pypackages__/
 
 # Celery stuff
 celerybeat-schedule*
@@ -216,12 +229,12 @@ celerybeat.pid
 *.pid
 
 # RabbitMQ
-mnesia/
-rabbitmq/
-rabbitmq-data/
+/mnesia/
+/rabbitmq/
+/rabbitmq-data/
 
 # ActiveMQ
-activemq-data/
+/activemq-data/
 
 # SageMath parsed files
 *.sage.py
@@ -230,11 +243,11 @@ activemq-data/
 .env
 .envrc
 .venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+/env/
+/venv/
+/ENV/
+/env.bak/
+/venv.bak/
 
 # SOPS plaintext is selected by tools/secret-patterns and also copied into each
 # clone's .git/info/exclude by tools/scripts/secrets/secrets_manager.py. The
@@ -268,7 +281,7 @@ dmypy.json
 .pytype/
 
 # Cython debug symbols
-cython_debug/
+/cython_debug/
 
 # PyCharm
 #   JetBrains specific template is maintained in a separate JetBrains.gitignore that can
@@ -281,7 +294,7 @@ cython_debug/
 #   Abstra is an AI-powered process automation framework.
 #   Ignore directories containing user credentials, local state, and settings.
 #   Learn more at https://abstra.io/docs
-.abstra/
+/.abstra/
 
 # Visual Studio Code
 #   Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
@@ -306,8 +319,11 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Build helper scripts are source files, not generated build output.
+# Source directories named build/, which the unanchored Python build/ rule above
+# would otherwise hide: build helper scripts and the build documentation are
+# source files, not generated build output.
 !/tools/scripts/build/
+!/docs/development/build/
 /tools/benchmark-results/
 /.ua/.trash-*/*
 /.ua/tmp/
