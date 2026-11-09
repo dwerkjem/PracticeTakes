@@ -302,10 +302,10 @@ void PracticeClock::refreshTable()
     if (current != builtScore)
     {
         tracks = pendingPlayback->tracks;
-        trackNames.clear();
+        trackLabels.clear();
         for (const PlaybackTrack& track : tracks)
         {
-            trackNames.push_back(current != nullptr ? trackName(*current, track) : std::string{});
+            trackLabels.push_back(current != nullptr ? trackLabel(*current, track) : TrackLabel{});
         }
         mix.setTrackCount(tracks.size());
         publishMix();
@@ -451,10 +451,10 @@ void PracticeClock::loadSoundFont(const std::string& path)
     }
     if (path.empty())
     {
-        synthUnavailable = "The sounds were not found beside the application";
+        synthUnavailable = std::string(l10n::key("playback.unavailable.not-found"));
         return;
     }
-    synthUnavailable = "The sounds are still loading";
+    synthUnavailable = std::string(l10n::key("playback.unavailable.loading"));
     loadingSynth = std::async(std::launch::async, [path] { return ScoreSynth::load(path); });
     soundFontPath = path;
 }
@@ -469,7 +469,7 @@ void PracticeClock::adoptSynth()
     synth = loadingSynth.get();
     if (synth == nullptr)
     {
-        synthUnavailable = "The sounds could not be read from " + soundFontPath;
+        synthUnavailable = std::string(l10n::key("playback.unavailable.unreadable"));
         return;
     }
     synthUnavailable.reset();
@@ -487,9 +487,9 @@ const std::vector<PlaybackTrack>& PracticeClock::playbackTracks() const noexcept
     return tracks;
 }
 
-const std::vector<std::string>& PracticeClock::playbackTrackNames() const noexcept
+const std::vector<TrackLabel>& PracticeClock::playbackTrackLabels() const noexcept
 {
-    return trackNames;
+    return trackLabels;
 }
 
 const PlaybackMix& PracticeClock::playbackMix() const noexcept

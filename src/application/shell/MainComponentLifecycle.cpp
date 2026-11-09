@@ -1,3 +1,4 @@
+#include "../localisation/Localisation.h"
 #include "MainComponent.h"
 
 #include <algorithm>
@@ -155,12 +156,12 @@ MainComponent::~MainComponent()
 
 void MainComponent::configureTopButtons()
 {
-    fileButton.setTooltip("Open a score");
+    fileButton.setTooltip(l10n::text("title.file.tooltip"));
     fileButton.onClick = [this] { showFileMenu(); };
     settingsButton.onClick = [this] { showSettingsMenu(); };
     toolsButton.onClick = [this] { showToolsMenu(); };
     helpButton.onClick = [this] { showHelpMenu(); };
-    microphoneButton.setTitle("Global microphone mute control");
+    microphoneButton.setTitle(l10n::text("microphone.button.title"));
     microphoneButton.onClick = [this] { audioInputService.toggleMuted(); };
     openSampleButton.setTooltip(bundled_sample::menuLabel());
     openSampleButton.onClick = [this] { openSampleScore(); };
@@ -314,15 +315,14 @@ void MainComponent::paintEmptyWorkspaceGuidance(juce::Graphics& graphics) const
     graphics.setColour(colours.foreground);
     graphics.setFont(appearance::fontFor(*this, appearance::TextRole::title, juce::Font::bold));
     graphics.drawFittedText(
-        "Open a score to get started", block.removeFromTop(scaled(guidanceTitleHeight)),
+        l10n::text("workspace.empty.title"), block.removeFromTop(scaled(guidanceTitleHeight)),
         juce::Justification::centred, 1);
 
     graphics.setColour(colours.muted);
     graphics.setFont(appearance::fontFor(*this, appearance::TextRole::prompt));
     graphics.drawFittedText(
-        "File > Open score reads a MusicXML file and shows it here, or try the sample "
-        "below. The Tools menu adds a tuner, spectrogram or harmonic analyser.",
-        block.removeFromTop(scaled(guidanceTextHeight)), juce::Justification::centredTop, 3);
+        l10n::text("workspace.empty.message"), block.removeFromTop(scaled(guidanceTextHeight)),
+        juce::Justification::centredTop, 3);
 }
 
 void MainComponent::resized()

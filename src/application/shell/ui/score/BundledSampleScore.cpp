@@ -1,5 +1,6 @@
 #include "BundledSampleScore.h"
 
+#include "../../../localisation/Localisation.h"
 #include "PracticeTakesSamples.h"
 
 namespace bundled_sample
@@ -11,7 +12,7 @@ juce::String fileName()
 
 juce::String menuLabel()
 {
-    return "Open sample score (Mahler, \"Die zwei blauen Augen\")";
+    return l10n::text("menu.file.open-sample");
 }
 
 juce::File defaultFolder()

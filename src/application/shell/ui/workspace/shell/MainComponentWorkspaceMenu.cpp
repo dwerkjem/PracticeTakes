@@ -139,7 +139,7 @@ void MainComponent::showToolsMenu()
             addInstanceItems(toolMenu, focusTarget);
         }
 
-        menu.addSubMenu(juce::String(definition.displayName), toolMenu);
+        menu.addSubMenu(l10n::text(toolNameKey(definition.id)), toolMenu);
     }
 
     const auto dockedCount = dockedTools().size();

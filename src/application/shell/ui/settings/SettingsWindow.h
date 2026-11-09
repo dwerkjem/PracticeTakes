@@ -477,7 +477,12 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 if (reason.isNotEmpty())
                 {
                     metronomeStatusLabel.setText(
-                        l10n::format("settings.audio.metronome.unavailable", {{"reason", reason}}),
+                        l10n::format(
+                            "settings.audio.metronome.unavailable",
+                            {{"reason",
+                              l10n::format(
+                                  reason.toStdString(),
+                                  {{"detail", audioInputService.outputUnavailableDetail()}})}}),
                         juce::dontSendNotification);
                     return;
                 }

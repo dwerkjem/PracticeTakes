@@ -1,3 +1,4 @@
+#include "../../../../localisation/Localisation.h"
 #include "../../../MainComponent.h"
 
 #include "../../../../tools/ToolInstanceAllocator.h"
@@ -129,7 +130,8 @@ AudioStreamUse::Use MainComponent::audioStreamUse() const
     {
         if (definition.readsAudioSamples)
         {
-            use.tools.push_back({definition.displayName, openInstancesOf(definition.id).size()});
+            use.tools.push_back(
+                {toolCountKey(definition.id), openInstancesOf(definition.id).size()});
         }
     }
     return use;
@@ -138,8 +140,8 @@ AudioStreamUse::Use MainComponent::audioStreamUse() const
 void MainComponent::showNoAudioStreamAlert() const
 {
     juce::AlertWindow::showMessageBoxAsync(
-        juce::MessageBoxIconType::InfoIcon, "No audio stream free",
-        juce::String::fromUTF8(AudioStreamUse::explainFull(audioStreamUse()).c_str()), "OK");
+        juce::MessageBoxIconType::InfoIcon, l10n::text("audio-streams.none-free"),
+        AudioStreamUse::explainFull(audioStreamUse()), l10n::text("workspace.alert.ok"));
 }
 
 void MainComponent::openAnotherInstance(std::string_view toolId)
@@ -189,21 +191,22 @@ void MainComponent::showRenameToolDialog(const ToolInstanceId& instance)
     }
 
     auto alert = std::make_unique<juce::AlertWindow>(
-        "Rename " + toolName(instance),
-        "A name for this " + juce::String::fromUTF8(definition->displayName.c_str()) +
-            ". Leave it empty to use the default.",
+        l10n::format("tool.rename.title", {{"name", toolName(instance)}}),
+        l10n::format("tool.rename.prompt", {{"tool", l10n::text(toolNameKey(definition->id))}}),
         juce::MessageBoxIconType::NoIcon, this);
     alert->setLookAndFeel(&appLookAndFeel);
-    alert->addTextEditor("toolName", toolName(instance), "Name");
+    alert->addTextEditor("toolName", toolName(instance), l10n::text("tool.rename.name"));
     if (auto* editor = alert->getTextEditor("toolName"))
     {
         editor->setInputRestrictions(static_cast<int>(ToolInstanceLabel::maximumCharacters));
-        editor->setTitle("Tool name");
-        editor->setDescription("A name for this tool instance");
+        editor->setTitle(l10n::text("tool.rename.name.title"));
+        editor->setDescription(l10n::text("tool.rename.name.description"));
         editor->selectAll();
     }
-    alert->addButton("Rename", 1, juce::KeyPress(juce::KeyPress::returnKey));
-    alert->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+    alert->addButton(
+        l10n::text("workspace.dialog.rename"), 1, juce::KeyPress(juce::KeyPress::returnKey));
+    alert->addButton(
+        l10n::text("workspace.dialog.cancel"), 0, juce::KeyPress(juce::KeyPress::escapeKey));
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     auto* alertPointer = alert.get();
@@ -236,7 +239,8 @@ void MainComponent::renameTool(const ToolInstanceId& instance, const juce::Strin
     // changes, rather than pinning today's text.
     auto label = ToolInstanceLabel::sanitise(requestedName.toStdString());
     if (label ==
-        ToolInstanceLabel::defaultName(definition->displayName, instance.ordinal().value_or(1)))
+        ToolInstanceLabel::defaultName(
+            l10n::text(toolNameKey(definition->id)).toStdString(), instance.ordinal().value_or(1)))
     {
         label.clear();
     }
@@ -526,10 +530,11 @@ juce::String MainComponent::toolName(const ToolInstanceId& instance) const
     // the tool's plain name, which is what every existing workspace and
     // screenshot expects to see, and later ones carry their ordinal.
     const auto* entry = findLiveTool(instance);
-    return juce::String::fromUTF8(ToolInstanceLabel::displayName(
-                                      definition->displayName, instance.ordinal().value_or(1),
-                                      entry != nullptr ? entry->label : std::string{})
-                                      .c_str());
+    return juce::String::fromUTF8(
+        ToolInstanceLabel::displayName(
+            l10n::text(toolNameKey(definition->id)).toStdString(), instance.ordinal().value_or(1),
+            entry != nullptr ? entry->label : std::string{})
+            .c_str());
 }
 
 bool MainComponent::toolIsOpen(const ToolInstanceId& instance) const

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../localisation/LocalisationRules.h"
 #include "ToolCatalog.h"
 
 // The roster of tools the application ships.
@@ -86,4 +87,62 @@
             {760, 520}},
     });
     return catalog;
+}
+
+// What a tool is called on screen, by catalogue identifier. `displayName`
+// above stays the English name, which the capture harness's manifest and the
+// feedback message use.
+[[nodiscard]] inline std::string_view toolNameKey(std::string_view toolId) noexcept
+{
+    if (toolId == "tuner")
+    {
+        return l10n::key("tool.tuner");
+    }
+    if (toolId == "spectrogram")
+    {
+        return l10n::key("tool.spectrogram");
+    }
+    if (toolId == "harmonic-analyzer")
+    {
+        return l10n::key("tool.harmonic-analyzer");
+    }
+    if (toolId == "score-view")
+    {
+        return l10n::key("tool.score-view");
+    }
+    if (toolId == "note-view")
+    {
+        return l10n::key("tool.note-view");
+    }
+    if (toolId == "now-next")
+    {
+        return l10n::key("tool.now-next");
+    }
+    if (toolId == "input-level")
+    {
+        return l10n::key("tool.input-level");
+    }
+    if (toolId == "take-review")
+    {
+        return l10n::key("tool.take-review");
+    }
+    return {};
+}
+
+// "1 Spectrogram", "3 Spectrograms": a counted tool, as a plural entry.
+[[nodiscard]] inline std::string_view toolCountKey(std::string_view toolId) noexcept
+{
+    if (toolId == "spectrogram")
+    {
+        return l10n::pluralKey("tool.spectrogram.count");
+    }
+    if (toolId == "harmonic-analyzer")
+    {
+        return l10n::pluralKey("tool.harmonic-analyzer.count");
+    }
+    if (toolId == "input-level")
+    {
+        return l10n::pluralKey("tool.input-level.count");
+    }
+    return l10n::pluralKey("tool.other.count");
 }

@@ -142,9 +142,13 @@ class AudioInputService final
     // Why there is no output to play the metronome through, or empty when there
     // is one. The device is opened with two outputs beside its inputs and, if
     // that fails, opened input-only exactly as before -- capture never depends
-    // on an output -- and the reason is kept here for Settings to show.
+    // on an output -- and the reason is kept here for Settings to show, as a
+    // catalogue identifier whose sentence may name outputUnavailableDetail():
+    // the lost device, or the driver's own error.
     // Message thread only.
     [[nodiscard]] juce::String outputUnavailableReason() const;
+
+    [[nodiscard]] juce::String outputUnavailableDetail() const;
 
     void initialiseDefaultInput();
     void resetToDefaultInput();
@@ -270,18 +274,28 @@ class AudioInputService final
     struct OutputStatus
     {
         juce::CriticalSection lock;
-        juce::String reason;
 
-        void set(const juce::String& newReason)
+        // A catalogue identifier, and the device or error its sentence names.
+        juce::String reason;
+        juce::String detail;
+
+        void set(const juce::String& newReason, const juce::String& newDetail = {})
         {
             const juce::ScopedLock scoped(lock);
             reason = newReason;
+            detail = newDetail;
         }
 
         [[nodiscard]] juce::String get() const
         {
             const juce::ScopedLock scoped(lock);
             return reason;
+        }
+
+        [[nodiscard]] juce::String getDetail() const
+        {
+            const juce::ScopedLock scoped(lock);
+            return detail;
         }
     };
 

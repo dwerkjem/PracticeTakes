@@ -2,6 +2,7 @@
 
 #include "../../../theme/AppLookAndFeel.h"
 
+#include "../../../localisation/Localisation.h"
 #include <JuceHeader.h>
 
 #include "TransportStrip.h"
@@ -52,13 +53,13 @@ class MainTitleBar final : public juce::Component
         // The hamburger is only visible below the collapsed-menu width, so a
         // click on it is legitimately unavailable in a wide window -- which the
         // channel reports as a failure rather than a silent no-op.
-        hamburgerButton.setButtonText("Menu");
-        hamburgerButton.setTooltip("Show application menu");
+        hamburgerButton.setButtonText(l10n::text("title.menu"));
+        hamburgerButton.setTooltip(l10n::text("title.menu.tooltip"));
         hamburgerButton.setComponentID("hamburger-button");
         hamburgerButton.onClick = [this] { showCollapsedMenu(); };
         addChildComponent(hamburgerButton);
 
-        fullscreenButton.setTooltip("Enter fullscreen (F11)");
+        fullscreenButton.setTooltip(l10n::text("title.fullscreen.enter.tooltip"));
         fullscreenButton.setComponentID("fullscreen-button");
         fullscreenButton.onClick = onFullscreen;
         addAndMakeVisible(fullscreenButton);
@@ -68,9 +69,11 @@ class MainTitleBar final : public juce::Component
 
     void setFullscreen(bool isFullscreen)
     {
-        fullscreenButton.setButtonText(isFullscreen ? "Restore" : "Fullscreen");
-        fullscreenButton.setTooltip(
-            isFullscreen ? "Exit fullscreen (F11 or Escape)" : "Enter fullscreen (F11)");
+        fullscreenButton.setButtonText(l10n::text(
+            isFullscreen ? l10n::key("title.fullscreen.restore") : l10n::key("title.fullscreen")));
+        fullscreenButton.setTooltip(l10n::text(
+            isFullscreen ? l10n::key("title.fullscreen.exit.tooltip")
+                         : l10n::key("title.fullscreen.enter.tooltip")));
     }
 
     void paint(juce::Graphics& graphics) override
@@ -158,10 +161,10 @@ class MainTitleBar final : public juce::Component
         };
 
         juce::PopupMenu menu;
-        menu.addItem(file, "File", false);
-        menu.addItem(settings, "Settings");
-        menu.addItem(tools, "Tools");
-        menu.addItem(help, "Help");
+        menu.addItem(file, l10n::text("title.file"), false);
+        menu.addItem(settings, l10n::text("title.settings"));
+        menu.addItem(tools, l10n::text("title.tools"));
+        menu.addItem(help, l10n::text("title.help"));
         menu.addSeparator();
         menu.addItem(microphone, microphoneButton.getButtonText());
 

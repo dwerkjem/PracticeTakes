@@ -5,6 +5,7 @@
 #include "../../../../platform/take/TakeRecorder.h"
 #include "../../../../platform/take/TakeStatus.h"
 #include "../../../../platform/transport/PracticeClock.h"
+#include "../../../localisation/Localisation.h"
 #include "../../../localisation/TakeText.h"
 #include "../../../theme/AppLookAndFeel.h"
 #include "PlaybackMixPanel.h"
@@ -63,18 +64,18 @@ class TransportStrip final
         // Component ids let the development-only test control channel click
         // these by name.
         playButton.setComponentID("transport-play");
-        playButton.setTooltip("Play from here, counting in first (Settings > Practice)");
+        playButton.setTooltip(l10n::text("transport.play.tooltip"));
         playButton.onClick = [this] { clock.togglePlay(); };
         addAndMakeVisible(playButton);
 
         stopButton.setComponentID("transport-stop");
-        stopButton.setTooltip("Stop, and go back to the start of the loop or the score");
+        stopButton.setTooltip(l10n::text("transport.stop.tooltip"));
         stopButton.onClick = [this] { clock.stop(); };
         addAndMakeVisible(stopButton);
 
         positionLabel.setComponentID("transport-position");
         positionLabel.setJustificationType(juce::Justification::centred);
-        positionLabel.setTooltip("Where the practice clock is in the score");
+        positionLabel.setTooltip(l10n::text("transport.position.tooltip"));
         addAndMakeVisible(positionLabel);
 
         tempoSlider.setComponentID("transport-tempo");
@@ -86,7 +87,7 @@ class TransportStrip final
         tempoSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 52, 24);
         tempoSlider.setTextValueSuffix("%");
         tempoSlider.setValue(clock.scalePercent(), juce::dontSendNotification);
-        tempoSlider.setTooltip("Tempo, as a percentage of the score's own");
+        tempoSlider.setTooltip(l10n::text("transport.tempo.tooltip"));
         tempoSlider.onValueChange = [this]
         { clock.setScalePercent(static_cast<int>(tempoSlider.getValue())); };
         addAndMakeVisible(tempoSlider);
@@ -94,7 +95,7 @@ class TransportStrip final
         clickButton.setComponentID("transport-click");
         clickButton.setClickingTogglesState(true);
         clickButton.setToggleState(clock.metronomeEnabled(), juce::dontSendNotification);
-        clickButton.setTooltip("Sound the metronome on every beat");
+        clickButton.setTooltip(l10n::text("transport.click.tooltip"));
         clickButton.onClick = [this]
         {
             clock.setMetronomeEnabled(clickButton.getToggleState());
@@ -108,14 +109,14 @@ class TransportStrip final
         loopButton.setComponentID("transport-loop");
         loopButton.setClickingTogglesState(true);
         loopButton.setToggleState(clock.loopEnabled(), juce::dontSendNotification);
-        loopButton.setTooltip("Loop the region, or the whole score when none is set");
+        loopButton.setTooltip(l10n::text("transport.loop.tooltip"));
         loopButton.onClick = [this] { clock.setLoopEnabled(loopButton.getToggleState()); };
         addAndMakeVisible(loopButton);
 
         // The score's sound, and each part's and hand's
         // (openspec/changes/archive/2026-11-08-score-playback).
         mixButton.setComponentID("transport-mix");
-        mixButton.setTooltip("Hear the score, and mute or solo each part or hand");
+        mixButton.setTooltip(l10n::text("transport.mix.tooltip"));
         mixButton.onClick = [this] { showMix(); };
         addAndMakeVisible(mixButton);
 
@@ -175,10 +176,12 @@ class TransportStrip final
         }
         if (position.countingIn)
         {
-            return "Count-in " + juce::String(position.beat + 1);
+            return l10n::format(
+                "transport.position.count-in", {{"beat", juce::String(position.beat + 1)}});
         }
-        return "Bar " + juce::String(position.bar + 1) + ", beat " +
-               juce::String(position.beat + 1);
+        return l10n::format(
+            "transport.position",
+            {{"bar", juce::String(position.bar + 1)}, {"beat", juce::String(position.beat + 1)}});
     }
 
     // Open the Mix popup under its button, inside the window so a capture
@@ -251,23 +254,25 @@ class TransportStrip final
         }
 
         const bool running = position.state == transport::ClockState::playing;
-        playButton.setButtonText(running ? "Pause" : "Play");
-        playButton.setTooltip(
-            running ? "Pause, holding the position"
-                    : "Play from here, counting in first (Settings > Practice)");
+        playButton.setButtonText(
+            l10n::text(running ? l10n::key("transport.pause") : l10n::key("transport.play")));
+        playButton.setTooltip(l10n::text(
+            running ? l10n::key("transport.pause.tooltip") : l10n::key("transport.play.tooltip")));
         positionLabel.setText(readout(position), juce::dontSendNotification);
         positionLabel.setTooltip(positionLabel.getText());
 
         // Record, or Finish while a take records, red so it cannot be missed.
         const bool recording = takes.isRecording();
         const std::optional<std::string> blocked = takes.whyCannotStart();
-        recordButton.setButtonText(recording ? "Finish" : "Record");
+        recordButton.setButtonText(
+            l10n::text(recording ? l10n::key("transport.finish") : l10n::key("transport.record")));
         recordButton.setEnabled(recording || !blocked.has_value());
         recordButton.setTooltip(
-            recording             ? "Finish the take, keeping what was played"
-            : blocked.has_value() ? "Recording is unavailable: " + l10n::text(*blocked)
-            : running             ? "Record a take from here, carrying on as it plays"
-                      : "Record a take from the microphone and keyboard, counting in first");
+            recording ? l10n::text("transport.finish.tooltip")
+            : blocked.has_value()
+                ? l10n::format("transport.record.unavailable", {{"reason", l10n::text(*blocked)}})
+            : running ? l10n::text("transport.record.while-playing.tooltip")
+                      : l10n::text("transport.record.tooltip"));
         recordButton.setColour(
             juce::TextButton::buttonColourId,
             recording ? juce::Colour::fromRGB(196, 43, 43)
@@ -295,12 +300,12 @@ class TransportStrip final
     std::function<void()> onSettingsChanged;
     std::uint64_t announcedTake = 0;
     juce::uint32 announceUntil = 0;
-    juce::TextButton recordButton{"Record"};
-    juce::TextButton playButton{"Play"};
-    juce::TextButton stopButton{"Stop"};
+    juce::TextButton recordButton{l10n::text("transport.record")};
+    juce::TextButton playButton{l10n::text("transport.play")};
+    juce::TextButton stopButton{l10n::text("transport.stop")};
     juce::Label positionLabel;
     juce::Slider tempoSlider;
-    juce::TextButton clickButton{"Click"};
-    juce::TextButton loopButton{"Loop"};
-    juce::TextButton mixButton{"Mix"};
+    juce::TextButton clickButton{l10n::text("transport.click")};
+    juce::TextButton loopButton{l10n::text("transport.loop")};
+    juce::TextButton mixButton{l10n::text("transport.mix")};
 };

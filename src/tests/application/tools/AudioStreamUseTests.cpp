@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "application/tools/AudioStreamUse.h"
+#include "application/tools/BuiltInToolCatalog.h"
 
 namespace
 {
@@ -10,7 +11,8 @@ namespace
     return {
         16,
         16 - 1 - spectrograms - analyzers,
-        {{"Spectrogram", spectrograms}, {"Harmonic Analyzer", analyzers}}};
+        {{toolCountKey("spectrogram"), spectrograms},
+         {toolCountKey("harmonic-analyzer"), analyzers}}};
 }
 } // namespace
 
@@ -30,7 +32,8 @@ TEST_CASE(
     "a tool with nothing open is left out, and one copy is singular",
     "[tools][audio-streams]")
 {
-    const AudioStreamUse::Use use{16, 14, {{"Spectrogram", 1}, {"Harmonic Analyzer", 0}}};
+    const AudioStreamUse::Use use{
+        16, 14, {{toolCountKey("spectrogram"), 1}, {toolCountKey("harmonic-analyzer"), 0}}};
     CHECK(AudioStreamUse::describeUsers(use) == "1 Spectrogram and shared pitch detection");
 }
 
@@ -38,7 +41,7 @@ TEST_CASE(
     "slots no tool accounts for beyond one are counted as other listeners",
     "[tools][audio-streams]")
 {
-    const AudioStreamUse::Use use{16, 10, {{"Spectrogram", 3}}};
+    const AudioStreamUse::Use use{16, 10, {{toolCountKey("spectrogram"), 3}}};
     CHECK(use.other() == 3);
     CHECK(AudioStreamUse::describeUsers(use) == "3 Spectrograms and 3 other listeners");
 }
@@ -57,7 +60,7 @@ TEST_CASE("an inconsistent count never underflows", "[tools][audio-streams]")
 {
     // More free than capacity, or tools claiming more than is used, cannot
     // happen from the service, but the arithmetic must not wrap if it did.
-    const AudioStreamUse::Use use{4, 9, {{"Spectrogram", 3}}};
+    const AudioStreamUse::Use use{4, 9, {{toolCountKey("spectrogram"), 3}}};
     CHECK(use.used() == 0);
     CHECK(use.other() == 0);
 }

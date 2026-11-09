@@ -10,10 +10,12 @@
 #include <string>
 #include <vector>
 
+#include "../../application/localisation/LocalisationRules.h"
 #include "../score/CurrentScore.h"
 #include "ClockMath.h"
 #include "ClockRenderer.h"
 #include "PlaybackMix.h"
+#include "PlaybackTrackNames.h"
 #include "ScoreSynth.h"
 
 // The practice clock: one per application, shared by every tool through
@@ -146,13 +148,20 @@ class PracticeClock final : private juce::Timer
     void loadSoundFont(const std::string& path);
 
     // Why the score cannot be played, in a sentence; nothing once it can.
+    // Why the score cannot be heard, as a catalogue identifier; its sentence
+    // may name soundFontLocation().
     [[nodiscard]] std::optional<std::string> whyPlaybackUnavailable() const;
+
+    [[nodiscard]] const std::string& soundFontLocation() const noexcept
+    {
+        return soundFontPath;
+    }
 
     // The open score's tracks, a staff of a part each, and the mix over them.
     // Mute and solo reset with each new score; playback and volume stay.
     [[nodiscard]] const std::vector<PlaybackTrack>& playbackTracks() const noexcept;
     // What each is called: "Voice", "Piano, right hand".
-    [[nodiscard]] const std::vector<std::string>& playbackTrackNames() const noexcept;
+    [[nodiscard]] const std::vector<TrackLabel>& playbackTrackLabels() const noexcept;
     [[nodiscard]] const PlaybackMix& playbackMix() const noexcept;
     void setPlaybackEnabled(bool enabled);
     void setPlaybackVolume(float volume);
@@ -202,10 +211,11 @@ class PracticeClock final : private juce::Timer
     // when it leaves the callback, in the destructor, before either goes.
     PlaybackMix mix;
     std::vector<PlaybackTrack> tracks;
-    std::vector<std::string> trackNames;
+    std::vector<TrackLabel> trackLabels;
     std::future<std::unique_ptr<ScoreSynth>> loadingSynth;
     std::unique_ptr<ScoreSynth> synth;
-    std::optional<std::string> synthUnavailable = std::string("The sounds have not been loaded");
+    std::optional<std::string> synthUnavailable =
+        std::string(l10n::key("playback.unavailable.not-loaded"));
     std::string soundFontPath;
     void adoptSynth();
     void publishMix();
