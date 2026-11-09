@@ -10,13 +10,15 @@ Diagnostic make(
     DiagnosticSeverity severity,
     DiagnosticLocation location,
     std::string elementName,
-    std::string message)
+    std::string_view code,
+    l10n::NamedArguments arguments)
 {
     Diagnostic diagnostic;
     diagnostic.severity = severity;
     diagnostic.location = std::move(location);
     diagnostic.elementName = std::move(elementName);
-    diagnostic.message = std::move(message);
+    diagnostic.code = std::string(code);
+    diagnostic.arguments = std::move(arguments);
 
     return diagnostic;
 }
@@ -26,14 +28,19 @@ void MusicXmlDiagnosticSink::add(
     DiagnosticSeverity severity,
     DiagnosticLocation location,
     std::string elementName,
-    std::string message)
+    std::string_view code,
+    l10n::NamedArguments arguments)
 {
-    // Keyed on all three fields, so only genuinely identical findings collapse.
-    // Keying on the element name alone would merge "a tie with no end" into "a
-    // tie with no start", which are different problems that happen to be about
-    // the same element.
-    const std::string key =
-        std::to_string(static_cast<int>(severity)) + '\0' + elementName + '\0' + message;
+    // Keyed on everything but the location, so only genuinely identical
+    // findings collapse. Keying on the element name alone would merge "a tie
+    // with no end" into "a tie with no start", which are different problems
+    // that happen to be about the same element.
+    std::string key = std::to_string(static_cast<int>(severity)) + '\0' + elementName + '\0';
+    key += code;
+    for (const auto& [name, value] : arguments)
+    {
+        key += '\0' + name + '=' + value;
+    }
     const auto existing = seen_.find(key);
 
     if (existing != seen_.end())
@@ -45,33 +52,37 @@ void MusicXmlDiagnosticSink::add(
 
     seen_.emplace(key, diagnostics_.size());
     diagnostics_.push_back(
-        make(severity, std::move(location), std::move(elementName), std::move(message)));
+        make(severity, std::move(location), std::move(elementName), code, std::move(arguments)));
 }
 
 void MusicXmlDiagnosticSink::addUnsupported(
     DiagnosticLocation location,
     std::string elementName,
-    std::string message)
+    std::string_view code,
+    l10n::NamedArguments arguments)
 {
-    add(DiagnosticSeverity::unsupported, std::move(location), std::move(elementName),
-        std::move(message));
+    add(DiagnosticSeverity::unsupported, std::move(location), std::move(elementName), code,
+        std::move(arguments));
 }
 
 void MusicXmlDiagnosticSink::addRepair(
     DiagnosticLocation location,
     std::string elementName,
-    std::string message)
+    std::string_view code,
+    l10n::NamedArguments arguments)
 {
-    add(DiagnosticSeverity::repaired, std::move(location), std::move(elementName),
-        std::move(message));
+    add(DiagnosticSeverity::repaired, std::move(location), std::move(elementName), code,
+        std::move(arguments));
 }
 
 void MusicXmlDiagnosticSink::addInfo(
     DiagnosticLocation location,
     std::string elementName,
-    std::string message)
+    std::string_view code,
+    l10n::NamedArguments arguments)
 {
-    add(DiagnosticSeverity::info, std::move(location), std::move(elementName), std::move(message));
+    add(DiagnosticSeverity::info, std::move(location), std::move(elementName), code,
+        std::move(arguments));
 }
 
 void MusicXmlDiagnosticSink::noteUnrecognisedElement(const std::string& elementName)
@@ -96,7 +107,7 @@ std::vector<Diagnostic> MusicXmlDiagnosticSink::release()
     {
         Diagnostic diagnostic = make(
             DiagnosticSeverity::info, {}, elementName,
-            "The importer does not read this element, so it was ignored.");
+            l10n::key("score.import.unrecognised-element"), {});
         diagnostic.occurrences = count;
         released.push_back(std::move(diagnostic));
     }

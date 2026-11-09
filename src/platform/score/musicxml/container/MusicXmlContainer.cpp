@@ -14,11 +14,13 @@ namespace
 // The MusicXML container specification fixes this path exactly.
 constexpr const char* containerManifestPath = "META-INF/container.xml";
 
-MusicXmlDocumentSource failure(MusicXmlImportStatus status, std::string error)
+MusicXmlDocumentSource
+failure(MusicXmlImportStatus status, std::string_view error, l10n::NamedArguments arguments = {})
 {
     MusicXmlDocumentSource source;
     source.status = status;
-    source.error = std::move(error);
+    source.error = std::string(error);
+    source.errorArguments = std::move(arguments);
 
     return source;
 }
@@ -40,8 +42,7 @@ bool readEntry(
                                           MusicXmlImportLimits::maximumUncompressedBytes)
     {
         failureOut = failure(
-            MusicXmlImportStatus::tooLarge,
-            "The compressed score expands to more than this importer accepts.");
+            MusicXmlImportStatus::tooLarge, l10n::key("score.import.error.expands-too-far"));
 
         return false;
     }
@@ -56,10 +57,7 @@ bool readEntry(
         static_cast<juce::uint64>(entry.uncompressedSize) >
             static_cast<juce::uint64>(containerBytes) * MusicXmlImportLimits::maximumExpansionRatio)
     {
-        failureOut = failure(
-            MusicXmlImportStatus::tooLarge,
-            "The compressed score expands far more than a real score does, so it "
-            "was refused rather than unpacked.");
+        failureOut = failure(MusicXmlImportStatus::tooLarge, l10n::key("score.import.error.bomb"));
 
         return false;
     }
@@ -70,7 +68,7 @@ bool readEntry(
     {
         failureOut = failure(
             MusicXmlImportStatus::invalidContainer,
-            "An entry inside the compressed score could not be opened.");
+            l10n::key("score.import.error.entry-unreadable"));
 
         return false;
     }
@@ -86,8 +84,7 @@ bool readEntry(
     if (buffer.getDataSize() > MusicXmlImportLimits::maximumUncompressedBytes)
     {
         failureOut = failure(
-            MusicXmlImportStatus::tooLarge,
-            "The compressed score expands to more than this importer accepts.");
+            MusicXmlImportStatus::tooLarge, l10n::key("score.import.error.expands-too-far"));
 
         return false;
     }
@@ -118,7 +115,7 @@ MusicXmlDocumentSource resolveContainer(const juce::File& file)
     if (archive.getNumEntries() <= 0)
     {
         return failure(
-            MusicXmlImportStatus::invalidContainer, "The compressed score contains no entries.");
+            MusicXmlImportStatus::invalidContainer, l10n::key("score.import.error.no-entries"));
     }
 
     const juce::int64 containerBytes = file.getSize();
@@ -129,9 +126,7 @@ MusicXmlDocumentSource resolveContainer(const juce::File& file)
     if (manifestEntry == nullptr)
     {
         return failure(
-            MusicXmlImportStatus::invalidContainer,
-            "The compressed score has no META-INF/container.xml, so there is no way to "
-            "tell which entry inside it is the score.");
+            MusicXmlImportStatus::invalidContainer, l10n::key("score.import.error.no-manifest"));
     }
 
     // getEntry returns the entry, but createStreamForEntry wants its index.
@@ -150,7 +145,7 @@ MusicXmlDocumentSource resolveContainer(const juce::File& file)
     {
         return failure(
             MusicXmlImportStatus::invalidContainer,
-            "The compressed score's manifest could not be located inside it.");
+            l10n::key("score.import.error.manifest-unlocated"));
     }
 
     std::string manifestText;
@@ -168,7 +163,7 @@ MusicXmlDocumentSource resolveContainer(const juce::File& file)
     {
         return failure(
             MusicXmlImportStatus::invalidContainer,
-            "The compressed score's META-INF/container.xml is not readable XML.");
+            l10n::key("score.import.error.manifest-malformed"));
     }
 
     // <container><rootfiles><rootfile full-path="score.xml"/></rootfiles></container>
@@ -177,8 +172,7 @@ MusicXmlDocumentSource resolveContainer(const juce::File& file)
     if (rootfiles == nullptr)
     {
         return failure(
-            MusicXmlImportStatus::invalidContainer,
-            "The compressed score's manifest lists no root files.");
+            MusicXmlImportStatus::invalidContainer, l10n::key("score.import.error.no-root-files"));
     }
 
     // The first <rootfile> is the score; later ones are alternate
@@ -191,7 +185,7 @@ MusicXmlDocumentSource resolveContainer(const juce::File& file)
     {
         return failure(
             MusicXmlImportStatus::invalidContainer,
-            "The compressed score's manifest does not name a root score document.");
+            l10n::key("score.import.error.no-root-document"));
     }
 
     const juce::ZipFile::ZipEntry* rootEntry =
@@ -210,8 +204,8 @@ MusicXmlDocumentSource resolveContainer(const juce::File& file)
     if (rootEntry == nullptr || rootIndex < 0)
     {
         return failure(
-            MusicXmlImportStatus::invalidContainer, "The compressed score's manifest names \"" +
-                                                        fullPath + "\", which is not in the file.");
+            MusicXmlImportStatus::invalidContainer, l10n::key("score.import.error.root-missing"),
+            {{"entry", fullPath}});
     }
 
     std::string documentText;
@@ -234,28 +228,30 @@ MusicXmlDocumentSource loadDocumentSource(const juce::File& file)
     if (!file.existsAsFile())
     {
         return failure(
-            MusicXmlImportStatus::notFound,
-            "There is no file at \"" + file.getFullPathName().toStdString() + "\".");
+            MusicXmlImportStatus::notFound, l10n::key("score.import.error.not-found"),
+            {{"path", file.getFullPathName().toStdString()}});
     }
 
     const juce::int64 size = file.getSize();
 
     if (size < 0)
     {
-        return failure(MusicXmlImportStatus::unreadable, "The file could not be read.");
+        return failure(
+            MusicXmlImportStatus::unreadable, l10n::key("score.import.error.unreadable"));
     }
 
     if (static_cast<juce::uint64>(size) > MusicXmlImportLimits::maximumSourceBytes)
     {
         return failure(
-            MusicXmlImportStatus::tooLarge, "The file is larger than this importer accepts.");
+            MusicXmlImportStatus::tooLarge, l10n::key("score.import.error.file-too-large"));
     }
 
     juce::FileInputStream stream(file);
 
     if (!stream.openedOk())
     {
-        return failure(MusicXmlImportStatus::unreadable, "The file could not be opened.");
+        return failure(
+            MusicXmlImportStatus::unreadable, l10n::key("score.import.error.unopenable"));
     }
 
     juce::MemoryOutputStream buffer;
@@ -270,7 +266,8 @@ MusicXmlDocumentSource loadDocumentSource(const juce::File& file)
 
     if (bytes.empty())
     {
-        return failure(MusicXmlImportStatus::notMusicXml, "The file is empty.");
+        return failure(
+            MusicXmlImportStatus::notMusicXml, l10n::key("score.import.error.file-empty"));
     }
 
     MusicXmlDocumentSource source;

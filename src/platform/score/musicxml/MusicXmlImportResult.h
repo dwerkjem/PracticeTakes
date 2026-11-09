@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "../../../application/localisation/LocalisationRules.h"
 #include "platform/score/Diagnostic.h"
 #include "platform/score/Score.h"
 
@@ -80,8 +81,10 @@ struct MusicXmlImportResult
     // once; `const` is what makes that safe without a lock.
     std::shared_ptr<const Score> score;
 
-    // Empty on success. Aimed at a user, not a log.
+    // Empty on success. Why the file was refused, as a catalogue identifier,
+    // with the values its sentence names (a file's path, an entry's name).
     std::string error;
+    l10n::NamedArguments errorArguments;
 
     // Present on success and on failure. A malformed document still has
     // something to say about where it went wrong.

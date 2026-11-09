@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../../application/localisation/LocalisationRules.h"
 #include <optional>
 #include <string>
 #include <string_view>
@@ -81,10 +82,12 @@ struct XmlParseResult
     XmlParseStatus status = XmlParseStatus::malformed;
     std::optional<XmlNode> root;
 
-    // Empty when the status is `parsed`. This is the parser's own message; it
-    // names what went wrong but not where, which is why diagnostics lead with a
-    // musical location instead (design.md, decision 5).
+    // Empty when the status is `parsed`. A catalogue identifier; for a
+    // malformed document its `detail` argument is the parser's own message,
+    // which names what went wrong but not where -- which is why diagnostics
+    // lead with a musical location instead (design.md, decision 5).
     std::string error;
+    l10n::NamedArguments errorArguments;
 };
 
 // Parse a whole XML document held in memory.

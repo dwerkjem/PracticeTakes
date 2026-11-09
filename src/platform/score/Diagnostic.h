@@ -3,6 +3,7 @@
 #include <optional>
 #include <string>
 
+#include "../../application/localisation/LocalisationRules.h"
 #include "MusicalTime.h"
 
 // What the importer has to say about a file it read (no JUCE dependency).
@@ -64,14 +65,31 @@ struct Diagnostic
     // when the diagnostic is not about one specific element.
     std::string elementName;
 
-    // Human-readable, aimed at a musician rather than a developer.
-    std::string message;
+    // What happened, as a catalogue identifier ("score.import.slur"), with the
+    // values its sentence names. This layer composes no prose
+    // (openspec/changes/internationalization, decision 4): the shell renders
+    // it, and a test asserts the finding rather than a wording.
+    std::string code;
+    l10n::NamedArguments arguments;
 
     // How many times this was seen. Unrecognised elements are summarised once
     // per element name with a count (task 7.2) rather than once per occurrence,
     // because a Sibelius export otherwise produces thousands of them.
     int occurrences = 1;
 };
+
+// The value of a named argument, or empty.
+[[nodiscard]] inline std::string argumentOf(const Diagnostic& diagnostic, std::string_view name)
+{
+    for (const auto& [key, value] : diagnostic.arguments)
+    {
+        if (key == name)
+        {
+            return value;
+        }
+    }
+    return {};
+}
 
 [[nodiscard]] inline bool hasLocation(const DiagnosticLocation& location) noexcept
 {

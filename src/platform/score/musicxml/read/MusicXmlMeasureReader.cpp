@@ -1,4 +1,5 @@
 #include "MusicXmlMeasureReader.h"
+#include "application/localisation/LocalisationRules.h"
 
 #include <algorithm>
 #include <cctype>
@@ -37,10 +38,8 @@ Tick rescaleDuration(
     if (!rescaled.exact)
     {
         context.diagnostics.addRepair(
-            location, elementName,
-            "A duration of " + text + " in units of " + std::to_string(state.divisions) +
-                " per quarter note does not convert exactly to the score's time base, so it was "
-                "rounded to the nearest tick.");
+            location, elementName, l10n::key("score.import.repair.inexact-duration"),
+            {{"duration", text}, {"divisions", std::to_string(state.divisions)}});
     }
 
     return rescaled.ticks;
@@ -68,7 +67,7 @@ readPitch(const XmlNode& pitchNode, ReadContext& context, const DiagnosticLocati
     if (alter != std::round(alter))
     {
         context.diagnostics.addUnsupported(
-            location, "alter", "A microtonal alteration was rounded to the nearest semitone.");
+            location, "alter", l10n::key("score.import.unsupported.microtone"));
     }
 
     return pitchFromSpelling(*step, static_cast<int>(std::lround(alter)), octave);
@@ -184,9 +183,7 @@ void readAttributes(
         else
         {
             context.diagnostics.addRepair(
-                locationOf(part, measure), "divisions",
-                "The part declares a non-positive number of divisions per quarter note, which no "
-                "duration can be measured against; the previous value was kept.");
+                locationOf(part, measure), "divisions", l10n::key("score.import.repair.divisions"));
         }
     }
 
@@ -214,8 +211,7 @@ void readAttributes(
         else
         {
             context.diagnostics.addRepair(
-                locationOf(part, measure), "time",
-                "The time signature could not be read, so the previous one was kept.");
+                locationOf(part, measure), "time", l10n::key("score.import.repair.time"));
         }
     }
 
@@ -345,10 +341,7 @@ void readNote(
     // least, but it is worth saying so rather than silently inventing a note.
     if (isChordTone)
     {
-        context.diagnostics.addRepair(
-            location, "chord",
-            "A note is marked as part of a chord but is the first note in its voice, so it was "
-            "imported as a note of its own.");
+        context.diagnostics.addRepair(location, "chord", l10n::key("score.import.repair.chord"));
     }
 
     PendingEvent pending;
@@ -381,7 +374,7 @@ void readNote(
         else
         {
             context.diagnostics.addRepair(
-                location, "step", "A note has no readable pitch, so it was imported as a rest.");
+                location, "step", l10n::key("score.import.repair.no-pitch"));
             pending.event.kind = EventKind::rest;
         }
     }
@@ -584,10 +577,9 @@ void readDirection(
     {
         context.diagnostics.addRepair(
             locationOf(part, measure), "metronome",
-            "The engraved metronome mark and the playback tempo disagree (" +
-                std::to_string(static_cast<int>(*metronomeTempo)) + " against " +
-                std::to_string(static_cast<int>(*soundTempo)) +
-                " quarter notes per minute); the playback tempo was used.");
+            l10n::key("score.import.repair.tempo-disagrees"),
+            {{"engraved", std::to_string(static_cast<int>(*metronomeTempo))},
+             {"playback", std::to_string(static_cast<int>(*soundTempo))}});
     }
 
     const std::optional<double> tempo = soundTempo.has_value() ? soundTempo : metronomeTempo;
@@ -754,9 +746,7 @@ void readMeasure(
             if (cursor < 0)
             {
                 context.diagnostics.addRepair(
-                    locationOf(part, measure), "backup",
-                    "A backup moved the writing position before the start of the measure; it was "
-                    "clamped to the start.");
+                    locationOf(part, measure), "backup", l10n::key("score.import.repair.backup"));
                 cursor = 0;
             }
         }
@@ -825,9 +815,7 @@ void readMeasure(
     if (occupied > measure.nominalDuration)
     {
         context.diagnostics.addRepair(
-            locationOf(part, measure), "measure",
-            "This bar holds more music than its time signature allows, so the bar was widened to "
-            "fit rather than the music being cut short.");
+            locationOf(part, measure), "measure", l10n::key("score.import.repair.over-full"));
 
         measure.nominalDuration = occupied;
     }

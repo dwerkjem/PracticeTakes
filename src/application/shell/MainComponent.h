@@ -11,6 +11,7 @@
 #include "../../platform/transport/PracticeClock.h"
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
+#include "../localisation/Localisation.h"
 #include "../theme/AppLookAndFeel.h"
 #include "../theme/Theme.h"
 #include "../tools/AudioStreamUse.h"
@@ -440,15 +441,15 @@ class MainComponent final
     // shell, which owns the settings file.
     TransportStrip transportStrip{practiceClock, takeRecorder, [this] { saveSettings(false); }};
 
-    juce::TextButton fileButton{"File"};
+    juce::TextButton fileButton{l10n::text("title.file")};
 
     // Shown in the empty workspace, under the guidance text, so a first launch
     // has a way to see a score without owning one. Hidden whenever a tool is
     // open: it is part of the guidance, not of the workspace.
-    juce::TextButton openSampleButton{"Open the sample score"};
-    juce::TextButton settingsButton{"Settings"};
-    juce::TextButton toolsButton{"Tools"};
-    juce::TextButton helpButton{"Help"};
+    juce::TextButton openSampleButton{l10n::text("workspace.empty.open-sample")};
+    juce::TextButton settingsButton{l10n::text("title.settings")};
+    juce::TextButton toolsButton{l10n::text("title.tools")};
+    juce::TextButton helpButton{l10n::text("title.help")};
     juce::TextButton microphoneButton;
 
     // Every tool instance the session knows about, live or closed.

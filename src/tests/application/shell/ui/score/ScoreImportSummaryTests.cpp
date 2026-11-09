@@ -108,12 +108,14 @@ findField(const ScoreImportSummary& summary, const std::string& label)
     return field == nullptr ? std::string{} : field->value;
 }
 
+// `code` is not in the catalogue, and an identifier the catalogue lacks is shown
+// as itself, so these diagnostics render as the text they are written with.
 [[nodiscard]] Diagnostic
-diagnosticOf(const DiagnosticSeverity severity, std::string message, std::string elementName = {})
+diagnosticOf(const DiagnosticSeverity severity, std::string code, std::string elementName = {})
 {
     Diagnostic diagnostic;
     diagnostic.severity = severity;
-    diagnostic.message = std::move(message);
+    diagnostic.code = std::move(code);
     diagnostic.elementName = std::move(elementName);
 
     return diagnostic;
@@ -507,7 +509,7 @@ TEST_CASE(
     CHECK(
         report.find("<harmony> Chord symbols are not imported. [Piano, bar 12a]") !=
         std::string::npos);
-    CHECK(report.find("(seen 2114 times)") != std::string::npos);
+    CHECK(report.find("(seen 2,114 times)") != std::string::npos);
 
     // The clean-import sentence must not appear when there are diagnostics.
     CHECK(report.find("Nothing was dropped") == std::string::npos);

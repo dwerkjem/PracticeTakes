@@ -1,4 +1,5 @@
 #include "MusicXmlScoreReader.h"
+#include "application/localisation/LocalisationRules.h"
 
 #include <string>
 #include <utility>
@@ -160,9 +161,9 @@ readPartList(const XmlNode& root, ReadContext& context, Score& score)
 
             context.diagnostics.addRepair(
                 location, "score-part",
-                duplicate ? "Two parts in the file share the identifier \"" + sourceId +
-                                "\", so the second was given a new one."
-                          : "A part in the file has no identifier, so one was generated for it.");
+                duplicate ? l10n::key("score.import.repair.duplicate-part-id")
+                          : l10n::key("score.import.repair.no-part-id"),
+                {{"identifier", sourceId}});
         }
 
         // Keyed by the *source* id, because that is what <part id="..."> says. A
@@ -204,9 +205,7 @@ void readParts(
         DiagnosticLocation location;
         location.partId = part.id;
         context.diagnostics.addRepair(
-            location, "part",
-            "The file contains music for a part that its part list does not declare, so a part "
-            "was created for it.");
+            location, "part", l10n::key("score.import.repair.undeclared-part"));
 
         score.parts.push_back(std::move(part));
         readPart(*partNode, context, score.parts.back());

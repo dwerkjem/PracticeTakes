@@ -138,7 +138,7 @@ struct MeasurePlan
 class NoticeList
 {
   public:
-    void add(std::string notice)
+    void add(Notice notice)
     {
         if (std::find(ordered.begin(), ordered.end(), notice) == ordered.end())
         {
@@ -146,13 +146,18 @@ class NoticeList
         }
     }
 
-    [[nodiscard]] std::vector<std::string> take()
+    void add(std::string_view code, l10n::NamedArguments arguments = {})
+    {
+        add(Notice{std::string(code), std::move(arguments), {}, std::nullopt});
+    }
+
+    [[nodiscard]] std::vector<Notice> take()
     {
         return std::move(ordered);
     }
 
   private:
-    std::vector<std::string> ordered;
+    std::vector<Notice> ordered;
 };
 
 // What to call a clef that names no pitch, in words a reader uses. MusicXML's
@@ -162,20 +167,15 @@ class NoticeList
 {
     if (sign == "percussion")
     {
-        return "a percussion clef";
+        return std::string(l10n::key("score.notice.clef.percussion"));
     }
 
     if (sign == "TAB")
     {
-        return "tablature";
+        return std::string(l10n::key("score.notice.clef.tablature"));
     }
 
-    return "a clef without pitches";
-}
-
-[[nodiscard]] std::string pluralised(std::size_t count, const std::string& singular)
-{
-    return std::to_string(count) + " " + singular + (count == 1 ? "" : "s");
+    return std::string(l10n::key("score.notice.clef.unpitched"));
 }
 
 // Every event of a measure that sits on `staff`, in the order a reader meets
@@ -424,8 +424,7 @@ void resolveBeamGroups(MeasurePlan& plan, NoticeList& notices)
 
             if (before.onset / groupTicks == group && after.onset / groupTicks == group)
             {
-                notices.add("Beams stop at rests, so notes either side of a rest are drawn with "
-                            "flags.");
+                notices.add(l10n::key("score.notice.beams-at-rests"));
             }
         }
 
@@ -439,7 +438,7 @@ void resolveBeamGroups(MeasurePlan& plan, NoticeList& notices)
 
             if (consecutiveGraceNotes > 1)
             {
-                notices.add("Grace notes are drawn with flags rather than beams.");
+                notices.add(l10n::key("score.notice.grace-flags"));
 
                 break;
             }
@@ -549,10 +548,9 @@ void planMeasure(
         if (!placed.value.has_value())
         {
             notices.add(
-                "Some notes are a length no single note symbol shows, and are drawn as "
-                "quarter notes. Bar " +
-                (plan.printedNumber.empty() ? std::to_string(plan.index + 1) : plan.printedNumber) +
-                " is the first.");
+                l10n::key("score.notice.unwritable-length"),
+                {{"bar", plan.printedNumber.empty() ? std::to_string(plan.index + 1)
+                                                    : plan.printedNumber}});
 
             placed.value = WrittenNoteValue{WrittenValue::quarter, 0};
         }
@@ -567,9 +565,7 @@ void planMeasure(
             {
                 // Guarded before the measure is planned at all; reaching here
                 // would mean the clef changed to an unpitched one mid-part.
-                notices.add(
-                    "This part switches to a clef without pitches, such as percussion, and the "
-                    "notes after the switch are not shown.");
+                notices.add(l10n::key("score.notice.clef-switch"));
 
                 continue;
             }
@@ -1876,9 +1872,7 @@ void liftTempoMarksToTop(System& system, int lastStaffOfFirstPart)
 
             if (cancelling)
             {
-                notices.add(
-                    "A change to a key with no sharps or flats is shown without the naturals "
-                    "that cancel the old key.");
+                notices.add(l10n::key("score.notice.key-cancel"));
             }
         }
 
@@ -1976,7 +1970,7 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     if (score->parts.empty())
     {
         layout.outcome = LayoutOutcome::nothingToDraw;
-        notices.add("This score has no parts to show.");
+        notices.add(l10n::key("score.notice.no-parts"));
         layout.notices = notices.take();
 
         return layout;
@@ -2030,8 +2024,7 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
             continue;
         }
 
-        const std::string subject = severalParts ? nameOf(part) : "This part";
-        const std::string object = severalParts ? nameOf(part) : "this part";
+        const l10n::NamedArguments named{{"part", severalParts ? nameOf(part) : std::string{}}};
 
         // Every staff of the part that names pitches. A staff in a clef without
         // pitches -- percussion inside an otherwise pitched part -- is left out
@@ -2056,27 +2049,34 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
 
         if (drawnStaves.empty())
         {
-            notices.add(
-                subject + " is written in " + unpitchedClefDescription(openingClef(part, 1).sign) +
-                ", which has no pitches to place on a staff, so it " +
-                (severalParts ? "is not shown." : "cannot be shown."));
+            notices.add(Notice{
+                std::string(
+                    severalParts ? l10n::key("score.notice.part-unpitched.named")
+                                 : l10n::key("score.notice.part-unpitched")),
+                named,
+                {{"clef", unpitchedClefDescription(openingClef(part, 1).sign)}},
+                std::nullopt});
 
             continue;
         }
 
         for (const std::string& description : omittedStaves)
         {
-            std::string notice = "One staff of ";
-            notice += object;
-            notice += " is written in ";
-            notice += description;
-            notice += ", which has no pitches to place on a staff, so it is not shown.";
-            notices.add(std::move(notice));
+            notices.add(Notice{
+                std::string(
+                    severalParts ? l10n::key("score.notice.staff-unpitched.named")
+                                 : l10n::key("score.notice.staff-unpitched")),
+                named,
+                {{"clef", description}},
+                std::nullopt});
         }
 
         if (part.measures.empty() || !holdsAnyEvent(part))
         {
-            notices.add(subject + " has no notes or rests to show.");
+            notices.add(
+                severalParts ? l10n::key("score.notice.part-empty.named")
+                             : l10n::key("score.notice.part-empty"),
+                named);
 
             continue;
         }
@@ -2114,10 +2114,8 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
     if (anyUncommonClef)
     {
         notices.add(
-            severalParts ? "A clef in this score sits on an uncommon line, so compare its key "
-                           "signature with the printed music."
-                         : "This part's clef sits on an uncommon line, so compare its key "
-                           "signature with the printed music.");
+            severalParts ? l10n::key("score.notice.uncommon-clef.score")
+                         : l10n::key("score.notice.uncommon-clef.part"));
     }
 
     // Parts are written measure for measure, so they almost always agree on
@@ -2134,9 +2132,11 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
 
     if (longest > measureCount)
     {
-        notices.add(
-            "Not shown: " + pluralised(longest - measureCount, "bar") +
-            " at the end that only some parts have.");
+        notices.add(Notice{
+            std::string(l10n::pluralKey("score.notice.extra-bars")),
+            {},
+            {},
+            static_cast<std::int64_t>(longest - measureCount)});
     }
 
     // Each staff planned vertically on its own, then every measure spaced across
@@ -2239,10 +2239,11 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
 
     if (notDrawn > 0)
     {
-        notices.add(
-            "Not shown: " + std::to_string(notDrawn) +
-            (notDrawn == 1 ? " note or rest" : " notes and rests") +
-            " on a staff this view does not show.");
+        notices.add(Notice{
+            std::string(l10n::pluralKey("score.notice.notes-not-shown")),
+            {},
+            {},
+            static_cast<std::int64_t>(notDrawn)});
     }
 
     // Which staves each part spans, for the painter's braces and barlines, and
@@ -2738,9 +2739,7 @@ layOutScore(const std::shared_ptr<const score::Score>& score, const LayoutOption
 
     if (anyBeam)
     {
-        notices.add(
-            "Beams are grouped by the time signature, so they may not match how the original "
-            "file grouped them.");
+        notices.add(l10n::key("score.notice.beams-by-time"));
     }
 
     layout.outcome = LayoutOutcome::laidOut;

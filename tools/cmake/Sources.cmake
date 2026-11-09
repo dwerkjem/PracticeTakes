@@ -141,6 +141,7 @@ set(PRACTICE_TAKES_SOURCES
     src/features/review/TakeReviewComponent.h
     src/features/score/MusicFont.cpp
     src/features/score/MusicFont.h
+    src/features/score/NoticeText.h
     src/features/score/ScoreGlyphPainter.cpp
     src/features/score/ScoreGlyphPainter.h
     src/features/score/ScoreViewComponent.cpp

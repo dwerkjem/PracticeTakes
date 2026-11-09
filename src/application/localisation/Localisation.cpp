@@ -76,7 +76,27 @@ juce::String Localisation::format(std::string_view key, Arguments arguments) con
 }
 
 juce::String
+Localisation::formatArguments(std::string_view key, const NamedArguments& arguments) const
+{
+    return juce::String::fromUTF8(formatNamed(text(key).toStdString(), arguments).c_str());
+}
+
+juce::String
 Localisation::plural(std::string_view key, std::int64_t count, Arguments arguments) const
+{
+    NamedArguments named;
+    named.reserve(arguments.size());
+    for (const auto& [name, value] : arguments)
+    {
+        named.emplace_back(std::string(name), value.toStdString());
+    }
+    return pluralArguments(key, count, named);
+}
+
+juce::String Localisation::pluralArguments(
+    std::string_view key,
+    std::int64_t count,
+    const NamedArguments& arguments) const
 {
     const std::string base(key);
     const std::string form = base + "." + std::string(pluralName(pluralCategory(code, count)));
@@ -98,10 +118,7 @@ Localisation::plural(std::string_view key, std::int64_t count, Arguments argumen
     NamedArguments named;
     named.reserve(arguments.size() + 1);
     named.emplace_back("count", formatNumber(static_cast<double>(count), 0, numberStyleFor(code)));
-    for (const auto& [name, value] : arguments)
-    {
-        named.emplace_back(std::string(name), value.toStdString());
-    }
+    named.insert(named.end(), arguments.begin(), arguments.end());
     return juce::String::fromUTF8(formatNamed(chosenPattern.toStdString(), named).c_str());
 }
 

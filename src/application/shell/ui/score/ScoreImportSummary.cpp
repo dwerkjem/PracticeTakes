@@ -5,6 +5,7 @@
 #include <sstream>
 #include <string>
 
+#include "application/localisation/Localisation.h"
 #include "platform/score/Score.h"
 
 namespace
@@ -79,9 +80,7 @@ void appendIfPresent(
         text << beatsPerMinute;
     }
 
-    text << " BPM";
-
-    return text.str();
+    return l10n::format("score.import.tempo", {{"bpm", juce::String(text.str())}}).toStdString();
 }
 
 // How a part is named in the summary, and in a diagnostic's location.
@@ -132,12 +131,19 @@ void appendIfPresent(
 
     if (diagnostic.location.measureNumber.has_value())
     {
-        pieces.push_back("bar " + *diagnostic.location.measureNumber);
+        pieces.push_back(
+            l10n::format(
+                "score.import.location.bar",
+                {{"bar", juce::String::fromUTF8(diagnostic.location.measureNumber->c_str())}})
+                .toStdString());
     }
 
     if (diagnostic.location.voice.has_value())
     {
-        pieces.push_back("voice " + std::to_string(*diagnostic.location.voice));
+        pieces.push_back(l10n::format(
+                             "score.import.location.voice",
+                             {{"voice", juce::String(*diagnostic.location.voice)}})
+                             .toStdString());
     }
 
     std::string location;
@@ -146,7 +152,7 @@ void appendIfPresent(
     {
         if (index > 0)
         {
-            location += ", ";
+            location += l10n::text("list.separator").toStdString();
         }
 
         location += pieces[index];
@@ -159,21 +165,21 @@ void appendIfPresent(
 // severity means for the score in front of the user rather than with the enum's
 // own word: "repaired" alone does not say that the score is complete but no
 // longer faithful to the file.
-[[nodiscard]] const char* severityHeading(const DiagnosticSeverity severity)
+[[nodiscard]] std::string severityHeading(const DiagnosticSeverity severity)
 {
     switch (severity)
     {
     case DiagnosticSeverity::unsupported:
-        return "Content this importer does not support, so the score differs from the file:";
+        return l10n::text("score.import.heading.unsupported").toStdString();
 
     case DiagnosticSeverity::repaired:
-        return "Structures repaired to make the score usable:";
+        return l10n::text("score.import.heading.repaired").toStdString();
 
     case DiagnosticSeverity::info:
-        return "Notes about the file:";
+        break;
     }
 
-    return "Notes about the file:";
+    return l10n::text("score.import.heading.info").toStdString();
 }
 
 // Severities in the order `DiagnosticSeverity` declares them. Grouping needs
@@ -203,8 +209,10 @@ groupBySeverity(const std::vector<Diagnostic>& diagnostics, const Score* score)
             }
 
             group.lines.push_back(
-                {diagnostic.severity, diagnostic.message, formatLocation(diagnostic, score),
-                 diagnostic.elementName, diagnostic.occurrences});
+                {diagnostic.severity,
+                 l10n::formatArguments(diagnostic.code, diagnostic.arguments).toStdString(),
+                 formatLocation(diagnostic, score), diagnostic.elementName,
+                 diagnostic.occurrences});
         }
 
         if (!group.lines.empty())
@@ -227,37 +235,37 @@ std::string scoreImportHeadline(const score::musicxml::MusicXmlImportStatus stat
     switch (status)
     {
     case MusicXmlImportStatus::imported:
-        return "The score was imported.";
+        return l10n::text("score.import.headline.imported").toStdString();
 
     case MusicXmlImportStatus::importedWithDiagnostics:
-        return "The score was imported, with notes about the file.";
+        return l10n::text("score.import.headline.imported-with-notes").toStdString();
 
     case MusicXmlImportStatus::notFound:
-        return "That file no longer exists.";
+        return l10n::text("score.import.headline.not-found").toStdString();
 
     case MusicXmlImportStatus::unreadable:
-        return "That file could not be read.";
+        return l10n::text("score.import.headline.unreadable").toStdString();
 
     case MusicXmlImportStatus::tooLarge:
-        return "That file is too large to import.";
+        return l10n::text("score.import.headline.too-large").toStdString();
 
     case MusicXmlImportStatus::notMusicXml:
-        return "That file is not a MusicXML score.";
+        return l10n::text("score.import.headline.not-musicxml").toStdString();
 
     case MusicXmlImportStatus::malformedXml:
-        return "That file is not valid XML.";
+        return l10n::text("score.import.headline.malformed").toStdString();
 
     case MusicXmlImportStatus::invalidContainer:
-        return "That compressed score's container is inconsistent.";
+        return l10n::text("score.import.headline.invalid-container").toStdString();
 
     case MusicXmlImportStatus::unsupportedDocumentType:
-        return "That is a MusicXML document of a kind this importer does not read.";
+        return l10n::text("score.import.headline.unsupported-document").toStdString();
 
     case MusicXmlImportStatus::structurallyInvalid:
-        return "That MusicXML score's structure could not be read.";
+        return l10n::text("score.import.headline.structurally-invalid").toStdString();
     }
 
-    return "That file could not be imported.";
+    return l10n::text("score.import.headline.failed").toStdString();
 }
 
 ScoreImportSummary summariseScoreImport(const score::musicxml::MusicXmlImportResult& result)
@@ -268,10 +276,13 @@ ScoreImportSummary summariseScoreImport(const score::musicxml::MusicXmlImportRes
     summary.succeeded = score::musicxml::succeeded(result.status);
     summary.headline = scoreImportHeadline(result.status);
 
-    // The importer's message, not a paraphrase of it. It is already written for
-    // a user and it names specifics -- the container entry that was missing,
-    // the element that was not understood -- that no re-wording here could add.
-    summary.detail = result.error;
+    // The importer's reason, not a paraphrase of it. It names specifics -- the
+    // container entry that was missing, the element that was not understood --
+    // that no re-wording here could add.
+    if (!result.error.empty())
+    {
+        summary.detail = l10n::formatArguments(result.error, result.errorArguments).toStdString();
+    }
 
     // Diagnostics come from the result rather than from `Score::diagnostics`,
     // because the result carries them on failure too and a malformed document
@@ -283,7 +294,7 @@ ScoreImportSummary summariseScoreImport(const score::musicxml::MusicXmlImportRes
 
     if (summary.cleanImport && summary.succeeded)
     {
-        summary.diagnosticsMessage = "Nothing was dropped or repaired.";
+        summary.diagnosticsMessage = l10n::text("score.import.clean").toStdString();
     }
 
     if (score == nullptr)
@@ -291,15 +302,25 @@ ScoreImportSummary summariseScoreImport(const score::musicxml::MusicXmlImportRes
         return summary;
     }
 
-    appendIfPresent(summary.fields, "Work", score->metadata.workTitle);
-    appendIfPresent(summary.fields, "Movement", score->metadata.movementTitle);
-    appendIfPresent(summary.fields, "Composer", score->metadata.composer);
-    appendIfPresent(summary.fields, "Lyricist", score->metadata.lyricist);
+    appendIfPresent(
+        summary.fields, l10n::text("score.import.field.work").toStdString(),
+        score->metadata.workTitle);
+    appendIfPresent(
+        summary.fields, l10n::text("score.import.field.movement").toStdString(),
+        score->metadata.movementTitle);
+    appendIfPresent(
+        summary.fields, l10n::text("score.import.field.composer").toStdString(),
+        score->metadata.composer);
+    appendIfPresent(
+        summary.fields, l10n::text("score.import.field.lyricist").toStdString(),
+        score->metadata.lyricist);
 
     // Shown with the metadata rather than tucked away: exporter dialects differ
     // more than the format suggests, so this is the first thing anyone needs
     // when a file misbehaves.
-    appendIfPresent(summary.fields, "Written by", score->metadata.encodingSoftware);
+    appendIfPresent(
+        summary.fields, l10n::text("score.import.field.written-by").toStdString(),
+        score->metadata.encodingSoftware);
 
     summary.parts.reserve(score->parts.size());
 
@@ -313,12 +334,21 @@ ScoreImportSummary summariseScoreImport(const score::musicxml::MusicXmlImportRes
     summary.length.seconds = score->tempoMap.tickToSeconds(score::totalLength(*score));
     summary.startingBeatsPerMinute = score->tempoMap.beatsPerMinuteAt(0);
 
-    summary.fields.push_back({"Parts", std::to_string(summary.parts.size())});
-    summary.fields.push_back({"Measures", std::to_string(summary.measureCount)});
+    const auto count = [](std::size_t value)
+    { return l10n::number(static_cast<double>(value), 0).toStdString(); };
     summary.fields.push_back(
-        {"Length", std::to_string(summary.length.bars) + " bars, " +
-                       formatClockTime(summary.length.seconds)});
-    summary.fields.push_back({"Tempo", formatBeatsPerMinute(summary.startingBeatsPerMinute)});
+        {l10n::text("score.import.field.parts").toStdString(), count(summary.parts.size())});
+    summary.fields.push_back(
+        {l10n::text("score.import.field.measures").toStdString(), count(summary.measureCount)});
+    summary.fields.push_back(
+        {l10n::text("score.import.field.length").toStdString(),
+         l10n::plural(
+             "score.import.length", static_cast<std::int64_t>(summary.length.bars),
+             {{"time", juce::String(formatClockTime(summary.length.seconds))}})
+             .toStdString()});
+    summary.fields.push_back(
+        {l10n::text("score.import.field.tempo").toStdString(),
+         formatBeatsPerMinute(summary.startingBeatsPerMinute)});
 
     return summary;
 }
@@ -336,7 +366,12 @@ std::string scoreImportReport(const ScoreImportSummary& summary)
 
     for (const ScoreImportField& field : summary.fields)
     {
-        report << field.label << ": " << field.value << "\n";
+        report << l10n::format(
+                      "score.import.field.line",
+                      {{"label", juce::String::fromUTF8(field.label.c_str())},
+                       {"value", juce::String::fromUTF8(field.value.c_str())}})
+                      .toStdString()
+               << "\n";
     }
 
     if (!summary.parts.empty())
@@ -351,7 +386,7 @@ std::string scoreImportReport(const ScoreImportSummary& summary)
             // staff" on every vocal line is noise.
             if (part.staffCount > 1)
             {
-                report << " (" << part.staffCount << " staves)";
+                report << " " << l10n::plural("score.import.staves", part.staffCount).toStdString();
             }
 
             report << "\n";
@@ -395,7 +430,7 @@ std::string scoreImportReport(const ScoreImportSummary& summary)
 
             if (line.occurrences > 1)
             {
-                report << " (seen " << line.occurrences << " times)";
+                report << " " << l10n::plural("score.import.seen", line.occurrences).toStdString();
             }
 
             report << "\n";

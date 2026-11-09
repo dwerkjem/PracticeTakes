@@ -78,6 +78,10 @@ class Localisation
     // language puts them.
     [[nodiscard]] juce::String format(std::string_view key, Arguments arguments) const;
 
+    // The same, with arguments a JUCE-free layer kept as data: a diagnostic's.
+    [[nodiscard]] juce::String
+    formatArguments(std::string_view key, const NamedArguments& arguments) const;
+
     // The form of `key` for `count`: the entry "key.one", "key.other" (and
     // "key.few" and so on, for a language that has them) that the language's
     // plural rule picks, falling back to the language's own "key.other" and
@@ -85,6 +89,11 @@ class Localisation
     // language writes numbers.
     [[nodiscard]] juce::String
     plural(std::string_view key, std::int64_t count, Arguments arguments = {}) const;
+
+    [[nodiscard]] juce::String pluralArguments(
+        std::string_view key,
+        std::int64_t count,
+        const NamedArguments& arguments) const;
 
     // `value` with `decimals` places, as the language writes it: 440,0 in
     // German, 440.0 in English.
@@ -118,9 +127,21 @@ bool setLanguage(std::string_view code);
 }
 
 [[nodiscard]] inline juce::String
+formatArguments(std::string_view key, const NamedArguments& arguments)
+{
+    return current().formatArguments(key, arguments);
+}
+
+[[nodiscard]] inline juce::String
 plural(std::string_view key, std::int64_t count, Arguments arguments = {})
 {
     return current().plural(key, count, arguments);
+}
+
+[[nodiscard]] inline juce::String
+pluralArguments(std::string_view key, std::int64_t count, const NamedArguments& arguments)
+{
+    return current().pluralArguments(key, count, arguments);
 }
 
 [[nodiscard]] inline juce::String number(double value, int decimals)

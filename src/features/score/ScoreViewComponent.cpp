@@ -1,5 +1,6 @@
 #include "ScoreViewComponent.h"
 #include "../../application/localisation/Localisation.h"
+#include "NoticeText.h"
 
 #include "../../platform/evaluation/TakeReview.h"
 #include "../../platform/score/PitchNames.h"
@@ -1773,9 +1774,9 @@ juce::String ScoreViewComponent::noticeText() const
         lines.add(l10n::text("score.view.notice.oversize"));
     }
 
-    for (const std::string& notice : layout.notices)
+    for (const engraving::Notice& notice : layout.notices)
     {
-        lines.add(juce::String(notice));
+        lines.add(score_view::noticeText(notice));
     }
 
     return lines.joinIntoString("  ");

@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <map>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "platform/score/Diagnostic.h"
@@ -13,10 +14,11 @@
 // purpose:
 //
 //  - **Identical diagnostics collapse.** Two reports agreeing on severity,
-//    element name, *and* message are the same finding seen twice, so the first
-//    keeps its location and the rest only increment its count. Distinct
-//    messages stay distinct, so "a tie with no end" never merges into "a tie
-//    with no start".
+//    element name, code *and* arguments are the same finding seen twice, so
+//    the first keeps its location and the rest only increment its count.
+//    Distinct codes stay distinct, so "a tie with no end" never merges into "a
+//    tie with no start" -- and whether two findings are the same no longer
+//    depends on how either is worded.
 //  - **Unrecognised elements** are aggregated by element name alone, since
 //    there is nothing to say about them beyond how often they appeared.
 //
@@ -35,12 +37,24 @@ class MusicXmlDiagnosticSink
   public:
     // A construct this importer recognises but does not support. The score no
     // longer says exactly what the file said, and this is what admits it.
-    void addUnsupported(DiagnosticLocation location, std::string elementName, std::string message);
+    void addUnsupported(
+        DiagnosticLocation location,
+        std::string elementName,
+        std::string_view code,
+        l10n::NamedArguments arguments = {});
 
     // A structural problem the importer fixed while reading.
-    void addRepair(DiagnosticLocation location, std::string elementName, std::string message);
+    void addRepair(
+        DiagnosticLocation location,
+        std::string elementName,
+        std::string_view code,
+        l10n::NamedArguments arguments = {});
 
-    void addInfo(DiagnosticLocation location, std::string elementName, std::string message);
+    void addInfo(
+        DiagnosticLocation location,
+        std::string elementName,
+        std::string_view code,
+        l10n::NamedArguments arguments = {});
 
     // An element this importer has no knowledge of at all. Counted by name; the
     // location is not kept, because the useful summary is "347 <print> elements
@@ -63,11 +77,12 @@ class MusicXmlDiagnosticSink
     add(DiagnosticSeverity severity,
         DiagnosticLocation location,
         std::string elementName,
-        std::string message);
+        std::string_view code,
+        l10n::NamedArguments arguments);
 
     std::vector<Diagnostic> diagnostics_;
 
-    // Severity, element name, and message to that diagnostic's index in
+    // Severity, element name, code and arguments to that diagnostic's index in
     // `diagnostics_`, so an identical finding increments a count instead of
     // appending a duplicate.
     std::map<std::string, std::size_t> seen_;

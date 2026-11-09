@@ -235,6 +235,21 @@ Decisions made while building it that the sections above did not settle.
   literals where they stand alone; where they sit inside a phrase, the phrase
   is the catalogue entry.
 
+- **A diagnostic's code is its catalogue identifier.** `Diagnostic::message`
+  became `code` plus `arguments` (named, as strings), and the importer passes
+  `l10n::key("score.import.unsupported.slur")` -- so the check sees every code
+  the importer can produce, and there is no second table mapping codes to
+  entries. A refusal (`MusicXmlImportResult::error`) is the same: an identifier
+  with `errorArguments` naming the path, entry or element. The XML parser's own
+  message survives as the `detail` of "The document is not valid XML: {detail}".
+- **The Score View's notices are the same shape** (`engraving::Notice`), with
+  `phraseArguments` for a value that is itself a phrase ("a percussion clef")
+  and an optional count for a plural one, rendered by `score_view::noticeText`.
+  Task 5 named only the importer's diagnostics; the engraving pass composed the
+  same kind of sentence one layer over, so it was taken apart with them.
+- **Numbers in the report are grouped** as the language groups them: a
+  construct "seen 2,114 times", where it used to say 2114.
+
 ## Risks
 
 - **A mechanical change across nearly every UI file.** It conflicts with

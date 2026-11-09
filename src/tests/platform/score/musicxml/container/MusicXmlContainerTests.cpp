@@ -20,6 +20,19 @@ using namespace score::musicxml;
 
 namespace
 {
+// Whether the reason a file was refused names `value` among its arguments.
+[[nodiscard]] bool namedIn(const MusicXmlImportResult& result, const std::string& value)
+{
+    for (const auto& [name, argument] : result.errorArguments)
+    {
+        if (argument == value)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Files are created under the temp directory and deleted with the fixture,
 // matching how every other test in this repository that needs a real file
 // works. Nothing is committed for these cases -- a malformed document is
@@ -178,9 +191,10 @@ TEST_CASE("a manifest naming a missing entry fails distinctly", "[score][musicxm
     CHECK(result.status == MusicXmlImportStatus::invalidContainer);
     CHECK(result.score == nullptr);
 
-    // The message names the entry that was missing, because "invalid container"
+    // The reason names the entry that was missing, because "invalid container"
     // on its own tells a user nothing they can act on.
-    CHECK(result.error.find("somewhere-else.xml") != std::string::npos);
+    CHECK(result.error == "score.import.error.root-missing");
+    CHECK(namedIn(result, "somewhere-else.xml"));
 }
 
 TEST_CASE(
@@ -259,7 +273,8 @@ TEST_CASE("a well-formed non-MusicXML document is rejected", "[score][musicxml][
 
     CHECK(result.status == MusicXmlImportStatus::notMusicXml);
     CHECK(result.score == nullptr);
-    CHECK(result.error.find("html") != std::string::npos);
+    CHECK(result.error == "score.import.error.not-musicxml");
+    CHECK(namedIn(result, "html"));
 }
 
 TEST_CASE("a timewise document is rejected as an unsupported type", "[score][musicxml][container]")
@@ -340,7 +355,8 @@ TEST_CASE(
 
     CHECK(bomb.score == nullptr);
     CHECK(bomb.status == MusicXmlImportStatus::notMusicXml);
-    CHECK(bomb.error.find("lolz") != std::string::npos);
+    CHECK(bomb.error == "score.import.error.not-musicxml");
+    CHECK(namedIn(bomb, "lolz"));
 }
 
 TEST_CASE(

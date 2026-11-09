@@ -23,7 +23,7 @@ namespace score::musicxml
 {
 // Element name to the explanation a user gets when it is dropped. Keyed by name
 // so a construct is reported once however many times it occurs.
-[[nodiscard]] const std::map<std::string, std::string>& unsupportedConstructs();
+[[nodiscard]] const std::map<std::string, std::string_view>& unsupportedConstructs();
 
 // Every element the importer knows about, whether it reads it or steps over it.
 // Anything outside this set is case 4 above. Keeping the set explicit is how a

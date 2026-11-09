@@ -1,4 +1,5 @@
 #include "MusicXmlImporter.h"
+#include "../../../application/localisation/LocalisationRules.h"
 
 #include <map>
 #include <utility>
@@ -13,11 +14,13 @@ namespace score::musicxml
 {
 namespace
 {
-MusicXmlImportResult failure(MusicXmlImportStatus status, std::string error)
+MusicXmlImportResult
+failure(MusicXmlImportStatus status, std::string_view error, l10n::NamedArguments arguments = {})
 {
     MusicXmlImportResult result;
     result.status = status;
-    result.error = std::move(error);
+    result.error = std::string(error);
+    result.errorArguments = std::move(arguments);
 
     return result;
 }
@@ -34,16 +37,14 @@ std::optional<MusicXmlImportResult> rejectUnacceptableRoot(const XmlNode& root)
     {
         return failure(
             MusicXmlImportStatus::unsupportedDocumentType,
-            "This is a timewise MusicXML document. Only partwise documents, which is "
-            "what every mainstream notation program exports, can be imported.");
+            l10n::key("score.import.error.timewise"));
     }
 
     if (root.name != "score-partwise")
     {
         return failure(
-            MusicXmlImportStatus::notMusicXml,
-            "This is well-formed XML but not a MusicXML score: its root element is <" + root.name +
-                ">.");
+            MusicXmlImportStatus::notMusicXml, l10n::key("score.import.error.not-musicxml"),
+            {{"element", root.name}});
     }
 
     return std::nullopt;
@@ -62,8 +63,8 @@ MusicXmlImportResult readScore(const XmlNode& root)
 
     if (score.parts.empty())
     {
-        MusicXmlImportResult result =
-            failure(MusicXmlImportStatus::structurallyInvalid, "The document declares no parts.");
+        MusicXmlImportResult result = failure(
+            MusicXmlImportStatus::structurallyInvalid, l10n::key("score.import.error.no-parts"));
         result.diagnostics = context.diagnostics.release();
 
         return result;
@@ -79,8 +80,7 @@ MusicXmlImportResult readScore(const XmlNode& root)
     if (context.eventCount == 0)
     {
         MusicXmlImportResult result = failure(
-            MusicXmlImportStatus::structurallyInvalid,
-            "The document contains no notes or rests, so there is no music to import.");
+            MusicXmlImportStatus::structurallyInvalid, l10n::key("score.import.error.no-music"));
         result.diagnostics = context.diagnostics.release();
 
         return result;
@@ -111,19 +111,19 @@ MusicXmlImportResult importMusicXmlDocument(const std::string& document)
     if (document.size() > MusicXmlImportLimits::maximumSourceBytes)
     {
         return failure(
-            MusicXmlImportStatus::tooLarge, "The document is larger than this importer accepts.");
+            MusicXmlImportStatus::tooLarge, l10n::key("score.import.error.document-too-large"));
     }
 
     const XmlParseResult parsed = parseXmlDocument(document);
 
     if (parsed.status == XmlParseStatus::empty)
     {
-        return failure(MusicXmlImportStatus::notMusicXml, parsed.error);
+        return failure(MusicXmlImportStatus::notMusicXml, parsed.error, parsed.errorArguments);
     }
 
     if (parsed.status != XmlParseStatus::parsed || !parsed.root.has_value())
     {
-        return failure(MusicXmlImportStatus::malformedXml, parsed.error);
+        return failure(MusicXmlImportStatus::malformedXml, parsed.error, parsed.errorArguments);
     }
 
     if (std::optional<MusicXmlImportResult> rejected = rejectUnacceptableRoot(*parsed.root);
@@ -141,7 +141,7 @@ MusicXmlImportResult importMusicXmlFile(const juce::File& file)
 
     if (source.status != MusicXmlImportStatus::imported)
     {
-        return failure(source.status, source.error);
+        return failure(source.status, source.error, source.errorArguments);
     }
 
     return importMusicXmlDocument(source.document);

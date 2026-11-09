@@ -53,26 +53,26 @@ commit.
 - [x] 4.3 `features/feedback` (56).
 - [x] 4.4 `features/analysis/*` (tuner 20, harmonics 14) — including the
       tuner's "bar" display mode, which must not share a key with a measure.
-- [ ] 4.5 `shell/ui/main_window`, `application/tools`, `platform/midi`,
+- [x] 4.5 `shell/ui/main_window`, `application/tools`, `platform/midi`,
       `features/score`.
-- [ ] 4.6 Take apart every concatenated sentence as it is swept. The known ones:
+- [x] 4.6 Take apart every concatenated sentence as it is swept. The known ones:
       `ScoreImportSummary.cpp:135,140,398` and `TargetNoteComponent.cpp:160`.
 
 ## 5. Diagnostics stop being prose
 
 The one deep change, and an improvement independent of language.
 
-- [ ] 5.1 Replace `addUnsupported/addRepair/addInfo`'s `std::string message`
+- [x] 5.1 Replace `addUnsupported/addRepair/addInfo`'s `std::string message`
       with a stable code plus typed parameters.
-- [ ] 5.2 Deduplicate on the code and parameters rather than on rendered text,
+- [x] 5.2 Deduplicate on the code and parameters rather than on rendered text,
       so "the same finding" stops depending on wording.
-- [ ] 5.3 Render in `src/application/shell/ui/score/`, keeping
+- [x] 5.3 Render in `src/application/shell/ui/score/`, keeping
       `src/platform/score/` JUCE-free with no exception carved for text.
-- [ ] 5.4 Rewrite the importer's tests to assert findings as data — *a slur was
+- [x] 5.4 Rewrite the importer's tests to assert findings as data — *a slur was
       unsupported in bar 1* — rather than asserting an English sentence. This is
       a better test than the one it replaces, which is the argument for doing it
       here rather than later.
-- [ ] 5.5 Confirm `score-import-diagnostics` and `score-import-clean` still
+- [x] 5.5 Confirm `score-import-diagnostics` and `score-import-clean` still
       capture correctly, since the report is rebuilt.
 
 ## 6. Musical naming, independent of language
