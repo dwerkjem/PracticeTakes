@@ -622,6 +622,8 @@ AppSettings::State MainComponent::captureSettingsState()
     state.playbackVolume = practiceClock.playbackMix().volume;
     state.referencePitchHz = referencePitch.hertz();
     state.inTuneCents = takeRecorder.intonationSettings().toleranceCents;
+    state.nearPerfectCents = takeRecorder.intonationSettings().nearPerfectCents;
+    state.outOfTuneCents = takeRecorder.intonationSettings().outOfTuneCents;
     state.keepTargetWhenScoreOpens = currentTarget.keepChosenWhenScoreOpens;
     state.targetFollowsScore = currentTarget.followScoreWhilePlaying;
     if (const auto target = currentTarget.target();
@@ -703,6 +705,8 @@ void MainComponent::loadSettings()
     {
         evaluation::IntonationSettings intonation = takeRecorder.intonationSettings();
         intonation.toleranceCents = loaded.state.inTuneCents;
+        intonation.nearPerfectCents = loaded.state.nearPerfectCents;
+        intonation.outOfTuneCents = loaded.state.outOfTuneCents;
         takeRecorder.setIntonation(intonation);
     }
     currentTarget.keepChosenWhenScoreOpens = loaded.state.keepTargetWhenScoreOpens;

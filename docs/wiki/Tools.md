@@ -10,23 +10,55 @@ also has **Give feedback on this tool**.
 Listens to the microphone and shows the detected note, its frequency, and how
 many cents sharp or flat it is.
 
-![The tuner in its graph view, reading A4 with the pitch line drifting just above and below it](images/tuner-graph.png)
+![The tuner in its graph view, reading A4: the pitch line drifts above and below a thin lit green band on A4, with dotted blue, amber and red lines where each looser zone begins](images/tuner-graph.png)
 
 - **Display mode** picks one of three views:
   - **Graph**, pitch over time, so drift within a held note is visible (above);
-  - **Bar**, the cents offset as a dot on a line from −50 to +50;
+  - **Bar**, the cents offset as a dot on a line, from −50 to +50 (one note)
+    unless you change its scale;
   - **Meter**, a needle between *flat* and *sharp*.
+- **The zones** show where you need to be, on all three views: bands around
+  the note, each as wide as its range either side of it, all set in
+  **Settings → Practice** and all plus or minus:
+  - **green**, near perfect, within **Near perfect within** (±5 cents by
+    default: from 5 cents flat to 5 cents sharp);
+  - **blue**, in tune, within **In tune within** (±25 cents);
+  - **amber**, near but off, out to **Out of tune beyond** (±40 cents);
+  - **red**, out of tune: everything past that.
+
+  Only the half of the zone you're in lights, the sharp half or the flat half,
+  and it carries a **♯** or a **♭**, half the height of the note name, so you
+  know which way to go as well as how far. On pitch, in the green, the sign
+  goes away: there is nothing to correct. The tighter zones inside it stay
+  faintly tinted, so you can still see the target; the looser ones outside it
+  are turned off and leave only a dotted line, in their own colour, where each
+  begins. Red is kept very faint. The graph keeps the note's zones in view while
+  you sing, and a marker on the bar and on the graph's newest point, and the
+  meter's needle, take the colour of the zone you're in.
+- **The tool's ... menu** changes how that looks, for each tuner:
+  - **Signs**: *Off*, *Sharp and flat* (the default), or *Arrows: which way to
+    go*, an arrow pointing back toward the note: left on the bar and the meter
+    when you're sharp and right when you're flat, and down or up on the graph,
+    whose pitch runs up the screen;
+  - **Show how far off**, which writes the cents in the lit half, *−18 ¢*,
+    beside the sign (off by default; the line above the display always gives
+    the exact reading);
+  - **Light both halves**, for a symmetric look that lights the whole zone;
+  - **Marker**, what marks where you are on the bar and the graph: *Off*,
+    *Dot* (the default), *Arrow*, *Line*, *Ring*, *Diamond* or *Crosshair*.
 
 | Bar | Meter |
 |---|---|
-| ![The tuner's bar view, a dot a few cents left of zero](images/tuner-bar.png) | ![The tuner's meter view, a needle just left of centre](images/tuner-meter.png) |
+| ![The tuner's bar view: a dot on zero inside the lit green near-perfect band, with dotted blue, amber and red lines where each looser zone begins](images/tuner-bar.png) | ![The tuner's meter view: a green needle on zero, the near-perfect band lit green at the top of the dial, and dotted blue, amber and red lines further out](images/tuner-meter.png) |
 
 - **Advanced settings**, from the tool's **...** menu, tune how the reading
   behaves: *pitch easing* (smoothing), *average window*, *note switch* (how
   readily it moves to a new note), *dropout hold* (how long it holds through a
-  gap) and *graph duration*. **Clear graph** starts the graph afresh.
+  gap), *graph duration*, and *bar/dial scale*: how far either way the bar
+  and the meter reach, ±50 cents (one note) unless you change it, from ±10 to
+  ±100. **Clear graph** starts the graph afresh.
 
-  ![The tuner with its advanced settings open: five sliders under the graph, and a Clear graph button](images/tuner-advanced.png)
+  ![The tuner with its advanced settings open: six sliders under the graph, the last, bar/dial scale, greyed while the graph is showing, and a Clear graph button](images/tuner-advanced.png)
 
 - **Settings → Practice → Practice preset** applies a coordinated set of these
   controls for the material you are practising.
@@ -39,7 +71,8 @@ it hears one.
 
 Above the reading, the tuner names the note you're aiming at and where you are
 against it:
-- *Target E4 · on it*, within 5 cents, in green;
+- *Target E4 · on it*, within your near-perfect range (±5 cents by default),
+  in green;
 - *Target E4 · 16 ¢ flat*, within half a semitone;
 - *Target E4 · 2 semitones below*, further away.
 
@@ -81,11 +114,11 @@ Shows the note you're singing or playing the way a musician thinks of it:
 - **On a keyboard:** the key you're on lights up in the colour of how close you
   are to the target (below). The target's key has a ring.
 - **The acceptable range:** a band either side of the target's line, as wide
-  as **Settings → Practice → In tune within** (25 cents by default). It
-  changes colour with the note you're on: **green** when you're within 5 cents
-  (near perfect), **blue** inside the range, **amber** when you're near but
-  off (up to half a semitone), **red** outside that, and grey while nothing is
-  sung. The key, the trail and your note on the staff take the same colour.
+  as **Settings → Practice → In tune within** (±25 cents by default). It
+  changes colour with the note you're on: **green** when you're near perfect
+  (within **Near perfect within**, ±5 cents by default), **blue** inside the range, **amber** when you're near but
+  off (out to **Out of tune beyond**, ±40 cents by default), **red** past that,
+  and grey while nothing is sung. The key, the trail and your note on the staff take the same colour.
   Without a target, the colours are against the note you're nearest.
 - **On a staff:** your note and the target side by side. The clef follows the
   note, or **Clef** in the **...** menu fixes it as treble, bass, or treble an

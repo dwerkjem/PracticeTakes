@@ -147,7 +147,7 @@ Intonation judgeIntonation(
         }
     }
 
-    result.zone = pitch::zoneOf(result.cents, settings.toleranceCents);
+    result.zone = pitch::zoneOf(result.cents, settings.zoneLimits());
     const double size = std::abs(result.cents);
     if (size > settings.wrongCents)
     {

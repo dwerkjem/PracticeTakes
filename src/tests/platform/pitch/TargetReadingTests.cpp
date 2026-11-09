@@ -39,3 +39,10 @@ TEST_CASE("the tuner reads the note it hears against the target", "[pitch][targe
 
     CHECK(readAgainstTarget(b3(), 60.0).text == "Target B3 \xC2\xB7 1 semitone above");
 }
+
+TEST_CASE("on it follows the singer's near-perfect limit", "[pitch][target]")
+{
+    CHECK(readAgainstTarget(b3(), 58.92).standing == TargetStanding::flat);
+    CHECK(readAgainstTarget(b3(), 58.92, 10.0).standing == TargetStanding::onIt);
+    CHECK(readAgainstTarget(b3(), 59.03, 2.0).standing == TargetStanding::sharp);
+}

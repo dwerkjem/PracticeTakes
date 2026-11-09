@@ -40,7 +40,7 @@ class NoteViewComponent final
         const pitch::ReferencePitch& applicationReferencePitch,
         const pitch::CurrentTarget& applicationTarget,
         MidiInputService& midiInputService,
-        std::function<double()> toleranceSource);
+        std::function<pitch::ZoneLimits()> zoneLimitsSource);
     ~NoteViewComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -76,14 +76,16 @@ class NoteViewComponent final
     // side of the target, in cents.
     [[nodiscard]] std::optional<pitch::IntonationZone> zone() const;
     [[nodiscard]] double toleranceCents() const;
+    [[nodiscard]] pitch::ZoneLimits zoneLimits() const;
 
     SharedPitchAnalysis& pitchAnalysis;
     const pitch::ReferencePitch& referencePitch;
     const pitch::CurrentTarget& target;
     MidiInputService& midi;
 
-    // The singer's acceptable range, as Settings → Practice sets it.
-    std::function<double()> tolerance;
+    // The singer's near-perfect and acceptable ranges, as Settings → Practice
+    // sets them.
+    std::function<pitch::ZoneLimits()> limits;
 
     PitchTracker tracker;
     notes::Trail trail;

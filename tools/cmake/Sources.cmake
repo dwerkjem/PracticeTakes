@@ -123,6 +123,7 @@ set(PRACTICE_TAKES_SOURCES
     src/features/analysis/tuner/TunerSettingsCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.h
     src/features/analysis/tuner/TunerDrawing.cpp
+    src/features/analysis/tuner/TunerZones.h
     src/features/review/TakeReviewComponent.cpp
     src/features/review/TakeReviewComponent.h
     src/features/score/MusicFont.cpp
@@ -342,6 +343,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/theme/ThemeContrastTests.cpp
     src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
     src/tests/features/analysis/tuner/TunerSettingsCodecTests.cpp
+    src/tests/features/analysis/tuner/TunerZonesTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
     src/tests/features/notes/NoteViewModelTests.cpp
     src/tests/features/nownext/NowNextModelTests.cpp

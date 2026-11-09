@@ -57,10 +57,13 @@ TEST_CASE("the sung note's zone is against the target, or else its nearest note"
     // No pitch, no zone.
     CHECK_FALSE(currentZone(std::nullopt, 0.0, 69, 25.0).has_value());
 
-    // Against the target A4: near perfect, acceptable, near but off, outside.
+    // Against the target A4: near perfect, acceptable, near but off, outside --
+    // out of tune past 40 cents by default.
     CHECK(currentZone(69.03, 3.0, 69, 25.0) == IntonationZone::nearPerfect);
     CHECK(currentZone(68.85, -15.0, 69, 25.0) == IntonationZone::acceptable);
-    CHECK(currentZone(69.4, 40.0, 69, 25.0) == IntonationZone::nearButOff);
+    CHECK(currentZone(69.3, 30.0, 69, 25.0) == IntonationZone::nearButOff);
+    CHECK(currentZone(69.45, 45.0, 69, 25.0) == IntonationZone::outside);
+    CHECK(currentZone(69.45, 45.0, 69, 25.0, 5.0, 50.0) == IntonationZone::nearButOff);
 
     // In tune on B4, but the target is A4: outside.
     CHECK(currentZone(71.0, 0.0, 69, 25.0) == IntonationZone::outside);

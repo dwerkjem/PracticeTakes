@@ -11,7 +11,9 @@
 #include "../../../platform/pitch/CurrentTarget.h"
 #include "../../../platform/pitch/PitchTracker.h"
 #include "../../../platform/pitch/SteadyReading.h"
+#include "TunerZones.h"
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -28,7 +30,8 @@ class TunerComponent final
         AudioInputService& sharedAudioInputService,
         SharedPitchAnalysis& sharedPitchAnalysis,
         const pitch::ReferencePitch& applicationReferencePitch,
-        pitch::CurrentTarget& applicationTarget);
+        pitch::CurrentTarget& applicationTarget,
+        std::function<pitch::ZoneLimits()> zoneLimitsSource);
     ~TunerComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -153,6 +156,19 @@ class TunerComponent final
     void drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawNoteWatermark(juce::Graphics& graphics, juce::Rectangle<int> area) const;
+
+    // Where the note name goes behind the display, and the height of a sharp
+    // or flat sign: half of that name's.
+    [[nodiscard]] juce::Rectangle<int> noteArea(juce::Rectangle<int> display) const;
+    [[nodiscard]] float signHeight(juce::Rectangle<int> display) const;
+
+    // Where the pitch is now, drawn as the chosen marker at `at`, across
+    // `span` for a line -- horizontal, or vertical when `vertical`.
+    void drawMarker(
+        juce::Graphics& graphics,
+        juce::Point<float> at,
+        juce::Rectangle<float> span,
+        bool vertical) const;
     void drawCompactDisplay(
         juce::Graphics& graphics,
         juce::Rectangle<int> bounds,
@@ -169,12 +185,19 @@ class TunerComponent final
         compact::Shape shape) const;
     void drawCompactReading(juce::Graphics& graphics, juce::Rectangle<int> area) const;
     [[nodiscard]] juce::String directionLabel() const;
+
+    // The singer's near-perfect and in-tune limits, as Settings → Practice
+    // sets them, in order; the defaults without a source.
+    [[nodiscard]] pitch::ZoneLimits zoneLimits() const;
+    [[nodiscard]] bool isNearPerfect() const;
+    [[nodiscard]] std::vector<tuner::ZoneBand> currentBands() const;
     void drawSelectedDisplay(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
 
     AudioInputService& audioInputService;
     SharedPitchAnalysis& pitchAnalysis;
     const pitch::ReferencePitch& referencePitch;
     pitch::CurrentTarget& target;
+    std::function<pitch::ZoneLimits()> limits;
     pitch::SteadyReading steadyReading;
 
     juce::Label displayModeLabel;
@@ -190,11 +213,13 @@ class TunerComponent final
     juce::Label thresholdLabel;
     juce::Label dropoutLabel;
     juce::Label durationLabel;
+    juce::Label scaleLabel;
     juce::Slider easingSlider;
     juce::Slider averagingSlider;
     juce::Slider thresholdSlider;
     juce::Slider dropoutSlider;
     juce::Slider durationSlider;
+    juce::Slider scaleSlider;
     juce::TextButton clearGraphButton{"Clear graph"};
 
     PitchTracker pitchTracker;
@@ -209,6 +234,37 @@ class TunerComponent final
     juce::String displayedNote{"--"};
     float inputLevel = 0.0f;
     int lockedMidiNote = 69;
+
+    // From the ... menu: what the lit half carries -- nothing, a sharp or flat
+    // sign, or an arrow the way to go -- and both halves of the lit zone lit
+    // instead of only the one the pitch is on.
+    enum class Signs
+    {
+        off = 0,
+        sharpFlat = 1,
+        arrows = 2
+    };
+    Signs signs = Signs::sharpFlat;
+    bool bothHalvesLit = false;
+
+    // From the ... menu: the cents off, written in the lit half.
+    bool offsetShown = false;
+
+    // What marks where the pitch is on the bar and the graph, from the ...
+    // menu.
+    enum class Marker
+    {
+        off = 0,
+        dot = 1,
+        arrow = 2,
+        line = 3,
+        ring = 4,
+        diamond = 5,
+        crosshair = 6
+    };
+    Marker marker = Marker::dot;
+    void chooseMarker(Marker chosen);
+    void chooseSigns(Signs chosen);
 
     bool hasLockedMidiNote = false;
     bool hasSignal = false;

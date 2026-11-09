@@ -23,9 +23,9 @@ NoteViewComponent::NoteViewComponent(
     const pitch::ReferencePitch& applicationReferencePitch,
     const pitch::CurrentTarget& applicationTarget,
     MidiInputService& midiInputService,
-    std::function<double()> toleranceSource)
+    std::function<pitch::ZoneLimits()> zoneLimitsSource)
     : pitchAnalysis(sharedPitchAnalysis), referencePitch(applicationReferencePitch),
-      target(applicationTarget), midi(midiInputService), tolerance(std::move(toleranceSource))
+      target(applicationTarget), midi(midiInputService), limits(std::move(zoneLimitsSource))
 {
     setComponentID("note-view-tool");
     midi.addConsumer(this);
@@ -43,9 +43,14 @@ AppPalette NoteViewComponent::palette() const
     return appPaletteFor(currentTheme);
 }
 
+pitch::ZoneLimits NoteViewComponent::zoneLimits() const
+{
+    return limits ? pitch::orderedLimits(limits()) : pitch::ZoneLimits{};
+}
+
 double NoteViewComponent::toleranceCents() const
 {
-    return tolerance ? tolerance() : pitch::nearNoteCents / 2.0;
+    return zoneLimits().toleranceCents;
 }
 
 std::optional<pitch::IntonationZone> NoteViewComponent::zone() const
@@ -54,7 +59,7 @@ std::optional<pitch::IntonationZone> NoteViewComponent::zone() const
     return notes::currentZone(
         currentPitch, currentCents,
         aimingAt != nullptr ? std::optional<int>(aimingAt->midiNoteNumber) : std::nullopt,
-        toleranceCents());
+        zoneLimits().toleranceCents, zoneLimits().nearPerfectCents, zoneLimits().outOfTuneCents);
 }
 
 void NoteViewComponent::setTheme(Theme theme)
