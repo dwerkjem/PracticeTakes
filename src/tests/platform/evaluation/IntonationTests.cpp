@@ -59,6 +59,7 @@ TEST_CASE("a steady note in tune scores high", "[evaluation][intonation]")
     CHECK(result.verdict == IntonationVerdict::inTune);
     CHECK(result.cents == Catch::Approx(3.0).margin(0.01));
     CHECK(result.score == Catch::Approx(1.0));
+    CHECK(result.zone == pitch::IntonationZone::nearPerfect);
     CHECK(result.octave == 0);
     CHECK(result.sureFrames > 50);
 }
@@ -86,6 +87,14 @@ TEST_CASE("the tolerance decides sharp from in tune", "[evaluation][intonation]"
     CHECK(
         judgeIntonation(contour, 0, second, 69, 440.0, rate, strict).verdict ==
         IntonationVerdict::sharp);
+
+    // Its zone moves with the tolerance too: blue at 25, amber at 10.
+    CHECK(
+        judgeIntonation(contour, 0, second, 69, 440.0, rate).zone ==
+        pitch::IntonationZone::acceptable);
+    CHECK(
+        judgeIntonation(contour, 0, second, 69, 440.0, rate, strict).zone ==
+        pitch::IntonationZone::nearButOff);
 }
 
 TEST_CASE("a scoop into the note does not decide it", "[evaluation][intonation]")

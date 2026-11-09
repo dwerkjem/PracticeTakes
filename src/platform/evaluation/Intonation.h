@@ -5,6 +5,7 @@
 #include <optional>
 #include <vector>
 
+#include "../pitch/IntonationZone.h"
 #include "PitchContour.h"
 
 // How in tune one sung note was: its frames split into attack, sustain and
@@ -92,6 +93,10 @@ struct Intonation
 
     // 0-1: the share of sure sustain frames within the tolerance.
     double score = 0.0;
+
+    // Which zone `cents` is in at the tolerance it was judged with: what the
+    // review colours it by. Outside for an uncertain note, which has no cents.
+    pitch::IntonationZone zone = pitch::IntonationZone::outside;
 
     // The octave sung in, against the written one: -1 is an octave low.
     int octave = 0;

@@ -24,6 +24,10 @@ enum class PitchMark
     wrong,
     missed,
 
+    // A sung note in tune, within the singer's tolerance but not near
+    // perfect: blue, where a near-perfect one is green (`correct`).
+    acceptable,
+
     // A sung note, the right one but off by more than the tolerance
     // (openspec/changes/archive/2026-11-09-sung-pitch-judging/design.md, decision 8).
     sharp,

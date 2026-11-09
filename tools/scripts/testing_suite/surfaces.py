@@ -992,9 +992,10 @@ SURFACES: tuple[Surface, ...] = (
         extras=(
             Question(
                 "intonation-on-notes",
-                "Are the voice's notes ringed green, with a few ringed orange and an orange "
-                "arrow above (sharp) or below (flat) labelled with the cents, one filled red "
-                "with the note sung, and one ringed faintly?",
+                "Are the voice's notes ringed green, a few ringed blue (in tune but not near "
+                "perfect), a few ringed amber with an arrow above (sharp) or below (flat) "
+                "labelled with the cents, one filled red with the note sung, and one ringed "
+                "faintly?",
             ),
             Question(
                 "intonation-list",
@@ -1088,8 +1089,9 @@ SURFACES: tuple[Surface, ...] = (
         extras=(
             Question(
                 "key-and-target",
-                "Is the key being sung lit, shaded between green and amber, and the target's "
-                "key ringed, distinguishable at a glance?",
+                "Is the key being sung lit, the target's key ringed, and a band either side "
+                "of the target's line showing the acceptable range, in the same colour as the "
+                "key and the trail (the tone drifts, so any of green, blue or amber)?",
             ),
             Question(
                 "staff-and-trail",
@@ -1098,8 +1100,14 @@ SURFACES: tuple[Surface, ...] = (
             ),
             Question(
                 "keys-held",
-                "With a MIDI keyboard, are held keys lit blue, and does a slide sung from one "
-                "note to another draw as one line?",
+                "With a MIDI keyboard, are held keys lit purple, and does a slide sung from "
+                "one note to another draw as one line?",
+                behavioural=True,
+            ),
+            Question(
+                "zones-live",
+                "Sing at the target and drift off slowly: does the band and the key go green "
+                "near perfect, blue inside the range, amber when near but off, and red beyond?",
                 behavioural=True,
             ),
         ),

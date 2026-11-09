@@ -176,3 +176,42 @@ those, its pitch stays unknown, as now.
   note's but without being a mistake.
 - **The capture sings the score's first part that plays one note at a time**
   (`isMonophonic`, in `platform/score`), so it is the sample's voice and not its piano.
+
+## Four colour zones (maintainer's request, 2026-11-09)
+
+The maintainer asked for the acceptable range to be shown as an area whose
+colour changes: green when near perfect, blue inside the acceptable range,
+amber when near but off, red outside. It applies to the Note View and the take
+review's marks, with the limits they chose:
+
+| Zone | Within | Colour |
+|---|---|---|
+| near perfect | ±5 ¢, the tuner's in-tune band | green |
+| acceptable | ±the In tune within setting | blue |
+| near but off | ±50 ¢ | amber |
+| outside | beyond, nearer another note | red |
+
+- **One rule:** `pitch::zoneOf` (JUCE-free), with the colours in
+  `intonationZoneColour` beside the palettes, so the live view and the review
+  cannot disagree.
+- **The Note View** draws the acceptable range as a band either side of the
+  target's line, as wide as the setting, filled with the current zone's colour
+  (grey with nothing sung). The lit key, the trail and the sung note on the
+  staff take the same colour.
+  - With a target, the zone is against the target, so singing the wrong note
+    in tune is red.
+  - Without one, it is against the nearest note, as the tuner reads.
+  - It reads the setting through the recorder's intonation settings, passed to
+    the tool as a function.
+- **Held MIDI keys turn purple**, so they are never read as the blue zone.
+- **The review:** `Intonation::zone` is set when a note is judged, at the
+  tolerance it was judged with.
+  - An in-tune note near perfect keeps the green ring.
+  - An in-tune note further off is ringed blue (`PitchMark::acceptable`); its
+    list row is blue and reads *in tune, +12 ¢*.
+  - Sharp and flat stay amber, and wrong stays red.
+- **The synthetic sung take** sings one note in eight 12 ¢ sharp, so the
+  capture shows the blue zone.
+- **The `note-view` state's tone** moves to 332 Hz, about +12 ¢ from the
+  sample's target. The tone drifts ±45 ¢ on purpose, so a picture catches it
+  green, blue or amber.

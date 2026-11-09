@@ -216,6 +216,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/midi/NoteSoundingTracker.h
     src/platform/midi/SoundingDurationJudgement.h
     src/platform/pitch/CurrentTarget.h
+    src/platform/pitch/IntonationZone.h
     src/platform/pitch/PitchTracker.cpp
     src/platform/pitch/PitchTracker.h
     src/platform/pitch/ReferencePitch.h
@@ -365,6 +366,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/midi/NoteSoundingTrackerTests.cpp
     src/tests/platform/midi/SoundingDurationJudgementTests.cpp
     src/tests/platform/pitch/CurrentTargetTests.cpp
+    src/tests/platform/pitch/IntonationZoneTests.cpp
     src/tests/platform/pitch/PitchTrackerTests.cpp
     src/tests/platform/pitch/ReferencePitchTests.cpp
     src/tests/platform/pitch/SteadyReadingTests.cpp

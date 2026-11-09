@@ -233,6 +233,13 @@ juce::Colour TakeReviewComponent::colourOf(const evaluation::ReviewRow& row) con
         }
         break;
     case evaluation::NoteOutcome::correct:
+        // A sung note in tune but not near perfect is blue, as on the score.
+        if (result.intonation.has_value() &&
+            result.intonation->verdict == evaluation::IntonationVerdict::inTune &&
+            result.intonation->zone == pitch::IntonationZone::acceptable && !row.mistake)
+        {
+            return intonationZoneColour(pitch::IntonationZone::acceptable);
+        }
         break;
     }
     return row.mistake ? juce::Colour(timingColour) : juce::Colour(correctColour);

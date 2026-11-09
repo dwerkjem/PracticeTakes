@@ -167,12 +167,15 @@ bar 9.
 A take from the microphone is judged for timing, and each single note for
 **how in tune it was**, against the reference pitch you sang at:
 
-- **In tune** is a green ring. **Sharp** or **flat** is an orange ring with an
-  orange arrow above (sharp) or below (flat) and the cents beside it: *+18*.
-  A note nearer another note than the written one is **wrong**, in red, with
-  the note you sang.
-- The list says it in words: *Bar 3, beat 2 · G4 · 18 ¢ sharp · on time*, and
-  the summary counts in tune, sharp and flat notes.
+- **In tune** is a **green** ring within 5 cents (near perfect), and a **blue**
+  ring further off but still inside your acceptable range. **Sharp** or
+  **flat** is an **amber** ring with an arrow above (sharp) or below (flat) and
+  the cents beside it: *+35*. A note nearer another note than the written one
+  is **wrong**, in **red**, with the note you sang. These are the same colours
+  the Note View shows live.
+- The list says it in words: *Bar 3, beat 2 · G4 · 35 ¢ sharp · on time*, or
+  *in tune, +12 ¢* for a blue one, and the summary counts in tune, sharp and
+  flat notes.
 - What decides a note is its **held middle**. A scoop into it or a slide out
   of it isn't counted against you.
 - A note the pitch tracker couldn't be sure of (breathy, very quiet, or noisy)

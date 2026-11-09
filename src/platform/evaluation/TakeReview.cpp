@@ -59,7 +59,16 @@ namespace
     switch (intonation.verdict)
     {
     case IntonationVerdict::inTune:
-        return "in tune";
+    {
+        // Within the range, but not near perfect: how far, signed.
+        if (intonation.zone != pitch::IntonationZone::acceptable)
+        {
+            return "in tune";
+        }
+        const long rounded = std::lround(intonation.cents);
+        return "in tune, " + std::string(rounded < 0 ? "\xE2\x88\x92" : "+") +
+               std::to_string(std::abs(rounded)) + " \xC2\xA2";
+    }
     case IntonationVerdict::sharp:
         return cents + " sharp";
     case IntonationVerdict::flat:

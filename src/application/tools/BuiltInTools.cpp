@@ -41,7 +41,8 @@ const ToolRegistry& builtInToolRegistry()
              {
                  return std::make_unique<NoteViewComponent>(
                      services.pitchAnalysis, services.referencePitch, services.target,
-                     services.midi);
+                     services.midi, [&takes = services.takes]
+                     { return takes.intonationSettings().toleranceCents; });
              }},
             {"take-review", [](const ToolServices& services)
              { return std::make_unique<TakeReviewComponent>(services.takes, services.clock); }},

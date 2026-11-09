@@ -62,3 +62,20 @@ Score View SHALL mark a sharp or flat note distinctly from an in-tune one.
 - **WHEN** a sung take with sharp and flat notes is under review
 - **THEN** the list reads, for example, "18 ¢ sharp", and the Score View shows
   an upward arrow on that note
+
+### Requirement: Four colours show how close a note is
+How close a note is to the note it aims at SHALL be shown in four colours:
+green within 5 cents, blue within the in-tune tolerance, amber within 50 cents,
+and red beyond. The Note View SHALL draw the acceptable range either side of
+the target as an area in the colour of the note being sung. A take review SHALL
+mark each sung note in the same colours.
+
+#### Scenario: Drifting off the target
+- **WHEN** a singer holds the target and drifts slowly sharp, with a tolerance
+  of 25 cents
+- **THEN** the Note View's band turns green, then blue, then amber past 25
+  cents, then red past 50
+
+#### Scenario: In tune, but not perfectly
+- **WHEN** a sung note in a take is 12 cents sharp, with a tolerance of 25 cents
+- **THEN** it is in tune, ringed blue on the score, and listed as "in tune, +12 ¢"

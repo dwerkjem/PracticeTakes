@@ -6,9 +6,8 @@
 
 namespace
 {
-constexpr juce::uint32 inTuneColour = 0xff2e9e4f;
-constexpr juce::uint32 offTuneColour = 0xffe08a1e;
-constexpr juce::uint32 heldColour = 0xff4a8fe7;
+// Purple, so a held key is never read as one of the four zone colours.
+constexpr juce::uint32 heldColour = 0xff9b6bd6;
 
 [[nodiscard]] juce::String nameOfMidi(int midi)
 {
@@ -21,9 +20,10 @@ NoteViewComponent::NoteViewComponent(
     SharedPitchAnalysis& sharedPitchAnalysis,
     const pitch::ReferencePitch& applicationReferencePitch,
     const pitch::CurrentTarget& applicationTarget,
-    MidiInputService& midiInputService)
+    MidiInputService& midiInputService,
+    std::function<double()> toleranceSource)
     : pitchAnalysis(sharedPitchAnalysis), referencePitch(applicationReferencePitch),
-      target(applicationTarget), midi(midiInputService)
+      target(applicationTarget), midi(midiInputService), tolerance(std::move(toleranceSource))
 {
     setComponentID("note-view-tool");
     midi.addConsumer(this);
@@ -39,6 +39,20 @@ NoteViewComponent::~NoteViewComponent()
 AppPalette NoteViewComponent::palette() const
 {
     return appPaletteFor(currentTheme);
+}
+
+double NoteViewComponent::toleranceCents() const
+{
+    return tolerance ? tolerance() : pitch::nearNoteCents / 2.0;
+}
+
+std::optional<pitch::IntonationZone> NoteViewComponent::zone() const
+{
+    const auto aimingAt = target.target();
+    return notes::currentZone(
+        currentPitch, currentCents,
+        aimingAt != nullptr ? std::optional<int>(aimingAt->midiNoteNumber) : std::nullopt,
+        toleranceCents());
 }
 
 void NoteViewComponent::setTheme(Theme theme)
@@ -319,12 +333,10 @@ void NoteViewComponent::paintStaff(juce::Graphics& graphics, juce::Rectangle<int
     {
         if (const auto spelled = pitch::spellMidi(*currentNote, true))
         {
-            const juce::Colour shade =
-                juce::Colour(inTuneColour)
-                    .interpolatedWith(
-                        juce::Colour(offTuneColour),
-                        static_cast<float>(notes::offTune(currentCents)));
-            head(*spelled, left + (width * 0.7f), shade, true);
+            const auto shade = zone();
+            head(
+                *spelled, left + (width * 0.7f),
+                shade.has_value() ? intonationZoneColour(*shade) : colours.foreground, true);
         }
     }
 }
@@ -342,6 +354,32 @@ void NoteViewComponent::paintTrail(juce::Graphics& graphics, juce::Rectangle<int
         graphics.drawVerticalLine(
             static_cast<int>(xOf(key, area)), static_cast<float>(area.getY()),
             static_cast<float>(area.getBottom()));
+    }
+
+    // The acceptable range either side of the target, as an area coloured by
+    // the zone the note being sung is in: green near perfect, blue inside the
+    // range, amber near but off, red outside. Grey with nothing sung.
+    const std::optional<pitch::IntonationZone> sungZone = zone();
+    const std::optional<juce::Colour> sungColour =
+        sungZone.has_value() ? std::optional<juce::Colour>(intonationZoneColour(*sungZone))
+                             : std::nullopt;
+    if (const auto aimingAt = target.target();
+        aimingAt != nullptr && window.contains(aimingAt->midiNoteNumber))
+    {
+        const double centre = aimingAt->midiNoteNumber;
+        const double half = toleranceCents() / 100.0;
+        const float from = xOf(centre - half, area);
+        const float to = xOf(centre + half, area);
+        const juce::Rectangle<float> range(
+            from, static_cast<float>(area.getY()), std::max(2.0f, to - from),
+            static_cast<float>(area.getHeight()));
+        const juce::Colour shade = sungColour.value_or(colours.muted);
+        graphics.setColour(shade.withAlpha(sungColour.has_value() ? 0.22f : 0.12f));
+        graphics.fillRect(range);
+        graphics.setColour(shade.withAlpha(0.65f));
+        graphics.drawVerticalLine(static_cast<int>(range.getX()), range.getY(), range.getBottom());
+        graphics.drawVerticalLine(
+            static_cast<int>(range.getRight()), range.getY(), range.getBottom());
     }
 
     // The target as a line down to its key.
@@ -387,10 +425,7 @@ void NoteViewComponent::paintTrail(juce::Graphics& graphics, juce::Rectangle<int
             drawing = true;
         }
     }
-    graphics.setColour(
-        juce::Colour(inTuneColour)
-            .interpolatedWith(
-                juce::Colour(offTuneColour), static_cast<float>(notes::offTune(currentCents))));
+    graphics.setColour(sungColour.value_or(colours.foreground));
     graphics.strokePath(path, juce::PathStrokeType(2.5f));
 }
 
@@ -401,13 +436,12 @@ void NoteViewComponent::paintKeyboard(juce::Graphics& graphics, juce::Rectangle<
     const std::optional<int> targetKey =
         aimingAt != nullptr ? std::optional<int>(aimingAt->midiNoteNumber) : std::nullopt;
 
+    const std::optional<pitch::IntonationZone> sungZone = zone();
     const auto keyFill = [&](int key, juce::Colour normal)
     {
-        if (currentNote == key)
+        if (currentNote == key && sungZone.has_value())
         {
-            return juce::Colour(inTuneColour)
-                .interpolatedWith(
-                    juce::Colour(offTuneColour), static_cast<float>(notes::offTune(currentCents)));
+            return intonationZoneColour(*sungZone);
         }
         if (heldKeys.count(key) != 0)
         {

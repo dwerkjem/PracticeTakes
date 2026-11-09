@@ -29,6 +29,9 @@ using NoteKey = std::tuple<std::size_t, std::size_t, std::size_t, std::size_t, s
         case evaluation::IntonationVerdict::uncertain:
             return PitchMark::uncertain;
         case evaluation::IntonationVerdict::inTune:
+            return result.intonation->zone == pitch::IntonationZone::nearPerfect
+                       ? PitchMark::correct
+                       : PitchMark::acceptable;
         case evaluation::IntonationVerdict::wrong:
             break;
         }

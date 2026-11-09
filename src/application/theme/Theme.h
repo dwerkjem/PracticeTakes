@@ -1,7 +1,12 @@
 #pragma once
 
+#include "../../platform/pitch/IntonationZone.h"
 #include "ThemeType.h"
 #include <juce_graphics/juce_graphics.h>
+
+// The four intonation zones' colours, the same in both themes: green near
+// perfect, blue acceptable, amber near but off, red outside.
+[[nodiscard]] juce::Colour intonationZoneColour(pitch::IntonationZone zone);
 
 struct AppPalette
 {

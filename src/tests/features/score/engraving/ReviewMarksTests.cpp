@@ -118,6 +118,7 @@ TEST_CASE("each judged note is marked on its own notehead", "[score][engraving][
             CHECK(source.eventIndex == 3);
             CHECK(mark.timing == TimingMark::early);
             break;
+        case PitchMark::acceptable:
         case PitchMark::sharp:
         case PitchMark::flat:
         case PitchMark::uncertain:
@@ -148,6 +149,7 @@ TEST_CASE("a sung note is marked sharp, flat or uncertain", "[score][engraving][
         evaluation::Intonation intonation;
         intonation.verdict = verdicts.at(index);
         intonation.cents = cents.at(index);
+        intonation.zone = pitch::zoneOf(intonation.cents, 25.0);
         report.results[index].intonation = intonation;
     }
 
@@ -175,6 +177,39 @@ TEST_CASE("a sung note is marked sharp, flat or uncertain", "[score][engraving][
             CHECK_FALSE(mark.cents.has_value());
             break;
         }
+    }
+}
+
+TEST_CASE(
+    "an in-tune sung note is green near perfect and blue within the tolerance",
+    "[score][engraving][review]")
+{
+    const ScoreLayout layout = layOutScore(scoreOf(1), wide());
+    REQUIRE(layout.systems.size() == 1);
+
+    evaluation::NoteReport report;
+    report.results = {
+        resultAt(0, 0, evaluation::NoteOutcome::correct),
+        resultAt(0, 1, evaluation::NoteOutcome::correct)};
+    const std::array<double, 2> cents{-3.0, 15.0};
+    for (std::size_t index = 0; index < cents.size(); ++index)
+    {
+        evaluation::Intonation intonation;
+        intonation.verdict = evaluation::IntonationVerdict::inTune;
+        intonation.cents = cents.at(index);
+        intonation.zone = pitch::zoneOf(intonation.cents, 25.0);
+        report.results[index].intonation = intonation;
+    }
+
+    const ReviewMarks marks = reviewMarksFor(layout, report, {});
+    REQUIRE(marks.notes.size() == 2);
+    const System& system = layout.systems.front();
+    for (const NoteMark& mark : marks.notes)
+    {
+        CHECK(
+            mark.pitch == (system.noteheads.at(mark.notehead).source.eventIndex == 0
+                               ? PitchMark::correct
+                               : PitchMark::acceptable));
     }
 }
 

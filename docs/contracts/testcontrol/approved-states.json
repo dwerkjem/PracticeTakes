@@ -1445,7 +1445,7 @@
     },
     {
       "id": "note-view",
-      "description": "The Note View: the note being sung lit on a keyboard and drawn on a staff, against the target, with its trail",
+      "description": "The Note View: the note being sung lit on a keyboard and drawn on a staff, against the target, with its trail, and the acceptable range around the target coloured by how close the note is",
       "tools": ["note-view"],
       "toolIds": ["note-view"],
       "presentation": "docked",
@@ -1455,7 +1455,7 @@
       "settingsOpen": false,
       "settingsPanel": "",
       "feedbackOpen": false,
-      "toneHz": 334,
+      "toneHz": 332,
       "toolView": "",
       "scoreFixture": "<bundled sample>",
       "showScoreImportSummary": false,

@@ -355,6 +355,11 @@ void ScoreViewComponent::paintReviewOn(
             graphics.setColour(juce::Colour(reviewCorrect));
             graphics.drawEllipse(around, ring);
             break;
+        case engraving::PitchMark::acceptable:
+            // In tune, within the singer's range but not near perfect.
+            graphics.setColour(intonationZoneColour(pitch::IntonationZone::acceptable));
+            graphics.drawEllipse(around, ring);
+            break;
         case engraving::PitchMark::wrong:
             graphics.setColour(juce::Colour(reviewWrong).withAlpha(0.5f));
             graphics.fillEllipse(around);

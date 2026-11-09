@@ -108,7 +108,15 @@ TEST_CASE("a synthetic sung take is judged by its pattern", "[testcontrol][revie
             CHECK(result.outcome == evaluation::NoteOutcome::correct);
             REQUIRE(result.intonation.has_value());
             CHECK(result.intonation->verdict == IntonationVerdict::inTune);
+            CHECK(result.intonation->zone == pitch::IntonationZone::nearPerfect);
             CHECK(result.intonation->score > 0.9);
+            break;
+        case SungNote::acceptable:
+            CHECK(result.outcome == evaluation::NoteOutcome::correct);
+            REQUIRE(result.intonation.has_value());
+            CHECK(result.intonation->verdict == IntonationVerdict::inTune);
+            CHECK(result.intonation->zone == pitch::IntonationZone::acceptable);
+            CHECK(std::abs(result.intonation->cents - testcontrol::syntheticAcceptableCents) < 3.0);
             break;
         case SungNote::sharp:
             CHECK(result.outcome == evaluation::NoteOutcome::correct);
@@ -159,6 +167,8 @@ TEST_CASE("a synthetic sung take is judged by its pattern", "[testcontrol][revie
     REQUIRE(rowWith(" \xC2\xA2 sharp") != nullptr);
     CHECK(rowWith(" \xC2\xA2 sharp")->mistake);
     REQUIRE(rowWith(" \xC2\xA2 flat") != nullptr);
+    REQUIRE(rowWith("in tune, +") != nullptr);
+    CHECK_FALSE(rowWith("in tune, +")->mistake);
     REQUIRE(rowWith("in tune") != nullptr);
     CHECK_FALSE(rowWith("in tune")->mistake);
     CHECK(rowWith("wrong, sang ") != nullptr);

@@ -129,6 +129,8 @@ inline constexpr double syntheticOffsetSeconds = 0.06;
 enum class SungNote
 {
     inTune,
+    // In tune, but 12 cents sharp: inside the default range, not near perfect.
+    acceptable,
     sharp,
     flat,
     wrong,
@@ -158,11 +160,16 @@ enum class SungNote
     {
         return SungNote::flat;
     }
+    if (index % 8 == 5)
+    {
+        return SungNote::acceptable;
+    }
     return SungNote::inTune;
 }
 
 inline constexpr double syntheticSharpCents = 35.0;
 inline constexpr double syntheticWrongCents = 200.0;
+inline constexpr double syntheticAcceptableCents = 12.0;
 
 // A microphone take of a part sung through `bars` bars, at tempo, at A4 =
 // `referenceHz`: a voice-like tone for each attack's first note, scooping up
@@ -246,6 +253,9 @@ inline constexpr double syntheticWrongCents = 200.0;
             break;
         case SungNote::wrong:
             cents = syntheticWrongCents;
+            break;
+        case SungNote::acceptable:
+            cents = syntheticAcceptableCents;
             break;
         default:
             break;
