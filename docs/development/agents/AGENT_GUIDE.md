@@ -177,7 +177,8 @@ subdirectory is the right answer when a subject grows. Add it to the index in
 - `src/bootstrap` — JUCE application entry, owns the top-level `DocumentWindow`.
 - `src/application/configuration` — settings persistence, defaults, portable
   `.ptsettings` import/export/transaction codecs.
-- `src/application/theme` — shared palettes and look-and-feel.
+- `src/application/theme` — shared palettes and look-and-feel, and `MiniStaff`,
+  the small staff with a notehead that several tools draw.
 - `src/application/shell` — window/menu/audio-state/workspace coordination.
   `shell/ui/{main_window,feedback,settings,workspace}` and `shell/state/{appearance,audio}`
   keep this from becoming one monolithic folder; `MainComponent` is split

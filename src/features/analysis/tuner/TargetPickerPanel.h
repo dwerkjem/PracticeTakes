@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 
+#include "../../../application/theme/MiniStaff.h"
 #include "../../../application/theme/Theme.h"
 #include "../../../platform/pitch/CurrentTarget.h"
 #include "../../../platform/pitch/TargetChoice.h"
@@ -9,6 +10,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <vector>
 
 // The target picker: every way of choosing the note to aim at, in a call-out
 // from the tuner (openspec/changes/archive/2026-11-08-target-note-picker/design.md, decision 1).
@@ -182,35 +184,59 @@ class TargetPickerPanel final
 
         void paint(juce::Graphics& graphics) override
         {
-            graphics.setColour(ink.withAlpha(0.8f));
-            for (const float middle : {trebleMiddle(), bassMiddle()})
+            // On each staff, the faint head under the pointer, then the
+            // target's over it.
+            const float x = static_cast<float>(getWidth()) * 0.5f;
+            std::vector<MiniStaffNote> trebleHeads;
+            std::vector<MiniStaffNote> bassHeads;
+            const auto add =
+                [&](pitch::StaffClef clef, const score::Pitch& note, juce::Colour colour)
             {
-                for (int line = -2; line <= 2; ++line)
-                {
-                    const float y = middle - (static_cast<float>(line) * spacing);
-                    graphics.drawHorizontalLine(
-                        static_cast<int>(y), 20.0f, static_cast<float>(getWidth()) - 10.0f);
-                }
-            }
-            graphics.setFont(juce::FontOptions(12.0f));
-            graphics.drawText(
-                "Treble", 0, static_cast<int>(trebleMiddle() - 30.0f), 60, 14,
-                juce::Justification::left);
-            graphics.drawText(
-                "Bass", 0, static_cast<int>(bassMiddle() + 22.0f), 60, 14,
-                juce::Justification::left);
-
+                (clef == pitch::StaffClef::treble ? trebleHeads : bassHeads)
+                    .push_back({note, x, colour, true});
+            };
             if (hover.has_value())
             {
-                drawHead(graphics, *hover, ink.withAlpha(0.25f));
+                if (const auto under = pitch::pitchAtStaffPosition(hover->clef, hover->steps, 0))
+                {
+                    add(hover->clef, *under, ink.withAlpha(0.25f));
+                }
             }
             if (shown.has_value())
             {
                 if (const auto place = placeOf(*shown))
                 {
-                    drawHead(graphics, *place, accent);
+                    add(place->clef, *shown, accent);
                 }
             }
+
+            // A fixed spacing, larger heads, and no accidental drawn: the
+            // heading names the note, and the buttons beside the staff choose
+            // the accidental for a click.
+            MiniStaffStyle style;
+            style.lines = ink.withAlpha(0.8f);
+            style.minSpacing = spacing;
+            style.maxSpacing = spacing;
+            style.headWidth = 1.5f;
+            style.headHeight = 1.125f;
+            style.ledgerReach = 1.25f;
+            style.ledgersInNoteColour = true;
+            style.accidentals = false;
+            drawMiniStaff(
+                graphics, staffArea(trebleMiddle()), pitch::StaffClef::treble, trebleHeads, style);
+            drawMiniStaff(
+                graphics, staffArea(bassMiddle()), pitch::StaffClef::bass, bassHeads, style);
+
+            // The grand staff is labelled in the margin, above the treble and
+            // below the bass, rather than above each staff.
+            graphics.setColour(style.lines);
+            graphics.setFont(juce::FontOptions(12.0f));
+            graphics.drawText(
+                miniStaffClefName(pitch::StaffClef::treble), 0,
+                static_cast<int>(trebleMiddle() - 30.0f), 60, 14, juce::Justification::left);
+            graphics.drawText(
+                miniStaffClefName(pitch::StaffClef::bass), 0,
+                static_cast<int>(bassMiddle() + 22.0f), 60, 14, juce::Justification::left);
         }
 
         void mouseMove(const juce::MouseEvent& event) override
@@ -269,36 +295,29 @@ class TargetPickerPanel final
             return Place{treble ? pitch::StaffClef::treble : pitch::StaffClef::bass, steps};
         }
 
+        // One staff of the pair, its middle line at `middle`: the lines run
+        // from 20 pixels in to 10 from the right (the mini staff insets its
+        // area by four), and the height gives the fixed spacing.
+        [[nodiscard]] juce::Rectangle<float> staffArea(float middle) const
+        {
+            constexpr float height = spacing * 14.0f;
+            return {
+                16.0f, middle - (height * 0.5f), static_cast<float>(getWidth()) - 22.0f, height};
+        }
+
         // Where a pitch sits: on the treble staff from middle C up, else the
         // bass.
         [[nodiscard]] static std::optional<Place> placeOf(const score::Pitch& note)
         {
-            const int letters = (note.octave * 7) + static_cast<int>(note.step);
-            const bool treble = letters >= (4 * 7);
-            const int middle = treble ? (4 * 7) + 6 : (3 * 7) + 1;
-            const int steps = letters - middle;
+            const bool treble = (note.octave * 7) + static_cast<int>(note.step) >= (4 * 7);
+            const pitch::StaffClef clef =
+                treble ? pitch::StaffClef::treble : pitch::StaffClef::bass;
+            const int steps = pitch::staffStepsOf(note, clef);
             if (std::abs(steps) > 10)
             {
                 return std::nullopt;
             }
-            return Place{treble ? pitch::StaffClef::treble : pitch::StaffClef::bass, steps};
-        }
-
-        void drawHead(juce::Graphics& graphics, const Place& place, juce::Colour colour) const
-        {
-            const float middle =
-                place.clef == pitch::StaffClef::treble ? trebleMiddle() : bassMiddle();
-            const float y = middle - (static_cast<float>(place.steps) * spacing * 0.5f);
-            const float x = static_cast<float>(getWidth()) * 0.5f;
-            graphics.setColour(colour);
-            graphics.fillEllipse(x - 6.0f, y - 4.5f, 12.0f, 9.0f);
-            // Ledger lines beyond the staff.
-            for (int step = 6; step <= std::abs(place.steps); step += 2)
-            {
-                const float ledger =
-                    middle - (static_cast<float>(place.steps > 0 ? step : -step) * spacing * 0.5f);
-                graphics.drawHorizontalLine(static_cast<int>(ledger), x - 10.0f, x + 10.0f);
-            }
+            return Place{clef, steps};
         }
 
         std::optional<Place> hover;

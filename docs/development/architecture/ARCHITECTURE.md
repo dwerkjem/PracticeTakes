@@ -6,7 +6,9 @@ The source tree groups code first by architectural role, then by feature:
 
 - `src/bootstrap` starts the JUCE application and owns the top-level window.
 - `src/application/configuration` persists settings and defines defaults.
-- `src/application/theme` owns shared palettes and look-and-feel behavior.
+- `src/application/theme` owns shared palettes and look-and-feel behavior, and
+  `MiniStaff`, the small five-line staff the Note View, Now & Next and the
+  target picker each draw a pitch on, so no tool reaches into another for it.
 - `src/application/shell` coordinates windows, menus, audio state, appearance,
   and workspace layout. Its `ui` and `state` branches keep immediate folder
   fan-out small. `MainComponent` implementations live beside the shell
