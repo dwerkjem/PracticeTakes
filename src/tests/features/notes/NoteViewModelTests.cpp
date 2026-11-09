@@ -1,0 +1,73 @@
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
+
+#include "features/notes/NoteViewModel.h"
+
+using Catch::Approx;
+using namespace notes;
+
+TEST_CASE("keys sit where a keyboard puts them", "[notes][keys]")
+{
+    CHECK_FALSE(isBlackKey(60));
+    CHECK(isBlackKey(61));
+    CHECK(isBlackKey(70));
+    CHECK_FALSE(isBlackKey(64));
+
+    // C4 is the 29th white key from C-1; its C# sits on the C-D boundary.
+    CHECK(keyCentre(60) == Approx(35.5));
+    CHECK(keyCentre(61) == Approx(36.0));
+    CHECK(keyCentre(62) == Approx(36.5));
+    CHECK(keyCentre(64) - keyCentre(65) == Approx(-1.0));
+}
+
+TEST_CASE("a pitch between two keys lies between them", "[notes][keys]")
+{
+    CHECK(pitchX(60.0) == Approx(keyCentre(60)));
+    CHECK(pitchX(60.5) == Approx((keyCentre(60) + keyCentre(61)) / 2.0));
+    CHECK(pitchX(64.5) == Approx((keyCentre(64) + keyCentre(65)) / 2.0));
+
+    // A slide from G4 to A4 moves steadily rightwards.
+    double previous = pitchX(67.0);
+    for (double midi = 67.1; midi <= 69.0; midi += 0.1)
+    {
+        CHECK(pitchX(midi) > previous);
+        previous = pitchX(midi);
+    }
+}
+
+TEST_CASE("the keys hold still until a note leaves them", "[notes][keys]")
+{
+    const KeyWindow start;
+    CHECK(windowFor(start, {}) == start);
+    CHECK(windowFor(start, {64, 72}) == start);
+
+    // A low note moves the window down to its C; a wide span widens it.
+    const KeyWindow low = windowFor(start, {43});
+    CHECK(low.lowest == 36);
+    CHECK(low.highest == 60);
+    const KeyWindow wide = windowFor(start, {40, 90});
+    CHECK(wide.lowest == 36);
+    CHECK(wide.highest == 96);
+}
+
+TEST_CASE("a lit key is shaded by how far off it is", "[notes][keys]")
+{
+    CHECK(offTune(0.0) == Approx(0.0));
+    CHECK(offTune(-5.0) == Approx(0.0));
+    CHECK(offTune(27.5) == Approx(0.5));
+    CHECK(offTune(-60.0) == Approx(1.0));
+}
+
+TEST_CASE("the trail keeps three seconds, with its gaps", "[notes][trail]")
+{
+    Trail trail;
+    for (int frame = 0; frame <= 40; ++frame)
+    {
+        const double seconds = frame * 0.1;
+        trail.add(seconds, frame == 20 ? std::nullopt : std::optional<double>(60.0 + frame * 0.05));
+    }
+    const auto& points = trail.recent();
+    CHECK(points.front().seconds >= 1.0 - 1e-9);
+    CHECK(points.back().seconds == Approx(4.0));
+    CHECK_FALSE(points[static_cast<std::size_t>(10)].midi.has_value());
+}

@@ -2,7 +2,7 @@
 
 - [x] 1.1 `PitchTracker` moves to `src/platform/pitch/`, with its tests; the
       tuner unchanged.
-- [ ] 1.2 `pitch::staffStepsOf` with treble 8vb; `NoteViewModel` (window, key
+- [x] 1.2 `pitch::staffStepsOf` with treble 8vb; `NoteViewModel` (window, key
       geometry, trail, shading). Tests.
 - [ ] 1.3 `ToolServices::midi`.
 

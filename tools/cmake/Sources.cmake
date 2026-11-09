@@ -171,6 +171,7 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/StaffGeometry.h
     src/features/score/engraving/StaffPosition.cpp
     src/features/score/engraving/StaffPosition.h
+    src/features/notes/NoteViewModel.h
     src/features/performance/ApplicationLaunchTimer.cpp
     src/features/performance/ApplicationLaunchTimer.h
     src/features/feedback/FeedbackComponent.cpp
@@ -325,6 +326,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
     src/tests/features/analysis/tuner/TunerSettingsCodecTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
+    src/tests/features/notes/NoteViewModelTests.cpp
     src/tests/features/score/MusicFontTests.cpp
     src/tests/features/score/ScoreViewSettingsTests.cpp
     src/tests/features/score/SmuflGlyphsTests.cpp

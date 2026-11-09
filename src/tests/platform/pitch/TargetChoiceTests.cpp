@@ -83,3 +83,23 @@ TEST_CASE("a key is spelled with sharps, or flats when asked", "[pitch][choice]"
     CHECK(nameOf(spellMidi(0, true)) == "C-1");
     CHECK_FALSE(spellMidi(128, true).has_value());
 }
+
+TEST_CASE("a pitch's place on a staff, in each clef", "[pitch][choice]")
+{
+    const score::Pitch middleC = score::pitchFromSpelling(score::Step::c, 0, 4);
+    CHECK(staffStepsOf(middleC, StaffClef::treble) == -6);
+    CHECK(staffStepsOf(middleC, StaffClef::bass) == 6);
+    CHECK(staffStepsOf(middleC, StaffClef::trebleOctaveDown) == 1);
+    CHECK(staffStepsOf(score::pitchFromSpelling(score::Step::f, 1, 5), StaffClef::treble) == 4);
+
+    // The two directions agree.
+    for (const StaffClef clef : {StaffClef::treble, StaffClef::bass, StaffClef::trebleOctaveDown})
+    {
+        for (int steps = -8; steps <= 8; ++steps)
+        {
+            const auto pitch = pitchAtStaffPosition(clef, steps, 0);
+            REQUIRE(pitch.has_value());
+            CHECK(staffStepsOf(*pitch, clef) == steps);
+        }
+    }
+}
