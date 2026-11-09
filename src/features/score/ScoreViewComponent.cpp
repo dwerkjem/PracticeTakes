@@ -62,6 +62,9 @@ constexpr double markHeight = 1.3;
 // The target's outline, in staff spaces, and its colour: violet, apart from
 // the clock's blue and the review's green, amber and red.
 constexpr double targetOutlineWidth = 2.3;
+
+// How long following takes to scroll to the next line.
+constexpr double glideSeconds = 0.25;
 constexpr double targetOutlineHeight = 1.8;
 
 [[nodiscard]] juce::Colour targetOutlineColour(Theme theme)
@@ -1377,6 +1380,14 @@ void ScoreViewComponent::clockChanged(const transport::ClockUpdate& update)
     clockPosition = update.position;
     const bool playing = clockPosition.state == transport::ClockState::playing;
 
+    // A seek or a loop's wrap is a jump, drawn as one; anything else is a
+    // step the playhead is smoothed across (transport::PlayheadSmoother).
+    if (update.seeks > 0 || update.wraps > 0)
+    {
+        playhead.restart(clockPosition.tick, secondsNow());
+    }
+    playhead.observe(clockPosition.tick, secondsNow(), playing);
+
     // Starting the clock again is asking to be followed again.
     if (playing && !wasPlaying)
     {
@@ -1403,10 +1414,14 @@ void ScoreViewComponent::updateCursor()
     if (renderedScore != nullptr && layout.outcome == engraving::LayoutOutcome::laidOut &&
         clockPosition.hasScore)
     {
-        place = engraving::placeOfTick(layout, clockPosition.tick);
+        // Where the clock is now, between its reports, rather than where it
+        // last said it was: drawn every frame, the band then moves evenly.
+        const double tick = clockPosition.state == transport::ClockState::playing
+                                ? playhead.at(secondsNow())
+                                : clockPosition.tick;
+        place = engraving::placeOfTick(layout, tick);
         marked = engraving::targetsAt(
-            *renderedScore, engraving::drawnPartsOf(layout), clockPosition.tick,
-            settings.lookAhead);
+            *renderedScore, engraving::drawnPartsOf(layout), tick, settings.lookAhead);
     }
 
     if (place == cursor && marked.sounding == targets.sounding &&
@@ -1491,6 +1506,7 @@ void ScoreViewComponent::follow()
                 page != currentPage)
             {
                 currentPage = page;
+                glide.reset();
                 scrollProgrammatically(0, 0);
                 updateControls();
                 canvas.repaint();
@@ -1523,8 +1539,7 @@ void ScoreViewComponent::follow()
         const double place = settings.view == score_view::ViewMode::vertical
                                  ? static_cast<double>(view.getHeight()) * verticalFollowPlace
                                  : 8.0;
-        scrollProgrammatically(
-            view.getX(), std::max(0, where->bounds.getY() - static_cast<int>(place)));
+        glideTo(view.getX(), std::max(0, where->bounds.getY() - static_cast<int>(place)));
         break;
     }
 
@@ -1537,15 +1552,53 @@ void ScoreViewComponent::follow()
         {
             break;
         }
-        scrollProgrammatically(
-            std::max(0, static_cast<int>(x - (width * horizontalFollowRestart))), view.getY());
+        glideTo(std::max(0, static_cast<int>(x - (width * horizontalFollowRestart))), view.getY());
         break;
     }
     }
 }
 
+void ScoreViewComponent::glideTo(int x, int y)
+{
+    const juce::Point<int> goal(x, y);
+    if (glide.has_value() && glide->to == goal)
+    {
+        return;
+    }
+    glide = Glide{viewport.getViewPosition(), goal, secondsNow()};
+}
+
+void ScoreViewComponent::frameDrawn()
+{
+    if (clockPosition.state == transport::ClockState::playing)
+    {
+        updateCursor();
+    }
+
+    if (!glide.has_value())
+    {
+        return;
+    }
+
+    // Eased out over a quarter of a second, whatever the display's frame rate:
+    // the page moves to the next line quickly, but not in one frame, so the
+    // eye can follow where it went.
+    const double along = std::clamp((secondsNow() - glide->started) / glideSeconds, 0.0, 1.0);
+    const double eased = 1.0 - ((1.0 - along) * (1.0 - along) * (1.0 - along));
+    const juce::Point<int> distance = glide->to - glide->from;
+    scrollProgrammatically(
+        glide->from.x + juce::roundToInt(distance.x * eased),
+        glide->from.y + juce::roundToInt(distance.y * eased));
+    if (along >= 1.0)
+    {
+        glide.reset();
+    }
+}
+
 void ScoreViewComponent::suspendFollowing()
 {
+    // The reader is scrolling: a glide still under way would fight them.
+    glide.reset();
     if (!settings.follow || followSuspended ||
         clockPosition.state != transport::ClockState::playing)
     {

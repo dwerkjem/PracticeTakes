@@ -315,6 +315,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/transport/PlaybackTrackNames.h
     src/platform/transport/PracticeClock.cpp
     src/platform/transport/PracticeClock.h
+    src/platform/transport/PlayheadSmoother.h
     src/platform/transport/ScoreSynth.cpp
     src/platform/transport/ScoreSynth.h
     src/platform/transport/SoundFontLocation.h
@@ -457,6 +458,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/take/TakeRecorderTests.cpp
     src/tests/platform/take/TakeStatusTests.cpp
     src/tests/platform/transport/ClockMathTests.cpp
+    src/tests/platform/transport/PlayheadSmootherTests.cpp
     src/tests/platform/transport/ClockRendererTests.cpp
     src/tests/platform/transport/PlaybackEventsTests.cpp
     src/tests/platform/transport/PracticeClockTests.cpp

@@ -10,6 +10,7 @@
 #include "../../platform/pitch/CurrentTarget.h"
 #include "../../platform/score/CurrentScore.h"
 #include "../../platform/take/TakeRecorder.h"
+#include "../../platform/transport/PlayheadSmoother.h"
 #include "../../platform/transport/PracticeClock.h"
 
 #include "ScoreGlyphPainter.h"
@@ -170,6 +171,18 @@ class ScoreViewComponent final
 
     // The reader moved the view while the clock played.
     void suspendFollowing();
+
+    // Scroll to (x, y) over the next few frames rather than at once.
+    void glideTo(int x, int y);
+
+    // Every frame the display draws: the playhead moved on while the clock
+    // plays, and a glide stepped along.
+    void frameDrawn();
+
+    [[nodiscard]] static double secondsNow()
+    {
+        return juce::Time::getMillisecondCounterHiRes() / 1000.0;
+    }
     void resumeFollowing();
 
     // Scroll or turn without that counting as the reader doing it.
@@ -371,6 +384,20 @@ class ScoreViewComponent final
     Theme currentTheme = Theme::light;
 
     LayoutKey laidOutFor;
+
+    // Where the clock is between its reports, and the scroll a follow is
+    // gliding towards.
+    transport::PlayheadSmoother playhead;
+    struct Glide
+    {
+        juce::Point<int> from;
+        juce::Point<int> to;
+        double started = 0.0;
+    };
+    std::optional<Glide> glide;
+
+    // Last, so it stops before anything it calls is destroyed.
+    juce::VBlankAttachment frames{this, [this] { frameDrawn(); }};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScoreViewComponent)
 };
