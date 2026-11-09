@@ -110,7 +110,7 @@ inline constexpr std::array<TextRoleInfo, 17> textRoles{{
     {TextRole::menu, "Menus and messages", 17.0f},
     {TextRole::heading, "Tool headings", 18.0f},
     {TextRole::title, "Titles", 20.0f},
-    {TextRole::panelHeading, "Settings headings", 22.0f},
+    {TextRole::panelHeading, "Large headings", 22.0f},
     {TextRole::readout, "Large readouts", 30.0f},
     {TextRole::display, "The level", 34.0f},
 }};

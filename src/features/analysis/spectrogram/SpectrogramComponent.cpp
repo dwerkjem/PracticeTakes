@@ -268,7 +268,8 @@ void SpectrogramComponent::drawFrequencyGrid(
     // caller passes red, so the grid reads as part of the same warning as the
     // border rather than as ordinary, unconcerned chrome sitting next to it.
     graphics.setColour(accentColour);
-    graphics.setFont(juce::FontOptions(shape == compact::Shape::full ? 11.0f : 9.0f));
+    graphics.setFont(textFont(
+        shape == compact::Shape::full ? appearance::TextRole::axis : appearance::TextRole::tiny));
 
     for (const auto frequency : frequencyGridLines)
     {
@@ -300,8 +301,8 @@ void SpectrogramComponent::drawFrequencyGrid(
             // scarce width.
             const auto label = frequencyLabel(frequency).removeCharacters(" ");
 
-            constexpr int glyphWidth = 10;
-            constexpr int lineHeight = 11;
+            const int glyphWidth = scaledHeight(10);
+            const int lineHeight = scaledHeight(11);
 
             // Same edge case a one-line label would have, narrower: the
             // highest frequency's line sits close enough to the right edge
@@ -326,8 +327,9 @@ void SpectrogramComponent::drawFrequencyGrid(
                 static_cast<int>(y), static_cast<float>(spectrogramBounds.getX()),
                 static_cast<float>(spectrogramBounds.getRight()));
             graphics.drawText(
-                frequencyLabel(frequency), spectrogramBounds.getX() + 4, static_cast<int>(y) - 13,
-                50, 12, juce::Justification::centredLeft);
+                frequencyLabel(frequency), spectrogramBounds.getX() + 4,
+                static_cast<int>(y) - scaledHeight(13), scaledHeight(50), scaledHeight(12),
+                juce::Justification::centredLeft);
         }
     }
 }
@@ -400,7 +402,8 @@ void SpectrogramComponent::paint(juce::Graphics& graphics)
     else
     {
         graphics.setColour(mutedColour());
-        graphics.setFont(juce::FontOptions(compactPane ? 12.0f : 17.0f));
+        graphics.setFont(
+            textFont(compactPane ? appearance::TextRole::small : appearance::TextRole::menu));
         graphics.drawFittedText(
             audioErrorMessage, spectrogramBounds.reduced(compactPane ? 4 : 20),
             juce::Justification::centred, compactPane ? 3 : 2);
