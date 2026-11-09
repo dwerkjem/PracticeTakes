@@ -160,9 +160,31 @@ the piano. Open **Tools → Take Review** beside the Score View to see the resul
   of the Take Review.
 
 Only what the take covered is judged: a take stopped in bar 8 isn't missing
-bar 9. A take from the microphone is judged for timing now; whether its notes
-were the right pitch comes with sung-pitch judging
-([#42](https://github.com/dwerkjem/PracticeTakes/issues/42)).
+bar 9.
+
+### A sung take
+
+A take from the microphone is judged for timing, and each single note for
+**how in tune it was**, against the reference pitch you sang at:
+
+- **In tune** is a green ring. **Sharp** or **flat** is an orange ring with an
+  orange arrow above (sharp) or below (flat) and the cents beside it: *+18*.
+  A note nearer another note than the written one is **wrong**, in red, with
+  the note you sang.
+- The list says it in words: *Bar 3, beat 2 · G4 · 18 ¢ sharp · on time*, and
+  the summary counts in tune, sharp and flat notes.
+- What decides a note is its **held middle**. A scoop into it or a slide out
+  of it isn't counted against you.
+- A note the pitch tracker couldn't be sure of (breathy, very quiet, or noisy)
+  is **pitch uncertain**, a faint ring, never wrong.
+- Sing a treble line an octave down and it is still in tune; the list adds
+  *an octave low*.
+- **Settings → Practice → In tune within** sets how close counts as in tune:
+  25 cents (a quarter of a semitone) unless you change it, from 5 to 50.
+  Changing it judges the take under review again.
+
+A chord heard through the microphone is judged for timing only: one voice is
+one pitch.
 
 ![A take under review: the piano's notes marked on the score, and the list of results beside it](images/take-review.png)
 

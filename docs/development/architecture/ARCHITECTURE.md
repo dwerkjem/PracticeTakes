@@ -334,9 +334,22 @@ tick to the frame it stopped at (`attacksInTake`).
 - **Note matching** (the archived `note-matching` change) compares pitches
   within the moments onset timing matched. Each written note is correct,
   wrong (keeping what was played), missed, or not judged for pitch when the
-  evidence has none: the microphone, until #42. Every played note left over is
-  extra, and a pairing with an equally good alternative is marked ambiguous.
-  `judgeNotes(take, part)` runs both.
+  evidence has none: a chord from the microphone. Every played note left over
+  is extra, and a pairing with an equally good alternative is marked ambiguous.
+  `judgeNotes(take, part)` runs all three passes.
+- **Sung pitch** (the archived `sung-pitch-judging` change):
+  - `PitchContour` runs YIN over a microphone take's audio, once per take, and
+    gives each frame a frequency and a confidence.
+  - `Intonation` judges each single sung note that timing matched. The note's
+    frames are split into attack, sustain and release. The sure sustain frames
+    are folded by octaves, and their median in cents against the written pitch,
+    at the take's own `referenceHz`, decides the verdict: in tune, sharp or flat
+    by the tolerance, wrong when it is nearer another note, or uncertain with
+    too few sure frames.
+  - `TakeEvidence` carries the onsets and the contour, found once, to every
+    part `bestPartFor` tries.
+  - The tolerance is `practice.inTuneCents`, held by the recorder
+    (`setIntonation`), which judges the review again when it changes.
 - **Take review** (the archived `take-review` change):
   - `bestPartFor` judges a take against every part of its score, finding its
     onsets once, and picks the part with the most correct notes and on-time

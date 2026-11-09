@@ -36,6 +36,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -61,6 +62,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -86,6 +88,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -111,6 +114,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -136,6 +140,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -161,6 +166,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -186,6 +192,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -211,6 +218,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -236,6 +244,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -261,6 +270,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -286,6 +296,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -311,6 +322,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Tuner"
     },
     {
@@ -336,6 +348,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -361,6 +374,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Spectrogram"
     },
     {
@@ -386,6 +400,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -411,6 +426,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Harmonic Analyzer"
     },
     {
@@ -436,6 +452,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -461,6 +478,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -486,6 +504,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -511,6 +530,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -536,6 +556,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -561,6 +582,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -586,6 +608,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -611,6 +634,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -636,6 +660,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -661,6 +686,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -686,6 +712,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -711,6 +738,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -736,6 +764,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -761,6 +790,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -786,6 +816,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -811,6 +842,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -836,6 +868,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -861,6 +894,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -886,6 +920,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Settings"
     },
     {
@@ -911,6 +946,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Send feedback"
     },
     {
@@ -936,6 +972,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Send feedback"
     },
     {
@@ -961,6 +998,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Score import"
     },
     {
@@ -986,6 +1024,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Score import"
     },
     {
@@ -1011,6 +1050,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1036,6 +1076,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Score View"
     },
     {
@@ -1061,6 +1102,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1086,6 +1128,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1111,6 +1154,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1136,6 +1180,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1161,6 +1206,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1186,6 +1232,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1211,6 +1258,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1236,6 +1284,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1261,6 +1310,33 @@
       "reviewTake": true,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
+      "windowTitle": ""
+    },
+    {
+      "id": "take-review-sung",
+      "description": "A sung take under review: in-tune notes ringed, sharp and flat ones with an arrow and their cents, and the list saying how far off each was",
+      "tools": ["score-view", "take-review"],
+      "toolIds": ["score-view", "take-review"],
+      "presentation": "docked",
+      "arrangement": "split",
+      "geometry": "normal",
+      "microphone": "available",
+      "settingsOpen": false,
+      "settingsPanel": "",
+      "feedbackOpen": false,
+      "toneHz": 0,
+      "toolView": "",
+      "scoreFixture": "<bundled sample>",
+      "showScoreImportSummary": false,
+      "holdScoreImportInProgress": false,
+      "clockPlaying": false,
+      "clockBar": -1,
+      "recordTake": false,
+      "reviewTake": true,
+      "mixOpen": false,
+      "referencePitchHz": 0,
+      "sungTake": true,
       "windowTitle": ""
     },
     {
@@ -1286,6 +1362,7 @@
       "reviewTake": false,
       "mixOpen": true,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1311,6 +1388,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1336,6 +1414,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 442,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1361,6 +1440,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1386,6 +1466,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1411,6 +1492,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1436,6 +1518,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1461,6 +1544,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1486,6 +1570,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": ""
     },
     {
@@ -1511,6 +1596,7 @@
       "reviewTake": false,
       "mixOpen": false,
       "referencePitchHz": 0,
+      "sungTake": false,
       "windowTitle": "Score import"
     }
   ]

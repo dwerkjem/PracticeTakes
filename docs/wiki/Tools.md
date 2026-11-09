@@ -159,7 +159,8 @@ signature.
 
 While a take is under review and its score is open, the Score View marks every
 note of the part it was judged against: right, wrong (with the key played),
-missed, early or late, and a cross above the staff for each extra key. See
+missed, early or late, and a cross above the staff for each extra key. A sung
+note is also marked sharp or flat, with an arrow and its cents. See
 [[Getting Started]] and the Take Review below. **Show take review** in the
 options menu turns the marks off.
 
@@ -167,13 +168,17 @@ options menu turns the marks off.
 
 The take you just played, judged note by note. It shows:
 - the take and the part it was judged against, each of which you can change;
-- a summary: *158 correct · 7 wrong · 11 missed · 1 extra · 3 early · 4 late*;
-- every result in time order.
+- a summary: *158 correct · 7 wrong · 11 missed · 1 extra · 3 early · 4 late*,
+  or for a sung take *41 in tune · 6 sharp · 3 flat · …*;
+- every result in time order, a sung note with how far off it was:
+  *G4 · 18 ¢ sharp*.
 
 Click a result to move the practice clock, and with it the Score View, to that
 note. Before the first take it says how to record one.
 
 ![The Take Review beside the Score View: a piano take stopped in bar 8, its notes marked and listed](images/take-review.png)
+
+![A sung take under review: the voice's notes ringed, sharp and flat ones with an arrow and their cents](images/take-review-sung.png)
 
 ## Target Note (retired)
 

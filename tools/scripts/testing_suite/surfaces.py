@@ -979,6 +979,37 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # A synthetic singer's take under review (sung-pitch-judging).
+    Surface(
+        state="take-review-sung",
+        title="A sung take under review",
+        area="score",
+        modes=frozenset({FULL}),
+        # Judging the sung audio blocks the window for about four and a half
+        # seconds in a Debug build: the pitch contour and the onsets of twenty
+        # seconds of singing.
+        warmup_seconds=10.0,
+        extras=(
+            Question(
+                "intonation-on-notes",
+                "Are the voice's notes ringed green, with a few ringed orange and an orange "
+                "arrow above (sharp) or below (flat) labelled with the cents, one filled red "
+                "with the note sung, and one ringed faintly?",
+            ),
+            Question(
+                "intonation-list",
+                "Does the Take Review list give sung notes as in tune, N cents sharp or flat, "
+                "wrong with the note sung, or pitch uncertain, and does the summary count in "
+                "tune, sharp and flat?",
+            ),
+            Question(
+                "intonation-real-voice",
+                "Sing a phrase from the sample into a real microphone, a little sharp on "
+                "purpose: are those notes judged sharp, and the others in tune?",
+                behavioural=True,
+            ),
+        ),
+    ),
     # The Mix popup (score-playback).
     Surface(
         state="playback-mix",
