@@ -150,8 +150,10 @@ instance/
 docs/_build/
 
 # PyBuilder
+# Anchored: PyBuilder writes target/ at the project root, and an unanchored
+# rule silently ignored src/application/shell/state/target/ (#41).
 .pybuilder/
-target/
+/target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
