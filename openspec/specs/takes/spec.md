@@ -9,11 +9,25 @@ not change while it runs.
 Starting a take SHALL record from every usable source: the microphone when an
 input is open and not muted, and the MIDI keyboard when one is open. A take
 SHALL NOT start with a score closed or no source usable. Recording SHALL begin
-at the start of the count-in.
+at the start of the count-in. A take started while the clock is playing SHALL
+record on from where the clock is, without stopping it or counting in, unless
+the player has chosen to count in when recording starts during playback (#361).
 
 #### Scenario: A pianist who sings
 - **WHEN** a take is started with the microphone and a keyboard both usable
 - **THEN** the take holds the microphone's audio and the keyboard's events
+
+#### Scenario: Record while the score plays
+- **WHEN** Record is pressed while the clock is playing, with counting in during
+  playback off
+- **THEN** the clock carries on without going back, and the take is recorded
+  from where it was
+
+#### Scenario: Counting in during playback, chosen
+- **WHEN** Record is pressed while the clock is playing, with counting in during
+  playback on
+- **THEN** the clock counts in to where it was, and recording begins with the
+  count-in
 
 #### Scenario: Nothing to record from
 - **WHEN** the microphone is muted and no keyboard is open

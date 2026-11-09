@@ -122,6 +122,11 @@ MIDI keyboard and what the microphone hears, against the open score. It counts
 in first, the same way Play does. Recording starts from the first click of the
 count-in, so the first note is never cut off.
 
+**Record while the score is playing** records from where you are: the music
+carries on without stopping, and the take starts there. Turn on **Settings →
+Practice → Count in when recording starts during playback** to count in first
+instead. The count-in steps back a bar so it leads into where you were.
+
 - The button turns red and reads **Finish**. The readout says *Counting in*,
   then *Recording 0:12*. Press **Finish** or **Stop** to end the take part-way,
   or let it play to the end of the piece.

@@ -29,6 +29,7 @@ constexpr auto inTuneCentsKey = "practice.inTuneCents";
 constexpr auto nearPerfectCentsKey = "practice.nearPerfectCents";
 constexpr auto outOfTuneCentsKey = "practice.outOfTuneCents";
 constexpr auto minimumLevelKey = "practice.minimumLevelDb";
+constexpr auto countInWhenPlayingKey = "practice.countInWhenRecordingDuringPlayback";
 constexpr auto chosenTargetSoundingKey = "practice.chosenTarget";
 constexpr auto chosenTargetWrittenKey = "practice.chosenTargetWritten";
 constexpr auto keepTargetKey = "practice.keepTargetWhenScoreOpens";
@@ -78,6 +79,7 @@ constexpr const char* ownedKeys[] = {
     nearPerfectCentsKey,
     outOfTuneCentsKey,
     minimumLevelKey,
+    countInWhenPlayingKey,
     chosenTargetSoundingKey,
     chosenTargetWrittenKey,
     keepTargetKey,
@@ -303,6 +305,8 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
     result.state.minimumLevelDb = boundedValue(
         properties, minimumLevelKey, AppDefaults::minimumLevelDb, AppDefaults::lowestMinimumLevelDb,
         AppDefaults::highestMinimumLevelDb);
+    result.state.countInWhenRecordingDuringPlayback =
+        properties.getBoolValue(countInWhenPlayingKey, false);
     result.state.chosenTargetSounding = properties.getValue(chosenTargetSoundingKey);
     result.state.chosenTargetWritten = properties.getValue(chosenTargetWrittenKey);
     result.state.keepTargetWhenScoreOpens = properties.getBoolValue(keepTargetKey, false);
@@ -388,6 +392,7 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(nearPerfectCentsKey, state.nearPerfectCents);
     properties.setValue(outOfTuneCentsKey, state.outOfTuneCents);
     properties.setValue(minimumLevelKey, state.minimumLevelDb);
+    properties.setValue(countInWhenPlayingKey, state.countInWhenRecordingDuringPlayback);
     properties.setValue(chosenTargetSoundingKey, state.chosenTargetSounding);
     properties.setValue(chosenTargetWrittenKey, state.chosenTargetWritten);
     properties.setValue(keepTargetKey, state.keepTargetWhenScoreOpens);

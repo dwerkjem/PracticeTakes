@@ -975,3 +975,21 @@ TEST_CASE(
     juce::PropertiesFile reader(temporary.path, settingsOptions());
     CHECK(AppSettings::load(reader).state.minimumLevelDb == Catch::Approx(-45.0));
 }
+
+TEST_CASE(
+    "counting in when recording during playback survives a round trip, and is off",
+    "[settings][persistence]")
+{
+    CHECK_FALSE(AppSettings::State{}.countInWhenRecordingDuringPlayback);
+
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        AppSettings::State expected;
+        expected.countInWhenRecordingDuringPlayback = true;
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    CHECK(AppSettings::load(reader).state.countInWhenRecordingDuringPlayback);
+}

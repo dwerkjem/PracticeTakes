@@ -529,3 +529,109 @@ TEST_CASE(
     fixture.recorder->setIntonation(strict);
     CHECK_FALSE(fixture.recorder->isJudging());
 }
+
+TEST_CASE("Record while playing records on from there, without a count-in", "[take][recorder]")
+{
+    // #361: a count-in steps back a bar to count in, which sounds like the
+    // piece starting over.
+    RecorderUnderTest fixture(8);
+    fixture.clock->play();
+    // Through the count-in and two and a half bars of the piece.
+    fixture.run(static_cast<int>((bar * 7 / 2) / blockFrames));
+    const auto before = fixture.clock->position();
+    REQUIRE(before.state == ClockState::playing);
+    REQUIRE_FALSE(before.countingIn);
+    REQUIRE(before.bar == 2);
+
+    REQUIRE(fixture.recorder->start());
+    CHECK(fixture.clock->isLocked());
+
+    // It never goes back: every position after is later, never counting in.
+    double last = before.tick;
+    for (int step = 0; step < 12; ++step)
+    {
+        fixture.run(8);
+        const auto now = fixture.clock->position();
+        CHECK(now.state == ClockState::playing);
+        CHECK_FALSE(now.countingIn);
+        CHECK(now.tick > last);
+        last = now.tick;
+    }
+
+    REQUIRE(fixture.recorder->current() != nullptr);
+    const Take& take = *fixture.recorder->current();
+    CHECK(take.state() == TakeState::performing);
+    CHECK(take.startTick == static_cast<score::Tick>(std::llround(before.tick)));
+    CHECK(take.countInFrames == 0);
+    CHECK(take.audioStart >= before.frame);
+    CHECK(take.audioStart < before.frame + 8 * blockFrames);
+
+    // And it ends at the end of the piece as any take does.
+    fixture.run(static_cast<int>((6 * bar) / blockFrames) + 8);
+    REQUIRE(fixture.recorder->takes().size() == 1);
+    CHECK(fixture.recorder->takes().front()->state() == TakeState::completed);
+}
+
+TEST_CASE("Record while playing counts in again when asked to", "[take][recorder]")
+{
+    RecorderUnderTest fixture(8);
+    fixture.recorder->setCountInWhenPlaying(true);
+    fixture.clock->play();
+    fixture.run(static_cast<int>((bar * 7 / 2) / blockFrames));
+    const auto before = fixture.clock->position();
+    REQUIRE_FALSE(before.countingIn);
+
+    REQUIRE(fixture.recorder->start());
+    fixture.run(8);
+    const auto counting = fixture.clock->position();
+    CHECK(counting.countingIn);
+    CHECK(counting.tick < before.tick);
+    REQUIRE(fixture.recorder->current() != nullptr);
+    CHECK(fixture.recorder->current()->state() == TakeState::countingIn);
+
+    // Into the bar it was in when Record was pressed.
+    fixture.run(static_cast<int>(bar / blockFrames) + 4);
+    CHECK_FALSE(fixture.clock->position().countingIn);
+    CHECK(fixture.clock->position().tick > before.tick);
+}
+
+TEST_CASE("Record during a count-in lets the count-in finish", "[take][recorder]")
+{
+    RecorderUnderTest fixture(8);
+    fixture.clock->play();
+    fixture.run(10);
+    REQUIRE(fixture.clock->position().countingIn);
+
+    REQUIRE(fixture.recorder->start());
+    fixture.run(8);
+    REQUIRE(fixture.recorder->current() != nullptr);
+    CHECK(fixture.recorder->current()->state() == TakeState::countingIn);
+
+    fixture.run(static_cast<int>(bar / blockFrames));
+    CHECK(fixture.recorder->current()->state() == TakeState::performing);
+    CHECK(fixture.recorder->current()->startTick == 0);
+}
+
+TEST_CASE("Record while looping records on from where the clock is", "[take][recorder]")
+{
+    RecorderUnderTest fixture(8);
+    fixture.clock->setLoopRegion(2 * 4 * quarter, 6 * 4 * quarter);
+    fixture.clock->setLoopEnabled(true);
+    fixture.tick();
+    fixture.clock->seekToBar(3);
+    fixture.run(4);
+    fixture.clock->play();
+    fixture.run(static_cast<int>((bar * 3 / 2) / blockFrames));
+    const auto before = fixture.clock->position();
+    REQUIRE(before.state == ClockState::playing);
+    REQUIRE_FALSE(before.countingIn);
+
+    REQUIRE(fixture.recorder->start());
+    CHECK_FALSE(fixture.clock->loopEnabled());
+    fixture.run(static_cast<int>((bar * 3 / 2) / blockFrames));
+
+    const auto after = fixture.clock->position();
+    CHECK(after.state == ClockState::playing);
+    CHECK_FALSE(after.countingIn);
+    CHECK(after.tick > before.tick);
+}
