@@ -219,11 +219,11 @@ void NoteViewComponent::paint(juce::Graphics& graphics)
     graphics.fillAll(colours.background);
 
     auto bounds = getLocalBounds().reduced(12);
-    paintReading(graphics, bounds.removeFromTop(30));
+    paintReading(graphics, bounds.removeFromTop(scaledHeight(30)));
     bounds.removeFromTop(6);
 
     // Small and docked: the keyboard alone (design decision 5).
-    const bool compact = getWidth() < 240 || getHeight() < 160;
+    const bool compact = getWidth() < scaledHeight(240) || getHeight() < scaledHeight(160);
     if (compact)
     {
         paintKeyboard(graphics, bounds);
@@ -255,12 +255,12 @@ void NoteViewComponent::paintReading(juce::Graphics& graphics, juce::Rectangle<i
         text = "Sing or play a note";
     }
     graphics.setColour(colours.foreground);
-    graphics.setFont(juce::FontOptions(18.0f, juce::Font::bold));
+    graphics.setFont(textFont(appearance::TextRole::heading, juce::Font::bold));
     graphics.drawText(
         text, area.removeFromLeft(area.getWidth() / 2), juce::Justification::centredLeft);
 
     graphics.setColour(colours.muted);
-    graphics.setFont(juce::FontOptions(14.0f));
+    graphics.setFont(textFont(appearance::TextRole::control));
     const auto aimingAt = target.target();
     graphics.drawText(
         aimingAt != nullptr ? juce::String::fromUTF8(("Target " + aimingAt->name).c_str())
@@ -301,6 +301,7 @@ void NoteViewComponent::paintStaff(juce::Graphics& graphics, juce::Rectangle<int
     MiniStaffStyle style;
     style.lines = colours.foreground.withAlpha(0.75f);
     style.label = colours.muted;
+    style.labelFontHeight = textSize(appearance::TextRole::axis);
     drawMiniStaff(graphics, area.toFloat(), staffClef, heads, style);
 }
 
@@ -435,9 +436,11 @@ void NoteViewComponent::paintKeyboard(juce::Graphics& graphics, juce::Rectangle<
         if (key % 12 == 0)
         {
             graphics.setColour(juce::Colours::black.withAlpha(0.6f));
-            graphics.setFont(juce::FontOptions(10.0f));
+            graphics.setFont(textFont(appearance::TextRole::fine));
             graphics.drawText(
-                "C" + juce::String((key / 12) - 1), rect.withTrimmedTop(rect.getHeight() - 14.0f),
+                "C" + juce::String((key / 12) - 1),
+                rect.withTrimmedTop(
+                    rect.getHeight() - 14.0f * textSize(appearance::TextRole::fine) / 10.0f),
                 juce::Justification::centred);
         }
     }
