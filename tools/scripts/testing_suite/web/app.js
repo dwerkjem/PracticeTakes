@@ -39,7 +39,17 @@ const state = {
   // means wanting both, and a facet whose captures only ever carry one value
   // shows nothing when two are named, which is what that honestly means.
   filters: {},
+  // The image the reviewer is on, so every redraw -- an answer, a filter, a
+  // finished job, coming back to the window -- can put it back where it was.
+  // `lastCard` is the one last touched; `anchor` is where it was on screen.
+  lastCard: null,
+  anchor: null,
+  anchorPinned: false,
+  settling: false,
 };
+
+// The "answered" facet's value for a capture with a question still open.
+const NOT_COMPLETELY_ANSWERED = "not completely answered";
 
 async function api(path, body) {
   const response = await fetch(path, body
@@ -616,6 +626,7 @@ function renderCard(capture) {
       return;
     }
 
+    state.lastCard = capture.id;
     selectFrom(capture.id, event);
   });
   attachLongPress(card, capture.id);
@@ -653,6 +664,8 @@ function renderGrid(view) {
         : "press “attend” on one to launch it). ") +
       "The run exports as incomplete until they are answered."
     : "Everything is scored.";
+
+  renderUnansweredToggle(view);
 
   element("tag-buttons").innerHTML = "";
   (view.tags || []).forEach((tag) => {
@@ -706,7 +719,132 @@ function renderGrid(view) {
   }
 
   paintSelection();
+
+  // An image that loads after the page has been put back in place changes the
+  // height of everything above the one you were on; put it back again.
+  grid.querySelectorAll("img").forEach((image) => {
+    if (!image.complete) image.addEventListener("load", settleAnchor, { once: true });
+  });
 }
+
+// One click for the pass that is left. It is the "answered" facet, kept to
+// "not completely answered": the same filter the menu offers, so the two
+// agree and clearing one clears the other.
+function renderUnansweredToggle(view) {
+  const button = element("only-unanswered");
+  const counts = Object.fromEntries((view.facets && view.facets.answered) || []);
+  const left = counts[NOT_COMPLETELY_ANSWERED] || 0;
+  const on = filterFor("answered").include.has(NOT_COMPLETELY_ANSWERED);
+
+  // Nothing left and not on: there is nothing for it to show.
+  button.hidden = !left && !on;
+  button.classList.toggle("active", on);
+  button.setAttribute("aria-pressed", on ? "true" : "false");
+  button.textContent = on
+    ? `showing only not completely answered (${left}) ✓`
+    : `only not completely answered (${left})`;
+}
+
+element("only-unanswered").addEventListener("click", () => {
+  const on = filterFor("answered").include.has(NOT_COMPLETELY_ANSWERED);
+
+  if (on) delete state.filters.answered;
+  else state.filters.answered = { include: new Set([NOT_COMPLETELY_ANSWERED]), exclude: new Set() };
+
+  applyFilters();
+});
+
+// --- Keeping your place ------------------------------------------------------
+//
+// Answering a question, changing a filter, a job finishing and coming back to
+// the window all redraw the grid, and a redraw that keeps the scroll offset
+// still loses your place: cards above change height, a filter drops the one
+// you just answered, images arrive late. So the place is a card, not an
+// offset -- the one last touched if it is still on screen, otherwise the first
+// one showing -- and its distance from the top of the window. A redraw puts
+// that card back at that distance; if it has gone, the next one after it in
+// the order it was in takes its place, which is the next one to look at.
+
+function cardFor(id) {
+  return document.querySelector(`#grid .card[data-id="${id}"]`);
+}
+
+function onScreen(card) {
+  const box = card.getBoundingClientRect();
+
+  return box.bottom > 0 && box.top < window.innerHeight;
+}
+
+function noteAnchor(id = state.lastCard) {
+  if (state.view !== "review") return;
+
+  let card = id === null || id === undefined ? null : cardFor(id);
+
+  // Touched, then scrolled away from: the place is what is on screen now.
+  if (card && !onScreen(card)) card = null;
+
+  if (!card) {
+    card = [...document.querySelectorAll("#grid .card")]
+      .find((candidate) => candidate.getBoundingClientRect().bottom > window.innerHeight * 0.25);
+  }
+
+  state.anchor = card
+    ? { id: Number(card.dataset.id), offset: card.getBoundingClientRect().top, order: [...state.order] }
+    : null;
+}
+
+// Noted now, and kept through the reload that follows, which would otherwise
+// note wherever the page happens to be by then.
+function pinAnchor(id) {
+  state.lastCard = id;
+  noteAnchor(id);
+  state.anchorPinned = true;
+}
+
+function restoreAnchor() {
+  const anchor = state.anchor;
+
+  if (!anchor || state.view !== "review") return;
+
+  let card = cardFor(anchor.id);
+
+  if (!card) {
+    const at = anchor.order.indexOf(anchor.id);
+    const after = anchor.order.slice(at + 1).find((id) => cardFor(id));
+    const before = anchor.order.slice(0, Math.max(at, 0)).reverse().find((id) => cardFor(id));
+    const stand = after !== undefined ? after : before;
+
+    if (stand === undefined) return;
+
+    // The stand-in is now the place, so later images settle around it.
+    anchor.id = stand;
+    card = cardFor(stand);
+  }
+
+  window.scrollBy(0, card.getBoundingClientRect().top - anchor.offset);
+  state.settling = true;
+}
+
+function settleAnchor() {
+  if (state.settling) restoreAnchor();
+}
+
+// Scrolling yourself ends the settling: the page must not pull you back to an
+// image you have chosen to leave.
+["wheel", "touchmove", "keydown"].forEach((type) => {
+  window.addEventListener(type, () => {
+    state.settling = false;
+  }, { passive: true });
+});
+
+// Losing focus -- a prompt, the application opened to attend, another window
+// -- and coming back puts you on the image you were on.
+window.addEventListener("blur", () => noteAnchor());
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) noteAnchor();
+  else restoreAnchor();
+});
+window.addEventListener("focus", () => restoreAnchor());
 
 
 // --- Filters ---------------------------------------------------------------
@@ -766,8 +904,10 @@ function matchesFilters(capture) {
 // than patched. Patching is what left "6 shown, 32 hidden" appended three times
 // over and a cleared filter still described in the summary.
 function applyFilters() {
+  noteAnchor();
   renderFilters(state.data);
   renderGrid(state.data);
+  restoreAnchor();
 }
 
 // Click keeps a value, shift-click drops it, and clicking an active one turns
@@ -1183,6 +1323,8 @@ async function scoreSelection(verdict) {
     return;
   }
 
+  pinAnchor(state.lastClicked !== null ? state.lastClicked : [...state.selected][0]);
+
   let note = "";
 
   if (verdict === "fail") {
@@ -1474,6 +1616,10 @@ async function applyTag(name, remove) {
 }
 
 async function score(captureId, question, verdict) {
+  // Noted before the prompt below takes focus, so the answer lands you back
+  // on this image -- or, if a filter now hides it, on the next one.
+  pinAnchor(captureId);
+
   // A reason is asked for on a failure and is not required: cancel or leave it
   // empty and the failure is still recorded. Blocking here only interrupted
   // somebody who could already see what was wrong.
@@ -1497,6 +1643,7 @@ async function score(captureId, question, verdict) {
 }
 
 async function addComment(captureId) {
+  pinAnchor(captureId);
   const body = window.prompt("Comment on this image:");
 
   if (!body || !body.trim()) return;
@@ -1543,8 +1690,19 @@ function zoom(capture) {
 }
 
 function closeZoom() {
+  const was = state.zoomed;
+
   element("zoom").hidden = true;
   state.zoomed = null;
+
+  // Back on the grid at the image you were last looking at, not wherever the
+  // grid was when you opened it.
+  if (was) {
+    state.lastCard = was.id;
+    const card = cardFor(was.id);
+
+    if (card) card.scrollIntoView({ block: "center" });
+  }
 }
 
 function stepZoom(direction) {
@@ -1931,6 +2089,9 @@ element("add-tag").addEventListener("click", async () => {
 
 async function reload() {
   const scroll = window.scrollY;
+
+  if (!state.anchorPinned) noteAnchor();
+  state.anchorPinned = false;
   const { data } = await api("/api/run");
   state.data = data;
   state.remote = Boolean(data.remote);
@@ -1952,7 +2113,8 @@ async function reload() {
 
   if (data.job && data.job.running) poll();
 
-  window.scrollTo(0, scroll);
+  if (state.view === "review" && state.anchor) restoreAnchor();
+  else window.scrollTo(0, scroll);
 }
 
 // The toolbar sticks below the header, so its offset has to follow the header's

@@ -125,6 +125,40 @@ class PageWiringTests(unittest.TestCase):
 
         self.assertIn("applyFilters()", cycle)
 
+    def test_the_unanswered_button_asks_for_the_servers_value(self) -> None:
+        """The button and the facet menu are one filter; a typo is a dead button."""
+        import sys  # noqa: PLC0415
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import review  # noqa: PLC0415
+
+        self.assertIn(f'"{review.NOT_COMPLETELY_ANSWERED}"', script())
+        self.assertIn('filterFor("answered")', script())
+
+    def test_a_redraw_keeps_your_place_on_an_image(self) -> None:
+        """A raw scroll offset loses the image when cards above it change."""
+        body = script()
+        reload_body = body[body.index("async function reload()"):body.index("function trackHeaderHeight")]
+        apply_body = body[body.index("function applyFilters()"):body.index("function cycleFilter")]
+
+        self.assertIn("noteAnchor()", reload_body)
+        self.assertIn("restoreAnchor()", reload_body)
+        self.assertIn("noteAnchor()", apply_body)
+        self.assertIn("restoreAnchor()", apply_body)
+
+    def test_answering_pins_the_image_before_any_prompt_takes_focus(self) -> None:
+        body = script()
+        score_body = body[body.index("async function score("):body.index("async function addComment(")]
+
+        self.assertLess(score_body.index("pinAnchor(captureId)"), score_body.index("window.prompt"))
+
+    def test_coming_back_to_the_window_returns_to_the_image(self) -> None:
+        body = script()
+
+        self.assertIn('window.addEventListener("blur"', body)
+        self.assertIn('window.addEventListener("focus", () => restoreAnchor())', body)
+        self.assertIn('"visibilitychange"', body)
+
     def test_an_emptied_facet_stops_being_a_filter(self) -> None:
         """A facet holding empty sets would match nothing and hide everything."""
         body = script()
