@@ -203,6 +203,38 @@ Decisions made while building it that the sections above did not settle.
   `l10n::` use or `Localisation.h` include under `src/application/testcontrol`
   fails it, before the capture harness would.
 
+- **An error or reason crossing out of a JUCE-free layer is an identifier.**
+  Settings import and export, the workspace catalogue, the take recorder and
+  the current target used to return English sentences in `error`/`reason`
+  strings. They now return the catalogue identifier (`l10n::key(...)`), which
+  the shell renders with `l10n::text`, so those layers stay JUCE-free and the
+  tests assert the identifier. The same goes for verdicts with numbers in them
+  — the take status, the review rows and summary, the tuner's reading against
+  its target — which keep their facts as data in `src/platform` and are put
+  into words by `src/application/localisation/TakeText` and
+  `features/analysis/tuner/TargetReadingText`.
+- **The feedback message stays English.** What a sender submits is read by the
+  maintainer, so its scaffolding ("Type:", "Title:", the context tag) is not
+  translated, and the preview shows it as it will be sent. The form around it
+  is translated. This is the operator-message exclusion, applied to the client.
+- **The harness addresses Settings panels by identifier.** `showPanel` used to
+  match the tab's printed caption; it now matches a component ID
+  (`settings-panel-practice`), so translating "Practice" cannot break an
+  approved state. Window titles are still matched by the capture harness and
+  are still English in English; the pseudolocale pass (tier 7) is where that
+  coupling has to be answered.
+- **A workspace action is a table of identifiers, not a verb spliced into
+  shared sentences** (`WorkspaceActionText`). The old "Built-in workspaces
+  cannot be " + action.toLowerCase() produced "cannot be save workspace."; each
+  action now has its own sentence.
+- **Built-in workspaces keep their English names in storage** and are shown by
+  identifier (`WorkspaceBuiltIns::nameKey`), since the stored name is what a
+  user's own workspace may not be called, in a file read by a copy in any
+  language.
+- **Symbols are not words.** ♯, ♭, ▲, ▼, ¢, −, and the fraction glyphs stay
+  literals where they stand alone; where they sit inside a phrase, the phrase
+  is the catalogue entry.
+
 ## Risks
 
 - **A mechanical change across nearly every UI file.** It conflicts with

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../../../localisation/Localisation.h"
 #include "../../../MainComponent.h"
 #include "ToolOptionsButton.h"
 
@@ -22,7 +23,7 @@ class MainComponent::DockedToolPanel final : public juce::Component
         ToolComponent* tool = nullptr)
         : content(&toolContent), onDrag(std::move(dragHandler)), onFocus(std::move(focusHandler)),
           optionsButton(
-              "Float in window",
+              l10n::text("menu.tools.float"),
               std::move(floatHandler),
               std::move(feedbackHandler),
               std::move(closeHandler),

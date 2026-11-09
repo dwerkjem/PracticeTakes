@@ -855,10 +855,12 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
     graphics.setColour(palette.muted);
     graphics.setFont(textFont(appearance::TextRole::small));
     graphics.drawText(
-        "FLAT", bounds.removeFromLeft(scaledHeight(74)).removeFromBottom(scaledHeight(24)),
+        l10n::text("tuner.meter.flat"),
+        bounds.removeFromLeft(scaledHeight(74)).removeFromBottom(scaledHeight(24)),
         juce::Justification::centred);
     graphics.drawText(
-        "SHARP", bounds.removeFromRight(scaledHeight(74)).removeFromBottom(scaledHeight(24)),
+        l10n::text("tuner.meter.sharp"),
+        bounds.removeFromRight(scaledHeight(74)).removeFromBottom(scaledHeight(24)),
         juce::Justification::centred);
 }
 
@@ -1214,13 +1216,14 @@ void TunerComponent::drawCompactMeter(
     graphics.setColour(inTune ? palette.inTune : palette.accent);
     graphics.setFont(textFont(appearance::TextRole::control, juce::Font::bold));
     graphics.drawFittedText(
-        inTune ? "in tune" : directionLabel(), directionArea, juce::Justification::centred, 1);
+        inTune ? l10n::text("tuner.direction.in-tune") : directionLabel(), directionArea,
+        juce::Justification::centred, 1);
 }
 
 juce::String TunerComponent::directionLabel() const
 {
-    return zoneCents() > 0 ? juce::String::fromUTF8("\xe2\x96\xb2  sharp")
-                           : juce::String::fromUTF8("\xe2\x96\xbc  flat");
+    return zoneCents() > 0 ? l10n::text("tuner.direction.sharp")
+                           : l10n::text("tuner.direction.flat");
 }
 
 void TunerComponent::drawCompactReading(juce::Graphics& graphics, juce::Rectangle<int> area) const

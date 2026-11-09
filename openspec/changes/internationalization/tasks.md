@@ -48,10 +48,10 @@ Before the sweep, so the sweep is verified as it happens rather than after.
 Mechanical, wide, shallow. Worth doing in reviewable slices rather than one
 commit.
 
-- [ ] 4.1 `shell/ui/settings` (71), the largest and the most self-contained.
-- [ ] 4.2 `shell/ui/workspace` (60 + 28 + 11).
-- [ ] 4.3 `features/feedback` (56).
-- [ ] 4.4 `features/analysis/*` (tuner 20, harmonics 14) — including the
+- [x] 4.1 `shell/ui/settings` (71), the largest and the most self-contained.
+- [x] 4.2 `shell/ui/workspace` (60 + 28 + 11).
+- [x] 4.3 `features/feedback` (56).
+- [x] 4.4 `features/analysis/*` (tuner 20, harmonics 14) — including the
       tuner's "bar" display mode, which must not share a key with a measure.
 - [ ] 4.5 `shell/ui/main_window`, `application/tools`, `platform/midi`,
       `features/score`.

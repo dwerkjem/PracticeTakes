@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 
+#include "../../application/localisation/LocalisationRules.h"
 #include "../score/PitchNames.h"
 #include "../score/Score.h"
 #include "../score/TargetNoteSelection.h"
@@ -60,7 +61,8 @@ chosenTarget(const score::Pitch& sounding, const score::Pitch& written, std::str
 class CurrentTarget
 {
   public:
-    // A target, or none with the reason in a sentence.
+    // A target, or none with the reason, as a catalogue identifier: this layer
+    // composes no prose, so whoever shows the reason renders it.
     void publish(std::shared_ptr<const Target> newTarget, std::string reasonWhenNone = {})
     {
         current = std::move(newTarget);
@@ -100,7 +102,7 @@ class CurrentTarget
 
   private:
     std::shared_ptr<const Target> current;
-    std::string reason = "No score is open";
+    std::string reason{l10n::key("target.none.no-score")};
 };
 
 // The target a score offers (decision 3), or none and why.
@@ -111,11 +113,11 @@ targetFromScore(const std::shared_ptr<const score::Score>& score)
     switch (selection.outcome)
     {
     case TargetNoteOutcome::noScoreOpen:
-        return {nullptr, "No score is open"};
+        return {nullptr, std::string(l10n::key("target.none.no-score"))};
     case TargetNoteOutcome::noPitchedNote:
-        return {nullptr, "This score has no notes to aim at"};
+        return {nullptr, std::string(l10n::key("target.none.no-notes"))};
     case TargetNoteOutcome::onlyPolyphonic:
-        return {nullptr, "Every part plays more than one note at a time; a target is one note"};
+        return {nullptr, std::string(l10n::key("target.none.polyphonic"))};
     case TargetNoteOutcome::found:
         break;
     }
@@ -124,7 +126,7 @@ targetFromScore(const std::shared_ptr<const score::Score>& score)
     // but nothing here should have to know that.
     if (!selection.note.has_value())
     {
-        return {nullptr, "This score has no notes to aim at"};
+        return {nullptr, std::string(l10n::key("target.none.no-notes"))};
     }
     const TargetNote& note = selection.note.value();
     auto target = std::make_shared<Target>();

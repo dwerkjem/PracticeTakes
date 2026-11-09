@@ -66,6 +66,7 @@ class TakeReviewComponent final
     transport::PracticeClock& clock;
 
     std::vector<evaluation::ReviewRow> rows;
+    juce::StringArray rowTexts;
     juce::String heading;
     juce::String summary;
 

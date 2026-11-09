@@ -1,4 +1,5 @@
 #include "TakeRecorder.h"
+#include "../../application/localisation/LocalisationRules.h"
 
 #include "../evaluation/TakeReview.h"
 #include "TakeAssembler.h"
@@ -90,19 +91,19 @@ std::optional<std::string> TakeRecorder::whyCannotStart() const
 {
     if (live != nullptr)
     {
-        return std::string("a take is already being recorded");
+        return std::string(l10n::key("take.cannot-start.recording"));
     }
     if (scoreHolder.score() == nullptr || !clock.hasScore())
     {
-        return std::string("open a score first");
+        return std::string(l10n::key("take.cannot-start.no-score"));
     }
     if (!microphoneUsable() && !keyboardUsable())
     {
         const bool muted = sources.microphoneOpen && sources.microphoneOpen() &&
                            sources.microphoneMuted && sources.microphoneMuted();
         return std::string(
-            muted ? "the microphone is muted and no keyboard is open"
-                  : "there is no microphone or keyboard to record from");
+            muted ? l10n::key("take.cannot-start.muted")
+                  : l10n::key("take.cannot-start.no-source"));
     }
     return std::nullopt;
 }
@@ -425,21 +426,21 @@ void TakeRecorder::poll()
 
     if (!drain())
     {
-        finish(TakeEvent::failed, "the clock jumped while recording");
+        finish(TakeEvent::failed, std::string(l10n::key("take.failed.clock-jumped")));
         clock.stop();
         return;
     }
 
     if (scoreHolder.score() != live->score)
     {
-        finish(TakeEvent::failed, "another score was opened");
+        finish(TakeEvent::failed, std::string(l10n::key("take.failed.score-changed")));
         clock.stop();
         return;
     }
 
     if (clock.renderer().recordingOverflows() > 0)
     {
-        finish(TakeEvent::failed, "the recording fell behind");
+        finish(TakeEvent::failed, std::string(l10n::key("take.failed.fell-behind")));
         clock.stop();
         return;
     }
@@ -451,7 +452,7 @@ void TakeRecorder::poll()
     const bool keyboardGone = live->usedKeyboard && !keyboardUsable();
     if ((microphoneGone || !live->usedMicrophone) && (keyboardGone || !live->usedKeyboard))
     {
-        finish(TakeEvent::failed, "the microphone and keyboard were disconnected");
+        finish(TakeEvent::failed, std::string(l10n::key("take.failed.sources-gone")));
         clock.stop();
     }
 }
@@ -464,7 +465,7 @@ void TakeRecorder::clockChanged(const transport::ClockUpdate& update)
     }
     if (!drain())
     {
-        finish(TakeEvent::failed, "the clock jumped while recording");
+        finish(TakeEvent::failed, std::string(l10n::key("take.failed.clock-jumped")));
         clock.stop();
         return;
     }

@@ -1,4 +1,5 @@
 #include "../../../../configuration/SettingsImportTransaction.h"
+#include "../../../../localisation/Localisation.h"
 #include "../../../MainComponent.h"
 
 #include <algorithm>
@@ -6,33 +7,36 @@
 
 namespace
 {
-[[nodiscard]] juce::String
-workspaceStatusMessage(NamedWorkspaceService::ResultStatus status, const juce::String& action)
+// Why an action failed. Applied, cancelled and awaiting confirmation are not
+// failures and never reach here; they fall to the general sentence.
+[[nodiscard]] juce::String workspaceStatusMessage(
+    NamedWorkspaceService::ResultStatus status,
+    const WorkspaceActionText& action)
 {
     using Status = NamedWorkspaceService::ResultStatus;
     switch (status)
     {
-    case Status::applied:
-        return action + " completed.";
-    case Status::cancelled:
-        return action + " was cancelled.";
-    case Status::confirmationRequired:
-        return action + " requires confirmation.";
     case Status::invalidName:
-        return "Enter a workspace name between 1 and 80 characters.";
+        return l10n::format(
+            "workspace.error.invalid-name",
+            {{"most",
+              l10n::number(static_cast<double>(NamedWorkspaceService::maximumNameCharacters), 0)}});
     case Status::reservedName:
-        return "That name is reserved for a built-in workspace.";
+        return l10n::text("workspace.error.reserved-name");
     case Status::notFound:
-        return "The selected workspace is no longer available.";
+        return l10n::text("workspace.error.not-found");
     case Status::immutableBuiltIn:
-        return "Built-in workspaces cannot be " + action.toLowerCase() + ".";
+        return l10n::text(action.builtIn);
     case Status::catalogFull:
-        return "Delete a named workspace before saving another one.";
+        return l10n::text("workspace.error.catalogue-full");
     case Status::idGenerationFailed:
-        return "Practice Takes could not create a unique workspace identifier.";
+        return l10n::text("workspace.error.no-identifier");
+    case Status::applied:
+    case Status::cancelled:
+    case Status::confirmationRequired:
+        break;
     }
-    jassertfalse;
-    return "The workspace action could not be completed.";
+    return l10n::text("workspace.error.general");
 }
 
 void showWorkspaceAlert(
@@ -40,7 +44,7 @@ void showWorkspaceAlert(
     const juce::String& title,
     const juce::String& message)
 {
-    juce::AlertWindow::showMessageBoxAsync(icon, title, message, "OK");
+    juce::AlertWindow::showMessageBoxAsync(icon, title, message, l10n::text("workspace.alert.ok"));
 }
 } // namespace
 
@@ -93,16 +97,15 @@ void MainComponent::runUiValidationScenario(const juce::String& scenario)
             if (scenario == "import-validation-error")
             {
                 juce::AlertWindow::showMessageBoxAsync(
-                    juce::MessageBoxIconType::WarningIcon, "Settings import failed",
-                    "The selected file is not a valid Practice Takes settings bundle.");
+                    juce::MessageBoxIconType::WarningIcon, l10n::text("settings.import.failed"),
+                    l10n::text("settings.transfer.error.not-a-settings-file"));
                 return;
             }
             if (scenario == "import-rollback-error")
             {
                 safeThis->showSettingsImportResult(
                     {.status = SettingsImportStatus::rollbackFailed,
-                     .error = "Settings import failed and the previous live settings could not be "
-                              "restored"});
+                     .error = std::string(l10n::key("settings.import.error.rollback-failed"))});
                 return;
             }
             if (scenario == "long-workspace-name")
@@ -139,7 +142,7 @@ void MainComponent::applyWorkspace(const std::string& workspaceId)
     const auto result = service.apply(workspaceCatalog, workspaceId);
     if (result.status != NamedWorkspaceService::ResultStatus::applied)
     {
-        showWorkspaceResult("Apply workspace", result);
+        showWorkspaceResult(workspaceactions::apply, result);
         return;
     }
 
@@ -147,8 +150,8 @@ void MainComponent::applyWorkspace(const std::string& workspaceId)
     {
         workspaceCatalog = previous;
         showWorkspaceAlert(
-            juce::MessageBoxIconType::WarningIcon, "Workspace not applied",
-            "Practice Takes could not apply that workspace. Your current workspace is unchanged.");
+            juce::MessageBoxIconType::WarningIcon, l10n::text("workspace.apply.not-applied"),
+            l10n::text("workspace.apply.not-applied.message"));
         return;
     }
 
@@ -158,19 +161,21 @@ void MainComponent::applyWorkspace(const std::string& workspaceId)
 void MainComponent::showSaveWorkspaceDialog()
 {
     auto alert = std::make_unique<juce::AlertWindow>(
-        "Save workspace", "Enter a name for the current workspace.",
+        l10n::text("workspace.save.title"), l10n::text("workspace.save.prompt"),
         juce::MessageBoxIconType::NoIcon, this);
     alert->setLookAndFeel(&appLookAndFeel);
-    alert->addTextEditor("workspaceName", {}, "Workspace name");
+    alert->addTextEditor("workspaceName", {}, l10n::text("workspace.name"));
     if (auto* editor = alert->getTextEditor("workspaceName"))
     {
         editor->setInputRestrictions(
             static_cast<int>(NamedWorkspaceService::maximumNameCharacters));
-        editor->setTitle("Workspace name");
-        editor->setDescription("Name for the workspace to save");
+        editor->setTitle(l10n::text("workspace.name"));
+        editor->setDescription(l10n::text("workspace.save.name.description"));
     }
-    alert->addButton("Save", 1, juce::KeyPress(juce::KeyPress::returnKey));
-    alert->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+    alert->addButton(
+        l10n::text("workspace.dialog.save"), 1, juce::KeyPress(juce::KeyPress::returnKey));
+    alert->addButton(
+        l10n::text("workspace.dialog.cancel"), 0, juce::KeyPress(juce::KeyPress::escapeKey));
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     auto* alertPointer = alert.get();
@@ -196,27 +201,30 @@ void MainComponent::showRenameWorkspaceDialog()
     if (workspace == nullptr)
     {
         showWorkspaceAlert(
-            juce::MessageBoxIconType::InfoIcon, "Rename unavailable",
-            "Select a named workspace before renaming it.");
+            juce::MessageBoxIconType::InfoIcon, l10n::text("workspace.rename.unavailable"),
+            l10n::text("workspace.rename.unavailable.message"));
         return;
     }
 
     auto alert = std::make_unique<juce::AlertWindow>(
-        "Rename workspace", "Enter a new name for this workspace.",
+        l10n::text("workspace.rename.title"), l10n::text("workspace.rename.prompt"),
         juce::MessageBoxIconType::NoIcon, this);
     alert->setLookAndFeel(&appLookAndFeel);
     alert->addTextEditor(
-        "workspaceName", juce::String::fromUTF8(workspace->name.c_str()), "Workspace name");
+        "workspaceName", juce::String::fromUTF8(workspace->name.c_str()),
+        l10n::text("workspace.name"));
     if (auto* editor = alert->getTextEditor("workspaceName"))
     {
         editor->setInputRestrictions(
             static_cast<int>(NamedWorkspaceService::maximumNameCharacters));
-        editor->setTitle("Workspace name");
-        editor->setDescription("New name for the selected workspace");
+        editor->setTitle(l10n::text("workspace.name"));
+        editor->setDescription(l10n::text("workspace.rename.name.description"));
         editor->selectAll();
     }
-    alert->addButton("Rename", 1, juce::KeyPress(juce::KeyPress::returnKey));
-    alert->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+    alert->addButton(
+        l10n::text("workspace.dialog.rename"), 1, juce::KeyPress(juce::KeyPress::returnKey));
+    alert->addButton(
+        l10n::text("workspace.dialog.cancel"), 0, juce::KeyPress(juce::KeyPress::escapeKey));
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     auto* alertPointer = alert.get();
@@ -246,10 +254,9 @@ void MainComponent::saveNamedWorkspace(const juce::String& name, bool confirmed)
     {
         const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
         juce::AlertWindow::showOkCancelBox(
-            juce::MessageBoxIconType::WarningIcon, "Overwrite workspace?",
-            "A named workspace already uses ‘" + name.trim() +
-                "’. Replace its saved layout with the current workspace?",
-            "Overwrite", "Cancel", this,
+            juce::MessageBoxIconType::WarningIcon, l10n::text("workspace.overwrite.question.title"),
+            l10n::format("workspace.save.overwrite.question", {{"name", name.trim()}}),
+            l10n::text("workspace.dialog.overwrite"), l10n::text("workspace.dialog.cancel"), this,
             juce::ModalCallbackFunction::create(
                 [safeThis, name](int response)
                 {
@@ -260,7 +267,7 @@ void MainComponent::saveNamedWorkspace(const juce::String& name, bool confirmed)
                 }));
         return;
     }
-    showWorkspaceResult("Save workspace", result, name);
+    showWorkspaceResult(workspaceactions::save, result, name);
 }
 
 void MainComponent::renameNamedWorkspace(const juce::String& name, bool confirmed)
@@ -269,8 +276,8 @@ void MainComponent::renameNamedWorkspace(const juce::String& name, bool confirme
     if (workspace == nullptr)
     {
         showWorkspaceAlert(
-            juce::MessageBoxIconType::InfoIcon, "Rename unavailable",
-            "Select a named workspace before renaming it.");
+            juce::MessageBoxIconType::InfoIcon, l10n::text("workspace.rename.unavailable"),
+            l10n::text("workspace.rename.unavailable.message"));
         return;
     }
 
@@ -281,10 +288,9 @@ void MainComponent::renameNamedWorkspace(const juce::String& name, bool confirme
     {
         const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
         juce::AlertWindow::showOkCancelBox(
-            juce::MessageBoxIconType::WarningIcon, "Replace named workspace?",
-            "Another named workspace already uses ‘" + name.trim() +
-                "’. Delete that saved entry and use the name here?",
-            "Replace", "Cancel", this,
+            juce::MessageBoxIconType::WarningIcon, l10n::text("workspace.rename.replace.title"),
+            l10n::format("workspace.rename.replace.question", {{"name", name.trim()}}),
+            l10n::text("workspace.dialog.replace"), l10n::text("workspace.dialog.cancel"), this,
             juce::ModalCallbackFunction::create(
                 [safeThis, name](int response)
                 {
@@ -295,7 +301,7 @@ void MainComponent::renameNamedWorkspace(const juce::String& name, bool confirme
                 }));
         return;
     }
-    showWorkspaceResult("Rename workspace", result, name);
+    showWorkspaceResult(workspaceactions::rename, result, name);
 }
 
 void MainComponent::confirmOverwriteWorkspace()
@@ -310,9 +316,9 @@ void MainComponent::confirmOverwriteWorkspace()
     const auto name = juce::String::fromUTF8(workspace->name.c_str());
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     juce::AlertWindow::showOkCancelBox(
-        juce::MessageBoxIconType::WarningIcon, "Overwrite workspace?",
-        "Replace the saved ‘" + name + "’ layout with the current workspace?", "Overwrite",
-        "Cancel", this,
+        juce::MessageBoxIconType::WarningIcon, l10n::text("workspace.overwrite.question.title"),
+        l10n::format("workspace.overwrite.question", {{"name", name}}),
+        l10n::text("workspace.dialog.overwrite"), l10n::text("workspace.dialog.cancel"), this,
         juce::ModalCallbackFunction::create(
             [safeThis, id](int response)
             {
@@ -325,7 +331,7 @@ void MainComponent::confirmOverwriteWorkspace()
                     safeThis->workspaceCatalog, safeThis->activeWorkspaceSnapshot);
                 NamedWorkspaceService service;
                 const auto result = service.overwrite(safeThis->workspaceCatalog, id, true);
-                safeThis->showWorkspaceResult("Overwrite workspace", result);
+                safeThis->showWorkspaceResult(workspaceactions::overwrite, result);
             }));
 }
 
@@ -341,9 +347,9 @@ void MainComponent::confirmDeleteWorkspace()
     const auto name = juce::String::fromUTF8(workspace->name.c_str());
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     juce::AlertWindow::showOkCancelBox(
-        juce::MessageBoxIconType::WarningIcon, "Delete workspace?",
-        "Delete the saved ‘" + name + "’ workspace? The current live layout will remain open.",
-        "Delete", "Cancel", this,
+        juce::MessageBoxIconType::WarningIcon, l10n::text("workspace.delete.question.title"),
+        l10n::format("workspace.delete.question", {{"name", name}}),
+        l10n::text("workspace.dialog.delete"), l10n::text("workspace.dialog.cancel"), this,
         juce::ModalCallbackFunction::create(
             [safeThis, id](int response)
             {
@@ -353,7 +359,7 @@ void MainComponent::confirmDeleteWorkspace()
                 }
                 NamedWorkspaceService service;
                 const auto result = service.remove(safeThis->workspaceCatalog, id, true);
-                safeThis->showWorkspaceResult("Delete workspace", result);
+                safeThis->showWorkspaceResult(workspaceactions::remove, result);
             }));
 }
 
@@ -361,10 +367,12 @@ void MainComponent::confirmResetWorkspace()
 {
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     juce::AlertWindow::showOkCancelBox(
-        juce::MessageBoxIconType::WarningIcon, "Reset workspace?",
-        "Replace the current workspace with Pitch Practice? Named workspaces and global settings "
-        "will not be changed.",
-        "Reset", "Cancel", this,
+        juce::MessageBoxIconType::WarningIcon, l10n::text("workspace.reset.question.title"),
+        l10n::format(
+            "workspace.reset.question",
+            {{"workspace",
+              l10n::text(WorkspaceBuiltIns::nameKey(WorkspaceBuiltIns::pitchPractice().id))}}),
+        l10n::text("workspace.dialog.reset"), l10n::text("workspace.dialog.cancel"), this,
         juce::ModalCallbackFunction::create(
             [safeThis](int response)
             {
@@ -372,14 +380,17 @@ void MainComponent::confirmResetWorkspace()
                 {
                     safeThis->resetLayout();
                     showWorkspaceAlert(
-                        juce::MessageBoxIconType::InfoIcon, "Workspace reset",
-                        "Pitch Practice is now the active workspace.");
+                        juce::MessageBoxIconType::InfoIcon, l10n::text("workspace.reset.done"),
+                        l10n::format(
+                            "workspace.reset.done.message",
+                            {{"workspace", l10n::text(WorkspaceBuiltIns::nameKey(
+                                               WorkspaceBuiltIns::pitchPractice().id))}}));
                 }
             }));
 }
 
 void MainComponent::showWorkspaceResult(
-    const juce::String& action,
+    const WorkspaceActionText& action,
     const NamedWorkspaceService::Result& result,
     const juce::String& requestedName)
 {
@@ -391,16 +402,14 @@ void MainComponent::showWorkspaceResult(
     if (result.status != Status::applied)
     {
         showWorkspaceAlert(
-            juce::MessageBoxIconType::WarningIcon, action + " failed",
+            juce::MessageBoxIconType::WarningIcon, l10n::text(action.failed),
             workspaceStatusMessage(result.status, action));
         return;
     }
 
     saveSettings();
-    auto detail = action + " completed.";
-    if (requestedName.isNotEmpty())
-    {
-        detail = action + " completed for ‘" + requestedName.trim() + "’.";
-    }
-    showWorkspaceAlert(juce::MessageBoxIconType::InfoIcon, action, detail);
+    const auto detail = requestedName.isNotEmpty()
+                            ? l10n::format(action.completedFor, {{"name", requestedName.trim()}})
+                            : l10n::text(action.completed);
+    showWorkspaceAlert(juce::MessageBoxIconType::InfoIcon, l10n::text(action.title), detail);
 }

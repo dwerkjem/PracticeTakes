@@ -10,7 +10,8 @@
 #include "NoteMatching.h"
 
 // What a review shows of a judged take: the part it is judged against, and one
-// row per result in time order (no JUCE dependency).
+// row per result in time order (no JUCE dependency). The words for a row and
+// for the summary are the application's: l10n::reviewRow, l10n::reviewSummary.
 // openspec/changes/archive/2026-11-08-take-review/design.md, decisions 2 and 4.
 namespace evaluation
 {
@@ -32,9 +33,6 @@ struct ReviewRow
 
     // Wrong, missed, extra, early or late: what a reader looks for.
     bool mistake = false;
-
-    // "Bar 3, beat 2 · G4 · wrong, played A4 · 40 ms late".
-    std::string text;
 };
 
 // A part, and the take judged against it.
@@ -51,11 +49,18 @@ struct ReviewedPart
 // The rows of `report`, judged from `take`, in time order, extras included.
 [[nodiscard]] std::vector<ReviewRow> reviewRows(const take::Take& take, const NoteReport& report);
 
-// "21 correct · 2 wrong · 1 missed · 3 extra · 4 early · 2 late", leaving out
-// what is zero. Early and late count moments, not the notes of a chord. A sung
-// take's correct notes are "in tune", "sharp" and "flat" instead, and its
-// unsure ones "uncertain".
-[[nodiscard]] std::string summaryLine(const NoteReport& report);
+// The sounding pitch a result was written as, spelled as the file spelled it.
+[[nodiscard]] std::string writtenNameOf(const take::Take& take, const NoteResult& result);
+
+// The on-time and early/late moments of a report: a chord's notes share one.
+struct MomentCounts
+{
+    std::size_t early = 0;
+    std::size_t onTime = 0;
+    std::size_t late = 0;
+};
+
+[[nodiscard]] MomentCounts momentsOf(const NoteReport& report);
 
 // How well a take matches a part: twice its correct notes, plus its on-time
 // moments (decision 2).

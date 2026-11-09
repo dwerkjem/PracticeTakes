@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "application/localisation/TakeText.h"
 #include "application/testcontrol/SyntheticTake.h"
 #include "platform/evaluation/TakeReview.h"
 
@@ -147,17 +148,20 @@ TEST_CASE("a synthetic sung take is judged by its pattern", "[testcontrol][revie
     CHECK(report.summary.flat == 2);
     CHECK(report.summary.uncertain == 1);
     CHECK(report.summary.inTune == 9);
+    REQUIRE(l10n::setLanguage("en"));
     CHECK(
-        evaluation::summaryLine(report) == "9 in tune \xC2\xB7 2 sharp \xC2\xB7 2 flat \xC2\xB7 1 "
-                                           "wrong \xC2\xB7 1 missed \xC2\xB7 1 uncertain");
+        l10n::reviewSummary(report) ==
+        juce::String::fromUTF8("9 in tune \xC2\xB7 2 sharp \xC2\xB7 2 flat \xC2\xB7 1 "
+                               "wrong \xC2\xB7 1 missed \xC2\xB7 1 uncertain"));
 
     // The rows say it in words, and a sharp or flat note is a mistake.
     const std::vector<evaluation::ReviewRow> rows = evaluation::reviewRows(sung, report);
-    const auto rowWith = [&rows](const std::string& text) -> const evaluation::ReviewRow*
+    const auto rowWith =
+        [&rows, &sung, &report](const std::string& text) -> const evaluation::ReviewRow*
     {
         for (const evaluation::ReviewRow& row : rows)
         {
-            if (row.text.find(text) != std::string::npos)
+            if (l10n::reviewRow(sung, report, row).contains(juce::String::fromUTF8(text.c_str())))
             {
                 return &row;
             }

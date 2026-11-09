@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 
+#include "../../application/localisation/Localisation.h"
+
 class FeedbackComponent final : public juce::Component, private juce::Thread
 {
   public:
@@ -82,12 +84,12 @@ class FeedbackComponent final : public juce::Component, private juce::Thread
     juce::Label contextLabel;
     juce::TextEditor contextEditor;
     juce::Label environmentLabel;
-    juce::ToggleButton versionDiagnostic{"Application version"};
-    juce::ToggleButton operatingSystemDiagnostic{"Operating system"};
-    juce::ToggleButton screenshotDiagnostic{"Application screenshot"};
+    juce::ToggleButton versionDiagnostic{l10n::text("feedback.diagnostics.version")};
+    juce::ToggleButton operatingSystemDiagnostic{l10n::text("feedback.diagnostics.os")};
+    juce::ToggleButton screenshotDiagnostic{l10n::text("feedback.diagnostics.screenshot")};
     juce::Label validationLabel;
-    juce::TextButton previewButton{"Preview"};
-    juce::TextButton submitButton{"Submit feedback"};
+    juce::TextButton previewButton{l10n::text("feedback.preview.button")};
+    juce::TextButton submitButton{l10n::text("feedback.submit")};
 
     Draft pendingDraft;
     SubmissionState submissionState = SubmissionState::editing;

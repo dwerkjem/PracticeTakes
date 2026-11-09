@@ -118,11 +118,17 @@ TEST_CASE("an item's beats and seconds, at the table's meter and scale", "[nowne
 
 TEST_CASE("beats are said with common fractions", "[nownext]")
 {
-    CHECK(beatsText(1.0) == "1 beat");
-    CHECK(beatsText(2.0) == "2 beats");
-    CHECK(beatsText(0.75) == "\xC2\xBE beat");
-    CHECK(beatsText(0.25) == "\xC2\xBC beat");
-    CHECK(beatsText(1.5) == "1\xC2\xBD beats");
-    CHECK(beatsText(1.0 / 3.0) == "\xE2\x85\x93 beat");
-    CHECK(beatsText(0.37) == "0.4 beat");
+    CHECK(beatsFigure(1.0) == "1");
+    CHECK(beatsFigure(2.0) == "2");
+    CHECK(beatsFigure(0.75) == "\xC2\xBE");
+    CHECK(beatsFigure(0.25) == "\xC2\xBC");
+    CHECK(beatsFigure(1.5) == "1\xC2\xBD");
+    CHECK(beatsFigure(1.0 / 3.0) == "\xE2\x85\x93");
+    CHECK(beatsFigure(0.37) == "0.4");
+    CHECK(beatsFigure(0.37, l10n::numberStyleFor("de")) == "0,4");
+
+    // Said as one up to a beat, and as several after.
+    CHECK(beatsPluralCount(0.25) == 1);
+    CHECK(beatsPluralCount(1.0) == 1);
+    CHECK(beatsPluralCount(1.5) == 2);
 }

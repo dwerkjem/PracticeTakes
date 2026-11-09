@@ -13,6 +13,20 @@
 // dependency, so each rule is tested on its own.
 namespace l10n
 {
+// Marks an identifier kept in a table and looked up later, so the check in
+// CI (tools/scripts/quality/check_localisation.py) finds it. Does nothing, and
+// needs no JUCE, so a JUCE-free table can hold identifiers too.
+[[nodiscard]] constexpr std::string_view key(std::string_view identifier) noexcept
+{
+    return identifier;
+}
+
+// The same, for an identifier that will be passed to plural().
+[[nodiscard]] constexpr std::string_view pluralKey(std::string_view identifier) noexcept
+{
+    return identifier;
+}
+
 // CLDR plural categories. Only `one` and `other` are used by the first
 // languages (English, German, French, Spanish, Italian, Portuguese); the rest
 // are here so a language that needs them is an entry in pluralCategory and

@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 
+#include "../../../../localisation/Localisation.h"
 #include "../../../../theme/AppLookAndFeel.h"
 
 #include <functional>
@@ -13,8 +14,8 @@ class ToolDragHandle final : public juce::Component
     explicit ToolDragHandle(std::function<void(juce::Component&)> dragHandler)
         : onDrag(std::move(dragHandler))
     {
-        setTitle("Drag tool");
-        setDescription("Drag this tool to a workspace drop target");
+        setTitle(l10n::text("tool.drag.title"));
+        setDescription(l10n::text("tool.drag.description"));
         setMouseCursor(juce::MouseCursor::DraggingHandCursor);
     }
 
@@ -26,7 +27,7 @@ class ToolDragHandle final : public juce::Component
         graphics.setColour(findColour(juce::TextButton::textColourOffId));
         graphics.setFont(
             appearance::fontFor(*this, appearance::TextRole::control, juce::Font::bold));
-        graphics.drawText("Drag", getLocalBounds(), juce::Justification::centred);
+        graphics.drawText(l10n::text("tool.drag"), getLocalBounds(), juce::Justification::centred);
     }
 
     void mouseDown(const juce::MouseEvent&) override

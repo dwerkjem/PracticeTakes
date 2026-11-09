@@ -35,6 +35,12 @@ An identifier kept in a table and looked up later is marked where it is
 written, with `l10n::key("…")` or `l10n::pluralKey("…")`. They do nothing at
 run time; they are how the check finds it.
 
+A JUCE-free layer never composes a sentence. An error or reason it hands
+upward is an identifier (`std::string(l10n::key("take.failed.score-changed"))`),
+rendered where it is shown with `l10n::text`; a verdict with numbers in it stays
+data, and `src/application/localisation/TakeText` (or the tool that shows it)
+puts it into words.
+
 The rules that are not text — plural categories, placeholder filling, number
 formatting — are in the JUCE-free `LocalisationRules.h`.
 
@@ -65,13 +71,17 @@ English, whatever language the interface is in:
   messages, test-control replies, command-line usage. Its reader is a
   developer reading a bug report, who needs the same words whatever the
   reporter's language.
-- **The feedback service's operator messages** in `src/services/feedback-intake`.
-  Its reader is the operator, not the person who sent the feedback.
+- **The feedback service's operator messages** in `src/services/feedback-intake`,
+  and the message the client sends it (`FeedbackComponent::previewText`: "Type:",
+  "Title:", the context tag). Its reader is the maintainer, not the person who
+  sent the feedback; the form around it is translated.
 - **MusicXML element and attribute names.** `<slur>` is a tag, not a word; a
   diagnostic names it as written in the file, inside a translated sentence.
 - **Settings keys**, and every other identifier written to disk: workspace and
   tool-settings property names, tool type identifiers, `.ptsettings` fields. A
   key is a storage identifier, and translating it would make a file
   unreadable by a copy of the application configured for another language.
+- **Symbols standing alone**: ♯, ♭, ▲, ▼, ¢, −, the fraction glyphs. Inside a
+  phrase, the phrase is the entry.
 - **Musical naming.** "H" is not the German for "B" but a different naming
   system, chosen as its own preference; see `score::PitchNaming`.

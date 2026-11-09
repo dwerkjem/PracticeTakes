@@ -5,6 +5,7 @@
 #include "../../../../platform/take/TakeRecorder.h"
 #include "../../../../platform/take/TakeStatus.h"
 #include "../../../../platform/transport/PracticeClock.h"
+#include "../../../localisation/TakeText.h"
 #include "../../../theme/AppLookAndFeel.h"
 #include "PlaybackMixPanel.h"
 
@@ -225,13 +226,13 @@ class TransportStrip final
     {
         if (const take::Take* live = takes.current())
         {
-            return juce::String(take::describe(*live));
+            return l10n::takeStatus(*live);
         }
         if (const take::Take* ended = takes.lastEnded();
             ended != nullptr && ended->id == announcedTake &&
             juce::Time::getMillisecondCounter() < announceUntil)
         {
-            return juce::String(take::describe(*ended));
+            return l10n::takeStatus(*ended);
         }
         return describe(position);
     }
@@ -264,7 +265,7 @@ class TransportStrip final
         recordButton.setEnabled(recording || !blocked.has_value());
         recordButton.setTooltip(
             recording             ? "Finish the take, keeping what was played"
-            : blocked.has_value() ? "Recording is unavailable: " + juce::String(*blocked)
+            : blocked.has_value() ? "Recording is unavailable: " + l10n::text(*blocked)
             : running             ? "Record a take from here, carrying on as it plays"
                       : "Record a take from the microphone and keyboard, counting in first");
         recordButton.setColour(

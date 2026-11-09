@@ -1,5 +1,6 @@
 #include "InputLevelComponent.h"
 
+#include "../../application/localisation/Localisation.h"
 #include "../../application/theme/Theme.h"
 #include "../../application/tools/CompactPresentation.h"
 
@@ -33,9 +34,7 @@ InputLevelComponent::InputLevelComponent(
 {
     setOpaque(true);
     meter.setComponentID("input-level-meter");
-    meter.setTooltip(
-        "The bar is the microphone's level; the mark, its loudest lately. Sound under the line "
-        "is not heard as a note: set the line in Settings, Practice, Ignore sound below");
+    meter.setTooltip(l10n::text("level.tooltip"));
     meter.onUpdate = [this] { repaint(levelArea.getUnion(statusArea).getUnion(detailArea)); };
     addAndMakeVisible(meter);
 }
@@ -44,9 +43,10 @@ juce::String InputLevelComponent::figure(double db)
 {
     if (db < InputLevelMeter::lowestDb)
     {
-        return "below " + signedFigure(InputLevelMeter::lowestDb) + " dB";
+        return l10n::format(
+            "level.figure.below", {{"decibels", signedFigure(InputLevelMeter::lowestDb)}});
     }
-    return signedFigure(db) + " dB";
+    return l10n::format("level.figure", {{"decibels", signedFigure(db)}});
 }
 
 void InputLevelComponent::setTheme(Theme newTheme)
@@ -75,15 +75,16 @@ void InputLevelComponent::applySettings(const ToolSettingsPayload& payload)
 std::vector<ToolComponent::MenuEntry> InputLevelComponent::optionsMenuEntries()
 {
     using input_level::Orientation;
-    MenuEntry menu{"Orientation", {}, false, true, {}};
+    MenuEntry menu{l10n::text("level.menu.orientation"), {}, false, true, {}};
     const auto choice = [this](const juce::String& label, Orientation value)
     {
         return MenuEntry{
             label, [this, value] { setOrientation(value); }, orientation == value, true, {}};
     };
     menu.submenu = {
-        choice("Automatic", Orientation::automatic), choice("Horizontal", Orientation::horizontal),
-        choice("Vertical", Orientation::vertical)};
+        choice(l10n::text("level.menu.orientation.automatic"), Orientation::automatic),
+        choice(l10n::text("level.menu.orientation.horizontal"), Orientation::horizontal),
+        choice(l10n::text("level.menu.orientation.vertical"), Orientation::vertical)};
     return {menu};
 }
 
@@ -205,8 +206,7 @@ void InputLevelComponent::paint(juce::Graphics& graphics)
     {
         graphics.setColour(counts ? palette.inTune : palette.muted);
         graphics.drawFittedText(
-            counts ? "Loud enough to count as playing or singing"
-                   : "Too quiet to count: a take ignores sound under the line",
+            l10n::text(counts ? l10n::key("level.counts") : l10n::key("level.too-quiet")),
             statusArea, juce::Justification::centredLeft, 2);
     }
 
@@ -214,9 +214,10 @@ void InputLevelComponent::paint(juce::Graphics& graphics)
     graphics.setColour(palette.muted);
     graphics.setFont(textFont(appearance::TextRole::body));
     auto detail = detailArea;
-    const juce::String peak =
-        "Peak " + (reason.isEmpty() ? figure(reading.peakDb) : juce::String("not measured"));
-    const juce::String below = "Ignore sound below " + figure(limit);
+    const juce::String peak = l10n::format(
+        "level.peak",
+        {{"level", reason.isEmpty() ? figure(reading.peakDb) : l10n::text("level.not-measured")}});
+    const juce::String below = l10n::format("level.ignore-below", {{"level", figure(limit)}});
     // One line each where the words are beside an upright bar and narrow.
     if (detail.getHeight() >= scaledHeight(60))
     {
@@ -232,5 +233,5 @@ void InputLevelComponent::paint(juce::Graphics& graphics)
             juce::Justification::centredLeft, 1);
     }
     graphics.drawFittedText(
-        "Set the line in Settings, Practice.", detail, juce::Justification::centredLeft, 1);
+        l10n::text("level.where-to-set"), detail, juce::Justification::centredLeft, 1);
 }

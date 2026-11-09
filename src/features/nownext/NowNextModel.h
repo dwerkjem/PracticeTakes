@@ -4,10 +4,12 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
 
+#include "../../application/localisation/LocalisationRules.h"
 #include "../../platform/score/PartTimeline.h"
 
 // What Now & Next shows at a tick: the item sounding, the items after it, and
@@ -31,10 +33,11 @@ struct View
     double through = 0.0;
 };
 
-// A count of beats as a musician says it: whole beats and a common fraction
-// ("1 1/2 beats" written with the fraction glyph), to the nearest
-// twenty-fourth; a decimal for anything finer.
-[[nodiscard]] inline std::string beatsText(double beats)
+// A count of beats as a musician writes it: whole beats and a common fraction
+// ("1 1/2" written with the fraction glyph), to the nearest twenty-fourth; a
+// decimal, in `style`, for anything finer. The word "beats" is the
+// component's, from the catalogue.
+[[nodiscard]] inline std::string beatsFigure(double beats, const l10n::NumberStyle& style = {})
 {
     struct Fraction
     {
@@ -54,11 +57,7 @@ struct View
         {20, "\xE2\x85\x9A"},
         {21, "\xE2\x85\x9E"},
     }};
-    const auto decimal = [beats]
-    {
-        const long tenths = std::lround(beats * 10.0);
-        return std::to_string(tenths / 10) + "." + std::to_string(tenths % 10);
-    };
+    const auto decimal = [beats, &style] { return l10n::formatNumber(beats, 1, style); };
     const double scaled = beats * 24.0;
     const long rounded = std::lround(scaled);
     std::string text;
@@ -82,7 +81,14 @@ struct View
             text = found == fractions.end() ? decimal() : text + found->glyph;
         }
     }
-    return text + (beats <= 1.0 + 1e-6 ? " beat" : " beats");
+    return text;
+}
+
+// Which form "beats" takes after beatsFigure: one beat or less is said as one,
+// "½ beat", as it always was here.
+[[nodiscard]] inline std::int64_t beatsPluralCount(double beats) noexcept
+{
+    return beats <= 1.0 + 1e-6 ? 1 : 2;
 }
 
 [[nodiscard]] inline View

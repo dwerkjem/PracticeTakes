@@ -1,3 +1,4 @@
+#include "../../../../localisation/Localisation.h"
 #include "../../../MainComponent.h"
 
 #include "../components/DockedToolPanel.h"
@@ -56,17 +57,17 @@ constexpr auto workspaceToolDragPrefix = "workspace-tool:";
     switch (zone)
     {
     case WorkspaceLayoutState::DropZone::left:
-        return "Tile left";
+        return l10n::text("workspace.drop.left");
     case WorkspaceLayoutState::DropZone::right:
-        return "Tile right";
+        return l10n::text("workspace.drop.right");
     case WorkspaceLayoutState::DropZone::top:
-        return "Tile top";
+        return l10n::text("workspace.drop.top");
     case WorkspaceLayoutState::DropZone::bottom:
-        return "Tile bottom";
+        return l10n::text("workspace.drop.bottom");
     case WorkspaceLayoutState::DropZone::centre:
-        return "Add as tab";
+        return l10n::text("workspace.drop.tab");
     case WorkspaceLayoutState::DropZone::floating:
-        return "Float";
+        return l10n::text("workspace.drop.float");
     case WorkspaceLayoutState::DropZone::none:
         return {};
     }
@@ -345,7 +346,7 @@ void MainComponent::paintOverChildren(juce::Graphics& graphics)
         // beside the tab to its left (#355).
         const auto label =
             activeDropTarget.tilesOut && zone == WorkspaceLayoutState::DropZone::centre
-                ? juce::String("Tile beside")
+                ? l10n::text("workspace.drop.tile-beside")
                 : dropZoneLabel(zone);
         paintDropZone(
             graphics, dropZoneBounds(zone, paneBounds).reduced(5), label,

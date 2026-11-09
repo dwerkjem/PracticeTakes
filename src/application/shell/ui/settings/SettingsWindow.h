@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../../localisation/Localisation.h"
 #include "../../../theme/PlusOrMinusCents.h"
 #include "../../../widgets/InputLevelMeter.h"
 #include "../../MainComponent.h"
@@ -134,7 +135,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
           public:
             TextSizePreview()
             {
-                setTitle("Every text size the application uses");
+                setTitle(l10n::text("settings.appearance.textsize.preview.title"));
             }
 
             // As tall as its rows at the current text size.
@@ -162,19 +163,22 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     graphics.setColour(ink);
                     graphics.setFont(appearance::textFont(info.role, scale));
                     graphics.drawFittedText(
-                        juce::String(info.name.data(), info.name.size()), row,
-                        juce::Justification::centredLeft, 1, 0.8f);
+                        l10n::text(info.name), row, juce::Justification::centredLeft, 1, 0.8f);
 
                     const auto points = [](float size) { // Whole or half points only, so a half
                                                          // shows its one decimal.
                         const bool whole = std::lround(size * 2.0f) % 2 == 0;
-                        return juce::String(size, whole ? 0 : 1) + " pt";
+                        return l10n::format(
+                            "settings.appearance.textsize.points",
+                            {{"size", l10n::number(size, whole ? 0 : 1)}});
                     };
                     juce::String sizes = points(info.baseSize);
                     if (scale != appearance::TextScale::defaultPercent)
                     {
-                        sizes += juce::String::fromUTF8(" \xe2\x86\x92 ") +
-                                 points(appearance::textSize(info.role, scale));
+                        sizes = l10n::format(
+                            "settings.appearance.textsize.change",
+                            {{"from", sizes},
+                             {"to", points(appearance::textSize(info.role, scale))}});
                     }
                     graphics.setColour(ink.withAlpha(0.6f));
                     graphics.setFont(appearance::textFont(appearance::TextRole::small, scale));
@@ -201,17 +205,17 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 : onAppearanceChanged(std::move(appearanceHandler)),
                   onTextScaleChanged(std::move(textScaleHandler))
             {
-                configureHeading(heading, "Appearance");
-                configureDescription(
-                    description,
-                    "Choose the application theme used by every open window, and how large its "
-                    "text is.");
+                configureHeading(heading, l10n::text("settings.appearance.title"));
+                configureDescription(description, l10n::text("settings.appearance.description"));
 
-                themeLabel.setText("Theme", juce::dontSendNotification);
+                themeLabel.setText(
+                    l10n::text("settings.appearance.theme"), juce::dontSendNotification);
                 addAndMakeVisible(themeLabel);
 
-                themeBox.addItem("Light", static_cast<int>(Theme::light));
-                themeBox.addItem("Dark", static_cast<int>(Theme::dark));
+                themeBox.addItem(
+                    l10n::text("settings.appearance.theme.light"), static_cast<int>(Theme::light));
+                themeBox.addItem(
+                    l10n::text("settings.appearance.theme.dark"), static_cast<int>(Theme::dark));
                 themeBox.setSelectedId(static_cast<int>(initialTheme), juce::dontSendNotification);
                 themeBox.onChange = [this]
                 {
@@ -225,7 +229,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 // One text size for the whole application (global-text-size):
                 // menus, buttons, labels, tool text and readouts. The tuner's
                 // note and the notation size themselves to their panes.
-                textSizeLabel.setText("Text size", juce::dontSendNotification);
+                textSizeLabel.setText(
+                    l10n::text("settings.appearance.textsize"), juce::dontSendNotification);
                 addAndMakeVisible(textSizeLabel);
                 for (int percent = appearance::TextScale::minimumPercent;
                      percent <= appearance::TextScale::maximumPercent;
@@ -234,9 +239,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     textSizeBox.addItem(juce::String(percent) + "%", percent);
                 }
                 textSizeBox.setComponentID("settings-text-size");
-                textSizeBox.setTooltip(
-                    "How large the text is in every window: menus, buttons, labels and what the "
-                    "tools write. The tuner's note and the notation keep their own sizes");
+                textSizeBox.setTooltip(l10n::text("settings.appearance.textsize.tooltip"));
                 textSizeBox.setSelectedId(initialTextScale, juce::dontSendNotification);
                 textSizeBox.onChange = [this]
                 {
@@ -248,7 +251,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 addAndMakeVisible(textSizeBox);
 
                 previewHeading.setText(
-                    "Every size of text, at this size", juce::dontSendNotification);
+                    l10n::text("settings.appearance.textsize.preview"), juce::dontSendNotification);
                 previewHeading.setFont(
                     appearance::labelFont(appearance::TextRole::body, juce::Font::bold));
                 addAndMakeVisible(previewHeading);
@@ -329,17 +332,15 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                       false,
                       true)
             {
-                configureHeading(heading, "Audio");
-                configureDescription(
-                    description,
-                    "Control the shared microphone signal used by every analysis tool, and the "
-                    "metronome the practice clock plays.");
+                configureHeading(heading, l10n::text("settings.audio.title"));
+                configureDescription(description, l10n::text("settings.audio.description"));
 
                 microphoneButton.onClick = [this] { audioInputService.toggleMuted(); };
-                microphoneButton.setTitle("Microphone mute control");
+                microphoneButton.setTitle(l10n::text("settings.audio.microphone.title"));
                 addAndMakeVisible(microphoneButton);
 
-                inputGainLabel.setText("Input volume", juce::dontSendNotification);
+                inputGainLabel.setText(
+                    l10n::text("settings.audio.input-volume"), juce::dontSendNotification);
                 addAndMakeVisible(inputGainLabel);
                 inputGainSlider.setRange(0.0, 200.0, 1.0);
                 inputGainSlider.setSliderStyle(juce::Slider::LinearHorizontal);
@@ -347,9 +348,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 inputGainSlider.setTextValueSuffix("%");
                 inputGainSlider.setValue(
                     inputService.inputGain() * 100.0, juce::dontSendNotification);
-                inputGainSlider.setTooltip(
-                    "Adjust the software gain used by every analysis tool; 100% preserves the "
-                    "captured microphone level");
+                inputGainSlider.setTooltip(l10n::text("settings.audio.input-volume.tooltip"));
                 // clang-format off
                 inputGainSlider.onValueChange = [this] {
                     audioInputService.setInputGain(
@@ -358,16 +357,18 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 // clang-format on
                 addAndMakeVisible(inputGainSlider);
 
-                inputLevelLabel.setText("Input level", juce::dontSendNotification);
+                inputLevelLabel.setText(
+                    l10n::text("settings.audio.input-level"), juce::dontSendNotification);
                 addAndMakeVisible(inputLevelLabel);
                 inputLevelMeter.setPercentageDisplay(false);
-                inputLevelMeter.setTitle("Live microphone input level");
+                inputLevelMeter.setTitle(l10n::text("settings.audio.input-level.title"));
                 addAndMakeVisible(inputLevelMeter);
 
                 bufferingStatusLabel.setJustificationType(juce::Justification::centredLeft);
                 addAndMakeVisible(bufferingStatusLabel);
 
-                metronomeVolumeLabel.setText("Metronome volume", juce::dontSendNotification);
+                metronomeVolumeLabel.setText(
+                    l10n::text("settings.audio.metronome-volume"), juce::dontSendNotification);
                 addAndMakeVisible(metronomeVolumeLabel);
                 metronomeVolumeSlider.setRange(0.0, 100.0, 1.0);
                 metronomeVolumeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
@@ -376,7 +377,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 metronomeVolumeSlider.setValue(
                     clock.metronomeVolume() * 100.0, juce::dontSendNotification);
                 metronomeVolumeSlider.setTooltip(
-                    "How loud the metronome and the count-in click through the output device");
+                    l10n::text("settings.audio.metronome-volume.tooltip"));
                 // clang-format off
                 metronomeVolumeSlider.onValueChange = [this] {
                     clock.setMetronomeVolume(
@@ -386,7 +387,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 // clang-format on
                 addAndMakeVisible(metronomeVolumeSlider);
 
-                accentToggle.setButtonText("Accent the first beat of each bar");
+                accentToggle.setButtonText(l10n::text("settings.audio.accent"));
                 accentToggle.setToggleState(clock.accentEnabled(), juce::dontSendNotification);
                 accentToggle.onClick = [this]
                 {
@@ -476,7 +477,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 if (reason.isNotEmpty())
                 {
                     metronomeStatusLabel.setText(
-                        "Metronome unavailable: " + reason + ".", juce::dontSendNotification);
+                        l10n::format("settings.audio.metronome.unavailable", {{"reason", reason}}),
+                        juce::dontSendNotification);
                     return;
                 }
 
@@ -484,18 +486,22 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 audioInputService.deviceManager().getAudioDeviceSetup(setup);
                 metronomeStatusLabel.setText(
                     setup.outputDeviceName.isNotEmpty()
-                        ? "The metronome plays through " + setup.outputDeviceName + "."
-                        : juce::String("The metronome plays through the output device."),
+                        ? l10n::format(
+                              "settings.audio.metronome.device",
+                              {{"device", setup.outputDeviceName}})
+                        : l10n::text("settings.audio.metronome.default-device"),
                     juce::dontSendNotification);
             }
 
             void updateMicrophoneControls()
             {
                 const auto isMuted = audioInputService.isMuted();
-                microphoneButton.setButtonText(isMuted ? "Unmute microphone" : "Mute microphone");
+                microphoneButton.setButtonText(
+                    isMuted ? l10n::text("settings.audio.microphone.unmute")
+                            : l10n::text("settings.audio.microphone.mute"));
                 microphoneButton.setTooltip(
-                    isMuted ? "Resume audio analysis using the selected input"
-                            : "Pause microphone audio for every analysis tool");
+                    isMuted ? l10n::text("settings.audio.microphone.unmute.tooltip")
+                            : l10n::text("settings.audio.microphone.mute.tooltip"));
                 inputGainSlider.setValue(
                     audioInputService.inputGain() * 100.0, juce::dontSendNotification);
                 inputLevelProgress = audioInputService.inputLevel();
@@ -503,9 +509,10 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 const auto droppedBlocks = audioInputService.droppedAnalysisBlocks();
                 bufferingStatusLabel.setText(
-                    droppedBlocks == 0 ? "Analysis buffers healthy - no dropped blocks"
-                                       : juce::String(droppedBlocks) +
-                                             " analysis block(s) dropped; a tool is not keeping up",
+                    droppedBlocks == 0 ? l10n::text("settings.audio.buffers.healthy")
+                                       : l10n::plural(
+                                             "settings.audio.buffers.dropped",
+                                             static_cast<std::int64_t>(droppedBlocks)),
                     juce::dontSendNotification);
                 updateMetronomeStatus();
             }
@@ -554,22 +561,20 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             {
                 tracker.setPedalThreshold(initialPedalThreshold);
 
-                configureHeading(heading, "MIDI");
-                configureDescription(
-                    description,
-                    "Choose the MIDI keyboard to capture. Its notes, velocities and sustain "
-                    "pedal are read live.");
+                configureHeading(heading, l10n::text("settings.midi.title"));
+                configureDescription(description, l10n::text("settings.midi.description"));
 
-                deviceLabel.setText("Keyboard", juce::dontSendNotification);
+                deviceLabel.setText(l10n::text("settings.midi.device"), juce::dontSendNotification);
                 addAndMakeVisible(deviceLabel);
 
-                deviceBox.setTextWhenNothingSelected("Choose a MIDI input");
-                deviceBox.setTextWhenNoChoicesAvailable("No MIDI input detected");
+                deviceBox.setTextWhenNothingSelected(l10n::text("settings.midi.device.prompt"));
+                deviceBox.setTextWhenNoChoicesAvailable(
+                    l10n::text("settings.midi.device.none-detected"));
                 deviceBox.onChange = [this] { applySelection(); };
                 addAndMakeVisible(deviceBox);
 
-                refreshButton.setButtonText("Rescan");
-                refreshButton.setTitle("Look for MIDI devices again");
+                refreshButton.setButtonText(l10n::text("settings.midi.rescan"));
+                refreshButton.setTitle(l10n::text("settings.midi.rescan.title"));
                 refreshButton.onClick = [this] { rebuildDeviceList(); };
                 addAndMakeVisible(refreshButton);
 
@@ -579,7 +584,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 activityLabel.setJustificationType(juce::Justification::topLeft);
                 addAndMakeVisible(activityLabel);
 
-                thresholdLabel.setText("Pedal counts as down at", juce::dontSendNotification);
+                thresholdLabel.setText(
+                    l10n::text("settings.midi.pedal-threshold"), juce::dontSendNotification);
                 addAndMakeVisible(thresholdLabel);
 
                 // A number the user can see, because the point of the setting is
@@ -591,8 +597,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 thresholdSlider.setRange(
                     midi::minimumPedalDownThreshold, midi::maximumPedalDownThreshold, 1.0);
                 thresholdSlider.setValue(tracker.pedalThreshold(), juce::dontSendNotification);
-                thresholdSlider.setTitle(
-                    "Sustain pedal position at which the pedal counts as down");
+                thresholdSlider.setTitle(l10n::text("settings.midi.pedal-threshold.tooltip"));
                 thresholdSlider.onValueChange = [this]
                 {
                     const int value = static_cast<int>(thresholdSlider.getValue());
@@ -611,9 +616,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 // Said in words, wherever pedal use is shown, so that nobody reads
                 // the absence of a complaint as agreement with their score.
                 pedalNoteLabel.setText(
-                    "Pedal markings in a score are not read, so pedal use is shown here but "
-                    "never compared with the score.",
-                    juce::dontSendNotification);
+                    l10n::text("settings.midi.pedal-note"), juce::dontSendNotification);
                 pedalNoteLabel.setJustificationType(juce::Justification::topLeft);
                 addAndMakeVisible(pedalNoteLabel);
 
@@ -675,7 +678,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
                 // Id 1 is "none", so that choosing nothing is an option rather
                 // than something only reachable by never having chosen.
-                deviceBox.addItem("No MIDI input", 1);
+                deviceBox.addItem(l10n::text("settings.midi.device.none"), 1);
 
                 for (std::size_t index = 0; index < devices.size(); ++index)
                 {
@@ -700,7 +703,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 if (selectedId == 1 && selected.isNotEmpty())
                 {
                     deviceBox.addItem(
-                        (selectedName.isNotEmpty() ? selectedName : selected) + " (not connected)",
+                        l10n::format(
+                            "settings.midi.device.absent",
+                            {{"device", selectedName.isNotEmpty() ? selectedName : selected}}),
                         absentDeviceItemId);
                     deviceBox.setItemEnabled(absentDeviceItemId, false);
                     selectedId = absentDeviceItemId;
@@ -760,9 +765,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 {
                 case MidiInputService::ConnectionState::noDeviceSelected:
                     statusLabel.setText(
-                        devices.empty()
-                            ? "No MIDI input detected. Connect a keyboard and choose Rescan."
-                            : "No MIDI input chosen.",
+                        devices.empty() ? l10n::text("settings.midi.status.none-detected")
+                                        : l10n::text("settings.midi.status.none-chosen"),
                         juce::dontSendNotification);
                     break;
 
@@ -771,14 +775,17 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     // for exactly this sentence, so that a user who has not
                     // switched their piano on yet reads which piano is meant.
                     statusLabel.setText(
-                        midiInputService.selectedDeviceName() +
-                            " is not connected. It will be used as soon as it appears.",
+                        l10n::format(
+                            "settings.midi.status.unavailable",
+                            {{"device", midiInputService.selectedDeviceName()}}),
                         juce::dontSendNotification);
                     break;
 
                 case MidiInputService::ConnectionState::open:
                     statusLabel.setText(
-                        "Connected to " + midiInputService.selectedDeviceName() + ".",
+                        l10n::format(
+                            "settings.midi.status.connected",
+                            {{"device", midiInputService.selectedDeviceName()}}),
                         juce::dontSendNotification);
                     break;
                 }
@@ -845,12 +852,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 if (midiInputService.receivedEventCount() == 0)
                 {
                     activityLabel.setText(
-                        "Nothing received yet. Play a key to check the connection.",
-                        juce::dontSendNotification);
+                        l10n::text("settings.midi.activity.empty"), juce::dontSendNotification);
                     notesLabel.setText(
-                        "Each finished note will appear here with how long the key was held "
-                        "and how long it sounded.",
-                        juce::dontSendNotification);
+                        l10n::text("settings.midi.notes.empty"), juce::dontSendNotification);
 
                     return;
                 }
@@ -872,14 +876,15 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 }
 
                 notesLabel.setText(
-                    noteLines.isEmpty() ? juce::String("Finished notes appear here.")
-                                        : noteLines.joinIntoString("\n"),
+                    noteLines.isEmpty()
+                        ? juce::String(l10n::text("settings.midi.notes.none-finished"))
+                        : noteLines.joinIntoString("\n"),
                     juce::dontSendNotification);
             }
 
             [[nodiscard]] static juce::String seconds(double value)
             {
-                return juce::String(value, 2) + " s";
+                return l10n::format("settings.midi.seconds", {{"seconds", l10n::number(value, 2)}});
             }
 
             // How long a finished note lasted, by finger and by sound.
@@ -891,23 +896,27 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             // would be a measurement that was never taken.
             [[nodiscard]] static juce::String describeNote(const midi::SoundedNote& note)
             {
-                const juce::String name = "Note " + juce::String(note.noteNumber);
+                const juce::String number(note.noteNumber);
 
                 if (note.end == midi::SoundingEnd::abandoned)
                 {
-                    return name + "   not measured (events were lost or the keyboard left)";
+                    return l10n::format("settings.midi.note.abandoned", {{"note", number}});
                 }
 
                 if (note.pedal == midi::PedalCertainty::unknown)
                 {
-                    return name + "   key " + seconds(note.fingerSeconds()) +
-                           "   not measured (the pedal has not been seen yet; move it once, "
-                           "otherwise sounding time cannot be told from key time)";
+                    return l10n::format(
+                        "settings.midi.note.pedal-unknown",
+                        {{"note", number}, {"key", seconds(note.fingerSeconds())}});
                 }
 
-                return name + "   key " + seconds(note.fingerSeconds()) + "   sounding " +
-                       seconds(note.soundingSeconds()) +
-                       (note.heldByPedal() ? "   held by pedal" : "   held by finger");
+                const auto held =
+                    note.heldByPedal() ? l10n::key("settings.midi.note.held-by-pedal")
+                                       : l10n::key("settings.midi.note.held-by-finger");
+                return l10n::format(
+                    held, {{"note", number},
+                           {"key", seconds(note.fingerSeconds())},
+                           {"sounding", seconds(note.soundingSeconds())}});
             }
 
             // Note NUMBERS, not names.
@@ -928,17 +937,22 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 switch (event.kind)
                 {
                 case midi::MidiEventKind::noteOn:
-                    return "Note on   " + juce::String(event.noteNumber) + "   velocity " +
-                           juce::String(event.velocity) + "   channel " +
-                           juce::String(event.channel);
+                    return l10n::format(
+                        "settings.midi.event.note-on",
+                        {{"note", juce::String(event.noteNumber)},
+                         {"velocity", juce::String(event.velocity)},
+                         {"channel", juce::String(event.channel)}});
 
                 case midi::MidiEventKind::noteOff:
-                    return "Note off  " + juce::String(event.noteNumber) + "   channel " +
-                           juce::String(event.channel);
+                    return l10n::format(
+                        "settings.midi.event.note-off", {{"note", juce::String(event.noteNumber)},
+                                                         {"channel", juce::String(event.channel)}});
 
                 case midi::MidiEventKind::sustainPedal:
-                    return "Pedal     position " + juce::String(event.pedalPosition) +
-                           "   channel " + juce::String(event.channel);
+                    return l10n::format(
+                        "settings.midi.event.pedal",
+                        {{"position", juce::String(event.pedalPosition)},
+                         {"channel", juce::String(event.channel)}});
                 }
 
                 return {};
@@ -994,15 +1008,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                       InputLevelMeter::Listening::whileShowing,
                       initialTheme)
             {
-                configureHeading(heading, "Practice");
-                configureDescription(
-                    description,
-                    "Apply a coordinated set of tuner controls for the material you are "
-                    "practicing, choose how many bars the metronome counts in, set the "
-                    "pitch everything tunes to, and how close a sung note must be to be "
-                    "in tune.");
+                configureHeading(heading, l10n::text("settings.practice.title"));
+                configureDescription(description, l10n::text("settings.practice.description"));
 
-                presetLabel.setText("Practice preset", juce::dontSendNotification);
+                presetLabel.setText(
+                    l10n::text("settings.practice.preset"), juce::dontSendNotification);
                 addAndMakeVisible(presetLabel);
                 for (const AppDefaults::PresetDefinition& preset : AppDefaults::presets)
                 {
@@ -1010,7 +1020,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                         juce::String(preset.label.data(), preset.label.size()),
                         static_cast<int>(preset.id));
                 }
-                presetBox.setTextWhenNothingSelected("Choose a preset");
+                presetBox.setTextWhenNothingSelected(l10n::text("settings.practice.preset.prompt"));
                 presetBox.onChange = [this]
                 {
                     if (onPreset)
@@ -1020,18 +1030,17 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 };
                 addAndMakeVisible(presetBox);
 
-                countInLabel.setText("Count-in", juce::dontSendNotification);
+                countInLabel.setText(
+                    l10n::text("settings.practice.count-in"), juce::dontSendNotification);
                 addAndMakeVisible(countInLabel);
-                countInBox.addItem("None", 1);
+                countInBox.addItem(l10n::text("settings.practice.count-in.none"), 1);
                 for (int bars = 1; bars <= transport::maximumCountInBars; ++bars)
                 {
                     countInBox.addItem(
-                        juce::String(bars) + (bars == 1 ? " bar" : " bars"), bars + 1);
+                        l10n::plural("settings.practice.count-in.bars", bars), bars + 1);
                 }
                 countInBox.setSelectedId(clock.countInBars() + 1, juce::dontSendNotification);
-                countInBox.setTooltip(
-                    "Bars of clicks before the clock starts, at the tempo and meter of the "
-                    "point it starts from");
+                countInBox.setTooltip(l10n::text("settings.practice.count-in.tooltip"));
                 countInBox.onChange = [this]
                 {
                     clock.setCountInBars(countInBox.getSelectedId() - 1);
@@ -1043,17 +1052,17 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 addAndMakeVisible(countInBox);
 
                 // The application's A4 (system-wide-target-note decision 1).
-                referenceLabel.setText("Reference pitch", juce::dontSendNotification);
+                referenceLabel.setText(
+                    l10n::text("settings.practice.reference"), juce::dontSendNotification);
                 addAndMakeVisible(referenceLabel);
                 referenceSlider.setComponentID("settings-reference-pitch");
                 referenceSlider.setSliderStyle(juce::Slider::IncDecButtons);
                 referenceSlider.setRange(pitch::minimumReferenceHz, pitch::maximumReferenceHz, 1.0);
                 referenceSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
-                referenceSlider.setTextValueSuffix(" Hz");
+                referenceSlider.setTextValueSuffix(
+                    l10n::text("settings.practice.reference.suffix"));
                 referenceSlider.setValue(reference.hertz(), juce::dontSendNotification);
-                referenceSlider.setTooltip(
-                    "A4, which the tuner and every note reading are measured against: 440 Hz "
-                    "unless your ensemble tunes elsewhere");
+                referenceSlider.setTooltip(l10n::text("settings.practice.reference.tooltip"));
                 referenceSlider.onValueChange = [this]
                 {
                     reference.set(referenceSlider.getValue());
@@ -1070,61 +1079,54 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 // the sliders show the result, so the bands cannot cross. In
                 // tune within wins: moving it pushes the others aside, and the
                 // others stop at it.
-                nearPerfectLabel.setText("Near perfect within", juce::dontSendNotification);
+                nearPerfectLabel.setText(
+                    l10n::text("settings.practice.near-perfect"), juce::dontSendNotification);
                 addAndMakeVisible(nearPerfectLabel);
                 nearPerfectSlider.setComponentID("settings-near-perfect-cents");
                 nearPerfectSlider.setSliderStyle(juce::Slider::IncDecButtons);
                 nearPerfectSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
                 showAsPlusOrMinusCents(nearPerfectSlider);
-                nearPerfectSlider.setTooltip(
-                    "How close a note must be to count as near perfect, plus or minus: 5 "
-                    "means from 5 cents flat to 5 cents sharp. The innermost, green band on "
-                    "the tuner and in the Note View. Always tighter than In tune within");
+                nearPerfectSlider.setTooltip(l10n::text("settings.practice.near-perfect.tooltip"));
                 nearPerfectSlider.onValueChange = [this] { applyZoneLimits(); };
                 addAndMakeVisible(nearPerfectSlider);
 
-                toleranceLabel.setText("In tune within", juce::dontSendNotification);
+                toleranceLabel.setText(
+                    l10n::text("settings.practice.in-tune"), juce::dontSendNotification);
                 addAndMakeVisible(toleranceLabel);
                 toleranceSlider.setComponentID("settings-in-tune-cents");
                 toleranceSlider.setSliderStyle(juce::Slider::IncDecButtons);
                 toleranceSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
                 showAsPlusOrMinusCents(toleranceSlider);
-                toleranceSlider.setTooltip(
-                    "How far a sung note may be from the written pitch, plus or minus, and "
-                    "still be in tune when a take is judged: 25 means from 25 cents flat to 25 "
-                    "cents sharp, a quarter of a semitone each way. Always wider than Near "
-                    "perfect within and narrower than Out of tune beyond");
+                toleranceSlider.setTooltip(l10n::text("settings.practice.in-tune.tooltip"));
                 toleranceSlider.onValueChange = [this] { applyZoneLimits(); };
                 addAndMakeVisible(toleranceSlider);
 
-                outOfTuneLabel.setText("Out of tune beyond", juce::dontSendNotification);
+                outOfTuneLabel.setText(
+                    l10n::text("settings.practice.out-of-tune"), juce::dontSendNotification);
                 addAndMakeVisible(outOfTuneLabel);
                 outOfTuneSlider.setComponentID("settings-out-of-tune-cents");
                 outOfTuneSlider.setSliderStyle(juce::Slider::IncDecButtons);
                 outOfTuneSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
                 showAsPlusOrMinusCents(outOfTuneSlider);
-                outOfTuneSlider.setTooltip(
-                    "Past how far, plus or minus, a note is out of tune: the red zone on the "
-                    "tuner and in the Note View. Between In tune within and this it is near "
-                    "but off, in amber. At most 50 cents, where a note is nearer the next one");
+                outOfTuneSlider.setTooltip(l10n::text("settings.practice.out-of-tune.tooltip"));
                 outOfTuneSlider.onValueChange = [this] { applyZoneLimits(); };
                 addAndMakeVisible(outOfTuneSlider);
 
                 // The quietest sound a microphone take counts (#349): below
                 // it the room is never an attack, so never an extra note.
-                minimumLevelLabel.setText("Ignore sound below", juce::dontSendNotification);
+                minimumLevelLabel.setText(
+                    l10n::text("settings.practice.minimum-level"), juce::dontSendNotification);
                 addAndMakeVisible(minimumLevelLabel);
                 minimumLevelSlider.setComponentID("settings-minimum-level");
                 minimumLevelSlider.setSliderStyle(juce::Slider::IncDecButtons);
                 minimumLevelSlider.setRange(
                     AppDefaults::lowestMinimumLevelDb, AppDefaults::highestMinimumLevelDb, 1.0);
                 minimumLevelSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
-                minimumLevelSlider.setTextValueSuffix(" dB");
+                minimumLevelSlider.setTextValueSuffix(
+                    l10n::text("settings.practice.minimum-level.suffix"));
                 minimumLevelSlider.setValue(recorder.minimumLevelDb(), juce::dontSendNotification);
                 minimumLevelSlider.setTooltip(
-                    "Sound quieter than this is not playing or singing: the room, breathing, a "
-                    "chair. It is never heard as a note. Raise it if a take finds extra notes "
-                    "in a noisy room; lower it if quiet notes are missed");
+                    l10n::text("settings.practice.minimum-level.tooltip"));
                 minimumLevelSlider.onValueChange = [this]
                 {
                     recorder.setMinimumLevelDb(minimumLevelSlider.getValue());
@@ -1139,9 +1141,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 // threshold, so it can be set against this room (#381).
                 minimumLevelMeter.setComponentID("settings-minimum-level-meter");
                 minimumLevelMeter.setTooltip(
-                    "Your microphone's level now. Sound in the grey part, under the line, is "
-                    "ignored; sound past the line counts as playing or singing. Set the line "
-                    "just above the room when you are silent");
+                    l10n::text("settings.practice.minimum-level.meter.tooltip"));
                 addAndMakeVisible(minimumLevelMeter);
 
                 nearPerfectSlider.setRange(
@@ -1157,9 +1157,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 keepTargetToggle.setComponentID("settings-keep-target");
                 keepTargetToggle.setToggleState(
                     target.keepChosenWhenScoreOpens, juce::dontSendNotification);
-                keepTargetToggle.setTooltip(
-                    "Off: opening a score aims at its first note. On: a target you chose "
-                    "stays until you choose another");
+                keepTargetToggle.setTooltip(l10n::text("settings.practice.keep-target.tooltip"));
                 keepTargetToggle.onClick = [this]
                 {
                     target.keepChosenWhenScoreOpens = keepTargetToggle.getToggleState();
@@ -1175,9 +1173,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 followToggle.setComponentID("settings-target-follows-score");
                 followToggle.setToggleState(
                     target.followScoreWhilePlaying, juce::dontSendNotification);
-                followToggle.setTooltip(
-                    "On: while the score plays, the target moves to the note being sung, so the "
-                    "tuner and the Note View aim at it. A target you chose stays put");
+                followToggle.setTooltip(l10n::text("settings.practice.target-follows.tooltip"));
                 followToggle.onClick = [this]
                 {
                     target.followScoreWhilePlaying = followToggle.getToggleState();
@@ -1194,8 +1190,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 countInWhenPlayingToggle.setToggleState(
                     recorder.countInWhenPlaying(), juce::dontSendNotification);
                 countInWhenPlayingToggle.setTooltip(
-                    "Off: pressing Record while the score plays records from where it is, and "
-                    "the music carries on. On: it counts in first, stepping back a bar");
+                    l10n::text("settings.practice.count-in-when-playing.tooltip"));
                 countInWhenPlayingToggle.onClick = [this]
                 {
                     recorder.setCountInWhenPlaying(countInWhenPlayingToggle.getToggleState());
@@ -1316,10 +1311,10 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::Label minimumLevelLabel;
             juce::Slider minimumLevelSlider;
             InputLevelMeter minimumLevelMeter;
-            juce::ToggleButton keepTargetToggle{"Keep my target when a score opens"};
-            juce::ToggleButton followToggle{"Target follows the score as it plays"};
+            juce::ToggleButton keepTargetToggle{l10n::text("settings.practice.keep-target")};
+            juce::ToggleButton followToggle{l10n::text("settings.practice.target-follows")};
             juce::ToggleButton countInWhenPlayingToggle{
-                "Count in when recording starts during playback"};
+                l10n::text("settings.practice.count-in-when-playing")};
         };
 
         class ResetPanel final : public CategoryPanel
@@ -1332,28 +1327,36 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 std::function<void()> resetLayoutHandler,
                 std::function<void()> resetAllHandler)
             {
-                configureHeading(heading, "Reset & support");
-                configureDescription(
-                    description,
-                    "Restore one category without affecting the others, or send feedback.");
+                configureHeading(heading, l10n::text("settings.reset.title"));
+                configureDescription(description, l10n::text("settings.reset.description"));
 
-                actionsHeading.setText("Support", juce::dontSendNotification);
+                actionsHeading.setText(
+                    l10n::text("settings.reset.support"), juce::dontSendNotification);
                 actionsHeading.setFont(
                     appearance::labelFont(appearance::TextRole::menu, juce::Font::bold));
                 addAndMakeVisible(actionsHeading);
-                feedbackButton.setButtonText("Send feedback");
-                feedbackButton.setTitle("Open the feedback form");
+                feedbackButton.setButtonText(l10n::text("settings.reset.feedback"));
+                feedbackButton.setTitle(l10n::text("settings.reset.feedback.title"));
                 feedbackButton.onClick = std::move(feedbackHandler);
                 addAndMakeVisible(feedbackButton);
 
-                resetHeading.setText("Reset category", juce::dontSendNotification);
+                resetHeading.setText(
+                    l10n::text("settings.reset.heading"), juce::dontSendNotification);
                 resetHeading.setFont(
                     appearance::labelFont(appearance::TextRole::menu, juce::Font::bold));
                 addAndMakeVisible(resetHeading);
-                configureResetButton(resetToolButton, "Current tool", std::move(resetToolHandler));
-                configureResetButton(resetAudioButton, "Audio", std::move(resetAudioHandler));
-                configureResetButton(resetLayoutButton, "Layout", std::move(resetLayoutHandler));
-                configureResetButton(resetAllButton, "All settings", std::move(resetAllHandler));
+                configureResetButton(
+                    resetToolButton, l10n::text("settings.reset.tool"),
+                    l10n::text("settings.reset.tool.question"), std::move(resetToolHandler));
+                configureResetButton(
+                    resetAudioButton, l10n::text("settings.reset.audio"),
+                    l10n::text("settings.reset.audio.question"), std::move(resetAudioHandler));
+                configureResetButton(
+                    resetLayoutButton, l10n::text("settings.reset.layout"),
+                    l10n::text("settings.reset.layout.question"), std::move(resetLayoutHandler));
+                configureResetButton(
+                    resetAllButton, l10n::text("settings.reset.all"),
+                    l10n::text("settings.reset.all.question"), std::move(resetAllHandler));
             }
 
             void resized() override
@@ -1386,15 +1389,17 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             void configureResetButton(
                 juce::TextButton& button,
                 const juce::String& text,
+                const juce::String& question,
                 std::function<void()> action)
             {
                 button.setButtonText(text);
-                button.onClick = [action = std::move(action), text]
+                button.onClick = [action = std::move(action), question]
                 {
                     juce::AlertWindow::showOkCancelBox(
-                        juce::MessageBoxIconType::WarningIcon, "Confirm reset",
-                        "Reset " + text.toLowerCase() + "? This cannot be undone.", "Reset",
-                        "Cancel", nullptr,
+                        juce::MessageBoxIconType::WarningIcon,
+                        l10n::text("settings.reset.confirm.title"), question,
+                        l10n::text("settings.reset.confirm.reset"),
+                        l10n::text("settings.reset.confirm.cancel"), nullptr,
                         juce::ModalCallbackFunction::create(
                             [action](int result)
                             {
@@ -1471,28 +1476,42 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                   std::move(resetAllHandler))
         {
             categoryTabs.setTabBarDepth(42);
+            // The test-control channel shows a panel by these identifiers, not
+            // by its caption, which is translated.
+            appearanceScroll.setComponentID("settings-panel-appearance");
+            audioScroll.setComponentID("settings-panel-audio-device");
+            midiScroll.setComponentID("settings-panel-midi");
+            practiceScroll.setComponentID("settings-panel-practice");
+            resetScroll.setComponentID("settings-panel-reset");
             categoryTabs.addTab(
-                "Appearance", juce::Colours::transparentBlack, &appearanceScroll, false);
-            categoryTabs.addTab("Audio", juce::Colours::transparentBlack, &audioScroll, false);
-            categoryTabs.addTab("MIDI", juce::Colours::transparentBlack, &midiScroll, false);
+                l10n::text("settings.appearance.title"), juce::Colours::transparentBlack,
+                &appearanceScroll, false);
             categoryTabs.addTab(
-                "Practice", juce::Colours::transparentBlack, &practiceScroll, false);
+                l10n::text("settings.audio.title"), juce::Colours::transparentBlack, &audioScroll,
+                false);
             categoryTabs.addTab(
-                "Reset & support", juce::Colours::transparentBlack, &resetScroll, false);
+                l10n::text("settings.midi.title"), juce::Colours::transparentBlack, &midiScroll,
+                false);
+            categoryTabs.addTab(
+                l10n::text("settings.practice.title"), juce::Colours::transparentBlack,
+                &practiceScroll, false);
+            categoryTabs.addTab(
+                l10n::text("settings.reset.title"), juce::Colours::transparentBlack, &resetScroll,
+                false);
             addAndMakeVisible(categoryTabs);
 
-            saveButton.setButtonText("Save settings");
-            saveButton.setTitle("Save the current settings");
+            saveButton.setButtonText(l10n::text("settings.save"));
+            saveButton.setTitle(l10n::text("settings.save.title"));
             saveButton.onClick = std::move(saveHandler);
             addAndMakeVisible(saveButton);
 
-            exportButton.setButtonText("Export settings");
-            exportButton.setTitle("Export portable settings");
+            exportButton.setButtonText(l10n::text("settings.export"));
+            exportButton.setTitle(l10n::text("settings.export.title"));
             exportButton.onClick = std::move(exportHandler);
             addAndMakeVisible(exportButton);
 
-            importButton.setButtonText("Import settings");
-            importButton.setTitle("Import portable settings");
+            importButton.setButtonText(l10n::text("settings.import"));
+            importButton.setTitle(l10n::text("settings.import.title"));
             importButton.onClick = std::move(importHandler);
             addAndMakeVisible(importButton);
         }
@@ -1531,14 +1550,16 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             repaint();
         }
 
-        // Select a category tab by its printed name. False when no tab matches,
-        // so a caller naming a panel that has been renamed fails loudly rather
+        // Select a category tab by its identifier ("practice"), never by its
+        // caption, which is translated. False when no tab matches, so a
+        // caller naming a panel that has been renamed fails loudly rather
         // than silently leaving whichever tab happened to be showing.
-        [[nodiscard]] bool showPanel(const juce::String& name)
+        [[nodiscard]] bool showPanel(const juce::String& identifier)
         {
             for (int index = 0; index < categoryTabs.getNumTabs(); ++index)
             {
-                if (categoryTabs.getTabNames()[index] == name)
+                const auto* panel = categoryTabs.getTabContentComponent(index);
+                if (panel != nullptr && panel->getComponentID() == "settings-panel-" + identifier)
                 {
                     categoryTabs.setCurrentTabIndex(index);
 
@@ -1626,14 +1647,15 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         juce::MessageManager::callAsync(onClose);
     }
 
-    // Show a named category panel. Used by the development-only test control
-    // channel so a manual-verification run can be pointed at one panel rather
-    // than at whichever tab the window happens to open on.
-    [[nodiscard]] bool showPanel(const juce::String& name)
+    // Show a category panel by identifier ("practice"). Used by the
+    // development-only test control channel so a manual-verification run can
+    // be pointed at one panel rather than at whichever tab the window happens
+    // to open on.
+    [[nodiscard]] bool showPanel(const juce::String& identifier)
     {
         if (auto* content = dynamic_cast<Content*>(getContentComponent()))
         {
-            return content->showPanel(name);
+            return content->showPanel(identifier);
         }
 
         return false;

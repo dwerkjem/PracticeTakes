@@ -26,6 +26,7 @@
 #include "ui/workspace/model/WorkspaceLayoutState.h"
 #include "ui/workspace/model/WorkspaceSessionLifecycle.h"
 #include "ui/workspace/model/WorkspaceToolState.h"
+#include "ui/workspace/shell/WorkspaceActionText.h"
 
 #include <cstdint>
 #include <functional>
@@ -168,7 +169,7 @@ class MainComponent final
     void saveNamedWorkspace(const juce::String& name, bool confirmed);
     void renameNamedWorkspace(const juce::String& name, bool confirmed);
     void showWorkspaceResult(
-        const juce::String& action,
+        const WorkspaceActionText& action,
         const NamedWorkspaceService::Result& result,
         const juce::String& requestedName = {});
     [[nodiscard]] const NamedWorkspace* activeNamedWorkspace() const;

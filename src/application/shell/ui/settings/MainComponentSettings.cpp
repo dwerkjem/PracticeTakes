@@ -9,6 +9,7 @@
 #include "../../../configuration/SettingsImportTransaction.h"
 #include "../../../configuration/SettingsTransferCodec.h"
 #include "../../../configuration/SettingsTransferFile.h"
+#include "../../../localisation/Localisation.h"
 #include "../workspace/components/ToolWindow.h"
 #include "SettingsWindow.h"
 
@@ -39,26 +40,31 @@ void MainComponent::showSettingsMenu()
 {
     juce::PopupMenu appearanceMenu;
     appearanceMenu.addItem(
-        lightSettingsMenuItemId, "Light theme", true, currentTheme == Theme::light);
-    appearanceMenu.addItem(darkSettingsMenuItemId, "Dark theme", true, currentTheme == Theme::dark);
+        lightSettingsMenuItemId, l10n::text("menu.settings.theme.light"), true,
+        currentTheme == Theme::light);
+    appearanceMenu.addItem(
+        darkSettingsMenuItemId, l10n::text("menu.settings.theme.dark"), true,
+        currentTheme == Theme::dark);
 
     juce::PopupMenu fullscreenMenu;
     fullscreenMenu.addItem(
-        normalFullscreenMenuItemId, "Normal fullscreen", true,
+        normalFullscreenMenuItemId, l10n::text("menu.settings.fullscreen.normal"), true,
         selectedFullscreenMode == AppSettings::FullscreenMode::normal);
     fullscreenMenu.addItem(
-        kioskFullscreenMenuItemId, "Kiosk fullscreen", true,
+        kioskFullscreenMenuItemId, l10n::text("menu.settings.fullscreen.kiosk"), true,
         selectedFullscreenMode == AppSettings::FullscreenMode::kiosk);
 
     juce::PopupMenu menu;
     menu.setLookAndFeel(&appLookAndFeel);
-    menu.addSubMenu("Appearance", appearanceMenu);
-    menu.addSubMenu("Fullscreen mode", fullscreenMenu);
+    menu.addSubMenu(l10n::text("settings.appearance.title"), appearanceMenu);
+    menu.addSubMenu(l10n::text("menu.settings.fullscreen"), fullscreenMenu);
     menu.addItem(
         muteSettingsMenuItemId,
-        audioInputService.isMuted() ? "Unmute microphone" : "Mute microphone");
+        l10n::text(
+            audioInputService.isMuted() ? l10n::key("settings.audio.microphone.unmute")
+                                        : l10n::key("settings.audio.microphone.mute")));
     menu.addSeparator();
-    menu.addItem(openSettingsMenuItemId, "Open full settings...");
+    menu.addItem(openSettingsMenuItemId, l10n::text("menu.settings.open"));
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(
@@ -240,8 +246,8 @@ void MainComponent::showSettings()
 void MainComponent::importSettings()
 {
     settingsTransferChooser = std::make_unique<juce::FileChooser>(
-        "Import settings", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
-        "*.ptsettings", true);
+        l10n::text("settings.import"),
+        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.ptsettings", true);
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     settingsTransferChooser->launchAsync(
         juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
@@ -268,8 +274,8 @@ void MainComponent::importSettings()
             if (staged.status != SettingsImportStageStatus::ready || !staged.model.has_value())
             {
                 juce::AlertWindow::showMessageBoxAsync(
-                    juce::MessageBoxIconType::WarningIcon, "Settings import failed",
-                    juce::String::fromUTF8(staged.error.c_str()));
+                    juce::MessageBoxIconType::WarningIcon, l10n::text("settings.import.failed"),
+                    l10n::text(staged.error));
                 return;
             }
             safeThis->confirmSettingsImport(*staged.model);
@@ -278,13 +284,13 @@ void MainComponent::importSettings()
 
 void MainComponent::confirmSettingsImport(SettingsTransferModel model)
 {
-    auto activeWorkspace = juce::String{"Customized workspace"};
+    auto activeWorkspace = juce::String{l10n::text("settings.import.summary.customized-workspace")};
     if (const auto& activeSource = model.state.workspaceCatalog.activeSource;
         activeSource.has_value())
     {
         if (const auto* builtIn = WorkspaceBuiltIns::find(*activeSource))
         {
-            activeWorkspace = builtIn->name;
+            activeWorkspace = l10n::text(WorkspaceBuiltIns::nameKey(builtIn->id));
         }
         else
         {
@@ -299,17 +305,25 @@ void MainComponent::confirmSettingsImport(SettingsTransferModel model)
         }
     }
 
-    const auto summary =
-        "This replaces supported preferences and all named workspaces.\n\nTheme: " +
-        juce::String(model.state.theme == Theme::dark ? "Dark" : "Light") + "\nAudio: Microphone " +
-        (model.state.microphoneMuted ? "muted" : "enabled") + ", input gain " +
-        juce::String(model.state.inputGain, 2) + "\nActive workspace: " + activeWorkspace +
-        "\nNamed workspaces: " +
-        juce::String(static_cast<int>(model.state.workspaceCatalog.named.size()));
+    const auto summary = l10n::format(
+        "settings.import.summary",
+        {{"theme",
+          l10n::text(
+              model.state.theme == Theme::dark ? l10n::key("settings.appearance.theme.dark")
+                                               : l10n::key("settings.appearance.theme.light"))},
+         {"microphone",
+          l10n::text(
+              model.state.microphoneMuted ? l10n::key("settings.import.summary.muted")
+                                          : l10n::key("settings.import.summary.enabled"))},
+         {"gain", l10n::number(model.state.inputGain, 2)},
+         {"workspace", activeWorkspace},
+         {"workspaces",
+          l10n::number(static_cast<double>(model.state.workspaceCatalog.named.size()), 0)}});
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     juce::AlertWindow::showOkCancelBox(
-        juce::MessageBoxIconType::QuestionIcon, "Replace settings?", summary, "Import", "Cancel",
-        this,
+        juce::MessageBoxIconType::QuestionIcon, l10n::text("settings.import.confirm.title"),
+        summary, l10n::text("settings.import.confirm.import"),
+        l10n::text("settings.import.confirm.cancel"), this,
         juce::ModalCallbackFunction::create(
             [safeThis, model = std::move(model)](int response)
             {
@@ -326,8 +340,8 @@ void MainComponent::executeSettingsImport(const SettingsTransferModel& model)
     if (settingsFile == nullptr)
     {
         juce::AlertWindow::showMessageBoxAsync(
-            juce::MessageBoxIconType::WarningIcon, "Settings import failed",
-            "The application settings file is unavailable.");
+            juce::MessageBoxIconType::WarningIcon, l10n::text("settings.import.failed"),
+            l10n::text("settings.import.failed.no-settings-file"));
         return;
     }
 
@@ -357,11 +371,10 @@ void MainComponent::showSettingsImportResult(const SettingsImportResult& result)
     juce::AlertWindow::showMessageBoxAsync(
         result.status == SettingsImportStatus::imported ? juce::MessageBoxIconType::InfoIcon
                                                         : juce::MessageBoxIconType::WarningIcon,
-        result.status == SettingsImportStatus::imported ? "Settings imported"
-                                                        : "Settings import failed",
-        result.status == SettingsImportStatus::imported
-            ? "Your settings and workspaces were imported successfully."
-            : juce::String::fromUTF8(result.error.c_str()));
+        result.status == SettingsImportStatus::imported ? l10n::text("settings.import.done")
+                                                        : l10n::text("settings.import.failed"),
+        result.status == SettingsImportStatus::imported ? l10n::text("settings.import.done.message")
+                                                        : l10n::text(result.error));
 }
 
 void MainComponent::exportSettings()
@@ -376,13 +389,13 @@ void MainComponent::exportSettings()
     if (encoded.status != SettingsTransferEncodeStatus::encoded || !encoded.document.has_value())
     {
         juce::AlertWindow::showMessageBoxAsync(
-            juce::MessageBoxIconType::WarningIcon, "Settings export failed",
-            juce::String::fromUTF8(encoded.error.c_str()));
+            juce::MessageBoxIconType::WarningIcon, l10n::text("settings.export.failed"),
+            l10n::text(encoded.error));
         return;
     }
 
     settingsTransferChooser = std::make_unique<juce::FileChooser>(
-        "Export settings",
+        l10n::text("settings.export"),
         juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
             .getChildFile("practice-takes.ptsettings"),
         "*.ptsettings", true);
@@ -409,11 +422,11 @@ void MainComponent::exportSettings()
                     ? juce::MessageBoxIconType::InfoIcon
                     : juce::MessageBoxIconType::WarningIcon,
                 result.status == SettingsTransferExportStatus::exported
-                    ? "Settings exported"
-                    : "Settings export failed",
+                    ? l10n::text("settings.export.done")
+                    : l10n::text("settings.export.failed"),
                 result.status == SettingsTransferExportStatus::exported
-                    ? "Your portable settings were exported successfully."
-                    : juce::String::fromUTF8(result.error.c_str()));
+                    ? l10n::text("settings.export.done.message")
+                    : l10n::text(result.error));
         });
 }
 

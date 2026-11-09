@@ -1,5 +1,6 @@
 #include "../../../MainComponent.h"
 
+#include "../../../../localisation/Localisation.h"
 #include "../model/WorkspaceMenuModel.h"
 
 namespace
@@ -73,14 +74,18 @@ void MainComponent::showToolsMenu()
         const auto isOpen = entry != nullptr && entry->state.isOpen();
         const auto toolId = std::string{instance.toolId()};
         addToolItem(
-            into, "Dock in workspace", {instance, toolId, ToolMenuAction::dock}, true,
+            into, l10n::text("menu.tools.dock"), {instance, toolId, ToolMenuAction::dock}, true,
             presentation == WorkspaceToolState::Presentation::docked);
         addToolItem(
-            into, "Float in window", {instance, toolId, ToolMenuAction::floating}, true,
-            presentation == WorkspaceToolState::Presentation::floating);
-        addToolItem(into, "Rename...", {instance, toolId, ToolMenuAction::rename}, isOpen);
+            into, l10n::text("menu.tools.float"), {instance, toolId, ToolMenuAction::floating},
+            true, presentation == WorkspaceToolState::Presentation::floating);
+        addToolItem(
+            into, l10n::text("menu.tools.rename"), {instance, toolId, ToolMenuAction::rename},
+            isOpen);
         into.addSeparator();
-        addToolItem(into, "Close", {instance, toolId, ToolMenuAction::close}, isOpen);
+        addToolItem(
+            into, l10n::text("menu.tools.close"), {instance, toolId, ToolMenuAction::close},
+            isOpen);
     };
 
     for (const auto& definition : builtInToolRegistry().tools())
@@ -92,22 +97,27 @@ void MainComponent::showToolsMenu()
         juce::PopupMenu toolMenu;
         // "Open or focus" is an action, not a state, so it carries no tick.
         addToolItem(
-            toolMenu, "Open or focus", {focusTarget, definition.id, ToolMenuAction::openOrFocus});
+            toolMenu, l10n::text("menu.tools.open-or-focus"),
+            {focusTarget, definition.id, ToolMenuAction::openOrFocus});
         if (isMulti)
         {
             // Its reason is part of its text, so a disabled item is never a
             // mystery. Out of audio streams it stays clickable: choosing it
             // says what is using them, which a greyed-out item cannot.
             const auto verdict = canOpenAnotherInstance(definition.id);
-            juce::String text = "Open another";
+            juce::String text = l10n::text("menu.tools.open-another");
             if (verdict == ToolInstanceAllocator::OpenAnother::toolLimitReached)
             {
-                text << " (" << static_cast<int>(ToolInstanceAllocator::maximumInstancesPerTool)
-                     << " is the most)";
+                text = l10n::format(
+                    "menu.tools.open-another.at-most",
+                    {{"most",
+                      l10n::number(
+                          static_cast<double>(ToolInstanceAllocator::maximumInstancesPerTool),
+                          0)}});
             }
             else if (verdict == ToolInstanceAllocator::OpenAnother::noAudioStreamFree)
             {
-                text << " (no audio stream free)";
+                text = l10n::text("menu.tools.open-another.no-audio-stream");
             }
             addToolItem(
                 toolMenu, text, {{}, definition.id, ToolMenuAction::openAnother},
@@ -136,15 +146,16 @@ void MainComponent::showToolsMenu()
     const auto canArrangeSplit = workspaceLayoutState.canSplitRoot();
     juce::PopupMenu layoutMenu;
     layoutMenu.addItem(
-        horizontalLayoutMenuItemId, "Side by side", canArrangeSplit,
+        horizontalLayoutMenuItemId, l10n::text("menu.arrange.side-by-side"), canArrangeSplit,
         workspaceLayoutState.isRootOrientation(WorkspaceLayoutState::Orientation::horizontal));
     layoutMenu.addItem(
-        verticalLayoutMenuItemId, "Stacked", canArrangeSplit,
+        verticalLayoutMenuItemId, l10n::text("menu.arrange.stacked"), canArrangeSplit,
         workspaceLayoutState.isRootOrientation(WorkspaceLayoutState::Orientation::vertical));
     layoutMenu.addItem(
-        tabbedLayoutMenuItemId, "Tabbed", dockedCount >= 2, workspaceLayoutState.isFlattenedTabs());
+        tabbedLayoutMenuItemId, l10n::text("menu.arrange.tabbed"), dockedCount >= 2,
+        workspaceLayoutState.isFlattenedTabs());
     menu.addSeparator();
-    menu.addSubMenu("Arrange workspace", layoutMenu, canArrangeSplit || dockedCount >= 2);
+    menu.addSubMenu(l10n::text("menu.arrange"), layoutMenu, canArrangeSplit || dockedCount >= 2);
 
     const auto workspaceModel = WorkspaceMenuModel::fromCatalog(workspaceCatalog);
     juce::PopupMenu workspaceMenu;
@@ -160,19 +171,31 @@ void MainComponent::showToolsMenu()
         }
         const auto menuItemId = firstWorkspaceMenuItemId + static_cast<int>(workspaceIds.size());
         workspaceMenu.addItem(
-            menuItemId, juce::String::fromUTF8(entry.name.c_str()), true, entry.selected);
+            menuItemId,
+            entry.builtIn ? l10n::text(WorkspaceBuiltIns::nameKey(entry.id))
+                          : juce::String::fromUTF8(entry.name.c_str()),
+            true, entry.selected);
         workspaceIds.push_back(entry.id);
     }
     workspaceMenu.addSeparator();
-    workspaceMenu.addItem(saveWorkspaceMenuItemId, "Save As...", workspaceModel.canSaveAs);
     workspaceMenu.addItem(
-        overwriteWorkspaceMenuItemId, "Overwrite Current...", workspaceModel.canOverwrite);
-    workspaceMenu.addItem(renameWorkspaceMenuItemId, "Rename Current...", workspaceModel.canRename);
-    workspaceMenu.addItem(deleteWorkspaceMenuItemId, "Delete Current...", workspaceModel.canDelete);
+        saveWorkspaceMenuItemId, l10n::text("menu.workspaces.save-as"), workspaceModel.canSaveAs);
+    workspaceMenu.addItem(
+        overwriteWorkspaceMenuItemId, l10n::text("menu.workspaces.overwrite"),
+        workspaceModel.canOverwrite);
+    workspaceMenu.addItem(
+        renameWorkspaceMenuItemId, l10n::text("menu.workspaces.rename"), workspaceModel.canRename);
+    workspaceMenu.addItem(
+        deleteWorkspaceMenuItemId, l10n::text("menu.workspaces.delete"), workspaceModel.canDelete);
     workspaceMenu.addSeparator();
-    workspaceMenu.addItem(resetWorkspaceMenuItemId, "Reset to Pitch Practice...");
+    workspaceMenu.addItem(
+        resetWorkspaceMenuItemId,
+        l10n::format(
+            "menu.workspaces.reset",
+            {{"workspace",
+              l10n::text(WorkspaceBuiltIns::nameKey(WorkspaceBuiltIns::pitchPractice().id))}}));
     menu.addSeparator();
-    menu.addSubMenu("Workspaces", workspaceMenu);
+    menu.addSubMenu(l10n::text("menu.workspaces"), workspaceMenu);
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(

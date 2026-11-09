@@ -1,5 +1,6 @@
 #include "NoteViewComponent.h"
 
+#include "../../application/localisation/Localisation.h"
 #include "../../application/theme/MiniStaff.h"
 #include "../../platform/score/PitchNames.h"
 
@@ -107,7 +108,7 @@ void NoteViewComponent::applySettings(const ToolSettingsPayload& payload)
 
 std::vector<ToolComponent::MenuEntry> NoteViewComponent::optionsMenuEntries()
 {
-    MenuEntry clefMenu{"Clef", {}};
+    MenuEntry clefMenu{l10n::text("notes.menu.clef"), {}};
     const auto choice = [this](const juce::String& label, ClefChoice value)
     {
         return MenuEntry{
@@ -120,9 +121,10 @@ std::vector<ToolComponent::MenuEntry> NoteViewComponent::optionsMenuEntries()
             clef == value};
     };
     clefMenu.submenu = {
-        choice("Automatic", ClefChoice::automatic), choice("Treble", ClefChoice::treble),
-        choice("Bass", ClefChoice::bass),
-        choice("Treble, an octave down", ClefChoice::trebleOctaveDown)};
+        choice(l10n::text("notes.menu.clef.automatic"), ClefChoice::automatic),
+        choice(l10n::text("notes.menu.clef.treble"), ClefChoice::treble),
+        choice(l10n::text("notes.menu.clef.bass"), ClefChoice::bass),
+        choice(l10n::text("notes.menu.clef.treble-octave-down"), ClefChoice::trebleOctaveDown)};
     return {clefMenu};
 }
 
@@ -252,7 +254,7 @@ void NoteViewComponent::paintReading(juce::Graphics& graphics, juce::Rectangle<i
     }
     else
     {
-        text = "Sing or play a note";
+        text = l10n::text("notes.prompt");
     }
     graphics.setColour(colours.foreground);
     graphics.setFont(textFont(appearance::TextRole::heading, juce::Font::bold));
@@ -263,8 +265,10 @@ void NoteViewComponent::paintReading(juce::Graphics& graphics, juce::Rectangle<i
     graphics.setFont(textFont(appearance::TextRole::control));
     const auto aimingAt = target.target();
     graphics.drawText(
-        aimingAt != nullptr ? juce::String::fromUTF8(("Target " + aimingAt->name).c_str())
-                            : juce::String::fromUTF8(target.whyNone().c_str()),
+        aimingAt != nullptr
+            ? l10n::format(
+                  "target.heading", {{"note", juce::String::fromUTF8(aimingAt->name.c_str())}})
+            : l10n::text(target.whyNone()),
         area, juce::Justification::centredRight, true);
 }
 

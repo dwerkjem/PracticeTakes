@@ -1,6 +1,7 @@
 #include "InputLevelMeter.h"
 
 #include "../../platform/evaluation/OnsetDetector.h"
+#include "../localisation/Localisation.h"
 #include "../theme/AppLookAndFeel.h"
 #include "../theme/Theme.h"
 
@@ -38,10 +39,8 @@ InputLevelMeter::InputLevelMeter(
     : audio(audioInputService), threshold(std::move(thresholdDb)), listening(howLong),
       theme(initialTheme), meter(evaluation::OnsetSettings{}.windowSize), scratch(4096, 0.0f)
 {
-    setTitle("Input level");
-    setDescription(
-        "The microphone's level, with a line at Ignore sound below: sound under the line is "
-        "not heard as a note");
+    setTitle(l10n::text("settings.audio.input-level"));
+    setDescription(l10n::text("level.meter.description"));
     if (listening == Listening::always)
     {
         startListening();
@@ -100,7 +99,7 @@ void InputLevelMeter::startListening()
     // taking a slot that is not there.
     if (listening == Listening::whileShowing && audio.freeConsumerSlots() == 0)
     {
-        unavailable = "No audio stream is free to measure the level.";
+        unavailable = l10n::text("level.unavailable.no-stream");
         return;
     }
 
@@ -139,13 +138,13 @@ void InputLevelMeter::audioInputStateChanged(AudioInputService::InputState state
     switch (state)
     {
     case AudioInputService::InputState::disconnected:
-        stateReason = "No microphone.";
+        stateReason = l10n::text("level.unavailable.no-microphone");
         break;
     case AudioInputService::InputState::opening:
-        stateReason = "Waiting for the microphone.";
+        stateReason = l10n::text("audio.input.opening");
         break;
     case AudioInputService::InputState::muted:
-        stateReason = "Microphone muted.";
+        stateReason = l10n::text("audio.input.muted");
         break;
     case AudioInputService::InputState::active:
     case AudioInputService::InputState::clipping:

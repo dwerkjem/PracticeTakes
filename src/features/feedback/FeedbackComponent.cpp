@@ -1,4 +1,5 @@
 #include "FeedbackComponent.h"
+#include "../../application/localisation/Localisation.h"
 
 #include <string_view>
 
@@ -130,77 +131,78 @@ FeedbackComponent::FeedbackComponent(
     const juce::String& initialContext)
     : Thread("Feedback submission"), properties(propertiesFile)
 {
-    setTitle("Send feedback form");
-    setDescription("Submit product feedback without leaving Practice Takes");
+    setTitle(l10n::text("feedback.form.title"));
+    setDescription(l10n::text("feedback.form.description"));
 
-    typeLabel.setText("Feedback type (required)", juce::dontSendNotification);
+    typeLabel.setText(l10n::text("feedback.type.label"), juce::dontSendNotification);
     addAndMakeVisible(typeLabel);
-    for (const auto& item : std::array<juce::String, 6>{
-             "Bug", "Usability problem", "Feature request", "Audio problem",
-             "Notation/MIDI problem", "Other"})
+    // In the order of typeName's numbering. Shown translated; the message
+    // the maintainer receives names the type in English (typeName).
+    for (const auto item :
+         {l10n::key("feedback.type.bug"), l10n::key("feedback.type.usability"),
+          l10n::key("feedback.type.feature"), l10n::key("feedback.type.audio"),
+          l10n::key("feedback.type.notation"), l10n::key("feedback.type.other")})
     {
-        typeBox.addItem(item, typeBox.getNumItems() + 1);
+        typeBox.addItem(l10n::text(item), typeBox.getNumItems() + 1);
     }
     typeBox.setSelectedId(1, juce::dontSendNotification);
-    typeBox.setTitle("Feedback type, required");
+    typeBox.setTitle(l10n::text("feedback.type.title"));
     typeBox.setExplicitFocusOrder(1);
     addAndMakeVisible(typeBox);
 
     titleLabel.setText(
-        "Short title (required, 120 characters maximum)", juce::dontSendNotification);
+        l10n::format(
+            "feedback.title.label",
+            {{"most", l10n::number(static_cast<double>(maximumTitleLength), 0)}}),
+        juce::dontSendNotification);
     descriptionLabel.setText(
-        "Detailed description (required, 6,500 characters maximum)", juce::dontSendNotification);
-    reproductionLabel.setText("Reproduction steps (optional)", juce::dontSendNotification);
-    emailLabel.setText(
-        "Contact email (optional and saved with the draft until sent)", juce::dontSendNotification);
-    contextLabel.setText(
-        "Feature context (optional and fully editable)", juce::dontSendNotification);
+        l10n::format(
+            "feedback.description.label",
+            {{"most", l10n::number(static_cast<double>(maximumDescriptionLength), 0)}}),
+        juce::dontSendNotification);
+    reproductionLabel.setText(
+        l10n::text("feedback.reproduction.label"), juce::dontSendNotification);
+    emailLabel.setText(l10n::text("feedback.email.label"), juce::dontSendNotification);
+    contextLabel.setText(l10n::text("feedback.context.label"), juce::dontSendNotification);
     for (auto* label :
          {&titleLabel, &descriptionLabel, &reproductionLabel, &emailLabel, &contextLabel})
     {
         addAndMakeVisible(label);
     }
 
-    configureEditor(titleEditor, "Short title, required", 2, false);
-    configureEditor(descriptionEditor, "Detailed description, required", 3, true);
-    configureEditor(reproductionEditor, "Reproduction steps, optional", 4, true);
-    configureEditor(emailEditor, "Contact email, optional", 5, false);
-    configureEditor(contextEditor, "Feature context, optional and removable", 6, true);
+    configureEditor(titleEditor, l10n::text("feedback.title.title"), 2, false);
+    configureEditor(descriptionEditor, l10n::text("feedback.description.title"), 3, true);
+    configureEditor(reproductionEditor, l10n::text("feedback.reproduction.title"), 4, true);
+    configureEditor(emailEditor, l10n::text("feedback.email.title"), 5, false);
+    configureEditor(contextEditor, l10n::text("feedback.context.title"), 6, true);
     titleEditor.setInputRestrictions(maximumTitleLength);
     descriptionEditor.setInputRestrictions(maximumDescriptionLength);
     reproductionEditor.setInputRestrictions(maximumReproductionLength);
     emailEditor.setInputRestrictions(maximumEmailLength);
 
-    environmentLabel.setText(
-        "Optional diagnostics (disabled by default; select for this report). Every submission "
-        "also sends the application version and an anonymous installation identifier.",
-        juce::dontSendNotification);
-    environmentLabel.setTitle("Optional diagnostic information");
-    environmentLabel.setDescription(
-        "Optional diagnostics are disabled by default. The application version and an anonymous "
-        "installation identifier are sent with every submission so the service can rate-limit "
-        "reports.");
+    environmentLabel.setText(l10n::text("feedback.diagnostics.label"), juce::dontSendNotification);
+    environmentLabel.setTitle(l10n::text("feedback.diagnostics.title"));
+    environmentLabel.setDescription(l10n::text("feedback.diagnostics.description"));
     addAndMakeVisible(environmentLabel);
-    versionDiagnostic.setTitle("Include application version in the feedback message");
-    operatingSystemDiagnostic.setTitle("Include operating system in the feedback message");
-    screenshotDiagnostic.setTitle(
-        "Capture all open Practice Takes windows except this feedback window");
+    versionDiagnostic.setTitle(l10n::text("feedback.diagnostics.version.title"));
+    operatingSystemDiagnostic.setTitle(l10n::text("feedback.diagnostics.os.title"));
+    screenshotDiagnostic.setTitle(l10n::text("feedback.diagnostics.screenshot.title"));
     addAndMakeVisible(versionDiagnostic);
     addAndMakeVisible(operatingSystemDiagnostic);
     addAndMakeVisible(screenshotDiagnostic);
 
     validationLabel.setColour(juce::Label::textColourId, juce::Colours::orange);
-    validationLabel.setTitle("Submission status");
-    validationLabel.setDescription("Feedback validation and submission status");
+    validationLabel.setTitle(l10n::text("feedback.status.title"));
+    validationLabel.setDescription(l10n::text("feedback.status.description"));
     addAndMakeVisible(validationLabel);
 
     previewButton.setExplicitFocusOrder(7);
-    previewButton.setTitle("Preview feedback submission");
+    previewButton.setTitle(l10n::text("feedback.preview.title"));
     previewButton.onClick = [this] { preview(); };
     addAndMakeVisible(previewButton);
 
     submitButton.setExplicitFocusOrder(8);
-    submitButton.setTitle("Submit feedback");
+    submitButton.setTitle(l10n::text("feedback.submit"));
     submitButton.onClick = [this] { submit(); };
     addAndMakeVisible(submitButton);
 
@@ -307,29 +309,32 @@ juce::String FeedbackComponent::validate() const
     const auto draft = currentDraft();
     if (draft.title.isEmpty())
     {
-        return "Enter a short title.";
+        return l10n::text("feedback.invalid.no-title");
     }
     if (draft.description.length() < 3)
     {
-        return "Enter a detailed description of at least 3 characters.";
+        return l10n::text("feedback.invalid.short-description");
     }
     if (draft.title.length() > maximumTitleLength ||
         draft.description.length() > maximumDescriptionLength ||
         draft.reproductionSteps.length() > maximumReproductionLength)
     {
-        return "One or more fields exceed the displayed size limit.";
+        return l10n::text("feedback.invalid.field-too-long");
     }
     if (previewText(draft).length() > 8000)
     {
-        return "The complete submission is too large. Shorten the description or steps.";
+        return l10n::text("feedback.invalid.too-large");
     }
     if (!looksLikeEmail(draft.contactEmail))
     {
-        return "Enter a valid contact email or leave it blank.";
+        return l10n::text("feedback.invalid.email");
     }
     return {};
 }
 
+// The message the maintainer receives, which the preview shows the sender as
+// it will be sent. In English whatever the interface language: its reader is
+// the maintainer (docs/development/architecture/localisation.md).
 juce::String FeedbackComponent::previewText(const Draft& draft) const
 {
     auto text = "Type: " + typeName(draft.type) + "\nTitle: " + draft.title + "\n\nDescription:\n" +
@@ -366,10 +371,10 @@ juce::String FeedbackComponent::previewText(const Draft& draft) const
 
 juce::String FeedbackComponent::previewSummary(const Draft& draft) const
 {
-    return previewText(draft) + "\n\nAlways sent with every submission:\nApplication version: " +
-           juce::String(ProjectInfo::versionString) +
-           "\nAnonymous installation identifier, reused for later reports so the feedback "
-           "service can rate-limit submissions";
+    return previewText(draft) + "\n\n" +
+           l10n::format(
+               "feedback.preview.always-sent",
+               {{"version", juce::String(ProjectInfo::versionString)}});
 }
 
 void FeedbackComponent::setContextTag(const juce::String& toolOrWorkflowName)
@@ -456,7 +461,8 @@ void FeedbackComponent::preview()
     if (!draft.includeScreenshot)
     {
         juce::AlertWindow::showMessageBoxAsync(
-            juce::MessageBoxIconType::InfoIcon, "Feedback preview", previewSummary(draft));
+            juce::MessageBoxIconType::InfoIcon, l10n::text("feedback.preview"),
+            previewSummary(draft));
         return;
     }
 
@@ -466,7 +472,7 @@ void FeedbackComponent::preview()
         !juce::Base64::convertFromBase64(decoded, draft.screenshotBase64))
     {
         setSubmissionState(
-            SubmissionState::failed, "The application screenshot could not be previewed.");
+            SubmissionState::failed, l10n::text("feedback.status.no-screenshot-preview"));
         return;
     }
 
@@ -474,7 +480,7 @@ void FeedbackComponent::preview()
         juce::ImageFileFormat::loadFrom(decoded.getData(), decoded.getDataSize());
     juce::DialogWindow::LaunchOptions options;
     options.content.setOwned(new FeedbackPreview(previewSummary(draft), screenshot));
-    options.dialogTitle = "Feedback preview";
+    options.dialogTitle = l10n::text("feedback.preview");
     options.dialogBackgroundColour = findColour(juce::ResizableWindow::backgroundColourId);
     options.escapeKeyTriggersCloseButton = true;
     options.useNativeTitleBar = true;
@@ -502,12 +508,12 @@ void FeedbackComponent::submit()
         if (pendingDraft.screenshotBase64.isEmpty())
         {
             setSubmissionState(
-                SubmissionState::failed, "The application screenshot could not be captured.");
+                SubmissionState::failed, l10n::text("feedback.status.no-screenshot"));
             return;
         }
     }
     saveDraft(pendingDraft);
-    setSubmissionState(SubmissionState::submitting, "Submitting feedback...");
+    setSubmissionState(SubmissionState::submitting, l10n::text("feedback.status.submitting"));
     startThread();
 }
 
@@ -594,18 +600,16 @@ void FeedbackComponent::run()
     const juce::String endpoint{PRACTICE_TAKES_FEEDBACK_ENDPOINT};
     if (endpoint.isEmpty() || !endpoint.startsWithIgnoreCase("https://"))
     {
-        juce::String detail("Queued locally; the feedback service is unavailable.");
-        if (endpoint.isNotEmpty())
-        {
-            detail = "Queued locally; the feedback service is not configured for a secure "
-                     "HTTPS connection.";
-        }
+        // Chosen here, rendered on the message thread, which owns the
+        // catalogue.
+        const auto detail = endpoint.isNotEmpty() ? l10n::key("feedback.status.queued.insecure")
+                                                  : l10n::key("feedback.status.queued.unavailable");
         juce::MessageManager::callAsync(
             [safe = juce::Component::SafePointer(this), detail]
             {
                 if (safe != nullptr)
                 {
-                    safe->setSubmissionState(SubmissionState::queued, detail);
+                    safe->setSubmissionState(SubmissionState::queued, l10n::text(detail));
                 }
             });
         return;
@@ -645,8 +649,7 @@ void FeedbackComponent::run()
                 if (safe != nullptr)
                 {
                     safe->setSubmissionState(
-                        SubmissionState::queued,
-                        "Queued locally; submission will need to be retried.");
+                        SubmissionState::queued, l10n::text("feedback.status.queued.retry"));
                 }
             });
         return;
@@ -712,16 +715,21 @@ void FeedbackComponent::run()
                 safe->operatingSystemDiagnostic.setToggleState(false, juce::dontSendNotification);
                 safe->screenshotDiagnostic.setToggleState(false, juce::dontSendNotification);
                 safe->setSubmissionState(
-                    SubmissionState::succeeded, "Feedback submitted successfully. Thank you.");
+                    SubmissionState::succeeded, l10n::text("feedback.status.submitted"));
             }
             else
             {
-                auto detail = "Submission failed (HTTP " + juce::String(submissionStatus) + ").";
-                if (submissionError.isNotEmpty())
-                {
-                    detail += " " + submissionError;
-                }
-                detail += " Your draft has been preserved.";
+                // The service's own explanation is its operator's English,
+                // passed on as it came.
+                const auto detail =
+                    submissionError.isNotEmpty()
+                        ? l10n::format(
+                              "feedback.status.failed.because",
+                              {{"status", juce::String(submissionStatus)},
+                               {"reason", submissionError}})
+                        : l10n::format(
+                              "feedback.status.failed",
+                              {{"status", juce::String(submissionStatus)}});
                 safe->setSubmissionState(SubmissionState::failed, detail);
             }
         });

@@ -1,4 +1,5 @@
 #include "HarmonicAnalyzerComponent.h"
+#include "../../../application/localisation/Localisation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -54,16 +55,16 @@ void HarmonicAnalyzerComponent::audioInputStateChanged(AudioInputService::InputS
     switch (state)
     {
     case AudioInputService::InputState::disconnected:
-        audioErrorMessage = "Microphone disconnected";
+        audioErrorMessage = l10n::text("harmonics.input.disconnected");
         break;
     case AudioInputService::InputState::opening:
-        audioErrorMessage = "Waiting for the microphone";
+        audioErrorMessage = l10n::text("harmonics.input.opening");
         break;
     case AudioInputService::InputState::muted:
-        audioErrorMessage = "Microphone muted";
+        audioErrorMessage = l10n::text("harmonics.input.muted");
         break;
     case AudioInputService::InputState::clipping:
-        audioErrorMessage = "Microphone input is clipping";
+        audioErrorMessage = l10n::text("harmonics.input.clipping");
         break;
     case AudioInputService::InputState::active:
         audioErrorMessage.clear();
@@ -149,7 +150,8 @@ void HarmonicAnalyzerComponent::drawCompactHarmonics(juce::Graphics& graphics, c
     // around it was the part that did not fit.
     const auto heading =
         currentResult.fundamentalHz > 0.0
-            ? juce::String(currentResult.fundamentalHz, 1) + " Hz"
+            ? l10n::format(
+                  "harmonics.hertz", {{"hertz", l10n::number(currentResult.fundamentalHz, 1)}})
             : (audioErrorMessage.isNotEmpty() ? audioErrorMessage : juce::String("--"));
     graphics.setColour(appPalette.foreground);
     graphics.setFont(textFont(appearance::TextRole::body, juce::Font::bold));
@@ -236,8 +238,10 @@ void HarmonicAnalyzerComponent::paint(juce::Graphics& graphics)
     graphics.setFont(textFont(appearance::TextRole::panelHeading, juce::Font::bold));
     const auto fundamentalText =
         currentResult.fundamentalHz > 0.0
-            ? "Fundamental " + juce::String(currentResult.fundamentalHz, 1) + " Hz"
-            : "Listening for a sustained pitch";
+            ? l10n::format(
+                  "harmonics.fundamental",
+                  {{"hertz", l10n::number(currentResult.fundamentalHz, 1)}})
+            : l10n::text("harmonics.listening");
     graphics.drawText(
         fundamentalText, status.removeFromTop(scaledHeight(28)), juce::Justification::centredLeft);
 
@@ -250,16 +254,18 @@ void HarmonicAnalyzerComponent::paint(juce::Graphics& graphics)
     }
     else if (!currentResult.isPitched)
     {
-        detail = "Uncertain or inharmonic input";
+        detail = l10n::text("harmonics.uncertain");
     }
     else if (currentResult.relativeAmplitudes[0] < 0.2f)
     {
-        detail = "Weak fundamental - profile anchored to the strongest overtone";
+        detail = l10n::text("harmonics.weak-fundamental");
     }
     else
     {
-        detail = "Brightness " + juce::String(currentResult.spectralCentroidHz, 0) +
-                 " Hz  |  confidence " + juce::String(currentResult.confidence * 100.0f, 0) + "%";
+        detail = l10n::format(
+            "harmonics.detail",
+            {{"brightness", l10n::number(currentResult.spectralCentroidHz, 0)},
+             {"confidence", l10n::number(currentResult.confidence * 100.0, 0)}});
     }
     graphics.drawText(detail, status, juce::Justification::centredLeft);
 
@@ -291,8 +297,8 @@ void HarmonicAnalyzerComponent::paint(juce::Graphics& graphics)
     graphics.fillRoundedRectangle(historyBounds.toFloat(), 8.0f);
     graphics.setColour(palette.muted);
     graphics.drawText(
-        "Relative harmonic amplitudes over time",
-        historyBounds.reduced(8).removeFromTop(scaledHeight(20)), juce::Justification::centredLeft);
+        l10n::text("harmonics.history"), historyBounds.reduced(8).removeFromTop(scaledHeight(20)),
+        juce::Justification::centredLeft);
     if (historyCount < 2)
     {
         return;

@@ -93,12 +93,17 @@ TEST_CASE("a review lists every result in time order, extras included", "[evalua
     const NoteReport report = judgeNotes(recorded, 0);
     const std::vector<ReviewRow> rows = reviewRows(recorded, report);
     REQUIRE(rows.size() == 5);
-    CHECK(rows[0].text == "Bar 1, beat 1 \xC2\xB7 G4 \xC2\xB7 correct \xC2\xB7 on time");
-    CHECK(rows[1].text == "Bar 1, beat 2 \xC2\xB7 G4 \xC2\xB7 correct \xC2\xB7 on time");
-    CHECK(rows[2].text == "Bar 1, beat 2 \xC2\xB7 G#5 \xC2\xB7 extra");
-    CHECK(
-        rows[3].text == "Bar 1, beat 3 \xC2\xB7 Ab4 \xC2\xB7 wrong, played B4 \xC2\xB7 50 ms late");
-    CHECK(rows[4].text == "Bar 1, beat 4 \xC2\xB7 G4 \xC2\xB7 missed");
+    CHECK(rows[0].bar == 0);
+    CHECK(rows[0].beat == 0);
+    CHECK(rows[1].beat == 1);
+    CHECK(rows[2].beat == 1);
+    CHECK(rows[3].beat == 2);
+    CHECK(rows[4].beat == 3);
+    CHECK(report.results[2].outcome == NoteOutcome::wrong);
+    CHECK(report.results[2].playedMidi == std::optional<int>{71});
+    CHECK(report.results[2].timing == TimingVerdict::late);
+    CHECK(report.results[3].outcome == NoteOutcome::missed);
+    CHECK(writtenNameOf(recorded, report.results[2]) == "Ab4");
 
     CHECK_FALSE(rows[0].mistake);
     CHECK(rows[2].mistake);
@@ -107,9 +112,7 @@ TEST_CASE("a review lists every result in time order, extras included", "[evalua
     CHECK(rows[3].tick == 2.0 * score::ticksPerQuarterNote);
     CHECK(rows[4].mistake);
 
-    CHECK(
-        summaryLine(report) ==
-        "2 correct \xC2\xB7 1 wrong \xC2\xB7 1 missed \xC2\xB7 1 extra \xC2\xB7 1 late");
+    CHECK(momentsOf(report).late == 1);
 }
 
 TEST_CASE("a chord's early or late counts once", "[evaluation][review]")
@@ -124,8 +127,9 @@ TEST_CASE("a chord's early or late counts once", "[evaluation][review]")
         report.results.push_back(result);
     }
     report.summary.correct = 3;
-    CHECK(summaryLine(report) == "3 correct \xC2\xB7 1 late");
-    CHECK(summaryLine(NoteReport{}) == "Nothing to judge");
+    CHECK(momentsOf(report).late == 1);
+    CHECK(momentsOf(report).onTime == 0);
+    CHECK(momentsOf(NoteReport{}).late == 0);
 }
 
 TEST_CASE("a take is reviewed against the part it matches best", "[evaluation][review]")

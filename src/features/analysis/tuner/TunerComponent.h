@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 
 #include "../../../application/configuration/AppDefaults.h"
+#include "../../../application/localisation/Localisation.h"
 #include "../../../application/theme/Theme.h"
 #include "../../../application/tools/CompactPresentation.h"
 #include "../../../application/tools/ToolComponent.h"
@@ -227,7 +228,7 @@ class TunerComponent final
     juce::Slider dropoutSlider;
     juce::Slider durationSlider;
     juce::Slider scaleSlider;
-    juce::TextButton clearGraphButton{"Clear graph"};
+    juce::TextButton clearGraphButton{l10n::text("tuner.clear-graph")};
 
     PitchTracker pitchTracker;
 

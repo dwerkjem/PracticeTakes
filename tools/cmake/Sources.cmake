@@ -79,12 +79,15 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/ui/workspace/shell/MainComponentWorkspaceDrag.cpp
     src/application/shell/ui/workspace/shell/MainComponentWorkspaceLayout.cpp
     src/application/shell/ui/workspace/shell/MainComponentWorkspaceMenu.cpp
+    src/application/shell/ui/workspace/shell/WorkspaceActionText.h
     src/application/shell/ui/workspace/shell/MainComponentWorkspaceManagement.cpp
     src/application/shell/ui/workspace/shell/MainComponentWorkspacePresentation.cpp
     src/application/shell/ui/workspace/shell/MainComponentWorkspaceSnapshot.cpp
     src/application/localisation/Localisation.cpp
     src/application/localisation/Localisation.h
     src/application/localisation/LocalisationRules.h
+    src/application/localisation/TakeText.cpp
+    src/application/localisation/TakeText.h
     src/application/testcontrol/ApprovedWindowStates.cpp
     src/application/testcontrol/ApprovedWindowStates.h
     src/application/testcontrol/SyntheticTake.h
@@ -126,6 +129,7 @@ set(PRACTICE_TAKES_SOURCES
     src/features/analysis/harmonics/HarmonicAnalyzerComponent.cpp
     src/features/analysis/harmonics/HarmonicAnalyzerComponent.h
     src/features/analysis/tuner/TargetPickerPanel.h
+    src/features/analysis/tuner/TargetReadingText.h
     src/features/analysis/tuner/TunerComponent.cpp
     src/features/analysis/tuner/TunerComponent.h
     src/features/analysis/tuner/TunerSettingsCodec.cpp
@@ -338,6 +342,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
     src/tests/application/localisation/LocalisationRulesTests.cpp
     src/tests/application/localisation/LocalisationTests.cpp
+    src/tests/application/localisation/TakeTextTests.cpp
     src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp
     src/tests/application/testcontrol/ApprovedWindowStatesTests.cpp
     src/tests/application/testcontrol/SyntheticTakeTests.cpp
@@ -360,6 +365,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
     src/tests/features/analysis/tuner/TunerSettingsCodecTests.cpp
     src/tests/features/analysis/tuner/TunerZonesTests.cpp
+    src/tests/features/analysis/tuner/TargetReadingTextTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
     src/tests/features/level/InputLevelSettingsTests.cpp
     src/tests/features/notes/NoteViewModelTests.cpp
@@ -444,6 +450,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/application/configuration/SettingsTransferCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.cpp
     src/application/localisation/Localisation.cpp
+    src/application/localisation/TakeText.cpp
     src/application/shell/ui/score/BundledSampleScore.cpp
     src/application/shell/ui/score/ScoreImportSummary.cpp
     src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp

@@ -1,5 +1,6 @@
 #include "WorkspaceCatalogCodec.h"
 
+#include "../../../../localisation/LocalisationRules.h"
 #include "WorkspaceBuiltIns.h"
 #include "WorkspaceNormalizer.h"
 #include "application/tools/ToolInstanceLabel.h"
@@ -471,7 +472,7 @@ WorkspaceCatalogDecodeResult WorkspaceCatalogCodec::decode(
         return {
             .status = WorkspaceCatalogDecodeStatus::tooLarge,
             .catalog = std::nullopt,
-            .error = "Workspace catalog exceeds the 4 MiB limit"};
+            .error = std::string(l10n::key("workspace.catalogue.error.too-large"))};
     }
 
     juce::var parsed;
@@ -481,7 +482,7 @@ WorkspaceCatalogDecodeResult WorkspaceCatalogCodec::decode(
         return {
             .status = WorkspaceCatalogDecodeStatus::invalid,
             .catalog = std::nullopt,
-            .error = parseResult.getErrorMessage().toStdString()};
+            .error = std::string(l10n::key("workspace.catalogue.error.not-json"))};
     }
 
     const auto* root = parsed.getDynamicObject();
@@ -492,21 +493,21 @@ WorkspaceCatalogDecodeResult WorkspaceCatalogCodec::decode(
         return {
             .status = WorkspaceCatalogDecodeStatus::invalid,
             .catalog = std::nullopt,
-            .error = "Workspace catalog version is invalid"};
+            .error = std::string(l10n::key("workspace.catalogue.error.version"))};
     }
     if (version > WorkspaceCatalog::currentVersion)
     {
         return {
             .status = WorkspaceCatalogDecodeStatus::newerSchema,
             .catalog = std::nullopt,
-            .error = "Workspace catalog uses a newer schema"};
+            .error = std::string(l10n::key("workspace.catalogue.error.newer"))};
     }
     if (version != WorkspaceCatalog::currentVersion || !hasProperty(*root, "named"))
     {
         return {
             .status = WorkspaceCatalogDecodeStatus::invalid,
             .catalog = std::nullopt,
-            .error = "Workspace catalog structure is invalid"};
+            .error = std::string(l10n::key("workspace.catalogue.error.structure"))};
     }
 
     const auto* namedValues = property(*root, "named").getArray();
@@ -516,7 +517,7 @@ WorkspaceCatalogDecodeResult WorkspaceCatalogCodec::decode(
         return {
             .status = WorkspaceCatalogDecodeStatus::invalid,
             .catalog = std::nullopt,
-            .error = "Workspace catalog has too many named workspaces"};
+            .error = std::string(l10n::key("workspace.catalogue.error.too-many"))};
     }
 
     WorkspaceCatalog catalog;

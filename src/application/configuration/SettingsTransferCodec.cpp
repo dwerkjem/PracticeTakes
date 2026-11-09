@@ -1,5 +1,6 @@
 #include "SettingsTransferCodec.h"
 
+#include "../localisation/LocalisationRules.h"
 #include "AudioDeviceStateTransfer.h"
 
 #include <juce_core/juce_core.h>
@@ -168,17 +169,17 @@ validateImportedWorkspaceNames(const juce::var& workspaceValue, std::string& err
             juce::String::fromUTF8(name.c_str()).trim().toLowerCase().toStdString();
         if (!ids.insert(id).second)
         {
-            error = "Settings transfer contains duplicate workspace IDs";
+            error = std::string(l10n::key("settings.transfer.error.duplicate-workspace-ids"));
             return false;
         }
         if (!names.insert(foldedName).second)
         {
-            error = "Settings transfer contains duplicate workspace names";
+            error = std::string(l10n::key("settings.transfer.error.duplicate-workspace-names"));
             return false;
         }
         if (reservedNames.contains(foldedName))
         {
-            error = "Settings transfer contains a reserved built-in workspace name";
+            error = std::string(l10n::key("settings.transfer.error.reserved-workspace-name"));
             return false;
         }
     }
@@ -218,7 +219,7 @@ SettingsTransferEncodeResult SettingsTransferCodec::encode(const SettingsTransfe
         return {
             .status = SettingsTransferEncodeStatus::invalidModel,
             .document = std::nullopt,
-            .error = "Settings transfer model schema is unsupported"};
+            .error = std::string(l10n::key("settings.transfer.error.model-unsupported"))};
     }
 
     auto root = std::make_unique<juce::DynamicObject>();
@@ -266,7 +267,7 @@ SettingsTransferEncodeResult SettingsTransferCodec::encode(const SettingsTransfe
         return {
             .status = SettingsTransferEncodeStatus::tooLarge,
             .document = std::nullopt,
-            .error = "Settings transfer document exceeds the 4 MiB limit"};
+            .error = std::string(l10n::key("settings.transfer.error.too-large"))};
     }
 
     return {
@@ -285,7 +286,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::tooLarge,
             .model = std::nullopt,
-            .error = "Settings transfer document exceeds the 4 MiB limit"};
+            .error = std::string(l10n::key("settings.transfer.error.too-large"))};
     }
 
     juce::var parsed;
@@ -295,7 +296,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = parseResult.getErrorMessage().toStdString()};
+            .error = std::string(l10n::key("settings.transfer.error.not-json"))};
     }
 
     const auto* root = parsed.getDynamicObject();
@@ -309,7 +310,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = "Settings transfer document is missing required fields"};
+            .error = std::string(l10n::key("settings.transfer.error.missing-fields"))};
     }
 
     if (format != formatMarker)
@@ -317,21 +318,21 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = "Settings transfer format marker is invalid"};
+            .error = std::string(l10n::key("settings.transfer.error.not-a-settings-file"))};
     }
     if (schemaVersion > SettingsTransferModel::currentSchemaVersion)
     {
         return {
             .status = SettingsTransferDecodeStatus::newerSchema,
             .model = std::nullopt,
-            .error = "Settings transfer uses a newer schema"};
+            .error = std::string(l10n::key("settings.transfer.error.newer"))};
     }
     if (schemaVersion < 1)
     {
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = "Settings transfer schema is unsupported"};
+            .error = std::string(l10n::key("settings.transfer.error.unsupported"))};
     }
 
     SettingsTransferModel model;
@@ -341,7 +342,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = "Settings transfer applicationVersion is invalid"};
+            .error = std::string(l10n::key("settings.transfer.error.version"))};
     }
 
     const auto* settings = property(*root, "settings").getDynamicObject();
@@ -352,7 +353,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = "Settings transfer settings section is incomplete"};
+            .error = std::string(l10n::key("settings.transfer.error.incomplete"))};
     }
 
     const auto* appearance = property(*settings, "appearance").getDynamicObject();
@@ -364,7 +365,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = "Settings transfer sections must be objects"};
+            .error = std::string(l10n::key("settings.transfer.error.sections"))};
     }
 
     std::string theme;
@@ -396,7 +397,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
         return {
             .status = SettingsTransferDecodeStatus::invalid,
             .model = std::nullopt,
-            .error = "Settings transfer primitive fields are invalid"};
+            .error = std::string(l10n::key("settings.transfer.error.fields"))};
     }
 
     const auto* floatingBounds =
@@ -414,7 +415,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
             return {
                 .status = SettingsTransferDecodeStatus::invalid,
                 .model = std::nullopt,
-                .error = "Settings transfer tuner floating bounds are invalid"};
+                .error = std::string(l10n::key("settings.transfer.error.tuner-bounds"))};
         }
         if (hasProperty(*floatingBounds, "spectrogram") &&
             !readString(property(*floatingBounds, "spectrogram"), spectrogramBounds))
@@ -422,7 +423,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
             return {
                 .status = SettingsTransferDecodeStatus::invalid,
                 .model = std::nullopt,
-                .error = "Settings transfer spectrogram floating bounds are invalid"};
+                .error = std::string(l10n::key("settings.transfer.error.spectrogram-bounds"))};
         }
         if (hasProperty(*floatingBounds, "harmonicAnalyzer") &&
             !readString(property(*floatingBounds, "harmonicAnalyzer"), harmonicBounds))
@@ -430,7 +431,7 @@ SettingsTransferDecodeResult SettingsTransferCodec::decode(
             return {
                 .status = SettingsTransferDecodeStatus::invalid,
                 .model = std::nullopt,
-                .error = "Settings transfer harmonic floating bounds are invalid"};
+                .error = std::string(l10n::key("settings.transfer.error.harmonics-bounds"))};
         }
     }
 

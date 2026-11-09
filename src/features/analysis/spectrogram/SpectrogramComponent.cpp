@@ -1,4 +1,5 @@
 #include "SpectrogramComponent.h"
+#include "../../../application/localisation/Localisation.h"
 
 #include <algorithm>
 #include <array>
@@ -98,13 +99,13 @@ void SpectrogramComponent::audioInputStateChanged(AudioInputService::InputState 
     switch (state)
     {
     case AudioInputService::InputState::disconnected:
-        audioErrorMessage = "Microphone disconnected.";
+        audioErrorMessage = l10n::text("audio.input.disconnected");
         break;
     case AudioInputService::InputState::opening:
-        audioErrorMessage = "Waiting for the microphone.";
+        audioErrorMessage = l10n::text("audio.input.opening");
         break;
     case AudioInputService::InputState::muted:
-        audioErrorMessage = "Microphone muted.";
+        audioErrorMessage = l10n::text("audio.input.muted");
         break;
     case AudioInputService::InputState::clipping:
     case AudioInputService::InputState::active:
@@ -238,7 +239,8 @@ juce::String SpectrogramComponent::frequencyLabel(double frequency) const
 {
     if (frequency < 1000.0)
     {
-        return juce::String(static_cast<int>(frequency)) + " Hz";
+        return l10n::format(
+            "spectrogram.axis.hertz", {{"hertz", l10n::number(std::floor(frequency), 0)}});
     }
 
     // A decimal point earns its place only when it says something -- 1500 Hz
@@ -251,7 +253,8 @@ juce::String SpectrogramComponent::frequencyLabel(double frequency) const
     const auto inKiloHertz = frequency / 1000.0;
     const auto isWholeNumber = std::abs(inKiloHertz - std::round(inKiloHertz)) < 0.001;
     const auto decimalPlaces = isWholeNumber ? 0 : 1;
-    return juce::String(inKiloHertz, decimalPlaces) + " kHz";
+    return l10n::format(
+        "spectrogram.axis.kilohertz", {{"kilohertz", l10n::number(inKiloHertz, decimalPlaces)}});
 }
 
 void SpectrogramComponent::drawFrequencyGrid(

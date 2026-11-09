@@ -106,19 +106,6 @@ class Localisation
 // rather than failing (and returns false).
 bool setLanguage(std::string_view code);
 
-// Marks an identifier kept in a table and looked up later, so the check in
-// CI (tools/scripts/quality/check_localisation.py) finds it. Does nothing.
-[[nodiscard]] constexpr std::string_view key(std::string_view identifier) noexcept
-{
-    return identifier;
-}
-
-// The same, for an identifier that will be passed to plural().
-[[nodiscard]] constexpr std::string_view pluralKey(std::string_view identifier) noexcept
-{
-    return identifier;
-}
-
 // The application's text, shortened for the call sites.
 [[nodiscard]] inline juce::String text(std::string_view key)
 {
