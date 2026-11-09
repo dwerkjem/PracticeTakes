@@ -10,6 +10,11 @@ and its history.
 - Drag a tool's **Drag** handle into the main window. The targets that appear
   tile it **left**, **right**, **top** or **bottom**, group it as a **tab**, or
   send it back to a floating window.
+- A tab drags the same way. Drop it on another tab strip to join that group.
+  Drop it on its own strip, or on **Tile beside** over its own pane, and it
+  comes out of the group and tiles beside the tab to its left (the tab to its
+  right, if it was first). Drop it on an edge of its own pane to put it on that
+  side instead.
 - Split dividers are resizable.
 - **Tools → Arrange workspace** does the same things from the keyboard.
 - A tuner, spectrogram or harmonic analyzer can be open more than once, and each

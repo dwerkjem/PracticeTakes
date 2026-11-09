@@ -1,6 +1,7 @@
 #include "../../../MainComponent.h"
 
 #include "../components/DockedToolPanel.h"
+#include "../components/WorkspaceTabbedComponent.h"
 
 namespace
 {
@@ -136,8 +137,43 @@ std::optional<ToolInstanceId> MainComponent::dockedToolAt(juce::Point<int> posit
     return std::nullopt;
 }
 
-MainComponent::DropTarget MainComponent::resolveDropTarget(juce::Point<int> position)
+MainComponent::DropTarget
+MainComponent::resolveDropTarget(juce::Point<int> position, std::optional<ToolInstanceId> dragged)
 {
+    const auto* draggedEntry = dragged.has_value() ? findLiveTool(*dragged) : nullptr;
+    // Whether the dragged tool sits in a tab group with others: then dropping
+    // it on itself tiles it out of the group rather than doing nothing (#355).
+    const auto inTabGroup = [](const LiveTool* entry)
+    {
+        return entry != nullptr && entry->dock != nullptr &&
+               entry->dock->findParentComponentOfClass<WorkspaceTabbedComponent>() != nullptr;
+    };
+
+    // Over a strip of tabs: join that group -- or, for one of its own tabs,
+    // tile out of it. The strip is not inside any tool's pane, which is why a
+    // tab dropped on its own strip used to land nowhere.
+    for (auto& entry : liveTools)
+    {
+        auto* dock = entry.dock.get();
+        if (dock == nullptr || dock->getParentComponent() == nullptr || !dock->isVisible())
+        {
+            continue;
+        }
+        auto* tabs = dock->findParentComponentOfClass<WorkspaceTabbedComponent>();
+        if (tabs == nullptr || !tabs->tabStripContains(tabs->getLocalPoint(this, position)))
+        {
+            continue;
+        }
+        if (draggedEntry != nullptr && tabs->holds(draggedEntry->handle))
+        {
+            return {WorkspaceLayoutState::DropZone::centre, dragged, true};
+        }
+        if (const auto shown = tabs->shownTool(); shown.has_value() && *shown == entry.handle)
+        {
+            return {WorkspaceLayoutState::DropZone::centre, entry.id};
+        }
+    }
+
     const auto workspace = getLocalBounds().reduced(18);
     const auto workspaceLocal = position - workspace.getPosition();
     const auto workspaceZone = WorkspaceLayoutState::dropZoneForPosition(
@@ -168,7 +204,7 @@ MainComponent::DropTarget MainComponent::resolveDropTarget(juce::Point<int> posi
         {
             zone = WorkspaceLayoutState::DropZone::centre;
         }
-        return {zone, pane};
+        return {zone, pane, dragged == pane && inTabGroup(draggedEntry)};
     }
 
     // No pane under the pointer (empty workspace, or hovering a divider) --
@@ -184,14 +220,15 @@ bool MainComponent::isInterestedInDragSource(const juce::DragAndDropTarget::Sour
 
 void MainComponent::itemDragEnter(const juce::DragAndDropTarget::SourceDetails& details)
 {
-    activeDropTarget = resolveDropTarget(details.localPosition);
+    activeDropTarget = resolveDropTarget(details.localPosition, draggedTool(details));
     repaint();
 }
 
 void MainComponent::itemDragMove(const juce::DragAndDropTarget::SourceDetails& details)
 {
-    const auto target = resolveDropTarget(details.localPosition);
-    if (target.zone != activeDropTarget.zone || target.pane != activeDropTarget.pane)
+    const auto target = resolveDropTarget(details.localPosition, draggedTool(details));
+    if (target.zone != activeDropTarget.zone || target.pane != activeDropTarget.pane ||
+        target.tilesOut != activeDropTarget.tilesOut)
     {
         activeDropTarget = target;
         repaint();
@@ -207,7 +244,7 @@ void MainComponent::itemDragExit(const juce::DragAndDropTarget::SourceDetails&)
 void MainComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& details)
 {
     const auto tool = draggedTool(details);
-    const auto target = resolveDropTarget(details.localPosition);
+    const auto target = resolveDropTarget(details.localPosition, tool);
     activeDropTarget = {};
     repaint();
     if (!tool.has_value() || target.zone == WorkspaceLayoutState::DropZone::none)
@@ -296,8 +333,14 @@ void MainComponent::paintOverChildren(juce::Graphics& graphics)
         WorkspaceLayoutState::DropZone::centre};
     for (const auto zone : tilingZones)
     {
+        // Over its own tab, the centre does not add a tab: it tiles the tool
+        // beside the tab to its left (#355).
+        const auto label =
+            activeDropTarget.tilesOut && zone == WorkspaceLayoutState::DropZone::centre
+                ? juce::String("Tile beside")
+                : dropZoneLabel(zone);
         paintDropZone(
-            graphics, dropZoneBounds(zone, paneBounds).reduced(5), dropZoneLabel(zone),
+            graphics, dropZoneBounds(zone, paneBounds).reduced(5), label,
             zone == activeDropTarget.zone, palette);
     }
 }

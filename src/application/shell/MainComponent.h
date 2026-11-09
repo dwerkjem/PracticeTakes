@@ -105,6 +105,10 @@ class MainComponent final
     {
         WorkspaceLayoutState::DropZone zone = WorkspaceLayoutState::DropZone::none;
         std::optional<ToolInstanceId> pane;
+
+        // The dragged tab is over its own pane or its own tab strip: dropped,
+        // it leaves its group and tiles beside the tab to its left (#355).
+        bool tilesOut = false;
     };
 
     // One tool instance and everything the shell holds on its behalf.
@@ -300,7 +304,8 @@ class MainComponent final
     [[nodiscard]] juce::Component* buildWorkspaceNode(const WorkspaceLayoutState::Node* node);
     [[nodiscard]] std::vector<ToolInstanceId> dockedTools();
     [[nodiscard]] std::optional<ToolInstanceId> dockedToolAt(juce::Point<int> position);
-    [[nodiscard]] DropTarget resolveDropTarget(juce::Point<int> position);
+    [[nodiscard]] DropTarget
+    resolveDropTarget(juce::Point<int> position, std::optional<ToolInstanceId> dragged);
     [[nodiscard]] std::optional<ToolInstanceId>
     draggedTool(const juce::DragAndDropTarget::SourceDetails& details) const;
     bool isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails& details) override;

@@ -193,7 +193,7 @@ TEST_CASE(
     CHECK(root->first->tabs == std::vector<Tool>{tuner, spectrogram});
 }
 
-TEST_CASE("dropping a pane onto itself is a no-op", "[workspace][layout]")
+TEST_CASE("dropping a lone pane onto itself is a no-op", "[workspace][layout]")
 {
     WorkspaceLayoutState state;
     state.insert(tuner, std::nullopt, Zone::centre);
@@ -529,4 +529,89 @@ TEST_CASE("three tools placed beside each other all stay visible", "[workspace][
 
     CHECK_FALSE(state.isFlattenedTabs());
     CHECK(state.canSplitRoot());
+}
+
+TEST_CASE(
+    "a tab dropped onto itself tiles with the tab to its left",
+    "[workspace][layout][tab-drop]")
+{
+    // #355: it used to land nowhere.
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::centre);
+
+    state.insert(spectrogram, spectrogram, Zone::centre);
+
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    REQUIRE(root->kind == NodeKind::split);
+    CHECK(root->orientation == Orientation::horizontal);
+    REQUIRE(root->first != nullptr);
+    REQUIRE(root->second != nullptr);
+    CHECK(root->first->kind == NodeKind::leaf);
+    CHECK(root->first->tool == tuner);
+    CHECK(root->second->kind == NodeKind::leaf);
+    CHECK(root->second->tool == spectrogram);
+}
+
+TEST_CASE(
+    "the first tab dropped onto itself tiles with the tab to its right",
+    "[workspace][layout][tab-drop]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::centre);
+
+    state.insert(tuner, tuner, Zone::centre);
+
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    REQUIRE(root->kind == NodeKind::split);
+    CHECK(root->first->tool == tuner);
+    CHECK(root->second->tool == spectrogram);
+}
+
+TEST_CASE(
+    "a tab dropped onto its own edge goes on that side, the rest stay tabbed",
+    "[workspace][layout][tab-drop]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(spectrogram, tuner, Zone::centre);
+    state.insert(harmonics, tuner, Zone::centre);
+
+    // The middle tab, onto its own top edge: above the other two, which
+    // stay a group showing the tab that was to its left.
+    state.insert(spectrogram, spectrogram, Zone::top);
+
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    REQUIRE(root->kind == NodeKind::split);
+    CHECK(root->orientation == Orientation::vertical);
+    CHECK(root->first->kind == NodeKind::leaf);
+    CHECK(root->first->tool == spectrogram);
+    REQUIRE(root->second->kind == NodeKind::tabs);
+    CHECK(root->second->tabs == std::vector<Tool>{tuner, harmonics});
+    CHECK(root->second->activeTab == tuner);
+}
+
+TEST_CASE(
+    "a tab dropped onto itself inside a split stays in its tile",
+    "[workspace][layout][tab-drop]")
+{
+    WorkspaceLayoutState state;
+    state.insert(tuner, std::nullopt, Zone::centre);
+    state.insert(harmonics, tuner, Zone::left);
+    state.insert(spectrogram, tuner, Zone::centre);
+
+    state.insert(spectrogram, spectrogram, Zone::centre);
+
+    // harmonics | (tuner | spectrogram)
+    const auto* root = state.rootNode();
+    REQUIRE(root != nullptr);
+    REQUIRE(root->kind == NodeKind::split);
+    CHECK(root->first->tool == harmonics);
+    REQUIRE(root->second->kind == NodeKind::split);
+    CHECK(root->second->first->tool == tuner);
+    CHECK(root->second->second->tool == spectrogram);
 }

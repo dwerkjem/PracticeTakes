@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "../model/WorkspaceLayoutState.h"
 #include "WorkspaceTabBarButton.h"
 
@@ -60,6 +62,31 @@ class WorkspaceTabbedComponent final : public juce::TabbedComponent
         {
             onActiveToolChanged(tabTools[static_cast<size_t>(newCurrentTabIndex)]);
         }
+    }
+
+    // Whether `point`, in this component's coordinates, is on the strip of
+    // tabs rather than the tool below it: a drop there joins this group, or,
+    // for a tab of this group, tiles it out (#355).
+    [[nodiscard]] bool tabStripContains(juce::Point<int> point)
+    {
+        const auto& bar = getTabbedButtonBar();
+        return bar.getBounds().contains(point);
+    }
+
+    [[nodiscard]] bool holds(Tool tool) const
+    {
+        return std::find(tabTools.begin(), tabTools.end(), tool) != tabTools.end();
+    }
+
+    // The tool whose tab is showing, or none.
+    [[nodiscard]] std::optional<Tool> shownTool() const
+    {
+        const int index = getCurrentTabIndex();
+        if (index < 0 || static_cast<std::size_t>(index) >= tabTools.size())
+        {
+            return std::nullopt;
+        }
+        return tabTools[static_cast<std::size_t>(index)];
     }
 
   protected:
