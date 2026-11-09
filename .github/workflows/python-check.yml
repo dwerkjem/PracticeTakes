@@ -10,6 +10,7 @@ on:
       - ".github/workflows/python-check.yml"
       - "src/tests/**"
       - "src/**"
+      - ".gitignore"
 
 permissions:
   contents: read
@@ -38,6 +39,9 @@ jobs:
         # src/tests/ would never trigger the job that rejects it.
         src/tests/**
         src/**
+        # The ignored-includes check below reads .gitignore, so a new rule
+        # that hides a header under src/ has to be able to fail it.
+        .gitignore
 
   python-tests:
     name: Test repository scripts
@@ -65,3 +69,9 @@ jobs:
       # test at the top level is an easy habit to fall back into.
       - name: Check the test layout mirrors the source tree
         run: python3 tools/scripts/quality/check_test_layout.py
+
+      # A header under a directory .gitignore excludes compiles where it was
+      # written and is never committed. target/ once hid one this way; this
+      # fails on the include rather than on another machine's missing file.
+      - name: Check no include in src/ names a file Git ignores
+        run: python3 tools/scripts/quality/check_ignored_includes.py
