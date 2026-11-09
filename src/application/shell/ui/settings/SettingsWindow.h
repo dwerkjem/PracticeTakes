@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../../theme/PlusOrMinusCents.h"
 #include "../../MainComponent.h"
 #include "../ShellWindowTitles.h"
 
@@ -840,10 +841,12 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 };
                 addAndMakeVisible(referenceSlider);
 
-                // The two zone limits, near perfect inside in tune within
-                // (sung-pitch-judging decision 7). Each slider's range stops a
-                // cent short of the other's value, so the bands cannot cross;
-                // pitch::orderedLimits holds the order wherever else they are set.
+                // The three zone limits, each inside the next (sung-pitch-judging
+                // decision 7). Each slider has its own fixed range; after every
+                // change pitch::orderedLimits puts the three back in order and
+                // the sliders show the result, so the bands cannot cross. In
+                // tune within wins: moving it pushes the others aside, and the
+                // others stop at it.
                 nearPerfectLabel.setText("Near perfect within", juce::dontSendNotification);
                 addAndMakeVisible(nearPerfectLabel);
                 nearPerfectSlider.setComponentID("settings-near-perfect-cents");
@@ -884,6 +887,12 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 outOfTuneSlider.onValueChange = [this] { applyZoneLimits(); };
                 addAndMakeVisible(outOfTuneSlider);
 
+                nearPerfectSlider.setRange(
+                    pitch::minimumNearPerfectCents, pitch::maximumNearPerfectCents, 1.0);
+                toleranceSlider.setRange(
+                    pitch::minimumToleranceCents, pitch::maximumToleranceCents, 1.0);
+                outOfTuneSlider.setRange(
+                    pitch::minimumOutOfTuneCents, pitch::maximumOutOfTuneCents, 1.0);
                 showZoneLimits(recorder.intonationSettings().zoneLimits());
 
                 // Whether opening a score replaces a target the player chose
@@ -965,36 +974,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             }
 
           private:
-            // "±5 ¢": each limit is a distance either side of the note, not a
-            // width centred on it. Typing a bare number still works.
-            static void showAsPlusOrMinusCents(juce::Slider& slider)
-            {
-                slider.textFromValueFunction = [](double value)
-                {
-                    return juce::String::fromUTF8("\xC2\xB1") +
-                           juce::String(juce::roundToInt(value)) +
-                           juce::String::fromUTF8(" \xC2\xA2");
-                };
-                slider.valueFromTextFunction = [](const juce::String& text)
-                { return text.retainCharacters("0123456789.").getDoubleValue(); };
-                slider.updateText();
-            }
-
-            // The three sliders to these limits, each ranged so it cannot pass
-            // its neighbour.
+            // The three sliders to these limits, which are already in order.
             void showZoneLimits(pitch::ZoneLimits limits)
             {
-                nearPerfectSlider.setRange(
-                    pitch::minimumNearPerfectCents,
-                    std::min(
-                        pitch::maximumNearPerfectCents,
-                        limits.toleranceCents - pitch::bandGapCents),
-                    1.0);
-                toleranceSlider.setRange(
-                    limits.nearPerfectCents + pitch::bandGapCents,
-                    limits.outOfTuneCents - pitch::bandGapCents, 1.0);
-                outOfTuneSlider.setRange(
-                    limits.toleranceCents + pitch::bandGapCents, pitch::maximumOutOfTuneCents, 1.0);
                 nearPerfectSlider.setValue(limits.nearPerfectCents, juce::dontSendNotification);
                 toleranceSlider.setValue(limits.toleranceCents, juce::dontSendNotification);
                 outOfTuneSlider.setValue(limits.outOfTuneCents, juce::dontSendNotification);

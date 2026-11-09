@@ -6,6 +6,7 @@
 #include <string>
 
 #include "CurrentTarget.h"
+#include "IntonationZone.h"
 
 // What the tuner says about the note it hears against the target (no JUCE
 // dependency).
@@ -14,7 +15,7 @@ namespace pitch
 {
 // The tuner's own in-tune band by default, so "on it" and the tuner's green
 // agree; the tuner passes the singer's near-perfect limit.
-inline constexpr double onTargetCents = 5.0;
+inline constexpr double onTargetCents = nearPerfectCents;
 
 enum class TargetStanding
 {

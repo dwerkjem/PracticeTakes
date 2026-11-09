@@ -35,7 +35,11 @@ enum class BandLook
 {
     lit,
     tinted,
-    dotted
+    dotted,
+    // Not drawn at all. Red, out of tune, whenever the pitch is not in it: it
+    // covers most of a graph, so only when it is the zone the pitch is in is
+    // it there to see.
+    hidden
 };
 
 // Which half of a lit band is lit: below the note, above it, or both.
@@ -96,6 +100,7 @@ zoneBands(std::optional<double> cents, pitch::ZoneLimits requested)
 
     if (!cents.has_value() || !std::isfinite(*cents))
     {
+        bands.back().look = BandLook::hidden;
         return bands;
     }
 
@@ -106,6 +111,10 @@ zoneBands(std::optional<double> cents, pitch::ZoneLimits requested)
         band.look = rank == current  ? BandLook::lit
                     : rank < current ? BandLook::tinted
                                      : BandLook::dotted;
+        if (band.zone == pitch::IntonationZone::outside && band.look != BandLook::lit)
+        {
+            band.look = BandLook::hidden;
+        }
         if (band.look == BandLook::lit)
         {
             band.litSide = *cents > 0.0 ? Side::sharp : *cents < 0.0 ? Side::flat : Side::both;

@@ -63,12 +63,16 @@ TEST_CASE("A tuner payload keeps the names and order it was always written in", 
                      "offsetShown"});
 }
 
-TEST_CASE("A tuner payload with a value outside its range is refused", "[tuner][codec]")
+TEST_CASE("A tuner payload with a required value outside its range is refused", "[tuner][codec]")
 {
     for (const AppDefaults::TunerNumberField& field : AppDefaults::tunerNumberFields)
     {
         const std::string key(field.key);
         INFO(key);
+        if (!field.required)
+        {
+            continue;
+        }
 
         CHECK(TunerSettingsCodec::decode(withProperty(key.c_str(), field.minimum)).has_value());
         CHECK(TunerSettingsCodec::decode(withProperty(key.c_str(), field.maximum)).has_value());
@@ -157,4 +161,23 @@ TEST_CASE("A missing or other-version tuner payload gives the defaults", "[tuner
     CHECK(none->easing == Approx(AppDefaults::tunerDefaults().easing));
     CHECK(other->graphDurationSeconds == Approx(AppDefaults::tunerDefaults().graphDurationSeconds));
     CHECK_FALSE(TunerSettingsCodec::decode(ToolSettingsPayload{1, "not json"}).has_value());
+}
+
+TEST_CASE(
+    "An optional tuner value outside its range takes its default, and keeps the rest",
+    "[tuner][codec]")
+{
+    // A marker a newer build added, in a workspace this build opens.
+    AppDefaults::TunerSettings settings = AppDefaults::tunerDefaults();
+    settings.averaging = 9.0;
+    juce::var object = parsed(TunerSettingsCodec::encode(settings));
+    object.getDynamicObject()->setProperty("marker", 7);
+    object.getDynamicObject()->setProperty("signs", "arrows");
+
+    const auto decoded = TunerSettingsCodec::decode(
+        ToolSettingsPayload{1, juce::JSON::toString(object).toStdString()});
+    REQUIRE(decoded.has_value());
+    CHECK(decoded->averaging == Approx(9.0));
+    CHECK(decoded->marker == Approx(AppDefaults::Tuner::marker));
+    CHECK(decoded->signs == Approx(AppDefaults::Tuner::signs));
 }
