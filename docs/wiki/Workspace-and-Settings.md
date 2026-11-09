@@ -48,7 +48,7 @@ Your layout is restored the next time you start Practice Takes.
 
 | Tab | Holds |
 |---|---|
-| **Appearance** | The theme, **Dark** or **Light**, for every open window; and the **Text size**, from 80% to 150% in steps of 10 (100% by default), for menus, buttons, labels and everything the tools write. Under it, every size of text the application uses is shown at the size you chose, with its usual size beside it. The tuner's note name and the notation in the Score View keep their own sizes, since they already fill their panes. At a large size the menus fold into **Menu** sooner, a Settings page that no longer fits scrolls, and a small tool switches to its compact form sooner |
+| **Appearance** | The theme, **Dark** or **Light**, for every open window; and the **Text size**, from 80% to 150% in steps of 10 (100% by default), for menus, buttons, labels and everything the tools write. Under it, every size of text the application uses is shown at the size you chose, with its usual size beside it. The tuner's note name and the notation in the Score View keep their own sizes, since they already fill their panes. At a large size the menus fold into **Menu** sooner, a Settings page that no longer fits scrolls, and a small tool switches to its compact form sooner **Note names** chooses how every tool names a note: **C D E F G A B**, **German** (H is B natural and B is B flat, with Fis, Es and so on), or **fixed do** (Do Re Mi). **Octave numbers** chooses where the numbers start: middle C is **C4**, **C3**, or **c′** (Helmholtz). Both are your own, separate from the language the application is in. A note heard without a score to spell it is spelled as the open score's key would spell it, so a piece in F minor shows A flat rather than G sharp |
 | **Audio** | Mute, input volume, the live input level, buffer health, the metronome's volume and accent (and why it's silent, if it is), and the input and output devices |
 | **MIDI** | The keyboard and the sustain pedal (see [[MIDI Keyboard]]) |
 | **Practice** | Practice presets, which set the tuner's behaviour for the material you're practising; how many bars the metronome counts in; the **reference pitch**, A4 = 440 Hz by default, from 415 to 466 Hz; **Near perfect within**, the green zone, ±5 cents by default (5 cents flat to 5 cents sharp), from ±1 to ±20; **In tune within**, how close a sung note must be to count as in tune, ±25 cents by default, from ±2 to ±49 and always wider than near perfect; **Out of tune beyond**, where amber turns red, ±40 cents by default, up to ±50 and always wider than in tune; **Ignore sound below**, the quietest sound a microphone take counts as playing or singing, −45 dB by default, from −80 to −20, with your microphone's level beside it and a line at the threshold, so you can set it against your room; whether a target you chose is kept when a score opens; whether a score's target **follows the note being sung** while the score plays (on by default); and whether **Record pressed during playback counts in first**, stepping back a bar, rather than recording on from where you are (off by default) |
@@ -66,6 +66,8 @@ contains your appearance, audio, fullscreen, feedback-invitation, tool,
 active-workspace and named-workspace settings.
 
 It deliberately leaves out:
+- how notes are named and their octaves numbered, for now: whether those travel
+  with the rest is still being decided;
 - feedback text and contact details;
 - installation identity, use counters and invitation history;
 - logs, benchmarks and analysis data;

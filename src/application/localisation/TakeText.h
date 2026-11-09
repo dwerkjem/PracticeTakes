@@ -3,6 +3,7 @@
 #include "../../platform/evaluation/TakeReview.h"
 #include "../../platform/take/TakeStatus.h"
 #include "Localisation.h"
+#include "NoteNames.h"
 
 // The words for what the platform layer reports about takes, which keeps
 // those as data so that it stays JUCE-free and composes no prose

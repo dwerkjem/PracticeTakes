@@ -23,7 +23,7 @@
 language: English
 
 # Settings
-"settings.appearance.description" = "Choose the application theme used by every open window, and how large its text is."
+"settings.appearance.description" = "Choose the application theme used by every open window, how large its text is, and how notes are named."
 "settings.appearance.textsize" = "Text size"
 "settings.appearance.textsize.change" = "{from} → {to}"
 "settings.appearance.textsize.points" = "{size} pt"
@@ -862,3 +862,15 @@ language: English
 "score.notice.uncommon-clef.part" = "This part's clef sits on an uncommon line, so compare its key signature with the printed music."
 "score.notice.uncommon-clef.score" = "A clef in this score sits on an uncommon line, so compare its key signature with the printed music."
 "score.notice.unwritable-length" = "Some notes are a length no single note symbol shows, and are drawn as quarter notes. Bar {bar} is the first."
+
+# Note names: the convention and the octave numbers
+"settings.appearance.naming" = "Note names"
+"settings.appearance.naming.english" = "C D E F G A B"
+"settings.appearance.naming.german" = "C D E F G A H (German)"
+"settings.appearance.naming.romance" = "Do Re Mi (fixed do)"
+"settings.appearance.naming.tooltip" = "How every tool names a note, whatever language the application is in. In German names, H is B natural and B is B flat"
+"settings.appearance.octaves" = "Octave numbers"
+"settings.appearance.octaves.helmholtz" = "Middle C is c′ (Helmholtz)"
+"settings.appearance.octaves.scientific" = "Middle C is C4"
+"settings.appearance.octaves.tooltip" = "Where octave numbers start: scientific (C4), as on many keyboards (C3), or Helmholtz primes"
+"settings.appearance.octaves.yamaha" = "Middle C is C3"

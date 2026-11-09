@@ -62,6 +62,12 @@ struct State
     // count-in, where an int packs without padding.
     int textScalePercent = appearance::TextScale::defaultPercent;
 
+    // How notes are named (score::NoteNaming) and their octaves numbered
+    // (score::OctaveNumbering), as stored: each the reader's own, independent
+    // of the interface language. Ints beside the text size, where they pack.
+    int noteNaming = 0;
+    int octaveNumbering = 0;
+
     // Whether the score plays with the clock, and how loud. Local too.
     bool playbackEnabled = AppDefaults::Playback::enabled;
     double playbackVolume = AppDefaults::Playback::volume;

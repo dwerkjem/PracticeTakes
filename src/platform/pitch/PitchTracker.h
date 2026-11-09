@@ -106,8 +106,3 @@ class PitchTracker
     bool hasLockedMidiNote = false;
     bool signalPresent = false;
 };
-
-// The note name for a MIDI number, as "C#4". Shared because the tuner's status
-// line and its graph axis must agree; they were separate copies before, free to
-// drift into disagreeing about the same note.
-[[nodiscard]] std::string noteNameForMidi(int midiNote);

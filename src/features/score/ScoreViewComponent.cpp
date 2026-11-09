@@ -1,5 +1,6 @@
 #include "ScoreViewComponent.h"
 #include "../../application/localisation/Localisation.h"
+#include "../../application/localisation/NoteNames.h"
 #include "NoticeText.h"
 
 #include "../../platform/evaluation/TakeReview.h"
@@ -373,7 +374,7 @@ void ScoreViewComponent::paintReviewOn(
                 // clear of the chord it is in.
                 const auto height = static_cast<float>(std::max(11.0, 1.7 * px));
                 const juce::Font font(juce::FontOptions(height, juce::Font::bold));
-                const juce::String name(evaluation::keyName(*mark.playedMidi));
+                const juce::String name(l10n::heardNoteName(*mark.playedMidi, target.keyFifths));
                 const float width =
                     juce::GlyphArrangement::getStringWidth(font, name) + (height * 0.5f);
                 const juce::Rectangle<float> tab(
@@ -1525,14 +1526,13 @@ void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
         // Every note of a chord: which one is the player's choice.
         for (const score::Note& note : event.notes)
         {
-            const juce::String written(score::spelledName(note.written));
+            const juce::String written(l10n::noteName(note.written));
             const juce::String label =
                 score::soundsAsWritten(note)
                     ? l10n::format("score.view.aim-at", {{"note", written}})
                     : l10n::format(
                           "score.view.aim-at.transposed",
-                          {{"note", written},
-                           {"sounding", juce::String(score::spelledName(note.sounding))}});
+                          {{"note", written}, {"sounding", l10n::noteName(note.sounding)}});
             menu.addItem(
                 label, [this, note, source]
                 { target.publish(pitch::chosenTarget(note.sounding, note.written, source)); });

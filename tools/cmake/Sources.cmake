@@ -86,6 +86,8 @@ set(PRACTICE_TAKES_SOURCES
     src/application/localisation/Localisation.cpp
     src/application/localisation/Localisation.h
     src/application/localisation/LocalisationRules.h
+    src/application/localisation/NoteNames.cpp
+    src/application/localisation/NoteNames.h
     src/application/localisation/PlaybackText.h
     src/application/localisation/TakeText.cpp
     src/application/localisation/TakeText.h
@@ -258,6 +260,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/score/PartTimeline.cpp
     src/platform/score/PartTimeline.h
     src/platform/score/PitchNames.h
+    src/platform/score/PitchNaming.h
     src/platform/score/Score.h
     src/platform/score/ScoreAttributes.h
     src/platform/score/ScoreBuilder.cpp
@@ -344,6 +347,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/shell/ui/workspace/model/WorkspaceToolStateTests.cpp
     src/tests/application/localisation/LocalisationRulesTests.cpp
     src/tests/application/localisation/LocalisationTests.cpp
+    src/tests/application/localisation/NoteNamesTests.cpp
     src/tests/application/localisation/PlaybackTextTests.cpp
     src/tests/application/localisation/TakeTextTests.cpp
     src/tests/application/testcontrol/ApprovedScoreFixturesTests.cpp
@@ -416,6 +420,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/score/CurrentScoreTests.cpp
     src/tests/platform/score/MusicalTimeTests.cpp
     src/tests/platform/score/PartTimelineTests.cpp
+    src/tests/platform/score/PitchNamingTests.cpp
     src/tests/platform/score/PitchNamesTests.cpp
     src/tests/platform/score/PitchTests.cpp
     src/tests/platform/score/ScoreInvariantsTests.cpp
@@ -453,6 +458,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/application/configuration/SettingsTransferCodec.cpp
     src/features/analysis/tuner/TunerSettingsCodec.cpp
     src/application/localisation/Localisation.cpp
+    src/application/localisation/NoteNames.cpp
     src/application/localisation/TakeText.cpp
     src/application/shell/ui/score/BundledSampleScore.cpp
     src/application/shell/ui/score/ScoreImportSummary.cpp

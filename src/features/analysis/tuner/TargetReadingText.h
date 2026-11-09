@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../../application/localisation/Localisation.h"
+#include "../../../application/localisation/NoteNames.h"
 #include "../../../platform/pitch/TargetReading.h"
 
 // What the tuner says about the note it hears against the target: "Target B3
@@ -11,7 +12,7 @@ namespace tuner
 [[nodiscard]] inline juce::String
 targetReadingText(const pitch::Target& target, const pitch::TargetReading& reading)
 {
-    const auto note = juce::String::fromUTF8(target.name.c_str());
+    const auto note = l10n::noteName(target.name);
     const auto amount = static_cast<std::int64_t>(reading.amount);
     switch (reading.standing)
     {

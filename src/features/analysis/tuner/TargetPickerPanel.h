@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../../application/localisation/Localisation.h"
+#include "../../../application/localisation/NoteNames.h"
 #include <JuceHeader.h>
 
 #include "../../../application/theme/AppLookAndFeel.h"
@@ -378,8 +379,7 @@ class TargetPickerPanel final
         const auto current = target.target();
         heading.setText(
             current != nullptr
-                ? l10n::format(
-                      "target.heading", {{"note", juce::String::fromUTF8(current->name.c_str())}})
+                ? l10n::format("target.heading", {{"note", l10n::noteName(current->name)}})
                 : l10n::text("target.heading.none"),
             juce::dontSendNotification);
         staff.shown = currentPitch();

@@ -15,6 +15,18 @@ void MainComponent::setTheme(Theme theme)
     applyAppearance();
 }
 
+void MainComponent::noteNamingChanged()
+{
+    saveSettings(false);
+    for (int index = 0; index < juce::TopLevelWindow::getNumTopLevelWindows(); ++index)
+    {
+        if (auto* window = juce::TopLevelWindow::getTopLevelWindow(index))
+        {
+            window->repaint();
+        }
+    }
+}
+
 void MainComponent::setTextScale(int percent)
 {
     const int snapped = appearance::TextScale::snapped(static_cast<double>(percent));

@@ -1,5 +1,6 @@
 #include "NowNextComponent.h"
 #include "../../application/localisation/Localisation.h"
+#include "../../application/localisation/NoteNames.h"
 
 #include "../../application/theme/MiniStaff.h"
 #include "../../platform/pitch/TargetChoice.h"
@@ -252,11 +253,11 @@ juce::String NowNextComponent::nameOf(const score::TimelineItem& item) const
     {
         if (score::isConsistent(pitch))
         {
-            names.add(utf8(score::spelledName(pitch)));
+            names.add(l10n::noteName(pitch));
         }
         else if (const auto spelled = pitch::spellMidi(pitch.midiNoteNumber, true))
         {
-            names.add(utf8(score::spelledName(*spelled)));
+            names.add(l10n::noteName(*spelled));
         }
     }
     return names.joinIntoString(" ");

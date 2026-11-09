@@ -69,7 +69,7 @@ namespace
     return {};
 }
 
-[[nodiscard]] juce::String outcomeText(const evaluation::NoteResult& result)
+[[nodiscard]] juce::String outcomeText(const evaluation::NoteResult& result, int keyFifths)
 {
     const bool sung = result.intonation.has_value();
     switch (result.outcome)
@@ -84,7 +84,7 @@ namespace
         return l10n::format(
             sung ? l10n::key("review.outcome.wrong.sang")
                  : l10n::key("review.outcome.wrong.played"),
-            {{"note", utf8(evaluation::keyName(*result.playedMidi))}});
+            {{"note", l10n::heardNoteName(*result.playedMidi, keyFifths)}});
     case evaluation::NoteOutcome::missed:
         return l10n::text("review.outcome.missed");
     case evaluation::NoteOutcome::pitchNotJudged:
@@ -108,6 +108,16 @@ namespace
         return {};
     }
     return {};
+}
+
+[[nodiscard]] int openingKeyFifths(const score::Score* score)
+{
+    if (score == nullptr || score->parts.empty() || score->parts.front().measures.empty())
+    {
+        return 0;
+    }
+    const auto& key = score->parts.front().measures.front().attributes.key;
+    return key.has_value() ? key->fifths : 0;
 }
 
 [[nodiscard]] juce::String place(std::int64_t bar, int beat)
@@ -159,6 +169,8 @@ juce::String reviewRow(
     const evaluation::NoteReport& report,
     const evaluation::ReviewRow& row)
 {
+    // A played note has no spelling, so it is spelled as the piece's key would.
+    const int keyFifths = openingKeyFifths(take.score.get());
     juce::StringArray parts{place(row.bar, row.beat)};
     if (row.result.has_value() && *row.result < report.results.size())
     {
@@ -168,8 +180,8 @@ juce::String reviewRow(
             result.intonation.has_value() &&
             result.intonation->verdict != evaluation::IntonationVerdict::uncertain &&
             result.intonation->verdict != evaluation::IntonationVerdict::wrong;
-        parts.add(utf8(evaluation::writtenNameOf(take, result)));
-        parts.add(outcomeText(result));
+        parts.add(l10n::noteName(evaluation::writtenNameOf(take, result)));
+        parts.add(outcomeText(result, keyFifths));
         parts.add(judged ? octaveText(result.intonation->octave) : juce::String());
         parts.add(timingText(result.timing, result.timingErrorMs));
     }
@@ -178,7 +190,7 @@ juce::String reviewRow(
         const evaluation::ExtraNote& extra = report.extra[*row.extra];
         if (extra.midi.has_value())
         {
-            parts.add(utf8(evaluation::keyName(*extra.midi)));
+            parts.add(l10n::heardNoteName(*extra.midi, keyFifths));
         }
         parts.add(l10n::text("review.outcome.extra"));
     }

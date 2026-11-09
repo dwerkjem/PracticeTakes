@@ -10,6 +10,7 @@
 #include "../../../configuration/SettingsTransferCodec.h"
 #include "../../../configuration/SettingsTransferFile.h"
 #include "../../../localisation/Localisation.h"
+#include "../../../localisation/NoteNames.h"
 #include "../workspace/components/ToolWindow.h"
 #include "SettingsWindow.h"
 
@@ -231,6 +232,15 @@ void MainComponent::showSettings()
             if (safeThis != nullptr)
             {
                 safeThis->closeSettings();
+            }
+        });
+
+    settingsWindow->setNamingHandler(
+        [safeThis]
+        {
+            if (safeThis != nullptr)
+            {
+                safeThis->noteNamingChanged();
             }
         });
 
@@ -581,6 +591,11 @@ void MainComponent::resetAll()
 {
     setTheme(AppDefaults::theme);
     setTextScale(appearance::TextScale::defaultPercent);
+    l10n::setNoteNaming({});
+    if (settingsWindow != nullptr)
+    {
+        settingsWindow->showNaming();
+    }
     selectedFullscreenMode = AppSettings::FullscreenMode::normal;
     resetAudio();
     currentTool = instanceIdToOpen(defaultToolId);
@@ -628,6 +643,8 @@ AppSettings::State MainComponent::captureSettingsState()
     AppSettings::State state;
     state.theme = currentTheme;
     state.textScalePercent = appLookAndFeel.textScale();
+    state.noteNaming = static_cast<int>(l10n::noteNaming().naming);
+    state.octaveNumbering = static_cast<int>(l10n::noteNaming().octaves);
     state.microphoneMuted =
         sessionMicrophoneMuteEnabled ? persistedMicrophoneMuted : audioInputService.isMuted();
     state.inputGain = audioInputService.inputGain();
@@ -707,6 +724,9 @@ void MainComponent::loadSettings()
     // Set before anything is laid out, so the first layout is at this size.
     appLookAndFeel.setTextScale(loaded.state.textScalePercent);
     titleStripLookAndFeel.setTextScale(loaded.state.textScalePercent);
+    l10n::setNoteNaming(
+        {static_cast<score::NoteNaming>(loaded.state.noteNaming),
+         static_cast<score::OctaveNumbering>(loaded.state.octaveNumbering)});
     audioInputService.setMuted(loaded.state.microphoneMuted);
     audioInputService.setInputGain(static_cast<float>(loaded.state.inputGain));
     applyLegacyToolState(loaded.state);

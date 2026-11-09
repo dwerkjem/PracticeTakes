@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 
+#include "../pitch/TargetChoice.h"
 #include "../score/PitchNames.h"
 
 namespace evaluation
@@ -74,13 +75,18 @@ MomentCounts momentsOf(const NoteReport& report)
     }
     return counts;
 }
+
 std::string keyName(int midi)
 {
-    static const std::array<const char*, 12> names{
-        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    // Spelled with sharps, as a key with none would spell it, and named by the
+    // one naming path (score::pitchName); a number outside MIDI's range is
+    // named by its pitch class and octave all the same.
     const int pitchClass = ((midi % 12) + 12) % 12;
     const int octave = (midi - pitchClass) / 12 - 1;
-    return std::string(names.at(static_cast<std::size_t>(pitchClass))) + std::to_string(octave);
+    const auto spelled = pitch::spellMidi(pitchClass + 12, true);
+    score::Pitch named = spelled.value_or(score::Pitch{});
+    named.octave = octave;
+    return score::spelledName(named);
 }
 
 std::vector<ReviewRow> reviewRows(const take::Take& take, const NoteReport& report)

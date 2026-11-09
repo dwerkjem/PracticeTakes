@@ -324,6 +324,10 @@ class MainComponent final
     // out again at once.
     void setTextScale(int percent);
 
+    // The note naming was changed in Settings: saved, and everything that names
+    // a note redrawn.
+    void noteNamingChanged();
+
     // A size laid out for 100 percent, grown with the text size.
     [[nodiscard]] int scaled(int base) const noexcept
     {

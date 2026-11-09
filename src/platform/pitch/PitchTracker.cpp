@@ -4,12 +4,6 @@
 #include <cmath>
 #include <limits>
 
-namespace
-{
-constexpr std::array<const char*, 12> noteNames{
-    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-} // namespace
-
 double PitchTracker::frequencyToMidi(double frequency, double reference)
 {
     return pitch::frequencyToMidi(frequency, reference);
@@ -18,14 +12,6 @@ double PitchTracker::frequencyToMidi(double frequency, double reference)
 double PitchTracker::midiToFrequency(double midiPitch, double reference)
 {
     return pitch::midiToFrequency(midiPitch, reference);
-}
-
-std::string noteNameForMidi(int midiNote)
-{
-    const auto noteIndex = ((midiNote % 12) + 12) % 12;
-    const auto octave = (midiNote / 12) - 1;
-
-    return std::string(noteNames[static_cast<std::size_t>(noteIndex)]) + std::to_string(octave);
 }
 
 PitchTracker::Update PitchTracker::detected(double frequency, const Settings& settings)

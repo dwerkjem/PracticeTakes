@@ -250,6 +250,27 @@ Decisions made while building it that the sections above did not settle.
 - **Numbers in the report are grouped** as the language groups them: a
   construct "seen 2,114 times", where it used to say 2114.
 
+- **One naming path, and a canonical name beside it.** `score::pitchName`
+  names a spelled pitch in a `PitchNamingStyle`; `score::spelledName` is that
+  function in the default style (English letters, scientific octaves), and is
+  what a target is stored and parsed back as -- a settings file must read the
+  same in every copy. What a reader sees goes through `l10n::noteName` and
+  `l10n::heardNoteName`, which hold the chosen style as `l10n::current()` holds
+  the language. The tuner's and the review's sharp-only tables are gone.
+- **A heard note is spelled for the open score's key**: flats in a flat key,
+  sharps otherwise (`pitch::spellForKey`), with no score meaning C major. That
+  is the spec's "consistently with how a score would have spelled it in that
+  key", and is what fixes A flat being announced as G sharp in F minor. It is
+  a key signature's spelling, not a harmonic one: a G sharp leading note in A
+  minor is still G sharp, and in F minor's relative major an E natural is not
+  respelled.
+- **German** takes -is/-es, B for B flat and H for B natural, Heses for B
+  double flat; **Helmholtz** uses primes (c′ c″ c‴) above the small octave
+  and commas below the great one.
+- **The preferences live in Appearance** (Note names, Octave numbers), saved
+  in the settings file. They do not travel in `.ptsettings` until task 8.1 is
+  decided, and the wiki says so.
+
 ## Risks
 
 - **A mechanical change across nearly every UI file.** It conflicts with

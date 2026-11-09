@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../../localisation/Localisation.h"
+#include "../../../localisation/NoteNames.h"
 #include "../../../theme/PlusOrMinusCents.h"
 #include "../../../widgets/InputLevelMeter.h"
 #include "../../MainComponent.h"
@@ -250,6 +251,44 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 };
                 addAndMakeVisible(textSizeBox);
 
+                // Note names, which are a musician's training rather than a
+                // language (openspec/changes/internationalization decision 5).
+                namingLabel.setText(
+                    l10n::text("settings.appearance.naming"), juce::dontSendNotification);
+                addAndMakeVisible(namingLabel);
+                namingBox.setComponentID("settings-note-naming");
+                namingBox.addItem(l10n::text("settings.appearance.naming.english"), 1);
+                namingBox.addItem(l10n::text("settings.appearance.naming.german"), 2);
+                namingBox.addItem(l10n::text("settings.appearance.naming.romance"), 3);
+                namingBox.setTooltip(l10n::text("settings.appearance.naming.tooltip"));
+                addAndMakeVisible(namingBox);
+                octavesLabel.setText(
+                    l10n::text("settings.appearance.octaves"), juce::dontSendNotification);
+                addAndMakeVisible(octavesLabel);
+                octavesBox.setComponentID("settings-octave-numbering");
+                octavesBox.addItem(l10n::text("settings.appearance.octaves.scientific"), 1);
+                octavesBox.addItem(l10n::text("settings.appearance.octaves.yamaha"), 2);
+                octavesBox.addItem(l10n::text("settings.appearance.octaves.helmholtz"), 3);
+                octavesBox.setTooltip(l10n::text("settings.appearance.octaves.tooltip"));
+                addAndMakeVisible(octavesBox);
+                showNaming();
+                const auto namingChanged = [this]
+                {
+                    if (namingBox.getSelectedId() <= 0 || octavesBox.getSelectedId() <= 0)
+                    {
+                        return;
+                    }
+                    l10n::setNoteNaming(
+                        {static_cast<score::NoteNaming>(namingBox.getSelectedId() - 1),
+                         static_cast<score::OctaveNumbering>(octavesBox.getSelectedId() - 1)});
+                    if (onNamingChanged)
+                    {
+                        onNamingChanged();
+                    }
+                };
+                namingBox.onChange = namingChanged;
+                octavesBox.onChange = namingChanged;
+
                 previewHeading.setText(
                     l10n::text("settings.appearance.textsize.preview"), juce::dontSendNotification);
                 previewHeading.setFont(
@@ -264,6 +303,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 // what is in force.
                 textSizeBox.setSelectedId(
                     appearance::textScaleOf(*this), juce::dontSendNotification);
+                showNaming();
                 CategoryPanel::lookAndFeelChanged();
                 preview.repaint();
             }
@@ -283,6 +323,16 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 auto sizeRow = bounds.removeFromTop(px(36));
                 textSizeLabel.setBounds(sizeRow.removeFromLeft(px(130)));
                 textSizeBox.setBounds(sizeRow.removeFromLeft(px(240)));
+                bounds.removeFromTop(px(12));
+
+                auto namingRow = bounds.removeFromTop(px(36));
+                namingLabel.setBounds(namingRow.removeFromLeft(px(130)));
+                namingBox.setBounds(namingRow.removeFromLeft(px(240)));
+                bounds.removeFromTop(px(12));
+
+                auto octavesRow = bounds.removeFromTop(px(36));
+                octavesLabel.setBounds(octavesRow.removeFromLeft(px(130)));
+                octavesBox.setBounds(octavesRow.removeFromLeft(px(240)));
                 bounds.removeFromTop(px(18));
 
                 previewHeading.setBounds(bounds.removeFromTop(px(24)));
@@ -306,6 +356,27 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             std::function<void(int)> onTextScaleChanged;
             juce::Label textSizeLabel;
             juce::ComboBox textSizeBox;
+            juce::Label namingLabel;
+            juce::ComboBox namingBox;
+            juce::Label octavesLabel;
+            juce::ComboBox octavesBox;
+
+          public:
+            // Called after the naming is changed here, so the shell can save it
+            // and redraw what names notes.
+            std::function<void()> onNamingChanged;
+
+            // What is in force: set elsewhere too, by a reset.
+            void showNaming()
+            {
+                const auto style = l10n::noteNaming();
+                namingBox.setSelectedId(
+                    static_cast<int>(style.naming) + 1, juce::dontSendNotification);
+                octavesBox.setSelectedId(
+                    static_cast<int>(style.octaves) + 1, juce::dontSendNotification);
+            }
+
+          private:
             juce::Label previewHeading;
             TextSizePreview preview;
         };
@@ -930,9 +1001,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             // number has none -- it cannot tell F sharp from G flat.
             // `score::spelledName` exists and is the right function, and it
             // cannot help here: it takes a `score::Pitch`, which is a spelling.
-            // The only thing that turns a bare number into one is the tuner's
-            // `noteNameForMidi`, which is private to that tool and picks a
-            // spelling arbitrarily for exactly this reason.
+            // The only thing that turns a bare number into one is
+            // `pitch::spellForKey`, which spells it as a key would -- a guess
+            // about a keyboard's own key that is worse than the number.
             //
             // So this shows the number. A played note gets a name once
             // something knows what it was *meant* to be -- which is matching it
@@ -1559,6 +1630,16 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         // caption, which is translated. False when no tab matches, so a
         // caller naming a panel that has been renamed fails loudly rather
         // than silently leaving whichever tab happened to be showing.
+        void setNamingHandler(std::function<void()> handler)
+        {
+            appearancePanel.onNamingChanged = std::move(handler);
+        }
+
+        void showNaming()
+        {
+            appearancePanel.showNaming();
+        }
+
         [[nodiscard]] bool showPanel(const juce::String& identifier)
         {
             for (int index = 0; index < categoryTabs.getNumTabs(); ++index)
@@ -1656,6 +1737,22 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
     // development-only test control channel so a manual-verification run can
     // be pointed at one panel rather than at whichever tab the window happens
     // to open on.
+    void setNamingHandler(std::function<void()> handler)
+    {
+        if (auto* content = dynamic_cast<Content*>(getContentComponent()))
+        {
+            content->setNamingHandler(std::move(handler));
+        }
+    }
+
+    void showNaming()
+    {
+        if (auto* content = dynamic_cast<Content*>(getContentComponent()))
+        {
+            content->showNaming();
+        }
+    }
+
     [[nodiscard]] bool showPanel(const juce::String& identifier)
     {
         if (auto* content = dynamic_cast<Content*>(getContentComponent()))

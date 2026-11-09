@@ -13,6 +13,8 @@ namespace
 constexpr auto schemaKey = "settings.schema";
 constexpr auto themeKey = "global.theme";
 constexpr auto textScaleKey = "appearance.textScale";
+constexpr auto noteNamingKey = "appearance.noteNaming";
+constexpr auto octaveNumberingKey = "appearance.octaveNumbering";
 constexpr auto microphoneMutedKey = "audio.muted";
 constexpr auto audioStateKey = "audio.deviceState";
 constexpr auto audioInputGainKey = "audio.inputGain";
@@ -64,6 +66,8 @@ constexpr const char* ownedKeys[] = {
     schemaKey,
     themeKey,
     textScaleKey,
+    noteNamingKey,
+    octaveNumberingKey,
     microphoneMutedKey,
     audioStateKey,
     audioInputGainKey,
@@ -267,6 +271,15 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
     // the nearest size the setting offers, or 100.
     result.state.textScalePercent = appearance::TextScale::snapped(properties.getDoubleValue(
         textScaleKey, static_cast<double>(appearance::TextScale::defaultPercent)));
+    // Unknown values -- a file from a later version with a convention this one
+    // lacks -- fall back to the default rather than to a neighbour.
+    const auto convention = [&properties](const char* key)
+    {
+        const int stored = properties.getIntValue(key, 0);
+        return stored >= 0 && stored <= 2 ? stored : 0;
+    };
+    result.state.noteNaming = convention(noteNamingKey);
+    result.state.octaveNumbering = convention(octaveNumberingKey);
     result.state.microphoneMuted = properties.getBoolValue(microphoneMutedKey, false);
     result.state.inputGain =
         boundedValue(properties, audioInputGainKey, AppDefaults::Audio::inputGain, 0.0, 2.0);
@@ -382,6 +395,8 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(schemaKey, AppDefaults::schemaVersion);
     properties.setValue(themeKey, static_cast<int>(state.theme));
     properties.setValue(textScaleKey, state.textScalePercent);
+    properties.setValue(noteNamingKey, state.noteNaming);
+    properties.setValue(octaveNumberingKey, state.octaveNumbering);
     properties.setValue(microphoneMutedKey, state.microphoneMuted);
     properties.setValue(audioInputGainKey, state.inputGain);
     properties.setValue(audioStateKey, state.audioDeviceState);

@@ -2,6 +2,7 @@
 
 #include "../../../application/theme/PlusOrMinusCents.h"
 
+#include "../../../application/localisation/NoteNames.h"
 #include "../../../platform/pitch/TargetReading.h"
 #include "TargetPickerPanel.h"
 #include "TargetReadingText.h"
@@ -45,9 +46,9 @@ class TunerComponent::ModeChooser final : public juce::Component
 #include <limits>
 
 // The thresholds that decide a glide from a misdetection, the smoothing, and
-// the note lock all live in PitchTracker now. noteNameForMidi comes from the
-// same header, so this file and TunerDrawing.cpp cannot disagree about the name
-// of a note -- they held separate identical copies before.
+// the note lock all live in PitchTracker now. A note is named by
+// l10n::heardNoteName in both this file and TunerDrawing.cpp, so they cannot
+// disagree about the name of a note -- they held separate copies before.
 
 //==============================================================================
 TunerComponent::TunerComponent(
@@ -715,7 +716,7 @@ void TunerComponent::applyTrackerUpdate(const PitchTracker::Update& update)
     lockedMidiNote = update.displayedMidiNote;
     hasLockedMidiNote = update.hasDisplayedNote;
     displayedNote = update.hasDisplayedNote
-                        ? juce::String(noteNameForMidi(update.displayedMidiNote))
+                        ? l10n::heardNoteName(update.displayedMidiNote, target.keyFifths)
                         : juce::String("--");
     steadyReading.update(
         update.hasSignal && update.hasDisplayedNote ? std::optional<int>(update.displayedMidiNote)

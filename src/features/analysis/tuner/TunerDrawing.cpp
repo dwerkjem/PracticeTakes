@@ -1,3 +1,4 @@
+#include "../../../application/localisation/NoteNames.h"
 #include "TunerComponent.h"
 
 #include <algorithm>
@@ -332,12 +333,11 @@ void drawZoneStrips(
     }
 }
 
-// The graph's axis labels and the status line's note name must agree. They were
-// byte-identical copies of the same function before, free to drift apart; the
-// single definition now lives beside the tracker that produces the note.
-[[nodiscard]] juce::String noteLabelForMidi(int midiNote)
+// The graph's axis labels and the status line's note name must agree: both are
+// l10n::heardNoteName, in the reader's naming and spelled for the score's key.
+[[nodiscard]] juce::String noteLabelForMidi(int midiNote, int keyFifths)
 {
-    return juce::String(::noteNameForMidi(midiNote));
+    return l10n::heardNoteName(midiNote, keyFifths);
 }
 } // namespace
 
@@ -490,7 +490,7 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
         {
             graphics.setColour(isCurrentNote ? palette.accent : palette.muted);
             graphics.drawFittedText(
-                noteLabelForMidi(midiNote),
+                noteLabelForMidi(midiNote, target.keyFifths),
                 labelArea.withY(static_cast<int>(std::round(y)) - 8).withHeight(16),
                 juce::Justification::centredRight, 1);
         }

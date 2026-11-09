@@ -79,20 +79,20 @@ The one deep change, and an improvement independent of language.
 
 Can run in parallel with sections 1-5; it shares no code with them.
 
-- [ ] 6.1 `score::PitchNaming` in the JUCE-free score layer: convention and
+- [x] 6.1 `score::PitchNaming` in the JUCE-free score layer: convention and
       octave numbering in, name out. Not in the catalogue — "H" is a naming
       system, not a translation.
-- [ ] 6.2 Conventions: `englishDutch`, `german` (H, with B meaning B♭),
+- [x] 6.2 Conventions: `englishDutch`, `german` (H, with B meaning B♭),
       `romance` (fixed-do). Octave numbering: `scientific`, `yamaha`,
       `helmholtz`.
-- [ ] 6.3 Retire `PitchTracker.cpp`'s sharp-only table and route the tuner
+- [x] 6.3 Retire `PitchTracker.cpp`'s sharp-only table and route the tuner
       through it, fixing the standing bug where a piece in F minor has its A♭
       announced as G♯.
-- [ ] 6.4 Route the score model's written spelling through the same function, so
+- [x] 6.4 Route the score model's written spelling through the same function, so
       there is one naming path and not two.
-- [ ] 6.5 Settings: naming and octave numbering as their own preferences,
+- [x] 6.5 Settings: naming and octave numbering as their own preferences,
       separate from interface language.
-- [ ] 6.6 Tests, by name rather than by number: B/H across the boundary,
+- [x] 6.6 Tests, by name rather than by number: B/H across the boundary,
       B♭ spelled as B in German, middle C in all three octave conventions, and
       a flat-key piece spelled with flats.
 
