@@ -121,7 +121,7 @@ Live tools for any voice or instrument. No score needed.
 
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
-| Pitch judged against the score | Each sung note marked in tune, sharp or flat, with how sure the judgement is | MVP | [#42](https://github.com/dwerkjem/PracticeTakes/issues/42) |
+| Pitch judged against the score | Each sung note marked in tune, sharp or flat, with how sure the judgement is | ✅ | [#42](https://github.com/dwerkjem/PracticeTakes/issues/42) |
 | Vibrato | Vibrato recognised for what it is, with its rate and width, not marked as out of tune | Beta 1 | [#46](https://github.com/dwerkjem/PracticeTakes/issues/46) |
 | Phrasing and breath | Phrases, breaths and articulation found in a take | Beta 1 | [#47](https://github.com/dwerkjem/PracticeTakes/issues/47) |
 

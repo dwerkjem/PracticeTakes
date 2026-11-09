@@ -41,7 +41,7 @@ quarters(const std::vector<std::vector<score::Pitch>>& parts)
     return source;
 }
 
-[[nodiscard]] score::Pitch pitch(score::Step step, int octave, int alter = 0)
+[[nodiscard]] score::Pitch pitchOf(score::Step step, int octave, int alter = 0)
 {
     return score::pitchFromSpelling(step, alter, octave);
 }
@@ -86,7 +86,8 @@ TEST_CASE("a review lists every result in time order, extras included", "[evalua
     using score::Step;
     const take::Take recorded = keyboardTake(
         quarters(
-            {{pitch(Step::g, 4), pitch(Step::g, 4), pitch(Step::a, 4, -1), pitch(Step::g, 4)}}),
+            {{pitchOf(Step::g, 4), pitchOf(Step::g, 4), pitchOf(Step::a, 4, -1),
+              pitchOf(Step::g, 4)}}),
         {{0, 67}, {quarter, 67}, {quarter + quarter / 2, 80}, {2 * quarter + 2205, 71}});
 
     const NoteReport report = judgeNotes(recorded, 0);
@@ -132,8 +133,8 @@ TEST_CASE("a take is reviewed against the part it matches best", "[evaluation][r
     using score::Step;
     // A voice (part 0) and a piano (part 1); the pianist played the piano part.
     const auto source = quarters(
-        {{pitch(Step::e, 5), pitch(Step::f, 5), pitch(Step::g, 5), pitch(Step::a, 5)},
-         {pitch(Step::c, 4), pitch(Step::e, 4), pitch(Step::g, 4), pitch(Step::c, 5)}});
+        {{pitchOf(Step::e, 5), pitchOf(Step::f, 5), pitchOf(Step::g, 5), pitchOf(Step::a, 5)},
+         {pitchOf(Step::c, 4), pitchOf(Step::e, 4), pitchOf(Step::g, 4), pitchOf(Step::c, 5)}});
     const take::Take pianist =
         keyboardTake(source, {{0, 60}, {quarter, 64}, {2 * quarter, 67}, {3 * quarter, 72}});
     const ReviewedPart reviewed = bestPartFor(pianist);
@@ -142,8 +143,8 @@ TEST_CASE("a take is reviewed against the part it matches best", "[evaluation][r
     CHECK(matchScore(reviewed.report) == 12);
 
     // Two identical parts: the earlier one.
-    const auto twins =
-        quarters({{pitch(Step::c, 4), pitch(Step::c, 4)}, {pitch(Step::c, 4), pitch(Step::c, 4)}});
+    const auto twins = quarters(
+        {{pitchOf(Step::c, 4), pitchOf(Step::c, 4)}, {pitchOf(Step::c, 4), pitchOf(Step::c, 4)}});
     CHECK(bestPartFor(keyboardTake(twins, {{0, 60}, {quarter, 60}})).part == 0);
 
     // No score, nothing judged.

@@ -13,6 +13,7 @@
 #include "NoteViewModel.h"
 
 #include <array>
+#include <functional>
 #include <optional>
 #include <set>
 
@@ -38,7 +39,8 @@ class NoteViewComponent final
         SharedPitchAnalysis& sharedPitchAnalysis,
         const pitch::ReferencePitch& applicationReferencePitch,
         const pitch::CurrentTarget& applicationTarget,
-        MidiInputService& midiInputService);
+        MidiInputService& midiInputService,
+        std::function<double()> toleranceSource);
     ~NoteViewComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -70,10 +72,18 @@ class NoteViewComponent final
 
     [[nodiscard]] AppPalette palette() const;
 
+    // The zone the note being sung is in, and the acceptable range either
+    // side of the target, in cents.
+    [[nodiscard]] std::optional<pitch::IntonationZone> zone() const;
+    [[nodiscard]] double toleranceCents() const;
+
     SharedPitchAnalysis& pitchAnalysis;
     const pitch::ReferencePitch& referencePitch;
     const pitch::CurrentTarget& target;
     MidiInputService& midi;
+
+    // The singer's acceptable range, as Settings → Practice sets it.
+    std::function<double()> tolerance;
 
     PitchTracker tracker;
     notes::Trail trail;

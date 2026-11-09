@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <limits>
+#include <map>
 
 namespace evaluation
 {
@@ -166,7 +167,39 @@ NoteReport matchNotes(const TimingReport& timing, std::size_t part)
         report.extra.begin(), report.extra.end(),
         [](const ExtraNote& left, const ExtraNote& right) { return left.frame < right.frame; });
 
-    NoteSummary& summary = report.summary;
+    summarise(report);
+    return report;
+}
+
+NoteReport judgeNotes(
+    const take::Take& take,
+    std::size_t part,
+    const std::vector<PerformedOnset>& onsets,
+    const TimingSettings& settings)
+{
+    return matchNotes(judgeTake(take, part, onsets, settings), part);
+}
+
+PitchContour contourOf(const take::Take& take)
+{
+    if (judgedFromKeyboard(take) || take.audio.empty())
+    {
+        return {};
+    }
+    return pitchContourOf(take.audio.data(), take.audio.size(), take.sampleRate, take.audioStart);
+}
+
+TakeEvidence evidenceOf(const take::Take& take)
+{
+    TakeEvidence evidence;
+    evidence.onsets = onsetsOf(take);
+    evidence.contour = contourOf(take);
+    return evidence;
+}
+
+void summarise(NoteReport& report)
+{
+    NoteSummary summary;
     for (const NoteResult& result : report.results)
     {
         switch (result.outcome)
@@ -184,22 +217,152 @@ NoteReport matchNotes(const TimingReport& timing, std::size_t part)
             ++summary.pitchNotJudged;
             break;
         }
+        if (!result.intonation.has_value())
+        {
+            continue;
+        }
+        switch (result.intonation->verdict)
+        {
+        case IntonationVerdict::inTune:
+            ++summary.inTune;
+            break;
+        case IntonationVerdict::sharp:
+            ++summary.sharp;
+            break;
+        case IntonationVerdict::flat:
+            ++summary.flat;
+            break;
+        case IntonationVerdict::uncertain:
+            ++summary.uncertain;
+            break;
+        case IntonationVerdict::wrong:
+            break;
+        }
     }
     summary.extra = report.extra.size();
+    report.summary = summary;
+}
+
+void judgeIntonations(
+    NoteReport& report,
+    const TimingReport& timing,
+    const take::Take& take,
+    std::size_t part,
+    const PitchContour& contour,
+    const IntonationSettings& settings)
+{
+    if (contour.frames.empty() || take.table == nullptr || take.table->empty() ||
+        take.score == nullptr || part >= take.score->parts.size())
+    {
+        return;
+    }
+    const score::Part& written = take.score->parts[part];
+    const std::int64_t latency = latencyFramesOf(take);
+
+    // Where each moment's sound begins: its onset, or where one was expected.
+    const auto soundAt = [&](std::size_t moment) -> std::int64_t
+    {
+        const TimingResult& result = timing.results[moment];
+        return result.onset.has_value() ? result.onset->frame : result.expectedFrame + latency;
+    };
+
+    std::map<score::Tick, std::size_t> momentAt;
+    for (std::size_t moment = 0; moment < timing.results.size(); ++moment)
+    {
+        momentAt.emplace(timing.results[moment].attack.tick, moment);
+    }
+
+    for (NoteResult& result : report.results)
+    {
+        if (result.outcome != NoteOutcome::pitchNotJudged)
+        {
+            continue;
+        }
+        const auto found = momentAt.find(result.tick);
+        if (found == momentAt.end())
+        {
+            continue;
+        }
+        const std::size_t moment = found->second;
+        const TimingResult& matched = timing.results[moment];
+        if (!matched.onset.has_value() || matched.attack.notes.size() != 1)
+        {
+            // A chord, or two voices together: one contour hears one pitch.
+            continue;
+        }
+
+        // The span: from the onset to the next moment's sound or the note's
+        // written end, whichever is first (decision 2).
+        const score::NoteRef& ref = result.ref;
+        if (ref.measureIndex >= written.measures.size())
+        {
+            continue;
+        }
+        const score::Measure& measure = written.measures[ref.measureIndex];
+        if (ref.voiceIndex >= measure.voices.size() ||
+            ref.eventIndex >= measure.voices[ref.voiceIndex].events.size())
+        {
+            continue;
+        }
+        const score::ScoreEvent& event = measure.voices[ref.voiceIndex].events[ref.eventIndex];
+        const score::Tick endTick = measure.start + event.onset + event.duration;
+        std::int64_t to =
+            transport::frameOfTick(*take.table, static_cast<double>(endTick)) + latency;
+        if (moment + 1 < timing.results.size())
+        {
+            to = std::min(to, soundAt(moment + 1));
+        }
+
+        Intonation intonation = judgeIntonation(
+            contour, matched.onset->frame, to, result.writtenMidi, take.referenceHz,
+            take.sampleRate, settings);
+        switch (intonation.verdict)
+        {
+        case IntonationVerdict::inTune:
+        case IntonationVerdict::sharp:
+        case IntonationVerdict::flat:
+            result.outcome = NoteOutcome::correct;
+            break;
+        case IntonationVerdict::wrong:
+            result.outcome = NoteOutcome::wrong;
+            result.playedMidi = intonation.sungMidi;
+            break;
+        case IntonationVerdict::uncertain:
+            break;
+        }
+        result.intonation = std::move(intonation);
+    }
+
+    for (ExtraNote& extra : report.extra)
+    {
+        if (!extra.midi.has_value())
+        {
+            extra.midi =
+                pitchAfterOnset(contour, extra.frame, take.referenceHz, take.sampleRate, settings);
+        }
+    }
+    summarise(report);
+}
+
+NoteReport judgeNotes(
+    const take::Take& take,
+    std::size_t part,
+    const TakeEvidence& evidence,
+    const TimingSettings& timing,
+    const IntonationSettings& intonation)
+{
+    const TimingReport timed = judgeTake(take, part, evidence.onsets, timing);
+    NoteReport report = matchNotes(timed, part);
+    judgeIntonations(report, timed, take, part, evidence.contour, intonation);
     return report;
 }
 
 NoteReport judgeNotes(
     const take::Take& take,
     std::size_t part,
-    const std::vector<PerformedOnset>& onsets,
-    const TimingSettings& settings)
+    const TimingSettings& timing,
+    const IntonationSettings& intonation)
 {
-    return matchNotes(judgeTake(take, part, onsets, settings), part);
-}
-
-NoteReport judgeNotes(const take::Take& take, std::size_t part, const TimingSettings& settings)
-{
-    return matchNotes(judgeTake(take, part, settings), part);
+    return judgeNotes(take, part, evidenceOf(take), timing, intonation);
 }
 } // namespace evaluation

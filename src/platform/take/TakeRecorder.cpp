@@ -16,7 +16,10 @@ constexpr std::size_t keyBufferSize = 256;
 
 // Judging runs off the message thread on a take nothing changes any more: a
 // kept take, its score and its table are all immutable.
-[[nodiscard]] TakeReview judge(std::shared_ptr<const Take> take, std::optional<std::size_t> part)
+[[nodiscard]] TakeReview judge(
+    std::shared_ptr<const Take> take,
+    std::optional<std::size_t> part,
+    evaluation::IntonationSettings intonation)
 {
     TakeReview review;
     review.take = std::move(take);
@@ -25,11 +28,11 @@ constexpr std::size_t keyBufferSize = 256;
         if (part.has_value())
         {
             review.part = *part;
-            review.report = evaluation::judgeNotes(*review.take, *part);
+            review.report = evaluation::judgeNotes(*review.take, *part, {}, intonation);
         }
         else
         {
-            evaluation::ReviewedPart best = evaluation::bestPartFor(*review.take);
+            evaluation::ReviewedPart best = evaluation::bestPartFor(*review.take, {}, intonation);
             review.part = best.part;
             review.report = std::move(best.report);
         }
@@ -125,6 +128,10 @@ bool TakeRecorder::start()
         const auto [input, output] = sources.latencies();
         take->inputLatencyFrames = input;
         take->outputLatencyFrames = output;
+    }
+    if (sources.referencePitch)
+    {
+        take->referenceHz = sources.referencePitch();
     }
     take->usedMicrophone = microphoneUsable();
     take->usedKeyboard = keyboardUsable();
@@ -265,9 +272,36 @@ bool TakeRecorder::reviewTake(std::uint64_t id, std::optional<std::size_t> part)
     {
         reviewed.reset();
     }
-    judging.push_back(Judging{++nextRequest, std::async(std::launch::async, judge, take, part)});
+    requested = Requested{id, part};
+    judging.push_back(
+        Judging{++nextRequest, std::async(std::launch::async, judge, take, part, intonation)});
     notify();
     return true;
+}
+
+void TakeRecorder::setIntonation(const evaluation::IntonationSettings& settings)
+{
+    if (settings == intonation)
+    {
+        return;
+    }
+    intonation = settings;
+
+    // Judged again against the part it is already reviewed against, or the
+    // part asked for.
+    if (requested.has_value())
+    {
+        const std::optional<std::size_t> part =
+            reviewed.has_value() && reviewed->take->id == requested->id
+                ? std::optional{reviewed->part}
+                : requested->part;
+        static_cast<void>(reviewTake(requested->id, part));
+    }
+}
+
+const evaluation::IntonationSettings& TakeRecorder::intonationSettings() const noexcept
+{
+    return intonation;
 }
 
 const TakeReview* TakeRecorder::review() const noexcept
@@ -285,6 +319,7 @@ void TakeRecorder::forgetTakes()
     kept.clear();
     ended.reset();
     reviewed.reset();
+    requested.reset();
 
     // Judging still running finishes and is dropped: its request is no longer
     // the newest.

@@ -4,6 +4,7 @@
 
 #include <optional>
 
+#include "../../../../platform/score/TargetNoteSelection.h"
 #include "../../../testcontrol/SyntheticTake.h"
 #include "../../../testcontrol/TestControlClicker.h"
 #include "../../ui/feedback/FeedbackWindow.h"
@@ -120,6 +121,7 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     testControlClockBar = state.clockBar;
     testControlRecordTake = state.recordTake;
     testControlReviewTake = state.reviewTake;
+    testControlSungTake = state.sungTake;
     testControlOpenMix = state.mixOpen;
     referencePitch.set(state.referencePitchHz > 0.0 ? state.referencePitchHz : 440.0);
 
@@ -379,14 +381,28 @@ void MainComponent::startClockForTestControl(int attemptsLeft)
 
         if (testControlReviewTake)
         {
-            // A pianist's take of the score's last part, through its first
+            // A pianist's take of the score's last part, or a singer's of its
+            // first part that plays one note at a time, through its first
             // eight bars, judged before the picture is taken.
             if (const std::shared_ptr<const score::Score> shown =
                     scoreImport.currentScoreHolder().score();
                 shown != nullptr && !shown->parts.empty())
             {
-                static_cast<void>(takeRecorder.keep(
-                    testcontrol::syntheticKeyboardTake(shown, shown->parts.size() - 1, 8)));
+                if (testControlSungTake)
+                {
+                    std::size_t sung = 0;
+                    while (sung + 1 < shown->parts.size() && !isMonophonic(shown->parts[sung]))
+                    {
+                        ++sung;
+                    }
+                    static_cast<void>(
+                        takeRecorder.keep(testcontrol::syntheticSungTake(shown, sung, 8)));
+                }
+                else
+                {
+                    static_cast<void>(takeRecorder.keep(
+                        testcontrol::syntheticKeyboardTake(shown, shown->parts.size() - 1, 8)));
+                }
                 takeRecorder.finishJudging();
             }
         }

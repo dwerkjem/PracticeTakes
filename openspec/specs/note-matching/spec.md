@@ -10,16 +10,25 @@ Every written note of the judged part SHALL have exactly one outcome:
 - correct, when its pitch was played at its matched moment;
 - wrong, when another pitch was played in its place, keeping that pitch;
 - missed, when nothing was played for it;
-- pitch not judged, when its moment was played but the evidence carries no
-  pitch.
+- pitch not judged, when its moment was played but its pitch could not be
+  judged: a chord heard through the microphone, or a sung note too unsure to
+  judge (sung-pitch-judging).
+
+A single sung note's pitch SHALL come from the take's pitch contour: correct
+when it is nearest the written note, and wrong, keeping the note sung, when it
+is nearer another.
 
 #### Scenario: A wrong note in a chord
 - **WHEN** a C major chord is written and C, E and A are played
 - **THEN** C and E are correct, and G is wrong, played as A
 
-#### Scenario: A sung take before pitch segmentation
-- **WHEN** a microphone onset is matched to a written note
-- **THEN** the note's pitch is not judged, not counted wrong
+#### Scenario: A chord through the microphone
+- **WHEN** a microphone onset is matched to a moment of three written notes
+- **THEN** their pitch is not judged, and none is counted wrong
+
+#### Scenario: A sung note a tone high
+- **WHEN** a singer sings A4 where G4 is written
+- **THEN** G4 is wrong, sung as A4
 
 ### Requirement: Extra notes are reported once and never attached elsewhere
 A played note with no written note at its moment, or at an onset no moment

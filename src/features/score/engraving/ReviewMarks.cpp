@@ -16,9 +16,27 @@ using NoteKey = std::tuple<std::size_t, std::size_t, std::size_t, std::size_t, s
     return {part, ref.measureIndex, ref.voiceIndex, ref.eventIndex, ref.noteIndex};
 }
 
-[[nodiscard]] PitchMark pitchMarkOf(evaluation::NoteOutcome outcome)
+[[nodiscard]] PitchMark pitchMarkOf(const evaluation::NoteResult& result)
 {
-    switch (outcome)
+    if (result.intonation.has_value())
+    {
+        switch (result.intonation->verdict)
+        {
+        case evaluation::IntonationVerdict::sharp:
+            return PitchMark::sharp;
+        case evaluation::IntonationVerdict::flat:
+            return PitchMark::flat;
+        case evaluation::IntonationVerdict::uncertain:
+            return PitchMark::uncertain;
+        case evaluation::IntonationVerdict::inTune:
+            return result.intonation->zone == pitch::IntonationZone::nearPerfect
+                       ? PitchMark::correct
+                       : PitchMark::acceptable;
+        case evaluation::IntonationVerdict::wrong:
+            break;
+        }
+    }
+    switch (result.outcome)
     {
     case evaluation::NoteOutcome::correct:
         return PitchMark::correct;
@@ -89,9 +107,14 @@ ReviewMarks reviewMarksFor(
             NoteMark mark;
             mark.system = index;
             mark.notehead = head;
-            mark.pitch = pitchMarkOf(result.outcome);
+            mark.pitch = pitchMarkOf(result);
             mark.timing = timingMarkOf(result.timing);
             mark.playedMidi = result.playedMidi;
+            if (result.intonation.has_value() &&
+                result.intonation->verdict != evaluation::IntonationVerdict::uncertain)
+            {
+                mark.cents = result.intonation->cents;
+            }
             marks.notes.push_back(mark);
         }
     }

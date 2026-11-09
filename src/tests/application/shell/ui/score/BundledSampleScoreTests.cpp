@@ -1,10 +1,14 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstddef>
+#include <memory>
 #include <string>
 
 #include "PracticeTakesSamples.h"
 #include "application/shell/ui/score/BundledSampleScore.h"
+#include "application/testcontrol/SyntheticTake.h"
+#include "platform/evaluation/TakeReview.h"
+#include "platform/score/TargetNoteSelection.h"
 #include "platform/score/musicxml/MusicXmlImporter.h"
 
 // The sample a first launch opens. What matters about it is that it is there,
@@ -172,4 +176,24 @@ TEST_CASE("a sample that cannot be written says so", "[score][sample]")
         CHECK(bundled_sample::install(scratch.get(), nullptr, 0) == juce::File());
         CHECK_FALSE(scratch.get().getChildFile(bundled_sample::fileName()).exists());
     }
+}
+
+TEST_CASE("the sample's voice, sung, is judged for intonation", "[score][sample][intonation]")
+{
+    // What the take-review-sung capture shows: the sample's voice through
+    // eight bars, sung by testcontrol::syntheticSungTake.
+    const ScratchFolder scratch;
+    const juce::File file = bundled_sample::install(scratch.get(), sampleBytes(), sampleSize());
+    const auto result = score::musicxml::importMusicXmlFile(file);
+    REQUIRE(result.score != nullptr);
+    std::shared_ptr<const score::Score> song = result.score;
+    REQUIRE(isMonophonic(song->parts[0]));
+
+    take::Take sung = testcontrol::syntheticSungTake(song, 0, 8);
+    REQUIRE(sung.state() == take::TakeState::stoppedEarly);
+    const evaluation::ReviewedPart reviewed = evaluation::bestPartFor(sung);
+    CHECK(reviewed.part == 0);
+    CHECK(reviewed.report.summary.inTune > 0);
+    CHECK(reviewed.report.summary.sharp > 0);
+    CHECK(reviewed.report.summary.flat > 0);
 }

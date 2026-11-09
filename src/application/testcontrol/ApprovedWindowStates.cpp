@@ -351,6 +351,31 @@ const std::vector<ApprovedWindowState>& states()
          "", false,
          "A take under review: its notes marked on the score, and the list of results beside it",
          0.0, "", bundledSampleFixtureName(), false, false, false, -1, false, true},
+        // A singer's take under review (sung-pitch-judging): the sample's
+        // voice, sung with notes sharp, flat, wrong and uncertain.
+        {"take-review-sung",
+         Tools{"score-view", "take-review"},
+         ToolPresentation::docked,
+         WorkspaceArrangement::split,
+         WindowGeometry::normal,
+         MicrophoneCondition::available,
+         false,
+         "",
+         false,
+         "A sung take under review: in-tune notes ringed, sharp and flat ones with an arrow "
+         "and their cents, and the list saying how far off each was",
+         0.0,
+         "",
+         bundledSampleFixtureName(),
+         false,
+         false,
+         false,
+         -1,
+         false,
+         true,
+         false,
+         0.0,
+         true},
         // The Mix popup over the sample (score-playback): playing the score,
         // with the piano's right hand muted.
         {"playback-mix",
@@ -414,8 +439,12 @@ const std::vector<ApprovedWindowState>& states()
         {"note-view", Tools{"note-view"}, ToolPresentation::docked, WorkspaceArrangement::single,
          WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
          "The Note View: the note being sung lit on a keyboard and drawn on a staff, against "
-         "the target, with its trail",
-         334.0, "", bundledSampleFixtureName(), false},
+         "the target, with its trail, and the acceptable range around the target coloured by "
+         "how close the note is",
+         // About 12 cents above the sample's target E4, the middle of the
+         // default range. The tone drifts 45 cents either way on purpose, so
+         // a picture catches it green, blue or amber.
+         332.0, "", bundledSampleFixtureName(), false},
         // The Note View with nothing to show: no tone, no score.
         {"note-view-empty", Tools{"note-view"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,

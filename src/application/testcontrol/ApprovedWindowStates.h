@@ -191,6 +191,13 @@ struct ApprovedWindowState
     //
     // Appended last, for the reason the comments above give.
     double referencePitchHz = 0.0;
+
+    // With `reviewTake`, the take is a singer's instead: a synthetic sung take
+    // of the score's first part that plays one note at a time, with notes
+    // sharp, flat, wrong and uncertain (sung-pitch-judging decision 9).
+    //
+    // Appended last, for the reason the comments above give.
+    bool sungTake = false;
 };
 
 // An object that can be asked to act, as though clicked.

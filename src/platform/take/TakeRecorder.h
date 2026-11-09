@@ -54,6 +54,10 @@ struct TakeSources
 
     // The device's stated input and output latencies, in frames.
     std::function<std::pair<int, int>()> latencies;
+
+    // The application's reference pitch, in hertz: what a take is sung
+    // against. 440 when absent.
+    std::function<double()> referencePitch;
 };
 
 class TakeListener
@@ -129,6 +133,11 @@ class TakeRecorder final : private juce::Timer, private transport::ClockListener
     // not kept or a part its score does not have.
     bool reviewTake(std::uint64_t id, std::optional<std::size_t> part = std::nullopt);
 
+    // How sung notes are judged: the singer's tolerance. A change judges the
+    // take under review again (openspec/changes/archive/2026-11-09-sung-pitch-judging, decision 7).
+    void setIntonation(const evaluation::IntonationSettings& settings);
+    [[nodiscard]] const evaluation::IntonationSettings& intonationSettings() const noexcept;
+
     // The take under review, judged. Null before the first, and while a
     // different take is being judged.
     [[nodiscard]] const TakeReview* review() const noexcept;
@@ -199,6 +208,15 @@ class TakeRecorder final : private juce::Timer, private transport::ClockListener
     std::vector<Judging> judging;
     std::uint64_t nextRequest = 0;
     std::optional<TakeReview> reviewed;
+
+    // The newest review asked for, to judge again when the settings change.
+    struct Requested
+    {
+        std::uint64_t id = 0;
+        std::optional<std::size_t> part;
+    };
+    std::optional<Requested> requested;
+    evaluation::IntonationSettings intonation;
 
     std::vector<float> scratch;
     std::vector<midi::MidiEvent> keyBuffer;

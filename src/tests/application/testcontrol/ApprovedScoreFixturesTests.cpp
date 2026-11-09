@@ -112,6 +112,7 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
             "score-view-cursor",
             "take-recording",
             "take-review",
+            "take-review-sung",
             "transport-playing",
             "playback-mix",
             "tuner-target",

@@ -70,3 +70,19 @@ juce::Colour spectrogramColourForLevel(Theme theme, float level)
                ? quiet.interpolatedWith(middle, clippedLevel / middlePoint)
                : middle.interpolatedWith(loud, (clippedLevel - middlePoint) / (1.0f - middlePoint));
 }
+
+juce::Colour intonationZoneColour(pitch::IntonationZone zone)
+{
+    switch (zone)
+    {
+    case pitch::IntonationZone::nearPerfect:
+        return juce::Colour(0xff2e9e4f);
+    case pitch::IntonationZone::acceptable:
+        return juce::Colour(0xff3b82d6);
+    case pitch::IntonationZone::nearButOff:
+        return juce::Colour(0xffe08a1e);
+    case pitch::IntonationZone::outside:
+        return juce::Colour(0xffd23c3c);
+    }
+    return juce::Colour(0xffd23c3c);
+}

@@ -63,6 +63,9 @@ struct State
     // A4 in hertz, 415-466.
     double referencePitchHz = AppDefaults::referencePitchHz;
 
+    // A sung note is in tune within this many cents, 5-50.
+    double inTuneCents = AppDefaults::inTuneCents;
+
     // A target the player chose, as its sounding and written names ("Bb3"),
     // empty for none; and whether opening a score keeps it (target-note-picker).
     juce::String chosenTargetSounding;

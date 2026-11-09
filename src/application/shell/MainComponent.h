@@ -498,6 +498,7 @@ class MainComponent final
     int testControlClockBar = -1;
     bool testControlRecordTake = false;
     bool testControlReviewTake = false;
+    bool testControlSungTake = false;
     bool testControlOpenMix = false;
     void startClockForTestControl(int attemptsLeft);
 

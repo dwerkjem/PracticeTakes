@@ -50,12 +50,24 @@ TEST_CASE("the keys hold still until a note leaves them", "[notes][keys]")
     CHECK(wide.highest == 96);
 }
 
-TEST_CASE("a lit key is shaded by how far off it is", "[notes][keys]")
+TEST_CASE("the sung note's zone is against the target, or else its nearest note", "[notes]")
 {
-    CHECK(offTune(0.0) == Approx(0.0));
-    CHECK(offTune(-5.0) == Approx(0.0));
-    CHECK(offTune(27.5) == Approx(0.5));
-    CHECK(offTune(-60.0) == Approx(1.0));
+    using pitch::IntonationZone;
+
+    // No pitch, no zone.
+    CHECK_FALSE(currentZone(std::nullopt, 0.0, 69, 25.0).has_value());
+
+    // Against the target A4: near perfect, acceptable, near but off, outside.
+    CHECK(currentZone(69.03, 3.0, 69, 25.0) == IntonationZone::nearPerfect);
+    CHECK(currentZone(68.85, -15.0, 69, 25.0) == IntonationZone::acceptable);
+    CHECK(currentZone(69.4, 40.0, 69, 25.0) == IntonationZone::nearButOff);
+
+    // In tune on B4, but the target is A4: outside.
+    CHECK(currentZone(71.0, 0.0, 69, 25.0) == IntonationZone::outside);
+
+    // Without a target, against the note it is nearest.
+    CHECK(currentZone(71.12, 12.0, std::nullopt, 25.0) == IntonationZone::acceptable);
+    CHECK(currentZone(71.12, 12.0, std::nullopt, 10.0) == IntonationZone::nearButOff);
 }
 
 TEST_CASE("the trail keeps three seconds, with its gaps", "[notes][trail]")

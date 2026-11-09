@@ -979,6 +979,38 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # A synthetic singer's take under review (sung-pitch-judging).
+    Surface(
+        state="take-review-sung",
+        title="A sung take under review",
+        area="score",
+        modes=frozenset({FULL}),
+        # Judging the sung audio blocks the window for about four and a half
+        # seconds in a Debug build: the pitch contour and the onsets of twenty
+        # seconds of singing.
+        warmup_seconds=10.0,
+        extras=(
+            Question(
+                "intonation-on-notes",
+                "Are the voice's notes ringed green, a few ringed blue (in tune but not near "
+                "perfect), a few ringed amber with an arrow above (sharp) or below (flat) "
+                "labelled with the cents, one filled red with the note sung, and one ringed "
+                "faintly?",
+            ),
+            Question(
+                "intonation-list",
+                "Does the Take Review list give sung notes as in tune, N cents sharp or flat, "
+                "wrong with the note sung, or pitch uncertain, and does the summary count in "
+                "tune, sharp and flat?",
+            ),
+            Question(
+                "intonation-real-voice",
+                "Sing a phrase from the sample into a real microphone, a little sharp on "
+                "purpose: are those notes judged sharp, and the others in tune?",
+                behavioural=True,
+            ),
+        ),
+    ),
     # The Mix popup (score-playback).
     Surface(
         state="playback-mix",
@@ -1057,8 +1089,9 @@ SURFACES: tuple[Surface, ...] = (
         extras=(
             Question(
                 "key-and-target",
-                "Is the key being sung lit, shaded between green and amber, and the target's "
-                "key ringed, distinguishable at a glance?",
+                "Is the key being sung lit, the target's key ringed, and a band either side "
+                "of the target's line showing the acceptable range, in the same colour as the "
+                "key and the trail (the tone drifts, so any of green, blue or amber)?",
             ),
             Question(
                 "staff-and-trail",
@@ -1067,8 +1100,14 @@ SURFACES: tuple[Surface, ...] = (
             ),
             Question(
                 "keys-held",
-                "With a MIDI keyboard, are held keys lit blue, and does a slide sung from one "
-                "note to another draw as one line?",
+                "With a MIDI keyboard, are held keys lit purple, and does a slide sung from "
+                "one note to another draw as one line?",
+                behavioural=True,
+            ),
+            Question(
+                "zones-live",
+                "Sing at the target and drift off slowly: does the band and the key go green "
+                "near perfect, blue inside the range, amber when near but off, and red beyond?",
                 behavioural=True,
             ),
         ),

@@ -6,18 +6,15 @@
 #include <optional>
 #include <vector>
 
+#include "../../platform/pitch/IntonationZone.h"
+
 // Everything the Note View draws that can be tested without a display: which
 // keys it shows, where a key or a pitch sits across them, the trail of recent
-// pitch, and how a lit key is shaded (no JUCE dependency).
+// pitch, and which colour zone the note being sung is in (no JUCE dependency).
 // openspec/changes/archive/2026-11-08-note-view/design.md, decision 2.
 namespace notes
 {
 inline constexpr double trailSeconds = 3.0;
-
-// Within the tuner's in-tune band a lit key is fully "on"; by half a semitone
-// it is fully "off".
-inline constexpr double inTuneCents = 5.0;
-inline constexpr double furthestCents = 50.0;
 
 [[nodiscard]] constexpr bool isBlackKey(int midi) noexcept
 {
@@ -83,15 +80,23 @@ struct KeyWindow
     return window;
 }
 
-// 0 for a key sung in tune, rising to 1 by half a semitone off.
-[[nodiscard]] inline double offTune(double cents) noexcept
+// The zone the note being sung is in: against the target when there is one,
+// otherwise against the note it is nearest. Nothing without a pitch. What the
+// lit key, the trail and the band around the target are coloured by.
+[[nodiscard]] inline std::optional<pitch::IntonationZone> currentZone(
+    std::optional<double> sungMidi,
+    double centsFromNearest,
+    std::optional<int> targetMidi,
+    double toleranceCents) noexcept
 {
-    const double off = std::abs(cents);
-    if (off <= inTuneCents)
+    if (!sungMidi.has_value())
     {
-        return 0.0;
+        return std::nullopt;
     }
-    return std::min(1.0, (off - inTuneCents) / (furthestCents - inTuneCents));
+    const double cents =
+        targetMidi.has_value() ? 100.0 * (*sungMidi - static_cast<double>(*targetMidi))
+                               : centsFromNearest;
+    return pitch::zoneOf(cents, toleranceCents);
 }
 
 struct TrailPoint
