@@ -131,6 +131,16 @@ void ScoreViewComponent::Canvas::mouseUp(const juce::MouseEvent& event)
     owner.aimAtNoteUnder(event.position);
 }
 
+void ScoreViewComponent::Canvas::mouseWheelMove(
+    const juce::MouseEvent& event,
+    const juce::MouseWheelDetails& wheel)
+{
+    if (!owner.turnPageByWheel(wheel))
+    {
+        juce::Component::mouseWheelMove(event, wheel);
+    }
+}
+
 void ScoreViewComponent::Canvas::mouseDoubleClick(const juce::MouseEvent& event)
 {
     if (event.mods.isPopupMenu())
@@ -714,6 +724,16 @@ void ScoreViewComponent::refreshFromCurrentScore()
 
 juce::Rectangle<float> ScoreViewComponent::pageBounds() const
 {
+    if (settings.pageFit == score_view::PageFit::panel)
+    {
+        // The panel itself, less the surround: no scrollbar is ever shown, so
+        // none is allowed for.
+        return juce::Rectangle<float>(
+                   0.0f, 0.0f, static_cast<float>(viewport.getWidth()),
+                   static_cast<float>(viewport.getHeight()))
+            .reduced(pageSurround);
+    }
+
     if (settings.pageFit == score_view::PageFit::page)
     {
         // The whole page in the panel: as tall as the panel allows, A4-shaped,
@@ -750,6 +770,13 @@ juce::Rectangle<float> ScoreViewComponent::pageBounds() const
 juce::Rectangle<float> ScoreViewComponent::pageContent() const
 {
     const juce::Rectangle<float> page = pageBounds();
+
+    // A page the panel's shape keeps narrow margins: a printed page's, in
+    // proportion to a wide panel, would waste a third of it.
+    if (settings.pageFit == score_view::PageFit::panel)
+    {
+        return page.reduced(std::min(24.0f, page.getWidth() * pageMarginFraction), 12.0f);
+    }
 
     return page.reduced(page.getWidth() * pageMarginFraction);
 }
@@ -814,10 +841,19 @@ void ScoreViewComponent::relayout(std::optional<std::size_t> keep, bool force)
         // One page on the canvas, scrolled vertically when it is taller than
         // the panel; pages are turned, never scrolled between.
         const juce::Rectangle<float> page = pageBounds();
-        viewport.setScrollBarsShown(true, false);
-        canvas.setSize(
-            std::max(0, width - viewport.getScrollBarThickness()),
-            std::max(height, static_cast<int>(std::ceil(page.getBottom() + pageSurround))));
+        if (settings.pageFit == score_view::PageFit::panel)
+        {
+            // Exactly the panel: nothing to scroll, so no scrollbar either.
+            viewport.setScrollBarsShown(false, false);
+            canvas.setSize(width, height);
+        }
+        else
+        {
+            viewport.setScrollBarsShown(true, false);
+            canvas.setSize(
+                std::max(0, width - viewport.getScrollBarThickness()),
+                std::max(height, static_cast<int>(std::ceil(page.getBottom() + pageSurround))));
+        }
     }
     else
     {
@@ -1558,8 +1594,43 @@ void ScoreViewComponent::follow()
     }
 }
 
+bool ScoreViewComponent::turnPageByWheel(const juce::MouseWheelDetails& wheel)
+{
+    if (settings.view != score_view::ViewMode::page ||
+        settings.pageFit != score_view::PageFit::panel || pages.empty())
+    {
+        return false;
+    }
+
+    // Whole pages only, and one a gesture: a trackpad's stream of small
+    // deltas is gathered until it amounts to a notch.
+    wheelGathered += wheel.deltaY;
+    if (std::abs(wheelGathered) < wheelNotch)
+    {
+        return true;
+    }
+    const bool forward = wheelGathered < 0.0f;
+    wheelGathered = 0.0f;
+    if (forward && currentPage + 1 < pages.size())
+    {
+        turnToPage(currentPage + 1);
+    }
+    else if (!forward && currentPage > 0)
+    {
+        turnToPage(currentPage - 1);
+    }
+    return true;
+}
+
 void ScoreViewComponent::glideTo(int x, int y)
 {
+    // A page the panel's shape has nothing to scroll: following turns its
+    // pages and stops there.
+    if (settings.view == score_view::ViewMode::page &&
+        settings.pageFit == score_view::PageFit::panel)
+    {
+        return;
+    }
     const juce::Point<int> goal(x, y);
     if (glide.has_value() && glide->to == goal)
     {
@@ -1910,6 +1981,10 @@ std::vector<ToolComponent::MenuEntry> ScoreViewComponent::optionsMenuEntries()
             l10n::text("score.view.menu.fit-page"),
             [this] { setPageFit(score_view::PageFit::page); },
             settings.pageFit == score_view::PageFit::page});
+        entries.push_back(MenuEntry{
+            l10n::text("score.view.menu.fit-panel"),
+            [this] { setPageFit(score_view::PageFit::panel); },
+            settings.pageFit == score_view::PageFit::panel});
     }
 
     if (std::optional<MenuEntry> parts = partsMenuEntry())

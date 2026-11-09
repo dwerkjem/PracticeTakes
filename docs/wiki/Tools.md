@@ -235,7 +235,11 @@ marks, with each part named beside its staves.
 - **Enlarge**, **Shrink** and **Default size** change the size of the music.
 - **Parts** shows and hides individual parts.
 - **Fit width** and **Fit page** (Page view) size the page to the panel's width,
-  or show the whole page at once.
+  or show the whole page at once. **Fill the panel** makes the page the panel's
+  own shape: as many lines as fit at the size you chose, no scrollbar, and the
+  score read by turning pages (the arrows, the keys, or the mouse wheel).
+  Following the clock turns the page for you. To fit more lines on a page,
+  shrink the music with **−**.
 - **Notes under the score** say where the drawing differs from the file (beams
   grouped by the time signature, say). The **×** at their right dismisses them
   and gives their room to the score; a dismissed note stays dismissed for every

@@ -37,7 +37,12 @@ enum class PageFit
     width,
 
     // As tall as the panel, so the whole page shows at once, smaller.
-    page
+    page,
+
+    // The panel's own shape: the page is the panel, filled with as many
+    // systems as fit, and the score is read by turning pages -- nothing
+    // scrolls.
+    panel
 };
 
 // The staff sizes enlarge and shrink step through, as pixels per staff space,
@@ -93,7 +98,8 @@ inline constexpr int settingsVersion = 1;
 
 // "view=page;size=7" -- the view by name and the size in pixels per space --
 // then, when any part is hidden, ";hidden=P1:Voice,P3:Alto"; then, each only
-// when it is not the default, ";ahead=3", ";follow=0", ";fit=page" and
+// when it is not the default, ";ahead=3", ";follow=0", ";fit=page" (or
+// ";fit=panel") and
 // ";review=0", and ";dismissed=a.b,c.d" when any notice is dismissed. A
 // notice's identifier holds only letters, digits, `.` and `-`, and one that
 // does not is dropped rather than escaped. A part's id is an

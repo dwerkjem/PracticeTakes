@@ -717,6 +717,7 @@ language: English
 "score.view.menu.default-size" = "Default size"
 "score.view.menu.enlarge" = "Enlarge"
 "score.view.menu.fit-page" = "Fit page"
+"score.view.menu.fit-panel" = "Fill the panel"
 "score.view.menu.fit-width" = "Fit width"
 "score.view.menu.follow" = "Follow the practice clock"
 "score.view.menu.go-to-bar" = "Go to bar…"

@@ -108,6 +108,7 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
             "score-view-notation",
             "score-view-part-hidden",
             "score-view-notices-dismissed",
+            "score-view-fill-panel",
             "score-view-notation-large",
             "score-view-page",
             "score-view-sample",

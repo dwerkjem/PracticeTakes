@@ -107,6 +107,10 @@ class ScoreViewComponent final
         void mouseUp(const juce::MouseEvent& event) override;
         void mouseDoubleClick(const juce::MouseEvent& event) override;
 
+        // In a page the panel's shape, the wheel turns pages.
+        void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel)
+            override;
+
       private:
         ScoreViewComponent& owner;
 
@@ -171,6 +175,12 @@ class ScoreViewComponent final
 
     // The reader moved the view while the clock played.
     void suspendFollowing();
+
+    // In Page view filling the panel, the wheel turns a page; false when it
+    // should scroll as usual.
+    bool turnPageByWheel(const juce::MouseWheelDetails& wheel);
+    float wheelGathered = 0.0f;
+    static constexpr float wheelNotch = 0.1f;
 
     // Scroll to (x, y) over the next few frames rather than at once.
     void glideTo(int x, int y);

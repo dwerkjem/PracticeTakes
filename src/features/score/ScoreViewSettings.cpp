@@ -286,6 +286,10 @@ ToolSettingsPayload encode(const Settings& settings)
     {
         data += ";fit=page";
     }
+    else if (settings.pageFit == PageFit::panel)
+    {
+        data += ";fit=panel";
+    }
     if (!settings.showReview)
     {
         data += ";review=0";
@@ -370,7 +374,9 @@ Settings decode(const ToolSettingsPayload& payload)
             }
             else if (key == "fit")
             {
-                settings.pageFit = value == "page" ? PageFit::page : PageFit::width;
+                settings.pageFit = value == "page"    ? PageFit::page
+                                   : value == "panel" ? PageFit::panel
+                                                      : PageFit::width;
             }
             else if (key == "size")
             {

@@ -1393,6 +1393,27 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # Page view filling the panel: nothing scrolls, pages turn.
+    Surface(
+        state="score-view-fill-panel",
+        title="The score view filling the panel",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "no-scrollbar",
+                "Is the page the panel's own shape, with no scrollbar and nothing cut off at "
+                "its foot?",
+            ),
+            Question(
+                "pages-turn",
+                "Resize the panel, then turn pages with the arrows and the mouse wheel: does "
+                "each page refill the panel, and does nothing ever scroll?",
+                behavioural=True,
+            ),
+        ),
+    ),
     # The sample with every note under the score dismissed: the strip goes and
     # the score takes its room.
     Surface(

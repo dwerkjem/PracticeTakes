@@ -378,6 +378,14 @@ const std::vector<ApprovedWindowState>& states()
          false, "", false,
          "The score view with the sample's voice hidden: the piano alone, in Page view", 0.0,
          "view=page;hidden=P1:Voice", bundledSampleFixtureName(), false},
+        // Page view filling the panel: the page is the panel's shape, nothing
+        // scrolls, and the score is read by turning pages.
+        {"score-view-fill-panel", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view in Page view filling the panel: no scrollbar, the page the panel's "
+         "shape",
+         0.0, "view=page;fit=panel", bundledSampleFixtureName(), false},
         // The sample with every notice under it dismissed: the strip gone
         // and its room given to the score.
         {"score-view-notices-dismissed", Tools{"score-view"}, ToolPresentation::docked,

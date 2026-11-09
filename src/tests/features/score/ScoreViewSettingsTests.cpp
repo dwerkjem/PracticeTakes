@@ -202,3 +202,15 @@ TEST_CASE("dismissed notices are remembered by identifier", "[score][view-settin
         score_view::decode({score_view::settingsVersion, "view=page;size=7;dismissed=x.y,,a=b"})
             .dismissedNotices == std::vector<std::string>{"x.y"});
 }
+
+TEST_CASE("a page that fills the panel is saved as fit=panel", "[score][view-settings]")
+{
+    score_view::Settings settings;
+    settings.pageFit = score_view::PageFit::panel;
+    const auto payload = score_view::encode(settings);
+    CHECK(payload.data.find(";fit=panel") != std::string::npos);
+    CHECK(score_view::decode(payload).pageFit == score_view::PageFit::panel);
+    CHECK(
+        score_view::decode({score_view::settingsVersion, "view=page;size=7;fit=page"}).pageFit ==
+        score_view::PageFit::page);
+}
