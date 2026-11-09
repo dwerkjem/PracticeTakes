@@ -32,6 +32,9 @@ class TakeReviewComponent final
     void setTheme(Theme theme) override;
     void resetToDefaults() override;
 
+  protected:
+    void textScaleChanged() override;
+
   private:
     static constexpr int headerHeight = 92;
     static constexpr int rowHeight = 24;
