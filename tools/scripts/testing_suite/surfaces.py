@@ -549,9 +549,22 @@ SURFACES: tuple[Surface, ...] = (
         area="settings",
         modes=frozenset({FULL}),
         instruction="Change the theme, and look at a tool with it applied.",
-        extras=(Question(
-                "theme-applies", "Did the theme apply everywhere?", behavioural=True
-            ),),
+        extras=(
+            Question("theme-applies", "Did the theme apply everywhere?", behavioural=True),
+            # global-text-size.
+            Question(
+                "text-size-preview",
+                "Under Text size, is every size of text listed, each drawn at its own size "
+                "with its point size beside it?",
+            ),
+            Question(
+                "text-size-applies",
+                "Choose 150%: do the preview, the menus, the title strip, the Settings rows and "
+                "every open tool's text grow at once, nothing clipped, and does 100% put them "
+                "back exactly?",
+                behavioural=True,
+            ),
+        ),
     ),
     Surface(
         state="settings-open",

@@ -67,7 +67,11 @@ class LoudnessMeterComponent final : public ToolComponent, /* ... */
 };
 ```
 
-`setTheme` and `resetToDefaults` are required. The settings pair defaults to a
+`setTheme` and `resetToDefaults` are required. Draw text with `textFont(role)`
+(an `appearance::TextRole`) rather than a point size, and grow any fixed height
+that holds text with `scaledHeight()`: the shell tells every tool the text size
+through `setTextScale`, and lays it out again when it changes (see
+[ARCHITECTURE.md § Text size](ARCHITECTURE.md#text-size)). The settings pair defaults to a
 tool that persists nothing and always starts at its defaults, which is what the
 spectrogram and harmonic analyzer do. A tool that overrides them must also
 declare a `settingsVersion`, and must check the version it is handed rather than

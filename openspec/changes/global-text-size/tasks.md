@@ -31,5 +31,5 @@
       nothing moves.
 - [ ] 5.2 Approved states for 80% and 150%. Capture them, read every picture,
       and fix anything clipped.
-- [ ] 5.3 The wiki (Workspace and Settings: Appearance), and
+- [x] 5.3 The wiki (Workspace and Settings: Appearance), and
       ARCHITECTURE.md on how text size reaches a tool.

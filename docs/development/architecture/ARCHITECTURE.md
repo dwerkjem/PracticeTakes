@@ -193,6 +193,28 @@ who holds them. The tuner reads pitch from `SharedPitchAnalysis` and is a
 state-only listener (`addStateListener`), which costs no stream. The audio
 callback is unchanged. See `openspec/specs/tool-registry/spec.md`.
 
+### Text size
+
+One text size scales every piece of UI text (openspec/changes/global-text-size).
+- **The rule** is JUCE-free: `appearance::TextScale` (80 to 150 percent in tens,
+  half-point rounding) and the role table in `application/theme/TextScale.h`,
+  one named role per size the application draws. Code asks for a role, never a
+  number, so a new size cannot appear without a name and a row in the
+  Settings preview.
+- **Widgets** follow through `AppLookAndFeel`, which holds the size and scales
+  labels, buttons, menus, tabs and alerts. A `juce::Label` is given its role's
+  *base* size and the look-and-feel scales it; text a component paints itself
+  asks for the scaled size. One rule each way, so nothing is scaled twice. The
+  title strip keeps JUCE's own look through `TitleStripLookAndFeel`.
+- **Tools** are told through `ToolComponent::setTextScale`, as they are told
+  the theme, and draw with `textFont(role)`; `scaledHeight()` grows a fixed
+  height and `compactShape()` makes a pane give up its full form sooner.
+- **Shell windows** read the size from the look-and-feel they are drawn with
+  (`appearance::scaledFor`, `fontFor`) and lay themselves out again in
+  `lookAndFeelChanged()`, which `MainComponent::setTextScale` sends.
+- **Exempt:** text that sizes itself to its pane -- the tuner's note name and
+  signs, notation and the marks on it, Now & Next's note card -- keeps doing so.
+
 ### Services and lifetime
 
 A tool reaches shared state only through `ToolServices`, passed to its factory.
