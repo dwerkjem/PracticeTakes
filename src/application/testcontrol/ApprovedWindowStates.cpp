@@ -479,6 +479,12 @@ const std::vector<ApprovedWindowState>& states()
          "The Input Level tool reading a tone: the level, its peak, and the line at Ignore "
          "sound below",
          440.0, ""},
+        // Its orientation set to Vertical in a pane wide enough for either.
+        {"input-level-vertical", Tools{"input-level"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The Input Level tool set upright: the bar down the left, the words beside it", 440.0,
+         "vertical"},
         // The Take Review tool before any take: what most sessions see first.
         {"take-review-empty", Tools{"take-review"}, ToolPresentation::docked,
          WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,

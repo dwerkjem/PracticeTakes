@@ -72,7 +72,8 @@
             "Input Level",
             {},
             ToolInstancePolicy::multi,
-            std::nullopt,
+            // input_level::settingsVersion: the orientation. A test pins it.
+            1,
             {720, 300},
             // Its own stream, measured as a take's attacks are (#381).
             /* readsAudioSamples */ true},

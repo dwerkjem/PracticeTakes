@@ -179,6 +179,7 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/StaffPosition.h
     src/features/level/InputLevelComponent.cpp
     src/features/level/InputLevelComponent.h
+    src/features/level/InputLevelSettings.h
     src/features/notes/NoteViewComponent.cpp
     src/features/notes/NoteViewComponent.h
     src/features/notes/NoteViewModel.h
@@ -352,6 +353,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/analysis/tuner/TunerSettingsCodecTests.cpp
     src/tests/features/analysis/tuner/TunerZonesTests.cpp
     src/tests/features/feedback/FeedbackInvitationPolicyTests.cpp
+    src/tests/features/level/InputLevelSettingsTests.cpp
     src/tests/features/notes/NoteViewModelTests.cpp
     src/tests/features/nownext/NowNextModelTests.cpp
     src/tests/features/score/MusicFontTests.cpp

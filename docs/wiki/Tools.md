@@ -201,6 +201,10 @@ take and never counted as a note; sound that reaches past it, in green, counts
 as playing or singing. The words under the figure say which side of the line you
 are on. Near full scale the bar turns red: a little louder and the input clips.
 
+The bar runs across the tool, or upright in a tall, thin pane. To choose,
+**...** → **Orientation**: **Automatic** (the default), **Horizontal** or
+**Vertical**. Each copy of the tool keeps its own choice with the workspace.
+
 To set the line for your room, open the tool, stay silent, and raise the line
 until the room sits under it; then sing quietly and check that you cross it.
 The same meter is beside **Ignore sound below** in Settings, so you can do it

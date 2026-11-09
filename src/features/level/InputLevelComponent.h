@@ -4,6 +4,7 @@
 
 #include "../../application/tools/ToolComponent.h"
 #include "../../application/widgets/InputLevelMeter.h"
+#include "InputLevelSettings.h"
 
 #include <functional>
 
@@ -29,11 +30,23 @@ class InputLevelComponent final : public ToolComponent
     void setTheme(Theme theme) override;
     void resetToDefaults() override;
 
+    // Which way the bar runs: automatic, horizontal or vertical, chosen from
+    // the tool's options menu and kept with the workspace.
+    [[nodiscard]] std::optional<ToolSettingsPayload> captureSettings() const override;
+    void applySettings(const ToolSettingsPayload& payload) override;
+    [[nodiscard]] std::vector<MenuEntry> optionsMenuEntries() override;
+
+    // "horizontal" or "vertical", for verification: the orientation forced.
+    [[nodiscard]] bool showView(const juce::String& view) override;
+
   private:
     // "−32 dB", or below the scale.
     [[nodiscard]] static juce::String figure(double db);
 
+    void setOrientation(input_level::Orientation choice);
+
     Theme theme;
+    input_level::Orientation orientation = input_level::Orientation::automatic;
     InputLevelMeter meter;
 
     // Where the words go, set by resized() for paint().

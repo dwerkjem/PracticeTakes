@@ -1215,6 +1215,26 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    Surface(
+        state="input-level-vertical",
+        title="The Input Level tool set upright",
+        modes=frozenset({FULL}),
+        warmup_seconds=2.5,
+        extras=(
+            Question(
+                "upright",
+                "Does the bar run bottom to top down the left, figures beside it, with the "
+                "level, the words and the peak to its right?",
+            ),
+            Question(
+                "menu-switches",
+                "In the tool's ... menu, does Orientation offer Automatic, Horizontal and "
+                "Vertical, tick the current one, switch at once, and keep the choice after a "
+                "restart?",
+                behavioural=True,
+            ),
+        ),
+    ),
     # The Take Review tool before any take.
     Surface(
         state="take-review-empty",
