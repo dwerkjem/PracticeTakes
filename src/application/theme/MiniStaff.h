@@ -10,8 +10,9 @@
 #include <span>
 #include <vector>
 
-// A small five-line staff with a notehead or two on it: the Note View's staff,
-// Now & Next's, and the target picker's grand staff (one call per staff).
+// A small five-line staff with a clef and a notehead or two on it: the Note
+// View's staff, Now & Next's, and the target picker's grand staff (one call
+// per staff).
 //
 // It is not notation -- the Score View engraves that -- just enough of a staff
 // to say where a pitch sits: the five lines, ledger lines out to the note, the
@@ -66,8 +67,7 @@ struct MiniStaffStyle
 
     // The music font, to draw the clef's own glyph at the staff's start in
     // the lines' colour, in place of its name. None writes the name instead
-    // (`label`), for a caller with no room for a clef: the picker's grand
-    // staff, labelled in its margin.
+    // (`label`). Every staff the application draws passes one.
     const MusicFont* font = nullptr;
 };
 

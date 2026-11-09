@@ -112,6 +112,16 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
         scoreImportWindow->setVisible(false);
     }
 
+    // No score and no target unless the state asks for one. Left alone, a
+    // state with no score inherited the last one's: a tuner photographed
+    // after a score surface read against that score's first note, and showed
+    // the transport, depending on which surfaces a worker happened to take
+    // before it. A state with a fixture imports it below, which publishes
+    // its own target.
+    scoreImport.close();
+    currentTarget.keyFifths = 0;
+    currentTarget.publish(nullptr, std::string(l10n::key("target.none.no-score")));
+
     // The clock at rest, at the score's tempo, with nothing looping: a state
     // that wants it playing says so, and no state inherits the last one's.
     practiceClock.stop();

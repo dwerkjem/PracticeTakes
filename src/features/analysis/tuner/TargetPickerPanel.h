@@ -6,6 +6,7 @@
 
 #include "../../../application/theme/AppLookAndFeel.h"
 #include "../../../application/theme/MiniStaff.h"
+#include "../../../application/theme/MusicFont.h"
 #include "../../../application/theme/Theme.h"
 #include "../../../platform/pitch/CurrentTarget.h"
 #include "../../../platform/pitch/TargetChoice.h"
@@ -236,21 +237,13 @@ class TargetPickerPanel final
             style.ledgerReach = 1.25f;
             style.ledgersInNoteColour = true;
             style.accidentals = false;
+            // Each staff's own clef, G on the treble and F on the bass, at its
+            // start: the heads are in the middle, clear of them.
+            style.font = &musicFont.get();
             drawMiniStaff(
                 graphics, staffArea(trebleMiddle()), pitch::StaffClef::treble, trebleHeads, style);
             drawMiniStaff(
                 graphics, staffArea(bassMiddle()), pitch::StaffClef::bass, bassHeads, style);
-
-            // The grand staff is labelled in the margin, above the treble and
-            // below the bass, rather than above each staff.
-            graphics.setColour(style.lines);
-            graphics.setFont(appearance::fontFor(*this, appearance::TextRole::small));
-            graphics.drawText(
-                miniStaffClefName(pitch::StaffClef::treble), 0,
-                static_cast<int>(trebleMiddle() - 30.0f), 60, 14, juce::Justification::left);
-            graphics.drawText(
-                miniStaffClefName(pitch::StaffClef::bass), 0,
-                static_cast<int>(bassMiddle() + 22.0f), 60, 14, juce::Justification::left);
         }
 
         void mouseMove(const juce::MouseEvent& event) override
@@ -335,6 +328,9 @@ class TargetPickerPanel final
         }
 
         std::optional<Place> hover;
+
+        // The music font, for the clefs: one copy however many tools draw staves.
+        juce::SharedResourcePointer<MusicFont> musicFont;
     };
 
     void handleNoteOn(juce::MidiKeyboardState*, int, int midiNoteNumber, float) override
