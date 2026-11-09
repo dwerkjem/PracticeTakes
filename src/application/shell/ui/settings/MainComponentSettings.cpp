@@ -110,6 +110,7 @@ void MainComponent::showSettings()
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     settingsWindow = std::make_unique<SettingsWindow>(
         audioInputService, midiInputService, practiceClock, referencePitch, currentTarget,
+        takeRecorder,
         [safeThis]
         {
             // The metronome and the count-in are saved as they change, like
@@ -620,6 +621,7 @@ AppSettings::State MainComponent::captureSettingsState()
     state.playbackEnabled = practiceClock.playbackMix().enabled;
     state.playbackVolume = practiceClock.playbackMix().volume;
     state.referencePitchHz = referencePitch.hertz();
+    state.inTuneCents = takeRecorder.intonationSettings().toleranceCents;
     state.keepTargetWhenScoreOpens = currentTarget.keepChosenWhenScoreOpens;
     if (const auto target = currentTarget.target();
         target != nullptr && target->origin == pitch::TargetOrigin::chosen)
@@ -697,6 +699,11 @@ void MainComponent::loadSettings()
     practiceClock.setPlaybackEnabled(loaded.state.playbackEnabled);
     practiceClock.setPlaybackVolume(static_cast<float>(loaded.state.playbackVolume));
     referencePitch.set(loaded.state.referencePitchHz);
+    {
+        evaluation::IntonationSettings intonation = takeRecorder.intonationSettings();
+        intonation.toleranceCents = loaded.state.inTuneCents;
+        takeRecorder.setIntonation(intonation);
+    }
     currentTarget.keepChosenWhenScoreOpens = loaded.state.keepTargetWhenScoreOpens;
     if (const auto sounding = pitch::parseNoteName(loaded.state.chosenTargetSounding.toStdString()))
     {

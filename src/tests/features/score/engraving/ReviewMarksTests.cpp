@@ -6,6 +6,7 @@
 
 #include "support/ScoreFixtures.h"
 
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -117,9 +118,64 @@ TEST_CASE("each judged note is marked on its own notehead", "[score][engraving][
             CHECK(source.eventIndex == 3);
             CHECK(mark.timing == TimingMark::early);
             break;
+        case PitchMark::sharp:
+        case PitchMark::flat:
+        case PitchMark::uncertain:
+            FAIL("a keyboard result is not marked for intonation");
+            break;
         }
     }
     CHECK(marks.extras.empty());
+}
+
+TEST_CASE("a sung note is marked sharp, flat or uncertain", "[score][engraving][review]")
+{
+    const ScoreLayout layout = layOutScore(scoreOf(1), wide());
+    REQUIRE(layout.systems.size() == 1);
+
+    evaluation::NoteReport report;
+    report.results = {
+        resultAt(0, 0, evaluation::NoteOutcome::correct),
+        resultAt(0, 1, evaluation::NoteOutcome::correct),
+        resultAt(0, 2, evaluation::NoteOutcome::correct),
+        resultAt(0, 3, evaluation::NoteOutcome::pitchNotJudged)};
+    const std::array<evaluation::IntonationVerdict, 4> verdicts{
+        evaluation::IntonationVerdict::inTune, evaluation::IntonationVerdict::sharp,
+        evaluation::IntonationVerdict::flat, evaluation::IntonationVerdict::uncertain};
+    const std::array<double, 4> cents{4.0, 30.0, -40.0, 0.0};
+    for (std::size_t index = 0; index < verdicts.size(); ++index)
+    {
+        evaluation::Intonation intonation;
+        intonation.verdict = verdicts.at(index);
+        intonation.cents = cents.at(index);
+        report.results[index].intonation = intonation;
+    }
+
+    const ReviewMarks marks = reviewMarksFor(layout, report, {});
+    REQUIRE(marks.notes.size() == 4);
+    const System& system = layout.systems.front();
+    for (const NoteMark& mark : marks.notes)
+    {
+        switch (system.noteheads.at(mark.notehead).source.eventIndex)
+        {
+        case 0:
+            CHECK(mark.pitch == PitchMark::correct);
+            CHECK(mark.cents == 4.0);
+            break;
+        case 1:
+            CHECK(mark.pitch == PitchMark::sharp);
+            CHECK(mark.cents == 30.0);
+            break;
+        case 2:
+            CHECK(mark.pitch == PitchMark::flat);
+            CHECK(mark.cents == -40.0);
+            break;
+        default:
+            CHECK(mark.pitch == PitchMark::uncertain);
+            CHECK_FALSE(mark.cents.has_value());
+            break;
+        }
+    }
 }
 
 TEST_CASE("another part's results mark nothing in this one", "[score][engraving][review]")

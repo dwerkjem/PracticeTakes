@@ -225,8 +225,14 @@ juce::Colour TakeReviewComponent::colourOf(const evaluation::ReviewRow& row) con
         return juce::Colour(wrongColour);
     case evaluation::NoteOutcome::missed:
         return palette().muted;
-    case evaluation::NoteOutcome::correct:
     case evaluation::NoteOutcome::pitchNotJudged:
+        // A sung note too unsure to judge is neither right nor wrong.
+        if (result.intonation.has_value() && !row.mistake)
+        {
+            return palette().muted;
+        }
+        break;
+    case evaluation::NoteOutcome::correct:
         break;
     }
     return row.mistake ? juce::Colour(timingColour) : juce::Colour(correctColour);

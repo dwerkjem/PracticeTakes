@@ -52,7 +52,9 @@ struct ReviewedPart
 [[nodiscard]] std::vector<ReviewRow> reviewRows(const take::Take& take, const NoteReport& report);
 
 // "21 correct · 2 wrong · 1 missed · 3 extra · 4 early · 2 late", leaving out
-// what is zero. Early and late count moments, not the notes of a chord.
+// what is zero. Early and late count moments, not the notes of a chord. A sung
+// take's correct notes are "in tune", "sharp" and "flat" instead, and its
+// unsure ones "uncertain".
 [[nodiscard]] std::string summaryLine(const NoteReport& report);
 
 // How well a take matches a part: twice its correct notes, plus its on-time
@@ -61,5 +63,8 @@ struct ReviewedPart
 
 // The take judged against every part of its score, and the part it matches
 // best; ties go to the earlier part. Part 0, unjudged, for a take with no score.
-[[nodiscard]] ReviewedPart bestPartFor(const take::Take& take, const TimingSettings& settings = {});
+[[nodiscard]] ReviewedPart bestPartFor(
+    const take::Take& take,
+    const TimingSettings& timing = {},
+    const IntonationSettings& intonation = {});
 } // namespace evaluation

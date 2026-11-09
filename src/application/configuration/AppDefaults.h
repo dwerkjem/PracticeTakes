@@ -34,6 +34,12 @@ inline constexpr int countInBars = 1;
 // metronome: a preference about where this person practises.
 inline constexpr double referencePitchHz = 440.0;
 
+// How close a sung note must be to be in tune, in cents either way
+// (openspec/changes/archive/2026-11-09-sung-pitch-judging, decision 4). Local, like the reference.
+inline constexpr double inTuneCents = 25.0;
+inline constexpr double minimumInTuneCents = 5.0;
+inline constexpr double maximumInTuneCents = 50.0;
+
 namespace Playback
 {
 inline constexpr bool enabled = false;

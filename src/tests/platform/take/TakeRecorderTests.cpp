@@ -2,6 +2,9 @@
 
 #include "platform/take/TakeRecorder.h"
 
+#include "application/testcontrol/SyntheticTake.h"
+
+#include <cmath>
 #include <deque>
 #include <memory>
 #include <vector>
@@ -74,6 +77,7 @@ struct RecorderUnderTest
             return count;
         };
         sources.latencies = [] { return std::pair<int, int>{256, 512}; };
+        sources.referencePitch = [] { return 442.0; };
         recorder = std::make_unique<TakeRecorder>(*clock, currentScore, std::move(sources));
 
         // The clock's table has to reach the renderer before it has a score.
@@ -163,6 +167,7 @@ TEST_CASE("a take counts in, records to the end of the piece and is complete", "
     CHECK(take.usedMicrophone);
     CHECK_FALSE(take.usedKeyboard);
     CHECK(take.inputLatencyFrames == 256);
+    CHECK(take.referenceHz == 442.0);
 
     // From the count-in's first frame to the piece's last, with nothing missing.
     CHECK(take.audioStart == -bar);
@@ -491,4 +496,36 @@ TEST_CASE("forgetting takes leaves nothing to review", "[take][recorder][review]
 
     // Ids keep counting, so a take is never confused with a forgotten one.
     CHECK(fixture.recorder->keep(keyboardTakeOf(voiceAndPiano(), {60})) == 3);
+}
+
+TEST_CASE(
+    "a new tolerance judges the take under review again",
+    "[take][recorder][review][intonation]")
+{
+    RecorderUnderTest fixture;
+
+    // Every note sung 15 cents sharp of A440.
+    take::Take sung = testcontrol::syntheticSungTake(
+        voiceAndPiano(), 0, 1, 44100.0, 440.0 * std::pow(2.0, 15.0 / 1200.0));
+    sung.referenceHz = 440.0;
+    const std::uint64_t id = fixture.recorder->keep(std::move(sung));
+    REQUIRE(id != 0);
+    fixture.recorder->finishJudging();
+    REQUIRE(fixture.recorder->review() != nullptr);
+    const std::size_t looseSharp = fixture.recorder->review()->report.summary.sharp;
+    CHECK(fixture.recorder->review()->report.summary.inTune > 0);
+
+    evaluation::IntonationSettings strict;
+    strict.toleranceCents = 10.0;
+    fixture.recorder->setIntonation(strict);
+    CHECK(fixture.recorder->intonationSettings().toleranceCents == 10.0);
+    fixture.recorder->finishJudging();
+    REQUIRE(fixture.recorder->review() != nullptr);
+    CHECK(fixture.recorder->review()->take->id == id);
+    CHECK(fixture.recorder->review()->report.summary.inTune == 0);
+    CHECK(fixture.recorder->review()->report.summary.sharp > looseSharp);
+
+    // The same settings again judge nothing.
+    fixture.recorder->setIntonation(strict);
+    CHECK_FALSE(fixture.recorder->isJudging());
 }

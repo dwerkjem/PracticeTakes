@@ -205,6 +205,7 @@ take::TakeSources MainComponent::takeSources()
                          int>{device->getInputLatencyInSamples(), device->getOutputLatencyInSamples()}
                    : std::pair<int, int>{0, 0};
     };
+    sources.referencePitch = [this] { return referencePitch.hertz(); };
     return sources;
 }
 

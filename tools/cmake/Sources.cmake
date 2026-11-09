@@ -191,6 +191,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/audio/SyntheticTone.h
     src/platform/evaluation/ExpectedAttacks.h
     src/platform/evaluation/Fft.h
+    src/platform/evaluation/Intonation.cpp
+    src/platform/evaluation/Intonation.h
     src/platform/evaluation/KeyboardOnsets.h
     src/platform/evaluation/NoteMatching.cpp
     src/platform/evaluation/NoteMatching.h
@@ -199,6 +201,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/evaluation/OnsetTiming.cpp
     src/platform/evaluation/OnsetTiming.h
     src/platform/evaluation/PerformedOnset.h
+    src/platform/evaluation/PitchContour.cpp
+    src/platform/evaluation/PitchContour.h
     src/platform/evaluation/TakeReview.cpp
     src/platform/evaluation/TakeReview.h
     src/platform/midi/MidiEvent.h
@@ -384,10 +388,12 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/score/musicxml/read/MusicXmlTimingTests.cpp
     src/tests/platform/score/musicxml/read/MusicXmlTranspositionTests.cpp
     src/tests/platform/evaluation/ExpectedAttacksTests.cpp
+    src/tests/platform/evaluation/IntonationTests.cpp
     src/tests/platform/evaluation/KeyboardOnsetsTests.cpp
     src/tests/platform/evaluation/NoteMatchingTests.cpp
     src/tests/platform/evaluation/OnsetDetectorTests.cpp
     src/tests/platform/evaluation/OnsetTimingTests.cpp
+    src/tests/platform/evaluation/PitchContourTests.cpp
     src/tests/platform/evaluation/TakeReviewTests.cpp
     src/tests/platform/take/TakeAssemblerTests.cpp
     src/tests/platform/take/TakeLifecycleTests.cpp
@@ -454,6 +460,8 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/take/TakeRecorder.cpp
     src/platform/evaluation/OnsetDetector.cpp
     src/platform/evaluation/OnsetTiming.cpp
+    src/platform/evaluation/Intonation.cpp
     src/platform/evaluation/NoteMatching.cpp
+    src/platform/evaluation/PitchContour.cpp
     src/platform/evaluation/TakeReview.cpp
 )

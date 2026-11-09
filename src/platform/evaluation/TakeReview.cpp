@@ -39,21 +39,65 @@ namespace
     return keyName(result.writtenMidi);
 }
 
+// "an octave low", "2 octaves high"; nothing in the written octave.
+[[nodiscard]] std::string octaveText(int octave)
+{
+    if (octave == 0)
+    {
+        return {};
+    }
+    const int size = std::abs(octave);
+    std::string text = size == 1 ? "an octave" : std::to_string(size) + " octaves";
+    text += octave < 0 ? " low" : " high";
+    return text;
+}
+
+// A sung note's verdict: "in tune", "18 ¢ sharp", "pitch uncertain".
+[[nodiscard]] std::string intonationText(const Intonation& intonation)
+{
+    const std::string cents = std::to_string(std::lround(std::abs(intonation.cents))) + " \xC2\xA2";
+    switch (intonation.verdict)
+    {
+    case IntonationVerdict::inTune:
+        return "in tune";
+    case IntonationVerdict::sharp:
+        return cents + " sharp";
+    case IntonationVerdict::flat:
+        return cents + " flat";
+    case IntonationVerdict::uncertain:
+        return "pitch uncertain";
+    case IntonationVerdict::wrong:
+        return {};
+    }
+    return {};
+}
+
 [[nodiscard]] std::string outcomeText(const NoteResult& result)
 {
+    const bool sung = result.intonation.has_value();
     switch (result.outcome)
     {
     case NoteOutcome::correct:
-        return "correct";
+        return sung ? intonationText(*result.intonation) : "correct";
     case NoteOutcome::wrong:
-        return result.playedMidi.has_value() ? "wrong, played " + keyName(*result.playedMidi)
-                                             : "wrong";
+        if (!result.playedMidi.has_value())
+        {
+            return "wrong";
+        }
+        return (sung ? "wrong, sang " : "wrong, played ") + keyName(*result.playedMidi);
     case NoteOutcome::missed:
         return "missed";
     case NoteOutcome::pitchNotJudged:
-        return "played";
+        return sung ? intonationText(*result.intonation) : "played";
     }
     return {};
+}
+
+[[nodiscard]] bool offPitch(const NoteResult& result)
+{
+    return result.intonation.has_value() &&
+           (result.intonation->verdict == IntonationVerdict::sharp ||
+            result.intonation->verdict == IntonationVerdict::flat);
 }
 
 [[nodiscard]] std::string timingText(TimingVerdict verdict, double errorMs)
@@ -146,13 +190,18 @@ std::vector<ReviewRow> reviewRows(const take::Take& take, const NoteReport& repo
             row.bar = beat.bar;
             row.beat = beat.beat;
         }
-        row.mistake =
-            result.outcome == NoteOutcome::wrong || result.outcome == NoteOutcome::missed ||
-            result.timing == TimingVerdict::early || result.timing == TimingVerdict::late;
+        row.mistake = result.outcome == NoteOutcome::wrong ||
+                      result.outcome == NoteOutcome::missed || offPitch(result) ||
+                      result.timing == TimingVerdict::early || result.timing == TimingVerdict::late;
 
+        // The octave is said only of a note whose pitch was judged.
+        const bool judged = result.intonation.has_value() &&
+                            result.intonation->verdict != IntonationVerdict::uncertain &&
+                            result.intonation->verdict != IntonationVerdict::wrong;
         row.text = place(row.bar, row.beat);
         for (const std::string& part :
              {writtenName(take, result), outcomeText(result),
+              judged ? octaveText(result.intonation->octave) : std::string{},
               timingText(result.timing, result.timingErrorMs)})
         {
             if (!part.empty())
@@ -202,11 +251,21 @@ std::string summaryLine(const NoteReport& report)
 {
     const MomentCounts moments = momentsOf(report);
     const NoteSummary& summary = report.summary;
-    const std::array<std::pair<std::size_t, const char*>, 7> parts{{
-        {summary.correct, "correct"},
+
+    // A sung take's correct notes are told by how in tune they were, and its
+    // uncertain ones apart from the chords nobody judged (decision 8).
+    const bool sung = summary.inTune + summary.sharp + summary.flat + summary.uncertain > 0;
+    const std::size_t otherCorrect =
+        summary.correct - (summary.inTune + summary.sharp + summary.flat);
+    const std::array<std::pair<std::size_t, const char*>, 11> parts{{
+        {sung ? summary.inTune : 0, "in tune"},
+        {sung ? summary.sharp : 0, "sharp"},
+        {sung ? summary.flat : 0, "flat"},
+        {sung ? otherCorrect : summary.correct, "correct"},
         {summary.wrong, "wrong"},
         {summary.missed, "missed"},
-        {summary.pitchNotJudged, "played"},
+        {sung ? summary.uncertain : 0, "uncertain"},
+        {summary.pitchNotJudged - (sung ? summary.uncertain : 0), "played"},
         {summary.extra, "extra"},
         {moments.early, "early"},
         {moments.late, "late"},
@@ -233,7 +292,10 @@ std::size_t matchScore(const NoteReport& report)
     return 2 * report.summary.correct + momentsOf(report).onTime;
 }
 
-ReviewedPart bestPartFor(const take::Take& take, const TimingSettings& settings)
+ReviewedPart bestPartFor(
+    const take::Take& take,
+    const TimingSettings& timing,
+    const IntonationSettings& intonation)
 {
     ReviewedPart best;
     if (take.score == nullptr || take.score->parts.empty())
@@ -241,11 +303,11 @@ ReviewedPart bestPartFor(const take::Take& take, const TimingSettings& settings)
         return best;
     }
 
-    const std::vector<PerformedOnset> onsets = onsetsOf(take);
+    const TakeEvidence evidence = evidenceOf(take);
     std::optional<std::size_t> bestScore;
     for (std::size_t part = 0; part < take.score->parts.size(); ++part)
     {
-        NoteReport report = judgeNotes(take, part, onsets, settings);
+        NoteReport report = judgeNotes(take, part, evidence, timing, intonation);
         const std::size_t score = matchScore(report);
         if (!bestScore.has_value() || score > *bestScore)
         {

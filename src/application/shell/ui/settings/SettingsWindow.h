@@ -4,6 +4,7 @@
 #include "../ShellWindowTitles.h"
 
 #include "../../../../platform/midi/NoteSoundingTracker.h"
+#include "../../../../platform/take/TakeRecorder.h"
 
 #include <algorithm>
 #include <functional>
@@ -763,17 +764,19 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 transport::PracticeClock& practiceClock,
                 pitch::ReferencePitch& applicationReferencePitch,
                 pitch::CurrentTarget& applicationTarget,
+                take::TakeRecorder& takeRecorder,
                 std::function<void()> countInHandler)
                 : onPreset(std::move(presetHandler)), clock(practiceClock),
                   reference(applicationReferencePitch), target(applicationTarget),
-                  onCountInChanged(std::move(countInHandler))
+                  recorder(takeRecorder), onCountInChanged(std::move(countInHandler))
             {
                 configureHeading(heading, "Practice");
                 configureDescription(
                     description,
                     "Apply a coordinated set of tuner controls for the material you are "
-                    "practicing, choose how many bars the metronome counts in, and set the "
-                    "pitch everything tunes to.");
+                    "practicing, choose how many bars the metronome counts in, set the "
+                    "pitch everything tunes to, and how close a sung note must be to be "
+                    "in tune.");
 
                 presetLabel.setText("Practice preset", juce::dontSendNotification);
                 addAndMakeVisible(presetLabel);
@@ -837,6 +840,32 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 };
                 addAndMakeVisible(referenceSlider);
 
+                // How close a sung note must be (sung-pitch-judging decision 7).
+                toleranceLabel.setText("In tune within", juce::dontSendNotification);
+                addAndMakeVisible(toleranceLabel);
+                toleranceSlider.setComponentID("settings-in-tune-cents");
+                toleranceSlider.setSliderStyle(juce::Slider::IncDecButtons);
+                toleranceSlider.setRange(
+                    evaluation::minimumToleranceCents, evaluation::maximumToleranceCents, 1.0);
+                toleranceSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
+                toleranceSlider.setTextValueSuffix(juce::String::fromUTF8(" \xC2\xA2"));
+                toleranceSlider.setValue(
+                    recorder.intonationSettings().toleranceCents, juce::dontSendNotification);
+                toleranceSlider.setTooltip(
+                    "How far a sung note may be from the written pitch, either way, and still "
+                    "be in tune when a take is judged: 25 cents is a quarter of a semitone");
+                toleranceSlider.onValueChange = [this]
+                {
+                    evaluation::IntonationSettings settings = recorder.intonationSettings();
+                    settings.toleranceCents = toleranceSlider.getValue();
+                    recorder.setIntonation(settings);
+                    if (onCountInChanged)
+                    {
+                        onCountInChanged();
+                    }
+                };
+                addAndMakeVisible(toleranceSlider);
+
                 // Whether opening a score replaces a target the player chose
                 // (target-note-picker decision 4).
                 keepTargetToggle.setComponentID("settings-keep-target");
@@ -877,6 +906,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 referenceLabel.setBounds(referenceRow.removeFromLeft(150));
                 referenceSlider.setBounds(referenceRow.removeFromLeft(180));
                 bounds.removeFromTop(12);
+
+                auto toleranceRow = bounds.removeFromTop(36);
+                toleranceLabel.setBounds(toleranceRow.removeFromLeft(150));
+                toleranceSlider.setBounds(toleranceRow.removeFromLeft(180));
+                bounds.removeFromTop(12);
                 keepTargetToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
             }
 
@@ -889,11 +923,14 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             transport::PracticeClock& clock;
             pitch::ReferencePitch& reference;
             pitch::CurrentTarget& target;
+            take::TakeRecorder& recorder;
             std::function<void()> onCountInChanged;
             juce::Label countInLabel;
             juce::ComboBox countInBox;
             juce::Label referenceLabel;
             juce::Slider referenceSlider;
+            juce::Label toleranceLabel;
+            juce::Slider toleranceSlider;
             juce::ToggleButton keepTargetToggle{"Keep my target when a score opens"};
         };
 
@@ -997,6 +1034,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             transport::PracticeClock& practiceClock,
             pitch::ReferencePitch& referencePitch,
             pitch::CurrentTarget& currentTarget,
+            take::TakeRecorder& takeRecorder,
             std::function<void()> clockSettingsHandler,
             int pedalDownThreshold,
             Theme initialTheme,
@@ -1024,6 +1062,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                   practiceClock,
                   referencePitch,
                   currentTarget,
+                  takeRecorder,
                   std::move(clockSettingsHandler)),
               resetPanel(
                   std::move(feedbackHandler),
@@ -1119,6 +1158,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         transport::PracticeClock& practiceClock,
         pitch::ReferencePitch& referencePitch,
         pitch::CurrentTarget& currentTarget,
+        take::TakeRecorder& takeRecorder,
         std::function<void()> clockSettingsHandler,
         int pedalDownThreshold,
         Theme initialTheme,
@@ -1145,7 +1185,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         setContentOwned(
             new Content(
                 audioInputService, midiInputService, practiceClock, referencePitch, currentTarget,
-                std::move(clockSettingsHandler), pedalDownThreshold, initialTheme,
+                takeRecorder, std::move(clockSettingsHandler), pedalDownThreshold, initialTheme,
                 std::move(appearanceHandler), std::move(presetHandler),
                 std::move(midiSelectionHandler), std::move(pedalThresholdHandler),
                 std::move(saveHandler), std::move(importHandler), std::move(exportHandler),

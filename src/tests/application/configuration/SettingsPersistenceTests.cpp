@@ -779,6 +779,31 @@ TEST_CASE(
     CHECK(AppSettings::load(reader).state.referencePitchHz == Catch::Approx(440.0));
 }
 
+TEST_CASE(
+    "the in-tune tolerance survives a round trip, and defaults to 25 cents",
+    "[settings][persistence]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        AppSettings::State expected;
+        expected.inTuneCents = 12.0;
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    {
+        juce::PropertiesFile reader(temporary.path, settingsOptions());
+        CHECK(AppSettings::load(reader).state.inTuneCents == Catch::Approx(12.0));
+    }
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.setValue("practice.inTuneCents", 90.0);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    CHECK(AppSettings::load(reader).state.inTuneCents == Catch::Approx(25.0));
+}
+
 TEST_CASE("a chosen target and keeping it survive a round trip", "[settings][persistence]")
 {
     TemporarySettingsFile temporary;

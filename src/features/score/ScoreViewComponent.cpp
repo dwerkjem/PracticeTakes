@@ -384,6 +384,45 @@ void ScoreViewComponent::paintReviewOn(
             graphics.setColour(muted);
             graphics.drawEllipse(around, ring);
             break;
+        case engraving::PitchMark::sharp:
+        case engraving::PitchMark::flat:
+        {
+            // The right note, off: an amber ring, and an upright arrow above
+            // a sharp head or below a flat one, with how far off beside it.
+            const bool sharp = mark.pitch == engraving::PitchMark::sharp;
+            const juce::Colour amber(reviewTiming);
+            graphics.setColour(amber);
+            graphics.drawEllipse(around, ring);
+
+            const double side = sharp ? -1.0 : 1.0;
+            const double base = centreY + (side * ((reviewMarkHeight * 0.5) + 0.3) * px);
+            const double tip = base + (side * 1.0 * px);
+            const double half = 0.45 * px;
+            juce::Path arrow;
+            arrow.addTriangle(
+                static_cast<float>(centreX - half), static_cast<float>(base),
+                static_cast<float>(centreX + half), static_cast<float>(base),
+                static_cast<float>(centreX), static_cast<float>(tip));
+            graphics.fillPath(arrow);
+
+            if (mark.cents.has_value())
+            {
+                const auto height = static_cast<float>(std::max(10.0, 1.4 * px));
+                const juce::String text = juce::String::fromUTF8(sharp ? "+" : "\xE2\x88\x92") +
+                                          juce::String(std::lround(std::abs(*mark.cents)));
+                graphics.setFont(juce::Font(juce::FontOptions(height, juce::Font::bold)));
+                const auto top = static_cast<float>(std::min(base, tip));
+                const juce::Rectangle<float> label(
+                    static_cast<float>(centreX + half + (0.1 * px)), top - (height * 0.15f),
+                    height * 2.6f, height);
+                graphics.drawText(text, label, juce::Justification::centredLeft, false);
+            }
+            break;
+        }
+        case engraving::PitchMark::uncertain:
+            graphics.setColour(muted.withAlpha(0.45f));
+            graphics.drawEllipse(around, ring * 0.6f);
+            break;
         case engraving::PitchMark::none:
             break;
         }

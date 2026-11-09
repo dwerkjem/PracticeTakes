@@ -17,11 +17,20 @@ namespace engraving
 {
 enum class PitchMark
 {
-    // A microphone onset, whose pitch is not judged: only its timing is shown.
+    // A microphone onset whose pitch is not judged, a chord: only its timing
+    // is shown.
     none,
     correct,
     wrong,
-    missed
+    missed,
+
+    // A sung note, the right one but off by more than the tolerance
+    // (openspec/changes/archive/2026-11-09-sung-pitch-judging/design.md, decision 8).
+    sharp,
+    flat,
+
+    // A sung note too unsure to judge.
+    uncertain
 };
 
 enum class TimingMark
@@ -43,6 +52,9 @@ struct NoteMark
 
     // What was played instead, for a wrong note.
     std::optional<int> playedMidi;
+
+    // How far off a sung note was, in cents; positive is sharp.
+    std::optional<double> cents;
 };
 
 struct ExtraMark

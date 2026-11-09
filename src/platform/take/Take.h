@@ -48,6 +48,10 @@ struct Take
     std::shared_ptr<const transport::ClockTable> table;
     double sampleRate = 44100.0;
 
+    // The application's reference pitch when the take started: what a sung
+    // note is judged against.
+    double referenceHz = 440.0;
+
     // The device's stated latencies, in frames, for #38 to correct by.
     int inputLatencyFrames = 0;
     int outputLatencyFrames = 0;
