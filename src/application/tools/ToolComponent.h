@@ -4,6 +4,7 @@
 
 #include "../theme/TextFonts.h"
 #include "../theme/ThemeType.h"
+#include "CompactPresentation.h"
 #include "ToolSettingsPayload.h"
 
 #include <functional>
@@ -153,6 +154,15 @@ class ToolComponent : public juce::Component
     [[nodiscard]] int scaledHeight(int base) const noexcept
     {
         return appearance::scaledHeight(base, textScalePercent);
+    }
+
+    // compact::shapeFor at the text size: a pane gives up its full form
+    // sooner as the text grows, since the same text needs more room.
+    [[nodiscard]] compact::Shape compactShape(int width, int height) const noexcept
+    {
+        return compact::shapeFor(
+            appearance::unscaledLength(width, textScalePercent),
+            appearance::unscaledLength(height, textScalePercent));
     }
 
     // The text size changed: lay out and draw again. A tool that keeps

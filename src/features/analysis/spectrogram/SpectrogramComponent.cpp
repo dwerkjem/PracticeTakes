@@ -376,7 +376,7 @@ void SpectrogramComponent::paint(juce::Graphics& graphics)
 {
     graphics.fillAll(backgroundColour());
 
-    const auto shape = compact::shapeFor(getWidth(), getHeight());
+    const auto shape = compactShape(getWidth(), getHeight());
     const auto compactPane = shape != compact::Shape::full;
 
     graphics.setColour(panelColour());
@@ -430,6 +430,6 @@ void SpectrogramComponent::resized()
     // The 18px frame is comfortable on a full pane and is most of a small one:
     // at the 180px floor it would spend a fifth of the width on margin. The plot
     // is the tool, so below the threshold the frame gives way to it.
-    const auto inset = compact::isCompact(getWidth(), getHeight()) ? 4 : 18;
+    const auto inset = compactShape(getWidth(), getHeight()) != compact::Shape::full ? 4 : 18;
     spectrogramBounds = getLocalBounds().reduced(inset);
 }

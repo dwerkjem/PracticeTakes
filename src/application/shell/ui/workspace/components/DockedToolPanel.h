@@ -110,7 +110,10 @@ class MainComponent::DockedToolPanel final : public juce::Component
         // Below the threshold the header goes entirely: a pane with no room for
         // its tool's display has none to spare for a title, a chooser, and a
         // button either. Right-click still reaches the options.
-        const auto compactPane = compact::isCompact(getWidth(), getHeight());
+        const auto scale = appearance::textScaleOf(*this);
+        const auto compactPane = compact::isCompact(
+            appearance::unscaledLength(getWidth(), scale),
+            appearance::unscaledLength(getHeight(), scale));
 
         titleLabel.setVisible(!compactPane);
         optionsButton.setVisible(!compactPane);

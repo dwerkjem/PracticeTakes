@@ -1345,7 +1345,7 @@ void TunerComponent::drawSelectedDisplay(juce::Graphics& graphics, juce::Rectang
     // compact form instead -- along whichever axis has room. The border still
     // goes down below, because a compact display is the display, not a message
     // shown in place of one.
-    const auto shape = compact::shapeFor(bounds.getWidth(), bounds.getHeight());
+    const auto shape = compactShape(bounds.getWidth(), bounds.getHeight());
 
     if (shape != compact::Shape::full)
     {

@@ -221,7 +221,7 @@ void HarmonicAnalyzerComponent::paint(juce::Graphics& graphics)
     const auto appPalette = appPaletteFor(currentTheme);
     graphics.fillAll(palette.background);
 
-    const auto shape = compact::shapeFor(getWidth(), getHeight());
+    const auto shape = compactShape(getWidth(), getHeight());
 
     if (shape != compact::Shape::full)
     {

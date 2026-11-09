@@ -35,4 +35,13 @@ textFont(TextRole role, int percent, int styleFlags = juce::Font::plain)
                : static_cast<int>(
                      std::lround(static_cast<double>(base) * TextScale::factor(percent)));
 }
+// A length in a layout grown by `percent`, measured back in 100-percent
+// units: what decides whether a pane is too small for its full form, so the
+// form gives way as the text grows (global-text-size decision 4).
+[[nodiscard]] inline int unscaledLength(int length, int percent) noexcept
+{
+    return percent <= TextScale::defaultPercent
+               ? length
+               : static_cast<int>(static_cast<double>(length) / TextScale::factor(percent));
+}
 } // namespace appearance
