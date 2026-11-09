@@ -23,7 +23,8 @@ inline constexpr double inputGain = 1.0;
 // saved locally and never carried in a settings transfer file.
 namespace Metronome
 {
-inline constexpr bool enabled = true;
+// Off until the player turns it on (#380). The count-in clicks either way.
+inline constexpr bool enabled = false;
 inline constexpr double volume = 0.7;
 inline constexpr bool accent = true;
 inline constexpr int countInBars = 1;

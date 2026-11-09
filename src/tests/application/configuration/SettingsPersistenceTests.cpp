@@ -649,8 +649,10 @@ TEST_CASE("clearing settings removes the pedal threshold", "[settings][midi]")
 TEST_CASE("the metronome and count-in settings survive a round trip", "[settings][persistence]")
 {
     TemporarySettingsFile temporary;
+    // The metronome is off by default (#380), so on is the change to keep.
+    CHECK_FALSE(AppSettings::State{}.metronomeEnabled);
     AppSettings::State expected;
-    expected.metronomeEnabled = false;
+    expected.metronomeEnabled = true;
     expected.metronomeVolume = 0.35;
     expected.metronomeAccent = false;
     expected.countInBars = 3;
@@ -664,7 +666,7 @@ TEST_CASE("the metronome and count-in settings survive a round trip", "[settings
     juce::PropertiesFile reader(temporary.path, settingsOptions());
     const auto loaded = AppSettings::load(reader);
 
-    CHECK_FALSE(loaded.state.metronomeEnabled);
+    CHECK(loaded.state.metronomeEnabled);
     CHECK(loaded.state.metronomeVolume == Catch::Approx(0.35));
     CHECK_FALSE(loaded.state.metronomeAccent);
     CHECK(loaded.state.countInBars == 3);

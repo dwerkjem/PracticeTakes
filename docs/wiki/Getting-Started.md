@@ -75,7 +75,7 @@ shares:
 | **Stop** | Stops, and goes back to the start of the score, or of the loop |
 | **Bar 3, beat 2** | Where the clock is in the score, or which count-in beat is sounding |
 | **100%** | The tempo, as a percentage of the score's own, from 5% to 200% in steps of 5. **−** and **+** change it, even while playing, and the music carries on from the same beat. |
-| **Click** | The metronome, on every beat, with the first beat of each bar accented |
+| **Click** | The metronome, on every beat, with the first beat of each bar accented. Off until you turn it on; the count-in clicks either way |
 | **Loop** | Plays the score round and round, starting again on exactly the same beat however many times it loops |
 | **Mix** | Hear the score, and mute or solo each part, or each hand of a piano. See below |
 
