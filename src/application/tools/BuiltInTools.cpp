@@ -33,7 +33,7 @@ const ToolRegistry& builtInToolRegistry()
              [](const ToolServices& services)
              {
                  return std::make_unique<ScoreViewComponent>(
-                     services.currentScore, services.clock, services.takes);
+                     services.currentScore, services.clock, services.takes, services.target);
              }},
             {"take-review", [](const ToolServices& services)
              { return std::make_unique<TakeReviewComponent>(services.takes, services.clock); }},

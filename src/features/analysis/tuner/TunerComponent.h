@@ -9,6 +9,7 @@
 #include "../../../platform/audio/AudioInputService.h"
 #include "../../../platform/audio/SharedPitchAnalysis.h"
 #include "../../../platform/pitch/CurrentTarget.h"
+#include "../../../platform/pitch/SteadyReading.h"
 #include "PitchTracker.h"
 
 #include <memory>
@@ -27,7 +28,7 @@ class TunerComponent final
         AudioInputService& sharedAudioInputService,
         SharedPitchAnalysis& sharedPitchAnalysis,
         const pitch::ReferencePitch& applicationReferencePitch,
-        const pitch::CurrentTarget& applicationTarget);
+        pitch::CurrentTarget& applicationTarget);
     ~TunerComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -129,6 +130,17 @@ class TunerComponent final
     [[nodiscard]] juce::String targetText() const;
     [[nodiscard]] bool onTarget() const;
 
+    // Choosing the target (target-note-picker): the picker opens from a click
+    // on the target line or the options menu.
+    void openTargetPicker();
+    [[nodiscard]] std::optional<int> steadyNote() const;
+    [[nodiscard]] juce::Rectangle<int> targetLineBounds() const;
+
+  public:
+    void mouseUp(const juce::MouseEvent& event) override;
+    void mouseMove(const juce::MouseEvent& event) override;
+
+  private:
     // Whether the graph has ever shown a real reading this session -- as
     // opposed to `hasSignal`, which also goes false during an ordinary pause
     // between notes. graphHistory carries NaN gaps for silence (the graph
@@ -162,7 +174,8 @@ class TunerComponent final
     AudioInputService& audioInputService;
     SharedPitchAnalysis& pitchAnalysis;
     const pitch::ReferencePitch& referencePitch;
-    const pitch::CurrentTarget& target;
+    pitch::CurrentTarget& target;
+    pitch::SteadyReading steadyReading;
 
     juce::Label displayModeLabel;
     juce::ComboBox displayModeBox;

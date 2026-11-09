@@ -1027,6 +1027,27 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The target picker (target-note-picker).
+    Surface(
+        state="target-picker",
+        title="The target picker",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "every-way",
+                "Does the picker under the target line show a keyboard, a grand staff with the "
+                "target's notehead and flat, natural and sharp beside it, a name field, Use the "
+                "note I'm on, and the four step buttons?",
+            ),
+            Question(
+                "choosing-works",
+                "Click a key, a staff line, type Bb3, hold a note and use it, and step: does the "
+                "tuner's target line follow each at once?",
+                behavioural=True,
+            ),
+        ),
+    ),
     # The Take Review tool before any take.
     Surface(
         state="take-review-empty",

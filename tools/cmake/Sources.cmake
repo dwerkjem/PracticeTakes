@@ -117,6 +117,7 @@ set(PRACTICE_TAKES_SOURCES
     src/features/analysis/harmonics/HarmonicAnalyzerComponent.h
     src/features/analysis/tuner/PitchTracker.cpp
     src/features/analysis/tuner/PitchTracker.h
+    src/features/analysis/tuner/TargetPickerPanel.h
     src/features/analysis/tuner/TunerComponent.cpp
     src/features/analysis/tuner/TunerComponent.h
     src/features/analysis/tuner/TunerSettingsCodec.cpp
@@ -162,6 +163,7 @@ set(PRACTICE_TAKES_SOURCES
     src/features/score/engraving/PartNames.cpp
     src/features/score/engraving/PartNames.h
     src/features/score/engraving/ScoreLayout.h
+    src/features/score/engraving/NoteHit.h
     src/features/score/engraving/ReviewMarks.cpp
     src/features/score/engraving/ReviewMarks.h
     src/features/score/engraving/ScoreCursor.cpp
@@ -210,6 +212,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/midi/SoundingDurationJudgement.h
     src/platform/pitch/CurrentTarget.h
     src/platform/pitch/ReferencePitch.h
+    src/platform/pitch/SteadyReading.h
+    src/platform/pitch/TargetChoice.h
     src/platform/pitch/TargetReading.h
     src/platform/score/CurrentScore.h
     src/platform/score/Diagnostic.h
@@ -333,6 +337,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/score/engraving/NoteValueTests.cpp
     src/tests/features/score/engraving/PaginationTests.cpp
     src/tests/features/score/engraving/PartNamesTests.cpp
+    src/tests/features/score/engraving/NoteHitTests.cpp
     src/tests/features/score/engraving/ReviewMarksTests.cpp
     src/tests/features/score/engraving/ScoreCursorTests.cpp
     src/tests/features/score/engraving/ScoreLayoutCorpusTests.cpp
@@ -354,6 +359,8 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/midi/SoundingDurationJudgementTests.cpp
     src/tests/platform/pitch/CurrentTargetTests.cpp
     src/tests/platform/pitch/ReferencePitchTests.cpp
+    src/tests/platform/pitch/SteadyReadingTests.cpp
+    src/tests/platform/pitch/TargetChoiceTests.cpp
     src/tests/platform/pitch/TargetReadingTests.cpp
     src/tests/platform/score/CurrentScoreTests.cpp
     src/tests/platform/score/MusicalTimeTests.cpp

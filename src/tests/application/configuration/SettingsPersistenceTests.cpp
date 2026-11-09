@@ -778,3 +778,27 @@ TEST_CASE(
     juce::PropertiesFile reader(temporary.path, settingsOptions());
     CHECK(AppSettings::load(reader).state.referencePitchHz == Catch::Approx(440.0));
 }
+
+TEST_CASE("a chosen target and keeping it survive a round trip", "[settings][persistence]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        AppSettings::State expected;
+        expected.chosenTargetSounding = "Bb3";
+        expected.chosenTargetWritten = "C4";
+        expected.keepTargetWhenScoreOpens = true;
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    const auto loaded = AppSettings::load(reader);
+    CHECK(loaded.state.chosenTargetSounding == "Bb3");
+    CHECK(loaded.state.chosenTargetWritten == "C4");
+    CHECK(loaded.state.keepTargetWhenScoreOpens);
+
+    // Nothing chosen by default, and a score replaces the target.
+    const AppSettings::State defaults;
+    CHECK(defaults.chosenTargetSounding.isEmpty());
+    CHECK_FALSE(defaults.keepTargetWhenScoreOpens);
+}

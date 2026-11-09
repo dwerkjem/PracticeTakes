@@ -4,6 +4,7 @@
 
 #include "../../application/theme/Theme.h"
 #include "../../application/tools/ToolComponent.h"
+#include "../../platform/pitch/CurrentTarget.h"
 #include "../../platform/score/CurrentScore.h"
 #include "../../platform/take/TakeRecorder.h"
 #include "../../platform/transport/PracticeClock.h"
@@ -54,7 +55,8 @@ class ScoreViewComponent final
     ScoreViewComponent(
         const score::CurrentScore& sharedCurrentScore,
         transport::PracticeClock& practiceClock,
-        take::TakeRecorder& takeRecorder);
+        take::TakeRecorder& takeRecorder,
+        pitch::CurrentTarget& applicationTarget);
     ~ScoreViewComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -182,6 +184,10 @@ class ScoreViewComponent final
     paintReviewOn(juce::Graphics& graphics, std::size_t index, const SystemOnCanvas& where) const;
 
     void seekToCanvasPoint(juce::Point<float> point);
+
+    // A right-click: aim at the note under the pointer, or move the clock
+    // there (target-note-picker decision 6).
+    void showNoteMenu(juce::Point<float> point);
     void showGoToBar();
     void goToBar(const juce::String& text);
     void setPageFit(score_view::PageFit fit);
@@ -260,6 +266,7 @@ class ScoreViewComponent final
     engraving::Targets targets;
 
     take::TakeRecorder& takes;
+    pitch::CurrentTarget& target;
 
     // The take under review's marks on the current layout; empty when none
     // are drawn.

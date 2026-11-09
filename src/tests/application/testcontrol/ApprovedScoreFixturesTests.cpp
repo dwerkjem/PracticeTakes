@@ -95,13 +95,28 @@ TEST_CASE("the score states are the ones naming a fixture", "[testcontrol][appro
     // other state behaves exactly as before" a checked claim rather than an
     // assumption.
     CHECK(
-        naming == std::set<std::string>{
-                      "score-import-clean", "score-import-diagnostics", "score-import-in-progress",
-                      "score-view-engraving", "score-view-grand-staff", "score-view-horizontal",
-                      "score-view-notation", "score-view-part-hidden", "score-view-notation-large",
-                      "score-view-page", "score-view-sample", "score-view-vertical",
-                      "score-view-cursor", "take-recording", "take-review", "transport-playing",
-                      "playback-mix", "tuner-target", "tuner-target-a442"});
+        naming ==
+        std::set<std::string>{
+            "score-import-clean",
+            "score-import-diagnostics",
+            "score-import-in-progress",
+            "score-view-engraving",
+            "score-view-grand-staff",
+            "score-view-horizontal",
+            "score-view-notation",
+            "score-view-part-hidden",
+            "score-view-notation-large",
+            "score-view-page",
+            "score-view-sample",
+            "score-view-vertical",
+            "score-view-cursor",
+            "take-recording",
+            "take-review",
+            "transport-playing",
+            "playback-mix",
+            "tuner-target",
+            "tuner-target-a442",
+            "target-picker"});
 }
 
 // The invariant this started as was "a state naming a score opens nothing

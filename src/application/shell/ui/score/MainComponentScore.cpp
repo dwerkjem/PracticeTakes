@@ -163,6 +163,16 @@ void MainComponent::finishScoreImport(const score::musicxml::MusicXmlImportResul
     // The target follows the open score (system-wide-target-note decision 2).
     if (result.score != nullptr)
     {
+        currentTarget.keyFifths = 0;
+        if (const auto score = scoreImport.score();
+            score != nullptr && !score->parts.empty() && !score->parts.front().measures.empty())
+        {
+            const auto& key = score->parts.front().measures.front().attributes.key;
+            currentTarget.keyFifths = key.has_value() ? key->fifths : 0;
+        }
+    }
+    if (result.score != nullptr && currentTarget.scoreReplacesTarget())
+    {
         auto [target, reason] = pitch::targetFromScore(scoreImport.score());
         currentTarget.publish(std::move(target), std::move(reason));
     }

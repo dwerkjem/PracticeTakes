@@ -25,6 +25,9 @@ constexpr auto countInBarsKey = "practice.countInBars";
 constexpr auto playbackEnabledKey = "playback.enabled";
 constexpr auto playbackVolumeKey = "playback.volume";
 constexpr auto referencePitchKey = "practice.referencePitchHz";
+constexpr auto chosenTargetSoundingKey = "practice.chosenTarget";
+constexpr auto chosenTargetWrittenKey = "practice.chosenTargetWritten";
+constexpr auto keepTargetKey = "practice.keepTargetWhenScoreOpens";
 constexpr auto tunerDisplayModeKey = "tuner.displayMode";
 constexpr auto tunerEasingKey = "tuner.easing";
 constexpr auto tunerAveragingKey = "tuner.averaging";
@@ -66,6 +69,9 @@ constexpr const char* ownedKeys[] = {
     playbackEnabledKey,
     playbackVolumeKey,
     referencePitchKey,
+    chosenTargetSoundingKey,
+    chosenTargetWrittenKey,
+    keepTargetKey,
     tunerDisplayModeKey,
     tunerEasingKey,
     tunerAveragingKey,
@@ -266,6 +272,9 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
         boundedValue(properties, playbackVolumeKey, AppDefaults::Playback::volume, 0.0, 1.0);
     result.state.referencePitchHz =
         boundedValue(properties, referencePitchKey, AppDefaults::referencePitchHz, 415.0, 466.0);
+    result.state.chosenTargetSounding = properties.getValue(chosenTargetSoundingKey);
+    result.state.chosenTargetWritten = properties.getValue(chosenTargetWrittenKey);
+    result.state.keepTargetWhenScoreOpens = properties.getBoolValue(keepTargetKey, false);
     // The pre-workspace keys, read against the ranges in the tuner's schema.
     const auto tunerValue =
         [&properties](const char* key, double AppDefaults::TunerSettings::*member)
@@ -339,6 +348,9 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(playbackEnabledKey, state.playbackEnabled);
     properties.setValue(playbackVolumeKey, state.playbackVolume);
     properties.setValue(referencePitchKey, state.referencePitchHz);
+    properties.setValue(chosenTargetSoundingKey, state.chosenTargetSounding);
+    properties.setValue(chosenTargetWrittenKey, state.chosenTargetWritten);
+    properties.setValue(keepTargetKey, state.keepTargetWhenScoreOpens);
     properties.setValue(tunerDisplayModeKey, state.tuner.displayMode);
     properties.setValue(tunerEasingKey, state.tuner.easing);
     properties.setValue(tunerAveragingKey, state.tuner.averaging);

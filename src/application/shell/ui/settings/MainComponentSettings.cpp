@@ -1,5 +1,7 @@
 #include "../../MainComponent.h"
 
+#include "../../../../platform/pitch/TargetChoice.h"
+
 #include "../../../../features/analysis/tuner/TunerComponent.h"
 #include "../../../../features/analysis/tuner/TunerSettingsCodec.h"
 #include "../../../configuration/AudioDeviceStateTransfer.h"
@@ -107,7 +109,7 @@ void MainComponent::showSettings()
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     settingsWindow = std::make_unique<SettingsWindow>(
-        audioInputService, midiInputService, practiceClock, referencePitch,
+        audioInputService, midiInputService, practiceClock, referencePitch, currentTarget,
         [safeThis]
         {
             // The metronome and the count-in are saved as they change, like
@@ -618,6 +620,13 @@ AppSettings::State MainComponent::captureSettingsState()
     state.playbackEnabled = practiceClock.playbackMix().enabled;
     state.playbackVolume = practiceClock.playbackMix().volume;
     state.referencePitchHz = referencePitch.hertz();
+    state.keepTargetWhenScoreOpens = currentTarget.keepChosenWhenScoreOpens;
+    if (const auto target = currentTarget.target();
+        target != nullptr && target->origin == pitch::TargetOrigin::chosen)
+    {
+        state.chosenTargetSounding = juce::String(target->name);
+        state.chosenTargetWritten = juce::String(target->writtenName);
+    }
 
     if (pendingAudioDeviceState != nullptr)
     {
@@ -688,6 +697,13 @@ void MainComponent::loadSettings()
     practiceClock.setPlaybackEnabled(loaded.state.playbackEnabled);
     practiceClock.setPlaybackVolume(static_cast<float>(loaded.state.playbackVolume));
     referencePitch.set(loaded.state.referencePitchHz);
+    currentTarget.keepChosenWhenScoreOpens = loaded.state.keepTargetWhenScoreOpens;
+    if (const auto sounding = pitch::parseNoteName(loaded.state.chosenTargetSounding.toStdString()))
+    {
+        const auto written = pitch::parseNoteName(loaded.state.chosenTargetWritten.toStdString());
+        currentTarget.publish(
+            pitch::chosenTarget(*sounding, written.value_or(*sounding), "Chosen"));
+    }
 
     savedSettingsBounds = validWindowBounds(loaded.state.settingsBounds);
 

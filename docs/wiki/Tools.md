@@ -43,11 +43,27 @@ against it:
 - *Target E4 · 16 ¢ flat*, within half a semitone;
 - *Target E4 · 2 semitones below*, further away.
 
-The target comes from the open score: the first note of its first part that
-plays one note at a time, such as the voice of a song. A piano piece has
-none, and the tuner says so, because a target is one note. Choosing the target
-yourself, on a keyboard, a staff, the score or by singing it, comes next
-([#296](https://github.com/dwerkjem/PracticeTakes/issues/296)).
+When a score opens, the target is its first note: the first note of its first
+part that plays one note at a time, such as the voice of a song. A piano piece
+has none, and the tuner says so, because a target is one note.
+
+**Choose the target yourself** by clicking the target line, or with **Choose
+target…** in the tuner's **...** menu:
+- **click a key** on the keyboard;
+- **click the staff**, after choosing ♭, ♮ or ♯ beside it;
+- **type a name**, such as *F#4* or *Bb3*, and press **Set**;
+- **sing or play it**, then press **Use the note I'm on**. It works once you
+  have held one note steadily, within 30 cents, for a moment;
+- **step** a semitone up or down, or a step of the score's key.
+
+In the Score View, **right-click a note** and choose **Aim at G4**. For a chord,
+pick which of its notes.
+
+A target you choose is remembered when you quit. Opening a score replaces it
+with the score's first note, unless **Settings → Practice → Keep my target when
+a score opens** is on.
+
+![The target picker under the tuner's target line: a keyboard, a staff, a name field, Use the note I'm on, and step buttons](images/target-picker.png)
 
 The tuner measures against the **reference pitch**, A4 = 440 Hz unless you
 change it in **Settings → Practice** (from 415 to 466 Hz).
