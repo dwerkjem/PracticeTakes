@@ -30,6 +30,132 @@ constexpr std::size_t zeroTick = 2;
     return juce::String(cents > 0.0 ? "+" : "") + juce::String(cents, whole ? 0 : 1);
 }
 
+// Whether the half of a band on `side` (-1 flat, +1 sharp) is the lit half:
+// only the half the pitch is on lights, both when it is dead on the note.
+//
+// `bothHalves` is the tuner's "Light both halves": the symmetric look, where
+// the whole zone lights whichever side the pitch is on.
+[[nodiscard]] bool isLitHalf(const tuner::ZoneBand& band, double side, bool bothHalves)
+{
+    if (band.look != tuner::BandLook::lit)
+    {
+        return false;
+    }
+    return bothHalves || band.litSide == tuner::Side::both ||
+           ((band.litSide == tuner::Side::sharp) == (side > 0.0));
+}
+
+// The sign the lit half carries, so which way to go reads at a glance: a sharp
+// above the note (come down), a flat below it (go up).
+[[nodiscard]] juce::String signFor(tuner::Side side)
+{
+    switch (side)
+    {
+    case tuner::Side::sharp:
+        return juce::String::fromUTF8("\xE2\x99\xAF");
+    case tuner::Side::flat:
+        return juce::String::fromUTF8("\xE2\x99\xAD");
+    case tuner::Side::both:
+        break;
+    }
+    return {};
+}
+
+// The band that is lit with a side to it, if any.
+[[nodiscard]] const tuner::ZoneBand* litHalfBand(const std::vector<tuner::ZoneBand>& bands)
+{
+    for (const auto& band : bands)
+    {
+        if (band.look == tuner::BandLook::lit && band.litSide != tuner::Side::both)
+        {
+            return &band;
+        }
+    }
+    return nullptr;
+}
+
+// The lit half's sign, centred on `centre` and `size` tall: a sharp or flat,
+// or -- with `arrows` -- an arrow the way to go, down when sharp and up when
+// flat. Drawn as a shape rather than a character, so it is the same size and
+// weight whatever the font has.
+void drawSign(
+    juce::Graphics& graphics,
+    tuner::Side side,
+    juce::Point<float> centre,
+    float size,
+    juce::Colour colour,
+    bool arrows)
+{
+    graphics.setColour(colour);
+    if (!arrows)
+    {
+        graphics.setFont(juce::FontOptions(size));
+        graphics.drawText(
+            signFor(side), juce::Rectangle<float>(size * 1.5f, size * 1.4f).withCentre(centre),
+            juce::Justification::centred);
+        return;
+    }
+
+    // Pointing down for sharp: come down. Up for flat: go up.
+    const auto direction = side == tuner::Side::sharp ? 1.0f : -1.0f;
+    const auto half = size * 0.5f;
+    const auto headLength = size * 0.45f;
+    const auto headHalfWidth = size * 0.32f;
+    const auto shaftHalfWidth = size * 0.1f;
+    const auto tip = centre + juce::Point<float>(0.0f, direction * half);
+    const auto tail = centre - juce::Point<float>(0.0f, direction * half);
+    const auto neck = tip - juce::Point<float>(0.0f, direction * headLength);
+
+    juce::Path arrow;
+    arrow.startNewSubPath(tail.x - shaftHalfWidth, tail.y);
+    arrow.lineTo(neck.x - shaftHalfWidth, neck.y);
+    arrow.lineTo(neck.x - headHalfWidth, neck.y);
+    arrow.lineTo(tip);
+    arrow.lineTo(neck.x + headHalfWidth, neck.y);
+    arrow.lineTo(neck.x + shaftHalfWidth, neck.y);
+    arrow.lineTo(tail.x + shaftHalfWidth, tail.y);
+    arrow.closeSubPath();
+    graphics.fillPath(arrow);
+}
+
+[[nodiscard]] double sideOf(const tuner::ZoneBand& band)
+{
+    return band.litSide == tuner::Side::sharp ? 1.0 : -1.0;
+}
+
+// The note name drawn behind a display, sized from the area it is given so
+// it fills a tall docked pane and still fits the band the bar leaves it. The
+// cap only stops it becoming absurd on a very large display.
+[[nodiscard]] float noteFontHeight(juce::Rectangle<int> area)
+{
+    return juce::jlimit(24.0f, 360.0f, static_cast<float>(area.getHeight()) * 0.28f);
+}
+
+// Red covers everything past the out-of-tune limit -- on a graph, most of the
+// plot -- so it is kept very faint, lit or not.
+constexpr float outsideLitAlpha = 0.14f;
+constexpr float outsideTintedAlpha = 0.05f;
+constexpr float graphOutsideLitAlpha = 0.09f;
+constexpr float graphOutsideTintedAlpha = 0.03f;
+
+// How strongly one half of a band is filled.
+[[nodiscard]] float fillAlpha(
+    const tuner::ZoneBand& band,
+    double side,
+    bool bothHalves,
+    float lit,
+    float tinted,
+    float outsideLit,
+    float outsideTinted)
+{
+    const auto isLit = isLitHalf(band, side, bothHalves);
+    if (band.zone == pitch::IntonationZone::outside)
+    {
+        return isLit ? outsideLit : outsideTinted;
+    }
+    return isLit ? lit : tinted;
+}
+
 // On a graph the trace runs across the bands, so they are quieter there.
 constexpr float graphLitBandAlpha = 0.32f;
 constexpr float graphTintedBandAlpha = 0.10f;
@@ -46,7 +172,11 @@ void drawZoneStrips(
     double note,
     double lowest,
     double highest,
-    bool vertical)
+    bool vertical,
+    bool bothHalves,
+    bool showSigns,
+    bool arrowSigns,
+    float signSize)
 {
     const juce::Graphics::ScopedSaveState state(graphics);
     graphics.reduceClipRegion(plot.getSmallestIntegerContainer());
@@ -68,12 +198,13 @@ void drawZoneStrips(
         {
             continue;
         }
-        graphics.setColour(
-            intonationZoneColour(band->zone)
-                .withAlpha(
-                    band->look == tuner::BandLook::lit ? graphLitBandAlpha : graphTintedBandAlpha));
         for (const double side : {-1.0, 1.0})
         {
+            graphics.setColour(
+                intonationZoneColour(band->zone)
+                    .withAlpha(fillAlpha(
+                        *band, side, bothHalves, graphLitBandAlpha, graphTintedBandAlpha,
+                        graphOutsideLitAlpha, graphOutsideTintedAlpha)));
             const auto from = at(note + side * band->innerCents / 100.0);
             const auto to = at(note + side * band->outerCents / 100.0);
             graphics.fillRect(
@@ -100,6 +231,20 @@ void drawZoneStrips(
                          : juce::Line<float>(plot.getX(), edge, plot.getRight(), edge),
                 edgeDashes, 2, 1.5f);
         }
+    }
+
+    // The sign, in the lit half, near the start of the plot where the trace is
+    // oldest and least in the way.
+    if (const auto* lit = litHalfBand(bands); showSigns && lit != nullptr)
+    {
+        const auto from = at(note + sideOf(*lit) * lit->innerCents / 100.0);
+        const auto to = at(note + sideOf(*lit) * lit->outerCents / 100.0);
+        const auto middle = (from + to) * 0.5f;
+        drawSign(
+            graphics, lit->litSide,
+            vertical ? juce::Point<float>(middle, plot.getY() + signSize)
+                     : juce::Point<float>(plot.getX() + signSize, middle),
+            signSize, intonationZoneColour(lit->zone), arrowSigns);
     }
 }
 
@@ -229,7 +374,8 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
     {
         drawZoneStrips(
             graphics, currentBands(), plotArea.toFloat(), lockedMidiNote, minimumValue,
-            maximumValue, false);
+            maximumValue, false, bothHalvesLit, signs != Signs::off, signs == Signs::arrows,
+            signHeight(bounds));
     }
 
     if (graphHistory.size() < 2 || validValues.empty())
@@ -270,6 +416,17 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
 
     graphics.setColour(palette.accent);
     graphics.strokePath(pitchPath, juce::PathStrokeType(2.0f));
+
+    // Where the pitch is now: the newest point.
+    if (std::isfinite(graphHistory.back()))
+    {
+        const auto y = juce::jmap(
+            static_cast<float>(graphHistory.back()), static_cast<float>(minimumValue),
+            static_cast<float>(maximumValue), static_cast<float>(plotArea.getBottom()),
+            static_cast<float>(plotArea.getY()));
+        drawMarker(
+            graphics, {static_cast<float>(plotArea.getRight()), y}, plotArea.toFloat(), false);
+    }
 }
 
 void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int> bounds) const
@@ -279,6 +436,9 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
     // How far either way it reaches, from the tuner's ... menu: ±50 cents, one
     // note, unless changed. A reading past the end sits at the end.
     const auto scaleCents = scaleSlider.getValue();
+
+    // Half the height of the note name above the bar.
+    const auto signSize = signHeight(bounds);
 
     auto barBounds = bounds.reduced(28, 34);
     const auto centreY = barBounds.getCentreY();
@@ -312,8 +472,9 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
             }
             const auto from = xOf(side * band->innerCents);
             const auto to = xOf(side * band->outerCents);
-            graphics.setColour(colour.withAlpha(
-                band->look == tuner::BandLook::lit ? litBandAlpha : tintedBandAlpha));
+            graphics.setColour(colour.withAlpha(fillAlpha(
+                *band, side, bothHalvesLit, litBandAlpha, tintedBandAlpha, outsideLitAlpha,
+                outsideTintedAlpha)));
             graphics.fillRect(juce::Rectangle<float>::leftTopRightBottom(
                 std::min(from, to), bandTop, std::max(from, to), bandBottom));
         }
@@ -359,19 +520,33 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
 
     const auto indicatorX = xOf(displayedCents);
 
-    // In the colour of its zone, outlined so it stays visible on the lit band.
-    const auto indicator =
-        juce::Rectangle<float>(20.0f, 20.0f).withCentre({indicatorX, static_cast<float>(centreY)});
-    graphics.setColour(intonationZoneColour(pitch::zoneOf(displayedCents, zoneLimits())));
-    graphics.fillEllipse(indicator);
-    graphics.setColour(palette.foreground);
-    graphics.drawEllipse(indicator, 2.0f);
+    // The sign over the lit half: a sharp to come down from, a flat to go up
+    // from. Over the band rather than on it, so the dot never hides it.
+    if (const auto* lit = litHalfBand(bands); signs != Signs::off && lit != nullptr)
+    {
+        const auto from = xOf(sideOf(*lit) * lit->innerCents);
+        const auto to = xOf(sideOf(*lit) * lit->outerCents);
+        drawSign(
+            graphics, lit->litSide, {(from + to) * 0.5f, bandTop - signSize * 0.8f}, signSize,
+            intonationZoneColour(lit->zone), signs == Signs::arrows);
+    }
+
+    // The chosen marker: a dot on the bar, an arrow down onto it, or a line
+    // across the band.
+    drawMarker(
+        graphics, {indicatorX, static_cast<float>(centreY)},
+        juce::Rectangle<float>::leftTopRightBottom(
+            indicatorX, bandTop - 10.0f, indicatorX, bandBottom + 10.0f),
+        true);
 }
 
 void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<int> bounds) const
 {
     const auto palette = tunerPaletteFor(currentTheme);
     const auto scaleCents = scaleSlider.getValue();
+
+    // Half the height of the note name behind the dial.
+    const auto signSize = signHeight(bounds);
 
     const auto centre = juce::Point<float>(
         static_cast<float>(bounds.getCentreX()), static_cast<float>(bounds.getBottom() - 24));
@@ -444,8 +619,9 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
                     segment.lineTo(pointAt(angle, bandRadius));
                 }
             }
-            graphics.setColour(colour.withAlpha(
-                band->look == tuner::BandLook::lit ? litBandAlpha : tintedBandAlpha));
+            graphics.setColour(colour.withAlpha(fillAlpha(
+                *band, side, bothHalvesLit, litBandAlpha, tintedBandAlpha, outsideLitAlpha,
+                outsideTintedAlpha)));
             graphics.strokePath(
                 segment, juce::PathStrokeType(
                              14.0f, juce::PathStrokeType::mitered, juce::PathStrokeType::butt));
@@ -486,6 +662,17 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
         }
     }
 
+    // The sign just inside the lit half of the arc.
+    if (const auto* lit = litHalfBand(bands); signs != Signs::off && lit != nullptr)
+    {
+        const auto middle =
+            (angleOf(sideOf(*lit) * lit->innerCents) + angleOf(sideOf(*lit) * lit->outerCents)) *
+            0.5;
+        drawSign(
+            graphics, lit->litSide, pointAt(middle, radius - 18.0f - signSize), signSize,
+            intonationZoneColour(lit->zone), signs == Signs::arrows);
+    }
+
     const auto needleAngle = angleOf(hasSignal ? displayedCents : 0.0);
     const auto needleEnd =
         centre + juce::Point<float>(
@@ -499,6 +686,7 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
     graphics.fillEllipse(centre.x - 7.0f, centre.y - 7.0f, 14.0f, 14.0f);
 
     graphics.setColour(palette.muted);
+    graphics.setFont(juce::FontOptions(12.0f));
     graphics.drawText(
         "FLAT", bounds.removeFromLeft(74).removeFromBottom(24), juce::Justification::centred);
     graphics.drawText(
@@ -523,11 +711,7 @@ void TunerComponent::drawNoteWatermark(juce::Graphics& graphics, juce::Rectangle
 
     const auto palette = tunerPaletteFor(currentTheme);
 
-    // Sized from the area it is given rather than fixed, so it fills a tall
-    // docked pane and still fits the half-height band the bar leaves it. The
-    // cap only stops it becoming absurd on a very large display.
-    const auto fontHeight =
-        juce::jlimit(24.0f, 360.0f, static_cast<float>(area.getHeight()) * 0.28f);
+    const auto fontHeight = noteFontHeight(area);
 
     graphics.setColour(palette.foreground.withAlpha(0.14f));
     graphics.setFont(juce::FontOptions(fontHeight, juce::Font::bold));
@@ -664,7 +848,9 @@ void TunerComponent::drawCompactGraph(
     if (hasLockedMidiNote)
     {
         drawZoneStrips(
-            graphics, currentBands(), plot.toFloat(), lockedMidiNote, lowest, highest, vertical);
+            graphics, currentBands(), plot.toFloat(), lockedMidiNote, lowest, highest, vertical,
+            bothHalvesLit, signs != Signs::off, signs == Signs::arrows,
+            std::min(signHeight(bounds), 0.3f * static_cast<float>(plot.getHeight())));
     }
 
     if (graphHistory.size() >= 2)
@@ -708,6 +894,11 @@ void TunerComponent::drawCompactGraph(
 
         graphics.setColour(palette.accent);
         graphics.strokePath(trace, juce::PathStrokeType(2.0f));
+
+        if (started)
+        {
+            drawMarker(graphics, trace.getCurrentPosition(), plot.toFloat(), vertical);
+        }
     }
 
     drawCompactReading(
@@ -987,9 +1178,7 @@ void TunerComponent::drawSelectedDisplay(juce::Graphics& graphics, juce::Rectang
     // centred, which is where it reads best. The bar lies straight across the
     // middle -- centred there, the track and its "0" tick slice the glyphs in
     // half -- so above the bar it is, in the band the bar does not use.
-    const auto watermarkArea =
-        mode == DisplayMode::bar ? bounds.withTrimmedBottom(bounds.getHeight() / 2 + 26) : bounds;
-    drawNoteWatermark(graphics, watermarkArea);
+    drawNoteWatermark(graphics, noteArea(bounds));
 
     switch (mode)
     {
@@ -1009,6 +1198,124 @@ void TunerComponent::drawSelectedDisplay(juce::Graphics& graphics, juce::Rectang
 
     graphics.setColour(palette.outline);
     graphics.drawRoundedRectangle(bounds.toFloat(), 8.0f, 1.0f);
+}
+
+void TunerComponent::drawMarker(
+    juce::Graphics& graphics,
+    juce::Point<float> at,
+    juce::Rectangle<float> span,
+    bool vertical) const
+{
+    if (!hasSignal || marker == Marker::off)
+    {
+        return;
+    }
+
+    // In the colour of the zone the pitch is in, outlined so it stays visible
+    // on a lit band of the same colour.
+    const auto palette = tunerPaletteFor(currentTheme);
+    const auto fill = intonationZoneColour(pitch::zoneOf(displayedCents, zoneLimits()));
+
+    switch (marker)
+    {
+    case Marker::dot:
+    {
+        const auto dot = juce::Rectangle<float>(18.0f, 18.0f).withCentre(at);
+        graphics.setColour(fill);
+        graphics.fillEllipse(dot);
+        graphics.setColour(palette.foreground);
+        graphics.drawEllipse(dot, 2.0f);
+        break;
+    }
+    case Marker::arrow:
+    {
+        // Its tip on the point, pointing the way the pitch is read along: down
+        // onto a bar or a horizontal graph's end, across onto a vertical one.
+        juce::Path arrow;
+        constexpr float length = 20.0f;
+        constexpr float halfWidth = 10.0f;
+        if (vertical)
+        {
+            arrow.addTriangle(
+                at, {at.x - halfWidth, at.y - length}, {at.x + halfWidth, at.y - length});
+        }
+        else
+        {
+            arrow.addTriangle(
+                at, {at.x - length, at.y - halfWidth}, {at.x - length, at.y + halfWidth});
+        }
+        graphics.setColour(fill);
+        graphics.fillPath(arrow);
+        graphics.setColour(palette.foreground);
+        graphics.strokePath(arrow, juce::PathStrokeType(1.5f));
+        break;
+    }
+    case Marker::line:
+    {
+        graphics.setColour(fill);
+        graphics.drawLine(
+            vertical ? juce::Line<float>(at.x, span.getY(), at.x, span.getBottom())
+                     : juce::Line<float>(span.getX(), at.y, span.getRight(), at.y),
+            3.0f);
+        break;
+    }
+    case Marker::ring:
+    {
+        // Hollow, so what is under it -- the trace, the zero tick -- shows.
+        const auto ring = juce::Rectangle<float>(20.0f, 20.0f).withCentre(at);
+        graphics.setColour(palette.foreground);
+        graphics.drawEllipse(ring, 5.0f);
+        graphics.setColour(fill);
+        graphics.drawEllipse(ring, 3.0f);
+        break;
+    }
+    case Marker::diamond:
+    {
+        juce::Path diamond;
+        constexpr float reach = 11.0f;
+        diamond.startNewSubPath(at.x, at.y - reach);
+        diamond.lineTo(at.x + reach, at.y);
+        diamond.lineTo(at.x, at.y + reach);
+        diamond.lineTo(at.x - reach, at.y);
+        diamond.closeSubPath();
+        graphics.setColour(fill);
+        graphics.fillPath(diamond);
+        graphics.setColour(palette.foreground);
+        graphics.strokePath(diamond, juce::PathStrokeType(1.5f));
+        break;
+    }
+    case Marker::crosshair:
+    {
+        // A short cross with a gap at its centre, so the point itself stays
+        // visible, like a sight.
+        constexpr float reach = 13.0f;
+        constexpr float gap = 4.0f;
+        graphics.setColour(fill);
+        for (const auto& arm :
+             {juce::Line<float>(at.x - reach, at.y, at.x - gap, at.y),
+              juce::Line<float>(at.x + gap, at.y, at.x + reach, at.y),
+              juce::Line<float>(at.x, at.y - reach, at.x, at.y - gap),
+              juce::Line<float>(at.x, at.y + gap, at.x, at.y + reach)})
+        {
+            graphics.drawLine(arm, 3.0f);
+        }
+        break;
+    }
+    case Marker::off:
+        break;
+    }
+}
+
+juce::Rectangle<int> TunerComponent::noteArea(juce::Rectangle<int> display) const
+{
+    return static_cast<DisplayMode>(displayModeBox.getSelectedId()) == DisplayMode::bar
+               ? display.withTrimmedBottom(display.getHeight() / 2 + 26)
+               : display;
+}
+
+float TunerComponent::signHeight(juce::Rectangle<int> display) const
+{
+    return 0.5f * noteFontHeight(noteArea(display));
 }
 
 void TunerComponent::paint(juce::Graphics& graphics)

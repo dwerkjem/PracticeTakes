@@ -26,11 +26,20 @@ many cents sharp or flat it is.
   - **amber**, near but off, out to **Out of tune beyond** (±40 cents);
   - **red**, out of tune: everything past that.
 
-  The zone you're in is lit. The tighter zones inside it stay faintly tinted,
-  so you can still see the target; the looser ones outside it are turned off
-  and leave only a dotted line, in their own colour, where each begins. The
-  graph keeps the note's zones in view while you sing, and the dot and the
-  needle take the colour of the zone you're in.
+  Only the half of the zone you're in lights, the sharp half or the flat half,
+  and it carries a **♯** or a **♭**, half the height of the note name, so you
+  know which way to go as well as how far. The tighter zones inside it stay
+  faintly tinted, so you can still see the target; the looser ones outside it
+  are turned off and leave only a dotted line, in their own colour, where each
+  begins. Red is kept very faint. The graph keeps the note's zones in view while
+  you sing, and a marker on the bar and on the graph's newest point, and the
+  meter's needle, take the colour of the zone you're in.
+- **The tool's ... menu** changes how that looks, for each tuner:
+  - **Signs**: *Off*, *Sharp and flat* (the default), or *Arrows: which way to
+    go*, an arrow pointing down when you're sharp and up when you're flat;
+  - **Light both halves**, for a symmetric look that lights the whole zone;
+  - **Marker**, what marks where you are on the bar and the graph: *Off*,
+    *Dot* (the default), *Arrow*, *Line*, *Ring*, *Diamond* or *Crosshair*.
 
 | Bar | Meter |
 |---|---|

@@ -126,3 +126,19 @@ TEST_CASE("crossed limits still give four bands, each inside the next", "[tuner]
     CHECK(bands[2].outerCents < bands[3].outerCents);
     CHECK(bands[1].outerCents == 10.0);
 }
+
+TEST_CASE("only the half of the lit zone the pitch is on lights", "[tuner][zones]")
+{
+    using tuner::Side;
+    const auto usual = limits(5.0, 25.0);
+
+    CHECK(zoneBands(12.0, usual)[1].litSide == Side::sharp);
+    CHECK(zoneBands(-12.0, usual)[1].litSide == Side::flat);
+    CHECK(zoneBands(-2.0, usual)[0].litSide == Side::flat);
+    CHECK(zoneBands(45.0, usual)[3].litSide == Side::sharp);
+
+    // Dead on the note, both halves; and a band that is not lit has no side.
+    CHECK(zoneBands(0.0, usual)[0].litSide == Side::both);
+    CHECK(zoneBands(12.0, usual)[0].litSide == Side::both);
+    CHECK(zoneBands(std::nullopt, usual)[1].litSide == Side::both);
+}

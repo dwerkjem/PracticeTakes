@@ -218,6 +218,9 @@ void TunerComponent::resetToDefaults()
     dropoutSlider.setValue(AppDefaults::Tuner::dropoutFrames);
     durationSlider.setValue(AppDefaults::Tuner::graphDurationSeconds);
     scaleSlider.setValue(AppDefaults::Tuner::scaleCents);
+    signs = static_cast<Signs>(juce::roundToInt(AppDefaults::Tuner::signs));
+    bothHalvesLit = AppDefaults::Tuner::bothHalvesLit > 0.5;
+    marker = static_cast<Marker>(juce::roundToInt(AppDefaults::Tuner::marker));
     areAdvancedSettingsExpanded = false;
     graphHistory.clear();
     resetPitchTracking();
@@ -240,6 +243,9 @@ void TunerComponent::applySettings(const AppDefaults::TunerSettings& settings)
     dropoutSlider.setValue(settings.dropoutFrames);
     durationSlider.setValue(settings.graphDurationSeconds);
     scaleSlider.setValue(settings.scaleCents);
+    signs = static_cast<Signs>(juce::jlimit(0, 2, juce::roundToInt(settings.signs)));
+    bothHalvesLit = settings.bothHalvesLit > 0.5;
+    marker = static_cast<Marker>(juce::jlimit(0, 6, juce::roundToInt(settings.marker)));
     graphHistory.clear();
     resetPitchTracking();
     repaint();
@@ -247,9 +253,10 @@ void TunerComponent::applySettings(const AppDefaults::TunerSettings& settings)
 
 AppDefaults::TunerSettings TunerComponent::settings() const
 {
-    return {displayModeBox.getSelectedId(), easingSlider.getValue(),  averagingSlider.getValue(),
-            thresholdSlider.getValue(),     dropoutSlider.getValue(), durationSlider.getValue(),
-            scaleSlider.getValue()};
+    return {displayModeBox.getSelectedId(), easingSlider.getValue(),    averagingSlider.getValue(),
+            thresholdSlider.getValue(),     dropoutSlider.getValue(),   durationSlider.getValue(),
+            scaleSlider.getValue(),         static_cast<double>(signs), bothHalvesLit ? 1.0 : 0.0,
+            static_cast<double>(marker)};
 }
 
 std::optional<ToolSettingsPayload> TunerComponent::captureSettings() const
@@ -437,7 +444,51 @@ std::vector<ToolComponent::MenuEntry> TunerComponent::optionsMenuEntries()
              resized();
              repaint();
          }},
+        {"Signs",
+         {},
+         false,
+         true,
+         {
+             {"Off", [this] { chooseSigns(Signs::off); }, signs == Signs::off},
+             {"Sharp and flat", [this] { chooseSigns(Signs::sharpFlat); },
+              signs == Signs::sharpFlat},
+             {"Arrows: which way to go", [this] { chooseSigns(Signs::arrows); },
+              signs == Signs::arrows},
+         }},
+        {"Light both halves",
+         [this]
+         {
+             bothHalvesLit = !bothHalvesLit;
+             repaint();
+         },
+         bothHalvesLit},
+        {"Marker",
+         {},
+         false,
+         true,
+         {
+             {"Off", [this] { chooseMarker(Marker::off); }, marker == Marker::off},
+             {"Dot", [this] { chooseMarker(Marker::dot); }, marker == Marker::dot},
+             {"Arrow", [this] { chooseMarker(Marker::arrow); }, marker == Marker::arrow},
+             {"Line", [this] { chooseMarker(Marker::line); }, marker == Marker::line},
+             {"Ring", [this] { chooseMarker(Marker::ring); }, marker == Marker::ring},
+             {"Diamond", [this] { chooseMarker(Marker::diamond); }, marker == Marker::diamond},
+             {"Crosshair", [this] { chooseMarker(Marker::crosshair); },
+              marker == Marker::crosshair},
+         }},
         {juce::String::fromUTF8("Choose target\xe2\x80\xa6"), [this] { openTargetPicker(); }}};
+}
+
+void TunerComponent::chooseMarker(Marker chosen)
+{
+    marker = chosen;
+    repaint();
+}
+
+void TunerComponent::chooseSigns(Signs chosen)
+{
+    signs = chosen;
+    repaint();
 }
 
 std::optional<int> TunerComponent::steadyNote() const

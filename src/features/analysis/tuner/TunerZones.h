@@ -22,7 +22,12 @@
 // turned off and leave only a dotted line where each begins (its inner edge),
 // in its own colour -- so no two lines fall on the same place, and red's
 // begins where the singer's out-of-tune limit is. With no signal
-// nothing is lit and every zone is tinted; outside every zone, likewise.
+// nothing is lit and every zone is tinted.
+//
+// Only the half of the lit zone the pitch is on lights -- the sharp half or
+// the flat half -- and it carries a sharp or flat sign, so which way to go is
+// as plain as how far. The other half of it stays tinted. Dead on zero both
+// halves light and there is no sign.
 namespace tuner
 {
 enum class BandLook
@@ -30,6 +35,14 @@ enum class BandLook
     lit,
     tinted,
     dotted
+};
+
+// Which half of a lit band is lit: below the note, above it, or both.
+enum class Side
+{
+    both,
+    flat,
+    sharp
 };
 
 struct ZoneBand
@@ -43,6 +56,9 @@ struct ZoneBand
     double outerCents;
 
     BandLook look;
+
+    // For a lit band, which half; both otherwise.
+    Side litSide = Side::both;
 };
 
 [[nodiscard]] inline int precisionRank(pitch::IntonationZone zone) noexcept
@@ -89,6 +105,10 @@ zoneBands(std::optional<double> cents, pitch::ZoneLimits requested)
         band.look = rank == current  ? BandLook::lit
                     : rank < current ? BandLook::tinted
                                      : BandLook::dotted;
+        if (band.look == BandLook::lit)
+        {
+            band.litSide = *cents > 0.0 ? Side::sharp : *cents < 0.0 ? Side::flat : Side::both;
+        }
     }
     return bands;
 }

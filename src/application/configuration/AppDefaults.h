@@ -82,6 +82,17 @@ inline constexpr double graphDurationSeconds = 20.0;
 
 // How far either way the bar and the dial reach: one note, ±50 cents.
 inline constexpr double scaleCents = pitch::nearNoteCents;
+
+// What the lit half of a zone carries: 0 nothing, 1 a sharp or flat sign, 2
+// an arrow the way to go (down when sharp, up when flat). And whether both
+// halves light (1) rather than only the one the pitch is on (0). Numbers, so
+// the one schema and codec cover them.
+inline constexpr double signs = 1.0;
+inline constexpr double bothHalvesLit = 0.0;
+
+// What marks where the pitch is on the bar and the graph: 0 nothing, 1 a dot,
+// 2 an arrow, 3 a line across, 4 a ring, 5 a diamond, 6 a crosshair.
+inline constexpr double marker = 1.0;
 } // namespace Tuner
 
 enum class Preset
@@ -99,6 +110,9 @@ struct TunerSettings
     double dropoutFrames;
     double graphDurationSeconds;
     double scaleCents;
+    double signs;
+    double bothHalvesLit;
+    double marker;
 };
 
 // The tuner's settings schema: for each numeric setting, the name it is stored
@@ -132,6 +146,9 @@ inline constexpr std::array tunerNumberFields{
     TunerNumberField{"graphDurationSeconds", &TunerSettings::graphDurationSeconds, 5.0, 60.0, 1.0},
     // Added in 0.7.0.
     TunerNumberField{"scaleCents", &TunerSettings::scaleCents, 10.0, 100.0, 5.0, false},
+    TunerNumberField{"signs", &TunerSettings::signs, 0.0, 2.0, 1.0, false},
+    TunerNumberField{"bothHalvesLit", &TunerSettings::bothHalvesLit, 0.0, 1.0, 1.0, false},
+    TunerNumberField{"marker", &TunerSettings::marker, 0.0, 6.0, 1.0, false},
 };
 
 // The schema entry for one setting. Every member of TunerSettings but
@@ -150,9 +167,11 @@ inline constexpr std::array tunerNumberFields{
 
 // The general-instrument values, which are also the tuner's defaults.
 inline constexpr TunerSettings generalInstrumentTuner{
-    Tuner::displayMode,         Tuner::easing,        Tuner::averaging,
-    Tuner::noteSwitchSemitones, Tuner::dropoutFrames, Tuner::graphDurationSeconds,
-    Tuner::scaleCents};
+    Tuner::displayMode,   Tuner::easing,
+    Tuner::averaging,     Tuner::noteSwitchSemitones,
+    Tuner::dropoutFrames, Tuner::graphDurationSeconds,
+    Tuner::scaleCents,    Tuner::signs,
+    Tuner::bothHalvesLit, Tuner::marker};
 
 // A practice preset, declared once: its identity, the name the Settings window
 // offers it under, and the tuner controls it applies. The Settings window
@@ -171,7 +190,8 @@ inline constexpr std::array presets{
     PresetDefinition{
         Preset::voice,
         "Voice practice",
-        {Tuner::displayMode, 0.25, 7.0, 0.45, 7.0, 30.0, Tuner::scaleCents}},
+        {Tuner::displayMode, 0.25, 7.0, 0.45, 7.0, 30.0, Tuner::scaleCents, Tuner::signs,
+         Tuner::bothHalvesLit, Tuner::marker}},
     PresetDefinition{Preset::generalInstrument, "General instrument", generalInstrumentTuner},
 };
 

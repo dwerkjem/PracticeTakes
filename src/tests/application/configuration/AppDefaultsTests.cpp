@@ -103,10 +103,10 @@ TEST_CASE("An unknown preset id applies the defaults", "[defaults][tuner]")
 
 TEST_CASE("The tuner schema covers every numeric setting once", "[defaults][tuner]")
 {
-    // TunerSettings has six numeric members besides displayMode; a seventh with
+    // TunerSettings has nine numeric members besides displayMode; a tenth with
     // no schema entry would be written by no codec and checked by no reader.
-    static_assert(sizeof(AppDefaults::TunerSettings) == sizeof(double) * 7);
-    REQUIRE(AppDefaults::tunerNumberFields.size() == 6);
+    static_assert(sizeof(AppDefaults::TunerSettings) == sizeof(double) * 10);
+    REQUIRE(AppDefaults::tunerNumberFields.size() == 9);
 
     for (std::size_t i = 0; i < AppDefaults::tunerNumberFields.size(); ++i)
     {
@@ -143,6 +143,12 @@ TEST_CASE("The tuner schema keeps the ranges each reader had", "[defaults][tuner
     CHECK(range(&TunerSettings::graphDurationSeconds) == std::array{5.0, 60.0, 1.0});
     CHECK(range(&TunerSettings::scaleCents) == std::array{10.0, 100.0, 5.0});
     CHECK_FALSE(AppDefaults::tunerField(&TunerSettings::scaleCents).required);
+    CHECK(range(&TunerSettings::signs) == std::array{0.0, 2.0, 1.0});
+    CHECK(range(&TunerSettings::bothHalvesLit) == std::array{0.0, 1.0, 1.0});
+    CHECK_FALSE(AppDefaults::tunerField(&TunerSettings::signs).required);
+    CHECK_FALSE(AppDefaults::tunerField(&TunerSettings::bothHalvesLit).required);
+    CHECK(range(&TunerSettings::marker) == std::array{0.0, 6.0, 1.0});
+    CHECK_FALSE(AppDefaults::tunerField(&TunerSettings::marker).required);
     CHECK(AppDefaults::tunerDisplayModeMinimum == 1);
     CHECK(AppDefaults::tunerDisplayModeMaximum == 3);
 }

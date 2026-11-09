@@ -59,7 +59,7 @@ TEST_CASE("A tuner payload keeps the names and order it was always written in", 
     CHECK(
         names == std::vector<std::string>{
                      "displayMode", "easing", "averaging", "noteSwitchSemitones", "dropoutFrames",
-                     "graphDurationSeconds", "scaleCents"});
+                     "graphDurationSeconds", "scaleCents", "signs", "bothHalvesLit", "marker"});
 }
 
 TEST_CASE("A tuner payload with a value outside its range is refused", "[tuner][codec]")
@@ -119,16 +119,27 @@ TEST_CASE(
     CHECK(decoded->graphDurationSeconds == Approx(25.0));
     CHECK(decoded->scaleCents == Approx(AppDefaults::Tuner::scaleCents));
     CHECK(AppDefaults::Tuner::scaleCents == Approx(50.0));
+
+    // Signs on, one half lit: the look 0.7.0 introduces, by default.
+    CHECK(decoded->signs == Approx(1.0));
+    CHECK(decoded->bothHalvesLit == Approx(0.0));
+    CHECK(decoded->marker == Approx(1.0));
 }
 
-TEST_CASE("A tuner's scale survives a round trip", "[tuner][codec]")
+TEST_CASE("A tuner's scale, signs, halves and marker survive a round trip", "[tuner][codec]")
 {
     AppDefaults::TunerSettings settings = AppDefaults::tunerDefaults();
     settings.scaleCents = 25.0;
+    settings.signs = 2.0;
+    settings.bothHalvesLit = 1.0;
+    settings.marker = 5.0;
 
     const auto decoded = TunerSettingsCodec::decode(TunerSettingsCodec::encode(settings));
     REQUIRE(decoded.has_value());
     CHECK(decoded->scaleCents == Approx(25.0));
+    CHECK(decoded->signs == Approx(2.0));
+    CHECK(decoded->bothHalvesLit == Approx(1.0));
+    CHECK(decoded->marker == Approx(5.0));
 }
 
 TEST_CASE("A missing or other-version tuner payload gives the defaults", "[tuner][codec]")
