@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../shell/ui/workspace/model/WorkspaceBuiltIns.h"
+#include "../theme/TextScale.h"
 #include "../theme/ThemeType.h"
 #include "AppDefaults.h"
 
@@ -33,6 +34,10 @@ enum class LoadStatus
 struct State
 {
     Theme theme = AppDefaults::theme;
+
+    // The text size, as a percentage of every text role's base size: 80 to
+    // 150 in tens (appearance::TextScale, global-text-size).
+    int textScalePercent = appearance::TextScale::defaultPercent;
     bool microphoneMuted = false;
     double inputGain = AppDefaults::Audio::inputGain;
     juce::String audioDeviceState;

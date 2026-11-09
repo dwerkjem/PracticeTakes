@@ -634,3 +634,37 @@ TEST_CASE("a transfer file carries no metronome or output device", "[settings][t
     CHECK(decoded.model->state.metronomeEnabled == AppDefaults::Metronome::enabled);
     CHECK(decoded.model->state.countInBars == AppDefaults::Metronome::countInBars);
 }
+
+TEST_CASE(
+    "the text size travels with appearance, and a bundle without it imports at 100",
+    "[settings][transfer][text-size]")
+{
+    SettingsTransferModel exported;
+    exported.state.textScalePercent = 130;
+    const std::string document = encodedDocument(exported);
+
+    auto decoded = SettingsTransferCodec::decode(document, {{0, 0, 2560, 1440}});
+    REQUIRE(decoded.model.has_value());
+    CHECK(decoded.model->state.textScalePercent == 130);
+
+    // A bundle from 0.7.0, before the setting: no textScale under appearance.
+    auto parsed = parsedDocument(document);
+    auto* appearance =
+        parsed.getProperty("settings", {}).getProperty("appearance", {}).getDynamicObject();
+    REQUIRE(appearance != nullptr);
+    REQUIRE(appearance->hasProperty("textScale"));
+    appearance->removeProperty("textScale");
+    decoded = SettingsTransferCodec::decode(serializedDocument(parsed), {{0, 0, 2560, 1440}});
+    REQUIRE(decoded.model.has_value());
+    CHECK(decoded.model->state.textScalePercent == 100);
+
+    // Out of range or not a number: the nearest size offered, or 100.
+    appearance->setProperty("textScale", 400);
+    decoded = SettingsTransferCodec::decode(serializedDocument(parsed), {{0, 0, 2560, 1440}});
+    REQUIRE(decoded.model.has_value());
+    CHECK(decoded.model->state.textScalePercent == 150);
+    appearance->setProperty("textScale", "large");
+    decoded = SettingsTransferCodec::decode(serializedDocument(parsed), {{0, 0, 2560, 1440}});
+    REQUIRE(decoded.model.has_value());
+    CHECK(decoded.model->state.textScalePercent == 100);
+}

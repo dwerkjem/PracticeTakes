@@ -12,6 +12,7 @@ namespace
 {
 constexpr auto schemaKey = "settings.schema";
 constexpr auto themeKey = "global.theme";
+constexpr auto textScaleKey = "appearance.textScale";
 constexpr auto microphoneMutedKey = "audio.muted";
 constexpr auto audioStateKey = "audio.deviceState";
 constexpr auto audioInputGainKey = "audio.inputGain";
@@ -62,6 +63,7 @@ constexpr const char* legacyLayoutKeys[] = {
 constexpr const char* ownedKeys[] = {
     schemaKey,
     themeKey,
+    textScaleKey,
     microphoneMutedKey,
     audioStateKey,
     audioInputGainKey,
@@ -261,6 +263,10 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
     const auto isCurrentSchema = storedSchema == AppDefaults::schemaVersion;
     result.status = isCurrentSchema ? LoadStatus::loaded : LoadStatus::migrated;
     result.state.theme = loadTheme(properties);
+    // Missing (a file from before the setting), out of range or not a number:
+    // the nearest size the setting offers, or 100.
+    result.state.textScalePercent = appearance::TextScale::snapped(properties.getDoubleValue(
+        textScaleKey, static_cast<double>(appearance::TextScale::defaultPercent)));
     result.state.microphoneMuted = properties.getBoolValue(microphoneMutedKey, false);
     result.state.inputGain =
         boundedValue(properties, audioInputGainKey, AppDefaults::Audio::inputGain, 0.0, 2.0);
@@ -375,6 +381,7 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
 {
     properties.setValue(schemaKey, AppDefaults::schemaVersion);
     properties.setValue(themeKey, static_cast<int>(state.theme));
+    properties.setValue(textScaleKey, state.textScalePercent);
     properties.setValue(microphoneMutedKey, state.microphoneMuted);
     properties.setValue(audioInputGainKey, state.inputGain);
     properties.setValue(audioStateKey, state.audioDeviceState);

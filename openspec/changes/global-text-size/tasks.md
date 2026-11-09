@@ -7,7 +7,7 @@
 
 ## 2. Storing it
 
-- [ ] 2.1 `appearance.textScale` in the settings file and in the exported
+- [x] 2.1 `appearance.textScale` in the settings file and in the exported
       bundle's appearance (decision 5). Tests: a missing value, an
       out-of-range one, and a round trip.
 
