@@ -63,7 +63,7 @@ TunerComponent::TunerComponent(
     const auto configureLabel = [this](juce::Label& label, const juce::String& text)
     {
         label.setText(text, juce::dontSendNotification);
-        label.setFont(juce::FontOptions(13.0f));
+        label.setFont(appearance::labelFont(appearance::TextRole::body));
         addAndMakeVisible(label);
     };
 
@@ -377,20 +377,21 @@ int TunerComponent::controlAreaHeight() const
     // A stacked row is taller than an inline one, so the room reserved here has
     // to be asked the same question resized() asks -- otherwise the display is
     // sized for six short rows and six tall ones are drawn under it.
-    const auto rowHeight = advancedRowsStack() ? stackedAdvancedRowHeight : advancedRowHeight;
-    const auto expandedRowsHeight = 6 * rowHeight + 8 + 36;
+    const auto rowHeight = advancedRowsStack() ? scaledHeight(stackedAdvancedRowHeight)
+                                               : scaledHeight(advancedRowHeight);
+    const auto expandedRowsHeight = 6 * rowHeight + 8 + scaledHeight(36);
 
     // Nothing but the advanced rows, and only while they are open. The mode
     // chooser is on the header line when the tuner is docked, and the tuner
     // adds a row for it only when nobody adopted it -- which resized() works
     // out, since it is the only place that knows.
     return (areAdvancedSettingsExpanded ? expandedRowsHeight + 8 : 0) +
-           (isModeChooserAdopted() ? 0 : modeChooserHeight + 8);
+           (isModeChooserAdopted() ? 0 : scaledHeight(modeChooserHeight) + 8);
 }
 
 bool TunerComponent::advancedRowsStack() const
 {
-    return getWidth() < stackedAdvancedRowsBelowWidth;
+    return getWidth() < scaledHeight(stackedAdvancedRowsBelowWidth);
 }
 
 bool TunerComponent::isModeChooserAdopted() const
@@ -511,7 +512,7 @@ std::optional<int> TunerComponent::steadyNote() const
 
 juce::Rectangle<int> TunerComponent::targetLineBounds() const
 {
-    return getLocalBounds().reduced(18).removeFromTop(targetHeight);
+    return getLocalBounds().reduced(18).removeFromTop(scaledHeight(targetHeight));
 }
 
 void TunerComponent::openTargetPicker()
@@ -563,7 +564,7 @@ juce::String TunerComponent::statusText() const
     }
 
     // Blank rather than a placeholder: the status line still holds its row
-    // either way (statusHeight is reserved unconditionally), and a brief gap
+    // either way (scaledHeight(statusHeight) is reserved unconditionally), and a brief gap
     // between notes has nothing worth reporting -- not silence to name, not
     // an error, just a moment where the reading is not current.
     if (!hasSignal)

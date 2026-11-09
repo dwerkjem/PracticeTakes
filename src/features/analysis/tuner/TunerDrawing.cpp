@@ -395,7 +395,7 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
     const auto palette = tunerPaletteFor(currentTheme);
 
     auto content = bounds.reduced(8);
-    auto labelArea = content.removeFromLeft(48);
+    auto labelArea = content.removeFromLeft(scaledHeight(48));
     const auto plotArea = content;
 
     std::vector<double> validValues;
@@ -466,7 +466,7 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
     const auto pixelsPerSemitone =
         static_cast<double>(plotArea.getHeight()) / std::max(1.0, maximumValue - minimumValue);
 
-    graphics.setFont(juce::FontOptions(11.0f));
+    graphics.setFont(textFont(appearance::TextRole::axis));
 
     for (int midiNote = firstNote; midiNote <= lastNote; ++midiNote)
     {
@@ -606,7 +606,7 @@ void TunerComponent::drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int>
         }
     }
 
-    graphics.setFont(juce::FontOptions(12.0f));
+    graphics.setFont(textFont(appearance::TextRole::small));
     const auto ticks = scaleTicks(scaleCents);
     for (std::size_t tick = 0; tick < ticks.size(); ++tick)
     {
@@ -773,7 +773,7 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
         }
     }
 
-    graphics.setFont(juce::FontOptions(12.0f));
+    graphics.setFont(textFont(appearance::TextRole::small));
     const auto ticks = scaleTicks(scaleCents);
     for (std::size_t tick = 0; tick < ticks.size(); ++tick)
     {
@@ -853,11 +853,13 @@ void TunerComponent::drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<in
     }
 
     graphics.setColour(palette.muted);
-    graphics.setFont(juce::FontOptions(12.0f));
+    graphics.setFont(textFont(appearance::TextRole::small));
     graphics.drawText(
-        "FLAT", bounds.removeFromLeft(74).removeFromBottom(24), juce::Justification::centred);
+        "FLAT", bounds.removeFromLeft(scaledHeight(74)).removeFromBottom(scaledHeight(24)),
+        juce::Justification::centred);
     graphics.drawText(
-        "SHARP", bounds.removeFromRight(74).removeFromBottom(24), juce::Justification::centred);
+        "SHARP", bounds.removeFromRight(scaledHeight(74)).removeFromBottom(scaledHeight(24)),
+        juce::Justification::centred);
 }
 
 void TunerComponent::drawNoteWatermark(juce::Graphics& graphics, juce::Rectangle<int> area) const
@@ -1155,7 +1157,7 @@ void TunerComponent::drawCompactBar(
     // on the note whenever the reading is in tune -- which is the moment the
     // note most wants reading. Offset perpendicular to the track, the two never
     // meet at any reading.
-    constexpr int readingHeight = 34;
+    const int readingHeight = scaledHeight(34);
     constexpr int clearance = 16;
     const auto readingCentre =
         vertical ? juce::Point<int>(
@@ -1210,7 +1212,7 @@ void TunerComponent::drawCompactMeter(
     }
 
     graphics.setColour(inTune ? palette.inTune : palette.accent);
-    graphics.setFont(juce::FontOptions(14.0f, juce::Font::bold));
+    graphics.setFont(textFont(appearance::TextRole::control, juce::Font::bold));
     graphics.drawFittedText(
         inTune ? "in tune" : directionLabel(), directionArea, juce::Justification::centred, 1);
 }
@@ -1531,14 +1533,16 @@ void TunerComponent::paint(juce::Graphics& graphics)
     // read at a glance, and it is drawn behind the display instead of above it.
     // The target first: what you are aiming at matters more than the hertz.
     graphics.setColour(onTarget() ? palette.inTune : palette.foreground);
-    graphics.setFont(juce::FontOptions(15.0f, juce::Font::bold));
+    graphics.setFont(textFont(appearance::TextRole::label, juce::Font::bold));
     graphics.drawText(
-        targetText(), bounds.removeFromTop(targetHeight), juce::Justification::centred, true);
+        targetText(), bounds.removeFromTop(scaledHeight(targetHeight)),
+        juce::Justification::centred, true);
 
     graphics.setColour(palette.muted);
-    graphics.setFont(juce::FontOptions(13.0f));
+    graphics.setFont(textFont(appearance::TextRole::body));
     graphics.drawText(
-        statusText(), bounds.removeFromTop(statusHeight), juce::Justification::centred);
+        statusText(), bounds.removeFromTop(scaledHeight(statusHeight)),
+        juce::Justification::centred);
     bounds.removeFromTop(statusGap);
 
     const auto preferredDisplayHeight = std::max(90, bounds.getHeight() - controlAreaHeight() - 8);
@@ -1553,8 +1557,8 @@ void TunerComponent::resized()
 
     // Must consume exactly what paint() consumes above the display, or the
     // controls drift away from the box they belong under.
-    bounds.removeFromTop(targetHeight);
-    bounds.removeFromTop(statusHeight);
+    bounds.removeFromTop(scaledHeight(targetHeight));
+    bounds.removeFromTop(scaledHeight(statusHeight));
     bounds.removeFromTop(statusGap);
 
     const auto preferredDisplayHeight = std::max(90, bounds.getHeight() - controlAreaHeight() - 8);
@@ -1566,7 +1570,7 @@ void TunerComponent::resized()
     if (modeChooser != nullptr && !isModeChooserAdopted())
     {
         bounds.removeFromTop(8);
-        placeModeChooser(bounds.removeFromTop(modeChooserHeight));
+        placeModeChooser(bounds.removeFromTop(scaledHeight(modeChooserHeight)));
     }
 
     if (!areAdvancedSettingsExpanded)
@@ -1577,23 +1581,23 @@ void TunerComponent::resized()
     bounds.removeFromTop(8);
 
     // Beside its slider while there is room for both, above it once there is
-    // not. See stackedAdvancedRowsBelowWidth for why the inline form stops
+    // not. See scaledHeight(stackedAdvancedRowsBelowWidth) for why the inline form stops
     // working -- the slider is left with a track too short to drag and a value
     // box too narrow to read.
     const auto stacked = advancedRowsStack();
-    const auto placeSliderRow = [&bounds, stacked](juce::Label& label, juce::Slider& slider)
+    const auto placeSliderRow = [this, &bounds, stacked](juce::Label& label, juce::Slider& slider)
     {
         if (stacked)
         {
-            auto row = bounds.removeFromTop(stackedAdvancedRowHeight);
-            label.setBounds(row.removeFromTop(stackedAdvancedLabelHeight));
+            auto row = bounds.removeFromTop(scaledHeight(stackedAdvancedRowHeight));
+            label.setBounds(row.removeFromTop(scaledHeight(stackedAdvancedLabelHeight)));
             slider.setBounds(row);
 
             return;
         }
 
-        auto row = bounds.removeFromTop(advancedRowHeight);
-        label.setBounds(row.removeFromLeft(120));
+        auto row = bounds.removeFromTop(scaledHeight(advancedRowHeight));
+        label.setBounds(row.removeFromLeft(scaledHeight(120)));
         slider.setBounds(row);
     };
 
@@ -1608,6 +1612,6 @@ void TunerComponent::resized()
 
     // Full width when stacked: a 120px button hugging the right edge of a
     // 200px pane reads as something that did not fit rather than as a choice.
-    auto buttonRow = bounds.removeFromTop(36);
-    clearGraphButton.setBounds(stacked ? buttonRow : buttonRow.removeFromRight(120));
+    auto buttonRow = bounds.removeFromTop(scaledHeight(36));
+    clearGraphButton.setBounds(stacked ? buttonRow : buttonRow.removeFromRight(scaledHeight(120)));
 }
