@@ -43,6 +43,18 @@ struct SpectrogramPalette
     juce::Colour outline;
 };
 
+// The two rings around the tuner's marker (#372): a halo in the background's
+// colour, then an outline in the foreground's. The marker is filled in its
+// zone's colour, so on a lit band of the same colour only these set it apart;
+// between them, one contrasts with every zone colour in either theme.
+struct MarkerEdges
+{
+    juce::Colour halo;
+    juce::Colour outline;
+};
+
+[[nodiscard]] MarkerEdges tunerMarkerEdges(Theme theme);
+
 [[nodiscard]] AppPalette appPaletteFor(Theme theme);
 [[nodiscard]] TunerPalette tunerPaletteFor(Theme theme);
 [[nodiscard]] SpectrogramPalette spectrogramPaletteFor(Theme theme);

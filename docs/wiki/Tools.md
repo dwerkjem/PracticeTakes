@@ -233,7 +233,7 @@ the Score View follows it:
 - A **cursor** marks where the clock is, moving through each note as it sounds.
 - The **notes sounding** are tinted, and the **notes coming next** are ringed.
   **Look ahead** in the options menu sets how many onsets ahead, from none to
-  four (two by default). Only the parts you show are marked, so hide the piano
+  four (none by default). Only the parts you show are marked, so hide the piano
   to see only your line.
 - The view **follows the clock**. It turns the page in Page view, steps a
   system at a time in Vertical scroll, and moves a screen at a time in
@@ -248,7 +248,8 @@ the Score View follows it:
 
 Open a score with **File → Open score...**. Until then it says "No score open".
 The header names the work and its parts, and links to the import's notes when
-there are any (*8 import diagnostics* above). A line at the bottom says where the
+there are any (*8 import diagnostics* above): click it to read them again, in the
+same window **Open score** showed them in. A line at the bottom says where the
 drawing knowingly differs from the file, such as beams regrouped by the time
 signature.
 

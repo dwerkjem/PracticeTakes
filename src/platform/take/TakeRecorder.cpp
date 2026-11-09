@@ -138,13 +138,20 @@ bool TakeRecorder::start()
     take->usedMicrophone = microphoneUsable();
     take->usedKeyboard = keyboardUsable();
 
-    // A take plays through once: no loop to wrap, and nothing moved under it
-    // (design.md decision 4). Paused first if it was running, so the count-in
-    // starts from where it is.
-    if (position.state == transport::ClockState::playing)
+    // Pressed during playback, the take records on from here and the music
+    // carries on (#361); a count-in would step back a bar to count in, which
+    // sounds like starting over. A count-in already sounding is let finish.
+    // Counting in again is the player's choice (countInWhenPlaying), and then
+    // the clock is paused first, so the count-in leads into where it was.
+    const bool playing = position.state == transport::ClockState::playing;
+    const bool keepPlaying = playing && (position.countingIn || !countInWhilePlaying);
+    if (playing && !keepPlaying)
     {
         clock.pause();
     }
+
+    // A take plays through once: no loop to wrap, and nothing moved under it
+    // (design.md decision 4). Turning a loop off keeps the clock's place.
     clock.setLoopEnabled(false);
     take->table = clock.currentTable();
 
@@ -162,9 +169,22 @@ bool TakeRecorder::start()
     }
 
     clock.lock();
-    clock.play();
+    if (!keepPlaying)
+    {
+        clock.play();
+    }
     notify();
     return true;
+}
+
+void TakeRecorder::setCountInWhenPlaying(bool countIn) noexcept
+{
+    countInWhilePlaying = countIn;
+}
+
+bool TakeRecorder::countInWhenPlaying() const noexcept
+{
+    return countInWhilePlaying;
 }
 
 void TakeRecorder::stop()

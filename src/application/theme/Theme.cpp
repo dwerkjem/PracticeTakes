@@ -71,6 +71,12 @@ juce::Colour spectrogramColourForLevel(Theme theme, float level)
                : middle.interpolatedWith(loud, (clippedLevel - middlePoint) / (1.0f - middlePoint));
 }
 
+MarkerEdges tunerMarkerEdges(Theme theme)
+{
+    const auto palette = tunerPaletteFor(theme);
+    return {palette.background, palette.foreground};
+}
+
 juce::Colour intonationZoneColour(pitch::IntonationZone zone)
 {
     switch (zone)

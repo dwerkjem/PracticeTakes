@@ -73,6 +73,10 @@ struct State
     // A microphone take ignores sound below this, in dBFS, -80 to -20.
     double minimumLevelDb = AppDefaults::minimumLevelDb;
 
+    // Record pressed while the score plays counts in again (stepping back a
+    // bar) rather than recording on from where it is (#361). Off.
+    bool countInWhenRecordingDuringPlayback = false;
+
     // A target the player chose, as its sounding and written names ("Bb3"),
     // empty for none; and whether opening a score keeps it (target-note-picker).
     juce::String chosenTargetSounding;

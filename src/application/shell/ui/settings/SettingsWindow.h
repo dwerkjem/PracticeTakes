@@ -972,6 +972,24 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     }
                 };
                 addAndMakeVisible(followToggle);
+
+                // Record pressed during playback (#361): on from here, or a
+                // count-in first, which steps back a bar.
+                countInWhenPlayingToggle.setComponentID("settings-count-in-when-playing");
+                countInWhenPlayingToggle.setToggleState(
+                    recorder.countInWhenPlaying(), juce::dontSendNotification);
+                countInWhenPlayingToggle.setTooltip(
+                    "Off: pressing Record while the score plays records from where it is, and "
+                    "the music carries on. On: it counts in first, stepping back a bar");
+                countInWhenPlayingToggle.onClick = [this]
+                {
+                    recorder.setCountInWhenPlaying(countInWhenPlayingToggle.getToggleState());
+                    if (onCountInChanged)
+                    {
+                        onCountInChanged();
+                    }
+                };
+                addAndMakeVisible(countInWhenPlayingToggle);
             }
 
             void resized() override
@@ -1024,6 +1042,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 keepTargetToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
                 bounds.removeFromTop(6);
                 followToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
+                bounds.removeFromTop(6);
+                countInWhenPlayingToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
             }
 
             void setTheme(Theme theme)
@@ -1082,6 +1102,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             InputLevelMeter minimumLevelMeter;
             juce::ToggleButton keepTargetToggle{"Keep my target when a score opens"};
             juce::ToggleButton followToggle{"Target follows the score as it plays"};
+            juce::ToggleButton countInWhenPlayingToggle{
+                "Count in when recording starts during playback"};
         };
 
         class ResetPanel final : public CategoryPanel

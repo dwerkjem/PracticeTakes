@@ -625,6 +625,7 @@ AppSettings::State MainComponent::captureSettingsState()
     state.nearPerfectCents = takeRecorder.intonationSettings().nearPerfectCents;
     state.outOfTuneCents = takeRecorder.intonationSettings().outOfTuneCents;
     state.minimumLevelDb = takeRecorder.minimumLevelDb();
+    state.countInWhenRecordingDuringPlayback = takeRecorder.countInWhenPlaying();
     state.keepTargetWhenScoreOpens = currentTarget.keepChosenWhenScoreOpens;
     state.targetFollowsScore = currentTarget.followScoreWhilePlaying;
     if (const auto target = currentTarget.target();
@@ -711,6 +712,7 @@ void MainComponent::loadSettings()
         takeRecorder.setIntonation(intonation);
     }
     takeRecorder.setMinimumLevelDb(loaded.state.minimumLevelDb);
+    takeRecorder.setCountInWhenPlaying(loaded.state.countInWhenRecordingDuringPlayback);
     currentTarget.keepChosenWhenScoreOpens = loaded.state.keepTargetWhenScoreOpens;
     currentTarget.followScoreWhilePlaying = loaded.state.targetFollowsScore;
     if (const auto sounding = pitch::parseNoteName(loaded.state.chosenTargetSounding.toStdString()))

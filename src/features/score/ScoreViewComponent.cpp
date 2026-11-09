@@ -471,9 +471,10 @@ ScoreViewComponent::ScoreViewComponent(
     const score::CurrentScore& sharedCurrentScore,
     transport::PracticeClock& practiceClock,
     take::TakeRecorder& takeRecorder,
-    pitch::CurrentTarget& applicationTarget)
+    pitch::CurrentTarget& applicationTarget,
+    std::function<void()> showImportSummary)
     : currentScore(sharedCurrentScore), clock(practiceClock), takes(takeRecorder),
-      target(applicationTarget)
+      target(applicationTarget), onShowImportSummary(std::move(showImportSummary))
 {
     setComponentID("score-view-tool");
     setWantsKeyboardFocus(true);
@@ -542,6 +543,38 @@ ScoreViewComponent::ScoreViewComponent(
 
     takes.addListener(this);
     updateReview();
+}
+
+void ScoreViewComponent::mouseMove(const juce::MouseEvent& event)
+{
+    const bool over = onShowImportSummary && diagnosticsLink.contains(event.getPosition());
+    if (over != diagnosticsLinkHovered)
+    {
+        diagnosticsLinkHovered = over;
+        setMouseCursor(
+            over ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
+        repaint(diagnosticsLink);
+    }
+}
+
+void ScoreViewComponent::mouseExit(const juce::MouseEvent& event)
+{
+    juce::ignoreUnused(event);
+    if (diagnosticsLinkHovered)
+    {
+        diagnosticsLinkHovered = false;
+        setMouseCursor(juce::MouseCursor::NormalCursor);
+        repaint(diagnosticsLink);
+    }
+}
+
+void ScoreViewComponent::mouseUp(const juce::MouseEvent& event)
+{
+    if (onShowImportSummary && diagnosticsLink.contains(event.getPosition()) &&
+        event.mouseWasClicked())
+    {
+        onShowImportSummary();
+    }
 }
 
 ScoreViewComponent::~ScoreViewComponent()
@@ -1794,17 +1827,30 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
 
     graphics.drawText(heading, title, juce::Justification::centredLeft, true);
 
+    diagnosticsLink = {};
     if (renderedScore != nullptr && !renderedScore->diagnostics.empty())
     {
         // The importer had something to say about this file, so what is drawn
         // is not a complete rendering of it. The summary window holds the
-        // detail; this is the pointer to it.
-        graphics.setColour(colours.warning);
-        graphics.setFont(juce::FontOptions(12.0f));
-        graphics.drawText(
+        // detail, and this opens it (#350): underlined, like a link.
+        const juce::String text =
             juce::String(static_cast<int>(renderedScore->diagnostics.size())) +
-                " import diagnostic" + (renderedScore->diagnostics.size() == 1 ? "" : "s"),
-            title, juce::Justification::centredRight);
+            " import diagnostic" + (renderedScore->diagnostics.size() == 1 ? "" : "s");
+        const juce::Font font(juce::FontOptions(12.0f));
+        const int width =
+            static_cast<int>(std::ceil(juce::GlyphArrangement::getStringWidth(font, text))) + 2;
+        diagnosticsLink = title.withLeft(std::max(title.getX(), title.getRight() - width))
+                              .withSizeKeepingCentre(std::min(width, title.getWidth()), 18);
+        graphics.setColour(
+            diagnosticsLinkHovered ? colours.warning.brighter(0.25f) : colours.warning);
+        graphics.setFont(font);
+        graphics.drawText(text, diagnosticsLink, juce::Justification::centredRight);
+        if (onShowImportSummary)
+        {
+            graphics.fillRect(
+                diagnosticsLink.getX(), diagnosticsLink.getBottom() - 2, diagnosticsLink.getWidth(),
+                1);
+        }
     }
 
     const juce::String notices = noticeText();

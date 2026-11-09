@@ -1248,7 +1248,7 @@
       "settingsPanel": "",
       "feedbackOpen": false,
       "toneHz": 0,
-      "toolView": "",
+      "toolView": "view=page;ahead=2",
       "scoreFixture": "<bundled sample>",
       "showScoreImportSummary": false,
       "holdScoreImportInProgress": false,

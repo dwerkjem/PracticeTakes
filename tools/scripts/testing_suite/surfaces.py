@@ -921,6 +921,12 @@ SURFACES: tuple[Surface, ...] = (
                 "notehead, accidental and stem still readable through the marks?",
             ),
             Question(
+                "diagnostics-link",
+                "Click 8 import diagnostics on the title line: does the import summary open, "
+                "with the notes about this file?",
+                behavioural=True,
+            ),
+            Question(
                 "follows-while-playing",
                 "Press Play: does the cursor move with the music, the page turn by itself at "
                 "the next page, and scrolling by hand stop that until Follow is pressed?",

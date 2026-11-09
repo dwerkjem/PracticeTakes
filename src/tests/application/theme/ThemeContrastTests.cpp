@@ -81,3 +81,26 @@ TEST_CASE("spectrogram colour mapping clamps levels to its valid range", "[theme
         CHECK(spectrogramColourForLevel(theme, 0.0f) != spectrogramColourForLevel(theme, 1.0f));
     }
 }
+
+TEST_CASE(
+    "the tuner's marker stands out from every zone colour in both themes",
+    "[theme][accessibility][tuner]")
+{
+    // #372: the marker is filled in its zone's colour and sits on a lit band
+    // of the same colour, so its rings are all that set it apart. One of the
+    // two must reach the 3:1 a user-interface graphic needs against every
+    // zone, and the two must be told apart from each other.
+    for (const Theme theme : {Theme::light, Theme::dark})
+    {
+        const MarkerEdges edges = tunerMarkerEdges(theme);
+        CHECK(contrast(edges.halo, edges.outline) >= 3.0);
+        for (const auto zone :
+             {pitch::IntonationZone::nearPerfect, pitch::IntonationZone::acceptable,
+              pitch::IntonationZone::nearButOff, pitch::IntonationZone::outside})
+        {
+            const auto colour = intonationZoneColour(zone);
+            INFO("dark " << isDarkTheme(theme) << ", zone " << static_cast<int>(zone));
+            CHECK(std::max(contrast(edges.halo, colour), contrast(edges.outline, colour)) >= 3.0);
+        }
+    }
+}

@@ -75,7 +75,7 @@ shares:
 | **Stop** | Stops, and goes back to the start of the score, or of the loop |
 | **Bar 3, beat 2** | Where the clock is in the score, or which count-in beat is sounding |
 | **100%** | The tempo, as a percentage of the score's own, from 5% to 200% in steps of 5. **−** and **+** change it, even while playing, and the music carries on from the same beat. |
-| **Click** | The metronome, on every beat, with the first beat of each bar accented |
+| **Click** | The metronome, on every beat, with the first beat of each bar accented. Off until you turn it on; the count-in clicks either way |
 | **Loop** | Plays the score round and round, starting again on exactly the same beat however many times it loops |
 | **Mix** | Hear the score, and mute or solo each part, or each hand of a piano. See below |
 
@@ -121,6 +121,11 @@ microphone hears the speakers too, and so do the timing and note judgements.
 MIDI keyboard and what the microphone hears, against the open score. It counts
 in first, the same way Play does. Recording starts from the first click of the
 count-in, so the first note is never cut off.
+
+**Record while the score is playing** records from where you are: the music
+carries on without stopping, and the take starts there. Turn on **Settings →
+Practice → Count in when recording starts during playback** to count in first
+instead. The count-in steps back a bar so it leads into where you were.
 
 - The button turns red and reads **Finish**. The readout says *Counting in*,
   then *Recording 0:12*. Press **Finish** or **Stop** to end the take part-way,

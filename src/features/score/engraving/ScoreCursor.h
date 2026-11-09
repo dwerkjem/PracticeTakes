@@ -67,7 +67,8 @@ struct Targets
 // each once.
 [[nodiscard]] std::vector<std::size_t> drawnPartsOf(const ScoreLayout& layout);
 
-// The look-ahead, in onsets: none to four, two by default.
+// The look-ahead, in onsets: none to four, none by default (#351): the notes
+// coming are ringed only for whoever turns it on.
 inline constexpr int maximumLookAhead = 4;
-inline constexpr int defaultLookAhead = 2;
+inline constexpr int defaultLookAhead = 0;
 } // namespace engraving

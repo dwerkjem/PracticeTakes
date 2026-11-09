@@ -99,9 +99,18 @@ class TakeRecorder final : private juce::Timer, private transport::ClockListener
     // it can.
     [[nodiscard]] std::optional<std::string> whyCannotStart() const;
 
-    // Start a take from where the clock is, counting in. False, changing
+    // Start a take from where the clock is. From a stopped or paused clock it
+    // counts in first. From a playing one it records from here without
+    // stopping -- the music carries on -- unless countInWhenPlaying() says to
+    // count in again, which steps back a bar to do it (#361). False, changing
     // nothing, when one cannot start.
     bool start();
+
+    // Whether Record pressed during playback counts in again rather than
+    // recording on from where the clock is. Off by default (Settings ->
+    // Practice).
+    void setCountInWhenPlaying(bool countIn) noexcept;
+    [[nodiscard]] bool countInWhenPlaying() const noexcept;
 
     // End the live take: stopped early (or cancelled, if nothing was played
     // yet), and stop the clock.
@@ -227,6 +236,7 @@ class TakeRecorder final : private juce::Timer, private transport::ClockListener
     std::optional<Requested> requested;
     evaluation::IntonationSettings intonation;
     evaluation::TimingSettings timing;
+    bool countInWhilePlaying = false;
 
     std::vector<float> scratch;
     std::vector<midi::MidiEvent> keyBuffer;

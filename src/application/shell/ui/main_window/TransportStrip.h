@@ -259,10 +259,10 @@ class TransportStrip final
         recordButton.setButtonText(recording ? "Finish" : "Record");
         recordButton.setEnabled(recording || !blocked.has_value());
         recordButton.setTooltip(
-            recording ? "Finish the take, keeping what was played"
-            : blocked.has_value()
-                ? "Recording is unavailable: " + juce::String(*blocked)
-                : "Record a take from the microphone and keyboard, counting in first");
+            recording             ? "Finish the take, keeping what was played"
+            : blocked.has_value() ? "Recording is unavailable: " + juce::String(*blocked)
+            : running             ? "Record a take from here, carrying on as it plays"
+                      : "Record a take from the microphone and keyboard, counting in first");
         recordButton.setColour(
             juce::TextButton::buttonColourId,
             recording ? juce::Colour::fromRGB(196, 43, 43)
