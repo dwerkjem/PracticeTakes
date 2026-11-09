@@ -128,6 +128,15 @@ void MainComponent::showSettings()
                 safeThis->setTheme(theme);
             }
         },
+        appLookAndFeel.textScale(),
+        [safeThis](int percent)
+        {
+            if (safeThis != nullptr)
+            {
+                safeThis->setTextScale(percent);
+                safeThis->saveSettings(false);
+            }
+        },
         [safeThis](AppDefaults::Preset preset)
         {
             if (safeThis != nullptr)

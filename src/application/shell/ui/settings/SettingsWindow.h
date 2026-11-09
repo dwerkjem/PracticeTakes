@@ -126,15 +126,83 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::Viewport viewport;
         };
 
+        // Every text role at the chosen size, named, with its base size
+        // beside it (global-text-size decision 2): what the text size changes,
+        // shown rather than described.
+        class TextSizePreview final : public juce::Component
+        {
+          public:
+            TextSizePreview()
+            {
+                setTitle("Every text size the application uses");
+            }
+
+            // As tall as its rows at the current text size.
+            [[nodiscard]] int preferredHeight() const
+            {
+                int height = 0;
+                for (const auto& info : appearance::textRoles)
+                {
+                    height += rowHeight(info.role);
+                }
+                return height;
+            }
+
+            void paint(juce::Graphics& graphics) override
+            {
+                const int scale = appearance::textScaleOf(*this);
+                const auto ink = findColour(juce::Label::textColourId);
+                auto bounds = getLocalBounds();
+                const int detailWidth = appearance::scaledHeight(150, scale);
+                for (const auto& info : appearance::textRoles)
+                {
+                    auto row = bounds.removeFromTop(rowHeight(info.role));
+                    auto detail = row.removeFromRight(detailWidth);
+
+                    graphics.setColour(ink);
+                    graphics.setFont(appearance::textFont(info.role, scale));
+                    graphics.drawFittedText(
+                        juce::String(info.name.data(), info.name.size()), row,
+                        juce::Justification::centredLeft, 1, 0.8f);
+
+                    const auto points = [](float size)
+                    { return juce::String(size, size == std::floor(size) ? 0 : 1) + " pt"; };
+                    juce::String sizes = points(info.baseSize);
+                    if (scale != appearance::TextScale::defaultPercent)
+                    {
+                        sizes += juce::String::fromUTF8(" \xe2\x86\x92 ") +
+                                 points(appearance::textSize(info.role, scale));
+                    }
+                    graphics.setColour(ink.withAlpha(0.6f));
+                    graphics.setFont(appearance::textFont(appearance::TextRole::small, scale));
+                    graphics.drawFittedText(sizes, detail, juce::Justification::centredRight, 1);
+                }
+            }
+
+          private:
+            [[nodiscard]] int rowHeight(appearance::TextRole role) const
+            {
+                const float size = appearance::textSize(role, appearance::textScaleOf(*this));
+                return std::max(20, static_cast<int>(std::ceil(size * 1.4f)) + 4);
+            }
+        };
+
         class AppearancePanel final : public CategoryPanel
         {
           public:
-            AppearancePanel(Theme initialTheme, std::function<void(Theme)> appearanceHandler)
-                : onAppearanceChanged(std::move(appearanceHandler))
+            AppearancePanel(
+                Theme initialTheme,
+                std::function<void(Theme)> appearanceHandler,
+                int initialTextScale,
+                std::function<void(int)> textScaleHandler)
+                : onAppearanceChanged(std::move(appearanceHandler)),
+                  onTextScaleChanged(std::move(textScaleHandler))
             {
                 configureHeading(heading, "Appearance");
                 configureDescription(
-                    description, "Choose the application theme used by every open window.");
+                    description,
+                    "Choose the application theme used by every open window, and how large its "
+                    "text is.");
 
                 themeLabel.setText("Theme", juce::dontSendNotification);
                 addAndMakeVisible(themeLabel);
@@ -150,6 +218,48 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     }
                 };
                 addAndMakeVisible(themeBox);
+
+                // One text size for the whole application (global-text-size):
+                // menus, buttons, labels, tool text and readouts. The tuner's
+                // note and the notation size themselves to their panes.
+                textSizeLabel.setText("Text size", juce::dontSendNotification);
+                addAndMakeVisible(textSizeLabel);
+                for (int percent = appearance::TextScale::minimumPercent;
+                     percent <= appearance::TextScale::maximumPercent;
+                     percent += appearance::TextScale::stepPercent)
+                {
+                    textSizeBox.addItem(juce::String(percent) + "%", percent);
+                }
+                textSizeBox.setComponentID("settings-text-size");
+                textSizeBox.setTooltip(
+                    "How large the text is in every window: menus, buttons, labels and what the "
+                    "tools write. The tuner's note and the notation keep their own sizes");
+                textSizeBox.setSelectedId(initialTextScale, juce::dontSendNotification);
+                textSizeBox.onChange = [this]
+                {
+                    if (onTextScaleChanged && textSizeBox.getSelectedId() > 0)
+                    {
+                        onTextScaleChanged(textSizeBox.getSelectedId());
+                    }
+                };
+                addAndMakeVisible(textSizeBox);
+
+                previewHeading.setText(
+                    "Every size of text, at this size", juce::dontSendNotification);
+                previewHeading.setFont(
+                    appearance::labelFont(appearance::TextRole::body, juce::Font::bold));
+                addAndMakeVisible(previewHeading);
+                addAndMakeVisible(preview);
+            }
+
+            void lookAndFeelChanged() override
+            {
+                // Set elsewhere too -- an import, a reset -- so the box shows
+                // what is in force.
+                textSizeBox.setSelectedId(
+                    appearance::textScaleOf(*this), juce::dontSendNotification);
+                CategoryPanel::lookAndFeelChanged();
+                preview.repaint();
             }
 
             void resized() override
@@ -162,6 +272,17 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 auto themeRow = bounds.removeFromTop(px(36));
                 themeLabel.setBounds(themeRow.removeFromLeft(px(130)));
                 themeBox.setBounds(themeRow.removeFromLeft(px(240)));
+                bounds.removeFromTop(px(12));
+
+                auto sizeRow = bounds.removeFromTop(px(36));
+                textSizeLabel.setBounds(sizeRow.removeFromLeft(px(130)));
+                textSizeBox.setBounds(sizeRow.removeFromLeft(px(240)));
+                bounds.removeFromTop(px(18));
+
+                previewHeading.setBounds(bounds.removeFromTop(px(24)));
+                bounds.removeFromTop(px(6));
+                preview.setBounds(bounds.removeFromTop(preview.preferredHeight())
+                                      .withWidth(std::min(bounds.getWidth(), px(520))));
                 contentEndsAt(bounds.getY());
             }
 
@@ -176,6 +297,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::Label themeLabel;
             juce::ComboBox themeBox;
             std::function<void(Theme)> onAppearanceChanged;
+            std::function<void(int)> onTextScaleChanged;
+            juce::Label textSizeLabel;
+            juce::ComboBox textSizeBox;
+            juce::Label previewHeading;
+            TextSizePreview preview;
         };
 
         class AudioPanel final : public CategoryPanel, private juce::ChangeListener
@@ -1301,6 +1427,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             int pedalDownThreshold,
             Theme initialTheme,
             std::function<void(Theme)> appearanceHandler,
+            int initialTextScale,
+            std::function<void(int)> textScaleHandler,
             std::function<void(AppDefaults::Preset)> presetHandler,
             std::function<void()> midiSelectionHandler,
             std::function<void(int)> pedalThresholdHandler,
@@ -1312,7 +1440,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             std::function<void()> resetAudioHandler,
             std::function<void()> resetLayoutHandler,
             std::function<void()> resetAllHandler)
-            : appearancePanel(initialTheme, std::move(appearanceHandler)),
+            : appearancePanel(
+                  initialTheme,
+                  std::move(appearanceHandler),
+                  initialTextScale,
+                  std::move(textScaleHandler)),
               audioPanel(inputService, practiceClock, clockSettingsHandler),
               midiPanel(
                   midiService,
@@ -1442,6 +1574,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         int pedalDownThreshold,
         Theme initialTheme,
         std::function<void(Theme)> appearanceHandler,
+        int initialTextScale,
+        std::function<void(int)> textScaleHandler,
         std::function<void(AppDefaults::Preset)> presetHandler,
         std::function<void()> midiSelectionHandler,
         std::function<void(int)> pedalThresholdHandler,
@@ -1465,10 +1599,10 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             new Content(
                 audioInputService, midiInputService, practiceClock, referencePitch, currentTarget,
                 takeRecorder, std::move(clockSettingsHandler), pedalDownThreshold, initialTheme,
-                std::move(appearanceHandler), std::move(presetHandler),
-                std::move(midiSelectionHandler), std::move(pedalThresholdHandler),
-                std::move(saveHandler), std::move(importHandler), std::move(exportHandler),
-                std::move(feedbackHandler), std::move(resetToolHandler),
+                std::move(appearanceHandler), initialTextScale, std::move(textScaleHandler),
+                std::move(presetHandler), std::move(midiSelectionHandler),
+                std::move(pedalThresholdHandler), std::move(saveHandler), std::move(importHandler),
+                std::move(exportHandler), std::move(feedbackHandler), std::move(resetToolHandler),
                 std::move(resetAudioHandler), std::move(resetLayoutHandler),
                 std::move(resetAllHandler)),
             true);
