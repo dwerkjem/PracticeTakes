@@ -312,7 +312,7 @@ ReviewedPart bestPartFor(
         return best;
     }
 
-    const TakeEvidence evidence = evidenceOf(take);
+    const TakeEvidence evidence = evidenceOf(take, timing.onsets);
     std::optional<std::size_t> bestScore;
     for (std::size_t part = 0; part < take.score->parts.size(); ++part)
     {

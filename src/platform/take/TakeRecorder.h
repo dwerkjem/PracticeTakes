@@ -138,6 +138,12 @@ class TakeRecorder final : private juce::Timer, private transport::ClockListener
     void setIntonation(const evaluation::IntonationSettings& settings);
     [[nodiscard]] const evaluation::IntonationSettings& intonationSettings() const noexcept;
 
+    // The quietest sound a microphone take counts as playing or singing, in dB
+    // below full scale (evaluation::OnsetSettings::minimumLevelDb). A change
+    // judges the take under review again, as a tolerance does.
+    void setMinimumLevelDb(double level);
+    [[nodiscard]] double minimumLevelDb() const noexcept;
+
     // The take under review, judged. Null before the first, and while a
     // different take is being judged.
     [[nodiscard]] const TakeReview* review() const noexcept;
@@ -178,6 +184,9 @@ class TakeRecorder final : private juce::Timer, private transport::ClockListener
     // Take a finished judgement, if the newest one is done.
     void adoptJudgement(bool wait);
 
+    // The take under review, judged again with the current settings.
+    void rejudge();
+
     [[nodiscard]] bool microphoneUsable() const;
     [[nodiscard]] bool keyboardUsable() const;
 
@@ -217,6 +226,7 @@ class TakeRecorder final : private juce::Timer, private transport::ClockListener
     };
     std::optional<Requested> requested;
     evaluation::IntonationSettings intonation;
+    evaluation::TimingSettings timing;
 
     std::vector<float> scratch;
     std::vector<midi::MidiEvent> keyBuffer;

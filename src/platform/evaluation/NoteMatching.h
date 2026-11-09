@@ -97,7 +97,7 @@ struct TakeEvidence
 // The contour of a take judged from its microphone; empty otherwise.
 [[nodiscard]] PitchContour contourOf(const take::Take& take);
 
-[[nodiscard]] TakeEvidence evidenceOf(const take::Take& take);
+[[nodiscard]] TakeEvidence evidenceOf(const take::Take& take, const OnsetSettings& onsets = {});
 
 // Judge each single sung note of `report` for intonation on `contour`, and
 // give an extra note the pitch sung after it

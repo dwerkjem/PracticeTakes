@@ -949,3 +949,29 @@ TEST_CASE("a chosen target and keeping it survive a round trip", "[settings][per
     CHECK(defaults.chosenTargetSounding.isEmpty());
     CHECK_FALSE(defaults.keepTargetWhenScoreOpens);
 }
+
+TEST_CASE(
+    "the minimum sound level survives a round trip, and defaults to -45 dB",
+    "[settings][persistence]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        AppSettings::State expected;
+        expected.minimumLevelDb = -38.0;
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    {
+        juce::PropertiesFile reader(temporary.path, settingsOptions());
+        CHECK(AppSettings::load(reader).state.minimumLevelDb == Catch::Approx(-38.0));
+    }
+    {
+        // Out of range, or a file from before the setting: the default.
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.setValue("practice.minimumLevelDb", 5.0);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    CHECK(AppSettings::load(reader).state.minimumLevelDb == Catch::Approx(-45.0));
+}

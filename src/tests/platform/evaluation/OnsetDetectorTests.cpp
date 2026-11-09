@@ -141,3 +141,90 @@ TEST_CASE("onset detection over a three-minute take", "[.benchmark][evaluation][
         return detectOnsets(audio.data(), audio.size(), rate, 0).size();
     };
 }
+
+namespace
+{
+// A quiet room: steady hiss at about -56 dBFS, and every 0.4 s from `from` a
+// 30 ms bump at about -48 dBFS -- a breath, a chair, the fridge.
+[[nodiscard]] std::vector<float> room(double seconds, double from = 0.2)
+{
+    std::mt19937 generator(11);
+    std::normal_distribution<float> hiss(0.0f, 0.0015f);
+    std::normal_distribution<float> bump(0.0f, 0.004f);
+    std::vector<float> audio(static_cast<std::size_t>(rate * seconds));
+    for (float& sample : audio)
+    {
+        sample = hiss(generator);
+    }
+    for (double at = from; at + 0.03 < seconds; at += 0.4)
+    {
+        const auto first = static_cast<std::size_t>(at * rate);
+        for (std::size_t index = first; index < first + static_cast<std::size_t>(0.03 * rate);
+             ++index)
+        {
+            audio[index] += bump(generator);
+        }
+    }
+    return audio;
+}
+
+// A note that dies away in about half a second, so the room between notes is
+// the room again.
+void addShortNote(std::vector<float>& audio, std::size_t start, double frequency, double level)
+{
+    for (std::size_t index = start; index < audio.size(); ++index)
+    {
+        const double seconds = static_cast<double>(index - start) / rate;
+        audio[index] += static_cast<float>(
+            level * std::exp(-seconds * 12.0) * std::sin(twoPi * frequency * seconds));
+    }
+}
+} // namespace
+
+TEST_CASE(
+    "the room is not an attack: nothing is found below the minimum level",
+    "[evaluation][onsets]")
+{
+    const auto quiet = room(3.0);
+
+    // The bug: in a take of nothing but the room, the relative thresholds found
+    // the room's own bumps, and they came back as extra notes.
+    CHECK(detectOnsets(quiet.data(), quiet.size(), rate, 0).empty());
+
+    // The floor is the singer's to move: lowered past the room, its bumps are
+    // attacks again.
+    OnsetSettings sensitive;
+    sensitive.minimumLevelDb = -80.0;
+    CHECK(detectOnsets(quiet.data(), quiet.size(), rate, 0, sensitive).size() >= 3);
+}
+
+TEST_CASE(
+    "notes over a noisy room are found, and the room is not, between or under them",
+    "[evaluation][onsets]")
+{
+    // Notes at 0.5, 1.5 and 2.5 s, and the room's bumps every 0.4 s from 1 s:
+    // some between the notes, and some -- 1.8 and 2.6 s -- under a note's
+    // tail, where the note is loud enough that only the floor under each
+    // frequency keeps the bump from reading as a new attack.
+    auto audio = room(3.2, 1.0);
+    for (const double at : {0.5, 1.5, 2.5})
+    {
+        addShortNote(audio, static_cast<std::size_t>(at * rate), 330.0, 0.3);
+    }
+
+    const auto onsets = detectOnsets(audio.data(), audio.size(), rate, 0);
+    CHECK(onsets.size() == 3);
+    for (const double at : {0.5, 1.5, 2.5})
+    {
+        CHECK(foundNear(onsets, static_cast<std::int64_t>(at * rate), 0.01));
+    }
+}
+
+TEST_CASE("a level is the RMS in dB below full scale", "[evaluation][onsets]")
+{
+    const std::vector<float> half(1000, 0.5f);
+    CHECK(std::abs(levelDb(half.data(), 0, half.size()) - (20.0 * std::log10(0.5))) < 1e-6);
+
+    const std::vector<float> silence(1000, 0.0f);
+    CHECK(std::isinf(levelDb(silence.data(), 0, silence.size())));
+}

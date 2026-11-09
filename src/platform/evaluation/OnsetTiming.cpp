@@ -268,13 +268,14 @@ attacksInTake(const take::Take& take, std::vector<ExpectedAttack> attacks)
     return attacks;
 }
 
-std::vector<PerformedOnset> onsetsOf(const take::Take& take)
+std::vector<PerformedOnset> onsetsOf(const take::Take& take, const OnsetSettings& settings)
 {
     if (judgedFromKeyboard(take))
     {
         return keyboardOnsetsOf(take.keyboard, take.sampleRate);
     }
-    return detectOnsets(take.audio.data(), take.audio.size(), take.sampleRate, take.audioStart);
+    return detectOnsets(
+        take.audio.data(), take.audio.size(), take.sampleRate, take.audioStart, settings);
 }
 
 TimingReport judgeTake(
@@ -298,6 +299,6 @@ TimingReport judgeTake(const take::Take& take, std::size_t part, const TimingSet
     {
         return {};
     }
-    return judgeTake(take, part, onsetsOf(take), settings);
+    return judgeTake(take, part, onsetsOf(take, settings.onsets), settings);
 }
 } // namespace evaluation

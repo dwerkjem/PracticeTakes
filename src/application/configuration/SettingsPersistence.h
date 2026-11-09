@@ -70,6 +70,9 @@ struct State
     double nearPerfectCents = AppDefaults::nearPerfectCents;
     double outOfTuneCents = AppDefaults::outOfTuneCents;
 
+    // A microphone take ignores sound below this, in dBFS, -80 to -20.
+    double minimumLevelDb = AppDefaults::minimumLevelDb;
+
     // A target the player chose, as its sounding and written names ("Bb3"),
     // empty for none; and whether opening a score keeps it (target-note-picker).
     juce::String chosenTargetSounding;

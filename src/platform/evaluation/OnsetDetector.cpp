@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <complex>
+#include <limits>
 
 namespace evaluation
 {
@@ -35,6 +36,16 @@ spectralFlux(const float* audio, std::size_t count, const OnsetSettings& setting
     std::vector<float> magnitude(size / 2 + 1, 0.0f);
     std::vector<double> flux(hops, 0.0);
 
+    // Under each bin, a floor: what sound at the minimum level puts in one bin
+    // of a Hann window (its RMS times the root of the window's energy, 3N/8),
+    // doubled to clear the noise's own spread. Quieter than that, a bin rising
+    // is the room, not an attack: the log spectrum makes a near-empty bin's
+    // small rise look large, which is how noise under a held note became an
+    // extra note.
+    const float floor = static_cast<float>(
+        2.0 * std::pow(10.0, settings.minimumLevelDb / 20.0) *
+        std::sqrt(3.0 * static_cast<double>(size) / 8.0));
+
     for (std::size_t hop = 0; hop < hops; ++hop)
     {
         // Centred on the hop's position, zero beyond the audio's ends.
@@ -56,7 +67,7 @@ spectralFlux(const float* audio, std::size_t count, const OnsetSettings& setting
             // Not std::abs, whose hypot guards against overflow this cannot have.
             const float re = buffer[bin].real();
             const float im = buffer[bin].imag();
-            magnitude[bin] = std::log1p(10.0f * std::sqrt((re * re) + (im * im)));
+            magnitude[bin] = std::log1p(10.0f * std::max(floor, std::sqrt((re * re) + (im * im))));
             rise += std::max(0.0f, magnitude[bin] - previous[bin]);
         }
         flux[hop] = hop == 0 ? 0.0 : rise;
@@ -65,6 +76,23 @@ spectralFlux(const float* audio, std::size_t count, const OnsetSettings& setting
     return flux;
 }
 } // namespace
+
+double levelDb(const float* audio, std::size_t first, std::size_t count) noexcept
+{
+    if (audio == nullptr || count == 0)
+    {
+        return -std::numeric_limits<double>::infinity();
+    }
+    double sum = 0.0;
+    for (std::size_t index = first; index < first + count; ++index)
+    {
+        const double sample = audio[index];
+        sum += sample * sample;
+    }
+    const double meanSquare = sum / static_cast<double>(count);
+    return meanSquare > 0.0 ? 10.0 * std::log10(meanSquare)
+                            : -std::numeric_limits<double>::infinity();
+}
 
 std::vector<PerformedOnset> detectOnsets(
     const float* audio,
@@ -114,6 +142,18 @@ std::vector<PerformedOnset> detectOnsets(
         const double threshold =
             (settings.medianScale * *middle) + (settings.peakFraction * loudest);
         if (flux[hop] <= threshold)
+        {
+            continue;
+        }
+
+        // Loud enough to be playing or singing: the window that follows the
+        // peak, where the attack's sound is, reaches the floor.
+        const std::size_t attack = std::min(
+            centre + static_cast<std::size_t>(
+                         settings.peakLeadFraction * static_cast<double>(settings.windowSize)),
+            count - 1);
+        const std::size_t span = std::min(settings.windowSize, count - attack);
+        if (levelDb(audio, attack, span) < settings.minimumLevelDb)
         {
             continue;
         }
