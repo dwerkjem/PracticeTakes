@@ -227,8 +227,8 @@ saved with the Target Note tool opens a tuner in its place.
 
 ## Two of the same tool
 
-The tuner, the spectrogram and the harmonic analyzer can each be open more than
-once: two tuners side by side, or two spectrograms at different settings. Each
+The tuner, the spectrogram, the harmonic analyzer, the Note View and Now & Next
+can each be open more than once: two tuners side by side, or two spectrograms at different settings. Each
 copy has its own settings, its own analysis and its own place in the workspace.
 
 - **Tools → *tool* → Open another** opens a new copy. **Open or focus** still
@@ -252,8 +252,8 @@ microphone. Tuners don't take one, because all tuners share one pitch reading.
 If the streams ever run out, **Open another** says *no audio stream free*.
 Choosing it tells you which tools are using them, so you know what to close.
 
-The score view and the target note tool open once each, because every copy
-would show the same score.
+The Score View and the Take Review open once each, because every copy would
+show the same score or the same take.
 
 ## Coming next
 

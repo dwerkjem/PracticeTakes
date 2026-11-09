@@ -8,10 +8,10 @@ capture of a MIDI keyboard and its sustain pedal.
 ![The tuner, spectrogram and harmonic analyzer tiled side by side, all reading the same sung A4](docs/wiki/images/overview.png)
 
 > **Status: early, and not yet a viable product.** The tools below work, and
-> what Practice Takes is for — play a piece, then see what went wrong in that
-> take — now works on a MIDI keyboard. Singing a take, playing one hand at a
-> time and the rest of the practice loop are the MVP, committed for
-> **17 May 2027**. The
+> what Practice Takes is for — play or sing a piece, then see what went wrong in
+> that take — works on a MIDI keyboard and the microphone. Finding your range,
+> checks on real hardware, and testing the whole loop with other musicians are
+> what's left of the MVP, committed for **17 May 2027**. The
 > [roadmap](https://github.com/dwerkjem/PracticeTakes/wiki/Roadmap) has the
 > dates and the [live forecast](https://github.com/dwerkjem/PracticeTakes/issues/10)
 > says whether they're on track.
@@ -25,7 +25,7 @@ capture of a MIDI keyboard and its sustain pedal.
 
 | | |
 |---|---|
-| ![The tuner reading A4, with a pitch graph showing the note drift above and below](docs/wiki/images/tuner-graph.png) | **Tuner.** The note you're on, its frequency, and how many cents sharp or flat, as a pitch graph, a bar or a meter, against a reference pitch you can set. With a score open it also names the target, the first note of the line you're singing or playing, and how far you are from it. Advanced settings shape how it settles, and practice presets set them for you. |
+| ![The tuner reading A4, with a pitch graph showing the note drift above and below](docs/wiki/images/tuner-graph.png) | **Tuner.** The note you're on, its frequency, and how many cents sharp or flat, as a pitch graph, a bar or a meter, against a reference pitch you can set. It names the target note and how far you are from it: one you choose on a keyboard, a staff, by name or by singing it, or the note of the score you should be on. Advanced settings shape how it settles, and practice presets set them for you. |
 | ![A spectrogram with a sung note and its overtones as bright horizontal bands](docs/wiki/images/spectrogram.png) | **Spectrogram.** A scrolling view of the frequencies in the sound: harmonics, noise, resonance, and how a tone changes over time. |
 | ![The Note View: the note being sung lit on a keyboard and drawn on a staff beside the target, with a trail](docs/wiki/images/note-view.png) | **Note View.** The note you're on, lit on a piano keyboard and drawn on a staff beside your target, with the last few seconds of pitch traced above the keys. Held MIDI keys light too. |
 | ![Now & Next: the current note large with its lyric and time left, and the notes coming](docs/wiki/images/now-next.png) | **Now & Next.** The note to sing or play now, large, with its lyric and the time left on it, and the notes coming, with rests, repeats and breaths marked. It follows the score as it plays, in high contrast if you want it for a music stand. |
@@ -62,7 +62,8 @@ score.
 
 When a take ends, it is judged against the part it matches best. The Score View
 marks every note right, wrong (with the key you pressed), missed, early or late,
-and every extra key. The **Take Review** lists them in order; click one to go
+and every extra key, and every sung note in tune, sharp or flat, by how many
+cents. The **Take Review** lists them in order; click one to go
 straight to that note and play the passage again.
 
 ### Play a MIDI keyboard

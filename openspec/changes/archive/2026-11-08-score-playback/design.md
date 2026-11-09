@@ -143,6 +143,13 @@ handled. Headphones avoid it, and the wiki says so.
 - **Downloads:** CI downloads about 32 MB once per clean configure.
 - **Sample provenance** in GeneralUser GS is the author's caveat. It is
   surfaced for the release review rather than resolved here.
+  *Accepted by the maintainer for 0.7.0 (2026-11-08).* The licence (v2.0)
+  allows the bank in software projects and lets its packaging change, with no
+  attribution, share-alike or non-commercial term; its samples allow full use
+  in music production. Every package installs `GeneralUser-GS-LICENSE.txt` and
+  `TinySoundFont-LICENSE.txt` beside the bank, and the build fetches from the
+  author's GitHub repository by commit, never his download links, as the
+  licence asks.
 
 ## Decided while building
 

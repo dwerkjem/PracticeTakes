@@ -11,7 +11,7 @@ the summary.
 
 | Stage | What you get | Commitment | Planning target |
 |---|---|---|---|
-| **Foundation** ([#12](https://github.com/dwerkjem/PracticeTakes/issues/12)) | The dockable workspace and its tools: what exists today. A development build, not a product | 29 Nov 2026 | 16 Nov 2026 |
+| **Foundation** ([#12](https://github.com/dwerkjem/PracticeTakes/issues/12)) | The dockable workspace and its tools: what exists today. **Released as 0.7.0**, a development build, not a product | 29 Nov 2026 | 16 Nov 2026 |
 | **MVP** ([#13](https://github.com/dwerkjem/PracticeTakes/issues/13)) | **Two lanes at once.** Listening and pitch: choose a target note, see the note you're on against it, find your range, sing against a drone. Piano practice: hands separately, slower. Both lead into one practice loop: play or sing a piece, see on the score what went wrong, loop the weak passage | **17 May 2027** | 1 Mar 2027 |
 | Beta 1 ([#14](https://github.com/dwerkjem/PracticeTakes/issues/14)) | Depth and drills on both instruments: held notes, the pedal, chords, wait mode and fingering on the piano; vibrato, phrasing, breath and latency drift for the voice; dynamics for both; pitch-matching, interval and steadiness drills | 4 Oct 2027 | 7 Jun 2027 |
 | Beta 2 | Files and sessions: MIDI files, saved sessions, the piano roll, a score library, and recording takes and opening audio files | 13 Dec 2027 | 19 Jul 2027 |
