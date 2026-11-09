@@ -1394,20 +1394,44 @@ void TunerComponent::drawMarker(
         return;
     }
 
-    // In the colour of the zone the pitch is in, outlined so it stays visible
-    // on a lit band of the same colour.
-    const auto palette = tunerPaletteFor(currentTheme);
+    // In the colour of the zone the pitch is in, ringed twice so it stands out
+    // from a lit band of the same colour (#372): a halo in the background's
+    // colour, then an outline in the foreground's. One of the two contrasts
+    // with every zone colour in either theme (ThemeContrastTests).
+    const auto edges = tunerMarkerEdges(currentTheme);
     const auto fill = intonationZoneColour(pitch::zoneOf(zoneCents(), zoneLimits()));
+    constexpr float haloWidth = 7.0f;
+    constexpr float outlineWidth = 2.5f;
+
+    // A filled shape: halo, fill, outline.
+    const auto ringed = [&graphics, &edges, fill](const juce::Path& shape)
+    {
+        graphics.setColour(edges.halo);
+        graphics.strokePath(shape, juce::PathStrokeType(haloWidth, juce::PathStrokeType::curved));
+        graphics.setColour(fill);
+        graphics.fillPath(shape);
+        graphics.setColour(edges.outline);
+        graphics.strokePath(
+            shape, juce::PathStrokeType(outlineWidth, juce::PathStrokeType::curved));
+    };
+    // A stroke: halo, outline, then the zone's colour down its middle.
+    const auto stroked = [&graphics, &edges, fill](const juce::Line<float>& line, float width)
+    {
+        graphics.setColour(edges.halo);
+        graphics.drawLine(line, width + 5.0f);
+        graphics.setColour(edges.outline);
+        graphics.drawLine(line, width + 2.0f);
+        graphics.setColour(fill);
+        graphics.drawLine(line, width);
+    };
 
     switch (marker)
     {
     case Marker::dot:
     {
-        const auto dot = juce::Rectangle<float>(18.0f, 18.0f).withCentre(at);
-        graphics.setColour(fill);
-        graphics.fillEllipse(dot);
-        graphics.setColour(palette.foreground);
-        graphics.drawEllipse(dot, 2.0f);
+        juce::Path dot;
+        dot.addEllipse(juce::Rectangle<float>(20.0f, 20.0f).withCentre(at));
+        ringed(dot);
         break;
     }
     case Marker::arrow:
@@ -1427,16 +1451,12 @@ void TunerComponent::drawMarker(
             arrow.addTriangle(
                 at, {at.x - length, at.y - halfWidth}, {at.x - length, at.y + halfWidth});
         }
-        graphics.setColour(fill);
-        graphics.fillPath(arrow);
-        graphics.setColour(palette.foreground);
-        graphics.strokePath(arrow, juce::PathStrokeType(1.5f));
+        ringed(arrow);
         break;
     }
     case Marker::line:
     {
-        graphics.setColour(fill);
-        graphics.drawLine(
+        stroked(
             vertical ? juce::Line<float>(at.x, span.getY(), at.x, span.getBottom())
                      : juce::Line<float>(span.getX(), at.y, span.getRight(), at.y),
             3.0f);
@@ -1446,7 +1466,9 @@ void TunerComponent::drawMarker(
     {
         // Hollow, so what is under it -- the trace, the zero tick -- shows.
         const auto ring = juce::Rectangle<float>(20.0f, 20.0f).withCentre(at);
-        graphics.setColour(palette.foreground);
+        graphics.setColour(edges.halo);
+        graphics.drawEllipse(ring, 8.0f);
+        graphics.setColour(edges.outline);
         graphics.drawEllipse(ring, 5.0f);
         graphics.setColour(fill);
         graphics.drawEllipse(ring, 3.0f);
@@ -1461,10 +1483,7 @@ void TunerComponent::drawMarker(
         diamond.lineTo(at.x, at.y + reach);
         diamond.lineTo(at.x - reach, at.y);
         diamond.closeSubPath();
-        graphics.setColour(fill);
-        graphics.fillPath(diamond);
-        graphics.setColour(palette.foreground);
-        graphics.strokePath(diamond, juce::PathStrokeType(1.5f));
+        ringed(diamond);
         break;
     }
     case Marker::crosshair:
@@ -1473,14 +1492,13 @@ void TunerComponent::drawMarker(
         // visible, like a sight.
         constexpr float reach = 13.0f;
         constexpr float gap = 4.0f;
-        graphics.setColour(fill);
         for (const auto& arm :
              {juce::Line<float>(at.x - reach, at.y, at.x - gap, at.y),
               juce::Line<float>(at.x + gap, at.y, at.x + reach, at.y),
               juce::Line<float>(at.x, at.y - reach, at.x, at.y - gap),
               juce::Line<float>(at.x, at.y + gap, at.x, at.y + reach)})
         {
-            graphics.drawLine(arm, 3.0f);
+            stroked(arm, 3.0f);
         }
         break;
     }
