@@ -210,8 +210,9 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   spaces, where every engraving rule worth asserting lives; see
   `docs/development/architecture/notation-engraving.md`), `review` (the Take
   Review tool, listing the take under review), `notes` (the Note View: the note
-  being sung on a keyboard and a staff, against the target), `feedback`, `performance`
-  (launch timing).
+  being sung on a keyboard and a staff, against the target), `nownext` (Now &
+  Next: the current note and the ones coming, following the clock, from
+  `score::PartTimeline`), `feedback`, `performance` (launch timing).
 - `src/platform` — shared infrastructure: `audio/` (`AudioInputService`,
   `AudioSampleFifo`, `AudioRecoveryPolicy`, `SyntheticTone`, `RealtimeRenderer`),
   `pitch/` (the application's reference pitch and current target note, both

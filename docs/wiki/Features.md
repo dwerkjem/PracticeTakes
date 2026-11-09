@@ -255,7 +255,7 @@ Shared by every instrument.
 
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
-| Current and next note | The note to play or sing now, and the ones coming | MVP | [#41](https://github.com/dwerkjem/PracticeTakes/issues/41) |
+| Current and next note | The note to play or sing now, and the ones coming | ✅ | [#41](https://github.com/dwerkjem/PracticeTakes/issues/41) |
 | Live feedback | A restrained signal during the take, not a distraction | Beta | [#51](https://github.com/dwerkjem/PracticeTakes/issues/51) |
 
 ### After a take

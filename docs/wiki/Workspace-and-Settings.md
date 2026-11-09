@@ -46,7 +46,7 @@ Your layout is restored the next time you start Practice Takes.
 | **Appearance** | The theme, **Dark** or **Light**, for every open window |
 | **Audio** | Mute, input volume, the live input level, buffer health, the metronome's volume and accent (and why it's silent, if it is), and the input and output devices |
 | **MIDI** | The keyboard and the sustain pedal (see [[MIDI Keyboard]]) |
-| **Practice** | Practice presets, which set the tuner's behaviour for the material you're practising; how many bars the metronome counts in; the **reference pitch**, A4 = 440 Hz by default, from 415 to 466 Hz; **In tune within**, how close a sung note must be to count as in tune, 25 cents by default, from 5 to 50; and whether a target you chose is kept when a score opens |
+| **Practice** | Practice presets, which set the tuner's behaviour for the material you're practising; how many bars the metronome counts in; the **reference pitch**, A4 = 440 Hz by default, from 415 to 466 Hz; **In tune within**, how close a sung note must be to count as in tune, 25 cents by default, from 5 to 50; whether a target you chose is kept when a score opens; and whether a score's target **follows the note being sung** while the score plays (on by default) |
 | **Reset & support** | **Send feedback**, and reset the current tool, the audio settings, the layout, or all settings, each after a confirmation |
 
 **Import settings**, **Export settings** and **Save settings** sit along the
