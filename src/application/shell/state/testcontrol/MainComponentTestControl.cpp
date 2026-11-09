@@ -125,6 +125,9 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     testControlOpenMix = state.mixOpen;
     referencePitch.set(state.referencePitchHz > 0.0 ? state.referencePitchHz : 440.0);
 
+    // Every state sets the text size, so none inherits the last one's.
+    setTextScale(state.textScalePercent);
+
     // Playback off and nothing muted: a state that wants it on says so.
     practiceClock.setPlaybackEnabled(false);
     if (takeRecorder.isRecording())

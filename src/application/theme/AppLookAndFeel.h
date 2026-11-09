@@ -2,6 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "TextFonts.h"
 #include "TextScale.h"
 
 // The application look and feel, which exists to put one thing in place: the
@@ -18,7 +19,16 @@
 // bold, so the design's 500 and 600 weights collapse onto these; see
 // tools/packaging/fonts/README.md for why that is the honest mapping rather
 // than a shortfall to fix later.
-class AppLookAndFeel final : public juce::LookAndFeel_V4
+// A look-and-feel that knows the text size, so a component drawn with it can
+// lay itself out for its text (global-text-size decision 3).
+class TextScaleSource
+{
+  public:
+    virtual ~TextScaleSource() = default;
+    [[nodiscard]] virtual int textScale() const noexcept = 0;
+};
+
+class AppLookAndFeel final : public juce::LookAndFeel_V4, public TextScaleSource
 {
   public:
     AppLookAndFeel();
@@ -50,7 +60,7 @@ class AppLookAndFeel final : public juce::LookAndFeel_V4
     // exactly, unrounded, so nothing moves until the setting does
     // (global-text-size decision 3).
     void setTextScale(int percent) noexcept;
-    [[nodiscard]] int textScale() const noexcept
+    [[nodiscard]] int textScale() const noexcept override
     {
         return textScalePercent;
     }
@@ -101,5 +111,77 @@ class AppLookAndFeel final : public juce::LookAndFeel_V4
   private:
     juce::Typeface::Ptr regular;
     juce::Typeface::Ptr bold;
+    int textScalePercent = appearance::TextScale::defaultPercent;
+};
+
+// The shell's windows and panels take the text size from the look-and-feel
+// they are drawn with -- MainComponent's one, which it owns and sets -- and lay
+// themselves out again in lookAndFeelChanged(), which a change of size sends
+// (global-text-size decision 3). Tools are told through ToolComponent instead.
+namespace appearance
+{
+// The text size `component` is drawn at: its look-and-feel's, or 100 under any
+// other look-and-feel.
+[[nodiscard]] inline int textScaleOf(const juce::Component& component)
+{
+    const auto* source = dynamic_cast<const TextScaleSource*>(&component.getLookAndFeel());
+    return source != nullptr ? source->textScale() : TextScale::defaultPercent;
+}
+
+// A size laid out for 100 percent, grown with `component`'s text.
+[[nodiscard]] inline int scaledFor(const juce::Component& component, int base)
+{
+    return scaledHeight(base, textScaleOf(component));
+}
+
+// `role`'s font for text `component` paints itself.
+[[nodiscard]] inline juce::FontOptions
+fontFor(const juce::Component& component, TextRole role, int styleFlags = juce::Font::plain)
+{
+    return textFont(role, textScaleOf(component), styleFlags);
+}
+} // namespace appearance
+
+// The title strip's look-and-feel: JUCE's own, which the strip has always been
+// drawn with, plus the text size for its buttons. Not AppLookAndFeel, whose
+// colours and typeface would change how the strip looks at 100 percent.
+class TitleStripLookAndFeel final : public juce::LookAndFeel_V4, public TextScaleSource
+{
+  public:
+    void setTextScale(int percent) noexcept
+    {
+        textScalePercent = appearance::TextScale::snapped(static_cast<double>(percent));
+    }
+
+    [[nodiscard]] int textScale() const noexcept override
+    {
+        return textScalePercent;
+    }
+
+    juce::Font getTextButtonFont(juce::TextButton& button, int buttonHeight) override
+    {
+        return scaled(juce::LookAndFeel_V4::getTextButtonFont(button, buttonHeight));
+    }
+
+    // The transport's position readout, and the tempo's text box.
+    juce::Font getLabelFont(juce::Label& label) override
+    {
+        return scaled(juce::LookAndFeel_V4::getLabelFont(label));
+    }
+
+    juce::Font getPopupMenuFont() override
+    {
+        return scaled(juce::LookAndFeel_V4::getPopupMenuFont());
+    }
+
+  private:
+    [[nodiscard]] juce::Font scaled(juce::Font base) const
+    {
+        return textScalePercent == appearance::TextScale::defaultPercent
+                   ? base
+                   : base.withHeight(
+                         appearance::TextScale::scaled(base.getHeight(), textScalePercent));
+    }
+
     int textScalePercent = appearance::TextScale::defaultPercent;
 };

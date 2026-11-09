@@ -245,7 +245,10 @@ class SurfaceListTests(unittest.TestCase):
                     )
 
     def test_the_geometry_surfaces_are_the_exempt_ones(self) -> None:
-        exempt = {s.state for s in surfaces.SURFACES if s.fixed_geometry}
+        # A text-size copy of one keeps its geometry (global-text-size).
+        exempt = {
+            s.state.rsplit("-text-", 1)[0] for s in surfaces.SURFACES if s.fixed_geometry
+        }
 
         self.assertEqual(exempt, {"narrow-window", "narrow-empty", "fullscreen"})
 

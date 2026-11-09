@@ -101,8 +101,9 @@ void MainComponent::paintMutedFrame(juce::Graphics& graphics) const
     // starts reading the workspace. Its text takes black or white, whichever
     // reads on the warning colour of the current theme.
     const juce::String label{"Microphone muted"};
-    const juce::Font font{juce::FontOptions(12.0f, juce::Font::bold)};
-    constexpr float labelHeight = 18.0f;
+    const juce::Font font{
+        appearance::fontFor(*this, appearance::TextRole::small, juce::Font::bold)};
+    const auto labelHeight = static_cast<float>(scaled(18));
     constexpr float labelPadding = 8.0f;
     const auto labelWidth =
         juce::GlyphArrangement::getStringWidth(font, label) + 2.0f * labelPadding;

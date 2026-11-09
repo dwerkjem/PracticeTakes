@@ -86,7 +86,8 @@ class MainComponent::ScoreImportWindow final : public juce::DocumentWindow
         Content()
         {
             headline.setJustificationType(juce::Justification::topLeft);
-            headline.setFont(juce::FontOptions(18.0f, juce::Font::bold));
+            headline.setFont(
+                appearance::labelFont(appearance::TextRole::heading, juce::Font::bold));
             addAndMakeVisible(headline);
 
             // Wrapped. The importer's diagnostics are full sentences ending
@@ -145,18 +146,32 @@ class MainComponent::ScoreImportWindow final : public juce::DocumentWindow
             const juce::Colour colour =
                 body.getLookAndFeel().findColour(juce::TextEditor::textColourId);
             body.applyColourToAllText(colour, false);
+
+            // The report at the text size (global-text-size). Left as JUCE
+            // made it until the size first moves off 100, so 100 is unchanged.
+            const int scale = appearance::textScaleOf(*this);
+            if (scale != reportScale)
+            {
+                reportScale = scale;
+                const juce::FontOptions font =
+                    appearance::textFont(appearance::TextRole::control, scale);
+                body.setFont(font);
+                body.applyFontToAllText(font, true);
+            }
+            resized();
         }
 
         void resized() override
         {
             auto bounds = getLocalBounds().reduced(16);
-            headline.setBounds(bounds.removeFromTop(52));
+            headline.setBounds(bounds.removeFromTop(appearance::scaledFor(*this, 52)));
             body.setBounds(bounds);
         }
 
       private:
         juce::Label headline;
         juce::TextEditor body;
+        int reportScale = appearance::TextScale::defaultPercent;
     };
 
     std::function<void()> onClose;

@@ -15,6 +15,30 @@ void MainComponent::setTheme(Theme theme)
     applyAppearance();
 }
 
+void MainComponent::setTextScale(int percent)
+{
+    const int snapped = appearance::TextScale::snapped(static_cast<double>(percent));
+    if (snapped == appLookAndFeel.textScale())
+    {
+        return;
+    }
+    appLookAndFeel.setTextScale(snapped);
+    titleStripLookAndFeel.setTextScale(snapped);
+
+    // Every component that lays itself out from the text size does it in
+    // lookAndFeelChanged(), which this sends to the main window, the open
+    // windows and every docked tool; the tools are told through their
+    // contract, as they are of the theme.
+    applyAppearance();
+    resized();
+
+    // The title strip above it is the window's, and is as tall as its text.
+    if (auto* parent = getParentComponent())
+    {
+        parent->resized();
+    }
+}
+
 void MainComponent::applyAppearance()
 {
     configureLookAndFeelColours();

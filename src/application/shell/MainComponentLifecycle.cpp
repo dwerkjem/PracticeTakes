@@ -32,9 +32,11 @@ constexpr int sampleButtonWidth = 220;
 constexpr int sampleButtonHeight = 32;
 constexpr int guidanceBlockHeight = guidanceTitleHeight + guidanceTextHeight + sampleButtonHeight;
 
-juce::Rectangle<int> emptyGuidanceBlock(juce::Rectangle<int> area)
+juce::Rectangle<int> emptyGuidanceBlock(juce::Rectangle<int> area, int textScale)
 {
-    return area.withSizeKeepingCentre(juce::jmin(area.getWidth(), 560), guidanceBlockHeight);
+    return area.withSizeKeepingCentre(
+        juce::jmin(area.getWidth(), appearance::scaledHeight(560, textScale)),
+        appearance::scaledHeight(guidanceBlockHeight, textScale));
 }
 
 juce::String settingsFolderName()
@@ -218,9 +220,11 @@ take::TakeSources MainComponent::takeSources()
 
 std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(std::function<void()> fullscreenHandler)
 {
-    return std::make_unique<MainTitleBar>(
+    auto bar = std::make_unique<MainTitleBar>(
         fileButton, settingsButton, toolsButton, helpButton, microphoneButton, transportStrip,
         std::move(fullscreenHandler));
+    bar->setLookAndFeel(&titleStripLookAndFeel);
+    return bar;
 }
 
 AppSettings::FullscreenMode MainComponent::fullscreenMode() const noexcept
@@ -291,7 +295,7 @@ juce::Rectangle<int> MainComponent::workspaceArea() const
     // whichever tool happens to be in that corner.
     if (microphoneWarning != nullptr && microphoneWarning->isVisible())
     {
-        area.removeFromTop(microphoneWarningHeight + microphoneWarningGap);
+        area.removeFromTop(scaled(microphoneWarningHeight) + microphoneWarningGap);
     }
 
     return area;
@@ -305,20 +309,20 @@ void MainComponent::paintEmptyWorkspaceGuidance(juce::Graphics& graphics) const
     // a tour -- the menus are right above it.
     const AppPalette colours = appPaletteFor(currentTheme);
     auto area = workspaceArea().reduced(24);
-    auto block = emptyGuidanceBlock(area);
+    auto block = emptyGuidanceBlock(area, appLookAndFeel.textScale());
 
     graphics.setColour(colours.foreground);
-    graphics.setFont(juce::FontOptions(20.0f, juce::Font::bold));
+    graphics.setFont(appearance::fontFor(*this, appearance::TextRole::title, juce::Font::bold));
     graphics.drawFittedText(
-        "Open a score to get started", block.removeFromTop(guidanceTitleHeight),
+        "Open a score to get started", block.removeFromTop(scaled(guidanceTitleHeight)),
         juce::Justification::centred, 1);
 
     graphics.setColour(colours.muted);
-    graphics.setFont(juce::FontOptions(14.5f));
+    graphics.setFont(appearance::fontFor(*this, appearance::TextRole::prompt));
     graphics.drawFittedText(
         "File > Open score reads a MusicXML file and shows it here, or try the sample "
         "below. The Tools menu adds a tuner, spectrogram or harmonic analyser.",
-        block.removeFromTop(guidanceTextHeight), juce::Justification::centredTop, 3);
+        block.removeFromTop(scaled(guidanceTextHeight)), juce::Justification::centredTop, 3);
 }
 
 void MainComponent::resized()
@@ -326,9 +330,10 @@ void MainComponent::resized()
     if (microphoneWarning != nullptr)
     {
         auto warningArea = getLocalBounds().reduced(workspaceMargin);
-        const auto availableWidth = juce::jmin(microphoneWarningWidth, warningArea.getWidth());
-        microphoneWarning->setBounds(
-            warningArea.removeFromTop(microphoneWarningHeight).removeFromRight(availableWidth));
+        const auto availableWidth =
+            juce::jmin(scaled(microphoneWarningWidth), warningArea.getWidth());
+        microphoneWarning->setBounds(warningArea.removeFromTop(scaled(microphoneWarningHeight))
+                                         .removeFromRight(availableWidth));
         if (microphoneWarning->isVisible())
         {
             microphoneWarning->toFront(false);
@@ -344,10 +349,10 @@ void MainComponent::resized()
 
     if (showGuidance)
     {
-        auto block = emptyGuidanceBlock(workspaceArea().reduced(24));
-        block.removeFromTop(guidanceTitleHeight + guidanceTextHeight);
+        auto block = emptyGuidanceBlock(workspaceArea().reduced(24), appLookAndFeel.textScale());
+        block.removeFromTop(scaled(guidanceTitleHeight) + scaled(guidanceTextHeight));
         openSampleButton.setBounds(block.withSizeKeepingCentre(
-            juce::jmin(block.getWidth(), sampleButtonWidth), sampleButtonHeight));
+            juce::jmin(block.getWidth(), scaled(sampleButtonWidth)), scaled(sampleButtonHeight)));
     }
 
     // The background carries the empty-workspace guidance, which appears and

@@ -82,6 +82,9 @@ class ApprovedState:
     # pianist's.
     sung_take: bool
 
+    # The text size the picture is taken at, as a percentage; 100 for most.
+    text_scale_percent: int
+
     # The top-level window the state is a picture of. Empty for the main one.
     window_title: str
 
@@ -134,6 +137,7 @@ def _state_from(entry: dict) -> ApprovedState:
         mix_open=entry["mixOpen"],
         reference_pitch_hz=float(entry["referencePitchHz"]),
         sung_take=entry["sungTake"],
+        text_scale_percent=int(entry["textScalePercent"]),
         window_title=entry["windowTitle"],
     )
 

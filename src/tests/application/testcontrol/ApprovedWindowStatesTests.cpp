@@ -454,3 +454,33 @@ TEST_CASE("tones are musical pitches rather than arbitrary numbers", "[testcontr
         CHECK(state.toneHz <= 900.0);
     }
 }
+
+TEST_CASE(
+    "the text size's states are approved states at 80 and 150 percent",
+    "[testcontrol][text-size]")
+{
+    std::size_t sized = 0;
+    for (const auto& state : approvedWindowStates())
+    {
+        if (state.textScalePercent == 100)
+        {
+            continue;
+        }
+        ++sized;
+        INFO("state " << state.id);
+        CHECK((state.textScalePercent == 80 || state.textScalePercent == 150));
+
+        // A copy of a state at 100, the same surface with only the size moved.
+        const auto suffix = "-text-" + std::to_string(state.textScalePercent);
+        REQUIRE(state.id.size() > suffix.size());
+        CHECK(state.id.ends_with(suffix));
+        const auto* base =
+            findApprovedWindowState(state.id.substr(0, state.id.size() - suffix.size()));
+        REQUIRE(base != nullptr);
+        CHECK(base->textScalePercent == 100);
+        CHECK(base->tools == state.tools);
+    }
+    CHECK(sized > 0);
+    CHECK(findApprovedWindowState("all-tools-docked-text-150") != nullptr);
+    CHECK(findApprovedWindowState("settings-practice-text-80") != nullptr);
+}

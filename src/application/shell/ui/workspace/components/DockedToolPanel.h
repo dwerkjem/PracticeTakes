@@ -42,7 +42,7 @@ class MainComponent::DockedToolPanel final : public juce::Component
         }
 
         titleLabel.setText(title, juce::dontSendNotification);
-        titleLabel.setFont(juce::FontOptions(18.0f, juce::Font::bold));
+        titleLabel.setFont(appearance::labelFont(appearance::TextRole::heading, juce::Font::bold));
         titleLabel.setInterceptsMouseClicks(false, false);
         addAndMakeVisible(titleLabel);
         addAndMakeVisible(optionsButton);
@@ -96,8 +96,15 @@ class MainComponent::DockedToolPanel final : public juce::Component
         graphics.drawRect(getLocalBounds(), 1);
     }
 
+    void lookAndFeelChanged() override
+    {
+        resized();
+    }
+
     void resized() override
     {
+        // Sizes for text at 100 percent, grown with the text size.
+        const auto px = [this](int base) { return appearance::scaledFor(*this, base); };
         auto bounds = getLocalBounds().reduced(6);
 
         // Below the threshold the header goes entirely: a pane with no room for
@@ -123,8 +130,8 @@ class MainComponent::DockedToolPanel final : public juce::Component
             return;
         }
 
-        auto header = bounds.removeFromTop(32);
-        optionsButton.setBounds(header.removeFromRight(38));
+        auto header = bounds.removeFromTop(px(32));
+        optionsButton.setBounds(header.removeFromRight(px(38)));
         header.removeFromRight(4);
 
         // The tool's own control sits between the title and the options button,
@@ -132,7 +139,7 @@ class MainComponent::DockedToolPanel final : public juce::Component
         // pane gives it less instead of pushing the title out.
         if (adoptedHeaderControl != nullptr)
         {
-            const auto width = juce::jlimit(120, 220, header.getWidth() / 2);
+            const auto width = juce::jlimit(px(120), px(220), header.getWidth() / 2);
             adoptedHeaderControl->setBounds(header.removeFromRight(width));
             header.removeFromRight(8);
         }

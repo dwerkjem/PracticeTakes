@@ -5,6 +5,7 @@
 #include "../../../../platform/take/TakeRecorder.h"
 #include "../../../../platform/take/TakeStatus.h"
 #include "../../../../platform/transport/PracticeClock.h"
+#include "../../../theme/AppLookAndFeel.h"
 #include "PlaybackMixPanel.h"
 
 #include <functional>
@@ -135,31 +136,33 @@ class TransportStrip final
 
     void resized() override
     {
+        // Widths for text at 100 percent, grown with the text size.
+        const auto px = [this](int base) { return appearance::scaledFor(*this, base); };
         auto bounds = getLocalBounds();
         constexpr int gap = 4;
-        const bool compact = getWidth() < fullWidth;
+        const bool compact = getWidth() < px(fullWidth);
 
-        recordButton.setBounds(bounds.removeFromLeft(56));
+        recordButton.setBounds(bounds.removeFromLeft(px(56)));
         bounds.removeFromLeft(gap);
-        playButton.setBounds(bounds.removeFromLeft(56));
+        playButton.setBounds(bounds.removeFromLeft(px(56)));
         bounds.removeFromLeft(gap);
-        stopButton.setBounds(bounds.removeFromLeft(46));
+        stopButton.setBounds(bounds.removeFromLeft(px(46)));
         bounds.removeFromLeft(gap);
 
         positionLabel.setVisible(!compact);
         if (!compact)
         {
-            positionLabel.setBounds(bounds.removeFromLeft(158));
+            positionLabel.setBounds(bounds.removeFromLeft(px(158)));
             bounds.removeFromLeft(gap);
         }
 
-        tempoSlider.setBounds(bounds.removeFromLeft(92));
+        tempoSlider.setBounds(bounds.removeFromLeft(px(92)));
         bounds.removeFromLeft(gap);
-        clickButton.setBounds(bounds.removeFromLeft(48));
+        clickButton.setBounds(bounds.removeFromLeft(px(48)));
         bounds.removeFromLeft(gap);
-        loopButton.setBounds(bounds.removeFromLeft(46));
+        loopButton.setBounds(bounds.removeFromLeft(px(46)));
         bounds.removeFromLeft(gap);
-        mixButton.setBounds(bounds.removeFromLeft(44));
+        mixButton.setBounds(bounds.removeFromLeft(px(44)));
     }
 
     // What the readout says for a position: "Bar 3, beat 2", or the count-in.
@@ -186,7 +189,8 @@ class TransportStrip final
         {
             return;
         }
-        auto panel = std::make_unique<PlaybackMixPanel>(clock, onSettingsChanged);
+        auto panel =
+            std::make_unique<PlaybackMixPanel>(clock, onSettingsChanged, &getLookAndFeel());
         const auto area = window->getLocalArea(this, mixButton.getBounds());
         juce::CallOutBox::launchAsynchronously(std::move(panel), area, window);
     }

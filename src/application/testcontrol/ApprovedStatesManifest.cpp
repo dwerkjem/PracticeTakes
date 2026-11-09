@@ -171,6 +171,7 @@ void appendState(std::string& out, const ApprovedWindowState& state)
     out += indent + "\"mixOpen\": " + boolean(state.mixOpen) + ",\n";
     out += indent + "\"referencePitchHz\": " + number(state.referencePitchHz) + ",\n";
     out += indent + "\"sungTake\": " + boolean(state.sungTake) + ",\n";
+    out += indent + "\"textScalePercent\": " + std::to_string(state.textScalePercent) + ",\n";
     out += indent + "\"windowTitle\": " + quoted(windowTitleOf(state)) + "\n";
     out += "    }";
 }

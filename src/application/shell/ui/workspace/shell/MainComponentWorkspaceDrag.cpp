@@ -9,11 +9,13 @@ namespace
 // never need a per-tool branch -- registering a new tool just works.
 constexpr auto workspaceToolDragPrefix = "workspace-tool:";
 
-[[nodiscard]] juce::Rectangle<int>
-dropZoneBounds(WorkspaceLayoutState::DropZone zone, juce::Rectangle<int> workspace)
+[[nodiscard]] juce::Rectangle<int> dropZoneBounds(
+    WorkspaceLayoutState::DropZone zone,
+    juce::Rectangle<int> workspace,
+    int textScale = appearance::TextScale::defaultPercent)
 {
-    constexpr int floatingTargetWidth = 170;
-    constexpr int floatingTargetHeight = 64;
+    const int floatingTargetWidth = appearance::scaledHeight(170, textScale);
+    const int floatingTargetHeight = appearance::scaledHeight(64, textScale);
     if (zone == WorkspaceLayoutState::DropZone::floating)
     {
         return workspace.removeFromTop(floatingTargetHeight).removeFromRight(floatingTargetWidth);
@@ -76,13 +78,15 @@ void paintDropZone(
     juce::Rectangle<int> bounds,
     const juce::String& label,
     bool active,
-    const AppPalette& palette)
+    const AppPalette& palette,
+    int textScale)
 {
     graphics.setColour(active ? palette.accent.withAlpha(0.72f) : palette.panel.withAlpha(0.88f));
     graphics.fillRoundedRectangle(bounds.toFloat(), 7.0f);
     graphics.setColour(active ? juce::Colours::white : palette.foreground);
     graphics.drawRoundedRectangle(bounds.toFloat(), 7.0f, 2.0f);
-    graphics.setFont(juce::FontOptions(16.0f, juce::Font::bold));
+    graphics.setFont(
+        appearance::textFont(appearance::TextRole::subheading, textScale, juce::Font::bold));
     graphics.drawFittedText(label, bounds.reduced(8), juce::Justification::centred, 1);
 }
 } // namespace
@@ -308,9 +312,13 @@ void MainComponent::paintOverChildren(juce::Graphics& graphics)
     // duration of a drag, regardless of whether a pane is currently hovered
     // underneath it.
     paintDropZone(
-        graphics, dropZoneBounds(WorkspaceLayoutState::DropZone::floating, workspace).reduced(5),
+        graphics,
+        dropZoneBounds(
+            WorkspaceLayoutState::DropZone::floating, workspace, appLookAndFeel.textScale())
+            .reduced(5),
         dropZoneLabel(WorkspaceLayoutState::DropZone::floating),
-        activeDropTarget.zone == WorkspaceLayoutState::DropZone::floating, palette);
+        activeDropTarget.zone == WorkspaceLayoutState::DropZone::floating, palette,
+        appLookAndFeel.textScale());
 
     if (activeDropTarget.zone == WorkspaceLayoutState::DropZone::floating)
     {
@@ -341,6 +349,6 @@ void MainComponent::paintOverChildren(juce::Graphics& graphics)
                 : dropZoneLabel(zone);
         paintDropZone(
             graphics, dropZoneBounds(zone, paneBounds).reduced(5), label,
-            zone == activeDropTarget.zone, palette);
+            zone == activeDropTarget.zone, palette, appLookAndFeel.textScale());
     }
 }

@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <functional>
 #include <utility>
+#include <vector>
 
 // Settings remains separate from the main window so it can grow without
 // crowding the top-level application shell.
@@ -28,11 +29,49 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 graphics.fillAll(findColour(juce::ResizableWindow::backgroundColourId));
             }
 
+            void lookAndFeelChanged() override
+            {
+                // Above 100 percent a description wraps rather than squeezing
+                // its letters onto one line; at 100 it is drawn as it always
+                // was.
+                const bool larger =
+                    appearance::textScaleOf(*this) > appearance::TextScale::defaultPercent;
+                for (auto* label : descriptions)
+                {
+                    label->setMinimumHorizontalScale(larger ? 1.0f : 0.0f);
+                }
+                resized();
+            }
+
+            // How tall the panel's rows are, as its last layout found: the
+            // scrolling wrapper makes the panel this tall, so at a large text
+            // size it scrolls rather than clipping (global-text-size).
+            [[nodiscard]] int contentHeight() const noexcept
+            {
+                return measuredHeight;
+            }
+
           protected:
+            // A size laid out for 100 percent, grown with the text size.
+            [[nodiscard]] int px(int base) const
+            {
+                return appearance::scaledFor(*this, base);
+            }
+
+            // The last row ends at `y`; a part below it that takes whatever
+            // room is left wants at least `flexibleMinimum`.
+            void contentEndsAt(int y, int flexibleMinimum = 0) noexcept
+            {
+                measuredHeight = y + flexibleMinimum + margin;
+            }
+
+            static constexpr int margin = 26;
+
             void configureHeading(juce::Label& heading, const juce::String& text)
             {
                 heading.setText(text, juce::dontSendNotification);
-                heading.setFont(juce::FontOptions(22.0f, juce::Font::bold));
+                heading.setFont(
+                    appearance::labelFont(appearance::TextRole::panelHeading, juce::Font::bold));
                 addAndMakeVisible(heading);
             }
 
@@ -41,7 +80,50 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 description.setText(text, juce::dontSendNotification);
                 description.setJustificationType(juce::Justification::topLeft);
                 addAndMakeVisible(description);
+                descriptions.push_back(&description);
             }
+
+          private:
+            int measuredHeight = 0;
+            std::vector<juce::Label*> descriptions;
+        };
+
+        // A panel in the tab, scrolling when its rows are taller than the
+        // window: at 150 percent the Practice panel is.
+        class ScrollingPanel final : public juce::Component
+        {
+          public:
+            explicit ScrollingPanel(CategoryPanel& shown) : panel(shown)
+            {
+                viewport.setViewedComponent(&panel, false);
+                viewport.setScrollBarsShown(true, false);
+                addAndMakeVisible(viewport);
+            }
+
+            void resized() override
+            {
+                viewport.setBounds(getLocalBounds());
+                // Laid out tall first to find where its rows end, then made
+                // that tall -- or as tall as the window, whichever is more.
+                int width = getWidth();
+                panel.setBounds(0, 0, width, measuringHeight);
+                if (panel.contentHeight() > getHeight())
+                {
+                    width -= viewport.getScrollBarThickness();
+                    panel.setBounds(0, 0, width, measuringHeight);
+                }
+                panel.setBounds(0, 0, width, std::max(getHeight(), panel.contentHeight()));
+            }
+
+            void lookAndFeelChanged() override
+            {
+                resized();
+            }
+
+          private:
+            static constexpr int measuringHeight = 4000;
+            CategoryPanel& panel;
+            juce::Viewport viewport;
         };
 
         class AppearancePanel final : public CategoryPanel
@@ -73,13 +155,14 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             void resized() override
             {
                 auto bounds = getLocalBounds().reduced(26);
-                heading.setBounds(bounds.removeFromTop(34));
-                description.setBounds(bounds.removeFromTop(42));
-                bounds.removeFromTop(18);
+                heading.setBounds(bounds.removeFromTop(px(34)));
+                description.setBounds(bounds.removeFromTop(px(42)));
+                bounds.removeFromTop(px(18));
 
-                auto themeRow = bounds.removeFromTop(36);
-                themeLabel.setBounds(themeRow.removeFromLeft(130));
-                themeBox.setBounds(themeRow.removeFromLeft(240));
+                auto themeRow = bounds.removeFromTop(px(36));
+                themeLabel.setBounds(themeRow.removeFromLeft(px(130)));
+                themeBox.setBounds(themeRow.removeFromLeft(px(240)));
+                contentEndsAt(bounds.getY());
             }
 
             void setTheme(Theme theme)
@@ -204,35 +287,37 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             void resized() override
             {
                 auto bounds = getLocalBounds().reduced(26);
-                heading.setBounds(bounds.removeFromTop(34));
-                description.setBounds(bounds.removeFromTop(42));
-                bounds.removeFromTop(12);
+                heading.setBounds(bounds.removeFromTop(px(34)));
+                description.setBounds(bounds.removeFromTop(px(42)));
+                bounds.removeFromTop(px(12));
 
-                microphoneButton.setBounds(bounds.removeFromTop(36).removeFromLeft(260));
-                bounds.removeFromTop(10);
+                microphoneButton.setBounds(bounds.removeFromTop(px(36)).removeFromLeft(px(260)));
+                bounds.removeFromTop(px(10));
 
-                auto gainRow = bounds.removeFromTop(36);
-                inputGainLabel.setBounds(gainRow.removeFromLeft(130));
-                inputGainSlider.setBounds(gainRow.removeFromLeft(360));
-                bounds.removeFromTop(8);
+                auto gainRow = bounds.removeFromTop(px(36));
+                inputGainLabel.setBounds(gainRow.removeFromLeft(px(130)));
+                inputGainSlider.setBounds(gainRow.removeFromLeft(px(360)));
+                bounds.removeFromTop(px(8));
 
-                auto levelRow = bounds.removeFromTop(24);
-                inputLevelLabel.setBounds(levelRow.removeFromLeft(130));
-                inputLevelMeter.setBounds(levelRow.removeFromLeft(360));
-                bounds.removeFromTop(6);
-                bufferingStatusLabel.setBounds(bounds.removeFromTop(26));
-                bounds.removeFromTop(8);
+                auto levelRow = bounds.removeFromTop(px(24));
+                inputLevelLabel.setBounds(levelRow.removeFromLeft(px(130)));
+                inputLevelMeter.setBounds(levelRow.removeFromLeft(px(360)));
+                bounds.removeFromTop(px(6));
+                bufferingStatusLabel.setBounds(bounds.removeFromTop(px(26)));
+                bounds.removeFromTop(px(8));
 
-                auto metronomeRow = bounds.removeFromTop(36);
-                metronomeVolumeLabel.setBounds(metronomeRow.removeFromLeft(130));
-                metronomeVolumeSlider.setBounds(metronomeRow.removeFromLeft(360));
-                accentToggle.setBounds(bounds.removeFromTop(28).removeFromLeft(360));
-                metronomeStatusLabel.setBounds(bounds.removeFromTop(26));
-                bounds.removeFromTop(10);
+                auto metronomeRow = bounds.removeFromTop(px(36));
+                metronomeVolumeLabel.setBounds(metronomeRow.removeFromLeft(px(130)));
+                metronomeVolumeSlider.setBounds(metronomeRow.removeFromLeft(px(360)));
+                accentToggle.setBounds(bounds.removeFromTop(px(28)).removeFromLeft(px(360)));
+                metronomeStatusLabel.setBounds(bounds.removeFromTop(px(26)));
+                bounds.removeFromTop(px(10));
 
+                contentEndsAt(bounds.getY(), px(220));
                 deviceViewport.setBounds(bounds);
                 const auto selectorWidth = juce::jmax(
                     1, deviceViewport.getWidth() - deviceViewport.getScrollBarThickness());
+                deviceSelector.setItemHeight(px(24));
                 deviceSelector.setBounds(
                     0, 0, selectorWidth,
                     juce::jmax(deviceSelector.getHeight(), deviceViewport.getHeight()));
@@ -417,30 +502,31 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             void resized() override
             {
                 auto bounds = getLocalBounds().reduced(26);
-                heading.setBounds(bounds.removeFromTop(34));
-                description.setBounds(bounds.removeFromTop(42));
-                bounds.removeFromTop(12);
+                heading.setBounds(bounds.removeFromTop(px(34)));
+                description.setBounds(bounds.removeFromTop(px(42)));
+                bounds.removeFromTop(px(12));
 
-                auto deviceRow = bounds.removeFromTop(36);
-                deviceLabel.setBounds(deviceRow.removeFromLeft(130));
-                deviceBox.setBounds(deviceRow.removeFromLeft(320));
-                deviceRow.removeFromLeft(10);
-                refreshButton.setBounds(deviceRow.removeFromLeft(110));
+                auto deviceRow = bounds.removeFromTop(px(36));
+                deviceLabel.setBounds(deviceRow.removeFromLeft(px(130)));
+                deviceBox.setBounds(deviceRow.removeFromLeft(px(320)));
+                deviceRow.removeFromLeft(px(10));
+                refreshButton.setBounds(deviceRow.removeFromLeft(px(110)));
 
-                bounds.removeFromTop(14);
-                statusLabel.setBounds(bounds.removeFromTop(30));
-                bounds.removeFromTop(6);
-                activityLabel.setBounds(bounds.removeFromTop(84));
+                bounds.removeFromTop(px(14));
+                statusLabel.setBounds(bounds.removeFromTop(px(30)));
+                bounds.removeFromTop(px(6));
+                activityLabel.setBounds(bounds.removeFromTop(px(84)));
 
-                bounds.removeFromTop(10);
-                auto thresholdRow = bounds.removeFromTop(30);
-                thresholdLabel.setBounds(thresholdRow.removeFromLeft(170));
-                thresholdSlider.setBounds(thresholdRow.removeFromLeft(380));
+                bounds.removeFromTop(px(10));
+                auto thresholdRow = bounds.removeFromTop(px(30));
+                thresholdLabel.setBounds(thresholdRow.removeFromLeft(px(170)));
+                thresholdSlider.setBounds(thresholdRow.removeFromLeft(px(380)));
 
-                bounds.removeFromTop(10);
-                notesLabel.setBounds(bounds.removeFromTop(84));
-                bounds.removeFromTop(6);
-                pedalNoteLabel.setBounds(bounds.removeFromTop(40));
+                bounds.removeFromTop(px(10));
+                notesLabel.setBounds(bounds.removeFromTop(px(84)));
+                bounds.removeFromTop(px(6));
+                pedalNoteLabel.setBounds(bounds.removeFromTop(px(40)));
+                contentEndsAt(bounds.getY());
             }
 
           private:
@@ -995,55 +1081,56 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             void resized() override
             {
                 auto bounds = getLocalBounds().reduced(26);
-                heading.setBounds(bounds.removeFromTop(34));
-                description.setBounds(bounds.removeFromTop(48));
-                bounds.removeFromTop(18);
+                heading.setBounds(bounds.removeFromTop(px(34)));
+                description.setBounds(bounds.removeFromTop(px(48)));
+                bounds.removeFromTop(px(18));
 
-                auto presetRow = bounds.removeFromTop(36);
-                presetLabel.setBounds(presetRow.removeFromLeft(150));
-                presetBox.setBounds(presetRow.removeFromLeft(280));
-                bounds.removeFromTop(12);
+                auto presetRow = bounds.removeFromTop(px(36));
+                presetLabel.setBounds(presetRow.removeFromLeft(px(150)));
+                presetBox.setBounds(presetRow.removeFromLeft(px(280)));
+                bounds.removeFromTop(px(12));
 
-                auto countInRow = bounds.removeFromTop(36);
-                countInLabel.setBounds(countInRow.removeFromLeft(150));
-                countInBox.setBounds(countInRow.removeFromLeft(280));
-                bounds.removeFromTop(12);
+                auto countInRow = bounds.removeFromTop(px(36));
+                countInLabel.setBounds(countInRow.removeFromLeft(px(150)));
+                countInBox.setBounds(countInRow.removeFromLeft(px(280)));
+                bounds.removeFromTop(px(12));
 
-                auto referenceRow = bounds.removeFromTop(36);
-                referenceLabel.setBounds(referenceRow.removeFromLeft(150));
-                referenceSlider.setBounds(referenceRow.removeFromLeft(180));
-                bounds.removeFromTop(12);
+                auto referenceRow = bounds.removeFromTop(px(36));
+                referenceLabel.setBounds(referenceRow.removeFromLeft(px(150)));
+                referenceSlider.setBounds(referenceRow.removeFromLeft(px(180)));
+                bounds.removeFromTop(px(12));
 
-                auto nearPerfectRow = bounds.removeFromTop(36);
-                nearPerfectLabel.setBounds(nearPerfectRow.removeFromLeft(150));
-                nearPerfectSlider.setBounds(nearPerfectRow.removeFromLeft(180));
-                bounds.removeFromTop(12);
+                auto nearPerfectRow = bounds.removeFromTop(px(36));
+                nearPerfectLabel.setBounds(nearPerfectRow.removeFromLeft(px(150)));
+                nearPerfectSlider.setBounds(nearPerfectRow.removeFromLeft(px(180)));
+                bounds.removeFromTop(px(12));
 
-                auto toleranceRow = bounds.removeFromTop(36);
-                toleranceLabel.setBounds(toleranceRow.removeFromLeft(150));
-                toleranceSlider.setBounds(toleranceRow.removeFromLeft(180));
-                bounds.removeFromTop(12);
+                auto toleranceRow = bounds.removeFromTop(px(36));
+                toleranceLabel.setBounds(toleranceRow.removeFromLeft(px(150)));
+                toleranceSlider.setBounds(toleranceRow.removeFromLeft(px(180)));
+                bounds.removeFromTop(px(12));
 
-                auto outOfTuneRow = bounds.removeFromTop(36);
-                outOfTuneLabel.setBounds(outOfTuneRow.removeFromLeft(150));
-                outOfTuneSlider.setBounds(outOfTuneRow.removeFromLeft(180));
-                bounds.removeFromTop(12);
+                auto outOfTuneRow = bounds.removeFromTop(px(36));
+                outOfTuneLabel.setBounds(outOfTuneRow.removeFromLeft(px(150)));
+                outOfTuneSlider.setBounds(outOfTuneRow.removeFromLeft(px(180)));
+                bounds.removeFromTop(px(12));
 
                 // Taller than the rows above: the meter's figures go under its
                 // bar.
-                auto minimumLevelRow = bounds.removeFromTop(44);
+                auto minimumLevelRow = bounds.removeFromTop(px(44));
                 minimumLevelLabel.setBounds(
-                    minimumLevelRow.removeFromLeft(150).withSizeKeepingCentre(150, 36));
+                    minimumLevelRow.removeFromLeft(px(150)).withSizeKeepingCentre(px(150), px(36)));
                 minimumLevelSlider.setBounds(
-                    minimumLevelRow.removeFromLeft(180).withSizeKeepingCentre(180, 36));
-                minimumLevelRow.removeFromLeft(16);
-                minimumLevelMeter.setBounds(minimumLevelRow.removeFromLeft(320));
-                bounds.removeFromTop(10);
-                keepTargetToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
-                bounds.removeFromTop(6);
-                followToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
-                bounds.removeFromTop(6);
-                countInWhenPlayingToggle.setBounds(bounds.removeFromTop(30).withWidth(430));
+                    minimumLevelRow.removeFromLeft(px(180)).withSizeKeepingCentre(px(180), px(36)));
+                minimumLevelRow.removeFromLeft(px(16));
+                minimumLevelMeter.setBounds(minimumLevelRow.removeFromLeft(px(320)));
+                bounds.removeFromTop(px(10));
+                keepTargetToggle.setBounds(bounds.removeFromTop(px(30)).withWidth(px(430)));
+                bounds.removeFromTop(px(6));
+                followToggle.setBounds(bounds.removeFromTop(px(30)).withWidth(px(430)));
+                bounds.removeFromTop(px(6));
+                countInWhenPlayingToggle.setBounds(bounds.removeFromTop(px(30)).withWidth(px(430)));
+                contentEndsAt(bounds.getY());
             }
 
             void setTheme(Theme theme)
@@ -1122,7 +1209,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     "Restore one category without affecting the others, or send feedback.");
 
                 actionsHeading.setText("Support", juce::dontSendNotification);
-                actionsHeading.setFont(juce::FontOptions(17.0f, juce::Font::bold));
+                actionsHeading.setFont(
+                    appearance::labelFont(appearance::TextRole::menu, juce::Font::bold));
                 addAndMakeVisible(actionsHeading);
                 feedbackButton.setButtonText("Send feedback");
                 feedbackButton.setTitle("Open the feedback form");
@@ -1130,7 +1218,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 addAndMakeVisible(feedbackButton);
 
                 resetHeading.setText("Reset category", juce::dontSendNotification);
-                resetHeading.setFont(juce::FontOptions(17.0f, juce::Font::bold));
+                resetHeading.setFont(
+                    appearance::labelFont(appearance::TextRole::menu, juce::Font::bold));
                 addAndMakeVisible(resetHeading);
                 configureResetButton(resetToolButton, "Current tool", std::move(resetToolHandler));
                 configureResetButton(resetAudioButton, "Audio", std::move(resetAudioHandler));
@@ -1141,26 +1230,27 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             void resized() override
             {
                 auto bounds = getLocalBounds().reduced(26);
-                heading.setBounds(bounds.removeFromTop(34));
-                description.setBounds(bounds.removeFromTop(48));
-                bounds.removeFromTop(18);
+                heading.setBounds(bounds.removeFromTop(px(34)));
+                description.setBounds(bounds.removeFromTop(px(48)));
+                bounds.removeFromTop(px(18));
 
-                actionsHeading.setBounds(bounds.removeFromTop(28));
-                bounds.removeFromTop(8);
-                feedbackButton.setBounds(bounds.removeFromTop(36).removeFromLeft(190));
+                actionsHeading.setBounds(bounds.removeFromTop(px(28)));
+                bounds.removeFromTop(px(8));
+                feedbackButton.setBounds(bounds.removeFromTop(px(36)).removeFromLeft(px(190)));
 
-                bounds.removeFromTop(28);
-                resetHeading.setBounds(bounds.removeFromTop(28));
-                bounds.removeFromTop(8);
-                auto firstRow = bounds.removeFromTop(36);
-                resetToolButton.setBounds(firstRow.removeFromLeft(190));
-                firstRow.removeFromLeft(10);
-                resetAudioButton.setBounds(firstRow.removeFromLeft(190));
-                bounds.removeFromTop(10);
-                auto secondRow = bounds.removeFromTop(36);
-                resetLayoutButton.setBounds(secondRow.removeFromLeft(190));
-                secondRow.removeFromLeft(10);
-                resetAllButton.setBounds(secondRow.removeFromLeft(190));
+                bounds.removeFromTop(px(28));
+                resetHeading.setBounds(bounds.removeFromTop(px(28)));
+                bounds.removeFromTop(px(8));
+                auto firstRow = bounds.removeFromTop(px(36));
+                resetToolButton.setBounds(firstRow.removeFromLeft(px(190)));
+                firstRow.removeFromLeft(px(10));
+                resetAudioButton.setBounds(firstRow.removeFromLeft(px(190)));
+                bounds.removeFromTop(px(10));
+                auto secondRow = bounds.removeFromTop(px(36));
+                resetLayoutButton.setBounds(secondRow.removeFromLeft(px(190)));
+                secondRow.removeFromLeft(px(10));
+                resetAllButton.setBounds(secondRow.removeFromLeft(px(190)));
+                contentEndsAt(bounds.getY());
             }
 
           private:
@@ -1247,12 +1337,13 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         {
             categoryTabs.setTabBarDepth(42);
             categoryTabs.addTab(
-                "Appearance", juce::Colours::transparentBlack, &appearancePanel, false);
-            categoryTabs.addTab("Audio", juce::Colours::transparentBlack, &audioPanel, false);
-            categoryTabs.addTab("MIDI", juce::Colours::transparentBlack, &midiPanel, false);
-            categoryTabs.addTab("Practice", juce::Colours::transparentBlack, &practicePanel, false);
+                "Appearance", juce::Colours::transparentBlack, &appearanceScroll, false);
+            categoryTabs.addTab("Audio", juce::Colours::transparentBlack, &audioScroll, false);
+            categoryTabs.addTab("MIDI", juce::Colours::transparentBlack, &midiScroll, false);
             categoryTabs.addTab(
-                "Reset & support", juce::Colours::transparentBlack, &resetPanel, false);
+                "Practice", juce::Colours::transparentBlack, &practiceScroll, false);
+            categoryTabs.addTab(
+                "Reset & support", juce::Colours::transparentBlack, &resetScroll, false);
             addAndMakeVisible(categoryTabs);
 
             saveButton.setButtonText("Save settings");
@@ -1278,15 +1369,23 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
 
         void resized() override
         {
+            // Sizes for text at 100 percent, grown with the text size.
+            const auto px = [this](int base) { return appearance::scaledFor(*this, base); };
             auto bounds = getLocalBounds().reduced(12);
-            auto footer = bounds.removeFromBottom(48);
+            auto footer = bounds.removeFromBottom(px(48));
+            categoryTabs.setTabBarDepth(px(42));
             categoryTabs.setBounds(bounds);
             footer.removeFromTop(10);
-            saveButton.setBounds(footer.removeFromRight(180));
+            saveButton.setBounds(footer.removeFromRight(px(180)));
             footer.removeFromRight(10);
-            exportButton.setBounds(footer.removeFromRight(180));
+            exportButton.setBounds(footer.removeFromRight(px(180)));
             footer.removeFromRight(10);
-            importButton.setBounds(footer.removeFromRight(180));
+            importButton.setBounds(footer.removeFromRight(px(180)));
+        }
+
+        void lookAndFeelChanged() override
+        {
+            resized();
         }
 
         void setTheme(Theme theme)
@@ -1321,6 +1420,11 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         MidiPanel midiPanel;
         PracticePanel practicePanel;
         ResetPanel resetPanel;
+        ScrollingPanel appearanceScroll{appearancePanel};
+        ScrollingPanel audioScroll{audioPanel};
+        ScrollingPanel midiScroll{midiPanel};
+        ScrollingPanel practiceScroll{practicePanel};
+        ScrollingPanel resetScroll{resetPanel};
         juce::TextButton saveButton;
         juce::TextButton importButton;
         juce::TextButton exportButton;

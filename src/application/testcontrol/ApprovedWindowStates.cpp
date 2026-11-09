@@ -8,6 +8,63 @@ namespace
 {
 using Tools = std::vector<std::string>;
 
+// The text size's states (global-text-size): copies of states already
+// approved, at 80 and 150 percent, each a picture of what the size changes. A
+// copy rather than a state of its own, so the 150 picture of a surface is the
+// same surface as its 100 one with only the size moved.
+std::vector<ApprovedWindowState> withTextSizes(std::vector<ApprovedWindowState> states)
+{
+    struct Sized
+    {
+        const char* base;
+        int percent;
+    };
+    static constexpr Sized sized[]{
+        {"empty", 150},
+        {"tuner-docked", 150},
+        {"tuner-bar", 150},
+        {"tuner-advanced", 150},
+        {"spectrogram-tone", 150},
+        {"harmonics-tone", 150},
+        {"two-tools-tabbed", 150},
+        {"all-tools-docked", 150},
+        {"narrow-window", 150},
+        {"microphone-warning", 150},
+        {"settings-appearance", 150},
+        {"settings-audio-device", 150},
+        {"settings-midi", 150},
+        {"settings-practice", 150},
+        {"settings-reset", 150},
+        {"transport-playing", 150},
+        {"score-view-cursor", 150},
+        {"take-review", 150},
+        {"note-view", 150},
+        {"now-next", 150},
+        {"input-level", 150},
+        {"empty", 80},
+        {"all-tools-docked", 80},
+        {"settings-practice", 80},
+    };
+
+    const std::size_t originals = states.size();
+    for (const Sized& size : sized)
+    {
+        const auto found = std::find_if(
+            states.begin(), states.begin() + static_cast<std::ptrdiff_t>(originals),
+            [&size](const ApprovedWindowState& state) { return state.id == size.base; });
+        if (found == states.begin() + static_cast<std::ptrdiff_t>(originals))
+        {
+            continue;
+        }
+        ApprovedWindowState copy = *found;
+        copy.id = std::string(size.base) + "-text-" + std::to_string(size.percent);
+        copy.description += ", with the text at " + std::to_string(size.percent) + "%";
+        copy.textScalePercent = size.percent;
+        states.push_back(std::move(copy));
+    }
+    return states;
+}
+
 // Every approved state, in the order `list-states` reports them.
 //
 // Adding one here is what makes a surface verifiable; there is deliberately no
@@ -16,7 +73,7 @@ using Tools = std::vector<std::string>;
 // checked before a release.
 const std::vector<ApprovedWindowState>& states()
 {
-    static const std::vector<ApprovedWindowState> approved{
+    static const std::vector<ApprovedWindowState> approved = withTextSizes({
         // --- The shell on its own ---
         {"empty",
          {},
@@ -518,7 +575,7 @@ const std::vector<ApprovedWindowState>& states()
          bundledSampleFixtureName(),
          true,
          true},
-    };
+    });
 
     return approved;
 }

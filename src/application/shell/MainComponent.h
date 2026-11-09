@@ -316,6 +316,17 @@ class MainComponent final
 
     // Appearance ------------------------------------------------------------
     void setTheme(Theme theme);
+
+    // The text size, as a percentage (global-text-size): the look-and-feel
+    // scales every widget, each tool is told, and every window lays itself
+    // out again at once.
+    void setTextScale(int percent);
+
+    // A size laid out for 100 percent, grown with the text size.
+    [[nodiscard]] int scaled(int base) const noexcept
+    {
+        return appearance::scaledHeight(base, appLookAndFeel.textScale());
+    }
     void applyAppearance();
     void configureLookAndFeelColours();
     void applyAppearanceToTopButtons();
@@ -365,6 +376,10 @@ class MainComponent final
     // below. AppLookAndFeel differs from LookAndFeel_V4 only in carrying the
     // embedded UI typeface.
     AppLookAndFeel appLookAndFeel;
+
+    // The title strip's: JUCE's own look plus the text size
+    // (global-text-size). Outlives the strip, which the window destroys first.
+    TitleStripLookAndFeel titleStripLookAndFeel;
 
     // The current score, and the summary of the import that produced it. The
     // shell stands in for #39's session file until it exists.

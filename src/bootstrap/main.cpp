@@ -183,11 +183,15 @@ class PracticeTakesApplication final : public juce::JUCEApplication
         {
             juce::Rectangle<int> bounds = getLocalBounds();
 
-            strip->setBounds(bounds.withHeight(stripHeight));
+            // As tall as its buttons' text needs (global-text-size): the strip
+            // is drawn with MainComponent's look-and-feel, which holds the
+            // text size.
+            const int height = appearance::scaledFor(*strip, stripHeight);
+            strip->setBounds(bounds.withHeight(height));
 
             if (strip->isVisible() && !stripOverlays)
             {
-                bounds.removeFromTop(stripHeight);
+                bounds.removeFromTop(height);
             }
 
             main->setBounds(bounds);
