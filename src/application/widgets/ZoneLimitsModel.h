@@ -12,8 +12,8 @@
 // The limits are the bands' edges, innermost first -- near perfect, in tune,
 // out of tune; right on, on time, off the beat -- and each keeps the range and
 // the order the separate controls kept: inside its own range, and at least
-// `gap` inside the next looser one. A dragged limit stops at its neighbour
-// rather than pushing it, so moving one never changes another.
+// `gap` inside the next looser one. A dragged limit that comes too close to a
+// neighbour pushes it along rather than stopping.
 namespace zone_limits
 {
 struct Limit
@@ -36,7 +36,9 @@ struct Model
 };
 
 // `values` with limit `index` moved as near `proposed` as it may go, on the
-// model's step.
+// model's step. A limit that comes within the gap of a neighbour pushes it
+// along, and that one the next, so they stay a gap apart; the drag stops only
+// where a pushed limit would leave its own range.
 [[nodiscard]] inline std::array<double, 3>
 moved(const Model& model, std::array<double, 3> values, std::size_t index, double proposed) noexcept
 {
@@ -44,23 +46,43 @@ moved(const Model& model, std::array<double, 3> values, std::size_t index, doubl
     {
         return values;
     }
+
+    // As far as every limit it would push can still give way.
     double lowest = model.limits[index].minimum;
     double highest = model.limits[index].maximum;
-    if (index > 0)
+    for (std::size_t other = 0; other < values.size(); ++other)
     {
-        lowest = std::max(lowest, values[index - 1] + model.gap);
+        const double apart = model.gap * (static_cast<double>(index) - static_cast<double>(other));
+        if (other < index)
+        {
+            lowest = std::max(lowest, model.limits[other].minimum + apart);
+        }
+        else if (other > index)
+        {
+            highest = std::min(highest, model.limits[other].maximum + apart);
+        }
     }
-    if (index + 1 < values.size())
+    if (lowest > highest)
     {
-        highest = std::min(highest, values[index + 1] - model.gap);
+        return values;
     }
+
     double value = proposed;
     if (model.step > 0.0)
     {
         value = std::round(value / model.step) * model.step;
     }
-    // A neighbour may leave no room at all; then the limit stays where it is.
-    values[index] = lowest <= highest ? std::clamp(value, lowest, highest) : values[index];
+    values[index] = std::clamp(value, lowest, highest);
+
+    // Then the push, outwards from the one dragged.
+    for (std::size_t other = index + 1; other < values.size(); ++other)
+    {
+        values[other] = std::max(values[other], values[other - 1] + model.gap);
+    }
+    for (std::size_t other = index; other-- > 0;)
+    {
+        values[other] = std::min(values[other], values[other + 1] - model.gap);
+    }
     return values;
 }
 

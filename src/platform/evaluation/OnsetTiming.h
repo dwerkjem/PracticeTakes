@@ -33,13 +33,16 @@ struct TimingLimits
     [[nodiscard]] bool operator==(const TimingLimits&) const = default;
 };
 
-// What Settings offers, and the gap kept between the bands.
+// What Settings offers, and the gap kept between the bands. Off the beat goes
+// no further than 200 ms: an onset more than maximumWindowMs (250) from its
+// beat is not matched to it at all, so a red zone past that could never show.
+// On time stops at 120, leaving off the beat room above it.
 inline constexpr double minimumRightOnMs = 5.0;
 inline constexpr double maximumRightOnMs = 50.0;
 inline constexpr double minimumOnTimeMs = 10.0;
-inline constexpr double maximumOnTimeMs = 150.0;
+inline constexpr double maximumOnTimeMs = 120.0;
 inline constexpr double minimumOffBeatMs = 20.0;
-inline constexpr double maximumOffBeatMs = 300.0;
+inline constexpr double maximumOffBeatMs = 200.0;
 inline constexpr double timingBandGapMs = 5.0;
 
 // The limits in order: on time kept first, inside its range, since early and
