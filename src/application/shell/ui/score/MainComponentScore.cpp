@@ -197,6 +197,11 @@ void MainComponent::finishScoreImport(const score::musicxml::MusicXmlImportResul
         startClockForTestControl(100);
     }
 
+    if (!testControlSearchQuery.empty())
+    {
+        openSearchForTestControl();
+    }
+
     if (testControlHideScoreImportSummary)
     {
         juce::ignoreUnused(summary);

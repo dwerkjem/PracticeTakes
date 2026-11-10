@@ -60,6 +60,9 @@ jobs:
           bash tools/scripts/build/check-linux-build-dependencies.sh --install
           sudo apt-get install --yes clang-format clang-tidy
 
+      - name: Rust toolchain for the search index
+        uses: ./.github/actions/rust-toolchain
+
       - name: Configure compilation database
         run: |
           cmake -S . -B build -G Ninja \

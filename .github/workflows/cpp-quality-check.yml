@@ -70,6 +70,9 @@ jobs:
           ccache --max-size=1G
           ccache --zero-stats
 
+      - name: Rust toolchain for the search index
+        uses: ./.github/actions/rust-toolchain
+
       - name: Configure compilation database
         run: |
           cmake -S . -B build -G Ninja \

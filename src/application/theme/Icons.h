@@ -69,7 +69,8 @@ enum class Icon
     repeat,
     slidersVertical,
     close,
-    presentation
+    presentation,
+    search
 };
 
 // The embedded SVG's resource name ("globe_svg"), or empty for none.

@@ -150,6 +150,12 @@ MainComponent::~MainComponent()
     saveSettings();
     audioInputService.removeChangeListener(this);
     takeRecorder.removeListener(&libraryTakeWatcher);
+    searchPopup.reset();
+    // The window is still a component while it destroys its content.
+    if (shortcutWindow != nullptr)
+    {
+        shortcutWindow->removeKeyListener(&searchShortcut);
+    }
     libraryWindow.reset();
     settingsWindow.reset();
     feedbackWindow.reset();
@@ -183,6 +189,11 @@ void MainComponent::configureTopButtons()
     settingsButton.onClick = [this] { showSettingsMenu(); };
     toolsButton.onClick = [this] { showToolsMenu(); };
     helpButton.onClick = [this] { showHelpMenu(); };
+    appearance::setIcon(searchButton, appearance::Icon::search);
+    searchButton.setTitle(l10n::text("search.title"));
+    searchButton.setTooltip(l10n::text("search.tooltip"));
+    searchButton.setComponentID("search-button");
+    searchButton.onClick = [this] { showSearch(); };
     microphoneButton.setTitle(l10n::text("microphone.button.title"));
     microphoneButton.onClick = [this]
     {
@@ -253,8 +264,8 @@ take::TakeSources MainComponent::takeSources()
 std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(std::function<void()> fullscreenHandler)
 {
     auto bar = std::make_unique<MainTitleBar>(
-        fileButton, settingsButton, toolsButton, helpButton, microphoneButton, transportStrip,
-        std::move(fullscreenHandler));
+        fileButton, settingsButton, toolsButton, helpButton, searchButton, microphoneButton,
+        transportStrip, std::move(fullscreenHandler));
     bar->setLookAndFeel(&titleStripLookAndFeel);
     return bar;
 }
@@ -372,6 +383,7 @@ void MainComponent::resized()
     }
 
     layoutWorkspace(workspaceArea());
+    placeSearch();
 
     // Part of the guidance painted behind it, so it follows the same rule:
     // visible exactly when no tool is open, laid out under the text.

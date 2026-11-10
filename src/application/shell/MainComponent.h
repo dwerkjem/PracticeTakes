@@ -11,11 +11,13 @@
 #include "../../platform/midi/MidiInputService.h"
 #include "../../platform/pitch/CurrentTarget.h"
 #include "../../platform/pitch/ReferencePitch.h"
+#include "../../platform/search/SearchIndex.h"
 #include "../../platform/take/TakeRecorder.h"
 #include "../../platform/transport/PracticeClock.h"
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
 #include "../localisation/Localisation.h"
+#include "../search/SearchCatalogue.h"
 #include "../theme/AppLookAndFeel.h"
 #include "../theme/Theme.h"
 #include "../tools/AudioStreamUse.h"
@@ -28,6 +30,7 @@
 #include "ui/main_window/TransportStrip.h"
 #include "ui/score/ScoreImportJob.h"
 #include "ui/score/ScoreImportState.h"
+#include "ui/search/SearchPopup.h"
 #include "ui/workspace/model/NamedWorkspaceService.h"
 #include "ui/workspace/model/WorkspaceDocuments.h"
 #include "ui/workspace/model/WorkspaceLayoutState.h"
@@ -303,6 +306,22 @@ class MainComponent final
     // What follows a score becoming current, from a file or a take: the
     // target and the key in force.
     void followNewScore(const score::musicxml::MusicXmlImportResult& result);
+
+    // Search (openspec/changes/everything-search; ui/search/
+    // MainComponentSearch.cpp): the index, the popup under the magnifying
+    // glass, and what choosing a result does.
+    struct SearchCommand
+    {
+        search::Command command;
+        std::function<void()> run;
+    };
+    [[nodiscard]] std::vector<SearchCommand> searchCommands();
+    void refreshSearchIndex();
+    void showSearch();
+    void closeSearch();
+    void placeSearch();
+    void chooseSearchHit(const search::SearchHit& hit);
+    void parentHierarchyChanged() override;
     // The open score's import summary, again: the Score View's diagnostics
     // label (#350). Nothing when no score is open.
     void showCurrentScoreImportSummary();
@@ -551,6 +570,8 @@ class MainComponent final
     juce::TextButton settingsButton{l10n::text("title.settings")};
     juce::TextButton toolsButton{l10n::text("title.tools")};
     juce::TextButton helpButton{l10n::text("title.help")};
+    // The magnifying glass: the search (everything-search).
+    juce::TextButton searchButton;
     juce::TextButton microphoneButton;
 
     // Every tool instance the session knows about, live or closed.
@@ -603,6 +624,22 @@ class MainComponent final
     std::unique_ptr<LibraryWindow> libraryWindow;
     std::unique_ptr<juce::FileChooser> libraryChooser;
 
+    // Ctrl+K (Cmd+K) and Ctrl+F open the search, wherever the focus is: a
+    // listener on the window, which keys reach when nothing else takes them.
+    struct SearchShortcut final : juce::KeyListener
+    {
+        explicit SearchShortcut(MainComponent& shell) : owner(shell) {}
+        bool keyPressed(const juce::KeyPress& key, juce::Component* origin) override;
+        MainComponent& owner;
+    };
+    SearchShortcut searchShortcut{*this};
+    juce::Component::SafePointer<juce::Component> shortcutWindow;
+
+    search::SearchIndex searchIndex;
+    std::shared_ptr<const score::Score> searchIndexedScore;
+    std::vector<SearchCommand> currentSearchCommands;
+    std::unique_ptr<SearchPopup> searchPopup;
+
     Theme currentTheme = Theme::light;
     ToolInstanceId currentTool;
     WorkspaceLayoutState workspaceLayoutState;
@@ -644,6 +681,9 @@ class MainComponent final
     bool testControlSungTake = false;
     // The Library tab a state opens once it is in place; empty for none.
     std::string testControlLibraryTab;
+    // What a state types into the search bar; empty for none.
+    std::string testControlSearchQuery;
+    void openSearchForTestControl();
     void resetScratchLibrary();
     void openLibraryForTestControl();
     bool testControlOpenMix = false;

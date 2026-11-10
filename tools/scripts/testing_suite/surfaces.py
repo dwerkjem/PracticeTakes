@@ -631,6 +631,52 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # Search (everything-search): the bar under the magnifying glass.
+    Surface(
+        state="search-settings",
+        title="Search: settings",
+        area="search",
+        modes=frozenset({FULL}),
+        warmup_seconds=2.0,
+        extras=(
+            Question(
+                "pitch-results",
+                "With \"pitch\" typed, does the list give the Reference pitch and Pitch "
+                "settings, each marked Setting with Practice under it, and nothing unrelated?",
+            ),
+            Question(
+                "choose-setting",
+                "Choose a setting: does Settings open on its panel with the control ringed in "
+                "violet for a moment?",
+                behavioural=True,
+            ),
+            Question(
+                "shortcut",
+                "Press Ctrl+K (Cmd+K on a Mac) anywhere: does the search bar open with the caret "
+                "in it, and does Escape close it?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    Surface(
+        state="search-lyrics",
+        title="Search: the open score's lyrics",
+        area="search",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "lyric-results",
+                "With \"augen\" typed over the sample, are the song and the lines that sing "
+                "Augen listed, each line with its bar and part?",
+            ),
+            Question(
+                "choose-lyric",
+                "Choose a line: does the score cursor move to its bar?",
+                behavioural=True,
+            ),
+        ),
+    ),
     # The media library (media-library): its two lists.
     Surface(
         state="library-songs",

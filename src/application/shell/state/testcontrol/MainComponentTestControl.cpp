@@ -117,6 +117,7 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     // (openspec/changes/media-library).
     closeLibrary();
     resetScratchLibrary();
+    closeSearch();
 
     // No score and no target unless the state asks for one. Left alone, a
     // state with no score inherited the last one's: a tuner photographed
@@ -139,6 +140,7 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     testControlReviewTake = state.reviewTake;
     testControlSungTake = state.sungTake;
     testControlLibraryTab = state.libraryTab;
+    testControlSearchQuery = state.searchQuery;
     testControlOpenMix = state.mixOpen;
     referencePitch.set(state.referencePitchHz > 0.0 ? state.referencePitchHz : 440.0);
 
@@ -282,6 +284,14 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     if (!state.libraryTab.empty() && !state.reviewTake)
     {
         openLibraryForTestControl();
+    }
+
+    // The search bar over a state without a score now; over one with a
+    // score once it has imported (finishScoreImport), so its lyrics are in
+    // the index.
+    if (!state.searchQuery.empty() && state.scoreFixture.empty())
+    {
+        openSearchForTestControl();
     }
 
     if (auto* window = dynamic_cast<juce::ResizableWindow*>(getTopLevelComponent()))
@@ -635,5 +645,17 @@ void MainComponent::openLibraryForTestControl()
         libraryWindow->showTab(
             testControlLibraryTab == "takes" ? LibraryWindow::Tab::takes
                                              : LibraryWindow::Tab::songs);
+    }
+}
+
+void MainComponent::openSearchForTestControl()
+{
+    showSearch();
+    // The songs and takes the library's worker lists, before the picture.
+    libraryWork.finishAll();
+    if (searchPopup != nullptr)
+    {
+        searchPopup->setQuery(juce::String::fromUTF8(testControlSearchQuery.c_str()));
+        placeSearch();
     }
 }

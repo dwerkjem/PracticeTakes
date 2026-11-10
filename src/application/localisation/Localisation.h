@@ -84,6 +84,10 @@ class Localisation
     // English measures a translation against.
     [[nodiscard]] juce::String englishText(std::string_view key) const;
 
+    // Every identifier English defines that begins with `prefix`, sorted: what
+    // the search bar reads Settings' controls from (everything-search).
+    [[nodiscard]] std::vector<std::string> keysStartingWith(std::string_view prefix) const;
+
     // text(key) with each {name} filled by name, in whatever order the
     // language puts them.
     [[nodiscard]] juce::String format(std::string_view key, Arguments arguments) const;

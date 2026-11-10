@@ -88,6 +88,20 @@ juce::String Localisation::englishText(std::string_view key) const
     return juce::String(std::string(key));
 }
 
+std::vector<std::string> Localisation::keysStartingWith(std::string_view prefix) const
+{
+    std::vector<std::string> keys;
+    for (const auto& [key, value] : english.entries())
+    {
+        if (std::string_view(key).substr(0, prefix.size()) == prefix)
+        {
+            keys.push_back(key);
+        }
+    }
+    std::sort(keys.begin(), keys.end());
+    return keys;
+}
+
 juce::String Localisation::format(std::string_view key, Arguments arguments) const
 {
     NamedArguments named;

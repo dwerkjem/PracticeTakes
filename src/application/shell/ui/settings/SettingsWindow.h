@@ -152,10 +152,108 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 resized();
             }
 
+            // Find the control labelled `text` (a label, a button, a toggle),
+            // scroll it into view and ring it for a moment: where a search
+            // result for a setting lands (everything-search). False when no
+            // control here is labelled so.
+            bool reveal(const juce::String& text)
+            {
+                const juce::String wanted = text.trim().trimCharactersAtEnd(":");
+                juce::Component* found = nullptr;
+                std::function<void(juce::Component&)> visit = [&](juce::Component& component)
+                {
+                    for (auto* child : component.getChildren())
+                    {
+                        if (found != nullptr)
+                        {
+                            return;
+                        }
+                        juce::String shown;
+                        if (auto* label = dynamic_cast<juce::Label*>(child))
+                        {
+                            shown = label->getText();
+                        }
+                        else if (auto* button = dynamic_cast<juce::Button*>(child))
+                        {
+                            shown = button->getButtonText();
+                        }
+                        if (child->isVisible() &&
+                            shown.trim().trimCharactersAtEnd(":").equalsIgnoreCase(wanted))
+                        {
+                            found = child;
+                            return;
+                        }
+                        visit(*child);
+                    }
+                };
+                visit(panel);
+                if (found == nullptr)
+                {
+                    return false;
+                }
+
+                // The control and the row it heads: a label's control is
+                // beside it, so the ring takes the whole row.
+                auto area = panel.getLocalArea(found->getParentComponent(), found->getBounds());
+                area = area.withX(0).withWidth(panel.getWidth()).expanded(0, 4);
+                const int top =
+                    std::max(0, area.getY() - (viewport.getHeight() - area.getHeight()) / 3);
+                viewport.setViewPosition(0, top);
+
+                ring = std::make_unique<Ring>();
+                panel.addAndMakeVisible(*ring);
+                ring->setBounds(area.reduced(4, 0));
+                ring->toFront(false);
+                return true;
+            }
+
           private:
+            // A violet outline that fades over a second and a half: the
+            // colour the score uses for the note aimed at, so "here" looks
+            // the same everywhere.
+            class Ring final : public juce::Component, private juce::Timer
+            {
+              public:
+                Ring()
+                {
+                    setInterceptsMouseClicks(false, false);
+                    startTimerHz(30);
+                }
+
+                void paint(juce::Graphics& graphics) override
+                {
+                    const float strength =
+                        std::clamp(1.0f - (static_cast<float>(ticks) / 45.0f), 0.0f, 1.0f);
+                    // The Score View's target violet, lighter on dark paper.
+                    const bool dark =
+                        findColour(juce::ResizableWindow::backgroundColourId).getBrightness() <
+                        0.5f;
+                    const juce::Colour violet =
+                        dark ? juce::Colour(0xffb69cff) : juce::Colour(0xff7c3aed);
+                    graphics.setColour(violet.withAlpha(strength));
+                    graphics.drawRoundedRectangle(
+                        getLocalBounds().toFloat().reduced(1.5f), 6.0f, 3.0f);
+                }
+
+              private:
+                void timerCallback() override
+                {
+                    ++ticks;
+                    if (ticks > 45)
+                    {
+                        stopTimer();
+                        setVisible(false);
+                    }
+                    repaint();
+                }
+
+                int ticks = 0;
+            };
+
             static constexpr int measuringHeight = 4000;
             CategoryPanel& panel;
             juce::Viewport viewport;
+            std::unique_ptr<Ring> ring;
         };
 
         // Every text role at the chosen size, named, with its base size
@@ -1961,6 +2059,17 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             practicePanel.showSpelling();
         }
 
+        // On the panel `identifier`, the control labelled `text`, ringed.
+        bool reveal(const juce::String& identifier, const juce::String& text)
+        {
+            if (!showPanel(identifier))
+            {
+                return false;
+            }
+            auto* shown = dynamic_cast<ScrollingPanel*>(categoryTabs.getCurrentContentComponent());
+            return shown != nullptr && shown->reveal(text);
+        }
+
         [[nodiscard]] bool showPanel(const juce::String& identifier)
         {
             for (int index = 0; index < categoryTabs.getNumTabs(); ++index)
@@ -2089,6 +2198,18 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         if (auto* content = dynamic_cast<Content*>(getContentComponent()))
         {
             return content->showPanel(identifier);
+        }
+
+        return false;
+    }
+
+    // Show the panel `identifier` with the control labelled `text` ringed:
+    // where a search result for a setting lands.
+    bool reveal(const juce::String& identifier, const juce::String& text)
+    {
+        if (auto* content = dynamic_cast<Content*>(getContentComponent()))
+        {
+            return content->reveal(identifier, text);
         }
 
         return false;
