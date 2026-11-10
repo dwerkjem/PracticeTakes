@@ -54,12 +54,12 @@ namespace pitch
             ref.eventIndex < measure.voices[ref.voiceIndex].events.size())
         {
             const auto& notes = measure.voices[ref.voiceIndex].events[ref.eventIndex].notes;
-            for (std::size_t index = 0; index < notes.size(); ++index)
+            for (std::size_t inChord = 0; inChord < notes.size(); ++inChord)
             {
-                if (notes[index].sounding.midiNoteNumber == sounding.midiNoteNumber)
+                if (notes[inChord].sounding.midiNoteNumber == sounding.midiNoteNumber)
                 {
-                    written = notes[index].written;
-                    place.noteIndex = index;
+                    written = notes[inChord].written;
+                    place.noteIndex = inChord;
                 }
             }
         }

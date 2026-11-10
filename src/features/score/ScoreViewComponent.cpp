@@ -361,11 +361,16 @@ void ScoreViewComponent::paintTargetOn(
     const SystemOnCanvas& where) const
 {
     const auto aimingAt = target.target();
-    if (aimingAt == nullptr || !aimingAt->place.has_value())
+    if (aimingAt == nullptr)
     {
         return;
     }
-    const pitch::Target::ScorePlace& place = *aimingAt->place;
+    const std::optional<pitch::Target::ScorePlace> placed = aimingAt->place;
+    if (!placed.has_value())
+    {
+        return;
+    }
+    const pitch::Target::ScorePlace& place = *placed;
     const engraving::System& system = layout.systems.at(index);
     const double px = where.pixelsPerSpace;
     const double noteheadMiddle = engraving::LayoutOptions{}.noteheadWidth / 2.0;
