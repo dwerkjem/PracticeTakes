@@ -400,6 +400,34 @@ default, with `Songs/` and `Takes/`.
 - **The library folder is a local setting** (`library.folder`), which no
   `.ptsettings` bundle carries.
 
+## Search
+
+One search over the application (the `everything-search` change), opened from
+the magnifying glass in the title strip or Ctrl+K.
+
+- **The index is Tantivy**, in the Rust crate `src/search`, behind a C
+  interface of a dozen functions (`src/platform/search/SearchIndexFfi.h`).
+  CMake builds it through Corrosion (`tools/cmake/Search.cmake`).
+  `search::SearchIndex` is the only caller: a JUCE-free RAII wrapper that
+  replaces a kind's documents and returns hits as plain structs.
+- **It lives in memory** and is rebuilt from the application's state when the
+  search opens. There is no file on disk to version or to go stale.
+- **Documents have a kind**: setting, tool, command, workspace, song, take,
+  lyric or bar. `src/application/search/SearchCatalogue` makes each kind's
+  documents in the interface language:
+  - Settings' controls come from the catalogue's keys
+    (`settings.<panel>.<name>`), not from the window;
+  - the score's lyric phrases and bars come from the JUCE-free
+    `platform/search/ScoreSearch.h`.
+- **The shell** (`shell/ui/search/`) owns the index, the `SearchPopup`
+  overlay and the Ctrl+K listener on the window, and acts on a chosen hit by
+  its kind. A setting goes through `SettingsWindow::reveal`, which finds the
+  control by its words and rings it.
+- **Threads:** the index is built and queried on the message thread
+  (milliseconds for a few thousand documents). The library's songs and takes
+  are listed on `libraryWork` and replaced when they arrive. No tool reaches
+  the index.
+
 ## Evaluation
 
 What a take is judged by lives in `src/platform/evaluation/`. It is JUCE-free

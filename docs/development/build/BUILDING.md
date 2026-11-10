@@ -6,10 +6,21 @@ Practice Takes requires:
 
 - CMake 3.25 or newer
 - a C++20 compiler
+- Rust 1.86 or newer (`cargo` and `rustc`), for the search index
 - Git
 - platform audio and window-system development libraries
 
-JUCE is downloaded by CMake at configure time. Linux's dependencies are managed
+JUCE is downloaded by CMake at configure time.
+
+The search index (`src/search`) is a Rust crate wrapping Tantivy. CMake builds
+it through [Corrosion](https://github.com/corrosion-rs/corrosion), fetched at
+configure time like JUCE, and links it into the application and the tests
+(`tools/cmake/Search.cmake`). Its crates come from crates.io at build time,
+pinned by `src/search/Cargo.lock`, and it is always built in the release
+profile. Install Rust with [rustup](https://rustup.rs) on any platform:
+distribution packages are often older than 1.86. On Linux,
+`check-linux-build-dependencies.sh` warns when it is missing. In CI,
+`.github/actions/rust-toolchain` installs it where a runner has none. Linux's dependencies are managed
 through the repository's `tools/vcpkg.json` manifest and custom triplets.
 
 ## Linux helper script

@@ -55,7 +55,9 @@ Settings:
 
 On the right of the title bar, the **microphone button** shows the input's state
 and mutes or unmutes it in one click: *Mic active - Mute*, *Mic muted - Unmute*,
-or *Mic disconnected*. **Fullscreen** fills the screen, and becomes **Restore**.
+or *Mic disconnected*. The **magnifying glass** beside it opens the [[Search]]
+(or press Ctrl+K): type to find any setting, tool, command, song, take or line
+of the lyrics. **Fullscreen** fills the screen, and becomes **Restore**.
 
 While the microphone is muted, the button turns amber and an amber frame
 labelled **Microphone muted** surrounds the whole workspace, so you can't sing

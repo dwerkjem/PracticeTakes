@@ -165,6 +165,8 @@ docs/_build/
 # PyBuilder
 /.pybuilder/
 /target/
+# Cargo's output when the search crate is built by hand in place.
+/src/search/target/
 
 # Jupyter Notebook
 .ipynb_checkpoints

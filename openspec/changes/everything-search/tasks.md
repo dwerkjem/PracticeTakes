@@ -28,5 +28,5 @@
 
 ## 5. Docs
 
-- [ ] 5.1 The wiki (a Search page, Getting Started), BUILDING.md's
+- [x] 5.1 The wiki (a Search page, Getting Started), BUILDING.md's
       requirements, ARCHITECTURE.md § Search, the agent guide's commands.

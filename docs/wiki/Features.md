@@ -343,6 +343,7 @@ Anything you can look at live, you can look at on a recording
 |---|---|---|---|
 | Portable settings | Export and import your settings as a `.ptsettings` file | ✅ (layouts and presets to come) | [#59](https://github.com/dwerkjem/PracticeTakes/issues/59) |
 | Feedback form | Send feedback from any tool or from Help | ✅ | — |
+| Search | One search bar (the magnifying glass, or Ctrl+K) over settings, tools, commands, workspaces, your songs and takes, and the open score's lyrics and bars; choosing a result goes there | ✅ | — |
 
 ## Getting started, access and reliability
 
