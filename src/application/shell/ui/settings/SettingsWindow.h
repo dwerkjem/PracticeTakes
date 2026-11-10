@@ -2,6 +2,8 @@
 
 #include "../../../localisation/Localisation.h"
 #include "../../../localisation/NoteNames.h"
+#include "../../../theme/MiniStaff.h"
+#include "../../../theme/MusicFont.h"
 #include "../../../theme/PlusOrMinusCents.h"
 #include "../../../widgets/InputLevelMeter.h"
 #include "../../MainComponent.h"
@@ -336,40 +338,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 octavesBox.addItem(l10n::text("settings.appearance.octaves.helmholtz"), 3);
                 octavesBox.setTooltip(l10n::text("settings.appearance.octaves.tooltip"));
                 addAndMakeVisible(octavesBox);
-
-                // How a note nothing else spells is spelled: a heard one, or a
-                // key clicked. The score's own spelling always comes first.
-                keyLabel.setText(l10n::text("settings.appearance.key"), juce::dontSendNotification);
-                appearance::setIcon(keyLabel, appearance::Icon::keyboardMusic);
-                addAndMakeVisible(keyLabel);
-                keyBox.setComponentID("settings-key-signature");
-                keyBox.setTooltip(l10n::text("settings.appearance.key.tooltip"));
-                addAndMakeVisible(keyBox);
-                accidentalsLabel.setText(
-                    l10n::text("settings.appearance.accidentals"), juce::dontSendNotification);
-                appearance::setIcon(accidentalsLabel, appearance::Icon::music);
-                addAndMakeVisible(accidentalsLabel);
-                accidentalsBox.setComponentID("settings-accidentals");
-                accidentalsBox.addItem(l10n::text("settings.appearance.accidentals.sharps"), 1);
-                accidentalsBox.addItem(l10n::text("settings.appearance.accidentals.flats"), 2);
-                accidentalsBox.setTooltip(l10n::text("settings.appearance.accidentals.tooltip"));
-                addAndMakeVisible(accidentalsBox);
                 showNaming();
-                const auto spellingChanged = [this]
-                {
-                    if (keyBox.getSelectedId() <= 0 || accidentalsBox.getSelectedId() <= 0)
-                    {
-                        return;
-                    }
-                    l10n::setSpelling(
-                        {keyBox.getSelectedId() - 8, accidentalsBox.getSelectedId() == 2});
-                    if (onNamingChanged)
-                    {
-                        onNamingChanged();
-                    }
-                };
-                keyBox.onChange = spellingChanged;
-                accidentalsBox.onChange = spellingChanged;
                 const auto namingChanged = [this]
                 {
                     if (namingBox.getSelectedId() <= 0 || octavesBox.getSelectedId() <= 0)
@@ -379,8 +348,6 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     l10n::setNoteNaming(
                         {static_cast<score::NoteNaming>(namingBox.getSelectedId() - 1),
                          static_cast<score::OctaveNumbering>(octavesBox.getSelectedId() - 1)});
-                    // The keys are named in the convention just chosen.
-                    showNaming();
                     if (onNamingChanged)
                     {
                         onNamingChanged();
@@ -416,8 +383,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 bounds.removeFromTop(px(18));
 
                 const int column = labelColumn(
-                    130, {&languageLabel, &themeLabel, &textSizeLabel, &namingLabel, &octavesLabel,
-                          &keyLabel, &accidentalsLabel});
+                    130,
+                    {&languageLabel, &themeLabel, &textSizeLabel, &namingLabel, &octavesLabel});
                 auto languageRow = bounds.removeFromTop(px(36));
                 languageLabel.setBounds(languageRow.removeFromLeft(column));
                 languageBox.setBounds(languageRow.removeFromLeft(px(240)));
@@ -443,17 +410,6 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 auto octavesRow = bounds.removeFromTop(px(36));
                 octavesLabel.setBounds(octavesRow.removeFromLeft(column));
                 octavesBox.setBounds(octavesRow.removeFromLeft(px(240)));
-                bounds.removeFromTop(px(12));
-
-                auto keyRow = bounds.removeFromTop(px(36));
-                keyLabel.setBounds(keyRow.removeFromLeft(column));
-                // Wider than the rest: a key is named twice, with its signs.
-                keyBox.setBounds(keyRow.removeFromLeft(px(340)));
-                bounds.removeFromTop(px(12));
-
-                auto accidentalsRow = bounds.removeFromTop(px(36));
-                accidentalsLabel.setBounds(accidentalsRow.removeFromLeft(column));
-                accidentalsBox.setBounds(accidentalsRow.removeFromLeft(px(240)));
                 bounds.removeFromTop(px(18));
 
                 previewHeading.setBounds(bounds.removeFromTop(px(24)));
@@ -481,10 +437,6 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::ComboBox namingBox;
             juce::Label octavesLabel;
             juce::ComboBox octavesBox;
-            juce::Label keyLabel;
-            juce::ComboBox keyBox;
-            juce::Label accidentalsLabel;
-            juce::ComboBox accidentalsBox;
 
             juce::Label languageLabel;
             juce::ComboBox languageBox;
@@ -522,32 +474,6 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     static_cast<int>(style.naming) + 1, juce::dontSendNotification);
                 octavesBox.setSelectedId(
                     static_cast<int>(style.octaves) + 1, juce::dontSendNotification);
-
-                // Each key by its major and relative minor, in the naming in
-                // force, with how many sharps or flats it has: id 8 is C major.
-                keyBox.clear(juce::dontSendNotification);
-                for (int fifths = -7; fifths <= 7; ++fifths)
-                {
-                    const pitch::KeyTonics tonics = pitch::keyTonics(fifths);
-                    const auto name = [&style](score::Step step, int alter) {
-                        return juce::String::fromUTF8(
-                            score::pitchClassName(step, alter, style.naming).c_str());
-                    };
-                    const juce::String signs =
-                        fifths == 0  ? l10n::text("settings.appearance.key.none")
-                        : fifths > 0 ? l10n::plural("settings.appearance.key.sharps", fifths)
-                                     : l10n::plural("settings.appearance.key.flats", -fifths);
-                    keyBox.addItem(
-                        l10n::format(
-                            "settings.appearance.key.entry",
-                            {{"major", name(tonics.majorStep, tonics.majorAlter)},
-                             {"minor", name(tonics.minorStep, tonics.minorAlter)},
-                             {"signs", signs}}),
-                        fifths + 8);
-                }
-                const pitch::SpellingPreference spelled = l10n::spelling();
-                keyBox.setSelectedId(spelled.keyFifths + 8, juce::dontSendNotification);
-                accidentalsBox.setSelectedId(spelled.flats ? 2 : 1, juce::dontSendNotification);
             }
 
           private:
@@ -1473,6 +1399,43 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 };
                 appearance::setIcon(countInWhenPlayingToggle, appearance::Icon::circleDot);
                 addAndMakeVisible(countInWhenPlayingToggle);
+
+                // How a note nothing else spells is spelled -- one sung or
+                // played, or a key clicked -- with no score open. A score's own
+                // key, and the notes it writes, always come first.
+                keyLabel.setText(l10n::text("settings.practice.key"), juce::dontSendNotification);
+                appearance::setIcon(keyLabel, appearance::Icon::keyboardMusic);
+                addAndMakeVisible(keyLabel);
+                keyBox.setComponentID("settings-key-signature");
+                keyBox.setTooltip(l10n::text("settings.practice.key.tooltip"));
+                addAndMakeVisible(keyBox);
+                addAndMakeVisible(keyPicture);
+                accidentalsLabel.setText(
+                    l10n::text("settings.practice.accidentals"), juce::dontSendNotification);
+                appearance::setIcon(accidentalsLabel, appearance::Icon::music);
+                addAndMakeVisible(accidentalsLabel);
+                accidentalsBox.setComponentID("settings-accidentals");
+                accidentalsBox.addItem(l10n::text("settings.practice.accidentals.sharps"), 1);
+                accidentalsBox.addItem(l10n::text("settings.practice.accidentals.flats"), 2);
+                accidentalsBox.setTooltip(l10n::text("settings.practice.accidentals.tooltip"));
+                addAndMakeVisible(accidentalsBox);
+                showSpelling();
+                const auto spellingChanged = [this]
+                {
+                    if (keyBox.getSelectedId() <= 0 || accidentalsBox.getSelectedId() <= 0)
+                    {
+                        return;
+                    }
+                    l10n::setSpelling(
+                        {keyBox.getSelectedId() - 8, accidentalsBox.getSelectedId() == 2});
+                    keyPicture.setKey(keyBox.getSelectedId() - 8);
+                    if (onCountInChanged)
+                    {
+                        onCountInChanged();
+                    }
+                };
+                keyBox.onChange = spellingChanged;
+                accidentalsBox.onChange = spellingChanged;
             }
 
             void resized() override
@@ -1483,8 +1446,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 bounds.removeFromTop(px(18));
 
                 const int column = labelColumn(
-                    150, {&presetLabel, &countInLabel, &referenceLabel, &nearPerfectLabel,
-                          &toleranceLabel, &outOfTuneLabel, &minimumLevelLabel});
+                    150,
+                    {&presetLabel, &countInLabel, &referenceLabel, &keyLabel, &accidentalsLabel,
+                     &nearPerfectLabel, &toleranceLabel, &outOfTuneLabel, &minimumLevelLabel});
                 auto presetRow = bounds.removeFromTop(px(36));
                 presetLabel.setBounds(presetRow.removeFromLeft(column));
                 presetBox.setBounds(presetRow.removeFromLeft(px(280)));
@@ -1498,6 +1462,22 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 auto referenceRow = bounds.removeFromTop(px(36));
                 referenceLabel.setBounds(referenceRow.removeFromLeft(column));
                 referenceSlider.setBounds(referenceRow.removeFromLeft(px(180)));
+                bounds.removeFromTop(px(12));
+
+                // Taller than a row: the picture of the key beside it is a staff.
+                auto keyRow = bounds.removeFromTop(px(48));
+                keyLabel.setBounds(
+                    keyRow.removeFromLeft(column).withSizeKeepingCentre(column, px(36)));
+                // Wider than the rest: a key is named twice, with its signs.
+                keyBox.setBounds(
+                    keyRow.removeFromLeft(px(340)).withSizeKeepingCentre(px(340), px(36)));
+                keyRow.removeFromLeft(px(12));
+                keyPicture.setBounds(keyRow.removeFromLeft(px(150)));
+                bounds.removeFromTop(px(12));
+
+                auto accidentalsRow = bounds.removeFromTop(px(36));
+                accidentalsLabel.setBounds(accidentalsRow.removeFromLeft(column));
+                accidentalsBox.setBounds(accidentalsRow.removeFromLeft(px(280)));
                 bounds.removeFromTop(px(12));
 
                 auto nearPerfectRow = bounds.removeFromTop(px(36));
@@ -1536,6 +1516,41 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             void setTheme(Theme theme)
             {
                 minimumLevelMeter.setTheme(theme);
+                keyPicture.setInk(appPaletteFor(theme).foreground);
+            }
+
+            // The key and accidentals in force, the keys named in the naming in
+            // force: set elsewhere too, by a reset, an import, or a change of
+            // naming.
+            void showSpelling()
+            {
+                const auto style = l10n::noteNaming();
+                // Each key by its major and relative minor, in the naming in
+                // force, with how many sharps or flats it has: id 8 is C major.
+                keyBox.clear(juce::dontSendNotification);
+                for (int fifths = -7; fifths <= 7; ++fifths)
+                {
+                    const pitch::KeyTonics tonics = pitch::keyTonics(fifths);
+                    const auto name = [&style](score::Step step, int alter) {
+                        return juce::String::fromUTF8(
+                            score::pitchClassName(step, alter, style.naming).c_str());
+                    };
+                    const juce::String signs =
+                        fifths == 0  ? l10n::text("settings.practice.key.none")
+                        : fifths > 0 ? l10n::plural("settings.practice.key.sharps", fifths)
+                                     : l10n::plural("settings.practice.key.flats", -fifths);
+                    keyBox.addItem(
+                        l10n::format(
+                            "settings.practice.key.entry",
+                            {{"major", name(tonics.majorStep, tonics.majorAlter)},
+                             {"minor", name(tonics.minorStep, tonics.minorAlter)},
+                             {"signs", signs}}),
+                        fifths + 8);
+                }
+                const pitch::SpellingPreference spelled = l10n::spelling();
+                keyPicture.setKey(spelled.keyFifths);
+                keyBox.setSelectedId(spelled.keyFifths + 8, juce::dontSendNotification);
+                accidentalsBox.setSelectedId(spelled.flats ? 2 : 1, juce::dontSendNotification);
             }
 
           private:
@@ -1591,6 +1606,47 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::ToggleButton followToggle{l10n::text("settings.practice.target-follows")};
             juce::ToggleButton countInWhenPlayingToggle{
                 l10n::text("settings.practice.count-in-when-playing")};
+
+            // A treble staff with the chosen key's sharps or flats, where they
+            // are written.
+            class KeyPicture final : public juce::Component
+            {
+              public:
+                void setKey(int fifths)
+                {
+                    keyFifths = fifths;
+                    repaint();
+                }
+
+                void setInk(juce::Colour colour)
+                {
+                    ink = colour;
+                    repaint();
+                }
+
+                void paint(juce::Graphics& graphics) override
+                {
+                    MiniStaffStyle style;
+                    style.lines = ink.withAlpha(0.8f);
+                    style.font = &font.get();
+                    style.keyFifths = keyFifths;
+                    style.minSpacing = 6.0f;
+                    style.maxSpacing = 6.0f;
+                    drawMiniStaff(
+                        graphics, getLocalBounds().toFloat(), pitch::StaffClef::treble, {}, style);
+                }
+
+              private:
+                int keyFifths = 0;
+                juce::Colour ink = juce::Colours::black;
+                juce::SharedResourcePointer<MusicFont> font;
+            };
+
+            juce::Label keyLabel;
+            juce::ComboBox keyBox;
+            KeyPicture keyPicture;
+            juce::Label accidentalsLabel;
+            juce::ComboBox accidentalsBox;
         };
 
         class ResetPanel final : public CategoryPanel
@@ -1880,6 +1936,7 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
         void showNaming()
         {
             appearancePanel.showNaming();
+            practicePanel.showSpelling();
         }
 
         [[nodiscard]] bool showPanel(const juce::String& identifier)

@@ -44,6 +44,11 @@ void MainComponent::noteNamingChanged()
 {
     applySpellingKey();
     saveSettings(false);
+    // Practice names its keys in the naming chosen in Appearance.
+    if (settingsWindow != nullptr)
+    {
+        settingsWindow->showNaming();
+    }
     for (int index = 0; index < juce::TopLevelWindow::getNumTopLevelWindows(); ++index)
     {
         if (auto* window = juce::TopLevelWindow::getTopLevelWindow(index))
