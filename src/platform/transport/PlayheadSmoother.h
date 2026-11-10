@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 
 // Where to draw the practice clock's playhead between its notifications (no
 // JUCE dependency).
@@ -22,7 +23,11 @@ class PlayheadSmoother
     // A report from the clock: its tick, the time it arrived in seconds on
     // any steady clock, and whether the clock is playing. A stopped or paused
     // clock is drawn exactly where it is.
-    void observe(double tick, double now, bool playing)
+    //
+    // `knownRate`, when given, is how fast the value moves in units a second
+    // -- the score's seconds move at the playback scale, whatever the tempo --
+    // and is used as it is rather than learned from the reports.
+    void observe(double tick, double now, bool playing, std::optional<double> knownRate = {})
     {
         if (!playing)
         {
@@ -34,6 +39,7 @@ class PlayheadSmoother
         {
             reset(tick, now);
             running = true;
+            rate = knownRate.value_or(0.0);
             return;
         }
 
@@ -58,8 +64,12 @@ class PlayheadSmoother
         // The rate, settled over many reports: one report's own rate is as
         // uneven as the blocks it counts. The first is taken as it is, and
         // drawn from exactly.
-        const bool learning = rate <= 0.0;
-        if (elapsed > 0.0)
+        const bool learning = rate <= 0.0 && !knownRate.has_value();
+        if (knownRate.has_value())
+        {
+            rate = *knownRate;
+        }
+        else if (elapsed > 0.0)
         {
             const double instant = moved / elapsed;
             rate = learning ? instant : rate + (rateSmoothing * (instant - rate));

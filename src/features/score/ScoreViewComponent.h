@@ -398,6 +398,10 @@ class ScoreViewComponent final
     // Where the clock is between its reports, and the scroll a follow is
     // gliding towards.
     transport::PlayheadSmoother playhead;
+
+    // Whether `playhead` holds the score's seconds (playing) or ticks (a
+    // count-in, or stopped).
+    bool smoothingSeconds = false;
     struct Glide
     {
         juce::Point<int> from;

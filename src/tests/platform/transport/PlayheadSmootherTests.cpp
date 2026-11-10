@@ -91,3 +91,15 @@ TEST_CASE("a playhead that stops hearing from the clock does not run away", "[tr
     const double last = smoother.at(1.0);
     CHECK(smoother.at(10.0) <= last + (960.0 * 0.2) + 1.0);
 }
+
+TEST_CASE("a known rate is used as it is, from the first report", "[transport][playhead]")
+{
+    // Score seconds at half speed: half a second of music each second.
+    PlayheadSmoother smoother;
+    smoother.observe(10.0, 100.0, true, 0.5);
+    CHECK(smoother.at(100.1) == Approx(10.05));
+
+    // Reports that agree keep it on that line exactly.
+    smoother.observe(10.05, 100.1, true, 0.5);
+    CHECK(smoother.at(100.2) == Approx(10.1));
+}

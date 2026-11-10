@@ -70,6 +70,11 @@ class TempoMap
     // the start of the score clamp to tick 0.
     [[nodiscard]] Tick secondsToTick(double seconds) const noexcept;
 
+    // The same, unrounded: a fractional tick, for drawing a playhead between
+    // ticks. Exact across a tempo change, which is what keeps a cursor's speed
+    // changing at the barline it changes at rather than near it.
+    [[nodiscard]] double secondsToFractionalTick(double seconds) const noexcept;
+
   private:
     explicit TempoMap(std::vector<TempoEntry> entries);
 

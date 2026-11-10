@@ -1421,13 +1421,25 @@ void ScoreViewComponent::clockChanged(const transport::ClockUpdate& update)
     clockPosition = update.position;
     const bool playing = clockPosition.state == transport::ClockState::playing;
 
-    // A seek or a loop's wrap is a jump, drawn as one; anything else is a
-    // step the playhead is smoothed across (transport::PlayheadSmoother).
-    if (update.seeks > 0 || update.wraps > 0)
+    // Smoothed in the score's seconds, which move at the playback scale
+    // whatever the tempo or the metre, and turned into ticks through the tempo
+    // map as it is drawn: the cursor's speed changes exactly at the barline it
+    // changes at, instead of the smoother catching up after it. A count-in has
+    // no score seconds yet, so it is smoothed in ticks.
+    const bool inSeconds = playing && !clockPosition.countingIn && clockPosition.tick >= 0.0 &&
+                           renderedScore != nullptr;
+    const double value = inSeconds ? clockPosition.seconds : clockPosition.tick;
+
+    // A seek or a loop's wrap is a jump, drawn as one, and so is the change
+    // from counting in to playing.
+    if (update.seeks > 0 || update.wraps > 0 || inSeconds != smoothingSeconds)
     {
-        playhead.restart(clockPosition.tick, secondsNow());
+        playhead.restart(value, secondsNow());
+        smoothingSeconds = inSeconds;
     }
-    playhead.observe(clockPosition.tick, secondsNow(), playing);
+    playhead.observe(
+        value, secondsNow(), playing,
+        inSeconds ? std::optional<double>(clockPosition.scalePercent / 100.0) : std::nullopt);
 
     // Starting the clock again is asking to be followed again.
     if (playing && !wasPlaying)
@@ -1457,9 +1469,13 @@ void ScoreViewComponent::updateCursor()
     {
         // Where the clock is now, between its reports, rather than where it
         // last said it was: drawn every frame, the band then moves evenly.
-        const double tick = clockPosition.state == transport::ClockState::playing
-                                ? playhead.at(secondsNow())
-                                : clockPosition.tick;
+        double tick = clockPosition.tick;
+        if (clockPosition.state == transport::ClockState::playing)
+        {
+            const double drawn = playhead.at(secondsNow());
+            tick =
+                smoothingSeconds ? renderedScore->tempoMap.secondsToFractionalTick(drawn) : drawn;
+        }
         place = engraving::placeOfTick(layout, tick);
         marked = engraving::targetsAt(
             *renderedScore, engraving::drawnPartsOf(layout), tick, settings.lookAhead);

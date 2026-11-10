@@ -149,4 +149,22 @@ Tick TempoMap::secondsToTick(double seconds) const noexcept
 
     return entry.tick + static_cast<Tick>(std::llround(ticks));
 }
+
+double TempoMap::secondsToFractionalTick(double seconds) const noexcept
+{
+    if (!std::isfinite(seconds) || seconds <= 0.0 || entries_.empty())
+    {
+        return 0.0;
+    }
+    const auto upper = std::upper_bound(secondsAtEntry_.begin(), secondsAtEntry_.end(), seconds);
+    const auto index =
+        upper == secondsAtEntry_.begin()
+            ? std::size_t{0}
+            : static_cast<std::size_t>(std::distance(secondsAtEntry_.begin(), std::prev(upper)));
+    const TempoEntry& entry = entries_[index];
+    const double quarterNotes =
+        (seconds - secondsAtEntry_[index]) * entry.beatsPerMinute / secondsPerMinute;
+    return static_cast<double>(entry.tick) +
+           (quarterNotes * static_cast<double>(ticksPerQuarterNote));
+}
 } // namespace score
