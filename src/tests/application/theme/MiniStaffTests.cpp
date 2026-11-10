@@ -40,7 +40,7 @@ TEST_CASE("a mini staff names its clef", "[theme][ministaff]")
     REQUIRE(l10n::setLanguage("en"));
     CHECK(miniStaffClefName(pitch::StaffClef::treble) == "Treble");
     CHECK(miniStaffClefName(pitch::StaffClef::bass) == "Bass");
-    CHECK(miniStaffClefName(pitch::StaffClef::trebleOctaveDown) == "Treble 8vb");
+    CHECK(miniStaffClefName(pitch::StaffClef::trebleOctaveDown) == "Tenor");
 }
 
 TEST_CASE(
@@ -109,4 +109,53 @@ TEST_CASE("a hollow head leaves its middle empty", "[theme][ministaff]")
     const juce::Image image = drawn(notes);
     CHECK(image.getPixelAt(50, 75).getAlpha() == 0);
     CHECK(image.getPixelAt(43, 75).getGreen() > 0);
+}
+
+TEST_CASE("a point on a mini staff finds its line or space", "[theme][ministaff]")
+{
+    // Spacing 10, the middle line on row 70: a step is five pixels.
+    const juce::Rectangle<float> area(0.0f, 0.0f, 100.0f, 140.0f);
+    const MiniStaffStyle style;
+    CHECK(miniStaffStepsAt(area, style, 70.0f) == 0);
+    CHECK(miniStaffStepsAt(area, style, 64.0f) == 1);
+    CHECK(miniStaffStepsAt(area, style, 90.0f) == -4);
+    CHECK(miniStaffStepsAt(area, style, 41.0f) == 6);
+}
+
+TEST_CASE("a mini staff with a font makes room for its clef", "[theme][ministaff]")
+{
+    const juce::ScopedJuceInitialiser_GUI runtime;
+    const juce::Rectangle<float> area(0.0f, 0.0f, 200.0f, 140.0f);
+    MiniStaffStyle style;
+    CHECK(miniStaffClefWidth(area, style) == 0.0f);
+
+    const MusicFont font;
+    style.font = &font;
+    // A treble clef is about two and a half spaces wide; the room is that, its
+    // indent, and clearance for a sharp beside the first head.
+    const float width = miniStaffClefWidth(area, style);
+    CHECK(width > 50.0f);
+    CHECK(width < 75.0f);
+}
+
+TEST_CASE("a key signature sits where it is written", "[theme][ministaff]")
+{
+    // G major on the treble staff: one sharp, on the top line (F5).
+    CHECK(miniStaffKeySteps(1, pitch::StaffClef::treble) == std::vector<int>{4});
+    // D major in the bass clef: F3 on the fourth line, C3 in the second space.
+    CHECK(miniStaffKeySteps(2, pitch::StaffClef::bass) == std::vector<int>{2, -1});
+    // B flat major: B4 on the middle line, E5 in the top space.
+    CHECK(miniStaffKeySteps(-2, pitch::StaffClef::treble) == std::vector<int>{0, 3});
+    CHECK(miniStaffKeySteps(0, pitch::StaffClef::treble).empty());
+    CHECK(miniStaffKeySteps(7, pitch::StaffClef::treble).size() == 7);
+}
+
+TEST_CASE("a key alters the letters its signature names", "[theme][ministaff]")
+{
+    CHECK(miniStaffKeyAlter(score::Step::f, 1) == 1);
+    CHECK(miniStaffKeyAlter(score::Step::c, 1) == 0);
+    CHECK(miniStaffKeyAlter(score::Step::b, -1) == -1);
+    CHECK(miniStaffKeyAlter(score::Step::e, -2) == -1);
+    CHECK(miniStaffKeyAlter(score::Step::a, -2) == 0);
+    CHECK(miniStaffKeyAlter(score::Step::b, 7) == 1);
 }

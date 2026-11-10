@@ -12,12 +12,15 @@ many cents sharp or flat it is.
 
 ![The tuner in its graph view, reading A4: the pitch line drifts above and below a thin lit green band on A4, with dotted blue, amber and red lines where each looser zone begins](images/tuner-graph.png)
 
-- **Display mode** picks one of three views:
+- **Display mode** picks one of four views:
   - **Graph**, pitch over time, so drift within a held note is visible (above);
   - **Bar**, the cents offset as a dot on a line, from −50 to +50 (one note)
     unless you change its scale;
-  - **Meter**, a needle between *flat* and *sharp*.
-- **The zones** show where you need to be, on all three views: bands around
+  - **Meter**, a needle between *flat* and *sharp*;
+  - **Staff**, the note you're on drawn on a staff after the clef and the key
+    signature of the bar you're at, beside the target, in the colour of how
+    close you are, with the cents under it.
+- **The zones** show where you need to be, on the graph, the bar and the meter: bands around
   the note, each as wide as its range either side of it, all set in
   **Settings → Practice** and all plus or minus:
   - **green**, near perfect, within **Near perfect within** (±5 cents by
@@ -51,6 +54,9 @@ many cents sharp or flat it is.
     beside the sign (off by default; the line above the display always gives
     the exact reading);
   - **Light both halves**, for a symmetric look that lights the whole zone;
+  - **Only the key's notes**, which leaves the graph only the rows of the
+    notes in the key of the bar you're at (or your own key, with no score
+    open). The note you're on and the target keep their rows either way;
   - **Marker**, what marks where you are on the bar and the graph: *Off*,
     *Dot* (the default), *Arrow*, *Line*, *Ring*, *Diamond* or *Crosshair*.
 
@@ -96,8 +102,16 @@ target…** in the tuner's **...** menu:
   have held one note steadily, within 30 cents, for a moment;
 - **step** a semitone up or down, or a step of the score's key.
 
-In the Score View, **right-click a note** and choose **Aim at G4**. For a chord,
-pick which of its notes.
+In the Score View, **click a note** to aim at it, or **right-click** it and
+choose **Aim at G4**; for a chord, the right-click menu lists each of its notes.
+The target is outlined in violet on the score whenever it is one of the score's
+notes, however it was chosen, and moves with it as the score plays.
+
+**Clear the target** to practise with none: **Clear target note** at the
+bottom of the **Tools** menu, or in any tool's **...** menu (and its
+right-click menu), or **Clear** in the picker. With no target, the tuner and
+the Note View colour your note against the nearest one. It stays clear until
+you choose one or open a score, and is remembered that way when you quit.
 
 A target you choose is remembered when you quit. Opening a score replaces it
 with the score's first note, unless **Settings → Practice → Keep my target when
@@ -127,14 +141,20 @@ Shows the note you're singing or playing the way a musician thinks of it:
   off (out to **Out of tune beyond**, ±40 cents by default), **red** past that,
   and grey while nothing is sung. The key, the trail and your note on the staff take the same colour.
   Without a target, the colours are against the note you're nearest.
-- **On a staff:** your note and the target side by side. The clef follows the
-  note, or **Clef** in the **...** menu fixes it as treble, bass, or treble an
-  octave down for tenor voices and guitar.
+- **On a staff:** your note and the target side by side, after the clef and
+  the key signature of the bar the music is at (an accidental is shown only
+  where your note differs from it, so an F natural in G major gets a ♮). The clef follows the
+  note, or **Clef** in the **...** menu fixes it as treble, bass, or tenor (the
+  treble clef with an 8 below, for tenor voices and guitar).
 - **A trail:** the last three seconds of pitch drawn above the keys, so a scoop
   up to a note, or a drift off it, shows as a shape. The target's line runs
   down to its key.
 - **The keys held** on a MIDI keyboard light purple, so it serves the piano
   too.
+- **Choose the target here:** click a key, or a line or space on the staff, and
+  that note becomes the target. The key or the note a click would choose shows
+  faintly as you move over it. A key is spelled as the open score's key would
+  spell it: with flats in a flat key, sharps otherwise.
 
 It reads pitch exactly as the tuner does, against the same reference pitch and
 target. Small and docked, it shows the keyboard alone.
@@ -223,7 +243,15 @@ marks, with each part named beside its staves.
 - **Enlarge**, **Shrink** and **Default size** change the size of the music.
 - **Parts** shows and hides individual parts.
 - **Fit width** and **Fit page** (Page view) size the page to the panel's width,
-  or show the whole page at once.
+  or show the whole page at once. **Fill the panel** makes the page the panel's
+  own shape: as many lines as fit at the size you chose, no scrollbar, and the
+  score read by turning pages (the arrows, the keys, or the mouse wheel).
+  Following the clock turns the page for you. To fit more lines on a page,
+  shrink the music with **−**.
+- **Notes under the score** say where the drawing differs from the file (beams
+  grouped by the time signature, say). The **×** at their right dismisses them
+  and gives their room to the score; a dismissed note stays dismissed for every
+  score until **Show dismissed notes** in the **…** menu brings them back.
 
 ### Following the practice clock
 
@@ -241,8 +269,10 @@ the Score View follows it:
   following, and a **Follow** button appears in the header until you press it
   or play again. **Follow the practice clock** in the options menu turns it off
   altogether.
-- **Click a note** to move the clock there, and **Go to bar…** to move it to a
-  bar by its printed number. Every Score View, and the transport, follow.
+- **Double-click** in the score to move the clock there (a single click on a
+  note makes it the target instead), and **Go to bar…** to move it to a bar by
+  its printed number. Every Score View, and the transport, follow. Dragging
+  across the score is kept for choosing a loop, which is to come.
 
 ![The score view with the clock at bar 6: a band over the first beat, its notes tinted and the next two onsets ringed](images/score-cursor.png)
 

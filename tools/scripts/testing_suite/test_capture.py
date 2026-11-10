@@ -49,6 +49,7 @@ class FakeDriver:
         self.restarts = 0
         # The real driver's: whether the next launch declines an input device.
         self.decline_audio_input = True
+        self.demo_mode = True
 
     def restart(self) -> None:
         self.restarts += 1
@@ -812,6 +813,7 @@ class AudioGateTests(unittest.TestCase):
                 inner.driver = inner
                 inner._open = None
                 inner.decline_audio_input = True
+                inner.demo_mode = True
 
             def restart(inner) -> None:  # noqa: N805 - standing in for the driver
                 held.append("locked" if gate.locked() else "UNGUARDED")
@@ -845,6 +847,7 @@ class AudioGateTests(unittest.TestCase):
                 inner.driver = inner
                 inner._open = None
                 inner.decline_audio_input = True
+                inner.demo_mode = True
 
             def open_state(inner, state):  # noqa: N805 - test double
                 return Reply(True, [])
@@ -1450,6 +1453,8 @@ class InputDeviceModeTests(unittest.TestCase):
 
     def pass_with(self, gate):
         restarts: list[bool] = []
+        demo_launches: list[bool] = []
+        self.demo_launches = demo_launches
 
         class Switching(capture_module.CapturePass):
             def __init__(inner):  # noqa: N805 - test double
@@ -1457,10 +1462,12 @@ class InputDeviceModeTests(unittest.TestCase):
                 inner.driver = inner
                 inner._open = None
                 inner.decline_audio_input = True
+                inner.demo_mode = True
 
             def restart(inner) -> None:  # noqa: N805 - standing in for the driver
                 # What the launch would carry, recorded at the moment it happens.
                 restarts.append(inner.decline_audio_input)
+                demo_launches.append(inner.demo_mode)
 
             def open_state(inner, state):  # noqa: N805 - test double
                 return Reply(True, [])
@@ -1520,6 +1527,30 @@ class InputDeviceModeTests(unittest.TestCase):
         pass_.move_to(self.surface(needs_input_device=True), "default", surfaces.DARK)
 
         self.assertEqual(held, ["locked"])
+
+    def test_a_microphone_surface_restarts_out_of_demo_mode_and_back(self) -> None:
+        """Demo mode hides the warning, so a picture of the warning needs it off."""
+        pass_, _ = self.pass_with(threading.Lock())
+
+        pass_.move_to(self.surface(shows_microphone=True), "default", surfaces.DARK)
+        self.assertFalse(pass_.demo_mode)
+        pass_.move_to(self.surface(), "default", surfaces.DARK)
+
+        self.assertEqual(self.demo_launches, [False, True])
+        self.assertTrue(pass_.demo_mode)
+
+    def test_only_the_microphone_surfaces_leave_demo_mode(self) -> None:
+        leaving = {s.state for s in surfaces.SURFACES if s.shows_microphone}
+
+        self.assertEqual(
+            leaving,
+            {
+                "microphone-muted",
+                "muted-all-tools",
+                "microphone-warning",
+                "microphone-warning-text-150",
+            },
+        )
 
     def test_only_the_settings_device_surface_asks_for_one(self) -> None:
         """Every extra one is a window where the run holds the microphone."""

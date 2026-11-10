@@ -82,6 +82,7 @@ TunerComponent::TunerComponent(
     // The tuner's bar view: a horizontal bar, not a measure ("score.bar").
     displayModeBox.addItem(l10n::text("tuner.view.bar"), static_cast<int>(DisplayMode::bar));
     displayModeBox.addItem(l10n::text("tuner.view.meter"), static_cast<int>(DisplayMode::meter));
+    displayModeBox.addItem(l10n::text("tuner.view.staff"), static_cast<int>(DisplayMode::staff));
     displayModeBox.setSelectedId(AppDefaults::Tuner::displayMode, juce::dontSendNotification);
     displayModeBox.onChange = [this]
     {
@@ -177,6 +178,13 @@ bool TunerComponent::showView(const juce::String& view)
         return true;
     }
 
+    if (view == "staff")
+    {
+        selectMode(DisplayMode::staff);
+
+        return true;
+    }
+
     if (view == "target-picker")
     {
         // The graph under the picker, and the picker opened once the tuner is
@@ -227,6 +235,7 @@ void TunerComponent::resetToDefaults()
     bothHalvesLit = AppDefaults::Tuner::bothHalvesLit > 0.5;
     offsetShown = AppDefaults::Tuner::offsetShown > 0.5;
     targetCentred = AppDefaults::Tuner::targetCentred > 0.5;
+    inKeyOnly = AppDefaults::Tuner::inKeyOnly > 0.5;
     marker = static_cast<Marker>(juce::roundToInt(AppDefaults::Tuner::marker));
     areAdvancedSettingsExpanded = false;
     graphHistory.clear();
@@ -254,6 +263,7 @@ void TunerComponent::applySettings(const AppDefaults::TunerSettings& settings)
     bothHalvesLit = settings.bothHalvesLit > 0.5;
     offsetShown = settings.offsetShown > 0.5;
     targetCentred = settings.targetCentred > 0.5;
+    inKeyOnly = settings.inKeyOnly > 0.5;
     marker = static_cast<Marker>(juce::jlimit(0, 6, juce::roundToInt(settings.marker)));
     graphHistory.clear();
     resetPitchTracking();
@@ -265,7 +275,8 @@ AppDefaults::TunerSettings TunerComponent::settings() const
     return {displayModeBox.getSelectedId(), easingSlider.getValue(),    averagingSlider.getValue(),
             thresholdSlider.getValue(),     dropoutSlider.getValue(),   durationSlider.getValue(),
             scaleSlider.getValue(),         static_cast<double>(signs), bothHalvesLit ? 1.0 : 0.0,
-            static_cast<double>(marker),    offsetShown ? 1.0 : 0.0,    targetCentred ? 1.0 : 0.0};
+            static_cast<double>(marker),    offsetShown ? 1.0 : 0.0,    targetCentred ? 1.0 : 0.0,
+            inKeyOnly ? 1.0 : 0.0};
 }
 
 std::optional<ToolSettingsPayload> TunerComponent::captureSettings() const
@@ -447,6 +458,8 @@ std::vector<ToolComponent::MenuEntry> TunerComponent::optionsMenuEntries()
          currentMode == DisplayMode::bar},
         {l10n::text("tuner.view.meter"), [selectMode] { selectMode(DisplayMode::meter); },
          currentMode == DisplayMode::meter},
+        {l10n::text("tuner.view.staff"), [selectMode] { selectMode(DisplayMode::staff); },
+         currentMode == DisplayMode::staff},
         {l10n::text(
              areAdvancedSettingsExpanded ? l10n::key("tuner.menu.advanced.hide")
                                          : l10n::key("tuner.menu.advanced.show")),
@@ -476,6 +489,13 @@ std::vector<ToolComponent::MenuEntry> TunerComponent::optionsMenuEntries()
              repaint();
          },
          targetCentred},
+        {l10n::text("tuner.menu.in-key"),
+         [this]
+         {
+             inKeyOnly = !inKeyOnly;
+             repaint();
+         },
+         inKeyOnly},
         {l10n::text("tuner.menu.offset"),
          [this]
          {

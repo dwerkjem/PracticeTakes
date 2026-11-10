@@ -213,7 +213,11 @@ subdirectory is the right answer when a subject grows. Add it to the index in
   opens no input device and the generated tone is its only signal — one process
   at a time can hold the microphone, and a capture run must not take it from a
   live application. The two flags are separate so the channel can still be
-  driven against a real device by hand. The approved states are written out to
+  driven against a real device by hand. It also passes `--demo-mode`, which
+  hides the "No microphone detected" warning and labels the microphone button
+  *Demo mode*, so every capture is taken in demo mode; only the surfaces about
+  the microphone's state (`shows_microphone` in `surfaces.py`) are not. The
+  approved states are written out to
   `docs/contracts/testcontrol/approved-states.json`, which the harness reads
   rather than restating them. Building `PracticeTakesTests` locally
   regenerates it; commit it with the state change (CI only checks it).

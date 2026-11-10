@@ -60,7 +60,7 @@ TEST_CASE("A tuner payload keeps the names and order it was always written in", 
         names == std::vector<std::string>{
                      "displayMode", "easing", "averaging", "noteSwitchSemitones", "dropoutFrames",
                      "graphDurationSeconds", "scaleCents", "signs", "bothHalvesLit", "marker",
-                     "offsetShown", "targetCentred"});
+                     "offsetShown", "targetCentred", "inKeyOnly"});
 }
 
 TEST_CASE("A tuner payload with a required value outside its range is refused", "[tuner][codec]")
@@ -85,7 +85,7 @@ TEST_CASE("A tuner payload with a required value outside its range is refused", 
 
     CHECK(TunerSettingsCodec::decode(withProperty("displayMode", 3)).has_value());
     CHECK_FALSE(TunerSettingsCodec::decode(withProperty("displayMode", 0)).has_value());
-    CHECK_FALSE(TunerSettingsCodec::decode(withProperty("displayMode", 4)).has_value());
+    CHECK_FALSE(TunerSettingsCodec::decode(withProperty("displayMode", 5)).has_value());
     CHECK_FALSE(TunerSettingsCodec::decode(withProperty("displayMode", 1.5)).has_value());
 }
 

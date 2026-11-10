@@ -4,6 +4,7 @@
 
 #include "../../../application/configuration/AppDefaults.h"
 #include "../../../application/localisation/Localisation.h"
+#include "../../../application/theme/MusicFont.h"
 #include "../../../application/theme/Theme.h"
 #include "../../../application/tools/CompactPresentation.h"
 #include "../../../application/tools/ToolComponent.h"
@@ -63,7 +64,9 @@ class TunerComponent final
     {
         graph = 1,
         bar,
-        meter
+        meter,
+        // The note sung on a staff, beside the target, in the key in force.
+        staff
     };
 
     static constexpr int maximumGraphPoints = 1200;
@@ -156,6 +159,7 @@ class TunerComponent final
     void drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawPitchBar(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawPitchMeter(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
+    void drawPitchStaff(juce::Graphics& graphics, juce::Rectangle<int> bounds) const;
     void drawNoteWatermark(juce::Graphics& graphics, juce::Rectangle<int> area) const;
 
     // Where the note name goes behind the display, and the height of a sharp
@@ -260,6 +264,16 @@ class TunerComponent final
 
     // From the ... menu: with a target chosen, centre on it.
     bool targetCentred = true;
+
+    // From the ... menu: the graph's rows for the key's notes only.
+    bool inKeyOnly = false;
+
+    // The music font, for the staff view's clef, key and accidentals.
+    juce::SharedResourcePointer<MusicFont> musicFont;
+
+    // Whether the graph draws `midiNote`'s row: always, unless only the key's
+    // notes are asked for -- and then the note sung and the target still.
+    [[nodiscard]] bool showsNoteRow(int midiNote) const;
 
     // What marks where the pitch is on the bar and the graph, from the ...
     // menu.

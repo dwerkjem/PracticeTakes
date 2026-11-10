@@ -70,6 +70,10 @@ TEST_CASE("a song's target is its voice; a piano piece has none", "[pitch][targe
     CHECK(target->midiNoteNumber == 59);
     CHECK(target->source == "Voice, bar 1");
     CHECK(reason.empty());
+    // It knows which note of the score it is: the voice's first, in part 1.
+    REQUIRE(target->place.has_value());
+    CHECK(target->place->partIndex == 1);
+    CHECK(target->place->note == NoteRef{0, 0, 0, 0});
 
     auto piano = std::make_shared<Score>();
     piano->parts = {partOf(
@@ -111,4 +115,24 @@ TEST_CASE("a target chosen from a transposing part keeps both names", "[pitch][t
     CHECK(target->name == "C5");
     CHECK(target->writtenName == "D5");
     CHECK_FALSE(target->soundsAsWritten);
+}
+
+TEST_CASE("a cleared target is none, and says the player cleared it", "[pitch][target]")
+{
+    pitch::CurrentTarget target;
+    score::Pitch g4;
+    g4.step = score::Step::g;
+    g4.octave = 4;
+    g4.midiNoteNumber = 67;
+    target.publish(pitch::chosenTarget(g4, g4, "test"));
+    REQUIRE(target.target() != nullptr);
+
+    // A target chosen from a key knows no note of the score.
+    CHECK_FALSE(target.target()->place.has_value());
+
+    target.clear();
+    CHECK(target.target() == nullptr);
+    CHECK(target.whyNone() == "target.none.cleared");
+    // Nothing chosen any more, so a score opening replaces it.
+    CHECK(target.scoreReplacesTarget());
 }

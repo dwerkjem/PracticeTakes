@@ -252,6 +252,9 @@ void readAllSettings(
             : juce::String();
     state.noteNaming = static_cast<int>(number(&appearance, "noteNaming", 0.0, 0.0, 2.0));
     state.octaveNumbering = static_cast<int>(number(&appearance, "octaveNumbering", 0.0, 0.0, 2.0));
+    state.keySignatureFifths =
+        static_cast<int>(std::lround(number(&appearance, "keySignature", 0.0, -7.0, 7.0)));
+    state.flatsWithoutKey = boolean(&appearance, "flatsWithoutKey", false);
 
     const auto* metronome = section("metronome");
     state.metronomeEnabled = boolean(metronome, "enabled", AppDefaults::Metronome::enabled);
@@ -332,6 +335,8 @@ SettingsTransferEncodeResult SettingsTransferCodec::encode(const SettingsTransfe
     appearance->setProperty("language", state.language);
     appearance->setProperty("noteNaming", state.noteNaming);
     appearance->setProperty("octaveNumbering", state.octaveNumbering);
+    appearance->setProperty("keySignature", state.keySignatureFifths);
+    appearance->setProperty("flatsWithoutKey", state.flatsWithoutKey);
     settings->setProperty("appearance", appearance.release());
 
     // Every setting travels, the devices too: an import on a machine without
@@ -635,6 +640,8 @@ SettingsTransferModel SettingsTransferCodec::withLocalPreferences(
     state.language = local.language;
     state.noteNaming = local.noteNaming;
     state.octaveNumbering = local.octaveNumbering;
+    state.keySignatureFifths = local.keySignatureFifths;
+    state.flatsWithoutKey = local.flatsWithoutKey;
     state.metronomeEnabled = local.metronomeEnabled;
     state.metronomeVolume = local.metronomeVolume;
     state.metronomeAccent = local.metronomeAccent;

@@ -103,11 +103,11 @@ TEST_CASE("An unknown preset id applies the defaults", "[defaults][tuner]")
 
 TEST_CASE("The tuner schema covers every numeric setting once", "[defaults][tuner]")
 {
-    // TunerSettings has eleven numeric members besides displayMode; a twelfth
-    // with no schema entry would be written by no codec and checked by no
-    // reader.
-    static_assert(sizeof(AppDefaults::TunerSettings) == sizeof(double) * 12);
-    REQUIRE(AppDefaults::tunerNumberFields.size() == 11);
+    // TunerSettings has twelve numeric members besides displayMode; a
+    // thirteenth with no schema entry would be written by no codec and checked
+    // by no reader.
+    static_assert(sizeof(AppDefaults::TunerSettings) == sizeof(double) * 13);
+    REQUIRE(AppDefaults::tunerNumberFields.size() == 12);
 
     for (std::size_t i = 0; i < AppDefaults::tunerNumberFields.size(); ++i)
     {
@@ -155,7 +155,7 @@ TEST_CASE("The tuner schema keeps the ranges each reader had", "[defaults][tuner
     CHECK(range(&TunerSettings::targetCentred) == std::array{0.0, 1.0, 1.0});
     CHECK_FALSE(AppDefaults::tunerField(&TunerSettings::targetCentred).required);
     CHECK(AppDefaults::tunerDisplayModeMinimum == 1);
-    CHECK(AppDefaults::tunerDisplayModeMaximum == 3);
+    CHECK(AppDefaults::tunerDisplayModeMaximum == 4);
 }
 
 TEST_CASE("Every preset is inside the tuner schema's ranges", "[defaults][tuner]")

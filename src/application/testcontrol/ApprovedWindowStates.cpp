@@ -105,6 +105,9 @@ const std::vector<ApprovedWindowState>& states()
         {"tuner-meter", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
          WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
          "The tuner in its meter view, reading a note", 440.0, "meter"},
+        {"tuner-staff", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
+         WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
+         "The tuner in its staff view, reading a note", 440.0, "staff"},
         {"tuner-advanced", Tools{"tuner"}, ToolPresentation::docked, WorkspaceArrangement::single,
          WindowGeometry::normal, MicrophoneCondition::available, false, "", false,
          "The tuner with its advanced settings expanded", 440.0, "advanced"},
@@ -378,6 +381,25 @@ const std::vector<ApprovedWindowState>& states()
          false, "", false,
          "The score view with the sample's voice hidden: the piano alone, in Page view", 0.0,
          "view=page;hidden=P1:Voice", bundledSampleFixtureName(), false},
+        // Page view filling the panel: the page is the panel's shape, nothing
+        // scrolls, and the score is read by turning pages.
+        {"score-view-fill-panel", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view in Page view filling the panel: no scrollbar, the page the panel's "
+         "shape",
+         0.0, "view=page;fit=panel", bundledSampleFixtureName(), false},
+        // The sample with every notice under it dismissed: the strip gone
+        // and its room given to the score.
+        {"score-view-notices-dismissed", Tools{"score-view"}, ToolPresentation::docked,
+         WorkspaceArrangement::single, WindowGeometry::normal, MicrophoneCondition::available,
+         false, "", false,
+         "The score view with the notes under the score dismissed: the strip gone, the score "
+         "taller",
+         0.0,
+         "view=page;dismissed=score.notice.key-cancel,score.notice.beams-at-rests,"
+         "score.notice.beams-by-time",
+         bundledSampleFixtureName(), false},
         // The practice clock playing the sample, with the transport in the
         // control strip: the one state where the clock is running
         // (practice-clock).

@@ -80,6 +80,11 @@ class MainComponent::ToolWindow final : public juce::DocumentWindow
         optionsButton.setRenameHandler(std::move(handler));
     }
 
+    void setClearTargetHandler(std::function<void()> handler, std::function<bool()> available)
+    {
+        optionsButton.setClearTargetHandler(std::move(handler), std::move(available));
+    }
+
     void releaseContent()
     {
         if (contentComponent != nullptr)

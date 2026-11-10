@@ -67,6 +67,12 @@ struct State
     int noteNaming = 0;
     int octaveNumbering = 0;
 
+    // The key signature to spell heard notes in with no score open, in fifths
+    // (-7 to 7, 0 for C major), and whether they take flats where no key
+    // decides (pitch::SpellingPreference).
+    int keySignatureFifths = 0;
+    bool flatsWithoutKey = false;
+
     // Whether the score plays with the clock, and how loud.
     bool playbackEnabled = AppDefaults::Playback::enabled;
     double playbackVolume = AppDefaults::Playback::volume;

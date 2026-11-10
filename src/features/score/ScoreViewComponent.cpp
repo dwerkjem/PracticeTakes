@@ -1,6 +1,7 @@
 #include "ScoreViewComponent.h"
 #include "../../application/localisation/Localisation.h"
 #include "../../application/localisation/NoteNames.h"
+#include "../../application/theme/Icons.h"
 #include "NoticeText.h"
 
 #include "../../platform/evaluation/TakeReview.h"
@@ -57,6 +58,19 @@ constexpr double verticalFollowPlace = 0.25;
 // notehead, centred on it, and a band about as wide as one.
 constexpr double markWidth = 1.75;
 constexpr double markHeight = 1.3;
+
+// The target's outline, in staff spaces, and its colour: violet, apart from
+// the clock's blue and the review's green, amber and red.
+constexpr double targetOutlineWidth = 2.3;
+
+// How long following takes to scroll to the next line.
+constexpr double glideSeconds = 0.25;
+constexpr double targetOutlineHeight = 1.8;
+
+[[nodiscard]] juce::Colour targetOutlineColour(Theme theme)
+{
+    return theme == Theme::dark ? juce::Colour(0xffb69cff) : juce::Colour(0xff7c3aed);
+}
 constexpr double cursorBandWidth = 1.6;
 
 // The review's marks (take-review decision 3): a ring a little larger than the
@@ -100,6 +114,9 @@ void ScoreViewComponent::Canvas::mouseDown(const juce::MouseEvent& event)
     owner.grabKeyboardFocus();
 }
 
+// One click on a note aims at it, as Aim at in the right-click menu does. A
+// double-click moves the playhead to where it lands. A drag does neither: it
+// is kept for choosing a loop region by sweeping across bars, which is to come.
 void ScoreViewComponent::Canvas::mouseUp(const juce::MouseEvent& event)
 {
     if (event.mouseWasDraggedSinceMouseDown())
@@ -109,6 +126,25 @@ void ScoreViewComponent::Canvas::mouseUp(const juce::MouseEvent& event)
     if (event.mods.isPopupMenu())
     {
         owner.showNoteMenu(event.position);
+        return;
+    }
+    owner.aimAtNoteUnder(event.position);
+}
+
+void ScoreViewComponent::Canvas::mouseWheelMove(
+    const juce::MouseEvent& event,
+    const juce::MouseWheelDetails& wheel)
+{
+    if (!owner.turnPageByWheel(wheel))
+    {
+        juce::Component::mouseWheelMove(event, wheel);
+    }
+}
+
+void ScoreViewComponent::Canvas::mouseDoubleClick(const juce::MouseEvent& event)
+{
+    if (event.mods.isPopupMenu())
+    {
         return;
     }
     owner.seekToCanvasPoint(event.position);
@@ -136,6 +172,7 @@ void ScoreViewComponent::Canvas::paint(juce::Graphics& graphics)
                 scoreNotationPaletteFor(owner.currentTheme));
             painter.drawSystem(owner.layout.systems.at(index), where->originX, where->originY);
             owner.paintCursorOn(graphics, index, *where);
+            owner.paintTargetOn(graphics, index, *where);
             owner.paintReviewOn(graphics, index, *where);
         }
     };
@@ -315,6 +352,52 @@ void ScoreViewComponent::paintCursorOn(
             graphics.setColour(colours.accent.withAlpha(upcomingAlpha));
             graphics.drawEllipse(mark, ring);
         }
+    }
+}
+
+void ScoreViewComponent::paintTargetOn(
+    juce::Graphics& graphics,
+    std::size_t index,
+    const SystemOnCanvas& where) const
+{
+    const auto aimingAt = target.target();
+    if (aimingAt == nullptr)
+    {
+        return;
+    }
+    const std::optional<pitch::Target::ScorePlace> placed = aimingAt->place;
+    if (!placed.has_value())
+    {
+        return;
+    }
+    const pitch::Target::ScorePlace& place = *placed;
+    const engraving::System& system = layout.systems.at(index);
+    const double px = where.pixelsPerSpace;
+    const double noteheadMiddle = engraving::LayoutOptions{}.noteheadWidth / 2.0;
+
+    for (const engraving::NoteheadGlyph& head : system.noteheads)
+    {
+        const auto staff = static_cast<std::size_t>(std::max(0, head.staff));
+        if (staff >= system.staffParts.size() || system.staffParts.at(staff) != place.partIndex ||
+            !(head.source == place.note))
+        {
+            continue;
+        }
+        const double offset =
+            staff < system.staffOffsets.size() ? system.staffOffsets.at(staff) : 0.0;
+        const double centreX = where.originX + ((head.x + noteheadMiddle) * px);
+        const double centreY =
+            where.originY + ((offset + engraving::spacesBelowTopLine(head.position)) * px);
+        // A rounded outline a little outside the clock's rings, so the target
+        // reads as chosen whether or not the clock is on it.
+        const juce::Rectangle<float> around(
+            static_cast<float>(centreX - (targetOutlineWidth * px * 0.5)),
+            static_cast<float>(centreY - (targetOutlineHeight * px * 0.5)),
+            static_cast<float>(targetOutlineWidth * px),
+            static_cast<float>(targetOutlineHeight * px));
+        graphics.setColour(targetOutlineColour(currentTheme));
+        graphics.drawRoundedRectangle(
+            around, static_cast<float>(0.5 * px), static_cast<float>(std::max(2.0, 0.22 * px)));
     }
 }
 
@@ -526,6 +609,10 @@ ScoreViewComponent::ScoreViewComponent(
         followButton, "score-view-follow", l10n::text("score.view.follow-again"),
         [this] { resumeFollowing(); });
     followButton.setVisible(false);
+    setUpButton(
+        dismissNoticesButton, "score-view-dismiss-notices", l10n::text("score.view.notice.dismiss"),
+        [this] { dismissNotices(); });
+    appearance::setIcon(dismissNoticesButton, appearance::Icon::close);
 
     for (juce::Label* label : {&sizeLabel, &pageLabel})
     {
@@ -601,6 +688,14 @@ AppPalette ScoreViewComponent::palette() const
 void ScoreViewComponent::timerCallback()
 {
     refreshFromCurrentScore();
+
+    // The target is the application's: the tuner, the Note View or the clock
+    // following the score can move it, and its outline moves with it.
+    if (const auto aimingAt = target.target(); aimingAt != outlinedTarget)
+    {
+        outlinedTarget = aimingAt;
+        canvas.repaint();
+    }
 }
 
 void ScoreViewComponent::refreshFromCurrentScore()
@@ -619,6 +714,7 @@ void ScoreViewComponent::refreshFromCurrentScore()
     // A different score starts at its beginning.
     currentPage = 0;
     relayout(std::nullopt, true);
+    updateNoticeStrip();
     scrollProgrammatically(0, 0);
 
     // The clock may already be somewhere in it -- moved the moment it opened,
@@ -633,6 +729,16 @@ void ScoreViewComponent::refreshFromCurrentScore()
 
 juce::Rectangle<float> ScoreViewComponent::pageBounds() const
 {
+    if (settings.pageFit == score_view::PageFit::panel)
+    {
+        // The panel itself, less the surround: no scrollbar is ever shown, so
+        // none is allowed for.
+        return juce::Rectangle<float>(
+                   0.0f, 0.0f, static_cast<float>(viewport.getWidth()),
+                   static_cast<float>(viewport.getHeight()))
+            .reduced(pageSurround);
+    }
+
     if (settings.pageFit == score_view::PageFit::page)
     {
         // The whole page in the panel: as tall as the panel allows, A4-shaped,
@@ -669,6 +775,13 @@ juce::Rectangle<float> ScoreViewComponent::pageBounds() const
 juce::Rectangle<float> ScoreViewComponent::pageContent() const
 {
     const juce::Rectangle<float> page = pageBounds();
+
+    // A page the panel's shape keeps narrow margins: a printed page's, in
+    // proportion to a wide panel, would waste a third of it.
+    if (settings.pageFit == score_view::PageFit::panel)
+    {
+        return page.reduced(std::min(24.0f, page.getWidth() * pageMarginFraction), 12.0f);
+    }
 
     return page.reduced(page.getWidth() * pageMarginFraction);
 }
@@ -733,10 +846,19 @@ void ScoreViewComponent::relayout(std::optional<std::size_t> keep, bool force)
         // One page on the canvas, scrolled vertically when it is taller than
         // the panel; pages are turned, never scrolled between.
         const juce::Rectangle<float> page = pageBounds();
-        viewport.setScrollBarsShown(true, false);
-        canvas.setSize(
-            std::max(0, width - viewport.getScrollBarThickness()),
-            std::max(height, static_cast<int>(std::ceil(page.getBottom() + pageSurround))));
+        if (settings.pageFit == score_view::PageFit::panel)
+        {
+            // Exactly the panel: nothing to scroll, so no scrollbar either.
+            viewport.setScrollBarsShown(false, false);
+            canvas.setSize(width, height);
+        }
+        else
+        {
+            viewport.setScrollBarsShown(true, false);
+            canvas.setSize(
+                std::max(0, width - viewport.getScrollBarThickness()),
+                std::max(height, static_cast<int>(std::ceil(page.getBottom() + pageSurround))));
+        }
     }
     else
     {
@@ -1125,7 +1247,22 @@ void ScoreViewComponent::resized()
     // does not move the staff. A strip that appeared only when a notice did
     // would reflow everything the moment a file finished loading, and which
     // files have notices is a property of the files rather than of the tool.
-    bounds.removeFromBottom(scaledHeight(noticeStripHeight));
+    // A reader who has dismissed notices has said they would rather have the
+    // room (wantsNoticeStrip).
+    noticeStripBounds = {};
+    if (noticeStripReserved)
+    {
+        noticeStripBounds = bounds.removeFromBottom(scaledHeight(noticeStripHeight));
+    }
+    const int dismissSize = scaledHeight(22);
+    dismissNoticesButton.setBounds(
+        noticeStripBounds.getRight() - canvasMargin - dismissSize, noticeStripBounds.getY() + 4,
+        dismissSize, dismissSize);
+    const bool dismissable =
+        noticeStripReserved && layout.outcome == engraving::LayoutOutcome::laidOut &&
+        std::ranges::any_of(
+            shownNotices(), [](const ShownNotice& shown) { return shown.dismissable; });
+    dismissNoticesButton.setVisible(dismissable);
 
     const std::optional<std::size_t> keep = measureInView();
     viewport.setBounds(bounds);
@@ -1221,6 +1358,7 @@ void ScoreViewComponent::resetToDefaults()
     renderedScore = nullptr;
     refreshFromCurrentScore();
     relayout(std::nullopt, true);
+    updateNoticeStrip();
     repaint();
 }
 
@@ -1234,6 +1372,7 @@ void ScoreViewComponent::applySettings(const ToolSettingsPayload& payload)
     const std::optional<std::size_t> keep = measureInView();
     settings = score_view::decode(payload);
     relayout(keep);
+    updateNoticeStrip();
 
     // The look-ahead and the review are not part of the layout, so a relayout
     // that found nothing changed did not reach the marks.
@@ -1271,6 +1410,7 @@ bool ScoreViewComponent::showView(const juce::String& view)
     const std::optional<std::size_t> keep = measureInView();
     settings = wanted;
     relayout(keep);
+    updateNoticeStrip();
 
     return true;
 }
@@ -1280,6 +1420,26 @@ void ScoreViewComponent::clockChanged(const transport::ClockUpdate& update)
     const bool wasPlaying = clockPosition.state == transport::ClockState::playing;
     clockPosition = update.position;
     const bool playing = clockPosition.state == transport::ClockState::playing;
+
+    // Smoothed in the score's seconds, which move at the playback scale
+    // whatever the tempo or the metre, and turned into ticks through the tempo
+    // map as it is drawn: the cursor's speed changes exactly at the barline it
+    // changes at, instead of the smoother catching up after it. A count-in has
+    // no score seconds yet, so it is smoothed in ticks.
+    const bool inSeconds = playing && !clockPosition.countingIn && clockPosition.tick >= 0.0 &&
+                           renderedScore != nullptr;
+    const double value = inSeconds ? clockPosition.seconds : clockPosition.tick;
+
+    // A seek or a loop's wrap is a jump, drawn as one, and so is the change
+    // from counting in to playing.
+    if (update.seeks > 0 || update.wraps > 0 || inSeconds != smoothingSeconds)
+    {
+        playhead.restart(value, secondsNow());
+        smoothingSeconds = inSeconds;
+    }
+    playhead.observe(
+        value, secondsNow(), playing,
+        inSeconds ? std::optional<double>(clockPosition.scalePercent / 100.0) : std::nullopt);
 
     // Starting the clock again is asking to be followed again.
     if (playing && !wasPlaying)
@@ -1307,10 +1467,18 @@ void ScoreViewComponent::updateCursor()
     if (renderedScore != nullptr && layout.outcome == engraving::LayoutOutcome::laidOut &&
         clockPosition.hasScore)
     {
-        place = engraving::placeOfTick(layout, clockPosition.tick);
+        // Where the clock is now, between its reports, rather than where it
+        // last said it was: drawn every frame, the band then moves evenly.
+        double tick = clockPosition.tick;
+        if (clockPosition.state == transport::ClockState::playing)
+        {
+            const double drawn = playhead.at(secondsNow());
+            tick =
+                smoothingSeconds ? renderedScore->tempoMap.secondsToFractionalTick(drawn) : drawn;
+        }
+        place = engraving::placeOfTick(layout, tick);
         marked = engraving::targetsAt(
-            *renderedScore, engraving::drawnPartsOf(layout), clockPosition.tick,
-            settings.lookAhead);
+            *renderedScore, engraving::drawnPartsOf(layout), tick, settings.lookAhead);
     }
 
     if (place == cursor && marked.sounding == targets.sounding &&
@@ -1395,6 +1563,7 @@ void ScoreViewComponent::follow()
                 page != currentPage)
             {
                 currentPage = page;
+                glide.reset();
                 scrollProgrammatically(0, 0);
                 updateControls();
                 canvas.repaint();
@@ -1427,8 +1596,7 @@ void ScoreViewComponent::follow()
         const double place = settings.view == score_view::ViewMode::vertical
                                  ? static_cast<double>(view.getHeight()) * verticalFollowPlace
                                  : 8.0;
-        scrollProgrammatically(
-            view.getX(), std::max(0, where->bounds.getY() - static_cast<int>(place)));
+        glideTo(view.getX(), std::max(0, where->bounds.getY() - static_cast<int>(place)));
         break;
     }
 
@@ -1441,15 +1609,88 @@ void ScoreViewComponent::follow()
         {
             break;
         }
-        scrollProgrammatically(
-            std::max(0, static_cast<int>(x - (width * horizontalFollowRestart))), view.getY());
+        glideTo(std::max(0, static_cast<int>(x - (width * horizontalFollowRestart))), view.getY());
         break;
     }
     }
 }
 
+bool ScoreViewComponent::turnPageByWheel(const juce::MouseWheelDetails& wheel)
+{
+    if (settings.view != score_view::ViewMode::page ||
+        settings.pageFit != score_view::PageFit::panel || pages.empty())
+    {
+        return false;
+    }
+
+    // Whole pages only, and one a gesture: a trackpad's stream of small
+    // deltas is gathered until it amounts to a notch.
+    wheelGathered += wheel.deltaY;
+    if (std::abs(wheelGathered) < wheelNotch)
+    {
+        return true;
+    }
+    const bool forward = wheelGathered < 0.0f;
+    wheelGathered = 0.0f;
+    if (forward && currentPage + 1 < pages.size())
+    {
+        turnToPage(currentPage + 1);
+    }
+    else if (!forward && currentPage > 0)
+    {
+        turnToPage(currentPage - 1);
+    }
+    return true;
+}
+
+void ScoreViewComponent::glideTo(int x, int y)
+{
+    // A page the panel's shape has nothing to scroll: following turns its
+    // pages and stops there.
+    if (settings.view == score_view::ViewMode::page &&
+        settings.pageFit == score_view::PageFit::panel)
+    {
+        return;
+    }
+    const juce::Point<int> goal(x, y);
+    if (glide.has_value() && glide->to == goal)
+    {
+        return;
+    }
+    glide = Glide{viewport.getViewPosition(), goal, secondsNow()};
+}
+
+void ScoreViewComponent::frameDrawn()
+{
+    if (clockPosition.state == transport::ClockState::playing)
+    {
+        updateCursor();
+    }
+
+    if (!glide.has_value())
+    {
+        return;
+    }
+
+    // Eased out over a quarter of a second, whatever the display's frame rate:
+    // the page moves to the next line quickly, but not in one frame, so the
+    // eye can follow where it went.
+    const double along = std::clamp((secondsNow() - glide->started) / glideSeconds, 0.0, 1.0);
+    const double eased = 1.0 - ((1.0 - along) * (1.0 - along) * (1.0 - along));
+    const juce::Point<int> distance = glide->to - glide->from;
+    scrollProgrammatically(
+        glide->from.x + juce::roundToInt(distance.x * eased),
+        glide->from.y + juce::roundToInt(distance.y * eased));
+    if (along >= 1.0)
+    {
+        glide.reset();
+    }
+}
+
 void ScoreViewComponent::suspendFollowing()
 {
+    // The reader is scrolling: a glide still under way would fight them.
+    glide.reset();
     if (!settings.follow || followSuspended ||
         clockPosition.state != transport::ClockState::playing)
     {
@@ -1485,9 +1726,9 @@ void ScoreViewComponent::seekToCanvasPoint(juce::Point<float> point)
     }
 }
 
-void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
+std::optional<ScoreViewComponent::NoteUnder>
+ScoreViewComponent::noteUnder(juce::Point<float> point) const
 {
-    juce::PopupMenu menu;
     for (std::size_t index = 0; index < layout.systems.size() && renderedScore != nullptr; ++index)
     {
         const std::optional<SystemOnCanvas> where = systemOnCanvas(index);
@@ -1501,14 +1742,14 @@ void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
         const std::optional<std::size_t> head = engraving::noteheadAt(system, x, y);
         if (!head.has_value())
         {
-            break;
+            return std::nullopt;
         }
         const engraving::NoteheadGlyph& glyph = system.noteheads.at(*head);
         const auto staff = static_cast<std::size_t>(std::max(0, glyph.staff));
         if (staff >= system.staffParts.size() ||
             system.staffParts.at(staff) >= renderedScore->parts.size())
         {
-            break;
+            return std::nullopt;
         }
         const score::Part& part = renderedScore->parts.at(system.staffParts.at(staff));
         const score::NoteRef& ref = glyph.source;
@@ -1516,16 +1757,50 @@ void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
             ref.voiceIndex >= part.measures[ref.measureIndex].voices.size() ||
             ref.eventIndex >= part.measures[ref.measureIndex].voices[ref.voiceIndex].events.size())
         {
-            break;
+            return std::nullopt;
         }
         const score::Measure& measure = part.measures[ref.measureIndex];
         const score::ScoreEvent& event = measure.voices[ref.voiceIndex].events[ref.eventIndex];
-        const std::string source =
-            (part.name.empty() ? part.id : part.name) + ", bar " + measure.printedNumber;
-
-        // Every note of a chord: which one is the player's choice.
-        for (const score::Note& note : event.notes)
+        if (event.notes.empty())
         {
+            return std::nullopt;
+        }
+        return NoteUnder{
+            event.notes, std::min(ref.noteIndex, event.notes.size() - 1),
+            (part.name.empty() ? part.id : part.name) + ", bar " + measure.printedNumber,
+            system.staffParts.at(staff), ref};
+    }
+    return std::nullopt;
+}
+
+void ScoreViewComponent::aimAtNoteUnder(juce::Point<float> point)
+{
+    if (const std::optional<NoteUnder> under = noteUnder(point))
+    {
+        const score::Note& note = under->chord.at(under->clicked);
+        score::NoteRef ref = under->ref;
+        ref.noteIndex = under->clicked;
+        target.publish(pitch::chosenTarget(
+            note.sounding, note.written, under->source,
+            pitch::Target::ScorePlace{under->partIndex, ref}));
+        canvas.repaint();
+    }
+}
+
+void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
+{
+    juce::PopupMenu menu;
+    if (const std::optional<NoteUnder> under = noteUnder(point))
+    {
+        const std::vector<score::Note>& notes = under->chord;
+        const std::string& source = under->source;
+        // Every note of a chord: which one is the player's choice.
+        for (std::size_t index = 0; index < notes.size(); ++index)
+        {
+            const score::Note& note = notes.at(index);
+            score::NoteRef ref = under->ref;
+            ref.noteIndex = index;
+            const pitch::Target::ScorePlace place{under->partIndex, ref};
             const juce::String written(l10n::noteName(note.written));
             const juce::String label =
                 score::soundsAsWritten(note)
@@ -1534,13 +1809,20 @@ void ScoreViewComponent::showNoteMenu(juce::Point<float> point)
                           "score.view.aim-at.transposed",
                           {{"note", written}, {"sounding", l10n::noteName(note.sounding)}});
             menu.addItem(
-                label, [this, note, source]
-                { target.publish(pitch::chosenTarget(note.sounding, note.written, source)); });
+                label,
+                [this, note, source, place]
+                {
+                    target.publish(pitch::chosenTarget(note.sounding, note.written, source, place));
+                    canvas.repaint();
+                });
         }
-        break;
     }
 
     menu.addItem(l10n::text("score.view.move-clock"), [this, point] { seekToCanvasPoint(point); });
+    if (target.target() != nullptr)
+    {
+        menu.addItem(l10n::text("target.clear"), [this] { target.clear(); });
+    }
     menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&canvas).withMousePosition());
 }
 
@@ -1720,6 +2002,10 @@ std::vector<ToolComponent::MenuEntry> ScoreViewComponent::optionsMenuEntries()
             l10n::text("score.view.menu.fit-page"),
             [this] { setPageFit(score_view::PageFit::page); },
             settings.pageFit == score_view::PageFit::page});
+        entries.push_back(MenuEntry{
+            l10n::text("score.view.menu.fit-panel"),
+            [this] { setPageFit(score_view::PageFit::panel); },
+            settings.pageFit == score_view::PageFit::panel});
     }
 
     if (std::optional<MenuEntry> parts = partsMenuEntry())
@@ -1746,6 +2032,12 @@ std::vector<ToolComponent::MenuEntry> ScoreViewComponent::optionsMenuEntries()
         l10n::text("score.view.menu.follow"), [this] { setFollow(!settings.follow); },
         settings.follow});
 
+    // Notices dismissed from the strip under the score come back from here.
+    MenuEntry showNotices{
+        l10n::text("score.view.menu.show-notices"), [this] { showDismissedNotices(); }, false};
+    showNotices.enabled = !settings.dismissedNotices.empty();
+    entries.push_back(std::move(showNotices));
+
     // The take under review (take-review decision 3).
     entries.push_back(MenuEntry{
         l10n::text("score.view.menu.take-review"), [this] { setShowReview(!settings.showReview); },
@@ -1754,16 +2046,26 @@ std::vector<ToolComponent::MenuEntry> ScoreViewComponent::optionsMenuEntries()
     return entries;
 }
 
-juce::String ScoreViewComponent::noticeText() const
+std::vector<ScoreViewComponent::ShownNotice> ScoreViewComponent::shownNotices() const
 {
-    juce::StringArray lines;
+    std::vector<ShownNotice> shown;
+    const auto add = [this, &shown](std::string code, juce::String text, bool dismissable)
+    {
+        if (dismissable &&
+            std::ranges::find(settings.dismissedNotices, code) != settings.dismissedNotices.end())
+        {
+            return;
+        }
+        shown.push_back({std::move(code), std::move(text), dismissable});
+    };
 
     // First, because it explains everything else on the page. Without the
     // font the staff, stems and beams still draw and every symbol is missing,
     // which would otherwise look like a score with no notes in it.
     if (!musicFont.isLoaded())
     {
-        lines.add(l10n::text("score.view.notice.no-music-font"));
+        add("score.view.notice.no-music-font", l10n::text("score.view.notice.no-music-font"),
+            false);
     }
 
     const bool anyOversize = std::any_of(
@@ -1771,15 +2073,61 @@ juce::String ScoreViewComponent::noticeText() const
 
     if (settings.view == score_view::ViewMode::page && anyOversize)
     {
-        lines.add(l10n::text("score.view.notice.oversize"));
+        add("score.view.notice.oversize", l10n::text("score.view.notice.oversize"), true);
     }
 
     for (const engraving::Notice& notice : layout.notices)
     {
-        lines.add(score_view::noticeText(notice));
+        add(notice.code, score_view::noticeText(notice), true);
     }
 
+    return shown;
+}
+
+juce::String ScoreViewComponent::noticeText() const
+{
+    juce::StringArray lines;
+    for (const ShownNotice& shown : shownNotices())
+    {
+        lines.add(shown.text);
+    }
     return lines.joinIntoString("  ");
+}
+
+bool ScoreViewComponent::wantsNoticeStrip() const
+{
+    return settings.dismissedNotices.empty() || !shownNotices().empty();
+}
+
+void ScoreViewComponent::updateNoticeStrip()
+{
+    const bool wanted = wantsNoticeStrip();
+    if (wanted != noticeStripReserved)
+    {
+        noticeStripReserved = wanted;
+    }
+    // Laid out again either way: the dismiss button comes and goes with
+    // what the strip holds, even when the strip itself stays.
+    resized();
+    repaint();
+}
+
+void ScoreViewComponent::dismissNotices()
+{
+    for (const ShownNotice& shown : shownNotices())
+    {
+        if (shown.dismissable)
+        {
+            settings.dismissedNotices.push_back(shown.code);
+        }
+    }
+    updateNoticeStrip();
+}
+
+void ScoreViewComponent::showDismissedNotices()
+{
+    settings.dismissedNotices.clear();
+    updateNoticeStrip();
 }
 
 void ScoreViewComponent::paintMessage(
@@ -1882,13 +2230,17 @@ void ScoreViewComponent::paint(juce::Graphics& graphics)
 
     const juce::String notices = noticeText();
 
-    if (notices.isEmpty())
+    if (notices.isEmpty() || noticeStripBounds.isEmpty())
     {
         return;
     }
 
-    const juce::Rectangle<int> strip =
-        bounds.removeFromBottom(scaledHeight(noticeStripHeight)).reduced(canvasMargin, 4);
+    juce::Rectangle<int> strip = noticeStripBounds.reduced(canvasMargin, 4);
+    if (dismissNoticesButton.isVisible())
+    {
+        // The text stops short of the close button rather than running under it.
+        strip.setRight(dismissNoticesButton.getX() - 6);
+    }
 
     graphics.setColour(colours.panel);
     graphics.fillRect(strip.expanded(canvasMargin, 2));

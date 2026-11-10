@@ -109,6 +109,10 @@ set(PRACTICE_TAKES_SOURCES
     src/application/theme/Icons.h
     src/application/theme/MiniStaff.cpp
     src/application/theme/MiniStaff.h
+    src/application/theme/MusicFont.cpp
+    src/application/theme/MusicFont.h
+    src/application/theme/SmuflGlyphs.cpp
+    src/application/theme/SmuflGlyphs.h
     src/application/theme/PlusOrMinusCents.h
     src/application/theme/Theme.cpp
     src/application/theme/Theme.h
@@ -144,17 +148,15 @@ set(PRACTICE_TAKES_SOURCES
     src/features/analysis/tuner/TunerZones.h
     src/features/review/TakeReviewComponent.cpp
     src/features/review/TakeReviewComponent.h
-    src/features/score/MusicFont.cpp
-    src/features/score/MusicFont.h
     src/features/score/NoticeText.h
     src/features/score/ScoreGlyphPainter.cpp
+    src/features/score/SmuflEngraving.cpp
     src/features/score/ScoreGlyphPainter.h
+    src/features/score/SmuflEngraving.h
     src/features/score/ScoreViewComponent.cpp
     src/features/score/ScoreViewComponent.h
     src/features/score/ScoreViewSettings.cpp
     src/features/score/ScoreViewSettings.h
-    src/features/score/SmuflGlyphs.cpp
-    src/features/score/SmuflGlyphs.h
     src/features/score/engraving/AccidentalStacking.cpp
     src/features/score/engraving/BeamGeometry.cpp
     src/features/score/engraving/BeamGrouping.cpp
@@ -246,6 +248,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/midi/NoteSoundingTracker.h
     src/platform/midi/SoundingDurationJudgement.h
     src/platform/pitch/CurrentTarget.h
+    src/platform/pitch/KeyInForce.h
     src/platform/pitch/IntonationZone.h
     src/platform/pitch/PitchTracker.cpp
     src/platform/pitch/PitchTracker.h
@@ -313,6 +316,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/transport/PlaybackTrackNames.h
     src/platform/transport/PracticeClock.cpp
     src/platform/transport/PracticeClock.h
+    src/platform/transport/PlayheadSmoother.h
     src/platform/transport/ScoreSynth.cpp
     src/platform/transport/ScoreSynth.h
     src/platform/transport/SoundFontLocation.h
@@ -361,6 +365,8 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/theme/AppLookAndFeelTests.cpp
     src/tests/application/theme/IconsTests.cpp
     src/tests/application/theme/MiniStaffTests.cpp
+    src/tests/application/theme/MusicFontTests.cpp
+    src/tests/application/theme/SmuflGlyphsTests.cpp
     src/tests/application/tools/CompactPresentationTests.cpp
     src/tests/application/tools/ToolCatalogTests.cpp
     src/tests/application/tools/ToolLifecycleTests.cpp
@@ -382,9 +388,8 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/features/level/InputLevelSettingsTests.cpp
     src/tests/features/notes/NoteViewModelTests.cpp
     src/tests/features/nownext/NowNextModelTests.cpp
-    src/tests/features/score/MusicFontTests.cpp
     src/tests/features/score/ScoreViewSettingsTests.cpp
-    src/tests/features/score/SmuflGlyphsTests.cpp
+    src/tests/features/score/SmuflEngravingTests.cpp
     src/tests/features/score/engraving/AccidentalStackingTests.cpp
     src/tests/features/score/engraving/BeamGeometryTests.cpp
     src/tests/features/score/engraving/BeamGroupingTests.cpp
@@ -415,6 +420,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/midi/NoteSoundingTrackerTests.cpp
     src/tests/platform/midi/SoundingDurationJudgementTests.cpp
     src/tests/platform/pitch/CurrentTargetTests.cpp
+    src/tests/platform/pitch/KeyInForceTests.cpp
     src/tests/platform/pitch/IntonationZoneTests.cpp
     src/tests/platform/pitch/PitchTrackerTests.cpp
     src/tests/platform/pitch/ReferencePitchTests.cpp
@@ -454,6 +460,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/take/TakeRecorderTests.cpp
     src/tests/platform/take/TakeStatusTests.cpp
     src/tests/platform/transport/ClockMathTests.cpp
+    src/tests/platform/transport/PlayheadSmootherTests.cpp
     src/tests/platform/transport/ClockRendererTests.cpp
     src/tests/platform/transport/PlaybackEventsTests.cpp
     src/tests/platform/transport/PracticeClockTests.cpp
@@ -477,13 +484,14 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/application/theme/AppLookAndFeel.cpp
     src/application/theme/Icons.cpp
     src/application/theme/MiniStaff.cpp
+    src/application/theme/MusicFont.cpp
+    src/application/theme/SmuflGlyphs.cpp
     src/application/theme/Theme.cpp
     src/features/analysis/harmonics/HarmonicAnalyzer.cpp
     src/platform/pitch/PitchTracker.cpp
     src/features/performance/ApplicationLaunchTimer.cpp
-    src/features/score/MusicFont.cpp
     src/features/score/ScoreViewSettings.cpp
-    src/features/score/SmuflGlyphs.cpp
+    src/features/score/SmuflEngraving.cpp
     src/features/score/engraving/AccidentalStacking.cpp
     src/features/score/engraving/BeamGeometry.cpp
     src/features/score/engraving/BeamGrouping.cpp

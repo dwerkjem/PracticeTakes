@@ -614,6 +614,8 @@ TEST_CASE("every setting travels in a transfer file, the devices too", "[setting
     state.language = "de";
     state.noteNaming = 1;
     state.octaveNumbering = 2;
+    state.keySignatureFifths = -2;
+    state.flatsWithoutKey = true;
     state.metronomeEnabled = false;
     state.metronomeVolume = 0.2;
     state.metronomeAccent = false;
@@ -642,6 +644,8 @@ TEST_CASE("every setting travels in a transfer file, the devices too", "[setting
     CHECK(imported.language == "de");
     CHECK(imported.noteNaming == 1);
     CHECK(imported.octaveNumbering == 2);
+    CHECK(imported.keySignatureFifths == -2);
+    CHECK(imported.flatsWithoutKey);
     CHECK_FALSE(imported.metronomeEnabled);
     CHECK(imported.metronomeVolume == Catch::Approx(0.2));
     CHECK_FALSE(imported.metronomeAccent);

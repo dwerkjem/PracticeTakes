@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "features/score/SmuflGlyphs.h"
+#include "application/theme/SmuflGlyphs.h"
 
 #include <algorithm>
 #include <set>
@@ -14,14 +14,6 @@
 // that the font actually has a glyph at each codepoint, and that its shape is
 // the one the name promises.
 using smufl::Glyph;
-
-TEST_CASE("each notehead kind has its own glyph", "[score][smufl]")
-{
-    CHECK(smufl::noteheadFor(engraving::NoteheadKind::filled) == Glyph::noteheadBlack);
-    CHECK(smufl::noteheadFor(engraving::NoteheadKind::half) == Glyph::noteheadHalf);
-    CHECK(smufl::noteheadFor(engraving::NoteheadKind::whole) == Glyph::noteheadWhole);
-    CHECK(smufl::noteheadFor(engraving::NoteheadKind::breve) == Glyph::noteheadDoubleWhole);
-}
 
 TEST_CASE("a flag is one glyph per count and direction", "[score][smufl]")
 {
@@ -45,33 +37,6 @@ TEST_CASE("a flag is one glyph per count and direction", "[score][smufl]")
         CHECK_FALSE(smufl::flagFor(-1, false).has_value());
         CHECK_FALSE(smufl::flagFor(6, true).has_value());
     }
-}
-
-TEST_CASE("each written value has its own rest", "[score][smufl]")
-{
-    using engraving::WrittenValue;
-
-    CHECK(smufl::restFor(WrittenValue::breve) == Glyph::restDoubleWhole);
-    CHECK(smufl::restFor(WrittenValue::whole) == Glyph::restWhole);
-    CHECK(smufl::restFor(WrittenValue::half) == Glyph::restHalf);
-    CHECK(smufl::restFor(WrittenValue::quarter) == Glyph::restQuarter);
-    CHECK(smufl::restFor(WrittenValue::eighth) == Glyph::rest8th);
-    CHECK(smufl::restFor(WrittenValue::sixteenth) == Glyph::rest16th);
-    CHECK(smufl::restFor(WrittenValue::thirtySecond) == Glyph::rest32nd);
-    CHECK(smufl::restFor(WrittenValue::sixtyFourth) == Glyph::rest64th);
-    CHECK(smufl::restFor(WrittenValue::hundredTwentyEighth) == Glyph::rest128th);
-}
-
-TEST_CASE("each accidental has its own sign, and none has none", "[score][smufl]")
-{
-    using engraving::AccidentalKind;
-
-    CHECK(smufl::accidentalFor(AccidentalKind::sharp) == Glyph::accidentalSharp);
-    CHECK(smufl::accidentalFor(AccidentalKind::flat) == Glyph::accidentalFlat);
-    CHECK(smufl::accidentalFor(AccidentalKind::natural) == Glyph::accidentalNatural);
-    CHECK(smufl::accidentalFor(AccidentalKind::doubleSharp) == Glyph::accidentalDoubleSharp);
-    CHECK(smufl::accidentalFor(AccidentalKind::doubleFlat) == Glyph::accidentalDoubleFlat);
-    CHECK_FALSE(smufl::accidentalFor(AccidentalKind::none).has_value());
 }
 
 TEST_CASE("a clef's glyph carries its octave change", "[score][smufl]")

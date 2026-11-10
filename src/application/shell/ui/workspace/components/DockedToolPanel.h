@@ -70,6 +70,11 @@ class MainComponent::DockedToolPanel final : public juce::Component
         optionsButton.setRenameHandler(std::move(handler));
     }
 
+    void setClearTargetHandler(std::function<void()> handler, std::function<bool()> available)
+    {
+        optionsButton.setClearTargetHandler(std::move(handler), std::move(available));
+    }
+
     void releaseContent()
     {
         // Handed back before the panel goes: the tool checks whether anyone

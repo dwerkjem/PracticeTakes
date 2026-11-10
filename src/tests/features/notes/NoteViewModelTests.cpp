@@ -86,3 +86,25 @@ TEST_CASE("the trail keeps three seconds, with its gaps", "[notes][trail]")
     CHECK(points.back().seconds == Approx(4.0));
     CHECK_FALSE(points[static_cast<std::size_t>(10)].midi.has_value());
 }
+
+TEST_CASE("a point on the keyboard finds the key under it", "[notes][keyboard]")
+{
+    // C4 to C6: fifteen white keys, so each is a fifteenth of the width.
+    const notes::KeyWindow window{60, 84};
+    const double white = 1.0 / 15.0;
+
+    // Low on the keys only white keys are there.
+    CHECK(notes::keyAt(window, white * 0.5, 0.9) == 60);
+    CHECK(notes::keyAt(window, white * 1.5, 0.9) == 62);
+    CHECK(notes::keyAt(window, 1.0 - (white * 0.5), 0.9) == 84);
+
+    // High up, a black key covers the boundary between its neighbours.
+    CHECK(notes::keyAt(window, white * 1.0, 0.3) == 61);
+    CHECK(notes::keyAt(window, white * 1.0, 0.9) != 61);
+    // Between E and F there is no black key, so the white one is found.
+    CHECK(notes::keyAt(window, white * 2.9, 0.3) == 64);
+
+    // Off the keys, nothing.
+    CHECK_FALSE(notes::keyAt(window, -0.01, 0.5).has_value());
+    CHECK_FALSE(notes::keyAt(window, 0.5, 1.2).has_value());
+}

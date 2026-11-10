@@ -18,6 +18,7 @@
 #include "../tools/BuiltInTools.h"
 #include "../tools/ToolInstanceAllocator.h"
 #include "../tools/ToolInstanceId.h"
+#include "state/following/KeyInForceFollower.h"
 #include "state/following/TargetClockFollower.h"
 #include "ui/main_window/TransportStrip.h"
 #include "ui/score/ScoreImportJob.h"
@@ -63,6 +64,16 @@ class MainComponent final
     // input device at all, leaving the generated tone as the only producer.
     // See that constructor for why a capture instance wants it.
     explicit MainComponent(bool muteMicrophoneForSession = false, bool declineAudioInput = false);
+
+    // Demo mode hides the "No microphone detected" warning and has the
+    // microphone button say Demo mode; clicking it, or the Settings menu,
+    // leaves. For the session only: never saved, so it cannot outlive the
+    // demonstration it was turned on for.
+    void setDemoMode(bool on);
+    [[nodiscard]] bool isDemoMode() const noexcept
+    {
+        return demoMode;
+    }
     ~MainComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -198,6 +209,11 @@ class MainComponent final
     [[nodiscard]] AudioStreamUse::Use audioStreamUse() const;
     void showNoAudioStreamAlert() const;
     void showRenameToolDialog(const ToolInstanceId& instance);
+
+    // Leaves the application with no target note, from the Tools menu or any
+    // tool's own menu, and saves that.
+    void clearTarget();
+
     void renameTool(const ToolInstanceId& instance, const juce::String& requestedName);
     // The open instances of one tool, lowest ordinal first.
     [[nodiscard]] std::vector<ToolInstanceId> openInstancesOf(std::string_view toolId) const;
@@ -336,6 +352,10 @@ class MainComponent final
     // a note redrawn.
     void noteNamingChanged();
 
+    // Puts the key in force where tools read it at once, rather than at the
+    // follower's next check: after a score opens or the reader's key changes.
+    void applySpellingKey();
+
     // The interface language chosen ("" for Automatic): saved, for the next
     // start -- every label takes its words when it is made.
     void chooseLanguage(const juce::String& code);
@@ -455,6 +475,10 @@ class MainComponent final
         [this] { return outputLatencyFrames(); }};
     [[nodiscard]] int outputLatencyFrames();
 
+    // Keeps the target's key on the measure the music is at, which every tool
+    // spells and draws in. After the clock, the score and the target it reads.
+    KeyInForceFollower keyFollower{practiceClock, scoreImport.currentScoreHolder(), currentTarget};
+
     // The clock's controls, which the window's control strip lays out beside
     // the menus. Declared after the clock it listens to, so it stops listening
     // before the clock goes. Saving the metronome switch goes through the
@@ -524,6 +548,7 @@ class MainComponent final
     AppSettings::FullscreenMode selectedFullscreenMode = AppSettings::FullscreenMode::normal;
     juce::Rectangle<int> savedSettingsBounds;
     bool isMicrophoneWarningDismissed = false;
+    bool demoMode = false;
 
 #if PRACTICE_TAKES_ENABLE_TEST_CONTROL
     // The approved state last applied, or empty when the application is not in

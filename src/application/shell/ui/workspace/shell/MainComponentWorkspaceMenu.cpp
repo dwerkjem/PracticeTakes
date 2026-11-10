@@ -1,6 +1,7 @@
 #include "../../../MainComponent.h"
 
 #include "../../../../localisation/Localisation.h"
+#include "../../../../theme/Icons.h"
 #include "../model/WorkspaceMenuModel.h"
 
 namespace
@@ -40,6 +41,7 @@ constexpr int renameWorkspaceMenuItemId = 62;
 constexpr int deleteWorkspaceMenuItemId = 63;
 constexpr int resetWorkspaceMenuItemId = 64;
 constexpr int firstWorkspaceMenuItemId = 1000;
+constexpr int clearTargetMenuItemId = 70;
 } // namespace
 
 void MainComponent::showToolsMenu()
@@ -197,6 +199,14 @@ void MainComponent::showToolsMenu()
     menu.addSeparator();
     menu.addSubMenu(l10n::text("menu.workspaces"), workspaceMenu);
 
+    // The target is the application's, not a tool's, so it is cleared here as
+    // well as from each tool's own menu.
+    menu.addSeparator();
+    menu.addItem(appearance::menuItem(
+                     clearTargetMenuItemId, l10n::text("target.clear"), appearance::Icon::target,
+                     appLookAndFeel.findColour(juce::PopupMenu::textColourId))
+                     .setEnabled(currentTarget.target() != nullptr));
+
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(
         juce::PopupMenu::Options()
@@ -237,6 +247,10 @@ void MainComponent::showToolsMenu()
                     safeThis->closeTool(item.instance);
                     break;
                 }
+            }
+            else if (selectedItemId == clearTargetMenuItemId)
+            {
+                safeThis->clearTarget();
             }
             else if (selectedItemId == horizontalLayoutMenuItemId)
             {

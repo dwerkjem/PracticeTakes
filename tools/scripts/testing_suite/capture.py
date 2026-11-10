@@ -391,7 +391,11 @@ class CapturePass:
             # costs a relaunch, so it happens only when the mode is wrong for
             # this surface -- held for the surface, not for the run.
             wants_device = surface.needs_input_device
-            wrong_mode = wants_device == self.driver.decline_audio_input
+            wants_demo = not surface.shows_microphone
+            wrong_mode = (
+                wants_device == self.driver.decline_audio_input
+                or wants_demo != self.driver.demo_mode
+            )
 
             if surface.restart_before or wrong_mode:
                 # The one place a capture opens the audio device. Left ungated,
@@ -399,6 +403,7 @@ class CapturePass:
                 # device and take this worker's whole share with it.
                 with self.audio_gate:
                     self.driver.decline_audio_input = not wants_device
+                    self.driver.demo_mode = wants_demo
                     self.driver.restart()
 
                 self._open = None

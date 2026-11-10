@@ -431,6 +431,16 @@ void MainComponent::constructToolPresentation(
         }
     };
 
+    const auto clearTargetHandler = [safeThis]
+    {
+        if (safeThis != nullptr)
+        {
+            safeThis->clearTarget();
+        }
+    };
+    const auto hasTargetSource = [safeThis]
+    { return safeThis != nullptr && safeThis->currentTarget.target() != nullptr; };
+
     if (presentation == WorkspaceToolState::Presentation::docked)
     {
         const auto floatHandler = [safeThis, instance]
@@ -444,6 +454,7 @@ void MainComponent::constructToolPresentation(
             toolName(instance), *entry->component, dragHandler, floatHandler, feedbackHandler,
             closeHandler, focusHandler, entry->component.get());
         entry->dock->setRenameHandler(renameHandler);
+        entry->dock->setClearTargetHandler(clearTargetHandler, hasTargetSource);
     }
     else
     {
@@ -464,6 +475,7 @@ void MainComponent::constructToolPresentation(
             toolName(instance), *entry->component, preferredSize, dragHandler, dockHandler,
             feedbackHandler, closeHandler, focusHandler, entry->component.get());
         entry->window->setRenameHandler(renameHandler);
+        entry->window->setClearTargetHandler(clearTargetHandler, hasTargetSource);
         if (!entry->savedBounds.isEmpty())
         {
             entry->window->setBounds(entry->savedBounds);

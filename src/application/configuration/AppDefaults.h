@@ -111,6 +111,10 @@ inline constexpr double offsetShown = 0.0;
 // sign and marker measuring against the target, the graph's axis centred on
 // its line -- or reads against the nearest note as it does without one (0).
 inline constexpr double targetCentred = 1.0;
+
+// Whether the graph shows only the notes of the key in force (1) -- the
+// target and the note sung always, in the key or not -- or every semitone (0).
+inline constexpr double inKeyOnly = 0.0;
 } // namespace Tuner
 
 enum class Preset
@@ -133,6 +137,8 @@ struct TunerSettings
     double marker;
     double offsetShown;
     double targetCentred;
+    // Last, with a default, so the presets written before it need not name it.
+    double inKeyOnly = Tuner::inKeyOnly;
 };
 
 // The tuner's settings schema: for each numeric setting, the name it is stored
@@ -155,7 +161,7 @@ struct TunerNumberField
 };
 
 inline constexpr int tunerDisplayModeMinimum = 1;
-inline constexpr int tunerDisplayModeMaximum = 3;
+inline constexpr int tunerDisplayModeMaximum = 4;
 
 // In payload order: a workspace payload lists its fields in this order.
 inline constexpr std::array tunerNumberFields{
@@ -171,6 +177,7 @@ inline constexpr std::array tunerNumberFields{
     TunerNumberField{"marker", &TunerSettings::marker, 0.0, 6.0, 1.0, false},
     TunerNumberField{"offsetShown", &TunerSettings::offsetShown, 0.0, 1.0, 1.0, false},
     TunerNumberField{"targetCentred", &TunerSettings::targetCentred, 0.0, 1.0, 1.0, false},
+    TunerNumberField{"inKeyOnly", &TunerSettings::inKeyOnly, 0.0, 1.0, 1.0, false},
 };
 
 // The schema entry for one setting. Every member of TunerSettings but
@@ -246,6 +253,7 @@ presetKeepingLook(TunerSettings preset, const TunerSettings& current)
     preset.marker = current.marker;
     preset.offsetShown = current.offsetShown;
     preset.targetCentred = current.targetCentred;
+    preset.inKeyOnly = current.inKeyOnly;
     return preset;
 }
 

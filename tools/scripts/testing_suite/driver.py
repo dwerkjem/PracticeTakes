@@ -118,6 +118,12 @@ class ApplicationDriver:
         # the mode a surface needs and back out after, so the microphone is
         # held for that surface rather than for the whole run.
         self.decline_audio_input = True
+        # Whether the next launch is in demo mode: no "No microphone detected"
+        # warning, and the microphone button saying Demo mode. On by default,
+        # because a capture instance has no microphone on purpose and every
+        # picture would otherwise carry the warning; off only for a surface
+        # that is about the microphone's state (`surfaces.Surface.shows_microphone`).
+        self.demo_mode = True
         self._process: subprocess.Popen[str] | None = None
         self._error_log = None
 
@@ -146,6 +152,7 @@ class ApplicationDriver:
                 # whenever one is asked for, so winning the device meant reading
                 # from it and discarding every sample.
                 *(["--no-audio-input"] if self.decline_audio_input else []),
+                *(["--demo-mode"] if self.demo_mode else []),
                 *self.extra_arguments,
             ],
             stdin=subprocess.PIPE,

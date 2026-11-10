@@ -1,3 +1,4 @@
+#include "../../../localisation/NoteNames.h"
 #include "../../MainComponent.h"
 
 #include "../../ui/feedback/FeedbackWindow.h"
@@ -34,9 +35,20 @@ void MainComponent::showLanguageRestartNote() const
         l10n::text("settings.appearance.language.restart"), l10n::text("workspace.alert.ok"));
 }
 
+void MainComponent::applySpellingKey()
+{
+    keyFollower.update();
+}
+
 void MainComponent::noteNamingChanged()
 {
+    applySpellingKey();
     saveSettings(false);
+    // Practice names its keys in the naming chosen in Appearance.
+    if (settingsWindow != nullptr)
+    {
+        settingsWindow->showNaming();
+    }
     for (int index = 0; index < juce::TopLevelWindow::getNumTopLevelWindows(); ++index)
     {
         if (auto* window = juce::TopLevelWindow::getTopLevelWindow(index))

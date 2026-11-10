@@ -22,6 +22,7 @@ constexpr int darkSettingsMenuItemId = 3;
 constexpr int muteSettingsMenuItemId = 4;
 constexpr int normalFullscreenMenuItemId = 5;
 constexpr int kioskFullscreenMenuItemId = 6;
+constexpr int demoModeMenuItemId = 7;
 // Automatic, then each language in availableLanguages' order.
 constexpr int firstLanguageMenuItemId = 100;
 
@@ -94,6 +95,13 @@ void MainComponent::showSettingsMenu()
             muted ? appearance::Icon::microphone : appearance::Icon::microphoneOff, ink);
         menu.addItem(std::move(mute));
     }
+    {
+        // Ticked rather than marked with its icon: it is a state to be in.
+        juce::PopupMenu::Item demo(l10n::text("demo.menu"));
+        demo.itemID = demoModeMenuItemId;
+        demo.isTicked = demoMode;
+        menu.addItem(std::move(demo));
+    }
     menu.addSeparator();
     {
         juce::PopupMenu::Item open(l10n::text("menu.settings.open"));
@@ -137,6 +145,9 @@ void MainComponent::showSettingsMenu()
                 break;
             case muteSettingsMenuItemId:
                 safeThis->audioInputService.toggleMuted();
+                break;
+            case demoModeMenuItemId:
+                safeThis->setDemoMode(!safeThis->demoMode);
                 break;
             case normalFullscreenMenuItemId:
                 safeThis->selectedFullscreenMode = AppSettings::FullscreenMode::normal;
@@ -633,6 +644,8 @@ void MainComponent::applyPracticePreferences(const AppSettings::State& state)
     l10n::setNoteNaming(
         {static_cast<score::NoteNaming>(state.noteNaming),
          static_cast<score::OctaveNumbering>(state.octaveNumbering)});
+    l10n::setSpelling({state.keySignatureFifths, state.flatsWithoutKey});
+    applySpellingKey();
 
     // The keyboard may not be plugged in yet, and that is not a failure: the
     // service holds the selection and opens it when it appears.
@@ -689,6 +702,8 @@ void MainComponent::resetAll()
     setTheme(AppDefaults::theme);
     setTextScale(appearance::TextScale::defaultPercent);
     l10n::setNoteNaming({});
+    l10n::setSpelling({});
+    applySpellingKey();
     chosenLanguage = {};
     if (settingsWindow != nullptr)
     {
@@ -744,6 +759,8 @@ AppSettings::State MainComponent::captureSettingsState()
     state.noteNaming = static_cast<int>(l10n::noteNaming().naming);
     state.language = chosenLanguage;
     state.octaveNumbering = static_cast<int>(l10n::noteNaming().octaves);
+    state.keySignatureFifths = l10n::spelling().keyFifths;
+    state.flatsWithoutKey = l10n::spelling().flats;
     state.microphoneMuted =
         sessionMicrophoneMuteEnabled ? persistedMicrophoneMuted : audioInputService.isMuted();
     state.inputGain = audioInputService.inputGain();

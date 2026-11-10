@@ -6,6 +6,7 @@
 
 #include "../../../application/theme/AppLookAndFeel.h"
 #include "../../../application/theme/MiniStaff.h"
+#include "../../../application/theme/MusicFont.h"
 #include "../../../application/theme/Theme.h"
 #include "../../../platform/pitch/CurrentTarget.h"
 #include "../../../platform/pitch/TargetChoice.h"
@@ -83,13 +84,22 @@ class TargetPickerPanel final
         {
             if (const std::optional<int> held = steadyNote ? steadyNote() : std::nullopt)
             {
-                if (const auto sung = pitch::spellMidi(*held, true))
+                if (const auto sung = l10n::spellHeard(*held, target.keyFifths))
                 {
                     choose(*sung, "Sung");
                 }
             }
         };
         addAndMakeVisible(singButton);
+
+        clearButton.setComponentID("target-clear");
+        clearButton.setTooltip(l10n::text("target.clear.tooltip"));
+        clearButton.onClick = [this]
+        {
+            target.clear();
+            refresh();
+        };
+        addAndMakeVisible(clearButton);
 
         const auto step = [this](juce::TextButton& button, const char* id, auto move)
         {
@@ -161,6 +171,8 @@ class TargetPickerPanel final
         nameButton.setBounds(nameRow.removeFromLeft(56));
         nameRow.removeFromLeft(12);
         singButton.setBounds(nameRow.removeFromLeft(170));
+        nameRow.removeFromLeft(12);
+        clearButton.setBounds(nameRow.removeFromLeft(110));
         bounds.removeFromTop(8);
 
         auto stepRow = bounds.removeFromTop(30);
@@ -180,6 +192,7 @@ class TargetPickerPanel final
         std::function<void(const score::Pitch&)> onChoose;
         int alter = 0;
         std::optional<score::Pitch> shown;
+        int keyFifths = 0;
         juce::Colour ink = juce::Colours::black;
         juce::Colour accent = juce::Colours::blue;
 
@@ -225,21 +238,14 @@ class TargetPickerPanel final
             style.ledgerReach = 1.25f;
             style.ledgersInNoteColour = true;
             style.accidentals = false;
+            // Each staff's own clef, G on the treble and F on the bass, at its
+            // start: the heads are in the middle, clear of them.
+            style.font = &musicFont.get();
+            style.keyFifths = keyFifths;
             drawMiniStaff(
                 graphics, staffArea(trebleMiddle()), pitch::StaffClef::treble, trebleHeads, style);
             drawMiniStaff(
                 graphics, staffArea(bassMiddle()), pitch::StaffClef::bass, bassHeads, style);
-
-            // The grand staff is labelled in the margin, above the treble and
-            // below the bass, rather than above each staff.
-            graphics.setColour(style.lines);
-            graphics.setFont(appearance::fontFor(*this, appearance::TextRole::small));
-            graphics.drawText(
-                miniStaffClefName(pitch::StaffClef::treble), 0,
-                static_cast<int>(trebleMiddle() - 30.0f), 60, 14, juce::Justification::left);
-            graphics.drawText(
-                miniStaffClefName(pitch::StaffClef::bass), 0,
-                static_cast<int>(bassMiddle() + 22.0f), 60, 14, juce::Justification::left);
         }
 
         void mouseMove(const juce::MouseEvent& event) override
@@ -324,6 +330,9 @@ class TargetPickerPanel final
         }
 
         std::optional<Place> hover;
+
+        // The music font, for the clefs: one copy however many tools draw staves.
+        juce::SharedResourcePointer<MusicFont> musicFont;
     };
 
     void handleNoteOn(juce::MidiKeyboardState*, int, int midiNoteNumber, float) override
@@ -332,8 +341,9 @@ class TargetPickerPanel final
         {
             return;
         }
-        // A key has no spelling, so it is spelled with a sharp.
-        if (const auto key = pitch::spellMidi(midiNoteNumber, true))
+        // A key has no spelling, so it is spelled as the score's key would
+        // spell it, or as the reader chose with none open.
+        if (const auto key = l10n::spellHeard(midiNoteNumber, target.keyFifths))
         {
             choose(*key, "Chosen on the keyboard");
         }
@@ -344,6 +354,13 @@ class TargetPickerPanel final
     void timerCallback() override
     {
         singButton.setEnabled(steadyNote && steadyNote().has_value());
+        clearButton.setEnabled(target.target() != nullptr);
+        // The key follows the music, so the staff's signature does too.
+        if (staff.keyFifths != target.keyFifths)
+        {
+            staff.keyFifths = target.keyFifths;
+            staff.repaint();
+        }
         showTargetOnKeyboard();
     }
 
@@ -383,6 +400,7 @@ class TargetPickerPanel final
                 : l10n::text("target.heading.none"),
             juce::dontSendNotification);
         staff.shown = currentPitch();
+        staff.keyFifths = target.keyFifths;
         // A call-out is dark in either theme, so the staff is drawn light.
         staff.ink = juce::Colours::white.withAlpha(0.85f);
         staff.accent = colours.accent.brighter(0.3f);
@@ -427,6 +445,7 @@ class TargetPickerPanel final
     juce::TextEditor nameEditor;
     juce::TextButton nameButton{l10n::text("target.name.set")};
     juce::TextButton singButton{l10n::text("target.sing")};
+    juce::TextButton clearButton{l10n::text("target.clear.short")};
     juce::TextButton semitoneDown{l10n::text("target.semitone-down")};
     juce::TextButton semitoneUp{l10n::text("target.semitone-up")};
     juce::TextButton keyDown{l10n::text("target.key-down")};

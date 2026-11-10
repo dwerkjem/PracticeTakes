@@ -58,6 +58,46 @@ struct KeyWindow
     bool operator==(const KeyWindow&) const = default;
 };
 
+// How far down a black key reaches, as a fraction of the keyboard's height.
+inline constexpr double blackKeyDepth = 0.62;
+
+// And how wide one is, in white-key widths.
+inline constexpr double blackKeyWidth = 0.6;
+
+// The key under a point on the keyboard drawn for `window`, given as fractions
+// across (0 at the lowest key's left edge, 1 at the highest's right) and down
+// (0 at the top). A black key is on top of its white neighbours where it
+// reaches; below that, the white key under the point. Nothing off the keys.
+[[nodiscard]] inline std::optional<int>
+keyAt(const KeyWindow& window, double across, double down) noexcept
+{
+    if (across < 0.0 || across > 1.0 || down < 0.0 || down > 1.0)
+    {
+        return std::nullopt;
+    }
+    const double first = keyCentre(window.lowest) - 0.5;
+    const double last = keyCentre(window.highest) + 0.5;
+    const double at = first + (across * (last - first));
+    if (down <= blackKeyDepth)
+    {
+        for (int key = window.lowest; key <= window.highest; ++key)
+        {
+            if (isBlackKey(key) && std::abs(at - keyCentre(key)) <= blackKeyWidth * 0.5)
+            {
+                return key;
+            }
+        }
+    }
+    for (int key = window.lowest; key <= window.highest; ++key)
+    {
+        if (!isBlackKey(key) && std::abs(at - keyCentre(key)) <= 0.5)
+        {
+            return key;
+        }
+    }
+    return std::nullopt;
+}
+
 // The window that shows every key in `mustShow`. The current one is kept while
 // it still does, so the keys hold still while the note moves inside them.
 [[nodiscard]] inline KeyWindow windowFor(const KeyWindow& current, const std::vector<int>& mustShow)

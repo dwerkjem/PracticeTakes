@@ -153,3 +153,26 @@ TEST_CASE("time before the start of the score clamps to tick zero", "[score][tem
     CHECK(map.secondsToTick(-1.0) == 0);
     CHECK(map.secondsToTick(0.0) == 0);
 }
+
+TEST_CASE("seconds turn into a fractional tick, exact across a tempo change", "[score][tempo]")
+{
+    // 60 BPM for one bar, then 120 BPM: the first bar takes four seconds.
+    const TempoMap map = TempoMap::build({{0, 60.0}, {oneBar, 120.0}});
+
+    CHECK(map.secondsToFractionalTick(0.0) == Approx(0.0));
+    CHECK(map.secondsToFractionalTick(2.0) == Approx(static_cast<double>(oneBar) / 2.0));
+    CHECK(map.secondsToFractionalTick(4.0) == Approx(static_cast<double>(oneBar)));
+    // Half a second past the change is half a second at the new speed: a whole
+    // quarter, not half of one.
+    CHECK(
+        map.secondsToFractionalTick(4.5) ==
+        Approx(static_cast<double>(oneBar) + static_cast<double>(ticksPerQuarterNote)));
+    // Between ticks, not rounded to either.
+    const double between = map.secondsToFractionalTick(0.0001);
+    CHECK(between > 0.0);
+    CHECK(between < 1.0);
+    // Inverse of tickToSeconds.
+    CHECK(
+        map.secondsToFractionalTick(map.tickToSeconds(oneBar * 3)) ==
+        Approx(static_cast<double>(oneBar * 3)));
+}

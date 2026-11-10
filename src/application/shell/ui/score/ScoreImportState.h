@@ -95,6 +95,15 @@ class ScoreImportState
         return openScoreSummary;
     }
 
+    // No score open, as at launch. Only the test-control channel asks: an
+    // approved state with no score must not show the one the state before it
+    // opened. The application itself never closes a score.
+    void close()
+    {
+        currentScore.publish(nullptr);
+        openScoreSummary = {};
+    }
+
   private:
     score::CurrentScore currentScore;
     ScoreImportSummary lastSummary;

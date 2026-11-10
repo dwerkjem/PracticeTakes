@@ -184,3 +184,15 @@ TEST_CASE("the open score's summary outlives a later import that failed", "[scor
     CHECK(state.currentScoreSummary().succeeded);
     CHECK(state.currentScoreSummary().detail != "Unexpected end of document");
 }
+
+TEST_CASE("closing leaves no score open", "[score][import][state]")
+{
+    ScoreImportState state;
+    static_cast<void>(state.apply(importOf("Gymnopédie")));
+    REQUIRE(state.hasScore());
+
+    state.close();
+    CHECK_FALSE(state.hasScore());
+    CHECK(state.score() == nullptr);
+    CHECK_FALSE(state.currentScoreSummary().succeeded);
+}

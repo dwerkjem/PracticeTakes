@@ -103,3 +103,62 @@ TEST_CASE("a pitch's place on a staff, in each clef", "[pitch][choice]")
         }
     }
 }
+
+TEST_CASE("a key signature names its major and relative minor", "[pitch][key]")
+{
+    using score::Step;
+    const auto c = pitch::keyTonics(0);
+    CHECK(c.majorStep == Step::c);
+    CHECK(c.majorAlter == 0);
+    CHECK(c.minorStep == Step::a);
+
+    const auto g = pitch::keyTonics(1);
+    CHECK(g.majorStep == Step::g);
+    CHECK(g.minorStep == Step::e);
+
+    const auto bFlat = pitch::keyTonics(-2);
+    CHECK(bFlat.majorStep == Step::b);
+    CHECK(bFlat.majorAlter == -1);
+    CHECK(bFlat.minorStep == Step::g);
+    CHECK(bFlat.minorAlter == 0);
+
+    const auto cSharp = pitch::keyTonics(7);
+    CHECK(cSharp.majorStep == Step::c);
+    CHECK(cSharp.majorAlter == 1);
+    CHECK(cSharp.minorStep == Step::a);
+    CHECK(cSharp.minorAlter == 1);
+
+    const auto cFlat = pitch::keyTonics(-7);
+    CHECK(cFlat.majorStep == Step::c);
+    CHECK(cFlat.majorAlter == -1);
+    CHECK(cFlat.minorStep == Step::a);
+    CHECK(cFlat.minorAlter == -1);
+}
+
+TEST_CASE("a heard note takes the key's accidentals, and the reader's in C", "[pitch][key]")
+{
+    // A flat key spells with flats and a sharp one with sharps, whatever the
+    // reader prefers; C major, which has neither, takes the preference.
+    CHECK(pitch::spellForKey(61, -3, false)->alter == -1);
+    CHECK(pitch::spellForKey(61, 2, true)->alter == 1);
+    CHECK(pitch::spellForKey(61, 0, false)->alter == 1);
+    CHECK(pitch::spellForKey(61, 0, true)->alter == -1);
+    CHECK(pitch::spellForKey(61, 0)->alter == 1);
+}
+
+TEST_CASE("a pitch is in a key when it is one of its seven notes", "[pitch][key]")
+{
+    // C major: the white keys.
+    CHECK(pitch::inKey(60, 0));
+    CHECK_FALSE(pitch::inKey(61, 0));
+    CHECK(pitch::inKey(71, 0));
+    // G major has F sharp, not F.
+    CHECK(pitch::inKey(66, 1));
+    CHECK_FALSE(pitch::inKey(65, 1));
+    // E flat major (and C minor) has A flat, not A.
+    CHECK(pitch::inKey(68, -3));
+    CHECK_FALSE(pitch::inKey(69, -3));
+    // Low and negative numbers work alike.
+    CHECK(pitch::inKey(0, 0));
+    CHECK_FALSE(pitch::inKey(-11, 0));
+}

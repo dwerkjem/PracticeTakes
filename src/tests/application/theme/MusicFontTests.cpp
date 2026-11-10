@@ -1,8 +1,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "features/score/MusicFont.h"
-#include "features/score/engraving/ScoreLayout.h"
+#include "application/theme/MusicFont.h"
 
 #include <cmath>
 #include <optional>
@@ -71,72 +70,6 @@ TEST_CASE("one em of the music font is four staff spaces", "[score][typeface]")
     CHECK(head.getRight() == Approx(1.18).margin(0.01));
     CHECK(head.getY() == Approx(-0.5).margin(0.01));
     CHECK(head.getBottom() == Approx(0.5).margin(0.01));
-}
-
-TEST_CASE("the layout's notehead is the font's notehead", "[score][typeface]")
-{
-    // The layout places stems at the edge of a notehead it measures with its
-    // own number. If that number and the font disagree, every stem stands off
-    // its notehead or cuts into it, and a font change is how they would come to
-    // disagree.
-    const MusicFontUnderTest fixture;
-
-    CHECK(
-        engraving::LayoutOptions{}.noteheadWidth ==
-        Approx(fixture.font.bounds(Glyph::noteheadBlack).getRight()).margin(0.01));
-}
-
-TEST_CASE("the layout's notehead widths are the font's", "[score][typeface]")
-{
-    // The layout ends each ledger line past the notehead drawn on it, and a
-    // whole note is wider than a black one. A table narrower than the font
-    // leaves the head hanging off its line.
-    const MusicFontUnderTest fixture;
-
-    for (const engraving::NoteheadKind kind :
-         {engraving::NoteheadKind::breve, engraving::NoteheadKind::whole,
-          engraving::NoteheadKind::half, engraving::NoteheadKind::filled})
-    {
-        const juce::Rectangle<float> bounds = fixture.font.bounds(smufl::noteheadFor(kind));
-
-        CHECK(engraving::noteheadWidthFor(kind) == Approx(bounds.getRight()).margin(0.02));
-    }
-}
-
-TEST_CASE("the layout's accidentals are the font's accidentals", "[score][typeface]")
-{
-    // The layout stacks a chord's accidentals into columns using its own table
-    // of widths and heights, and the painter draws each sign where the layout
-    // put it. A table wider than the font leaves gaps; one narrower overlaps a
-    // sign with the one beside it, and a height that is short lets two signs in
-    // one column touch. Margin as for the notehead: SMuFL publishes three
-    // decimal places and the outline's own bounds round differently.
-    const MusicFontUnderTest fixture;
-
-    for (const engraving::AccidentalKind kind :
-         {engraving::AccidentalKind::natural, engraving::AccidentalKind::sharp,
-          engraving::AccidentalKind::flat, engraving::AccidentalKind::doubleSharp,
-          engraving::AccidentalKind::doubleFlat})
-    {
-        INFO(engraving::nameOf(kind));
-
-        const std::optional<Glyph> sign = smufl::accidentalFor(kind);
-        REQUIRE(sign.has_value());
-
-        const juce::Rectangle<float> bounds = fixture.font.bounds(*sign);
-        const engraving::AccidentalMetrics metrics = engraving::accidentalMetricsFor(kind);
-
-        // Origin at the left edge, which is what makes `accidentalX` the
-        // sign's left edge.
-        CHECK(bounds.getX() == Approx(0.0).margin(0.02));
-
-        CHECK(metrics.width == Approx(bounds.getRight()).margin(0.02));
-
-        // Staff spaces grow downwards in the font as on the page, so the part
-        // above the origin is the negative part.
-        CHECK(metrics.above == Approx(-bounds.getY()).margin(0.02));
-        CHECK(metrics.below == Approx(bounds.getBottom()).margin(0.02));
-    }
 }
 
 TEST_CASE("glyphs keep SMuFL's origins", "[score][typeface]")

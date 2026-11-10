@@ -156,6 +156,13 @@ class Surface:
     # the microphone is held for one surface rather than for the whole run.
     needs_input_device: bool = False
 
+    # Capture this surface outside demo mode, against the harness's default of
+    # `--demo-mode`. Demo mode hides the "No microphone detected" warning and
+    # has the microphone button say Demo mode, which is what every picture
+    # wants -- except one whose subject is the microphone's state: the warning,
+    # or the button and frame of a muted microphone.
+    shows_microphone: bool = False
+
     # Something the tester must do by hand before answering, because it is an
     # interaction rather than a state. The harness prompts and waits; it does
     # not simulate it.
@@ -287,6 +294,19 @@ SURFACES: tuple[Surface, ...] = (
         warmup_seconds=2.5,
         title="The tuner in its meter view",
         modes=frozenset({FULL}),
+    ),
+    Surface(
+        state="tuner-staff",
+        warmup_seconds=2.5,
+        title="The tuner in its staff view",
+        modes=frozenset({FULL}),
+        extras=(
+            Question(
+                "staff-reads",
+                "Is the note sung on the staff after a clef, filled in the colour of how close "
+                "it is, with its cents under it?",
+            ),
+        ),
     ),
     Surface(
         state="tuner-advanced",
@@ -463,6 +483,7 @@ SURFACES: tuple[Surface, ...] = (
         title="Global microphone mute engaged",
         area="audio",
         modes=frozenset({FULL}),
+        shows_microphone=True,
         extras=(
             Question("mute-obvious", "Is it obvious at a glance that input is muted?"),
             Question(
@@ -475,6 +496,7 @@ SURFACES: tuple[Surface, ...] = (
         title="Every tool at once, microphone muted",
         area="audio",
         modes=frozenset({FULL}),
+        shows_microphone=True,
         extras=(
             Question(
                 "all-silent",
@@ -488,6 +510,7 @@ SURFACES: tuple[Surface, ...] = (
         title="The no-usable-input warning",
         area="audio",
         modes=frozenset({FULL}),
+        shows_microphone=True,
         extras=(
             Question("actionable", "Does the warning say what to do about it?"),
             Question(
@@ -1383,6 +1406,50 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # Page view filling the panel: nothing scrolls, pages turn.
+    Surface(
+        state="score-view-fill-panel",
+        title="The score view filling the panel",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "no-scrollbar",
+                "Is the page the panel's own shape, with no scrollbar and nothing cut off at "
+                "its foot?",
+            ),
+            Question(
+                "pages-turn",
+                "Resize the panel, then turn pages with the arrows and the mouse wheel: does "
+                "each page refill the panel, and does nothing ever scroll?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    # The sample with every note under the score dismissed: the strip goes and
+    # the score takes its room.
+    Surface(
+        state="score-view-notices-dismissed",
+        title="The score view with its notes dismissed",
+        area="score",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "no-strip",
+                "Is there no strip of notes under the score, and does the page reach down "
+                "into the room it took?",
+            ),
+            Question(
+                "dismiss-and-restore",
+                "On the sample in Page view, click the close button at the right of the notes "
+                "under the score: do they go, and does the score grow into the room? Then "
+                "open the ... menu and choose Show dismissed notes: do they come back?",
+                behavioural=True,
+            ),
+        ),
+    ),
     # The song with its voice hidden from the Parts menu
     # (openspec/changes/archive/2026-11-06-score-part-selection).
     Surface(
@@ -1538,6 +1605,7 @@ def _text_size_surfaces(base: tuple[Surface, ...]) -> tuple[Surface, ...]:
                 area=source.area if source else "workspace",
                 modes=frozenset({FULL}),
                 warmup_seconds=source.warmup_seconds if source else 0.0,
+                shows_microphone=source.shows_microphone if source else False,
                 extras=(
                     Question(
                         "text-fits",

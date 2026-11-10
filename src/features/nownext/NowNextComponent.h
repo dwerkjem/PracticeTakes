@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 
+#include "../../application/theme/MusicFont.h"
 #include "../../application/theme/Theme.h"
 #include "../../application/tools/ToolComponent.h"
 #include "../../platform/score/CurrentScore.h"
@@ -95,6 +96,8 @@ class NowNextComponent final : public ToolComponent, private juce::Timer
     nownext::View view;
     std::shared_ptr<const transport::ClockTable> table;
 
+    // The music font, for the clef: one copy however many tools draw staves.
+    juce::SharedResourcePointer<MusicFont> musicFont;
     Theme currentTheme = Theme::light;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NowNextComponent)
