@@ -12,6 +12,7 @@ namespace
 // person who has just installed the application and has no MusicXML file yet.
 constexpr int openScoreMenuItemId = 1;
 constexpr int openSampleScoreMenuItemId = 2;
+constexpr int libraryMenuItemId = 3;
 
 constexpr int fileMenuWidth = 320;
 
@@ -38,6 +39,10 @@ void MainComponent::showFileMenu()
         ink));
     menu.addItem(appearance::menuItem(
         openSampleScoreMenuItemId, bundled_sample::menuLabel(), appearance::Icon::music, ink));
+    menu.addSeparator();
+    // Songs and takes (openspec/changes/media-library).
+    menu.addItem(appearance::menuItem(
+        libraryMenuItemId, l10n::text("menu.file.library"), appearance::Icon::listOrdered, ink));
 
     const auto safeThis = juce::Component::SafePointer<MainComponent>(this);
     menu.showMenuAsync(
@@ -56,6 +61,10 @@ void MainComponent::showFileMenu()
             else if (selectedItemId == openSampleScoreMenuItemId)
             {
                 safeThis->openSampleScore();
+            }
+            else if (selectedItemId == libraryMenuItemId)
+            {
+                safeThis->showLibrary();
             }
         });
 }
@@ -127,7 +136,12 @@ void MainComponent::startScoreImport(const juce::File& file)
             { finishScoreImport(result); });
     }
 
-    if (!scoreImportJob->start(file))
+    const bool started = scoreImportJob->start(file);
+    if (started)
+    {
+        importingFile = file;
+    }
+    if (!started)
     {
         // One import at a time. Naming the file being read is the point --
         // refusing the second command silently would look like the click did
@@ -163,16 +177,15 @@ void MainComponent::finishScoreImport(const score::musicxml::MusicXmlImportResul
     // A successful import becomes the current score; a failed one leaves the
     // score already open exactly as it was. ScoreImportState owns that rule and
     // is tested on it.
-    const ScoreImportSummary& summary = scoreImport.apply(result);
-
-    // The target follows the open score (system-wide-target-note decision 2),
-    // and the key every tool spells in follows the measure it is in.
-    if (result.score != nullptr && currentTarget.scoreReplacesTarget())
-    {
-        auto [target, reason] = pitch::targetFromScore(scoreImport.score());
-        currentTarget.publish(std::move(target), std::move(reason));
-    }
-    applySpellingKey();
+    //
+    // A score that opens goes into the library, and the copy is what is open
+    // (openspec/changes/media-library, decision 2): copied only once it has
+    // imported, so a malformed file does not clutter the library.
+    const juce::File opened = result.score != nullptr ? intoLibrary(importingFile) : importingFile;
+    importingFile = juce::File();
+    const ScoreImportSummary& summary =
+        scoreImport.apply(result, opened.getFullPathName().toStdString());
+    followNewScore(result);
 
 #if PRACTICE_TAKES_ENABLE_TEST_CONTROL
     // An approved state that opens a score into a tool wants the tool in the
@@ -264,4 +277,16 @@ void MainComponent::clearTarget()
     // The chosen target is saved, so a cleared one is too: it does not come
     // back at the next launch.
     saveSettings(false);
+}
+
+void MainComponent::followNewScore(const score::musicxml::MusicXmlImportResult& result)
+{
+    // The target follows the open score (system-wide-target-note decision 2),
+    // and the key every tool spells in follows the measure it is in.
+    if (result.score != nullptr && currentTarget.scoreReplacesTarget())
+    {
+        auto [target, reason] = pitch::targetFromScore(scoreImport.score());
+        currentTarget.publish(std::move(target), std::move(reason));
+    }
+    applySpellingKey();
 }

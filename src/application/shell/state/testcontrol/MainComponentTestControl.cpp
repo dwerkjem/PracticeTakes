@@ -112,6 +112,12 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
         scoreImportWindow->setVisible(false);
     }
 
+    // The Library window, and the capture's own library emptied: a state's
+    // songs and takes are the ones it put there, never an earlier state's
+    // (openspec/changes/media-library).
+    closeLibrary();
+    resetScratchLibrary();
+
     // No score and no target unless the state asks for one. Left alone, a
     // state with no score inherited the last one's: a tuner photographed
     // after a score surface read against that score's first note, and showed
@@ -132,6 +138,7 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     testControlRecordTake = state.recordTake;
     testControlReviewTake = state.reviewTake;
     testControlSungTake = state.sungTake;
+    testControlLibraryTab = state.libraryTab;
     testControlOpenMix = state.mixOpen;
     referencePitch.set(state.referencePitchHz > 0.0 ? state.referencePitchHz : 440.0);
 
@@ -270,6 +277,13 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
         showFeedback();
     }
 
+    // A state that keeps a take opens the Library once the take is kept and
+    // saved (startClockForTestControl); one that keeps none opens it now.
+    if (!state.libraryTab.empty() && !state.reviewTake)
+    {
+        openLibraryForTestControl();
+    }
+
     if (auto* window = dynamic_cast<juce::ResizableWindow*>(getTopLevelComponent()))
     {
         switch (state.geometry)
@@ -395,6 +409,10 @@ void MainComponent::startClockForTestControl(int attemptsLeft)
                         testcontrol::syntheticKeyboardTake(shown, shown->parts.size() - 1, 8)));
                 }
                 takeRecorder.finishJudging();
+            }
+            if (!testControlLibraryTab.empty())
+            {
+                openLibraryForTestControl();
             }
         }
 
@@ -575,3 +593,47 @@ std::string MainComponent::currentTestControlStateId() const
 }
 
 #endif
+
+void MainComponent::resetScratchLibrary()
+{
+    if (scratchLibraryFolder == juce::File())
+    {
+        return;
+    }
+    takeSaver.finishSaving();
+    libraryWork.finishAll();
+    for (const auto& child : juce::RangedDirectoryIterator(
+             scratchLibraryFolder, false, "*", juce::File::findFilesAndDirectories))
+    {
+        static_cast<void>(child.getFile().deleteRecursively());
+    }
+    showLibraryStatus({});
+}
+
+void MainComponent::openLibraryForTestControl()
+{
+    // The harness scores as the library's songs, beside the built-in sample,
+    // and the state's take written before the window lists it.
+    const juce::File fixtures =
+        juce::File(PRACTICE_TAKES_SOURCE_DIR)
+            .getChildFile(juce::String(testcontrol::approvedScoreFixtureDirectory()));
+    for (const auto& item :
+         juce::RangedDirectoryIterator(fixtures, false, "*.musicxml", juce::File::findFiles))
+    {
+        static_cast<void>(library::intoLibrary(libraryLayout(), item.getFile()));
+    }
+    // One that does not read, to be listed so.
+    static_cast<void>(libraryLayout()
+                          .songs()
+                          .getChildFile("Unfinished sketch.musicxml")
+                          .replaceWithText("<score-partwise"));
+    takeSaver.finishSaving();
+    showLibrary();
+    libraryWork.finishAll();
+    if (libraryWindow != nullptr)
+    {
+        libraryWindow->showTab(
+            testControlLibraryTab == "takes" ? LibraryWindow::Tab::takes
+                                             : LibraryWindow::Tab::songs);
+    }
+}

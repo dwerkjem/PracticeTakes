@@ -119,6 +119,9 @@ MainComponent::MainComponent(bool muteMicrophoneForSession, bool declineAudioInp
 {
     setOpaque(true);
     audioInputService.addChangeListener(this);
+    takeRecorder.addListener(&libraryTakeWatcher);
+    takeSaver.onSaved = [this](const library::TakeSaver::Saved& saved)
+    { takeSavedToLibrary(saved); };
 
     const auto storageOptions = settingsStorageOptions();
     migrateLegacySettingsFile(storageOptions.getDefaultFile());
@@ -146,6 +149,8 @@ MainComponent::~MainComponent()
 {
     saveSettings();
     audioInputService.removeChangeListener(this);
+    takeRecorder.removeListener(&libraryTakeWatcher);
+    libraryWindow.reset();
     settingsWindow.reset();
     feedbackWindow.reset();
     workspaceContainers.clear();
@@ -158,6 +163,13 @@ MainComponent::~MainComponent()
     microphoneWarning.reset();
     applicationProperties.closeFiles();
     setLookAndFeel(nullptr);
+    // A capture instance's library is its own, and goes with it -- after the
+    // saver has finished writing into it.
+    if (scratchLibraryFolder != juce::File())
+    {
+        takeSaver.finishSaving();
+        scratchLibraryFolder.deleteRecursively();
+    }
 }
 
 void MainComponent::configureTopButtons()
@@ -234,6 +246,7 @@ take::TakeSources MainComponent::takeSources()
                    : std::pair<int, int>{0, 0};
     };
     sources.referencePitch = [this] { return referencePitch.hertz(); };
+    sources.scoreFile = [this] { return scoreImport.currentScoreFile(); };
     return sources;
 }
 

@@ -12,6 +12,38 @@ using Tools = std::vector<std::string>;
 // approved, at 80 and 150 percent, each a picture of what the size changes. A
 // copy rather than a state of its own, so the 150 picture of a surface is the
 // same surface as its 100 one with only the size moved.
+// The Library window's two states, each built on a state above rather than
+// spelled out field by field: its songs, over the empty shell; and its takes,
+// after the sung take under review is kept, and so saved.
+std::vector<ApprovedWindowState> withLibrary(std::vector<ApprovedWindowState> states)
+{
+    const auto based =
+        [&states](const char* base, const char* id, const char* tab, const char* description)
+    {
+        const auto found = std::find_if(
+            states.begin(), states.end(),
+            [base](const ApprovedWindowState& state) { return state.id == base; });
+        if (found == states.end())
+        {
+            return;
+        }
+        ApprovedWindowState copy = *found;
+        copy.id = id;
+        copy.libraryTab = tab;
+        copy.description = description;
+        states.push_back(std::move(copy));
+    };
+    based(
+        "empty", "library-songs", "songs",
+        "The Library window's songs: the built-in sample and the harness scores, one that "
+        "cannot be read marked so");
+    based(
+        "take-review-sung", "library-takes", "takes",
+        "The Library window's takes: the sung take just recorded, saved, with its song, length, "
+        "inputs, how it ended and its size");
+    return states;
+}
+
 std::vector<ApprovedWindowState> withTextSizes(std::vector<ApprovedWindowState> states)
 {
     struct Sized
@@ -73,7 +105,7 @@ std::vector<ApprovedWindowState> withTextSizes(std::vector<ApprovedWindowState> 
 // checked before a release.
 const std::vector<ApprovedWindowState>& states()
 {
-    static const std::vector<ApprovedWindowState> approved = withTextSizes({
+    static const std::vector<ApprovedWindowState> approved = withTextSizes(withLibrary({
         // --- The shell on its own ---
         {"empty",
          {},
@@ -597,7 +629,7 @@ const std::vector<ApprovedWindowState>& states()
          bundledSampleFixtureName(),
          true,
          true},
-    });
+    }));
 
     return approved;
 }

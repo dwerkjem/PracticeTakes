@@ -202,6 +202,10 @@ std::string windowTitleOf(const ApprovedWindowState& state)
     {
         return std::string(shellwindows::settings);
     }
+    if (!state.libraryTab.empty())
+    {
+        return std::string(shellwindows::library);
+    }
     if (!state.scoreFixture.empty() &&
         (state.showScoreImportSummary || state.holdScoreImportInProgress))
     {

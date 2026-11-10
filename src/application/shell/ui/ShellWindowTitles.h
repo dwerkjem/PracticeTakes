@@ -19,6 +19,7 @@ namespace shellwindows
 inline constexpr std::string_view settings = "Settings";
 inline constexpr std::string_view feedback = "Send feedback";
 inline constexpr std::string_view scoreImport = "Score import";
+inline constexpr std::string_view library = "Library";
 
 // What each is called on screen, by catalogue identifier. The English entries
 // are the constants above -- a test holds them together -- so the manifest
@@ -27,4 +28,5 @@ inline constexpr std::string_view scoreImport = "Score import";
 inline constexpr std::string_view settingsKey = l10n::key("window.settings");
 inline constexpr std::string_view feedbackKey = l10n::key("window.feedback");
 inline constexpr std::string_view scoreImportKey = l10n::key("window.score-import");
+inline constexpr std::string_view libraryKey = l10n::key("window.library");
 } // namespace shellwindows

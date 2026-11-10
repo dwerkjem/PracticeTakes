@@ -179,6 +179,25 @@ so a capture run neither reads the user's songs nor saves its synthetic takes
 among theirs. A state that wants a library with something in it fills that
 folder itself.
 
+### 11. Decided while building
+
+- **The folder's Change… is in the Library window**, at its foot beside the
+  folder it shows, because Settings has no general panel to hold it.
+- **A save reports itself in the Library window's status line**: "Take saved"
+  with its folder, or why not. A failure is also said once a session in an
+  alert, because the window may be closed and a take that is not saved is gone
+  when the application quits. A capture instance never shows the alert.
+- **The background work is one worker.** `library::BackgroundWork` runs one job
+  at a time (a listing, a load, an Add Songs import) and hands each result back
+  to the message thread. Saving has its own thread (`TakeSaver`), so a long
+  listing never delays a take reaching the disk.
+- **"This song only" matches by title.** A take records its song's title and
+  carries its own score copy, not a link to the song's file, so a song and its
+  takes are matched by title.
+- **The listing marks the sample "(built in)" and an unreadable file "(cannot
+  be read)"** in its title cell, rather than with an icon, so the state is read
+  and not guessed.
+
 ## Risks / Trade-offs
 
 - **Disk use grows with practice.** Nothing is deleted automatically, which is

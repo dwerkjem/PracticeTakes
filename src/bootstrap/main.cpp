@@ -263,6 +263,13 @@ class PracticeTakesApplication final : public juce::JUCEApplication
                 std::make_unique<MainComponent>(muteMicrophoneForSession, declineAudioInput);
             content = ownedContent.get();
             content->setDemoMode(demoMode);
+#if PRACTICE_TAKES_ENABLE_TEST_CONTROL
+            // A capture instance keeps its own library, and never the user's.
+            if (testControlChannelRequested || testControlState.isNotEmpty())
+            {
+                content->useScratchLibrary();
+            }
+#endif
             auto controlStrip = content->createTitleBar([this] { toggleFullscreen(); });
             titleBar = controlStrip.get();
             frame = new WindowFrame(std::move(ownedContent), std::move(controlStrip));

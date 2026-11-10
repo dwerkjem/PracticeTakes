@@ -401,6 +401,7 @@ if(BUILD_TESTING)
             PracticeTakesUiIcons
             PracticeTakesSamples
             juce::juce_audio_devices
+            juce::juce_audio_formats
             juce::juce_data_structures
             juce::juce_dsp
             juce::juce_graphics

@@ -39,6 +39,9 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/state/appearance/MainComponentAppearance.cpp
     src/application/shell/state/audio/MainComponentAudioState.cpp
     src/application/shell/state/testcontrol/MainComponentTestControl.cpp
+    src/application/shell/ui/library/LibraryWindow.cpp
+    src/application/shell/ui/library/LibraryWindow.h
+    src/application/shell/ui/library/MainComponentLibrary.cpp
     src/application/shell/ui/main_window/MainTitleBar.h
     src/application/shell/ui/main_window/MicrophoneWarning.h
     src/application/shell/ui/main_window/PlaybackMixPanel.h
@@ -240,6 +243,18 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/evaluation/PitchContour.h
     src/platform/evaluation/TakeReview.cpp
     src/platform/evaluation/TakeReview.h
+    src/platform/library/BackgroundWork.cpp
+    src/platform/library/BackgroundWork.h
+    src/platform/library/LibraryLayout.cpp
+    src/platform/library/LibraryLayout.h
+    src/platform/library/LibraryListing.cpp
+    src/platform/library/LibraryListing.h
+    src/platform/library/TakeFiles.cpp
+    src/platform/library/TakeFiles.h
+    src/platform/library/TakeManifest.cpp
+    src/platform/library/TakeManifest.h
+    src/platform/library/TakeSaver.cpp
+    src/platform/library/TakeSaver.h
     src/platform/midi/MidiEvent.h
     src/platform/midi/MidiEventFifo.h
     src/platform/midi/MidiInputService.cpp
@@ -417,6 +432,11 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/audio/SyntheticToneTests.cpp
     src/tests/platform/audio/PitchDetectorTests.cpp
     src/tests/platform/audio/SharedPitchAnalysisTests.cpp
+    src/tests/platform/library/LibraryLayoutTests.cpp
+    src/tests/platform/library/LibraryListingTests.cpp
+    src/tests/platform/library/TakeFilesTests.cpp
+    src/tests/platform/library/TakeManifestTests.cpp
+    src/tests/platform/library/TakeSaverTests.cpp
     src/tests/platform/midi/MidiEventFifoTests.cpp
     src/tests/platform/midi/MidiInputServiceTests.cpp
     src/tests/platform/midi/MidiMessageTranslationTests.cpp
@@ -529,6 +549,11 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/transport/PlaybackEvents.cpp
     src/platform/transport/ScoreSynth.cpp
     src/platform/transport/PracticeClock.cpp
+    src/platform/library/LibraryLayout.cpp
+    src/platform/library/LibraryListing.cpp
+    src/platform/library/TakeFiles.cpp
+    src/platform/library/TakeManifest.cpp
+    src/platform/library/TakeSaver.cpp
     src/platform/take/TakeRecorder.cpp
     src/platform/evaluation/OnsetDetector.cpp
     src/platform/evaluation/OnsetTiming.cpp

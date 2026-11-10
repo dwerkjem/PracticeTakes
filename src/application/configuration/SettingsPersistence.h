@@ -104,6 +104,11 @@ struct State
     // its words when it is made.
     juce::String language;
 
+    // The media library's folder (openspec/changes/media-library), empty for
+    // the default under Music. A path on this machine: it stays here, and no
+    // settings bundle carries it.
+    juce::String libraryFolder;
+
     juce::String chosenTargetSounding;
     juce::String chosenTargetWritten;
     bool keepTargetWhenScoreOpens = false;

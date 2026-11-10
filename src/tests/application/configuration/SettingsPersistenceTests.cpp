@@ -1157,3 +1157,20 @@ TEST_CASE(
     // Right on can be no looser than on time, less the gap between the bands.
     CHECK(AppSettings::load(reader).state.timingRightOnMs == Catch::Approx(50.0));
 }
+
+TEST_CASE(
+    "the library folder is kept with this machine's settings",
+    "[settings][persistence][library]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        CHECK(AppSettings::load(writer).state.libraryFolder.isEmpty());
+        AppSettings::State expected;
+        expected.libraryFolder = "/media/practice/Library";
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    CHECK(AppSettings::load(reader).state.libraryFolder == "/media/practice/Library");
+}

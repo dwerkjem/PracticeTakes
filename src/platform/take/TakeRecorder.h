@@ -58,6 +58,9 @@ struct TakeSources
     // The application's reference pitch, in hertz: what a take is sung
     // against. 440 when absent.
     std::function<double()> referencePitch;
+
+    // The file the current score was imported from. Empty when absent.
+    std::function<std::string()> scoreFile;
 };
 
 class TakeListener

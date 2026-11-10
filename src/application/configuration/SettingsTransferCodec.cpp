@@ -652,6 +652,8 @@ SettingsTransferModel SettingsTransferCodec::withLocalPreferences(
     // preference, so no bundle carries it and an import keeps it.
     state.chosenTargetSounding = local.chosenTargetSounding;
     state.chosenTargetWritten = local.chosenTargetWritten;
+    // Nor the library's folder: a path on this machine (media-library).
+    state.libraryFolder = local.libraryFolder;
     if (imported.carriesAllSettings)
     {
         return imported;

@@ -196,3 +196,15 @@ TEST_CASE("closing leaves no score open", "[score][import][state]")
     CHECK(state.score() == nullptr);
     CHECK_FALSE(state.currentScoreSummary().succeeded);
 }
+
+TEST_CASE("the open score's file is kept, and a failure keeps it", "[score][import][state]")
+{
+    ScoreImportState state;
+    CHECK(state.currentScoreFile().empty());
+    state.apply(importOf("First"), "/library/Songs/First.musicxml");
+    CHECK(state.currentScoreFile() == "/library/Songs/First.musicxml");
+    state.apply(failureOf(MusicXmlImportStatus::malformedXml, "broken"), "/elsewhere/broken.xml");
+    CHECK(state.currentScoreFile() == "/library/Songs/First.musicxml");
+    state.close();
+    CHECK(state.currentScoreFile().empty());
+}

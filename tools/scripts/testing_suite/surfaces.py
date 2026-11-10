@@ -631,6 +631,50 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # The media library (media-library): its two lists.
+    Surface(
+        state="library-songs",
+        title="Library: songs",
+        area="library",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "songs-listed",
+                "Does the Songs list show the sample marked built in first, then the harness "
+                "scores by title with composer, parts and date added, and the unfinished sketch "
+                "marked as not readable?",
+            ),
+            Question(
+                "open-song",
+                "Double-click a song: does it open in the Score View, and stay one copy in the "
+                "library folder?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    Surface(
+        state="library-takes",
+        title="Library: takes",
+        area="library",
+        modes=frozenset({FULL}),
+        # The sung take is judged, then saved and listed, before the window opens:
+        # take-review-sung's ten seconds, and the save on top.
+        warmup_seconds=15.0,
+        extras=(
+            Question(
+                "take-listed",
+                "Does the Takes list show the sung take with today's date, the sample's title, "
+                "its length, Microphone, Stopped in bar 8 and its size?",
+            ),
+            Question(
+                "review-take",
+                "Quit, start again, and review the take from the Library: does the Take Review "
+                "show the same results as before?",
+                behavioural=True,
+            ),
+        ),
+    ),
     Surface(
         state="settings-reset",
         title="Settings: reset and support",

@@ -817,3 +817,20 @@ TEST_CASE(
     REQUIRE(decoded.model.has_value());
     CHECK(decoded.model->state.textScalePercent == 100);
 }
+
+TEST_CASE(
+    "no bundle carries the library folder, and an import keeps this machine's",
+    "[settings][transfer][library]")
+{
+    SettingsTransferModel exported;
+    exported.state.libraryFolder = "/elsewhere/Library";
+    const std::string document = encodedDocument(exported);
+    CHECK(document.find("/elsewhere/Library") == std::string::npos);
+
+    const auto decoded = SettingsTransferCodec::decode(document, {{0, 0, 2560, 1440}});
+    REQUIRE(decoded.model.has_value());
+    AppSettings::State local;
+    local.libraryFolder = "/home/me/Music/Practice Takes";
+    const auto merged = SettingsTransferCodec::withLocalPreferences(*decoded.model, local);
+    CHECK(merged.state.libraryFolder == "/home/me/Music/Practice Takes");
+}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "ScoreImportSummary.h"
@@ -36,8 +37,11 @@
 class ScoreImportState
 {
   public:
-    // Apply a finished import, and return the summary to show for it.
-    const ScoreImportSummary& apply(const score::musicxml::MusicXmlImportResult& result)
+    // Apply a finished import, and return the summary to show for it. `file`
+    // is where the score was read from: what a take of it saves a copy of
+    // (openspec/changes/media-library, decision 3).
+    const ScoreImportSummary&
+    apply(const score::musicxml::MusicXmlImportResult& result, std::string file = {})
     {
         lastSummary = summariseScoreImport(result);
         hasSummary = true;
@@ -50,6 +54,7 @@ class ScoreImportState
         {
             currentScore.publish(result.score);
             openScoreSummary = lastSummary;
+            openScoreFile = std::move(file);
         }
 
         return lastSummary;
@@ -102,6 +107,13 @@ class ScoreImportState
     {
         currentScore.publish(nullptr);
         openScoreSummary = {};
+        openScoreFile.clear();
+    }
+
+    // The file the open score was read from; empty with none open.
+    [[nodiscard]] const std::string& currentScoreFile() const noexcept
+    {
+        return openScoreFile;
     }
 
   private:
@@ -109,4 +121,5 @@ class ScoreImportState
     ScoreImportSummary lastSummary;
     ScoreImportSummary openScoreSummary;
     bool hasSummary = false;
+    std::string openScoreFile;
 };

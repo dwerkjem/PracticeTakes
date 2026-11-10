@@ -39,6 +39,7 @@ constexpr auto outOfTuneCentsKey = "practice.outOfTuneCents";
 constexpr auto minimumLevelKey = "practice.minimumLevelDb";
 constexpr auto timingRightOnKey = "practice.timingRightOnMs";
 constexpr auto timingOnTimeKey = "practice.timingOnTimeMs";
+constexpr auto libraryFolderKey = "library.folder";
 constexpr auto timingOffBeatKey = "practice.timingOffBeatMs";
 constexpr auto countInWhenPlayingKey = "practice.countInWhenRecordingDuringPlayback";
 constexpr auto chosenTargetSoundingKey = "practice.chosenTarget";
@@ -99,6 +100,7 @@ constexpr const char* ownedKeys[] = {
     timingRightOnKey,
     timingOnTimeKey,
     timingOffBeatKey,
+    libraryFolderKey,
     countInWhenPlayingKey,
     chosenTargetSoundingKey,
     chosenTargetWrittenKey,
@@ -353,6 +355,7 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
         result.state.timingOnTimeMs = limits.onTimeMs;
         result.state.timingOffBeatMs = limits.offBeatMs;
     }
+    result.state.libraryFolder = properties.getValue(libraryFolderKey);
     result.state.countInWhenRecordingDuringPlayback =
         properties.getBoolValue(countInWhenPlayingKey, false);
     result.state.language = storedLanguage(properties);
@@ -458,6 +461,7 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(timingRightOnKey, state.timingRightOnMs);
     properties.setValue(timingOnTimeKey, state.timingOnTimeMs);
     properties.setValue(timingOffBeatKey, state.timingOffBeatMs);
+    properties.setValue(libraryFolderKey, state.libraryFolder);
     properties.setValue(countInWhenPlayingKey, state.countInWhenRecordingDuringPlayback);
     properties.setValue(languageKey, state.language);
     properties.setValue(chosenTargetSoundingKey, state.chosenTargetSounding);

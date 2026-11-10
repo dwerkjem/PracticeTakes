@@ -670,6 +670,7 @@ void MainComponent::applyPracticePreferences(const AppSettings::State& state)
         {state.timingRightOnMs, state.timingOnTimeMs, state.timingOffBeatMs});
     takeRecorder.setCountInWhenPlaying(state.countInWhenRecordingDuringPlayback);
     currentTarget.keepChosenWhenScoreOpens = state.keepTargetWhenScoreOpens;
+    libraryFolderSetting = state.libraryFolder;
     currentTarget.followScoreWhilePlaying = state.targetFollowsScore;
 }
 
@@ -793,6 +794,7 @@ AppSettings::State MainComponent::captureSettingsState()
     }
     state.countInWhenRecordingDuringPlayback = takeRecorder.countInWhenPlaying();
     state.keepTargetWhenScoreOpens = currentTarget.keepChosenWhenScoreOpens;
+    state.libraryFolder = libraryFolderSetting;
     state.targetFollowsScore = currentTarget.followScoreWhilePlaying;
     if (const auto target = currentTarget.target();
         target != nullptr && target->origin == pitch::TargetOrigin::chosen)

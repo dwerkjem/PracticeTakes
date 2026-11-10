@@ -123,6 +123,10 @@ bool TakeRecorder::start()
     take->score = scoreHolder.score();
     take->scoreTitle = take->score->metadata.workTitle.empty() ? take->score->metadata.movementTitle
                                                                : take->score->metadata.workTitle;
+    if (sources.scoreFile)
+    {
+        take->scoreFile = sources.scoreFile();
+    }
     take->startTick = static_cast<score::Tick>(std::llround(std::max(0.0, position.tick)));
     take->scalePercent = clock.scalePercent();
     take->sampleRate = timing.sampleRate > 0.0 ? timing.sampleRate : 44100.0;
@@ -267,6 +271,13 @@ std::uint64_t TakeRecorder::keep(Take take)
     }
     take.id = ++nextId;
     const std::uint64_t id = take.id;
+    // A take of the open score that does not say which file it came from --
+    // the capture harness's -- is of the file the open score came from, so a
+    // saved copy of it carries that score (media-library).
+    if (take.scoreFile.empty() && sources.scoreFile && take.score == scoreHolder.score())
+    {
+        take.scoreFile = sources.scoreFile();
+    }
     auto done = std::make_shared<const Take>(std::move(take));
     ended = done;
     retain(std::move(done));
