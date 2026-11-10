@@ -6,6 +6,7 @@
 #include "../../../theme/MusicFont.h"
 #include "../../../theme/PlusOrMinusCents.h"
 #include "../../../widgets/InputLevelMeter.h"
+#include "../../../widgets/ZoneLimitsSlider.h"
 #include "../../MainComponent.h"
 #include "../ShellWindowTitles.h"
 
@@ -1266,47 +1267,18 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 };
                 addAndMakeVisible(referenceSlider);
 
-                // The three zone limits, each inside the next (sung-pitch-judging
-                // decision 7). Each slider has its own fixed range; after every
-                // change pitch::orderedLimits puts the three back in order and
-                // the sliders show the result, so the bands cannot cross. In
-                // tune within wins: moving it pushes the others aside, and the
-                // others stop at it.
-                nearPerfectLabel.setText(
-                    l10n::text("settings.practice.near-perfect"), juce::dontSendNotification);
-                appearance::setIcon(nearPerfectLabel, appearance::Icon::crosshair);
-                addAndMakeVisible(nearPerfectLabel);
-                nearPerfectSlider.setComponentID("settings-near-perfect-cents");
-                nearPerfectSlider.setSliderStyle(juce::Slider::IncDecButtons);
-                nearPerfectSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
-                showAsPlusOrMinusCents(nearPerfectSlider);
-                nearPerfectSlider.setTooltip(l10n::text("settings.practice.near-perfect.tooltip"));
-                nearPerfectSlider.onValueChange = [this] { applyZoneLimits(); };
-                addAndMakeVisible(nearPerfectSlider);
-
-                toleranceLabel.setText(
-                    l10n::text("settings.practice.in-tune"), juce::dontSendNotification);
-                appearance::setIcon(toleranceLabel, appearance::Icon::circleCheck);
-                addAndMakeVisible(toleranceLabel);
-                toleranceSlider.setComponentID("settings-in-tune-cents");
-                toleranceSlider.setSliderStyle(juce::Slider::IncDecButtons);
-                toleranceSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
-                showAsPlusOrMinusCents(toleranceSlider);
-                toleranceSlider.setTooltip(l10n::text("settings.practice.in-tune.tooltip"));
-                toleranceSlider.onValueChange = [this] { applyZoneLimits(); };
-                addAndMakeVisible(toleranceSlider);
-
-                outOfTuneLabel.setText(
-                    l10n::text("settings.practice.out-of-tune"), juce::dontSendNotification);
-                appearance::setIcon(outOfTuneLabel, appearance::Icon::circleAlert);
-                addAndMakeVisible(outOfTuneLabel);
-                outOfTuneSlider.setComponentID("settings-out-of-tune-cents");
-                outOfTuneSlider.setSliderStyle(juce::Slider::IncDecButtons);
-                outOfTuneSlider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
-                showAsPlusOrMinusCents(outOfTuneSlider);
-                outOfTuneSlider.setTooltip(l10n::text("settings.practice.out-of-tune.tooltip"));
-                outOfTuneSlider.onValueChange = [this] { applyZoneLimits(); };
-                addAndMakeVisible(outOfTuneSlider);
+                // Pitch's three limits on one bar (sung-pitch-judging decision
+                // 7): green to near perfect, blue to in tune, amber to out of
+                // tune, red beyond. Each handle keeps its own range and stays a
+                // cent inside the next looser one, as the separate controls did.
+                pitchZonesLabel.setText(
+                    l10n::text("settings.practice.pitch-zones"), juce::dontSendNotification);
+                appearance::setIcon(pitchZonesLabel, appearance::Icon::crosshair);
+                addAndMakeVisible(pitchZonesLabel);
+                pitchZones.setComponentID("settings-pitch-zones");
+                pitchZones.setTooltip(l10n::text("settings.practice.pitch-zones.tooltip"));
+                pitchZones.onChange = [this] { applyZoneLimits(); };
+                addAndMakeVisible(pitchZones);
 
                 // The quietest sound a microphone take counts (#349): below
                 // it the room is never an attack, so never an extra note.
@@ -1341,64 +1313,20 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                     l10n::text("settings.practice.minimum-level.meter.tooltip"));
                 addAndMakeVisible(minimumLevelMeter);
 
-                nearPerfectSlider.setRange(
-                    pitch::minimumNearPerfectCents, pitch::maximumNearPerfectCents, 1.0);
-                toleranceSlider.setRange(
-                    pitch::minimumToleranceCents, pitch::maximumToleranceCents, 1.0);
-                outOfTuneSlider.setRange(
-                    pitch::minimumOutOfTuneCents, pitch::maximumOutOfTuneCents, 1.0);
                 showZoneLimits(recorder.intonationSettings().zoneLimits());
 
-                // Timing's three limits, set as pitch's are and coloured the
-                // same: green right on the beat, blue on time, amber a little
-                // early or late, red off the beat.
-                const auto setUpTiming =
-                    [this](
-                        juce::Label& label, juce::Slider& slider, std::string_view key,
-                        std::string_view tooltipKey, const char* id, appearance::Icon icon,
-                        double lowest, double highest)
-                {
-                    label.setText(l10n::text(key), juce::dontSendNotification);
-                    appearance::setIcon(label, icon);
-                    addAndMakeVisible(label);
-                    slider.setComponentID(id);
-                    slider.setSliderStyle(juce::Slider::IncDecButtons);
-                    slider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 90, 26);
-                    slider.setRange(lowest, highest, 5.0);
-                    slider.textFromValueFunction = [](double value)
-                    {
-                        return l10n::format(
-                            "settings.practice.timing.value",
-                            {{"ms", l10n::number(std::round(value), 0)}});
-                    };
-                    slider.valueFromTextFunction = [](const juce::String& text)
-                    { return text.retainCharacters("0123456789.").getDoubleValue(); };
-                    slider.setTooltip(l10n::text(tooltipKey));
-                    slider.onValueChange = [this] { applyTimingLimits(); };
-                    addAndMakeVisible(slider);
-                };
-                setUpTiming(
-                    rightOnLabel, rightOnSlider, l10n::key("settings.practice.timing.right-on"),
-                    l10n::key("settings.practice.timing.right-on.tooltip"),
-                    "settings-timing-right-on", appearance::Icon::timer,
-                    evaluation::minimumRightOnMs, evaluation::maximumRightOnMs);
-                setUpTiming(
-                    onTimeLabel, onTimeSlider, l10n::key("settings.practice.timing.on-time"),
-                    l10n::key("settings.practice.timing.on-time.tooltip"),
-                    "settings-timing-on-time", appearance::Icon::circleCheck,
-                    evaluation::minimumOnTimeMs, evaluation::maximumOnTimeMs);
-                setUpTiming(
-                    offBeatLabel, offBeatSlider, l10n::key("settings.practice.timing.off-beat"),
-                    l10n::key("settings.practice.timing.off-beat.tooltip"),
-                    "settings-timing-off-beat", appearance::Icon::circleAlert,
-                    evaluation::minimumOffBeatMs, evaluation::maximumOffBeatMs);
+                // Timing's three limits on a bar of its own, coloured the same:
+                // green right on the beat, blue on time, amber a little early or
+                // late, red off the beat.
+                timingZonesLabel.setText(
+                    l10n::text("settings.practice.timing-zones"), juce::dontSendNotification);
+                appearance::setIcon(timingZonesLabel, appearance::Icon::timer);
+                addAndMakeVisible(timingZonesLabel);
+                timingZones.setComponentID("settings-timing-zones");
+                timingZones.setTooltip(l10n::text("settings.practice.timing-zones.tooltip"));
+                timingZones.onChange = [this] { applyTimingLimits(); };
+                addAndMakeVisible(timingZones);
                 showTimingLimits(recorder.timingLimits());
-                for (ZoneSwatch* swatch :
-                     {&nearPerfectSwatch, &toleranceSwatch, &outOfTuneSwatch, &rightOnSwatch,
-                      &onTimeSwatch, &offBeatSwatch})
-                {
-                    addAndMakeVisible(swatch);
-                }
 
                 // Whether opening a score replaces a target the player chose
                 // (target-note-picker decision 4).
@@ -1498,9 +1426,9 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 bounds.removeFromTop(px(18));
 
                 const int column = labelColumn(
-                    150, {&presetLabel, &countInLabel, &referenceLabel, &keyLabel,
-                          &accidentalsLabel, &nearPerfectLabel, &toleranceLabel, &outOfTuneLabel,
-                          &rightOnLabel, &onTimeLabel, &offBeatLabel, &minimumLevelLabel});
+                    150,
+                    {&presetLabel, &countInLabel, &referenceLabel, &keyLabel, &accidentalsLabel,
+                     &pitchZonesLabel, &timingZonesLabel, &minimumLevelLabel});
                 auto presetRow = bounds.removeFromTop(px(36));
                 presetLabel.setBounds(presetRow.removeFromLeft(column));
                 presetBox.setBounds(presetRow.removeFromLeft(px(280)));
@@ -1532,36 +1460,15 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 accidentalsBox.setBounds(accidentalsRow.removeFromLeft(px(280)));
                 bounds.removeFromTop(px(12));
 
-                auto nearPerfectRow = bounds.removeFromTop(px(36));
-                nearPerfectLabel.setBounds(nearPerfectRow.removeFromLeft(column));
-                nearPerfectSlider.setBounds(nearPerfectRow.removeFromLeft(px(180)));
-                nearPerfectSwatch.setBounds(nearPerfectRow.removeFromLeft(px(28)));
-                bounds.removeFromTop(px(12));
-
-                auto toleranceRow = bounds.removeFromTop(px(36));
-                toleranceLabel.setBounds(toleranceRow.removeFromLeft(column));
-                toleranceSlider.setBounds(toleranceRow.removeFromLeft(px(180)));
-                toleranceSwatch.setBounds(toleranceRow.removeFromLeft(px(28)));
-                bounds.removeFromTop(px(12));
-
-                auto outOfTuneRow = bounds.removeFromTop(px(36));
-                outOfTuneLabel.setBounds(outOfTuneRow.removeFromLeft(column));
-                outOfTuneSlider.setBounds(outOfTuneRow.removeFromLeft(px(180)));
-                outOfTuneSwatch.setBounds(outOfTuneRow.removeFromLeft(px(28)));
-                bounds.removeFromTop(px(12));
-
-                for (const auto& [label, slider, swatch] :
-                     {std::tuple<juce::Label*, juce::Slider*, ZoneSwatch*>{
-                          &rightOnLabel, &rightOnSlider, &rightOnSwatch},
-                      std::tuple<juce::Label*, juce::Slider*, ZoneSwatch*>{
-                          &onTimeLabel, &onTimeSlider, &onTimeSwatch},
-                      std::tuple<juce::Label*, juce::Slider*, ZoneSwatch*>{
-                          &offBeatLabel, &offBeatSlider, &offBeatSwatch}})
+                // Taller than a row: the values sit over the bar.
+                for (const auto& [label, zones] :
+                     {std::pair<juce::Label*, ZoneLimitsSlider*>{&pitchZonesLabel, &pitchZones},
+                      std::pair<juce::Label*, ZoneLimitsSlider*>{&timingZonesLabel, &timingZones}})
                 {
-                    auto row = bounds.removeFromTop(px(36));
-                    label->setBounds(row.removeFromLeft(column));
-                    slider->setBounds(row.removeFromLeft(px(180)));
-                    swatch->setBounds(row.removeFromLeft(px(28)));
+                    auto row = bounds.removeFromTop(std::max(px(36), zones->preferredHeight()));
+                    label->setBounds(
+                        row.removeFromLeft(column).withSizeKeepingCentre(column, px(36)));
+                    zones->setBounds(row.removeFromLeft(px(420)));
                     bounds.removeFromTop(px(12));
                 }
 
@@ -1587,6 +1494,8 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             {
                 minimumLevelMeter.setTheme(theme);
                 keyPicture.setInk(appPaletteFor(theme).foreground);
+                pitchZones.setInk(appPaletteFor(theme).foreground, appPaletteFor(theme).panel);
+                timingZones.setInk(appPaletteFor(theme).foreground, appPaletteFor(theme).panel);
             }
 
             // The key and accidentals in force, the keys named in the naming in
@@ -1624,18 +1533,16 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             }
 
           private:
-            // Timing's three sliders to these limits, which are in order.
+            // Timing's bar to these limits, which are in order.
             void showTimingLimits(evaluation::TimingLimits limits)
             {
-                rightOnSlider.setValue(limits.rightOnMs, juce::dontSendNotification);
-                onTimeSlider.setValue(limits.onTimeMs, juce::dontSendNotification);
-                offBeatSlider.setValue(limits.offBeatMs, juce::dontSendNotification);
+                timingZones.setValues({limits.rightOnMs, limits.onTimeMs, limits.offBeatMs});
             }
 
             void applyTimingLimits()
             {
-                recorder.setTimingLimits(
-                    {rightOnSlider.getValue(), onTimeSlider.getValue(), offBeatSlider.getValue()});
+                const auto values = timingZones.values();
+                recorder.setTimingLimits({values[0], values[1], values[2]});
                 showTimingLimits(recorder.timingLimits());
                 if (onCountInChanged)
                 {
@@ -1643,19 +1550,17 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
                 }
             }
 
-            // The three sliders to these limits, which are already in order.
+            // Pitch's bar to these limits, which are already in order.
             void showZoneLimits(pitch::ZoneLimits limits)
             {
-                nearPerfectSlider.setValue(limits.nearPerfectCents, juce::dontSendNotification);
-                toleranceSlider.setValue(limits.toleranceCents, juce::dontSendNotification);
-                outOfTuneSlider.setValue(limits.outOfTuneCents, juce::dontSendNotification);
+                pitchZones.setValues(
+                    {limits.nearPerfectCents, limits.toleranceCents, limits.outOfTuneCents});
             }
 
             void applyZoneLimits()
             {
-                const auto limits = pitch::orderedLimits(
-                    {nearPerfectSlider.getValue(), toleranceSlider.getValue(),
-                     outOfTuneSlider.getValue()});
+                const auto values = pitchZones.values();
+                const auto limits = pitch::orderedLimits({values[0], values[1], values[2]});
                 evaluation::IntonationSettings settings = recorder.intonationSettings();
                 settings.nearPerfectCents = limits.nearPerfectCents;
                 settings.toleranceCents = limits.toleranceCents;
@@ -1682,48 +1587,40 @@ class MainComponent::SettingsWindow final : public juce::DocumentWindow
             juce::ComboBox countInBox;
             juce::Label referenceLabel;
             juce::Slider referenceSlider;
-            juce::Label nearPerfectLabel;
-            juce::Slider nearPerfectSlider;
-            juce::Label toleranceLabel;
-            juce::Slider toleranceSlider;
-            juce::Label outOfTuneLabel;
-            juce::Slider outOfTuneSlider;
-            // A dot in the colour a limit sets, after its slider: the same
-            // four colours for timing as for pitch.
-            class ZoneSwatch final : public juce::Component
-            {
-              public:
-                explicit ZoneSwatch(pitch::IntonationZone shown) : zone(shown)
+            // Pitch's and timing's limits, each three on one bar: the ranges
+            // and gaps the judgement keeps (pitch::orderedLimits,
+            // evaluation::orderedTimingLimits).
+            juce::Label pitchZonesLabel;
+            ZoneLimitsSlider pitchZones{
+                zone_limits::Model{
+                    {zone_limits::Limit{
+                         pitch::minimumNearPerfectCents, pitch::maximumNearPerfectCents},
+                     zone_limits::Limit{pitch::minimumToleranceCents, pitch::maximumToleranceCents},
+                     zone_limits::Limit{
+                         pitch::minimumOutOfTuneCents, pitch::maximumOutOfTuneCents}},
+                    pitch::bandGapCents,
+                    1.0},
+                [](double value)
                 {
-                    setInterceptsMouseClicks(false, false);
-                }
-
-                void paint(juce::Graphics& graphics) override
+                    return juce::String::fromUTF8("\xC2\xB1") +
+                           juce::String(juce::roundToInt(value)) +
+                           juce::String::fromUTF8(" \xC2\xA2");
+                }};
+            juce::Label timingZonesLabel;
+            ZoneLimitsSlider timingZones{
+                zone_limits::Model{
+                    {zone_limits::Limit{evaluation::minimumRightOnMs, evaluation::maximumRightOnMs},
+                     zone_limits::Limit{evaluation::minimumOnTimeMs, evaluation::maximumOnTimeMs},
+                     zone_limits::Limit{
+                         evaluation::minimumOffBeatMs, evaluation::maximumOffBeatMs}},
+                    evaluation::timingBandGapMs,
+                    5.0},
+                [](double value)
                 {
-                    const float size =
-                        std::min(14.0f, static_cast<float>(std::min(getWidth(), getHeight())));
-                    graphics.setColour(intonationZoneColour(zone));
-                    graphics.fillEllipse(
-                        getLocalBounds().toFloat().withSizeKeepingCentre(size, size));
-                }
-
-              private:
-                pitch::IntonationZone zone;
-            };
-
-            ZoneSwatch nearPerfectSwatch{pitch::IntonationZone::nearPerfect};
-            ZoneSwatch toleranceSwatch{pitch::IntonationZone::acceptable};
-            ZoneSwatch outOfTuneSwatch{pitch::IntonationZone::outside};
-            ZoneSwatch rightOnSwatch{pitch::IntonationZone::nearPerfect};
-            ZoneSwatch onTimeSwatch{pitch::IntonationZone::acceptable};
-            ZoneSwatch offBeatSwatch{pitch::IntonationZone::outside};
-
-            juce::Label rightOnLabel;
-            juce::Slider rightOnSlider;
-            juce::Label onTimeLabel;
-            juce::Slider onTimeSlider;
-            juce::Label offBeatLabel;
-            juce::Slider offBeatSlider;
+                    return l10n::format(
+                        "settings.practice.timing.value",
+                        {{"ms", l10n::number(std::round(value), 0)}});
+                }};
             juce::Label minimumLevelLabel;
             juce::Slider minimumLevelSlider;
             InputLevelMeter minimumLevelMeter;

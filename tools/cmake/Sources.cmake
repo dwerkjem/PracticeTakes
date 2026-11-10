@@ -121,6 +121,9 @@ set(PRACTICE_TAKES_SOURCES
     src/application/theme/ThemeType.h
     src/application/widgets/InputLevelMeter.cpp
     src/application/widgets/InputLevelMeter.h
+    src/application/widgets/ZoneLimitsModel.h
+    src/application/widgets/ZoneLimitsSlider.cpp
+    src/application/widgets/ZoneLimitsSlider.h
     src/application/tools/BuiltInToolCatalog.h
     src/application/tools/BuiltInTools.cpp
     src/application/tools/BuiltInTools.h
@@ -380,6 +383,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/testcontrol/TestControlSessionTests.cpp
     src/tests/application/theme/TextScaleTests.cpp
     src/tests/application/theme/ThemeContrastTests.cpp
+    src/tests/application/widgets/ZoneLimitsModelTests.cpp
     src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
     src/tests/features/analysis/tuner/TunerSettingsCodecTests.cpp
     src/tests/features/analysis/tuner/TunerZonesTests.cpp
