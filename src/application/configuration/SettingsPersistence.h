@@ -90,6 +90,12 @@ struct State
     // A microphone take ignores sound below this, in dBFS, -80 to -20.
     double minimumLevelDb = AppDefaults::minimumLevelDb;
 
+    // Timing's three limits, in milliseconds either way
+    // (evaluation::TimingLimits): right on the beat, on time, off the beat.
+    double timingRightOnMs = 15.0;
+    double timingOnTimeMs = 40.0;
+    double timingOffBeatMs = 100.0;
+
     // A target the player chose, as its sounding and written names ("Bb3"),
     // empty for none; and whether opening a score keeps it (target-note-picker).
     // The interface language's code ("de"), or empty for Automatic: the

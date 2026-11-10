@@ -289,7 +289,9 @@ While a take is under review and its score is open, the Score View marks every
 note of the part it was judged against: right, wrong (with the key played),
 missed, early or late, and a cross above the staff for each extra key. A sung
 note is also marked by how in tune it was: green near perfect, blue within your
-acceptable range, amber sharp or flat with an arrow and its cents, red wrong. See
+acceptable range, amber sharp or flat with an arrow and its cents, red wrong.
+A note played early or late gets a small arrow beside it in the same colours
+for timing: amber a little early or late, red off the beat. See
 [[Getting Started]] and the Take Review below. **Show take review** in the
 options menu turns the marks off.
 
@@ -300,7 +302,9 @@ The take you just played, judged note by note. It shows:
 - a summary: *158 correct · 7 wrong · 11 missed · 1 extra · 3 early · 4 late*,
   or for a sung take *41 in tune · 6 sharp · 3 flat · …*;
 - every result in time order, a sung note with how far off it was:
-  *G4 · 18 ¢ sharp*.
+  *G4 · 18 ¢ sharp*. Each has two dots: the first for the note, the second,
+  a ring, for its timing in the same four colours as pitch — green right on
+  the beat, blue on time, amber a little early or late, red off the beat.
 
 Click a result to move the practice clock, and with it the Score View, to that
 note. Before the first take it says how to record one.

@@ -331,6 +331,22 @@ const evaluation::IntonationSettings& TakeRecorder::intonationSettings() const n
     return intonation;
 }
 
+void TakeRecorder::setTimingLimits(const evaluation::TimingLimits& limits)
+{
+    const evaluation::TimingLimits ordered = evaluation::orderedTimingLimits(limits);
+    if (ordered == timing.limits)
+    {
+        return;
+    }
+    timing.limits = ordered;
+    rejudge();
+}
+
+evaluation::TimingLimits TakeRecorder::timingLimits() const noexcept
+{
+    return timing.limits;
+}
+
 void TakeRecorder::setMinimumLevelDb(double level)
 {
     if (level == timing.onsets.minimumLevelDb)

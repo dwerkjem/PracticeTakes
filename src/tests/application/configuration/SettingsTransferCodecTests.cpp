@@ -616,6 +616,9 @@ TEST_CASE("every setting travels in a transfer file, the devices too", "[setting
     state.octaveNumbering = 2;
     state.keySignatureFifths = -2;
     state.flatsWithoutKey = true;
+    state.timingRightOnMs = 20.0;
+    state.timingOnTimeMs = 60.0;
+    state.timingOffBeatMs = 150.0;
     state.metronomeEnabled = false;
     state.metronomeVolume = 0.2;
     state.metronomeAccent = false;
@@ -646,6 +649,9 @@ TEST_CASE("every setting travels in a transfer file, the devices too", "[setting
     CHECK(imported.octaveNumbering == 2);
     CHECK(imported.keySignatureFifths == -2);
     CHECK(imported.flatsWithoutKey);
+    CHECK(imported.timingRightOnMs == Catch::Approx(20.0));
+    CHECK(imported.timingOnTimeMs == Catch::Approx(60.0));
+    CHECK(imported.timingOffBeatMs == Catch::Approx(150.0));
     CHECK_FALSE(imported.metronomeEnabled);
     CHECK(imported.metronomeVolume == Catch::Approx(0.2));
     CHECK_FALSE(imported.metronomeAccent);

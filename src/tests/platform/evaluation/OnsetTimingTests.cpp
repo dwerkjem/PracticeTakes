@@ -174,14 +174,21 @@ TEST_CASE("timing stays aligned through a tempo change", "[evaluation][timing]")
 
     CHECK(report.summary.onTime == 12);
 
-    // At 60 bpm the same 20 ms is a smaller part of the beat, and the
-    // tolerance is the 80 ms cap rather than 40.
+    // At 60 bpm the same 20 ms is a smaller part of the beat.
     CHECK(report.results[0].errorBeats == Approx(0.04).margin(0.001));
     CHECK(report.results[8].errorBeats == Approx(0.02).margin(0.001));
+
+    // The player's limits are in milliseconds, at any tempo: 60 ms is past the
+    // default 40 either side of the change, and on time once they widen it.
     const auto late = judgeTiming(
         attacks, onsetsAt(attacks, *table, std::vector<double>(12, 60.0)), *table, rate, 0);
     CHECK(late.results[0].verdict == TimingVerdict::late);
-    CHECK(late.results[8].verdict == TimingVerdict::onTime);
+    CHECK(late.results[8].verdict == TimingVerdict::late);
+    TimingSettings wider;
+    wider.limits.onTimeMs = 80.0;
+    const auto widened = judgeTiming(
+        attacks, onsetsAt(attacks, *table, std::vector<double>(12, 60.0)), *table, rate, 0, wider);
+    CHECK(widened.results[8].verdict == TimingVerdict::onTime);
 }
 
 TEST_CASE("a weak onset makes its judgement uncertain", "[evaluation][timing]")
@@ -277,4 +284,62 @@ TEST_CASE("a microphone take is judged from the onsets in its audio", "[evaluati
     CHECK(report.summary.onTime == 7);
     CHECK(report.results[4].verdict == TimingVerdict::absent);
     CHECK(std::abs(report.summary.meanErrorMs) < 5.0);
+}
+
+TEST_CASE(
+    "timing is coloured in pitch's four zones, by the player's limits",
+    "[evaluation][timing]")
+{
+    const auto source = quarters(1);
+    const auto table = tableOf(*source);
+    const auto attacks = expectedAttacksOf(*source, 0);
+    // Right on within 15 ms, on time within 40, off the beat past 100.
+    const auto report = judgeTiming(
+        attacks, onsetsAt(attacks, *table, {5.0, -30.0, 70.0, -150.0}), *table, rate, 0);
+
+    REQUIRE(report.results.size() == 4);
+    CHECK(report.results[0].zone == pitch::IntonationZone::nearPerfect);
+    CHECK(report.results[1].zone == pitch::IntonationZone::acceptable);
+    CHECK(report.results[1].verdict == TimingVerdict::onTime);
+    CHECK(report.results[2].zone == pitch::IntonationZone::nearButOff);
+    CHECK(report.results[2].verdict == TimingVerdict::late);
+    CHECK(report.results[3].zone == pitch::IntonationZone::outside);
+    CHECK(report.results[3].verdict == TimingVerdict::early);
+}
+
+TEST_CASE("the player's on-time limit decides early and late", "[evaluation][timing]")
+{
+    const auto source = quarters(1);
+    const auto table = tableOf(*source);
+    const auto attacks = expectedAttacksOf(*source, 0);
+    TimingSettings settings;
+    settings.limits = {10.0, 80.0, 150.0};
+    const auto report = judgeTiming(
+        attacks, onsetsAt(attacks, *table, {60.0, -60.0, 5.0, 100.0}), *table, rate, 0, settings);
+
+    REQUIRE(report.results.size() == 4);
+    // 60 ms is on time within 80, where the default would call it late.
+    CHECK(report.results[0].verdict == TimingVerdict::onTime);
+    CHECK(report.results[1].verdict == TimingVerdict::onTime);
+    CHECK(report.results[2].zone == pitch::IntonationZone::nearPerfect);
+    CHECK(report.results[3].zone == pitch::IntonationZone::nearButOff);
+    // No timing for an attack nothing was matched to.
+    CHECK_FALSE(TimingResult{}.zone.has_value());
+}
+
+TEST_CASE("timing limits are kept in order and in range", "[evaluation][timing]")
+{
+    // On time first, then the others give way to it.
+    const auto squeezed = orderedTimingLimits({60.0, 40.0, 30.0});
+    CHECK(squeezed.onTimeMs == Approx(40.0));
+    CHECK(squeezed.rightOnMs == Approx(35.0));
+    CHECK(squeezed.offBeatMs == Approx(45.0));
+
+    const auto wild = orderedTimingLimits({-5.0, 1000.0, std::nan("")});
+    CHECK(wild.onTimeMs == Approx(maximumOnTimeMs));
+    CHECK(wild.rightOnMs == Approx(minimumRightOnMs));
+    // Not a number: its default, 100, pushed clear of on time's 150.
+    CHECK(wild.offBeatMs == Approx(maximumOnTimeMs + timingBandGapMs));
+
+    CHECK(orderedTimingLimits({}) == TimingLimits{});
 }

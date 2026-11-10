@@ -531,7 +531,11 @@ void ScoreViewComponent::paintReviewOn(
                 static_cast<float>(base), static_cast<float>(centreY - half),
                 static_cast<float>(base), static_cast<float>(centreY + half),
                 static_cast<float>(tip), static_cast<float>(centreY));
-            graphics.setColour(juce::Colour(reviewTiming));
+            // Amber a little early or late, red off the beat: timing's zones
+            // in pitch's colours (Settings -> Practice sets both).
+            graphics.setColour(
+                mark.timingZone.has_value() ? intonationZoneColour(*mark.timingZone)
+                                            : juce::Colour(reviewTiming));
             graphics.fillPath(arrow);
         }
     }

@@ -54,6 +54,10 @@ struct NoteMark
     PitchMark pitch = PitchMark::none;
     TimingMark timing = TimingMark::none;
 
+    // Which of the four zones the note's timing is in, coloured as a pitch
+    // zone is; nothing for a note with no timing.
+    std::optional<pitch::IntonationZone> timingZone;
+
     // What was played instead, for a wrong note.
     std::optional<int> playedMidi;
 

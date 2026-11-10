@@ -276,13 +276,29 @@ void TakeReviewComponent::paintListBoxItem(
     }
 
     const auto dot = static_cast<float>(height) * 0.36f;
+    const float dotY = (static_cast<float>(height) - dot) * 0.5f;
     graphics.setColour(colourOf(row));
-    graphics.fillEllipse(10.0f, (static_cast<float>(height) - dot) * 0.5f, dot, dot);
+    graphics.fillEllipse(10.0f, dotY, dot, dot);
 
+    // Beside it, the timing's zone in the same four colours: green right on
+    // the beat, blue on time, amber a little early or late, red off the beat.
+    const float timingX = 10.0f + dot + 4.0f;
+    if (const take::TakeReview* review = takes.review();
+        review != nullptr && row.result.has_value() && *row.result < review->report.results.size())
+    {
+        if (const auto zone = review->report.results[*row.result].timingZone)
+        {
+            graphics.setColour(intonationZoneColour(*zone));
+            graphics.drawEllipse(timingX, dotY, dot, dot, 2.0f);
+        }
+    }
+
+    const int textLeft = static_cast<int>(timingX + dot) + 8;
     graphics.setColour(row.mistake ? colours.foreground : colours.muted);
     graphics.setFont(textFont(appearance::TextRole::control));
     graphics.drawText(
-        rowTexts[rowNumber], 28, 0, width - 32, height, juce::Justification::centredLeft, true);
+        rowTexts[rowNumber], textLeft, 0, width - textLeft - 4, height,
+        juce::Justification::centredLeft, true);
 }
 
 void TakeReviewComponent::listBoxItemClicked(int row, const juce::MouseEvent& event)
