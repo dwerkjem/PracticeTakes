@@ -161,7 +161,7 @@ struct TunerNumberField
 };
 
 inline constexpr int tunerDisplayModeMinimum = 1;
-inline constexpr int tunerDisplayModeMaximum = 3;
+inline constexpr int tunerDisplayModeMaximum = 4;
 
 // In payload order: a workspace payload lists its fields in this order.
 inline constexpr std::array tunerNumberFields{

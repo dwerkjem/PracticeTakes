@@ -442,6 +442,7 @@ language: English
 "tuner.view.bar" = "Bar"
 "tuner.view.graph" = "Graph"
 "tuner.view.meter" = "Meter"
+"tuner.view.staff" = "Staff"
 
 # The target note, and what the tuner says against it
 "target.none.cleared" = "No target note"

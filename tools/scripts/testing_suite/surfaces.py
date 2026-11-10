@@ -296,6 +296,19 @@ SURFACES: tuple[Surface, ...] = (
         modes=frozenset({FULL}),
     ),
     Surface(
+        state="tuner-staff",
+        warmup_seconds=2.5,
+        title="The tuner in its staff view",
+        modes=frozenset({FULL}),
+        extras=(
+            Question(
+                "staff-reads",
+                "Is the note sung on the staff after a clef, filled in the colour of how close "
+                "it is, with its cents under it?",
+            ),
+        ),
+    ),
+    Surface(
         state="tuner-advanced",
         warmup_seconds=2.5,
         title="The tuner with advanced settings open",

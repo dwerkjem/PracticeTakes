@@ -82,6 +82,7 @@ TunerComponent::TunerComponent(
     // The tuner's bar view: a horizontal bar, not a measure ("score.bar").
     displayModeBox.addItem(l10n::text("tuner.view.bar"), static_cast<int>(DisplayMode::bar));
     displayModeBox.addItem(l10n::text("tuner.view.meter"), static_cast<int>(DisplayMode::meter));
+    displayModeBox.addItem(l10n::text("tuner.view.staff"), static_cast<int>(DisplayMode::staff));
     displayModeBox.setSelectedId(AppDefaults::Tuner::displayMode, juce::dontSendNotification);
     displayModeBox.onChange = [this]
     {
@@ -173,6 +174,13 @@ bool TunerComponent::showView(const juce::String& view)
     if (view == "meter")
     {
         selectMode(DisplayMode::meter);
+
+        return true;
+    }
+
+    if (view == "staff")
+    {
+        selectMode(DisplayMode::staff);
 
         return true;
     }
@@ -450,6 +458,8 @@ std::vector<ToolComponent::MenuEntry> TunerComponent::optionsMenuEntries()
          currentMode == DisplayMode::bar},
         {l10n::text("tuner.view.meter"), [selectMode] { selectMode(DisplayMode::meter); },
          currentMode == DisplayMode::meter},
+        {l10n::text("tuner.view.staff"), [selectMode] { selectMode(DisplayMode::staff); },
+         currentMode == DisplayMode::staff},
         {l10n::text(
              areAdvancedSettingsExpanded ? l10n::key("tuner.menu.advanced.hide")
                                          : l10n::key("tuner.menu.advanced.show")),

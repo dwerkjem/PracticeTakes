@@ -12,12 +12,15 @@ many cents sharp or flat it is.
 
 ![The tuner in its graph view, reading A4: the pitch line drifts above and below a thin lit green band on A4, with dotted blue, amber and red lines where each looser zone begins](images/tuner-graph.png)
 
-- **Display mode** picks one of three views:
+- **Display mode** picks one of four views:
   - **Graph**, pitch over time, so drift within a held note is visible (above);
   - **Bar**, the cents offset as a dot on a line, from −50 to +50 (one note)
     unless you change its scale;
-  - **Meter**, a needle between *flat* and *sharp*.
-- **The zones** show where you need to be, on all three views: bands around
+  - **Meter**, a needle between *flat* and *sharp*;
+  - **Staff**, the note you're on drawn on a staff after the clef and the key
+    signature of the bar you're at, beside the target, in the colour of how
+    close you are, with the cents under it.
+- **The zones** show where you need to be, on the graph, the bar and the meter: bands around
   the note, each as wide as its range either side of it, all set in
   **Settings → Practice** and all plus or minus:
   - **green**, near perfect, within **Near perfect within** (±5 cents by

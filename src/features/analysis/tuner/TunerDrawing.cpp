@@ -1,4 +1,5 @@
 #include "../../../application/localisation/NoteNames.h"
+#include "../../../application/theme/MiniStaff.h"
 #include "TunerComponent.h"
 
 #include <algorithm>
@@ -1328,6 +1329,11 @@ void TunerComponent::drawCompactDisplay(
         drawCompactMeter(graphics, bounds, shape);
         break;
 
+    case DisplayMode::staff:
+        // A staff draws at any size: its spacing follows the room.
+        drawPitchStaff(graphics, bounds);
+        break;
+
     case DisplayMode::graph:
     default:
         drawCompactGraph(graphics, bounds, shape);
@@ -1370,12 +1376,20 @@ void TunerComponent::drawSelectedDisplay(juce::Graphics& graphics, juce::Rectang
     // centred, which is where it reads best. The bar lies straight across the
     // middle -- centred there, the track and its "0" tick slice the glyphs in
     // half -- so above the bar it is, in the band the bar does not use.
-    drawNoteWatermark(graphics, noteArea(bounds));
+    // The staff names its note itself, by where it sits.
+    if (mode != DisplayMode::staff)
+    {
+        drawNoteWatermark(graphics, noteArea(bounds));
+    }
 
     switch (mode)
     {
     case DisplayMode::bar:
         drawPitchBar(graphics, bounds);
+        break;
+
+    case DisplayMode::staff:
+        drawPitchStaff(graphics, bounds);
         break;
 
     case DisplayMode::meter:
@@ -1632,4 +1646,71 @@ bool TunerComponent::showsNoteRow(int midiNote) const
     const auto aimingAt = target.target();
     return (hasSignal && midiNote == lockedMidiNote) ||
            (aimingAt != nullptr && aimingAt->midiNoteNumber == midiNote);
+}
+
+void TunerComponent::drawPitchStaff(juce::Graphics& graphics, juce::Rectangle<int> bounds) const
+{
+    const auto palette = tunerPaletteFor(currentTheme);
+    const auto aimingAt = target.target();
+
+    // The clef the note needs: treble from middle C up, bass below, as the
+    // Note View chooses it.
+    const int reference =
+        hasSignal ? lockedMidiNote : (aimingAt != nullptr ? aimingAt->midiNoteNumber : 69);
+    const pitch::StaffClef clef =
+        reference >= 60 ? pitch::StaffClef::treble : pitch::StaffClef::bass;
+
+    // A wide staff reads no better than a fitted one: no wider than this.
+    const auto area = bounds.reduced(16).toFloat();
+    const auto staffArea =
+        area.withSizeKeepingCentre(std::min(area.getWidth(), 560.0f), area.getHeight());
+
+    MiniStaffStyle style;
+    style.lines = palette.foreground.withAlpha(0.75f);
+    style.font = &musicFont.get();
+    style.keyFifths = target.keyFifths;
+    style.minSpacing = 5.0f;
+    style.maxSpacing = 18.0f;
+    style.ledgerReach = 1.2f;
+
+    // The target hollow on the left, the note sung filled on the right in the
+    // colour of how close it is, as the Note View draws them.
+    const float left = staffArea.getX() + miniStaffClefWidth(staffArea, style);
+    const float width = std::max(0.0f, staffArea.getRight() - 4.0f - left);
+    std::vector<MiniStaffNote> heads;
+    if (aimingAt != nullptr)
+    {
+        if (const auto spelled = pitch::parseNoteName(aimingAt->name))
+        {
+            heads.push_back({*spelled, left + (width * 0.35f), palette.accent, false});
+        }
+    }
+    std::optional<juce::Colour> sungColour;
+    if (hasSignal)
+    {
+        if (const auto spelled = l10n::spellHeard(lockedMidiNote, target.keyFifths))
+        {
+            sungColour = intonationZoneColour(pitch::zoneOf(zoneCents(), zoneLimits()));
+            heads.push_back({*spelled, left + (width * 0.7f), *sungColour, true});
+        }
+    }
+    drawMiniStaff(graphics, staffArea, clef, heads, style);
+
+    // How far off, under the note sung.
+    if (sungColour.has_value())
+    {
+        const long cents = std::lround(zoneCents());
+        const juce::String text =
+            (cents > 0 ? "+" : "") + juce::String(cents) + juce::String::fromUTF8(" \xC2\xA2");
+        graphics.setColour(*sungColour);
+        graphics.setFont(textFont(appearance::TextRole::subheading, juce::Font::bold));
+        // Below the staff and the ledger lines a sung note usually needs.
+        const float spacing = miniStaffSpacing(staffArea, style);
+        graphics.drawText(
+            text,
+            juce::Rectangle<float>(
+                left + (width * 0.7f) - 60.0f, staffArea.getCentreY() + (spacing * 5.0f), 120.0f,
+                28.0f),
+            juce::Justification::centred);
+    }
 }

@@ -85,7 +85,7 @@ TEST_CASE("A tuner payload with a required value outside its range is refused", 
 
     CHECK(TunerSettingsCodec::decode(withProperty("displayMode", 3)).has_value());
     CHECK_FALSE(TunerSettingsCodec::decode(withProperty("displayMode", 0)).has_value());
-    CHECK_FALSE(TunerSettingsCodec::decode(withProperty("displayMode", 4)).has_value());
+    CHECK_FALSE(TunerSettingsCodec::decode(withProperty("displayMode", 5)).has_value());
     CHECK_FALSE(TunerSettingsCodec::decode(withProperty("displayMode", 1.5)).has_value());
 }
 

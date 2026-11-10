@@ -155,7 +155,7 @@ TEST_CASE("The tuner schema keeps the ranges each reader had", "[defaults][tuner
     CHECK(range(&TunerSettings::targetCentred) == std::array{0.0, 1.0, 1.0});
     CHECK_FALSE(AppDefaults::tunerField(&TunerSettings::targetCentred).required);
     CHECK(AppDefaults::tunerDisplayModeMinimum == 1);
-    CHECK(AppDefaults::tunerDisplayModeMaximum == 3);
+    CHECK(AppDefaults::tunerDisplayModeMaximum == 4);
 }
 
 TEST_CASE("Every preset is inside the tuner schema's ranges", "[defaults][tuner]")
