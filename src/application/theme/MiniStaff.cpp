@@ -65,6 +65,7 @@ std::vector<int> miniStaffKeySteps(int keyFifths, pitch::StaffClef clef)
     const int shift = clef == pitch::StaffClef::bass ? -2 : 0;
     std::vector<int> steps;
     const int count = std::min(7, std::abs(keyFifths));
+    steps.reserve(static_cast<std::size_t>(count));
     for (int index = 0; index < count; ++index)
     {
         steps.push_back((keyFifths > 0 ? sharpSteps[index] : flatSteps[index]) + shift);
