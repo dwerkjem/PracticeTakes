@@ -8,7 +8,7 @@
 #include "platform/search/SearchIndex.h"
 
 // The search bar and what it finds, opened from the magnifying glass in the
-// title strip or with Ctrl+K (openspec/changes/everything-search, decision 6).
+// title strip or with Ctrl+K (openspec/changes/archive/2026-11-10-everything-search, decision 6).
 //
 // It searches as the reader types, lists the best matches with what kind each
 // is, and runs the one chosen: by click, or by the arrow keys and Return.

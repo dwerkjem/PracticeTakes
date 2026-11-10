@@ -307,7 +307,7 @@ class MainComponent final
     // target and the key in force.
     void followNewScore(const score::musicxml::MusicXmlImportResult& result);
 
-    // Search (openspec/changes/everything-search; ui/search/
+    // Search (openspec/changes/archive/2026-11-10-everything-search; ui/search/
     // MainComponentSearch.cpp): the index, the popup under the magnifying
     // glass, and what choosing a result does.
     struct SearchCommand

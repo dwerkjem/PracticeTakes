@@ -7,7 +7,8 @@
 #include <vector>
 
 // The application's search index (no JUCE dependency): Tantivy, in the Rust
-// crate under src/search, behind this class (openspec/changes/everything-search).
+// crate under src/search, behind this class
+// (openspec/changes/archive/2026-11-10-everything-search).
 //
 // Everything searchable is a `SearchDocument` of some kind -- a setting, a
 // tool, a command, a song, a take, a line of lyrics. The shell replaces a

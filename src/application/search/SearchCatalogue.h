@@ -11,7 +11,7 @@
 #include "platform/search/SearchIndex.h"
 
 // What the search bar finds, as documents for the index
-// (openspec/changes/everything-search, decision 4). Each function turns one
+// (openspec/changes/archive/2026-11-10-everything-search, decision 4). Each function turns one
 // source -- the settings, the tools, the library, the open score -- into the
 // documents of one kind, in the interface language. The shell decides when
 // each is rebuilt and what choosing a result does.

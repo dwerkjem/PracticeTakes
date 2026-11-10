@@ -212,7 +212,7 @@ struct ApprovedWindowState
 
     // Open the search bar with this typed into it, once everything else --
     // the score, the library -- is in place; empty for no search bar
-    // (openspec/changes/everything-search).
+    // (openspec/changes/archive/2026-11-10-everything-search).
     std::string searchQuery;
 };
 

@@ -1,5 +1,5 @@
 //! The application's search index: Tantivy behind a C interface
-//! (openspec/changes/everything-search).
+//! (openspec/changes/archive/2026-11-10-everything-search).
 //!
 //! Everything searchable -- a setting, a tool, a command, a song, a take, a
 //! line of the open score's lyrics -- is a document with a `kind`, an `id` the

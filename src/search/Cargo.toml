@@ -1,5 +1,5 @@
 # The search index behind the application's search bar
-# (openspec/changes/everything-search): Tantivy, behind a small C interface
+# (openspec/changes/archive/2026-11-10-everything-search): Tantivy, behind a small C interface
 # that src/platform/search/SearchIndex wraps. Built and linked by CMake through
 # Corrosion (tools/cmake/Search.cmake); not a crate anyone publishes.
 [package]

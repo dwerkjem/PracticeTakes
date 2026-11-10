@@ -3,7 +3,7 @@
 #include <cstdint>
 
 // The C interface of the Rust crate in src/search, which holds the search
-// index (openspec/changes/everything-search). Declared here, by hand, to match
+// index (openspec/changes/archive/2026-11-10-everything-search). Declared here, by hand, to match
 // src/search/src/lib.rs; SearchIndex is the only caller.
 //
 // Strings in are NUL-terminated UTF-8 that need only last the call. Strings out

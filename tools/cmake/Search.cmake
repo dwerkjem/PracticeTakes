@@ -1,4 +1,4 @@
-# The search index (openspec/changes/everything-search): the Rust crate in
+# The search index (openspec/changes/archive/2026-11-10-everything-search): the Rust crate in
 # src/search, which wraps Tantivy behind a C interface, built by Cargo and
 # linked into both targets as the `practice_takes_search` static library.
 #

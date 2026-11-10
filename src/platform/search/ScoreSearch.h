@@ -8,7 +8,7 @@
 #include "../score/Score.h"
 
 // What of the open score can be searched for (no JUCE dependency;
-// openspec/changes/everything-search, decision 5): its sung lines, by their
+// openspec/changes/archive/2026-11-10-everything-search, decision 5): its sung lines, by their
 // words, and its bars, by number. Choosing one moves the practice clock there.
 //
 // The words are the application's to put into a sentence ("Bar 12, Voice"),

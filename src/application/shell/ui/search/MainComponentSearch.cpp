@@ -12,7 +12,7 @@
 #include <memory>
 #include <utility>
 
-// The shell's half of search (openspec/changes/everything-search): what is in
+// The shell's half of search (openspec/changes/archive/2026-11-10-everything-search): what is in
 // the index and when it is rebuilt, the magnifying glass and Ctrl+K, and what
 // choosing a result does.
 //
