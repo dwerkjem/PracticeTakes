@@ -21,6 +21,7 @@ MIDI keyboard.
 | Know what each tool shows | [[Tools]] |
 | Dock, float, tile and save layouts | [[Workspace and Settings]] |
 | Open a score, and know why a file came in differently | [[Scores and MusicXML]] |
+| Find your songs and takes from earlier sessions | [[Library]] |
 | Connect a MIDI keyboard and sustain pedal | [[MIDI Keyboard]] |
 | Fix something that isn't working | [[Troubleshooting]] |
 | See what's coming, and when | [[Roadmap]] |

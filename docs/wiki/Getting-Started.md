@@ -48,7 +48,7 @@ Settings:
 
 | Menu | Holds |
 |---|---|
-| **File** | Open a score, or the bundled sample |
+| **File** | Open a score, or the bundled sample, and the [[Library]] of your songs and takes |
 | **Settings** | Appearance, audio and the metronome, MIDI, practice presets and the count-in, reset and support, and portable settings import/export |
 | **Tools** | Opens each tool, arranges the workspace, and manages named workspaces |
 | **Help** | Send feedback, and turn feedback invitations on or off |

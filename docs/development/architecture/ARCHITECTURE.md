@@ -363,8 +363,42 @@ archived `takes` change):
   after `practiceClock` and `midiInputService` and before `transportStrip` and
   `liveTools`, and passes it to tools as `ToolServices::takes`. While a take
   runs it locks the clock, so nothing it is measured against can change.
-- **Takes are kept in memory for the session**, at most 50. Saving them is
-  #39's job.
+- **Takes are kept in memory for the session**, at most 50, and every kept
+  take is also saved to the media library (§ Media library), so a later
+  session can review it.
+
+## Media library
+
+One folder where songs and takes go (`src/platform/library/`, the
+`media-library` change): `Practice Takes` under the user's Music folder by
+default, with `Songs/` and `Takes/`.
+
+- **`LibraryLayout`** names the folders and holds the copy-on-open rule:
+  opening a score from outside the library copies it into `Songs/` once it
+  has imported, reuses a file with the same bytes, and numbers a clash. It
+  also moves things to the bin (a freedesktop trash on Linux, with the
+  `.trashinfo` that `juce::File::moveToTrash` does not write).
+- **A saved take is a folder** of `take.json` (`TakeManifest`, versioned), the
+  microphone as 24-bit FLAC, and a copy of the score file it was played
+  against. The clock table is not stored: `transport::buildTable` rebuilds it
+  from the score, scale, rate and loop. See
+  `docs/development/formats/take-folder.md`.
+- **`TakeSaver`** writes each newly kept take on a thread of its own. A kept
+  take is an immutable `shared_ptr<const Take>`, so nothing is locked but the
+  queue. A take loaded from the library carries its `libraryFolder`, and is
+  never saved again.
+- **`BackgroundWork`** runs the library's other disk work, one job at a time:
+  listing (`LibraryListing`, with a disposable song index cache), loading a
+  take, and Add Songs. Each job hands a function back to the message thread.
+- **The shell** owns one of each, after `takeRecorder`, and the
+  `LibraryWindow` (`shell/ui/library/`), which shows what it is given and asks
+  the shell for everything else. Reviewing a saved take publishes its own score
+  through `ScoreImportState::apply` and gives the take to
+  `TakeRecorder::keep`. No tool reaches the library.
+- **`--test-control` uses a scratch library** in the temporary folder, emptied
+  at every state and removed at exit, so a capture never touches the user's.
+- **The library folder is a local setting** (`library.folder`), which no
+  `.ptsettings` bundle carries.
 
 ## Evaluation
 

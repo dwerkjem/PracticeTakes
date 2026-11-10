@@ -309,6 +309,10 @@ The take you just played, judged note by note. It shows:
 Click a result to move the practice clock, and with it the Score View, to that
 note. Before the first take it says how to record one.
 
+Every take is also saved in the [[Library]]. **File → Library…**, then
+**Takes**, lists takes from every session, and **Review** brings one back here
+with its own score, judged with your current settings.
+
 ![The Take Review beside the Score View: a piano take stopped in bar 8, its notes marked and listed](images/take-review.png)
 
 ![A sung take under review: the voice's notes ringed, sharp and flat ones with an arrow and their cents](images/take-review-sung.png)

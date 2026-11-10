@@ -217,6 +217,7 @@ Training what you hear and understand, alongside what you play and sing.
 
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
+| Library | Songs and takes in one folder, listed under File → Library…: every score you open is copied in, and every take is saved | ✅ | — |
 | Score library | The folders you choose, listed with a preview of each score | Beta 2 | [#228](https://github.com/dwerkjem/PracticeTakes/issues/228) |
 
 ### Reading the score
@@ -300,6 +301,7 @@ Anything you can look at live, you can look at on a recording
 
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
+| Saved takes | Every take's audio and keyboard kept in the library with its score, and reviewed again in a later session | ✅ | — |
 | Record and open recordings | Keep a take's audio and MIDI, or open a WAV, AIFF or FLAC file | Beta 2 | [#292](https://github.com/dwerkjem/PracticeTakes/issues/292) |
 
 ### Analysing a recording

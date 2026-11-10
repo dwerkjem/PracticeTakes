@@ -6,6 +6,7 @@
 - [[Tools]]
 - [[Workspace and Settings]]
 - [[Scores and MusicXML]]
+- [[Library]]
 - [[MIDI Keyboard]]
 - [[Troubleshooting]]
 

@@ -62,6 +62,6 @@
 
 ## 7. Docs
 
-- [ ] 7.1 The wiki (a Library page, File menu, Take Review), the Features row,
+- [x] 7.1 The wiki (a Library page, File menu, Take Review), the Features row,
       ARCHITECTURE.md § Library, the take format in
       `docs/development/formats/`.
