@@ -192,6 +192,7 @@ class TargetPickerPanel final
         std::function<void(const score::Pitch&)> onChoose;
         int alter = 0;
         std::optional<score::Pitch> shown;
+        int keyFifths = 0;
         juce::Colour ink = juce::Colours::black;
         juce::Colour accent = juce::Colours::blue;
 
@@ -240,6 +241,7 @@ class TargetPickerPanel final
             // Each staff's own clef, G on the treble and F on the bass, at its
             // start: the heads are in the middle, clear of them.
             style.font = &musicFont.get();
+            style.keyFifths = keyFifths;
             drawMiniStaff(
                 graphics, staffArea(trebleMiddle()), pitch::StaffClef::treble, trebleHeads, style);
             drawMiniStaff(
@@ -353,6 +355,12 @@ class TargetPickerPanel final
     {
         singButton.setEnabled(steadyNote && steadyNote().has_value());
         clearButton.setEnabled(target.target() != nullptr);
+        // The key follows the music, so the staff's signature does too.
+        if (staff.keyFifths != target.keyFifths)
+        {
+            staff.keyFifths = target.keyFifths;
+            staff.repaint();
+        }
         showTargetOnKeyboard();
     }
 
@@ -392,6 +400,7 @@ class TargetPickerPanel final
                 : l10n::text("target.heading.none"),
             juce::dontSendNotification);
         staff.shown = currentPitch();
+        staff.keyFifths = target.keyFifths;
         // A call-out is dark in either theme, so the staff is drawn light.
         staff.ink = juce::Colours::white.withAlpha(0.85f);
         staff.accent = colours.accent.brighter(0.3f);

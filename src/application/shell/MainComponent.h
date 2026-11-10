@@ -18,6 +18,7 @@
 #include "../tools/BuiltInTools.h"
 #include "../tools/ToolInstanceAllocator.h"
 #include "../tools/ToolInstanceId.h"
+#include "state/following/KeyInForceFollower.h"
 #include "state/following/TargetClockFollower.h"
 #include "ui/main_window/TransportStrip.h"
 #include "ui/score/ScoreImportJob.h"
@@ -351,8 +352,8 @@ class MainComponent final
     // a note redrawn.
     void noteNamingChanged();
 
-    // With no score open, heard notes are spelled in the reader's key
-    // signature (Settings -> Appearance); this puts it where tools read it.
+    // Puts the key in force where tools read it at once, rather than at the
+    // follower's next check: after a score opens or the reader's key changes.
     void applySpellingKey();
 
     // The interface language chosen ("" for Automatic): saved, for the next
@@ -473,6 +474,10 @@ class MainComponent final
         practiceClock, scoreImport.currentScoreHolder(), currentTarget,
         [this] { return outputLatencyFrames(); }};
     [[nodiscard]] int outputLatencyFrames();
+
+    // Keeps the target's key on the measure the music is at, which every tool
+    // spells and draws in. After the clock, the score and the target it reads.
+    KeyInForceFollower keyFollower{practiceClock, scoreImport.currentScoreHolder(), currentTarget};
 
     // The clock's controls, which the window's control strip lays out beside
     // the menus. Declared after the clock it listens to, so it stops listening

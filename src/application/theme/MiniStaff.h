@@ -69,7 +69,21 @@ struct MiniStaffStyle
     // the lines' colour, in place of its name. None writes the name instead
     // (`label`). Every staff the application draws passes one.
     const MusicFont* font = nullptr;
+
+    // The key signature after the clef, in fifths (sharps positive, flats
+    // negative), drawn with the font. A head's accidental is then shown only
+    // where it differs from the key, with a natural where the key would alter
+    // it (pitch::keyInForce gives the key a tool is in).
+    int keyFifths = 0;
 };
+
+// Where a key signature's accidentals sit on a staff, in steps from the middle
+// line, in the order they are written: F C G D A E B for sharps, B E A D G C F
+// for flats, at the conventional height for the clef.
+[[nodiscard]] std::vector<int> miniStaffKeySteps(int keyFifths, pitch::StaffClef clef);
+
+// The alteration a key gives a letter: +1, -1, or 0.
+[[nodiscard]] int miniStaffKeyAlter(score::Step step, int keyFifths);
 
 // "Treble", "Bass" or "Tenor" (the treble clef an octave down, as a tenor
 // part is written), in the interface's language.
@@ -78,8 +92,8 @@ struct MiniStaffStyle
 // The line spacing a staff in `area` is drawn with.
 [[nodiscard]] float miniStaffSpacing(juce::Rectangle<float> area, const MiniStaffStyle& style);
 
-// How far from the area's left the clef reaches, so the heads go right of it:
-// nothing without a font.
+// How far from the area's left the clef and the key signature reach, so the
+// heads go right of them: nothing without a font.
 [[nodiscard]] float miniStaffClefWidth(juce::Rectangle<float> area, const MiniStaffStyle& style);
 
 // The staff position under `y` in a staff drawn across `area`, in steps from

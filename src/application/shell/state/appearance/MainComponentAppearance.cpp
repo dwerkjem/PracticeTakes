@@ -37,12 +37,7 @@ void MainComponent::showLanguageRestartNote() const
 
 void MainComponent::applySpellingKey()
 {
-    // The key heard notes are spelled in: the open score's, which its import
-    // set; with none open, the reader's own key signature.
-    if (!scoreImport.hasScore())
-    {
-        currentTarget.keyFifths = l10n::spelling().keyFifths;
-    }
+    keyFollower.update();
 }
 
 void MainComponent::noteNamingChanged()

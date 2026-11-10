@@ -137,3 +137,25 @@ TEST_CASE("a mini staff with a font makes room for its clef", "[theme][ministaff
     CHECK(width > 50.0f);
     CHECK(width < 75.0f);
 }
+
+TEST_CASE("a key signature sits where it is written", "[theme][ministaff]")
+{
+    // G major on the treble staff: one sharp, on the top line (F5).
+    CHECK(miniStaffKeySteps(1, pitch::StaffClef::treble) == std::vector<int>{4});
+    // D major in the bass clef: F3 on the fourth line, C3 in the second space.
+    CHECK(miniStaffKeySteps(2, pitch::StaffClef::bass) == std::vector<int>{2, -1});
+    // B flat major: B4 on the middle line, E5 in the top space.
+    CHECK(miniStaffKeySteps(-2, pitch::StaffClef::treble) == std::vector<int>{0, 3});
+    CHECK(miniStaffKeySteps(0, pitch::StaffClef::treble).empty());
+    CHECK(miniStaffKeySteps(7, pitch::StaffClef::treble).size() == 7);
+}
+
+TEST_CASE("a key alters the letters its signature names", "[theme][ministaff]")
+{
+    CHECK(miniStaffKeyAlter(score::Step::f, 1) == 1);
+    CHECK(miniStaffKeyAlter(score::Step::c, 1) == 0);
+    CHECK(miniStaffKeyAlter(score::Step::b, -1) == -1);
+    CHECK(miniStaffKeyAlter(score::Step::e, -2) == -1);
+    CHECK(miniStaffKeyAlter(score::Step::a, -2) == 0);
+    CHECK(miniStaffKeyAlter(score::Step::b, 7) == 1);
+}

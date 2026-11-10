@@ -135,7 +135,9 @@ Shows the note you're singing or playing the way a musician thinks of it:
   off (out to **Out of tune beyond**, ±40 cents by default), **red** past that,
   and grey while nothing is sung. The key, the trail and your note on the staff take the same colour.
   Without a target, the colours are against the note you're nearest.
-- **On a staff:** your note and the target side by side, after the clef. The clef follows the
+- **On a staff:** your note and the target side by side, after the clef and
+  the key signature of the bar the music is at (an accidental is shown only
+  where your note differs from it, so an F natural in G major gets a ♮). The clef follows the
   note, or **Clef** in the **...** menu fixes it as treble, bass, or tenor (the
   treble clef with an 8 below, for tenor voices and guitar).
 - **A trail:** the last three seconds of pitch drawn above the keys, so a scoop

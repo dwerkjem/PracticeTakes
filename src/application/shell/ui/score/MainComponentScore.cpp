@@ -165,22 +165,14 @@ void MainComponent::finishScoreImport(const score::musicxml::MusicXmlImportResul
     // is tested on it.
     const ScoreImportSummary& summary = scoreImport.apply(result);
 
-    // The target follows the open score (system-wide-target-note decision 2).
-    if (result.score != nullptr)
-    {
-        currentTarget.keyFifths = 0;
-        if (const auto score = scoreImport.score();
-            score != nullptr && !score->parts.empty() && !score->parts.front().measures.empty())
-        {
-            const auto& key = score->parts.front().measures.front().attributes.key;
-            currentTarget.keyFifths = key.has_value() ? key->fifths : 0;
-        }
-    }
+    // The target follows the open score (system-wide-target-note decision 2),
+    // and the key every tool spells in follows the measure it is in.
     if (result.score != nullptr && currentTarget.scoreReplacesTarget())
     {
         auto [target, reason] = pitch::targetFromScore(scoreImport.score());
         currentTarget.publish(std::move(target), std::move(reason));
     }
+    applySpellingKey();
 
 #if PRACTICE_TAKES_ENABLE_TEST_CONTROL
     // An approved state that opens a score into a tool wants the tool in the

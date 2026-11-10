@@ -50,6 +50,46 @@ struct ClefGlyph
     return {smufl::Glyph::gClef, -2};
 }
 
+// A key signature's accidentals, a space apart, starting this far after the
+// clef.
+constexpr float keyGapSpaces = 0.9f;
+constexpr float keyStepSpaces = 1.0f;
+} // namespace
+
+std::vector<int> miniStaffKeySteps(int keyFifths, pitch::StaffClef clef)
+{
+    // Treble positions from the middle line; the bass clef writes each a third
+    // (two steps) lower, and the tenor clef as the treble does.
+    constexpr int sharpSteps[7] = {4, 1, 5, 2, -1, 3, 0};
+    constexpr int flatSteps[7] = {0, 3, -1, 2, -2, 1, -3};
+    const int shift = clef == pitch::StaffClef::bass ? -2 : 0;
+    std::vector<int> steps;
+    const int count = std::min(7, std::abs(keyFifths));
+    for (int index = 0; index < count; ++index)
+    {
+        steps.push_back((keyFifths > 0 ? sharpSteps[index] : flatSteps[index]) + shift);
+    }
+    return steps;
+}
+
+int miniStaffKeyAlter(score::Step step, int keyFifths)
+{
+    using score::Step;
+    constexpr Step sharpOrder[7] = {Step::f, Step::c, Step::g, Step::d, Step::a, Step::e, Step::b};
+    constexpr Step flatOrder[7] = {Step::b, Step::e, Step::a, Step::d, Step::g, Step::c, Step::f};
+    const int count = std::min(7, std::abs(keyFifths));
+    for (int index = 0; index < count; ++index)
+    {
+        if ((keyFifths > 0 ? sharpOrder[index] : flatOrder[index]) == step)
+        {
+            return keyFifths > 0 ? 1 : -1;
+        }
+    }
+    return 0;
+}
+
+namespace
+{
 // The clef starts this far into the staff, in spaces, as an engraved one does.
 constexpr float clefIndentSpaces = 0.5f;
 
@@ -71,7 +111,10 @@ float miniStaffClefWidth(juce::Rectangle<float> area, const MiniStaffStyle& styl
     {
         widest = std::max(widest, style.font->bounds(clefGlyphOf(clef).glyph).getRight());
     }
-    return 4.0f + (spacing * (clefIndentSpaces + widest + clefClearanceSpaces));
+    const int signs = std::min(7, std::abs(style.keyFifths));
+    const float key =
+        signs == 0 ? 0.0f : keyGapSpaces + (static_cast<float>(signs) * keyStepSpaces);
+    return 4.0f + (spacing * (clefIndentSpaces + widest + key + clefClearanceSpaces));
 }
 
 int miniStaffStepsAt(juce::Rectangle<float> area, const MiniStaffStyle& style, float y)
@@ -119,6 +162,21 @@ void drawMiniStaff(
             left + (spacing * clefIndentSpaces), yOf(glyph.steps)));
         graphics.setColour(style.lines.withAlpha(1.0f));
         graphics.fillPath(outline);
+
+        // The key signature, a space apart after the clef.
+        const juce::Path& sign = style.font->outline(
+            style.keyFifths > 0 ? smufl::Glyph::accidentalSharp : smufl::Glyph::accidentalFlat);
+        float signX =
+            left + (spacing *
+                    (clefIndentSpaces + style.font->bounds(glyph.glyph).getRight() + keyGapSpaces));
+        for (const int steps : miniStaffKeySteps(style.keyFifths, clef))
+        {
+            juce::Path placed = sign;
+            placed.applyTransform(
+                juce::AffineTransform::scale(spacing).translated(signX, yOf(steps)));
+            graphics.fillPath(placed);
+            signX += spacing * keyStepSpaces;
+        }
     }
     else if (style.label.has_value())
     {
@@ -157,7 +215,23 @@ void drawMiniStaff(
             graphics.drawEllipse(head, 2.0f);
         }
 
-        if (style.accidentals && note.pitch.alter != 0)
+        // Against the key: an accidental only where the note differs from it,
+        // a natural where the key would sharpen or flatten its letter.
+        const int keyAlter = miniStaffKeyAlter(note.pitch.step, style.keyFifths);
+        if (style.accidentals && note.pitch.alter != keyAlter && style.font != nullptr &&
+            style.font->isLoaded())
+        {
+            const smufl::Glyph glyph =
+                note.pitch.alter > 0   ? smufl::Glyph::accidentalSharp
+                : note.pitch.alter < 0 ? smufl::Glyph::accidentalFlat
+                                       : smufl::Glyph::accidentalNatural;
+            juce::Path placed = style.font->outline(glyph);
+            const float glyphWidth = style.font->bounds(glyph).getRight() * spacing;
+            placed.applyTransform(juce::AffineTransform::scale(spacing).translated(
+                x - (headWidth * 0.5f) - (spacing * 0.3f) - glyphWidth, y));
+            graphics.fillPath(placed);
+        }
+        else if (style.accidentals && note.pitch.alter != 0 && note.pitch.alter != keyAlter)
         {
             graphics.setFont(juce::FontOptions(spacing * 1.6f));
             graphics.drawText(

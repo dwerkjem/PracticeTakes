@@ -273,6 +273,7 @@ MiniStaffStyle NoteViewComponent::staffStyle() const
     style.label = colours.muted;
     style.labelFontHeight = textSize(appearance::TextRole::axis);
     style.font = &musicFont.get();
+    style.keyFifths = target.keyFifths;
     return style;
 }
 

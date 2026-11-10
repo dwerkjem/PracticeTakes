@@ -3,6 +3,7 @@
 #include "../../application/localisation/NoteNames.h"
 
 #include "../../application/theme/MiniStaff.h"
+#include "../../platform/pitch/KeyInForce.h"
 #include "../../platform/pitch/TargetChoice.h"
 #include "../../platform/score/PitchNames.h"
 #include "../../platform/score/TargetNoteSelection.h"
@@ -583,6 +584,12 @@ void NowNextComponent::paintStaff(
     style.maxSpacing = 16.0f;
     style.ledgerReach = 1.2f;
     style.font = &musicFont.get();
+    // The key of the bar this note is in.
+    if (shownScore != nullptr && part < shownScore->parts.size() && item.ref.has_value())
+    {
+        style.keyFifths =
+            pitch::keyFifthsAtMeasure(shownScore->parts[part], item.ref->measureIndex);
+    }
 
     // Every pitch of the chord at the centre of the staff after its clef,
     // filled in the accent.
