@@ -261,6 +261,13 @@ class TunerComponent final
     // From the ... menu: with a target chosen, centre on it.
     bool targetCentred = true;
 
+    // From the ... menu: the graph's rows for the key's notes only.
+    bool inKeyOnly = false;
+
+    // Whether the graph draws `midiNote`'s row: always, unless only the key's
+    // notes are asked for -- and then the note sung and the target still.
+    [[nodiscard]] bool showsNoteRow(int midiNote) const;
+
     // What marks where the pitch is on the bar and the graph, from the ...
     // menu.
     enum class Marker

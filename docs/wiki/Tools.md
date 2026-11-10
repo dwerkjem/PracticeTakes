@@ -51,6 +51,9 @@ many cents sharp or flat it is.
     beside the sign (off by default; the line above the display always gives
     the exact reading);
   - **Light both halves**, for a symmetric look that lights the whole zone;
+  - **Only the key's notes**, which leaves the graph only the rows of the
+    notes in the key of the bar you're at (or your own key, with no score
+    open). The note you're on and the target keep their rows either way;
   - **Marker**, what marks where you are on the bar and the graph: *Off*,
     *Dot* (the default), *Arrow*, *Line*, *Ring*, *Diamond* or *Crosshair*.
 

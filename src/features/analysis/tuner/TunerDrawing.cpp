@@ -470,6 +470,10 @@ void TunerComponent::drawPitchGraph(juce::Graphics& graphics, juce::Rectangle<in
 
     for (int midiNote = firstNote; midiNote <= lastNote; ++midiNote)
     {
+        if (!showsNoteRow(midiNote))
+        {
+            continue;
+        }
         const auto y = juce::jmap(
             static_cast<float>(midiNote), static_cast<float>(minimumValue),
             static_cast<float>(maximumValue), static_cast<float>(plotArea.getBottom()),
@@ -998,7 +1002,7 @@ void TunerComponent::drawCompactGraph(
 
         // Every gridline when there is room; only the current one when there
         // is not.
-        if (!isCurrent && detail < 0.35f)
+        if (!isCurrent && (detail < 0.35f || !showsNoteRow(midiNote)))
         {
             continue;
         }
@@ -1617,4 +1621,15 @@ void TunerComponent::resized()
     // 200px pane reads as something that did not fit rather than as a choice.
     auto buttonRow = bounds.removeFromTop(scaledHeight(36));
     clearGraphButton.setBounds(stacked ? buttonRow : buttonRow.removeFromRight(scaledHeight(120)));
+}
+
+bool TunerComponent::showsNoteRow(int midiNote) const
+{
+    if (!inKeyOnly || pitch::inKey(midiNote, target.keyFifths))
+    {
+        return true;
+    }
+    const auto aimingAt = target.target();
+    return (hasSignal && midiNote == lockedMidiNote) ||
+           (aimingAt != nullptr && aimingAt->midiNoteNumber == midiNote);
 }

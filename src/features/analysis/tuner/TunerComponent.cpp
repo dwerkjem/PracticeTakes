@@ -227,6 +227,7 @@ void TunerComponent::resetToDefaults()
     bothHalvesLit = AppDefaults::Tuner::bothHalvesLit > 0.5;
     offsetShown = AppDefaults::Tuner::offsetShown > 0.5;
     targetCentred = AppDefaults::Tuner::targetCentred > 0.5;
+    inKeyOnly = AppDefaults::Tuner::inKeyOnly > 0.5;
     marker = static_cast<Marker>(juce::roundToInt(AppDefaults::Tuner::marker));
     areAdvancedSettingsExpanded = false;
     graphHistory.clear();
@@ -254,6 +255,7 @@ void TunerComponent::applySettings(const AppDefaults::TunerSettings& settings)
     bothHalvesLit = settings.bothHalvesLit > 0.5;
     offsetShown = settings.offsetShown > 0.5;
     targetCentred = settings.targetCentred > 0.5;
+    inKeyOnly = settings.inKeyOnly > 0.5;
     marker = static_cast<Marker>(juce::jlimit(0, 6, juce::roundToInt(settings.marker)));
     graphHistory.clear();
     resetPitchTracking();
@@ -265,7 +267,8 @@ AppDefaults::TunerSettings TunerComponent::settings() const
     return {displayModeBox.getSelectedId(), easingSlider.getValue(),    averagingSlider.getValue(),
             thresholdSlider.getValue(),     dropoutSlider.getValue(),   durationSlider.getValue(),
             scaleSlider.getValue(),         static_cast<double>(signs), bothHalvesLit ? 1.0 : 0.0,
-            static_cast<double>(marker),    offsetShown ? 1.0 : 0.0,    targetCentred ? 1.0 : 0.0};
+            static_cast<double>(marker),    offsetShown ? 1.0 : 0.0,    targetCentred ? 1.0 : 0.0,
+            inKeyOnly ? 1.0 : 0.0};
 }
 
 std::optional<ToolSettingsPayload> TunerComponent::captureSettings() const
@@ -476,6 +479,13 @@ std::vector<ToolComponent::MenuEntry> TunerComponent::optionsMenuEntries()
              repaint();
          },
          targetCentred},
+        {l10n::text("tuner.menu.in-key"),
+         [this]
+         {
+             inKeyOnly = !inKeyOnly;
+             repaint();
+         },
+         inKeyOnly},
         {l10n::text("tuner.menu.offset"),
          [this]
          {

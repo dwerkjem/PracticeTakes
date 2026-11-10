@@ -208,6 +208,16 @@ struct KeyTonics
     return {majorSteps[index], majorAlters[index], minorSteps[index], minorAlters[index]};
 }
 
+// Whether a pitch is one of the seven notes of the major key with `fifths`
+// sharps (or flats, negative) -- and so of its relative minor.
+[[nodiscard]] constexpr bool inKey(int midi, int fifths) noexcept
+{
+    const int tonic = (((fifths * 7) % 12) + 12) % 12;
+    const int degree = ((((midi - tonic) % 12) + 12) % 12);
+    return degree == 0 || degree == 2 || degree == 4 || degree == 5 || degree == 7 || degree == 9 ||
+           degree == 11;
+}
+
 // How the reader spells a note nothing else spells: the key signature to
 // assume with no score open (-7 to 7 fifths, 0 for C major), and sharps or
 // flats where there is no key to decide. A score's own spelling, and its own

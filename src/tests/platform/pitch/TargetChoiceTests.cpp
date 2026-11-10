@@ -145,3 +145,20 @@ TEST_CASE("a heard note takes the key's accidentals, and the reader's in C", "[p
     CHECK(pitch::spellForKey(61, 0, true)->alter == -1);
     CHECK(pitch::spellForKey(61, 0)->alter == 1);
 }
+
+TEST_CASE("a pitch is in a key when it is one of its seven notes", "[pitch][key]")
+{
+    // C major: the white keys.
+    CHECK(pitch::inKey(60, 0));
+    CHECK_FALSE(pitch::inKey(61, 0));
+    CHECK(pitch::inKey(71, 0));
+    // G major has F sharp, not F.
+    CHECK(pitch::inKey(66, 1));
+    CHECK_FALSE(pitch::inKey(65, 1));
+    // E flat major (and C minor) has A flat, not A.
+    CHECK(pitch::inKey(68, -3));
+    CHECK_FALSE(pitch::inKey(69, -3));
+    // Low and negative numbers work alike.
+    CHECK(pitch::inKey(0, 0));
+    CHECK_FALSE(pitch::inKey(-11, 0));
+}

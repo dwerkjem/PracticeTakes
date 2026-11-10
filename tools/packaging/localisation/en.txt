@@ -430,6 +430,7 @@ language: English
 "tuner.menu.marker.line" = "Line"
 "tuner.menu.marker.ring" = "Ring"
 "tuner.menu.off" = "Off"
+"tuner.menu.in-key" = "Only the key's notes"
 "tuner.menu.offset" = "Show how far off"
 "tuner.menu.signs" = "Signs"
 "tuner.menu.signs.arrows" = "Arrows: which way to go"
