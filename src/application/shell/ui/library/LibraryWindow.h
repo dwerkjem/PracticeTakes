@@ -24,6 +24,8 @@ class LibraryWindow final : public juce::DocumentWindow
         std::function<void()> addSongs;
         std::function<void(const library::SongEntry&)> removeSong;
         std::function<void(const juce::File&)> reviewTake;
+        std::function<void(const juce::File&)> playTake;
+        std::function<void(const juce::File&)> exportTake;
         std::function<void(const library::TakeEntry&)> deleteTake;
         std::function<void(const juce::File&)> showInFolder;
         std::function<void()> changeFolder;

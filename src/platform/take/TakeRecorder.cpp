@@ -97,6 +97,12 @@ std::optional<std::string> TakeRecorder::whyCannotStart() const
     {
         return std::string(l10n::key("take.cannot-start.no-score"));
     }
+    // Over a take playing back, Record would start from where the playback
+    // is, at its scale: Stop first (take-playback).
+    if (clock.playingRecording())
+    {
+        return std::string(l10n::key("take.cannot-start.playing-back"));
+    }
     if (!microphoneUsable() && !keyboardUsable())
     {
         const bool muted = sources.microphoneOpen && sources.microphoneOpen() &&

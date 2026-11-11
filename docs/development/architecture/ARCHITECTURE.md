@@ -366,6 +366,22 @@ archived `takes` change):
 - **Takes are kept in memory for the session**, at most 50, and every kept
   take is also saved to the media library (§ Media library), so a later
   session can review it.
+- **A take plays back through the clock** (the `take-playback` change), never
+  through a second renderer:
+  - `take::takePlaybackOf` turns it into keyboard notes, with the pedal as
+    `NoteSoundingTracker` says it sounded, and its microphone at the device's
+    rate (resampled once, on the message thread, when the rates differ);
+  - `PracticeClock::playRecording` publishes a table at the take's scale,
+    ending where the take ended, with those notes on one track and the
+    samples beside it (`TakeSound`), and plays from the take's start without
+    a count-in;
+  - the metronome and the score's own notes are silent meanwhile. The next
+    stop puts the clock's scale, loop, metronome and mix back.
+  - `transport` knows recordings, not takes: the shell turns one into the
+    other (`MainComponentTakePlayback.cpp`).
+- **Export Audio…** renders a take on the library's worker
+  (`library::renderTake`), its keyboard through a `ScoreSynth` of its own, and
+  writes a 24-bit stereo WAV.
 
 ## Media library
 

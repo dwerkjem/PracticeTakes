@@ -11,7 +11,8 @@
     {"id": "open-sample-button", "description": "Opens the sample score from the empty window"},
     {"id": "hamburger-button", "description": "Opens the collapsed menu in a narrow window"},
     {"id": "fullscreen-button", "description": "Toggles fullscreen"},
-    {"id": "search-button", "description": "Opens the search bar"}
+    {"id": "search-button", "description": "Opens the search bar"},
+    {"id": "take-review-play", "description": "Plays the take under review, or stops it"}
   ],
   "states": [
     {

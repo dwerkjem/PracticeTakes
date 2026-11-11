@@ -307,6 +307,22 @@ class MainComponent final
     // target and the key in force.
     void followNewScore(const score::musicxml::MusicXmlImportResult& result);
 
+    // What every tool is built with: the shared services, and the shell's
+    // actions a tool may ask for.
+    [[nodiscard]] ToolServices toolServices();
+
+    // Take playback (openspec/changes/take-playback; ui/library/
+    // MainComponentTakePlayback.cpp): play a kept take through the clock, and
+    // export a take's audio, kept or in the library.
+    bool playTake(std::uint64_t id);
+    void exportTakeAudio(std::uint64_t id);
+    void
+    exportTakeAudio(const std::shared_ptr<const take::Take>& recorded, const juce::String& name);
+    void exportLibraryTakeAudio(const juce::File& folder);
+    void playLibraryTake(const juce::File& folder);
+    // Whether a library take, once loaded, is played as well as reviewed.
+    bool playLoadedTake = false;
+
     // Search (openspec/changes/archive/2026-11-10-everything-search; ui/search/
     // MainComponentSearch.cpp): the index, the popup under the magnifying
     // glass, and what choosing a result does.
@@ -623,6 +639,7 @@ class MainComponent final
 
     std::unique_ptr<LibraryWindow> libraryWindow;
     std::unique_ptr<juce::FileChooser> libraryChooser;
+    std::unique_ptr<juce::FileChooser> exportChooser;
 
     // Ctrl+K (Cmd+K) and Ctrl+F open the search, wherever the focus is: a
     // listener on the window, which keys reach when nothing else takes them.

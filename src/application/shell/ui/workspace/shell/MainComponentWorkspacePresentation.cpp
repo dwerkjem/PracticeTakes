@@ -328,18 +328,7 @@ void MainComponent::presentTool(
 
         static_cast<void>(entry->state.present(presentation));
 
-        const ToolServices services{
-            audioInputService,
-            pitchAnalysis,
-            scoreImport.currentScoreHolder(),
-            practiceClock,
-            takeRecorder,
-            referencePitch,
-            currentTarget,
-            midiInputService,
-            currentTheme,
-            [this] { showCurrentScoreImportSummary(); },
-            appLookAndFeel.textScale()};
+        const ToolServices services = toolServices();
         entry->component = builtInToolRegistry().create(instance.toolId(), services);
         if (entry->component == nullptr)
         {
@@ -625,4 +614,31 @@ void MainComponent::applyAppearanceToTool(const ToolInstanceId& instance)
         entry->component->setTheme(currentTheme);
         entry->component->setTextScale(appLookAndFeel.textScale());
     }
+}
+
+ToolServices MainComponent::toolServices()
+{
+    const juce::Component::SafePointer<MainComponent> safeThis(this);
+    ToolServices services{
+        audioInputService,
+        pitchAnalysis,
+        scoreImport.currentScoreHolder(),
+        practiceClock,
+        takeRecorder,
+        referencePitch,
+        currentTarget,
+        midiInputService,
+        currentTheme,
+        [this] { showCurrentScoreImportSummary(); },
+        appLookAndFeel.textScale()};
+    services.playTake = [safeThis](std::uint64_t id)
+    { return safeThis != nullptr && safeThis->playTake(id); };
+    services.exportTakeAudio = [safeThis](std::uint64_t id)
+    {
+        if (safeThis != nullptr)
+        {
+            safeThis->exportTakeAudio(id);
+        }
+    };
+    return services;
 }

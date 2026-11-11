@@ -66,8 +66,13 @@ const ToolRegistry& builtInToolRegistry()
                      services.audio, [&takes = services.takes] { return takes.minimumLevelDb(); },
                      services.initialTheme);
              }},
-            {"take-review", [](const ToolServices& services)
-             { return std::make_unique<TakeReviewComponent>(services.takes, services.clock); }},
+            {"take-review",
+             [](const ToolServices& services)
+             {
+                 return std::make_unique<TakeReviewComponent>(
+                     services.takes, services.clock,
+                     TakeReviewComponent::TakeActions{services.playTake, services.exportTakeAudio});
+             }},
         });
 
     // The catalog and the factory table are edited together; if they drift, a

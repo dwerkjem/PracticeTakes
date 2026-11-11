@@ -302,6 +302,7 @@ Anything you can look at live, you can look at on a recording
 | Feature | What it does | Status | Issue |
 |---|---|---|---|
 | Saved takes | Every take's audio and keyboard kept in the library with its score, and reviewed again in a later session | ✅ | — |
+| Take playback | Hear a take again as it was played, the score cursor following, and export its audio as a WAV | ✅ | — |
 | Record and open recordings | Keep a take's audio and MIDI, or open a WAV, AIFF or FLAC file | Beta 2 | [#292](https://github.com/dwerkjem/PracticeTakes/issues/292) |
 
 ### Analysing a recording

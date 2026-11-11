@@ -51,7 +51,7 @@ end, one you stop early, and one that fails. A take you cancel before playing
 anything is not saved.
 
 A take's folder holds what was recorded (the microphone as a FLAC file, and the
-keyboard), when and at what tempo, and **its own copy of the score it was played
+keyboard's notes), when and at what tempo, and **its own copy of the score it was played
 against**. So a take still opens, and is judged against the music as it was
 when you played it, even after the song is changed or removed.
 
@@ -62,6 +62,8 @@ and its size. **Only takes of…** shows just the selected song's takes.
 | Button | Does |
 |---|---|
 | **Review** | Opens the take's score and shows the take in [[Take Review\|Tools#take-review]], judged with your current settings (or double-click it) |
+| **Play** | Reviews it and plays it back: what you recorded, with the score cursor following |
+| **Export Audio…** | Saves its audio as a WAV file wherever you choose |
 | **Delete…** | Moves the take's folder to the bin |
 | **Show in Folder** | Shows the take's folder in your file manager |
 

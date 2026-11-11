@@ -126,10 +126,12 @@ class LibraryWindow::Content final : public juce::Component
         {
             addAndMakeVisible(*button);
         }
-        for (auto* button : {&reviewButton, &deleteButton, &takeFolderButton})
+        for (auto* button :
+             {&reviewButton, &playButton, &exportButton, &deleteButton, &takeFolderButton})
         {
             addChildComponent(*button);
         }
+        appearance::setIcon(playButton, appearance::Icon::volume);
         addChildComponent(thisSongOnly);
         appearance::setIcon(openButton, appearance::Icon::folderOpen);
         appearance::setIcon(reviewButton, appearance::Icon::play);
@@ -152,6 +154,22 @@ class LibraryWindow::Content final : public juce::Component
             }
         };
         reviewButton.onClick = [this] { reviewSelectedTake(); };
+        playButton.onClick = [this]
+        {
+            if (const auto* entry = selectedTake();
+                entry != nullptr && entry->manifest.has_value() && commands.playTake)
+            {
+                commands.playTake(entry->folder);
+            }
+        };
+        exportButton.onClick = [this]
+        {
+            if (const auto* entry = selectedTake();
+                entry != nullptr && entry->manifest.has_value() && commands.exportTake)
+            {
+                commands.exportTake(entry->folder);
+            }
+        };
         deleteButton.onClick = [this]
         {
             if (const auto* entry = selectedTake(); entry != nullptr && commands.deleteTake)
@@ -233,6 +251,8 @@ class LibraryWindow::Content final : public juce::Component
         }
         for (juce::Component* control :
              {static_cast<juce::Component*>(&reviewButton),
+              static_cast<juce::Component*>(&playButton),
+              static_cast<juce::Component*>(&exportButton),
               static_cast<juce::Component*>(&deleteButton),
               static_cast<juce::Component*>(&takeFolderButton),
               static_cast<juce::Component*>(&thisSongOnly)})
@@ -309,8 +329,10 @@ class LibraryWindow::Content final : public juce::Component
         }
         else
         {
-            place(reviewButton, 110);
-            place(deleteButton, 110);
+            place(reviewButton, 100);
+            place(playButton, 90);
+            place(exportButton, 140);
+            place(deleteButton, 100);
             place(takeFolderButton, 150);
             thisSongOnly.setBounds(actions);
         }
@@ -587,6 +609,8 @@ class LibraryWindow::Content final : public juce::Component
         addButton.setEnabled(folderReachable);
         const auto* entry = selectedTake();
         reviewButton.setEnabled(entry != nullptr && entry->manifest.has_value());
+        playButton.setEnabled(entry != nullptr && entry->manifest.has_value());
+        exportButton.setEnabled(entry != nullptr && entry->manifest.has_value());
         deleteButton.setEnabled(entry != nullptr);
 
         const bool empty = shown == Tab::takes && takes.entries.empty();
@@ -614,6 +638,8 @@ class LibraryWindow::Content final : public juce::Component
     juce::TextButton removeButton{l10n::text("library.song.remove")};
     juce::TextButton songFolderButton{l10n::text("library.show-in-folder")};
     juce::TextButton reviewButton{l10n::text("library.take.review")};
+    juce::TextButton playButton{l10n::text("library.take.play")};
+    juce::TextButton exportButton{l10n::text("library.take.export")};
     juce::TextButton deleteButton{l10n::text("library.take.delete")};
     juce::TextButton takeFolderButton{l10n::text("library.show-in-folder")};
     juce::ToggleButton thisSongOnly;

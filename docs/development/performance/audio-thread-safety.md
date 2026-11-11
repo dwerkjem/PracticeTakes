@@ -103,11 +103,22 @@ callback. What it does, and why each part is bounded:
   without allocating" plays chords on two hands, through a mute, a loop's wrap
   and a seek, under RealtimeSanitizer.
 
+- **When a take plays back** (`take-playback` change):
+  - its keyboard notes go through the same dispatch, with a velocity per note;
+  - its microphone samples are added to each played span: a copy of at most
+    one block's frames, with a gain.
+  - The samples are read through a raw pointer in the table's slot. The slot's
+    `shared_ptr` owner is assigned and dropped only by the message thread, in
+    the slot the renderer is not reading, so the callback never frees memory.
+  - The `[callback]` case "the audio callback plays a take: its samples, and
+    its keys with their touch" drives it through a loop's wrap and a seek,
+    under RealtimeSanitizer.
+
 Measured by the `[.benchmark]` case "rendering a block against a full segment
 table": a 512-frame block against a full 512-segment table takes about 0.74 µs.
 
 The renderer runs before the mute check, so muting the microphone does not
-silence the metronome. It is driven through the real callback by five
+silence the metronome. It is driven through the real callback by six
 `[callback]` cases in `AudioInputServiceTests.cpp`, recording a take among
 them, so the Realtime job sees it run.
 

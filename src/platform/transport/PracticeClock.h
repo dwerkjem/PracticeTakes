@@ -155,6 +155,12 @@ class PracticeClock final : private juce::Timer
     // prepared at.
     [[nodiscard]] double sampleRate() const noexcept;
 
+    // The score the clock keeps time for.
+    [[nodiscard]] std::shared_ptr<const score::Score> currentScore() const
+    {
+        return scoreHolder.score();
+    }
+
     [[nodiscard]] ClockPosition position() const;
     [[nodiscard]] ClockTiming timing() const noexcept;
     [[nodiscard]] bool hasScore() const noexcept;

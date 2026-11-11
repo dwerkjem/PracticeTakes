@@ -309,6 +309,19 @@ The take you just played, judged note by note. It shows:
 Click a result to move the practice clock, and with it the Score View, to that
 note. Before the first take it says how to record one.
 
+**Play** plays the take back as it was recorded: the microphone, and the keys
+through the piano with the sustain pedal as you used it, from where it started
+and at the tempo it was played at. The score cursor follows it, so you can hear
+a wrong note and see it at once. The metronome and the score's own playback
+are silent meanwhile. Play becomes **Stop**; the transport's Pause and Stop
+work too. When it stops, the clock's tempo, loop and metronome are as you left
+them. Play is greyed out for a take of a score that is no longer open, and
+Record waits until the take has stopped playing.
+
+**Export Audio…** saves the take as a WAV file wherever you choose: the
+microphone, and the keys played through the piano, in stereo. A take played
+only on the keyboard gets a sound file this way too.
+
 Every take is also saved in the [[Library]]. **File → Library…**, then
 **Takes**, lists takes from every session, and **Review** brings one back here
 with its own score, judged with your current settings.

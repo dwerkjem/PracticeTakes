@@ -16,15 +16,21 @@
 
 ## 3. Export
 
-- [ ] 3.1 `library::renderTakeAudio` and a WAV writer, on the worker. Tests.
+- [x] 3.1 `library::renderTakeAudio` and a WAV writer, on the worker. Tests.
 
 ## 4. The interface
 
-- [ ] 4.1 Take Review: Play, Stop, Export Audio…; the Library: Play, Export
+- [x] 4.1 Take Review: Play, Stop, Export Audio…; the Library: Play, Export
       Audio…; recording or a new score ends playback. Captures; checked on a
       virtual display.
+      Record does not end playback itself: while a take plays, Record is
+      refused with "a take is playing back; stop it first", because the
+      clock's position is the playback's for a block after it ends, and a take
+      started then would start from the wrong place. The shell's actions reach
+      Take Review as `ToolServices::playTake` and `exportTakeAudio`, beside
+      `showScoreImportSummary`, so the tool still names nothing of the shell.
 
 ## 5. Docs
 
-- [ ] 5.1 The wiki (Tools § Take Review, Library), ARCHITECTURE.md § Takes,
+- [x] 5.1 The wiki (Tools § Take Review, Library), ARCHITECTURE.md § Takes,
       audio-thread-safety.md.
