@@ -122,6 +122,39 @@ class PracticeClock final : private juce::Timer
     void setAccentEnabled(bool enabled);
     [[nodiscard]] bool accentEnabled() const noexcept;
 
+    // --- Playing a recording back (openspec/changes/take-playback) ---------
+    //
+    // A take, played through the clock: its keyboard on a track of its own,
+    // its microphone mixed in, at the scale it was recorded at, from where it
+    // started, until where it ended. The score cursor follows it. The
+    // metronome and the score's own playback are silent meanwhile, and the
+    // clock's own scale, loop and mix are back when it next stops.
+    struct Recording
+    {
+        int scalePercent = defaultScalePercent;
+        Tick startTick = 0;
+
+        // Where it ended, at the device's rate: the clock stops there.
+        Frame endFrame = 0;
+
+        // Its keyboard, already at the device's rate, all on track 0.
+        std::vector<PlaybackEvent> keyboard;
+
+        // Its microphone, at the device's rate.
+        TakeSound sound;
+    };
+
+    // Start playing `played` from its start. False, changing nothing, with
+    // no score open or while a take is being recorded (`lock`).
+    bool playRecording(Recording played);
+    [[nodiscard]] bool playingRecording() const noexcept;
+    // Stop it and put the clock back as it was. Nothing when none plays.
+    void endRecordingPlayback();
+
+    // The device's sample rate as the clock last saw it: what a recording is
+    // prepared at.
+    [[nodiscard]] double sampleRate() const noexcept;
+
     [[nodiscard]] ClockPosition position() const;
     [[nodiscard]] ClockTiming timing() const noexcept;
     [[nodiscard]] bool hasScore() const noexcept;
@@ -219,6 +252,14 @@ class PracticeClock final : private juce::Timer
     std::string soundFontPath;
     void adoptSynth();
     void publishMix();
+
+    // The recording playing, and what it silenced. `recordingStarted` is set
+    // once the clock is seen playing it, so the stop that ends it is not the
+    // one it began from.
+    std::optional<Recording> recording;
+    bool recordingStarted = false;
+    bool builtForRecording = false;
+    bool metronomeBeforeRecording = true;
 
     int scale = defaultScalePercent;
     bool looping = false;

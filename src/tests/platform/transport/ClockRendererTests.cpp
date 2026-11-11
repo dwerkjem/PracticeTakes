@@ -404,6 +404,73 @@ TEST_CASE("the clock advances with no output to write to", "[transport][renderer
     CHECK(harness.renderer.snapshot().position == 5120);
 }
 
+TEST_CASE(
+    "a take's samples sound on the frames they were recorded at",
+    "[transport][renderer][take-playback]")
+{
+    Harness harness;
+    harness.renderer.setMetronomeEnabled(false);
+    const auto source = scoreOf(8, {4, 4}, 120.0);
+    auto samples = std::make_shared<std::vector<float>>(2000);
+    for (std::size_t index = 0; index < samples->size(); ++index)
+    {
+        (*samples)[index] = static_cast<float>(index + 1) / 4000.0f;
+    }
+    const TakeSound take{samples, samples->data(), samples->size(), 1000};
+    REQUIRE(harness.renderer.publish(*tableOf(source), PlaybackScore{}, take));
+    harness.block(64);
+    harness.recorded.clear();
+
+    harness.play();
+    harness.blocks(8);
+    REQUIRE(harness.recorded.size() == 8 * 512);
+    CHECK(harness.recorded[999] == 0.0f);
+    CHECK(harness.recorded[1000] == (*samples)[0]);
+    CHECK(harness.recorded[2500] == (*samples)[1500]);
+    CHECK(harness.recorded[2999] == (*samples)[1999]);
+    CHECK(harness.recorded[3000] == 0.0f);
+    // Both channels.
+    CHECK(harness.right.back() == 0.0f);
+}
+
+TEST_CASE(
+    "a take recorded through a count-in starts part way into its samples",
+    "[transport][renderer][take-playback]")
+{
+    Harness harness;
+    harness.renderer.setMetronomeEnabled(false);
+    const auto source = scoreOf(8, {4, 4}, 120.0);
+    auto samples = std::make_shared<std::vector<float>>(4000, 0.25f);
+    (*samples)[500] = 0.5f;
+    // The first 500 samples were the count-in, before frame zero.
+    const TakeSound take{samples, samples->data(), samples->size(), -500};
+    REQUIRE(harness.renderer.publish(*tableOf(source), PlaybackScore{}, take));
+    harness.block(64);
+    harness.recorded.clear();
+
+    harness.renderer.setTakeVolume(0.5f);
+    harness.play();
+    harness.blocks(2);
+    CHECK(harness.recorded[0] == 0.25f);
+    CHECK(harness.recorded[1] == 0.125f);
+    CHECK(harness.renderer.snapshot().position == 1024);
+}
+
+TEST_CASE("a table without a take sounds none", "[transport][renderer][take-playback]")
+{
+    Harness harness;
+    harness.renderer.setMetronomeEnabled(false);
+    const auto source = scoreOf(8, {4, 4}, 120.0);
+    REQUIRE(harness.renderer.publish(*tableOf(source)));
+    harness.block(64);
+    harness.play();
+    harness.blocks(4);
+    for (const float sample : harness.recorded)
+    {
+        REQUIRE(sample == 0.0f);
+    }
+}
+
 TEST_CASE("rendering a block against a full segment table", "[.benchmark][transport][renderer]")
 {
     // 512 segments, the most a table holds: a tempo change every beat. At 200%

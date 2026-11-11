@@ -329,6 +329,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/take/Take.h
     src/platform/take/TakeAssembler.h
     src/platform/take/TakeLifecycle.h
+    src/platform/take/TakePlayback.h
     src/platform/take/TakeRecorder.cpp
     src/platform/take/TakeRecorder.h
     src/platform/take/TakeStatus.h
@@ -493,6 +494,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/search/SearchIndexTests.cpp
     src/tests/platform/take/TakeAssemblerTests.cpp
     src/tests/platform/take/TakeLifecycleTests.cpp
+    src/tests/platform/take/TakePlaybackTests.cpp
     src/tests/platform/take/TakeRecorderTests.cpp
     src/tests/platform/take/TakeStatusTests.cpp
     src/tests/platform/transport/ClockMathTests.cpp
