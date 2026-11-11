@@ -127,10 +127,13 @@ TEST_CASE("the bin keeps what was removed, and where it came from", "[library]")
     const juce::String record =
         trash.getChildFile("info/2026-11-10 21-04-09 Song.trashinfo").loadFileAsString();
     CHECK(record.startsWith("[Trash Info]\n"));
-    // The path as a URL path: spaces escaped, slashes not.
-    CHECK(record.contains(
-        "Path=" + take.getParentDirectory().getFullPathName().replace(" ", "%20") +
-        "/2026-11-10%2021-04-09%20Song\n"));
+    // The path as a URL path: escaped, with no space left in it, and reading
+    // back as the item's own path -- whatever the platform writes paths with.
+    const juce::String path = record.fromFirstOccurrenceOf("Path=", false, false)
+                                  .upToFirstOccurrenceOf("\n", false, false);
+    CHECK_FALSE(path.containsChar(' '));
+    CHECK(path.contains("2026-11-10%2021-04-09%20Song"));
+    CHECK(juce::URL::removeEscapeChars(path) == take.getFullPathName());
     CHECK(record.contains("DeletionDate=2026-11-10T21:04:09\n"));
 
     // A second of the same name is numbered, not overwritten.
