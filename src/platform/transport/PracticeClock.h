@@ -122,7 +122,7 @@ class PracticeClock final : private juce::Timer
     void setAccentEnabled(bool enabled);
     [[nodiscard]] bool accentEnabled() const noexcept;
 
-    // --- Playing a recording back (openspec/changes/take-playback) ---------
+    // --- Playing a recording back (openspec/changes/archive/2026-11-11-take-playback) ---------
     //
     // A take, played through the clock: its keyboard on a track of its own,
     // its microphone mixed in, at the scale it was recorded at, from where it

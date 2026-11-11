@@ -12,7 +12,7 @@
 #include "Take.h"
 
 // What playing a take back sounds, on the clock's timeline at the device's rate
-// (no JUCE dependency; openspec/changes/take-playback, decisions 3 and 4).
+// (no JUCE dependency; openspec/changes/archive/2026-11-11-take-playback, decisions 3 and 4).
 //
 // The microphone, as samples and the frame they start at; and the keyboard, as
 // the note-ons and note-offs the synthesiser plays, with the sustain pedal

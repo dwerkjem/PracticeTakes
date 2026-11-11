@@ -311,7 +311,7 @@ class MainComponent final
     // actions a tool may ask for.
     [[nodiscard]] ToolServices toolServices();
 
-    // Take playback (openspec/changes/take-playback; ui/library/
+    // Take playback (openspec/changes/archive/2026-11-11-take-playback; ui/library/
     // MainComponentTakePlayback.cpp): play a kept take through the clock, and
     // export a take's audio, kept or in the library.
     bool playTake(std::uint64_t id);

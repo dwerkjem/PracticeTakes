@@ -8,7 +8,7 @@
 #include "../take/Take.h"
 #include "../transport/ScoreSynth.h"
 
-// A take as a sound file of its own (openspec/changes/take-playback,
+// A take as a sound file of its own (openspec/changes/archive/2026-11-11-take-playback,
 // decision 6): its microphone, and its keyboard played through the piano the
 // score plays with, from where it started to where it ended, in stereo at its
 // sample rate.

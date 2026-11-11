@@ -104,7 +104,7 @@ struct RecordedBlock
 };
 
 // A take's microphone, sounding with the table it is published beside
-// (openspec/changes/take-playback, decisions 1 and 2): samples at the table's
+// (openspec/changes/archive/2026-11-11-take-playback, decisions 1 and 2): samples at the table's
 // rate, and the clock frame of the first. `owner` keeps them alive. Only the
 // message thread assigns or drops it, and only in the slot the renderer is not
 // reading, so the audio thread reads `samples` and never frees anything.

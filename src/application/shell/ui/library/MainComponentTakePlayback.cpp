@@ -9,7 +9,7 @@
 #include <memory>
 #include <utility>
 
-// Hearing a take again (openspec/changes/take-playback): playing one through
+// Hearing a take again (openspec/changes/archive/2026-11-11-take-playback): playing one through
 // the clock, and exporting one's audio to a file of the reader's choosing.
 //
 // Playing is prepared here, on the message thread -- a resample at most, when
