@@ -602,7 +602,6 @@ std::string MainComponent::currentTestControlStateId() const
     return testControlStateId;
 }
 
-
 void MainComponent::resetScratchLibrary()
 {
     if (scratchLibraryFolder == juce::File())

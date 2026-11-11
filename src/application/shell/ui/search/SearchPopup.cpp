@@ -161,8 +161,8 @@ void SearchPopup::paintListBoxItem(
                 0.0f, 1.0f, static_cast<float>(width), static_cast<float>(height - 2)),
             5.0f);
     }
-    const juce::Colour ink = look.findColour(
-        selected ? juce::TextEditor::highlightedTextColourId : juce::ListBox::textColourId);
+    const juce::Colour ink = selected ? look.findColour(juce::TextEditor::highlightedTextColourId)
+                                      : look.findColour(juce::ListBox::textColourId);
     auto area = juce::Rectangle<int>(0, 0, width, height).reduced(8, 3);
 
     // What kind of thing it is, on the left, so a setting and a song of the
