@@ -19,6 +19,7 @@ resultFor(const ExpectedNote& note, const TimingResult& moment, std::size_t part
     result.writtenMidi = note.midiNoteNumber;
     result.timing = moment.verdict;
     result.timingErrorMs = moment.errorMs;
+    result.timingZone = moment.zone;
     return result;
 }
 

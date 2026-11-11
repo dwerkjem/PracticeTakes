@@ -112,6 +112,13 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
         scoreImportWindow->setVisible(false);
     }
 
+    // The Library window, and the capture's own library emptied: a state's
+    // songs and takes are the ones it put there, never an earlier state's
+    // (openspec/changes/media-library).
+    closeLibrary();
+    resetScratchLibrary();
+    closeSearch();
+
     // No score and no target unless the state asks for one. Left alone, a
     // state with no score inherited the last one's: a tuner photographed
     // after a score surface read against that score's first note, and showed
@@ -132,6 +139,8 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
     testControlRecordTake = state.recordTake;
     testControlReviewTake = state.reviewTake;
     testControlSungTake = state.sungTake;
+    testControlLibraryTab = state.libraryTab;
+    testControlSearchQuery = state.searchQuery;
     testControlOpenMix = state.mixOpen;
     referencePitch.set(state.referencePitchHz > 0.0 ? state.referencePitchHz : 440.0);
 
@@ -270,6 +279,21 @@ bool MainComponent::applyTestControlState(const testcontrol::ApprovedWindowState
         showFeedback();
     }
 
+    // A state that keeps a take opens the Library once the take is kept and
+    // saved (startClockForTestControl); one that keeps none opens it now.
+    if (!state.libraryTab.empty() && !state.reviewTake)
+    {
+        openLibraryForTestControl();
+    }
+
+    // The search bar over a state without a score now; over one with a
+    // score once it has imported (finishScoreImport), so its lyrics are in
+    // the index.
+    if (!state.searchQuery.empty() && state.scoreFixture.empty())
+    {
+        openSearchForTestControl();
+    }
+
     if (auto* window = dynamic_cast<juce::ResizableWindow*>(getTopLevelComponent()))
     {
         switch (state.geometry)
@@ -395,6 +419,10 @@ void MainComponent::startClockForTestControl(int attemptsLeft)
                         testcontrol::syntheticKeyboardTake(shown, shown->parts.size() - 1, 8)));
                 }
                 takeRecorder.finishJudging();
+            }
+            if (!testControlLibraryTab.empty())
+            {
+                openLibraryForTestControl();
             }
         }
 
@@ -572,6 +600,62 @@ bool MainComponent::clickTestControlTarget(const std::string& id)
 std::string MainComponent::currentTestControlStateId() const
 {
     return testControlStateId;
+}
+
+void MainComponent::resetScratchLibrary()
+{
+    if (scratchLibraryFolder == juce::File())
+    {
+        return;
+    }
+    takeSaver.finishSaving();
+    libraryWork.finishAll();
+    for (const auto& child : juce::RangedDirectoryIterator(
+             scratchLibraryFolder, false, "*", juce::File::findFilesAndDirectories))
+    {
+        static_cast<void>(child.getFile().deleteRecursively());
+    }
+    showLibraryStatus({});
+}
+
+void MainComponent::openLibraryForTestControl()
+{
+    // The harness scores as the library's songs, beside the built-in sample,
+    // and the state's take written before the window lists it.
+    const juce::File fixtures =
+        juce::File(PRACTICE_TAKES_SOURCE_DIR)
+            .getChildFile(juce::String(testcontrol::approvedScoreFixtureDirectory()));
+    for (const auto& item :
+         juce::RangedDirectoryIterator(fixtures, false, "*.musicxml", juce::File::findFiles))
+    {
+        static_cast<void>(library::intoLibrary(libraryLayout(), item.getFile()));
+    }
+    // One that does not read, to be listed so.
+    static_cast<void>(libraryLayout()
+                          .songs()
+                          .getChildFile("Unfinished sketch.musicxml")
+                          .replaceWithText("<score-partwise"));
+    takeSaver.finishSaving();
+    showLibrary();
+    libraryWork.finishAll();
+    if (libraryWindow != nullptr)
+    {
+        libraryWindow->showTab(
+            testControlLibraryTab == "takes" ? LibraryWindow::Tab::takes
+                                             : LibraryWindow::Tab::songs);
+    }
+}
+
+void MainComponent::openSearchForTestControl()
+{
+    showSearch();
+    // The songs and takes the library's worker lists, before the picture.
+    libraryWork.finishAll();
+    if (searchPopup != nullptr)
+    {
+        searchPopup->setQuery(juce::String::fromUTF8(testControlSearchQuery.c_str()));
+        placeSearch();
+    }
 }
 
 #endif

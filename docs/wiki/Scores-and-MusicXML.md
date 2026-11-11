@@ -16,6 +16,10 @@ Whether a file is compressed is decided by its contents, not its extension, so
 a mislabelled export still opens. **File → Open sample score** opens a bundled
 song by Mahler, *Die zwei blauen Augen*.
 
+A score you open is copied into the `Songs` folder of your [[Library]], once it
+has opened, so it is there next time under **File → Library…**. Opening the
+same file again uses the copy already there.
+
 Opening a score shows an **import summary**: anything that came in differently
 from the file, grouped by severity, with the part and bar number. Score View
 and Target Note then show the score.

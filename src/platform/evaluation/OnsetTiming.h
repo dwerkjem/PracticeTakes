@@ -1,10 +1,13 @@
 #pragma once
 
+#include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <vector>
 
+#include "../pitch/IntonationZone.h"
 #include "../take/Take.h"
 #include "../transport/ClockMath.h"
 #include "ExpectedAttacks.h"
@@ -16,13 +19,64 @@
 // openspec/changes/archive/2026-11-08-onset-timing/design.md, decisions 4-6.
 namespace evaluation
 {
+// The three limits a player sets for timing, in milliseconds either way, as a
+// singer sets three for pitch: right on the beat (green), on time (blue, and
+// what decides early or late), and past what a note is off the beat (red);
+// between the last two it is a little early or late (amber). The zones are
+// pitch::IntonationZone's four, so timing is coloured as pitch is.
+struct TimingLimits
+{
+    double rightOnMs = 15.0;
+    double onTimeMs = 40.0;
+    double offBeatMs = 100.0;
+
+    [[nodiscard]] bool operator==(const TimingLimits&) const = default;
+};
+
+// What Settings offers, and the gap kept between the bands. Off the beat goes
+// no further than 200 ms: an onset more than maximumWindowMs (250) from its
+// beat is not matched to it at all, so a red zone past that could never show.
+// On time stops at 120, leaving off the beat room above it.
+inline constexpr double minimumRightOnMs = 5.0;
+inline constexpr double maximumRightOnMs = 50.0;
+inline constexpr double minimumOnTimeMs = 10.0;
+inline constexpr double maximumOnTimeMs = 120.0;
+inline constexpr double minimumOffBeatMs = 20.0;
+inline constexpr double maximumOffBeatMs = 200.0;
+inline constexpr double timingBandGapMs = 5.0;
+
+// The limits in order: on time kept first, inside its range, since early and
+// late depend on it; right on and off the beat give way on either side. A value
+// that is not a number takes its default.
+[[nodiscard]] inline TimingLimits orderedTimingLimits(TimingLimits limits) noexcept
+{
+    const TimingLimits defaults;
+    const auto orDefault = [](double value, double fallback)
+    { return std::isfinite(value) ? value : fallback; };
+    TimingLimits result;
+    result.onTimeMs =
+        std::clamp(orDefault(limits.onTimeMs, defaults.onTimeMs), minimumOnTimeMs, maximumOnTimeMs);
+    result.rightOnMs = std::clamp(
+        orDefault(limits.rightOnMs, defaults.rightOnMs), minimumRightOnMs,
+        std::max(minimumRightOnMs, std::min(maximumRightOnMs, result.onTimeMs - timingBandGapMs)));
+    result.offBeatMs = std::clamp(
+        orDefault(limits.offBeatMs, defaults.offBeatMs),
+        std::max(minimumOffBeatMs, result.onTimeMs + timingBandGapMs), maximumOffBeatMs);
+    return result;
+}
+
+// Which of the four zones a note `errorMs` off the beat is in, either way.
+[[nodiscard]] inline pitch::IntonationZone
+timingZoneOf(double errorMs, TimingLimits limits) noexcept
+{
+    return pitch::zoneOf(errorMs, limits.onTimeMs, limits.rightOnMs, limits.offBeatMs);
+}
+
 // Every threshold the judgement uses, so none is a decision hidden in code.
 struct TimingSettings
 {
-    // On time: within this fraction of a beat, clamped between the two.
-    double toleranceBeatFraction = 0.08;
-    double minimumToleranceMs = 30.0;
-    double maximumToleranceMs = 80.0;
+    // The player's limits: on time within `onTimeMs`, the rest for colour.
+    TimingLimits limits;
 
     // How far from an attack an onset may be and still be its onset: half the
     // gap to the neighbouring attacks, at least the tolerance, at most this.
@@ -64,6 +118,9 @@ struct TimingResult
     // Positive is late. Corrected for latency. Zero when absent.
     double errorMs = 0.0;
     double errorBeats = 0.0;
+
+    // Its zone under the player's limits, for colour; nothing when absent.
+    std::optional<pitch::IntonationZone> zone;
 
     // The onset was too weak to trust the judgement.
     bool uncertain = false;

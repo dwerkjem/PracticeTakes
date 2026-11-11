@@ -1,5 +1,7 @@
 #include "SettingsPersistence.h"
 
+#include "../../platform/evaluation/OnsetTiming.h"
+
 #include "../../features/analysis/tuner/TunerSettingsCodec.h"
 #include "../shell/ui/workspace/model/WorkspaceCatalogCodec.h"
 
@@ -35,6 +37,10 @@ constexpr auto inTuneCentsKey = "practice.inTuneCents";
 constexpr auto nearPerfectCentsKey = "practice.nearPerfectCents";
 constexpr auto outOfTuneCentsKey = "practice.outOfTuneCents";
 constexpr auto minimumLevelKey = "practice.minimumLevelDb";
+constexpr auto timingRightOnKey = "practice.timingRightOnMs";
+constexpr auto timingOnTimeKey = "practice.timingOnTimeMs";
+constexpr auto libraryFolderKey = "library.folder";
+constexpr auto timingOffBeatKey = "practice.timingOffBeatMs";
 constexpr auto countInWhenPlayingKey = "practice.countInWhenRecordingDuringPlayback";
 constexpr auto chosenTargetSoundingKey = "practice.chosenTarget";
 constexpr auto chosenTargetWrittenKey = "practice.chosenTargetWritten";
@@ -91,6 +97,10 @@ constexpr const char* ownedKeys[] = {
     nearPerfectCentsKey,
     outOfTuneCentsKey,
     minimumLevelKey,
+    timingRightOnKey,
+    timingOnTimeKey,
+    timingOffBeatKey,
+    libraryFolderKey,
     countInWhenPlayingKey,
     chosenTargetSoundingKey,
     chosenTargetWrittenKey,
@@ -335,6 +345,17 @@ AppSettings::LoadResult AppSettings::load(const juce::PropertiesFile& properties
     result.state.minimumLevelDb = boundedValue(
         properties, minimumLevelKey, AppDefaults::minimumLevelDb, AppDefaults::lowestMinimumLevelDb,
         AppDefaults::highestMinimumLevelDb);
+    {
+        // Read into order as the judgement keeps them (orderedTimingLimits).
+        const evaluation::TimingLimits limits = evaluation::orderedTimingLimits(
+            {properties.getDoubleValue(timingRightOnKey, 15.0),
+             properties.getDoubleValue(timingOnTimeKey, 40.0),
+             properties.getDoubleValue(timingOffBeatKey, 100.0)});
+        result.state.timingRightOnMs = limits.rightOnMs;
+        result.state.timingOnTimeMs = limits.onTimeMs;
+        result.state.timingOffBeatMs = limits.offBeatMs;
+    }
+    result.state.libraryFolder = properties.getValue(libraryFolderKey);
     result.state.countInWhenRecordingDuringPlayback =
         properties.getBoolValue(countInWhenPlayingKey, false);
     result.state.language = storedLanguage(properties);
@@ -437,6 +458,10 @@ void AppSettings::store(juce::PropertySet& properties, const State& state)
     properties.setValue(nearPerfectCentsKey, state.nearPerfectCents);
     properties.setValue(outOfTuneCentsKey, state.outOfTuneCents);
     properties.setValue(minimumLevelKey, state.minimumLevelDb);
+    properties.setValue(timingRightOnKey, state.timingRightOnMs);
+    properties.setValue(timingOnTimeKey, state.timingOnTimeMs);
+    properties.setValue(timingOffBeatKey, state.timingOffBeatMs);
+    properties.setValue(libraryFolderKey, state.libraryFolder);
     properties.setValue(countInWhenPlayingKey, state.countInWhenRecordingDuringPlayback);
     properties.setValue(languageKey, state.language);
     properties.setValue(chosenTargetSoundingKey, state.chosenTargetSounding);

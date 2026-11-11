@@ -4,14 +4,20 @@
 
 #include "../../platform/audio/AudioInputService.h"
 #include "../../platform/audio/SharedPitchAnalysis.h"
+#include "../../platform/library/BackgroundWork.h"
+#include "../../platform/library/LibraryListing.h"
+#include "../../platform/library/TakeFiles.h"
+#include "../../platform/library/TakeSaver.h"
 #include "../../platform/midi/MidiInputService.h"
 #include "../../platform/pitch/CurrentTarget.h"
 #include "../../platform/pitch/ReferencePitch.h"
+#include "../../platform/search/SearchIndex.h"
 #include "../../platform/take/TakeRecorder.h"
 #include "../../platform/transport/PracticeClock.h"
 #include "../configuration/AppDefaults.h"
 #include "../configuration/SettingsPersistence.h"
 #include "../localisation/Localisation.h"
+#include "../search/SearchCatalogue.h"
 #include "../theme/AppLookAndFeel.h"
 #include "../theme/Theme.h"
 #include "../tools/AudioStreamUse.h"
@@ -20,9 +26,11 @@
 #include "../tools/ToolInstanceId.h"
 #include "state/following/KeyInForceFollower.h"
 #include "state/following/TargetClockFollower.h"
+#include "ui/library/LibraryWindow.h"
 #include "ui/main_window/TransportStrip.h"
 #include "ui/score/ScoreImportJob.h"
 #include "ui/score/ScoreImportState.h"
+#include "ui/search/SearchPopup.h"
 #include "ui/workspace/model/NamedWorkspaceService.h"
 #include "ui/workspace/model/WorkspaceDocuments.h"
 #include "ui/workspace/model/WorkspaceLayoutState.h"
@@ -74,6 +82,12 @@ class MainComponent final
     {
         return demoMode;
     }
+
+    // Keep the media library in a fresh temporary folder for this process,
+    // removed when it quits: a capture instance never reads the user's songs
+    // or saves its takes among theirs (openspec/changes/media-library,
+    // decision 10).
+    void useScratchLibrary();
     ~MainComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -266,6 +280,48 @@ class MainComponent final
     // non-modal: an import is not a question the user has to answer.
     void showScoreImportWindow();
     void closeScoreImportWindow();
+
+    // The media library (openspec/changes/media-library): one folder where
+    // songs and takes go, and the window that lists them
+    // (ui/library/MainComponentLibrary.cpp).
+    [[nodiscard]] library::Layout libraryLayout() const;
+    // Whether the library folder exists or can be made where it is set.
+    [[nodiscard]] bool libraryReachable() const;
+    // What opening `file` should open: its copy in the library, made now, or
+    // the file itself when it is in the library or the samples, or when the
+    // copy cannot be made -- which the library window then says.
+    [[nodiscard]] juce::File intoLibrary(const juce::File& file);
+    void showLibrary();
+    void closeLibrary();
+    void refreshLibrary();
+    void offerTakesToLibrary();
+    void takeSavedToLibrary(const library::TakeSaver::Saved& saved);
+    void reviewLibraryTake(const juce::File& folder);
+    void finishLoadingLibraryTake(const library::LoadedTake& loaded);
+    void addSongsToLibrary();
+    void removeLibrarySong(const library::SongEntry& song);
+    void deleteLibraryTake(const library::TakeEntry& entry);
+    void changeLibraryFolder();
+    void showLibraryStatus(const juce::String& status);
+    // What follows a score becoming current, from a file or a take: the
+    // target and the key in force.
+    void followNewScore(const score::musicxml::MusicXmlImportResult& result);
+
+    // Search (openspec/changes/archive/2026-11-10-everything-search; ui/search/
+    // MainComponentSearch.cpp): the index, the popup under the magnifying
+    // glass, and what choosing a result does.
+    struct SearchCommand
+    {
+        search::Command command;
+        std::function<void()> run;
+    };
+    [[nodiscard]] std::vector<SearchCommand> searchCommands();
+    void refreshSearchIndex();
+    void showSearch();
+    void closeSearch();
+    void placeSearch();
+    void chooseSearchHit(const search::SearchHit& hit);
+    void parentHierarchyChanged() override;
     // The open score's import summary, again: the Score View's diagnostics
     // label (#350). Nothing when no score is open.
     void showCurrentScoreImportSummary();
@@ -485,6 +541,26 @@ class MainComponent final
     // shell, which owns the settings file.
     TransportStrip transportStrip{practiceClock, takeRecorder, [this] { saveSettings(false); }};
 
+    // Saves every take the recorder keeps into the library. The watcher tells
+    // it when the takes change; registered with the recorder for this
+    // component's life (MainComponentLifecycle.cpp).
+    struct LibraryTakeWatcher final : take::TakeListener
+    {
+        explicit LibraryTakeWatcher(MainComponent& shell) : owner(shell) {}
+        void takesChanged() override
+        {
+            owner.offerTakesToLibrary();
+        }
+        MainComponent& owner;
+    };
+    LibraryTakeWatcher libraryTakeWatcher{*this};
+    library::TakeSaver takeSaver;
+    library::BackgroundWork libraryWork;
+    juce::String libraryFolderSetting;
+    juce::File scratchLibraryFolder;
+    juce::String libraryStatus;
+    bool libraryProblemAlerted = false;
+
     juce::TextButton fileButton{l10n::text("title.file")};
 
     // Shown in the empty workspace, under the guidance text, so a first launch
@@ -494,6 +570,8 @@ class MainComponent final
     juce::TextButton settingsButton{l10n::text("title.settings")};
     juce::TextButton toolsButton{l10n::text("title.tools")};
     juce::TextButton helpButton{l10n::text("title.help")};
+    // The magnifying glass: the search (everything-search).
+    juce::TextButton searchButton;
     juce::TextButton microphoneButton;
 
     // Every tool instance the session knows about, live or closed.
@@ -539,6 +617,29 @@ class MainComponent final
     // and "here is what was read" are the same surface.
     std::unique_ptr<ScoreImportWindow> scoreImportWindow;
 
+    // The file the running import reads, so a successful one can be copied
+    // into the library and recorded as the open file.
+    juce::File importingFile;
+
+    std::unique_ptr<LibraryWindow> libraryWindow;
+    std::unique_ptr<juce::FileChooser> libraryChooser;
+
+    // Ctrl+K (Cmd+K) and Ctrl+F open the search, wherever the focus is: a
+    // listener on the window, which keys reach when nothing else takes them.
+    struct SearchShortcut final : juce::KeyListener
+    {
+        explicit SearchShortcut(MainComponent& shell) : owner(shell) {}
+        bool keyPressed(const juce::KeyPress& key, juce::Component* origin) override;
+        MainComponent& owner;
+    };
+    SearchShortcut searchShortcut{*this};
+    juce::Component::SafePointer<juce::Component> shortcutWindow;
+
+    search::SearchIndex searchIndex;
+    std::shared_ptr<const score::Score> searchIndexedScore;
+    std::vector<SearchCommand> currentSearchCommands;
+    std::unique_ptr<SearchPopup> searchPopup;
+
     Theme currentTheme = Theme::light;
     ToolInstanceId currentTool;
     WorkspaceLayoutState workspaceLayoutState;
@@ -578,6 +679,13 @@ class MainComponent final
     bool testControlRecordTake = false;
     bool testControlReviewTake = false;
     bool testControlSungTake = false;
+    // The Library tab a state opens once it is in place; empty for none.
+    std::string testControlLibraryTab;
+    // What a state types into the search bar; empty for none.
+    std::string testControlSearchQuery;
+    void openSearchForTestControl();
+    void resetScratchLibrary();
+    void openLibraryForTestControl();
     bool testControlOpenMix = false;
     void startClockForTestControl(int attemptsLeft);
 

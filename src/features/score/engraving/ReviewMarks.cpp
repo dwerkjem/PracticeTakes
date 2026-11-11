@@ -109,6 +109,7 @@ ReviewMarks reviewMarksFor(
             mark.notehead = head;
             mark.pitch = pitchMarkOf(result);
             mark.timing = timingMarkOf(result.timing);
+            mark.timingZone = result.timingZone;
             mark.playedMidi = result.playedMidi;
             if (result.intonation.has_value() &&
                 result.intonation->verdict != evaluation::IntonationVerdict::uncertain)

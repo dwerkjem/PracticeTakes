@@ -88,6 +88,27 @@ for package in "${apt_packages[@]}"; do
     fi
 done
 
+# --- Rust ---------------------------------------------------------------------
+#
+# The search index (src/search) is a Rust crate built by CMake, which needs
+# cargo and rustc 1.86 or newer. Not an apt package: Debian 12 and Ubuntu 22.04
+# ship older ones. rustup installs it for this user, without root, and that is
+# the user's call rather than this script's. A warning, not a failure: CI
+# installs it in a step of its own after this one, and configuring without it
+# stops with Corrosion's own error anyway.
+rust_version="$(
+    { command -v rustc >/dev/null 2>&1 && rustc --version; } ||
+        { [[ -x "${HOME}/.cargo/bin/rustc" ]] && "${HOME}/.cargo/bin/rustc" --version; } ||
+        true
+)"
+rust_minor="$(printf '%s' "$rust_version" | sed -n 's/^rustc 1\.\([0-9]*\)\..*/\1/p')"
+if [[ -z "$rust_minor" ]] || (( rust_minor < 86 )); then
+    printf 'Warning: the build needs Rust 1.86 or newer (found: %s).\n' "${rust_version:-none}" >&2
+    printf 'Install it for this user with rustup, from https://rustup.rs:\n' >&2
+    printf "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh\n" >&2
+    printf 'or, if rustup is already installed: rustup update stable\n' >&2
+fi
+
 if (( ${#missing_packages[@]} == 0 )); then
     printf 'Linux build dependencies are installed.\n'
     exit 0

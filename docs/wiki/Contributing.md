@@ -7,7 +7,9 @@ this is the short version.
 
 ## Building it
 
-It is a C++20 application on JUCE 8, built with CMake. On Linux:
+It is a C++20 application on JUCE 8, built with CMake, with one Rust crate (the
+search index, built by CMake too), so it needs a Rust toolchain from
+[rustup](https://rustup.rs) as well as a C++ compiler. On Linux:
 
 ```bash
 ./tools/scripts/build/build-and-run.sh                 # configure, build, run
@@ -30,6 +32,7 @@ Prerequisites for each platform are in
 | Change under | Run |
 |---|---|
 | `src/**` (C++) | `cmake -S . -B build -DBUILD_TESTING=ON && cmake --build build --target PracticeTakesTests && ctest --test-dir build --output-on-failure` |
+| `src/search/**` (the search index, Rust) | `cargo test` and `cargo clippy` from `src/search/`; the C++ tests above search through it too |
 | `src/services/**` (the feedback worker, TypeScript) | `npm run check && npm run test` from `src/services/` |
 | `tools/scripts/**` (Python tooling) | `python tools/scripts/run_tests.py` |
 

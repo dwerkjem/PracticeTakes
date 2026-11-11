@@ -12,6 +12,70 @@ using Tools = std::vector<std::string>;
 // approved, at 80 and 150 percent, each a picture of what the size changes. A
 // copy rather than a state of its own, so the 150 picture of a surface is the
 // same surface as its 100 one with only the size moved.
+// The Library window's two states, each built on a state above rather than
+// spelled out field by field: its songs, over the empty shell; and its takes,
+// after the sung take under review is kept, and so saved.
+std::vector<ApprovedWindowState> withLibrary(std::vector<ApprovedWindowState> states)
+{
+    const auto based =
+        [&states](const char* base, const char* id, const char* tab, const char* description)
+    {
+        const auto found = std::find_if(
+            states.begin(), states.end(),
+            [base](const ApprovedWindowState& state) { return state.id == base; });
+        if (found == states.end())
+        {
+            return;
+        }
+        ApprovedWindowState copy = *found;
+        copy.id = id;
+        copy.libraryTab = tab;
+        copy.description = description;
+        states.push_back(std::move(copy));
+    };
+    based(
+        "empty", "library-songs", "songs",
+        "The Library window's songs: the built-in sample and the harness scores, one that "
+        "cannot be read marked so");
+    based(
+        "take-review-sung", "library-takes", "takes",
+        "The Library window's takes: the sung take just recorded, saved, with its song, length, "
+        "inputs, how it ended and its size");
+    return states;
+}
+
+// The search bar's states, each over a state above with something typed: a
+// setting's words over the empty window, and a word of the sample's lyrics
+// over the sample, where the song, its line and the setting all answer.
+std::vector<ApprovedWindowState> withSearch(std::vector<ApprovedWindowState> states)
+{
+    const auto based =
+        [&states](const char* base, const char* id, const char* query, const char* description)
+    {
+        const auto found = std::find_if(
+            states.begin(), states.end(),
+            [base](const ApprovedWindowState& state) { return state.id == base; });
+        if (found == states.end())
+        {
+            return;
+        }
+        ApprovedWindowState copy = *found;
+        copy.id = id;
+        copy.searchQuery = query;
+        copy.description = description;
+        states.push_back(std::move(copy));
+    };
+    based(
+        "empty", "search-settings", "pitch",
+        "The search bar with \"pitch\" typed: the settings, tools and commands about pitch, "
+        "each with its kind and where it is");
+    based(
+        "score-view-sample", "search-lyrics", "augen",
+        "The search bar over the sample with \"augen\" typed: the song itself and the lines of "
+        "its lyrics that sing it, each with its bar");
+    return states;
+}
+
 std::vector<ApprovedWindowState> withTextSizes(std::vector<ApprovedWindowState> states)
 {
     struct Sized
@@ -73,7 +137,7 @@ std::vector<ApprovedWindowState> withTextSizes(std::vector<ApprovedWindowState> 
 // checked before a release.
 const std::vector<ApprovedWindowState>& states()
 {
-    static const std::vector<ApprovedWindowState> approved = withTextSizes({
+    static const std::vector<ApprovedWindowState> approved = withTextSizes(withSearch(withLibrary({
         // --- The shell on its own ---
         {"empty",
          {},
@@ -597,7 +661,7 @@ const std::vector<ApprovedWindowState>& states()
          bundledSampleFixtureName(),
          true,
          true},
-    });
+    })));
 
     return approved;
 }
@@ -616,6 +680,7 @@ const std::vector<ApprovedClickTarget>& targets()
         {"open-sample-button", "Opens the sample score from the empty window"},
         {"hamburger-button", "Opens the collapsed menu in a narrow window"},
         {"fullscreen-button", "Toggles fullscreen"},
+        {"search-button", "Opens the search bar"},
     };
 
     return approved;

@@ -202,6 +202,18 @@ struct ApprovedWindowState
     // The text size the picture is taken at, as a percentage
     // (global-text-size). 100 for every state but the ones about the size.
     int textScalePercent = 100;
+
+    // Open the Library window on this tab -- "songs" or "takes" -- once
+    // everything else is in place; empty for no Library window
+    // (openspec/changes/media-library). The capture's own library is filled
+    // with the harness scores first, and with the state's take, if it keeps
+    // one.
+    std::string libraryTab;
+
+    // Open the search bar with this typed into it, once everything else --
+    // the score, the library -- is in place; empty for no search bar
+    // (openspec/changes/archive/2026-11-10-everything-search).
+    std::string searchQuery;
 };
 
 // An object that can be asked to act, as though clicked.

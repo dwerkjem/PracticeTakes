@@ -27,11 +27,12 @@ class MainTitleBar final : public juce::Component
         juce::TextButton& settings,
         juce::TextButton& tools,
         juce::TextButton& help,
+        juce::TextButton& search,
         juce::TextButton& microphone,
         TransportStrip& transport,
         std::function<void()> fullscreenHandler)
         : fileButton(file), settingsButton(settings), toolsButton(tools), helpButton(help),
-          microphoneButton(microphone), transportStrip(transport),
+          searchButton(search), microphoneButton(microphone), transportStrip(transport),
           onFullscreen(std::move(fullscreenHandler))
     {
         // Its own visibility is the strip's to decide: shown once a score is
@@ -44,6 +45,9 @@ class MainTitleBar final : public juce::Component
         {
             addAndMakeVisible(button);
         }
+        // Always shown, collapsed menus or not: search is how a reader finds
+        // what the menus would have shown them.
+        addAndMakeVisible(searchButton);
 
         // Component ids let the development-only test control channel address
         // these by name rather than by screen position. The names must match
@@ -99,6 +103,8 @@ class MainTitleBar final : public juce::Component
         const int windowButtonWidth = px(76);
 
         fullscreenButton.setBounds(bounds.removeFromRight(windowButtonWidth));
+        bounds.removeFromRight(gap);
+        searchButton.setBounds(bounds.removeFromRight(px(40)));
         bounds.removeFromRight(gap);
 
         const auto useCollapsedMenu = getWidth() < px(900);
@@ -218,6 +224,7 @@ class MainTitleBar final : public juce::Component
     juce::TextButton& settingsButton;
     juce::TextButton& toolsButton;
     juce::TextButton& helpButton;
+    juce::TextButton& searchButton;
     juce::TextButton& microphoneButton;
     TransportStrip& transportStrip;
     juce::TextButton hamburgerButton;

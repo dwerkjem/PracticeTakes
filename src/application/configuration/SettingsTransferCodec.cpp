@@ -1,5 +1,6 @@
 #include "SettingsTransferCodec.h"
 
+#include "../../platform/evaluation/OnsetTiming.h"
 #include "../../platform/pitch/IntonationZone.h"
 #include "../localisation/LocalisationRules.h"
 #include "AudioDeviceStateTransfer.h"
@@ -286,6 +287,21 @@ void readAllSettings(
     state.minimumLevelDb = number(
         practice, "minimumLevelDb", AppDefaults::minimumLevelDb, AppDefaults::lowestMinimumLevelDb,
         AppDefaults::highestMinimumLevelDb);
+    {
+        const evaluation::TimingLimits limits = evaluation::orderedTimingLimits(
+            {number(
+                 practice, "timingRightOnMs", 15.0, evaluation::minimumRightOnMs,
+                 evaluation::maximumRightOnMs),
+             number(
+                 practice, "timingOnTimeMs", 40.0, evaluation::minimumOnTimeMs,
+                 evaluation::maximumOnTimeMs),
+             number(
+                 practice, "timingOffBeatMs", 100.0, evaluation::minimumOffBeatMs,
+                 evaluation::maximumOffBeatMs)});
+        state.timingRightOnMs = limits.rightOnMs;
+        state.timingOnTimeMs = limits.onTimeMs;
+        state.timingOffBeatMs = limits.offBeatMs;
+    }
     state.keepTargetWhenScoreOpens = boolean(practice, "keepTargetWhenScoreOpens", false);
     state.targetFollowsScore = boolean(practice, "targetFollowsScore", true);
     state.countInWhenRecordingDuringPlayback =
@@ -365,6 +381,9 @@ SettingsTransferEncodeResult SettingsTransferCodec::encode(const SettingsTransfe
     practice->setProperty("inTuneCents", state.inTuneCents);
     practice->setProperty("outOfTuneCents", state.outOfTuneCents);
     practice->setProperty("minimumLevelDb", state.minimumLevelDb);
+    practice->setProperty("timingRightOnMs", state.timingRightOnMs);
+    practice->setProperty("timingOnTimeMs", state.timingOnTimeMs);
+    practice->setProperty("timingOffBeatMs", state.timingOffBeatMs);
     practice->setProperty("keepTargetWhenScoreOpens", state.keepTargetWhenScoreOpens);
     practice->setProperty("targetFollowsScore", state.targetFollowsScore);
     practice->setProperty(
@@ -633,6 +652,8 @@ SettingsTransferModel SettingsTransferCodec::withLocalPreferences(
     // preference, so no bundle carries it and an import keeps it.
     state.chosenTargetSounding = local.chosenTargetSounding;
     state.chosenTargetWritten = local.chosenTargetWritten;
+    // Nor the library's folder: a path on this machine (media-library).
+    state.libraryFolder = local.libraryFolder;
     if (imported.carriesAllSettings)
     {
         return imported;
@@ -653,6 +674,9 @@ SettingsTransferModel SettingsTransferCodec::withLocalPreferences(
     state.inTuneCents = local.inTuneCents;
     state.outOfTuneCents = local.outOfTuneCents;
     state.minimumLevelDb = local.minimumLevelDb;
+    state.timingRightOnMs = local.timingRightOnMs;
+    state.timingOnTimeMs = local.timingOnTimeMs;
+    state.timingOffBeatMs = local.timingOffBeatMs;
     state.keepTargetWhenScoreOpens = local.keepTargetWhenScoreOpens;
     state.targetFollowsScore = local.targetFollowsScore;
     state.countInWhenRecordingDuringPlayback = local.countInWhenRecordingDuringPlayback;

@@ -36,6 +36,7 @@ broader music-practice and digital-audio workstation application.
 ### `formats/`
 
 - [Supported MusicXML subset](formats/musicxml-subset.md) — what the score importer reads, what it drops with a diagnostic, and what it refuses
+- [A saved take's folder](formats/take-folder.md) — how the media library stores a take: its files, its manifest's fields, and what a reader refuses
 
 ### `quality/`
 

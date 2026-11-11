@@ -631,6 +631,96 @@ SURFACES: tuple[Surface, ...] = (
             ),
         ),
     ),
+    # Search (everything-search): the bar under the magnifying glass.
+    Surface(
+        state="search-settings",
+        title="Search: settings",
+        area="search",
+        modes=frozenset({FULL}),
+        warmup_seconds=2.0,
+        extras=(
+            Question(
+                "pitch-results",
+                "With \"pitch\" typed, does the list give the Reference pitch and Pitch "
+                "settings, each marked Setting with Practice under it, and nothing unrelated?",
+            ),
+            Question(
+                "choose-setting",
+                "Choose a setting: does Settings open on its panel with the control ringed in "
+                "violet for a moment?",
+                behavioural=True,
+            ),
+            Question(
+                "shortcut",
+                "Press Ctrl+K (Cmd+K on a Mac) anywhere: does the search bar open with the caret "
+                "in it, and does Escape close it?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    Surface(
+        state="search-lyrics",
+        title="Search: the open score's lyrics",
+        area="search",
+        modes=frozenset({FULL}),
+        warmup_seconds=4.0,
+        extras=(
+            Question(
+                "lyric-results",
+                "With \"augen\" typed over the sample, are the song and the lines that sing "
+                "Augen listed, each line with its bar and part?",
+            ),
+            Question(
+                "choose-lyric",
+                "Choose a line: does the score cursor move to its bar?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    # The media library (media-library): its two lists.
+    Surface(
+        state="library-songs",
+        title="Library: songs",
+        area="library",
+        modes=frozenset({FULL}),
+        warmup_seconds=3.0,
+        extras=(
+            Question(
+                "songs-listed",
+                "Does the Songs list show the sample marked built in first, then the harness "
+                "scores by title with composer, parts and date added, and the unfinished sketch "
+                "marked as not readable?",
+            ),
+            Question(
+                "open-song",
+                "Double-click a song: does it open in the Score View, and stay one copy in the "
+                "library folder?",
+                behavioural=True,
+            ),
+        ),
+    ),
+    Surface(
+        state="library-takes",
+        title="Library: takes",
+        area="library",
+        modes=frozenset({FULL}),
+        # The sung take is judged, then saved and listed, before the window opens:
+        # take-review-sung's ten seconds, and the save on top.
+        warmup_seconds=15.0,
+        extras=(
+            Question(
+                "take-listed",
+                "Does the Takes list show the sung take with today's date, the sample's title, "
+                "its length, Microphone, Stopped in bar 8 and its size?",
+            ),
+            Question(
+                "review-take",
+                "Quit, start again, and review the take from the Library: does the Take Review "
+                "show the same results as before?",
+                behavioural=True,
+            ),
+        ),
+    ),
     Surface(
         state="settings-reset",
         title="Settings: reset and support",

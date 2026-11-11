@@ -666,8 +666,11 @@ void MainComponent::applyPracticePreferences(const AppSettings::State& state)
         takeRecorder.setIntonation(intonation);
     }
     takeRecorder.setMinimumLevelDb(state.minimumLevelDb);
+    takeRecorder.setTimingLimits(
+        {state.timingRightOnMs, state.timingOnTimeMs, state.timingOffBeatMs});
     takeRecorder.setCountInWhenPlaying(state.countInWhenRecordingDuringPlayback);
     currentTarget.keepChosenWhenScoreOpens = state.keepTargetWhenScoreOpens;
+    libraryFolderSetting = state.libraryFolder;
     currentTarget.followScoreWhilePlaying = state.targetFollowsScore;
 }
 
@@ -783,8 +786,15 @@ AppSettings::State MainComponent::captureSettingsState()
     state.nearPerfectCents = takeRecorder.intonationSettings().nearPerfectCents;
     state.outOfTuneCents = takeRecorder.intonationSettings().outOfTuneCents;
     state.minimumLevelDb = takeRecorder.minimumLevelDb();
+    {
+        const evaluation::TimingLimits limits = takeRecorder.timingLimits();
+        state.timingRightOnMs = limits.rightOnMs;
+        state.timingOnTimeMs = limits.onTimeMs;
+        state.timingOffBeatMs = limits.offBeatMs;
+    }
     state.countInWhenRecordingDuringPlayback = takeRecorder.countInWhenPlaying();
     state.keepTargetWhenScoreOpens = currentTarget.keepChosenWhenScoreOpens;
+    state.libraryFolder = libraryFolderSetting;
     state.targetFollowsScore = currentTarget.followScoreWhilePlaying;
     if (const auto target = currentTarget.target();
         target != nullptr && target->origin == pitch::TargetOrigin::chosen)

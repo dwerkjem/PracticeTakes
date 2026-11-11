@@ -150,10 +150,7 @@ TimingReport judgeTiming(
     for (const ExpectedAttack& attack : attacks)
     {
         frames.push_back(transport::frameOfTick(table, static_cast<double>(attack.tick)));
-        const double beatMs = framesPerBeatAt(table, attack.tick) / framesPerMs;
-        const double toleranceMs = std::clamp(
-            settings.toleranceBeatFraction * beatMs, settings.minimumToleranceMs,
-            settings.maximumToleranceMs);
+        const double toleranceMs = orderedTimingLimits(settings.limits).onTimeMs;
         tolerances.push_back(static_cast<std::int64_t>(std::llround(toleranceMs * framesPerMs)));
     }
 
@@ -206,6 +203,7 @@ TimingReport judgeTiming(
         result.verdict = error < -tolerance  ? TimingVerdict::early
                          : error > tolerance ? TimingVerdict::late
                                              : TimingVerdict::onTime;
+        result.zone = timingZoneOf(result.errorMs, orderedTimingLimits(settings.limits));
         result.uncertain = onset.strength < settings.uncertainStrength;
         sum += result.errorMs;
         sumOfSquares += result.errorMs * result.errorMs;

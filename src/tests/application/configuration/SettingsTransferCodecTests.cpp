@@ -616,6 +616,9 @@ TEST_CASE("every setting travels in a transfer file, the devices too", "[setting
     state.octaveNumbering = 2;
     state.keySignatureFifths = -2;
     state.flatsWithoutKey = true;
+    state.timingRightOnMs = 20.0;
+    state.timingOnTimeMs = 60.0;
+    state.timingOffBeatMs = 150.0;
     state.metronomeEnabled = false;
     state.metronomeVolume = 0.2;
     state.metronomeAccent = false;
@@ -646,6 +649,9 @@ TEST_CASE("every setting travels in a transfer file, the devices too", "[setting
     CHECK(imported.octaveNumbering == 2);
     CHECK(imported.keySignatureFifths == -2);
     CHECK(imported.flatsWithoutKey);
+    CHECK(imported.timingRightOnMs == Catch::Approx(20.0));
+    CHECK(imported.timingOnTimeMs == Catch::Approx(60.0));
+    CHECK(imported.timingOffBeatMs == Catch::Approx(150.0));
     CHECK_FALSE(imported.metronomeEnabled);
     CHECK(imported.metronomeVolume == Catch::Approx(0.2));
     CHECK_FALSE(imported.metronomeAccent);
@@ -810,4 +816,21 @@ TEST_CASE(
     decoded = SettingsTransferCodec::decode(serializedDocument(parsed), {{0, 0, 2560, 1440}});
     REQUIRE(decoded.model.has_value());
     CHECK(decoded.model->state.textScalePercent == 100);
+}
+
+TEST_CASE(
+    "no bundle carries the library folder, and an import keeps this machine's",
+    "[settings][transfer][library]")
+{
+    SettingsTransferModel exported;
+    exported.state.libraryFolder = "/elsewhere/Library";
+    const std::string document = encodedDocument(exported);
+    CHECK(document.find("/elsewhere/Library") == std::string::npos);
+
+    const auto decoded = SettingsTransferCodec::decode(document, {{0, 0, 2560, 1440}});
+    REQUIRE(decoded.model.has_value());
+    AppSettings::State local;
+    local.libraryFolder = "/home/me/Music/Practice Takes";
+    const auto merged = SettingsTransferCodec::withLocalPreferences(*decoded.model, local);
+    CHECK(merged.state.libraryFolder == "/home/me/Music/Practice Takes");
 }

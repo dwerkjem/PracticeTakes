@@ -77,6 +77,9 @@ jobs:
           ccache --max-size=1G
           ccache --zero-stats
 
+      - name: Rust toolchain for the search index
+        uses: ./.github/actions/rust-toolchain
+
       - name: Configure
         run: |
           cmake -S . -B build-asan -G Ninja \
@@ -121,6 +124,9 @@ jobs:
         run: |
           bash tools/scripts/build/check-linux-build-dependencies.sh --install
           sudo apt-get install --yes ninja-build clang-20
+
+      - name: Rust toolchain for the search index
+        uses: ./.github/actions/rust-toolchain
 
       - name: Configure
         run: |

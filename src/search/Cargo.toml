@@ -1,0 +1,26 @@
+# The search index behind the application's search bar
+# (openspec/changes/archive/2026-11-10-everything-search): Tantivy, behind a small C interface
+# that src/platform/search/SearchIndex wraps. Built and linked by CMake through
+# Corrosion (tools/cmake/Search.cmake); not a crate anyone publishes.
+[package]
+name = "practice_takes_search"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.86"
+publish = false
+license = "MIT"
+
+[lib]
+crate-type = ["staticlib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+# No default features: the index lives in memory and holds a few thousand
+# short documents, so memory-mapped files, compression and stemming would be
+# code carried for nothing.
+tantivy = { version = "=0.26.2", default-features = false }
+
+[profile.release]
+# Built once per configure; a smaller library links faster into every target.
+codegen-units = 4
+lto = "thin"

@@ -1,0 +1,40 @@
+# The Rust toolchain the search index needs (src/search, built by CMake through
+# Corrosion: tools/cmake/Search.cmake). GitHub's Ubuntu, macOS and Windows x64
+# images already carry one, and then this does nothing; a container (the
+# Debian 12 package build) or an image without one gets a minimal stable
+# toolchain from rustup, for the runner's own architecture.
+name: Rust toolchain
+description: Make cargo and rustc (1.86 or newer) available, installing them with rustup when missing.
+runs:
+  using: composite
+  steps:
+    - name: Install Rust when missing (Linux, macOS)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        if command -v cargo >/dev/null 2>&1; then
+          cargo --version
+          exit 0
+        fi
+        if [ ! -x "${HOME}/.cargo/bin/cargo" ]; then
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+            | sh -s -- -y --profile minimal --default-toolchain stable --no-modify-path
+        fi
+        echo "${HOME}/.cargo/bin" >> "${GITHUB_PATH}"
+        "${HOME}/.cargo/bin/cargo" --version
+
+    - name: Install Rust when missing (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        if (Get-Command cargo -ErrorAction SilentlyContinue) {
+          cargo --version
+          exit 0
+        }
+        $arch = if ($env:RUNNER_ARCH -eq 'ARM64') { 'aarch64' } else { 'x86_64' }
+        $installer = Join-Path $env:RUNNER_TEMP 'rustup-init.exe'
+        Invoke-WebRequest "https://static.rust-lang.org/rustup/dist/$arch-pc-windows-msvc/rustup-init.exe" -OutFile $installer
+        & $installer -y --profile minimal --default-toolchain stable
+        $cargoBin = Join-Path $env:USERPROFILE '.cargo\bin'
+        $cargoBin | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+        & (Join-Path $cargoBin 'cargo.exe') --version

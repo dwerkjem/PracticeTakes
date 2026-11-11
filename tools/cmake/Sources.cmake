@@ -33,12 +33,17 @@ set(PRACTICE_TAKES_SOURCES
     src/application/configuration/SettingsTransferCodec.cpp
     src/application/configuration/SettingsTransferCodec.h
     src/application/configuration/SettingsTransferFile.h
+    src/application/search/SearchCatalogue.cpp
+    src/application/search/SearchCatalogue.h
     src/application/shell/MainComponent.h
     src/application/shell/MainComponentLifecycle.cpp
     src/application/shell/WorkspaceStartupSequence.h
     src/application/shell/state/appearance/MainComponentAppearance.cpp
     src/application/shell/state/audio/MainComponentAudioState.cpp
     src/application/shell/state/testcontrol/MainComponentTestControl.cpp
+    src/application/shell/ui/library/LibraryWindow.cpp
+    src/application/shell/ui/library/LibraryWindow.h
+    src/application/shell/ui/library/MainComponentLibrary.cpp
     src/application/shell/ui/main_window/MainTitleBar.h
     src/application/shell/ui/main_window/MicrophoneWarning.h
     src/application/shell/ui/main_window/PlaybackMixPanel.h
@@ -55,6 +60,9 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/ui/score/ScoreImportSummary.h
     src/application/shell/ui/score/ScoreImportWindow.h
     src/application/shell/ui/ShellWindowTitles.h
+    src/application/shell/ui/search/MainComponentSearch.cpp
+    src/application/shell/ui/search/SearchPopup.cpp
+    src/application/shell/ui/search/SearchPopup.h
     src/application/shell/ui/settings/MainComponentSettings.cpp
     src/application/shell/ui/settings/SettingsWindow.h
     src/application/shell/ui/workspace/components/DockedToolPanel.h
@@ -121,6 +129,9 @@ set(PRACTICE_TAKES_SOURCES
     src/application/theme/ThemeType.h
     src/application/widgets/InputLevelMeter.cpp
     src/application/widgets/InputLevelMeter.h
+    src/application/widgets/ZoneLimitsModel.h
+    src/application/widgets/ZoneLimitsSlider.cpp
+    src/application/widgets/ZoneLimitsSlider.h
     src/application/tools/BuiltInToolCatalog.h
     src/application/tools/BuiltInTools.cpp
     src/application/tools/BuiltInTools.h
@@ -237,6 +248,18 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/evaluation/PitchContour.h
     src/platform/evaluation/TakeReview.cpp
     src/platform/evaluation/TakeReview.h
+    src/platform/library/BackgroundWork.cpp
+    src/platform/library/BackgroundWork.h
+    src/platform/library/LibraryLayout.cpp
+    src/platform/library/LibraryLayout.h
+    src/platform/library/LibraryListing.cpp
+    src/platform/library/LibraryListing.h
+    src/platform/library/TakeFiles.cpp
+    src/platform/library/TakeFiles.h
+    src/platform/library/TakeManifest.cpp
+    src/platform/library/TakeManifest.h
+    src/platform/library/TakeSaver.cpp
+    src/platform/library/TakeSaver.h
     src/platform/midi/MidiEvent.h
     src/platform/midi/MidiEventFifo.h
     src/platform/midi/MidiInputService.cpp
@@ -299,6 +322,10 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/score/musicxml/read/MusicXmlTieResolver.h
     src/platform/score/musicxml/read/MusicXmlValueParsing.cpp
     src/platform/score/musicxml/read/MusicXmlValueParsing.h
+    src/platform/search/SearchIndex.cpp
+    src/platform/search/SearchIndex.h
+    src/platform/search/SearchIndexFfi.h
+    src/platform/search/ScoreSearch.h
     src/platform/take/Take.h
     src/platform/take/TakeAssembler.h
     src/platform/take/TakeLifecycle.h
@@ -336,6 +363,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/configuration/AudioDeviceStateTransferTests.cpp
     src/tests/application/configuration/SettingsPersistenceTests.cpp
     src/tests/application/configuration/SettingsTransferCodecTests.cpp
+    src/tests/application/search/SearchCatalogueTests.cpp
     src/tests/application/shell/WorkspaceStartupSequenceTests.cpp
     src/tests/application/shell/ui/score/BundledSampleScoreTests.cpp
     src/tests/application/shell/ui/score/ScoreImportStateTests.cpp
@@ -380,6 +408,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/application/testcontrol/TestControlSessionTests.cpp
     src/tests/application/theme/TextScaleTests.cpp
     src/tests/application/theme/ThemeContrastTests.cpp
+    src/tests/application/widgets/ZoneLimitsModelTests.cpp
     src/tests/features/analysis/harmonics/HarmonicAnalyzerTests.cpp
     src/tests/features/analysis/tuner/TunerSettingsCodecTests.cpp
     src/tests/features/analysis/tuner/TunerZonesTests.cpp
@@ -413,6 +442,11 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/audio/SyntheticToneTests.cpp
     src/tests/platform/audio/PitchDetectorTests.cpp
     src/tests/platform/audio/SharedPitchAnalysisTests.cpp
+    src/tests/platform/library/LibraryLayoutTests.cpp
+    src/tests/platform/library/LibraryListingTests.cpp
+    src/tests/platform/library/TakeFilesTests.cpp
+    src/tests/platform/library/TakeManifestTests.cpp
+    src/tests/platform/library/TakeSaverTests.cpp
     src/tests/platform/midi/MidiEventFifoTests.cpp
     src/tests/platform/midi/MidiInputServiceTests.cpp
     src/tests/platform/midi/MidiMessageTranslationTests.cpp
@@ -455,6 +489,8 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/evaluation/OnsetTimingTests.cpp
     src/tests/platform/evaluation/PitchContourTests.cpp
     src/tests/platform/evaluation/TakeReviewTests.cpp
+    src/tests/platform/search/ScoreSearchTests.cpp
+    src/tests/platform/search/SearchIndexTests.cpp
     src/tests/platform/take/TakeAssemblerTests.cpp
     src/tests/platform/take/TakeLifecycleTests.cpp
     src/tests/platform/take/TakeRecorderTests.cpp
@@ -472,6 +508,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/application/localisation/Localisation.cpp
     src/application/localisation/NoteNames.cpp
     src/application/localisation/TakeText.cpp
+    src/application/search/SearchCatalogue.cpp
     src/application/shell/ui/score/BundledSampleScore.cpp
     src/application/shell/ui/score/ScoreImportSummary.cpp
     src/application/shell/ui/workspace/model/WorkspaceCatalogCodec.cpp
@@ -525,6 +562,12 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/transport/PlaybackEvents.cpp
     src/platform/transport/ScoreSynth.cpp
     src/platform/transport/PracticeClock.cpp
+    src/platform/library/LibraryLayout.cpp
+    src/platform/library/LibraryListing.cpp
+    src/platform/library/TakeFiles.cpp
+    src/platform/library/TakeManifest.cpp
+    src/platform/library/TakeSaver.cpp
+    src/platform/search/SearchIndex.cpp
     src/platform/take/TakeRecorder.cpp
     src/platform/evaluation/OnsetDetector.cpp
     src/platform/evaluation/OnsetTiming.cpp

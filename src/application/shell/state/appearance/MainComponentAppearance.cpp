@@ -203,4 +203,8 @@ void MainComponent::applyAppearanceToOpenWindows()
         // disagreed.
         scoreImportWindow->applyAppearance(&appLookAndFeel, palette.background);
     }
+    if (libraryWindow != nullptr)
+    {
+        libraryWindow->applyAppearance(&appLookAndFeel, palette.background);
+    }
 }

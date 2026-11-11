@@ -45,6 +45,7 @@ struct NoteResult
     // The moment's timing (#43), shared by every note of it.
     TimingVerdict timing = TimingVerdict::absent;
     double timingErrorMs = 0.0;
+    std::optional<pitch::IntonationZone> timingZone;
 
     // How in tune a single sung note was (#42): set for every single note of a
     // microphone take that timing matched.

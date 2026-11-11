@@ -41,6 +41,14 @@ struct Take
     std::shared_ptr<const score::Score> score;
     std::string scoreTitle;
 
+    // The file that score was imported from, so a saved take can carry a copy
+    // of it (openspec/changes/media-library, decision 3). Empty when unknown.
+    std::string scoreFile;
+
+    // The take's folder in the library, for a take loaded from there: it is
+    // already saved, and is not saved again. Empty for a take of this session.
+    std::string libraryFolder;
+
     // Where it was started from, at what tempo scale, and the clock's table at
     // that scale: what turns a frame into a tick.
     score::Tick startTick = 0;

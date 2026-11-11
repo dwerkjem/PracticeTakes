@@ -48,14 +48,16 @@ Settings:
 
 | Menu | Holds |
 |---|---|
-| **File** | Open a score, or the bundled sample |
+| **File** | Open a score, or the bundled sample, and the [[Library]] of your songs and takes |
 | **Settings** | Appearance, audio and the metronome, MIDI, practice presets and the count-in, reset and support, and portable settings import/export |
 | **Tools** | Opens each tool, arranges the workspace, and manages named workspaces |
 | **Help** | Send feedback, and turn feedback invitations on or off |
 
 On the right of the title bar, the **microphone button** shows the input's state
 and mutes or unmutes it in one click: *Mic active - Mute*, *Mic muted - Unmute*,
-or *Mic disconnected*. **Fullscreen** fills the screen, and becomes **Restore**.
+or *Mic disconnected*. The **magnifying glass** beside it opens the [[Search]]
+(or press Ctrl+K): type to find any setting, tool, command, song, take or line
+of the lyrics. **Fullscreen** fills the screen, and becomes **Restore**.
 
 While the microphone is muted, the button turns amber and an amber frame
 labelled **Microphone muted** surrounds the whole workspace, so you can't sing

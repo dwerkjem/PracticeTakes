@@ -203,7 +203,7 @@ jobs:
         if: ${{ env.BUILD_NEEDED == 'true' }}
         run: |
           apt-get update
-          apt-get install --yes ca-certificates ccache git python3
+          apt-get install --yes ca-certificates ccache curl git python3
 
       - name: Check out repository
         if: ${{ env.BUILD_NEEDED == 'true' }}
@@ -243,6 +243,10 @@ jobs:
       - name: Install Linux build dependencies
         if: ${{ env.BUILD_NEEDED == 'true' }}
         run: bash tools/scripts/build/check-linux-build-dependencies.sh --install
+
+      - name: Rust toolchain for the search index
+        if: ${{ env.BUILD_NEEDED == 'true' }}
+        uses: ./.github/actions/rust-toolchain
 
       - name: Configure
         if: ${{ env.BUILD_NEEDED == 'true' }}
@@ -483,6 +487,10 @@ jobs:
           else {
             choco install nsis --yes --no-progress --version ${env:NSIS_VERSION} --allow-downgrade
           }
+
+      - name: Rust toolchain for the search index
+        if: ${{ env.BUILD_NEEDED == 'true' }}
+        uses: ./.github/actions/rust-toolchain
 
       - name: Configure
         if: ${{ env.BUILD_NEEDED == 'true' }}
@@ -742,6 +750,10 @@ jobs:
         id: version
         shell: bash
         run: echo "version=$(python3 tools/scripts/release/version.py current)" >> "${GITHUB_OUTPUT}"
+
+      - name: Rust toolchain for the search index
+        if: ${{ env.BUILD_NEEDED == 'true' }}
+        uses: ./.github/actions/rust-toolchain
 
       - name: Configure
         if: ${{ env.BUILD_NEEDED == 'true' }}

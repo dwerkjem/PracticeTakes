@@ -13,7 +13,8 @@ process is intentionally light — see `.github/CONTRIBUTING.md` for when a chan
 needs an OpenSpec proposal (`openspec/changes/`) versus a straight PR.
 
 There is also a small Cloudflare Worker service, `src/services/feedback-intake`
-(TypeScript), that receives in-app feedback submissions.
+(TypeScript), that receives in-app feedback submissions, and one Rust crate,
+`src/search`, which wraps the Tantivy search index behind a C interface.
 
 ## Commands
 
@@ -87,6 +88,18 @@ build). `CLANG_FORMAT`/`CLANG_TIDY`/`CLANG_TIDY_BUILD_DIR` env vars override
 tool paths / build dir. Local pre-commit only runs `clang-format`; `clang-tidy`
 runs in CI (PR check-only, plus an auto-fix commit to `main`).
 
+### Rust search index (`src/search`)
+
+```bash
+cd src/search && cargo test && cargo clippy -- -D warnings && cargo fmt --check
+```
+
+The crate wraps Tantivy behind a C interface; CMake builds and links it
+through Corrosion (`tools/cmake/Search.cmake`), so a Rust toolchain (1.86+,
+from rustup) is a build requirement. Point `--target-dir` outside the source
+tree, or let CMake build it into `build/`: nothing under `src/search/target`
+is tracked.
+
 ### TypeScript service (`src/services/feedback-intake`)
 
 ```bash
@@ -155,8 +168,8 @@ resolves the project from the root; the package itself still lives under
 `CLAUDE.md` is a stub that imports this guide — edit the guide, not the stub.
 
 **Never add a new top-level file or directory.** Source of any language goes
-under `src/` (`src/services` is the TypeScript worker, `src/tests` the C++
-tests); build/packaging/tooling inputs under `tools/` (`tools/cmake`,
+under `src/` (`src/services` is the TypeScript worker, `src/search` the Rust
+search index, `src/tests` the C++ tests); build/packaging/tooling inputs under `tools/` (`tools/cmake`,
 `tools/packaging`, `tools/scripts`, `tools/secret-patterns`, `tools/VERSION`,
 `tools/vcpkg.json`); community-health files under `.github/`; documentation
 and shared schemas under `docs/` (`docs/contracts`). `openspec/` is the one

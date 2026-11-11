@@ -251,6 +251,7 @@ endif()
 # repository root.
 include("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/Sources.cmake")
 include("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/ScorePlayback.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/Search.cmake")
 
 target_sources(PracticeTakes
     PRIVATE
@@ -309,6 +310,7 @@ target_link_libraries(PracticeTakes
         PracticeTakesFonts
         PracticeTakesSamples
         PracticeTakesUiIcons
+        practice_takes_search
         juce::juce_audio_utils
         juce::juce_dsp
         juce::juce_gui_extra
@@ -400,7 +402,9 @@ if(BUILD_TESTING)
             PracticeTakesFonts
             PracticeTakesUiIcons
             PracticeTakesSamples
+            practice_takes_search
             juce::juce_audio_devices
+            juce::juce_audio_formats
             juce::juce_data_structures
             juce::juce_dsp
             juce::juce_graphics

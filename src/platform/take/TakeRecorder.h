@@ -58,6 +58,9 @@ struct TakeSources
     // The application's reference pitch, in hertz: what a take is sung
     // against. 440 when absent.
     std::function<double()> referencePitch;
+
+    // The file the current score was imported from. Empty when absent.
+    std::function<std::string()> scoreFile;
 };
 
 class TakeListener
@@ -150,6 +153,11 @@ class TakeRecorder final : private juce::Timer, private transport::ClockListener
     // The quietest sound a microphone take counts as playing or singing, in dB
     // below full scale (evaluation::OnsetSettings::minimumLevelDb). A change
     // judges the take under review again, as a tolerance does.
+    // The player's timing limits (Settings -> Practice), kept in order;
+    // changing them judges the take under review again.
+    void setTimingLimits(const evaluation::TimingLimits& limits);
+    [[nodiscard]] evaluation::TimingLimits timingLimits() const noexcept;
+
     void setMinimumLevelDb(double level);
     [[nodiscard]] double minimumLevelDb() const noexcept;
 

@@ -85,6 +85,9 @@ jobs:
       # The control channel is how the smoke driver reaches the application
       # without synthesising input. It is development-only and absent from any
       # shipped build.
+      - name: Rust toolchain for the search index
+        uses: ./.github/actions/rust-toolchain
+
       - name: Configure
         run: |
           cmake -S . -B build-smoke -G Ninja \

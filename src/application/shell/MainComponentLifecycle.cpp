@@ -119,6 +119,9 @@ MainComponent::MainComponent(bool muteMicrophoneForSession, bool declineAudioInp
 {
     setOpaque(true);
     audioInputService.addChangeListener(this);
+    takeRecorder.addListener(&libraryTakeWatcher);
+    takeSaver.onSaved = [this](const library::TakeSaver::Saved& saved)
+    { takeSavedToLibrary(saved); };
 
     const auto storageOptions = settingsStorageOptions();
     migrateLegacySettingsFile(storageOptions.getDefaultFile());
@@ -146,6 +149,14 @@ MainComponent::~MainComponent()
 {
     saveSettings();
     audioInputService.removeChangeListener(this);
+    takeRecorder.removeListener(&libraryTakeWatcher);
+    searchPopup.reset();
+    // The window is still a component while it destroys its content.
+    if (shortcutWindow != nullptr)
+    {
+        shortcutWindow->removeKeyListener(&searchShortcut);
+    }
+    libraryWindow.reset();
     settingsWindow.reset();
     feedbackWindow.reset();
     workspaceContainers.clear();
@@ -158,6 +169,13 @@ MainComponent::~MainComponent()
     microphoneWarning.reset();
     applicationProperties.closeFiles();
     setLookAndFeel(nullptr);
+    // A capture instance's library is its own, and goes with it -- after the
+    // saver has finished writing into it.
+    if (scratchLibraryFolder != juce::File())
+    {
+        takeSaver.finishSaving();
+        scratchLibraryFolder.deleteRecursively();
+    }
 }
 
 void MainComponent::configureTopButtons()
@@ -171,6 +189,11 @@ void MainComponent::configureTopButtons()
     settingsButton.onClick = [this] { showSettingsMenu(); };
     toolsButton.onClick = [this] { showToolsMenu(); };
     helpButton.onClick = [this] { showHelpMenu(); };
+    appearance::setIcon(searchButton, appearance::Icon::search);
+    searchButton.setTitle(l10n::text("search.title"));
+    searchButton.setTooltip(l10n::text("search.tooltip"));
+    searchButton.setComponentID("search-button");
+    searchButton.onClick = [this] { showSearch(); };
     microphoneButton.setTitle(l10n::text("microphone.button.title"));
     microphoneButton.onClick = [this]
     {
@@ -234,14 +257,15 @@ take::TakeSources MainComponent::takeSources()
                    : std::pair<int, int>{0, 0};
     };
     sources.referencePitch = [this] { return referencePitch.hertz(); };
+    sources.scoreFile = [this] { return scoreImport.currentScoreFile(); };
     return sources;
 }
 
 std::unique_ptr<MainTitleBar> MainComponent::createTitleBar(std::function<void()> fullscreenHandler)
 {
     auto bar = std::make_unique<MainTitleBar>(
-        fileButton, settingsButton, toolsButton, helpButton, microphoneButton, transportStrip,
-        std::move(fullscreenHandler));
+        fileButton, settingsButton, toolsButton, helpButton, searchButton, microphoneButton,
+        transportStrip, std::move(fullscreenHandler));
     bar->setLookAndFeel(&titleStripLookAndFeel);
     return bar;
 }
@@ -359,6 +383,7 @@ void MainComponent::resized()
     }
 
     layoutWorkspace(workspaceArea());
+    placeSearch();
 
     // Part of the guidance painted behind it, so it follows the same rule:
     // visible exactly when no tool is open, laid out under the text.

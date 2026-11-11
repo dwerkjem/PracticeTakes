@@ -1122,3 +1122,55 @@ TEST_CASE(
     juce::PropertiesFile reader(temporary.path, settingsOptions());
     CHECK(AppSettings::storedLanguage(reader).isEmpty());
 }
+
+TEST_CASE(
+    "the timing limits survive a round trip, read back into order",
+    "[settings][persistence][timing]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        const auto loaded = AppSettings::load(writer).state;
+        CHECK(loaded.timingRightOnMs == Catch::Approx(15.0));
+        CHECK(loaded.timingOnTimeMs == Catch::Approx(40.0));
+        CHECK(loaded.timingOffBeatMs == Catch::Approx(100.0));
+        AppSettings::State expected;
+        expected.timingRightOnMs = 25.0;
+        expected.timingOnTimeMs = 70.0;
+        expected.timingOffBeatMs = 200.0;
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    {
+        juce::PropertiesFile reader(temporary.path, settingsOptions());
+        const auto loaded = AppSettings::load(reader).state;
+        CHECK(loaded.timingRightOnMs == Catch::Approx(25.0));
+        CHECK(loaded.timingOnTimeMs == Catch::Approx(70.0));
+        CHECK(loaded.timingOffBeatMs == Catch::Approx(200.0));
+    }
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        writer.setValue("practice.timingRightOnMs", 90.0);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    // Right on can be no looser than on time, less the gap between the bands.
+    CHECK(AppSettings::load(reader).state.timingRightOnMs == Catch::Approx(50.0));
+}
+
+TEST_CASE(
+    "the library folder is kept with this machine's settings",
+    "[settings][persistence][library]")
+{
+    TemporarySettingsFile temporary;
+    {
+        juce::PropertiesFile writer(temporary.path, settingsOptions());
+        CHECK(AppSettings::load(writer).state.libraryFolder.isEmpty());
+        AppSettings::State expected;
+        expected.libraryFolder = "/media/practice/Library";
+        AppSettings::store(writer, expected);
+        REQUIRE(writer.saveIfNeeded());
+    }
+    juce::PropertiesFile reader(temporary.path, settingsOptions());
+    CHECK(AppSettings::load(reader).state.libraryFolder == "/media/practice/Library");
+}
