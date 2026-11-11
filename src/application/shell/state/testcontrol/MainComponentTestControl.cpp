@@ -602,7 +602,6 @@ std::string MainComponent::currentTestControlStateId() const
     return testControlStateId;
 }
 
-#endif
 
 void MainComponent::resetScratchLibrary()
 {
@@ -659,3 +658,5 @@ void MainComponent::openSearchForTestControl()
         placeSearch();
     }
 }
+
+#endif
