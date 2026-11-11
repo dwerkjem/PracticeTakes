@@ -71,7 +71,12 @@ void TakeSaver::finishSaving()
         }
         static_cast<void>(jobDone.wait(50));
     }
-    handleUpdateNowIfNeeded();
+    // Taken here, not through handleUpdateNowIfNeeded: the worker records a
+    // job as done before it triggers the update, so between the two there is
+    // nothing pending to handle and the result would wait for the message
+    // loop. handleAsyncUpdate takes what is finished under the lock; the
+    // update that follows finds nothing, which is harmless.
+    handleAsyncUpdate();
 }
 
 void TakeSaver::run()
