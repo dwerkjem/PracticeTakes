@@ -519,3 +519,108 @@ TEST_CASE(
     CHECK(fixture.clock->renderer().audibleTracks() == 0b1);
     CHECK(fixture.clock->playbackMix().enabled);
 }
+
+TEST_CASE(
+    "a recording plays at its own scale from its start, without counting in",
+    "[transport][clock][take-playback]")
+{
+    ClockUnderTest fixture;
+    auto& clock = *fixture.clock;
+    clock.setCountInBars(2);
+    clock.setMetronomeEnabled(true);
+    clock.setLoopEnabled(true);
+    fixture.block();
+    clock.poll();
+
+    PracticeClock::Recording played;
+    played.scalePercent = 50;
+    played.startTick = 4 * quarter;
+    REQUIRE(clock.playRecording(played));
+    CHECK(clock.playingRecording());
+    // A block and a poll each way: the loop's table, set just before, takes
+    // a block to be acknowledged before the recording's can follow it.
+    const auto settle = [&fixture, &clock]
+    {
+        for (int round = 0; round < 2; ++round)
+        {
+            fixture.block();
+            clock.poll();
+        }
+    };
+    settle();
+
+    const auto position = clock.position();
+    CHECK(position.state == ClockState::playing);
+    CHECK_FALSE(position.countingIn);
+    CHECK(position.scalePercent == 50);
+    CHECK(position.tick == Approx(4.0 * quarter).margin(quarter / 2.0));
+    // Only the recording sounds.
+    CHECK_FALSE(clock.renderer().metronomeEnabled());
+    CHECK(clock.renderer().audibleTracks() == 1);
+
+    // Pause keeps it; Stop ends it, and the clock is as it was.
+    clock.pause();
+    settle();
+    CHECK(clock.playingRecording());
+    clock.stop();
+    settle();
+    CHECK_FALSE(clock.playingRecording());
+    settle();
+    CHECK(clock.renderer().metronomeEnabled());
+    CHECK(clock.position().scalePercent == 100);
+    CHECK(clock.loopEnabled());
+    CHECK(clock.countInBars() == 2);
+}
+
+TEST_CASE("a recording stops where it ended", "[transport][clock][take-playback]")
+{
+    ClockUnderTest fixture;
+    auto& clock = *fixture.clock;
+    fixture.block();
+    clock.poll();
+
+    // 120 bpm at 100%: a quarter is 22,050 frames, so bar 2 starts at 88,200.
+    PracticeClock::Recording played;
+    played.startTick = 4 * quarter;
+    played.endFrame = 88200 + 4000;
+    REQUIRE(clock.playRecording(played));
+    for (int block = 0; block < 20 && clock.playingRecording(); ++block)
+    {
+        fixture.block();
+        clock.poll();
+    }
+    CHECK_FALSE(clock.playingRecording());
+    CHECK(clock.position().state == ClockState::stopped);
+}
+
+TEST_CASE(
+    "a recording cannot start while a take is recorded, or with no score",
+    "[transport][clock][take-playback]")
+{
+    ClockUnderTest fixture;
+    auto& clock = *fixture.clock;
+    fixture.block();
+    clock.lock();
+    CHECK_FALSE(clock.playRecording({}));
+    clock.unlock();
+
+    ClockUnderTest empty(nullptr);
+    empty.block();
+    empty.clock->poll();
+    CHECK_FALSE(empty.clock->playRecording({}));
+}
+
+TEST_CASE("opening another score ends a recording", "[transport][clock][take-playback]")
+{
+    ClockUnderTest fixture;
+    auto& clock = *fixture.clock;
+    clock.setMetronomeEnabled(true);
+    fixture.block();
+    clock.poll();
+    REQUIRE(clock.playRecording({}));
+    fixture.block();
+    fixture.currentScore.publish(scoreOf(4, {3, 4}, 90.0));
+    clock.poll();
+    CHECK_FALSE(clock.playingRecording());
+    CHECK(clock.renderer().metronomeEnabled());
+}

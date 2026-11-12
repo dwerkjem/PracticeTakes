@@ -44,6 +44,7 @@ set(PRACTICE_TAKES_SOURCES
     src/application/shell/ui/library/LibraryWindow.cpp
     src/application/shell/ui/library/LibraryWindow.h
     src/application/shell/ui/library/MainComponentLibrary.cpp
+    src/application/shell/ui/library/MainComponentTakePlayback.cpp
     src/application/shell/ui/main_window/MainTitleBar.h
     src/application/shell/ui/main_window/MicrophoneWarning.h
     src/application/shell/ui/main_window/PlaybackMixPanel.h
@@ -254,6 +255,8 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/library/LibraryLayout.h
     src/platform/library/LibraryListing.cpp
     src/platform/library/LibraryListing.h
+    src/platform/library/TakeExport.cpp
+    src/platform/library/TakeExport.h
     src/platform/library/TakeFiles.cpp
     src/platform/library/TakeFiles.h
     src/platform/library/TakeManifest.cpp
@@ -329,6 +332,7 @@ set(PRACTICE_TAKES_SOURCES
     src/platform/take/Take.h
     src/platform/take/TakeAssembler.h
     src/platform/take/TakeLifecycle.h
+    src/platform/take/TakePlayback.h
     src/platform/take/TakeRecorder.cpp
     src/platform/take/TakeRecorder.h
     src/platform/take/TakeStatus.h
@@ -444,6 +448,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/audio/SharedPitchAnalysisTests.cpp
     src/tests/platform/library/LibraryLayoutTests.cpp
     src/tests/platform/library/LibraryListingTests.cpp
+    src/tests/platform/library/TakeExportTests.cpp
     src/tests/platform/library/TakeFilesTests.cpp
     src/tests/platform/library/TakeManifestTests.cpp
     src/tests/platform/library/TakeSaverTests.cpp
@@ -493,6 +498,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/tests/platform/search/SearchIndexTests.cpp
     src/tests/platform/take/TakeAssemblerTests.cpp
     src/tests/platform/take/TakeLifecycleTests.cpp
+    src/tests/platform/take/TakePlaybackTests.cpp
     src/tests/platform/take/TakeRecorderTests.cpp
     src/tests/platform/take/TakeStatusTests.cpp
     src/tests/platform/transport/ClockMathTests.cpp
@@ -564,6 +570,7 @@ set(PRACTICE_TAKES_TEST_SOURCES
     src/platform/transport/PracticeClock.cpp
     src/platform/library/LibraryLayout.cpp
     src/platform/library/LibraryListing.cpp
+    src/platform/library/TakeExport.cpp
     src/platform/library/TakeFiles.cpp
     src/platform/library/TakeManifest.cpp
     src/platform/library/TakeSaver.cpp

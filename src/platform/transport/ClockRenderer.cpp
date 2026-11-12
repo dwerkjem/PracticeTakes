@@ -76,6 +76,19 @@ bool ClockRenderer::publish(const ClockTable& table)
 
 bool ClockRenderer::publish(const ClockTable& table, const PlaybackScore& playback)
 {
+    return publish(table, playback, TakeSound{});
+}
+
+void ClockRenderer::setTakeVolume(float newGain) noexcept
+{
+    takeGain.store(std::clamp(newGain, 0.0f, 1.0f), std::memory_order_relaxed);
+}
+
+bool ClockRenderer::publish(
+    const ClockTable& table,
+    const PlaybackScore& playback,
+    const TakeSound& take)
+{
     const std::uint64_t generation = published.load(std::memory_order_relaxed);
     if (acknowledged.load(std::memory_order_acquire) != generation)
     {
@@ -86,6 +99,9 @@ bool ClockRenderer::publish(const ClockTable& table, const PlaybackScore& playba
     Slot& slot = (*slots)[next & 1U];
     slot.table = table;
     slot.playback = playback;
+    // Here, on the message thread, in the slot the renderer is not reading:
+    // the only place a take's samples are let go.
+    slot.take = take;
     synthesise(slot, table.sampleRate);
     published.store(next, std::memory_order_release);
     return true;
@@ -501,6 +517,7 @@ void ClockRenderer::advance(RenderBlock& block) noexcept PRACTICE_TAKES_NONBLOCK
         const Frame length = std::min(remaining, boundary - position);
         recordSpan(block, offset, position, length, false);
         dispatchNotes(block, offset, position, length);
+        mixTake(block, offset, position, length);
 
         if (metronome)
         {
@@ -644,10 +661,46 @@ void ClockRenderer::dispatchNotes(
         }
         else if ((soundingTracks & (std::uint64_t{1} << event.track)) != 0)
         {
-            synth->noteOn(event.track, event.key, playbackVelocity);
+            synth->noteOn(
+                event.track, event.key,
+                event.velocity > 0 ? static_cast<float>(event.velocity) / 127.0f
+                                   : playbackVelocity);
         }
         ++nextEvent;
         ++eventsThisBlock;
+    }
+}
+
+void ClockRenderer::mixTake(RenderBlock& block, int offset, Frame start, Frame length) noexcept
+    PRACTICE_TAKES_NONBLOCKING
+{
+    const Slot* slot = activeSlot();
+    if (slot == nullptr || slot->take.samples == nullptr || block.outputs == nullptr || length <= 0)
+    {
+        return;
+    }
+    const TakeSound& take = slot->take;
+    const Frame from = std::max(start, take.start);
+    const Frame to = std::min(start + length, take.start + static_cast<Frame>(take.frames));
+    if (to <= from)
+    {
+        return;
+    }
+    const float level = takeGain.load(std::memory_order_relaxed);
+    const float* source = take.samples + (from - take.start);
+    const int first = offset + static_cast<int>(from - start);
+    const int count = static_cast<int>(to - from);
+    for (int channel = 0; channel < block.outputChannels; ++channel)
+    {
+        float* destination = block.outputs[channel];
+        if (destination == nullptr)
+        {
+            continue;
+        }
+        for (int index = 0; index < count; ++index)
+        {
+            destination[first + index] += source[index] * level;
+        }
     }
 }
 

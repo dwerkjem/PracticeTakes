@@ -58,7 +58,8 @@ void PracticeClock::play()
     {
         return;
     }
-    send({ClockCommand::Kind::play, 0, countIn});
+    // A recording plays back without counting in: it is already in time.
+    send({ClockCommand::Kind::play, 0, recording.has_value() ? 0 : countIn});
 }
 
 void PracticeClock::pause()
@@ -249,6 +250,14 @@ void PracticeClock::refreshTable()
 
     if (current != seenScore)
     {
+        // A recording belongs to the score it was played against.
+        if (recording.has_value())
+        {
+            recording.reset();
+            recordingStarted = false;
+            clockRenderer->setMetronomeEnabled(metronomeBeforeRecording);
+            publishMix();
+        }
         seenScore = current;
         // A different score: the old loop and position mean nothing in it.
         // Stopped before the new table is published, so the stop lands on the
@@ -269,9 +278,41 @@ void PracticeClock::refreshTable()
     const Tick wantedLoopStart = looping ? (hasRegion ? loopStart : 0) : 0;
     const Tick wantedLoopEnd = looping ? (hasRegion ? loopEnd : length) : 0;
 
-    const bool unchanged = current == builtScore && scale == builtScalePercent &&
-                           rate == builtSampleRate && looping == builtLoopEnabled &&
-                           wantedLoopStart == builtLoopStart && wantedLoopEnd == builtLoopEnd;
+    if (recording.has_value() && current != nullptr)
+    {
+        // The recording's table: its scale, no loop, ending where it ended.
+        buildTable(*pendingTable, *current, recording->scalePercent, rate);
+        if (recording->endFrame > 0 && recording->endFrame < pendingTable->endFrame)
+        {
+            pendingTable->endFrame = recording->endFrame;
+            pendingTable->endTick =
+                static_cast<Tick>(std::llround(tickAtFrame(*pendingTable, recording->endFrame)));
+        }
+        PlaybackScore keys;
+        keys.tracks.push_back(PlaybackTrack{});
+        keys.events = recording->keyboard;
+        if (!clockRenderer->publish(*pendingTable, keys, recording->sound))
+        {
+            tablePending = true;
+            return;
+        }
+        tablePending = false;
+        // Built for the recording, not the score: the score's table is built
+        // again after it, with its mix as it was.
+        builtForRecording = true;
+        std::size_t sentRecording = 0;
+        while (sentRecording < unsent.size() && clockRenderer->send(unsent[sentRecording]))
+        {
+            ++sentRecording;
+        }
+        unsent.erase(unsent.begin(), unsent.begin() + static_cast<std::ptrdiff_t>(sentRecording));
+        return;
+    }
+
+    const bool unchanged =
+        !builtForRecording && current == builtScore && scale == builtScalePercent &&
+        rate == builtSampleRate && looping == builtLoopEnabled &&
+        wantedLoopStart == builtLoopStart && wantedLoopEnd == builtLoopEnd;
     if (unchanged && !tablePending)
     {
         return;
@@ -297,6 +338,7 @@ void PracticeClock::refreshTable()
     }
 
     tablePending = false;
+    builtForRecording = false;
 
     // A new score's tracks, with nothing muted or soloed.
     if (current != builtScore)
@@ -413,6 +455,19 @@ void PracticeClock::poll()
     const auto snapshot = clockRenderer->snapshot();
     const auto events = clockRenderer->events();
 
+    // A recording ends with the stop after it began: Stop, or its end.
+    if (recording.has_value() && !tablePending)
+    {
+        if (snapshot.state == ClockState::playing)
+        {
+            recordingStarted = true;
+        }
+        else if (snapshot.state == ClockState::stopped && recordingStarted)
+        {
+            endRecordingPlayback();
+        }
+    }
+
     ClockUpdate update;
     update.position = positionFrom(snapshot);
     update.seeks = static_cast<int>(events.seeks - lastEvents.seeks);
@@ -525,5 +580,56 @@ void PracticeClock::publishMix()
 {
     clockRenderer->setAudibleTracks(mix.audibleTracks());
     clockRenderer->setPlaybackVolume(mix.volume);
+}
+bool PracticeClock::playRecording(Recording played)
+{
+    if (!hasScore() || locked)
+    {
+        return false;
+    }
+    if (!recording.has_value())
+    {
+        metronomeBeforeRecording = clockRenderer->metronomeEnabled();
+    }
+    const Tick start = played.startTick;
+    recording = std::move(played);
+    recordingStarted = false;
+    clockRenderer->setMetronomeEnabled(false);
+    // Its keyboard is track 0 of the table it is published in; nothing else
+    // sounds.
+    clockRenderer->setAudibleTracks(1);
+    clockRenderer->setPlaybackVolume(mix.volume);
+    send({ClockCommand::Kind::stop});
+    tablePending = true;
+    refreshTable();
+    send({ClockCommand::Kind::seek, std::max<Tick>(0, start)});
+    send({ClockCommand::Kind::play, 0, 0});
+    return true;
+}
+
+bool PracticeClock::playingRecording() const noexcept
+{
+    return recording.has_value();
+}
+
+void PracticeClock::endRecordingPlayback()
+{
+    if (!recording.has_value())
+    {
+        return;
+    }
+    recording.reset();
+    recordingStarted = false;
+    send({ClockCommand::Kind::stop});
+    clockRenderer->setMetronomeEnabled(metronomeBeforeRecording);
+    publishMix();
+    tablePending = true;
+    refreshTable();
+}
+
+double PracticeClock::sampleRate() const noexcept
+{
+    const double rate = clockRenderer->snapshot().sampleRate;
+    return rate > 0.0 ? rate : (builtSampleRate > 0.0 ? builtSampleRate : 44100.0);
 }
 } // namespace transport

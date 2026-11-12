@@ -131,18 +131,7 @@ bool MainComponent::applyWorkspaceSnapshot(const WorkspaceSnapshot& snapshot)
 
                 if (entry->component == nullptr)
                 {
-                    const ToolServices services{
-                        audioInputService,
-                        pitchAnalysis,
-                        scoreImport.currentScoreHolder(),
-                        practiceClock,
-                        takeRecorder,
-                        referencePitch,
-                        currentTarget,
-                        midiInputService,
-                        currentTheme,
-                        [this] { showCurrentScoreImportSummary(); },
-                        appLookAndFeel.textScale()};
+                    const ToolServices services = toolServices();
                     entry->component = builtInToolRegistry().create(entry->id.toolId(), services);
                 }
                 if (entry->component != nullptr && entry->savedSettings.has_value())

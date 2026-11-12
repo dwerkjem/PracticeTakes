@@ -2,6 +2,7 @@
 
 #include "../theme/ThemeType.h"
 
+#include <cstdint>
 #include <functional>
 
 namespace score
@@ -97,4 +98,11 @@ struct ToolServices
     // The text size a tool should start at (global-text-size). Later changes
     // arrive through ToolComponent::setTextScale, as the theme's do.
     int initialTextScale = 100;
+
+    // Play a kept take through the clock, and write a take's audio to a file
+    // the reader chooses, each by the take's id (take-playback): the shell's,
+    // since they need its settings and its file chooser. Playing says false
+    // when it cannot -- another score open, a take recording.
+    std::function<bool(std::uint64_t)> playTake;
+    std::function<void(std::uint64_t)> exportTakeAudio;
 };

@@ -109,6 +109,20 @@ void MainComponent::showLibrary()
                 safeThis->reviewLibraryTake(folder);
             }
         };
+        commands.playTake = [safeThis](const juce::File& folder)
+        {
+            if (safeThis != nullptr)
+            {
+                safeThis->playLibraryTake(folder);
+            }
+        };
+        commands.exportTake = [safeThis](const juce::File& folder)
+        {
+            if (safeThis != nullptr)
+            {
+                safeThis->exportLibraryTakeAudio(folder);
+            }
+        };
         commands.deleteTake = [safeThis](const library::TakeEntry& entry)
         {
             if (safeThis != nullptr)
@@ -242,6 +256,7 @@ void MainComponent::reviewLibraryTake(const juce::File& folder)
     if (takeRecorder.isRecording())
     {
         showLibraryStatus(l10n::text("library.take.busy"));
+        playLoadedTake = false;
         return;
     }
     showLibraryStatus(l10n::text("library.take.loading"));
@@ -264,12 +279,14 @@ void MainComponent::finishLoadingLibraryTake(const library::LoadedTake& loaded)
 {
     if (loaded.take == nullptr)
     {
+        playLoadedTake = false;
         showLibraryStatus(l10n::text(loaded.error));
         return;
     }
     if (takeRecorder.isRecording())
     {
         showLibraryStatus(l10n::text("library.take.busy"));
+        playLoadedTake = false;
         return;
     }
 
@@ -282,9 +299,15 @@ void MainComponent::finishLoadingLibraryTake(const library::LoadedTake& loaded)
 
     // Kept as if it had just ended here, and reviewed; it is already in the
     // library, so the saver passes it by.
-    static_cast<void>(takeRecorder.keep(*loaded.take));
+    const std::uint64_t id = takeRecorder.keep(*loaded.take);
     showLibraryStatus({});
     openToolById("take-review");
+    // Played as well, when that is what was asked (Play in the Library).
+    if (playLoadedTake)
+    {
+        playLoadedTake = false;
+        static_cast<void>(playTake(id));
+    }
     // The review is in the main window, so that comes forward.
     if (auto* window = getTopLevelComponent())
     {

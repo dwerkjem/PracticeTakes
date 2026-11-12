@@ -103,6 +103,19 @@ struct RecordedBlock
     bool countingIn = false;
 };
 
+// A take's microphone, sounding with the table it is published beside
+// (openspec/changes/archive/2026-11-11-take-playback, decisions 1 and 2): samples at the table's
+// rate, and the clock frame of the first. `owner` keeps them alive. Only the
+// message thread assigns or drops it, and only in the slot the renderer is not
+// reading, so the audio thread reads `samples` and never frees anything.
+struct TakeSound
+{
+    std::shared_ptr<const void> owner;
+    const float* samples = nullptr;
+    std::size_t frames = 0;
+    Frame start = 0;
+};
+
 // Monotonic counts of the discrete events. A reader keeps the last counts it
 // saw; the difference is how many of each happened since.
 struct ClockEventCounts
@@ -139,6 +152,12 @@ class ClockRenderer final : public RealtimeRenderer
     // nothing changed and the caller tries again later.
     [[nodiscard]] bool publish(const ClockTable& table);
     [[nodiscard]] bool publish(const ClockTable& table, const PlaybackScore& playback);
+    // With a take's microphone to sound alongside (take-playback).
+    [[nodiscard]] bool
+    publish(const ClockTable& table, const PlaybackScore& playback, const TakeSound& take);
+
+    // The take's loudness, 0-1; 1 by default, as it was recorded.
+    void setTakeVolume(float gain) noexcept;
 
     // Whether the last publish has been picked up.
     [[nodiscard]] bool publishAcknowledged() const noexcept;
@@ -215,6 +234,7 @@ class ClockRenderer final : public RealtimeRenderer
     {
         ClockTable table;
         PlaybackScore playback;
+        TakeSound take;
         std::array<float, maximumClickFrames> accented{};
         std::array<float, maximumClickFrames> normal{};
         std::size_t clickFrames = 0;
@@ -245,6 +265,10 @@ class ClockRenderer final : public RealtimeRenderer
     void dispatchNotes(RenderBlock& block, int offset, Frame start, Frame length) noexcept
         PRACTICE_TAKES_NONBLOCKING;
     void renderSynthUntil(RenderBlock& block, int offset) noexcept PRACTICE_TAKES_NONBLOCKING;
+    // Add the take's samples for one span of the block -- `length` frames
+    // from `offset`, which start at clock frame `start` -- to the output.
+    void mixTake(RenderBlock& block, int offset, Frame start, Frame length) noexcept
+        PRACTICE_TAKES_NONBLOCKING;
     // Every note released, and the event cursor found again: a seek, a wrap,
     // a stop, a new table.
     void releaseNotes() noexcept PRACTICE_TAKES_NONBLOCKING;
@@ -284,6 +308,7 @@ class ClockRenderer final : public RealtimeRenderer
     std::atomic<ScoreSynth*> synthPointer{nullptr};
     std::atomic<std::uint64_t> audibleMask{0};
     std::atomic<float> playbackGain{0.8f};
+    std::atomic<float> takeGain{1.0f};
     std::atomic<std::uint64_t> playbackOverflowCount{0};
 
     std::atomic<bool> metronomeOn{true};

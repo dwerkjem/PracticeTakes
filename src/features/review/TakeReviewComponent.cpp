@@ -1,6 +1,7 @@
 #include "TakeReviewComponent.h"
 #include "../../application/localisation/Localisation.h"
 #include "../../application/localisation/TakeText.h"
+#include "../../application/theme/Icons.h"
 
 #include "../../platform/take/TakeStatus.h"
 
@@ -25,8 +26,9 @@ constexpr juce::uint32 timingColour = 0xffe08a1e;
 
 TakeReviewComponent::TakeReviewComponent(
     take::TakeRecorder& takeRecorder,
-    transport::PracticeClock& practiceClock)
-    : takes(takeRecorder), clock(practiceClock)
+    transport::PracticeClock& practiceClock,
+    TakeActions actions)
+    : takes(takeRecorder), clock(practiceClock), takeActions(std::move(actions))
 {
     setComponentID("take-review-tool");
 
@@ -56,6 +58,36 @@ TakeReviewComponent::TakeReviewComponent(
     };
     addAndMakeVisible(partChooser);
 
+    // Hearing the take (take-playback): Play, which is Stop while it plays,
+    // and its audio as a file.
+    playButton.setComponentID("take-review-play");
+    playButton.onClick = [this]
+    {
+        if (clock.playingRecording())
+        {
+            clock.stop();
+            return;
+        }
+        if (const take::TakeReview* review = takes.review(); review != nullptr && takeActions.play)
+        {
+            static_cast<void>(takeActions.play(review->take->id));
+        }
+        updateTakeButtons();
+    };
+    addAndMakeVisible(playButton);
+    exportButton.setComponentID("take-review-export");
+    exportButton.setButtonText(l10n::text("review.export"));
+    exportButton.setTooltip(l10n::text("review.export.tooltip"));
+    exportButton.onClick = [this]
+    {
+        if (const take::TakeReview* review = takes.review();
+            review != nullptr && takeActions.exportAudio)
+        {
+            takeActions.exportAudio(review->take->id);
+        }
+    };
+    addAndMakeVisible(exportButton);
+
     list.setComponentID("take-review-list");
     list.setModel(this);
     list.setRowHeight(scaledHeight(rowHeight));
@@ -63,12 +95,14 @@ TakeReviewComponent::TakeReviewComponent(
     addAndMakeVisible(list);
 
     takes.addListener(this);
+    clock.addListener(this);
     setTheme(Theme::light);
     refresh();
 }
 
 TakeReviewComponent::~TakeReviewComponent()
 {
+    clock.removeListener(this);
     takes.removeListener(this);
     list.setModel(nullptr);
 }
@@ -98,6 +132,29 @@ void TakeReviewComponent::resetToDefaults()
 void TakeReviewComponent::takesChanged()
 {
     refresh();
+}
+
+void TakeReviewComponent::clockChanged(const transport::ClockUpdate&)
+{
+    updateTakeButtons();
+}
+
+void TakeReviewComponent::updateTakeButtons()
+{
+    const take::TakeReview* review = takes.review();
+    const bool playing = clock.playingRecording();
+    playButton.setButtonText(
+        l10n::text(playing ? l10n::key("review.stop") : l10n::key("review.play")));
+    appearance::setIcon(playButton, playing ? appearance::Icon::stop : appearance::Icon::play);
+    // Its own score must be the open one: a take of a score since replaced
+    // has nothing to play against.
+    const bool playable = review != nullptr && takeActions.play &&
+                          review->take->score == clock.currentScore() && !takes.isRecording();
+    playButton.setEnabled(playing || playable);
+    playButton.setTooltip(l10n::text(
+        playable || playing || review == nullptr ? l10n::key("review.play.tooltip")
+                                                 : l10n::key("review.play.other-score")));
+    exportButton.setEnabled(review != nullptr && takeActions.exportAudio);
 }
 
 void TakeReviewComponent::refresh()
@@ -156,6 +213,9 @@ void TakeReviewComponent::refresh()
     // Nothing to choose between before the first take.
     takeChooser.setVisible(!kept.empty());
     partChooser.setVisible(!kept.empty());
+    playButton.setVisible(review != nullptr);
+    exportButton.setVisible(review != nullptr);
+    updateTakeButtons();
     list.setVisible(review != nullptr);
     list.updateContent();
     list.repaint();
@@ -170,6 +230,10 @@ void TakeReviewComponent::resized()
     takeChooser.setBounds(choosers.removeFromLeft(scaledHeight(120)));
     choosers.removeFromLeft(scaledHeight(8));
     partChooser.setBounds(choosers.removeFromLeft(scaledHeight(180)));
+    choosers.removeFromLeft(scaledHeight(8));
+    playButton.setBounds(choosers.removeFromLeft(scaledHeight(90)));
+    choosers.removeFromLeft(scaledHeight(8));
+    exportButton.setBounds(choosers.removeFromLeft(scaledHeight(130)));
     list.setBounds(bounds);
 }
 

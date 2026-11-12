@@ -681,6 +681,7 @@ const std::vector<ApprovedClickTarget>& targets()
         {"hamburger-button", "Opens the collapsed menu in a narrow window"},
         {"fullscreen-button", "Toggles fullscreen"},
         {"search-button", "Opens the search bar"},
+        {"take-review-play", "Plays the take under review, or stops it"},
     };
 
     return approved;

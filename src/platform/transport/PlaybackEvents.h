@@ -38,6 +38,10 @@ struct PlaybackEvent
     std::uint8_t track = 0;
     std::uint8_t key = 60;
     bool on = false;
+
+    // 1-127 for a note played with a touch of its own -- a take's keyboard
+    // (take-playback); 0 for the score's notes, which sound at one velocity.
+    std::uint8_t velocity = 0;
 };
 
 struct PlaybackScore

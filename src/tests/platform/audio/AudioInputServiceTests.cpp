@@ -1173,3 +1173,75 @@ TEST_CASE(
     CHECK(renderer.playbackOverflows() == 0);
     fixture.service.setRealtimeRenderer(nullptr);
 }
+
+TEST_CASE(
+    "the audio callback plays a take: its samples, and its keys with their touch",
+    "[audio][callback][transport][take-playback]")
+{
+    // What playing a take back puts on the audio thread (take-playback): a
+    // buffer of the take's samples mixed in by pointer, and keyboard notes
+    // with velocities through the synthesiser. Under RealtimeSanitizer this is
+    // the path that must not allocate, lock or free.
+    score::Score source;
+    source.tempoMap = score::TempoMap::build({{0, 120.0}});
+    score::Part part;
+    for (int index = 0; index < 4; ++index)
+    {
+        score::Measure measure;
+        measure.index = static_cast<std::size_t>(index);
+        measure.start = static_cast<score::Tick>(index) * score::ticksPerWholeNote;
+        measure.nominalDuration = score::ticksPerWholeNote;
+        part.measures.push_back(std::move(measure));
+    }
+    source.parts.push_back(std::move(part));
+
+    const auto synth = transport::ScoreSynth::load(PRACTICE_TAKES_TEST_SOUNDFONT);
+    REQUIRE(synth != nullptr);
+    transport::ClockRenderer renderer;
+    auto table = std::make_unique<transport::ClockTable>();
+    transport::buildTable(*table, source, 100, 44100.0, 0, score::ticksPerWholeNote);
+
+    transport::PlaybackScore keys;
+    keys.tracks.push_back(transport::PlaybackTrack{});
+    for (int note = 0; note < 8; ++note)
+    {
+        const transport::Frame on = static_cast<transport::Frame>(note) * 11025;
+        keys.events.push_back(
+            {on, 0, static_cast<std::uint8_t>(60 + note), true,
+             static_cast<std::uint8_t>(30 + (note * 10))});
+        keys.events.push_back({on + 9000, 0, static_cast<std::uint8_t>(60 + note), false, 0});
+    }
+    auto samples = std::make_shared<std::vector<float>>(88200);
+    for (std::size_t index = 0; index < samples->size(); ++index)
+    {
+        (*samples)[index] = 0.1f * std::sin(static_cast<float>(index) * 0.06f);
+    }
+    const transport::TakeSound take{samples, samples->data(), samples->size(), -4410};
+
+    REQUIRE(renderer.publish(*table, keys, take));
+    renderer.setMetronomeEnabled(false);
+    renderer.setSynth(synth.get());
+    renderer.setAudibleTracks(0b1);
+    REQUIRE(renderer.send({transport::ClockCommand::Kind::play}));
+
+    ServiceUnderTest fixture;
+    standUpDevice(fixture.service);
+    fixture.service.setRealtimeRenderer(&renderer);
+
+    Buffers buffers;
+    bool heard = false;
+    for (int block = 0; block < 2000; ++block)
+    {
+        if (block == 1600)
+        {
+            REQUIRE(
+                renderer.send({transport::ClockCommand::Kind::seek, score::ticksPerQuarterNote}));
+        }
+        drive(fixture.service, buffers);
+        heard = heard || anySound(buffers.output);
+    }
+
+    CHECK(heard);
+    CHECK(renderer.events().wraps > 0);
+    fixture.service.setRealtimeRenderer(nullptr);
+}

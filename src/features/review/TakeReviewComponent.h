@@ -8,6 +8,8 @@
 #include "../../platform/take/TakeRecorder.h"
 #include "../../platform/transport/PracticeClock.h"
 
+#include <cstdint>
+#include <functional>
 #include <vector>
 
 // The Take Review tool: the take under review, the part it is judged against,
@@ -21,10 +23,22 @@
 class TakeReviewComponent final
     : public ToolComponent,
       private take::TakeListener,
+      private transport::ClockListener,
       private juce::ListBoxModel
 {
   public:
-    TakeReviewComponent(take::TakeRecorder& takeRecorder, transport::PracticeClock& practiceClock);
+    // Playing and exporting a take are the shell's (take-playback): it asks
+    // for them by the take's id.
+    struct TakeActions
+    {
+        std::function<bool(std::uint64_t)> play;
+        std::function<void(std::uint64_t)> exportAudio;
+    };
+
+    TakeReviewComponent(
+        take::TakeRecorder& takeRecorder,
+        transport::PracticeClock& practiceClock,
+        TakeActions actions = {});
     ~TakeReviewComponent() override;
 
     void paint(juce::Graphics& graphics) override;
@@ -40,6 +54,10 @@ class TakeReviewComponent final
     static constexpr int rowHeight = 24;
 
     void takesChanged() override;
+    void clockChanged(const transport::ClockUpdate& update) override;
+
+    // Play or Stop, and whether either can be done now.
+    void updateTakeButtons();
 
     // Re-read the review: the choosers, the summary and the rows.
     void refresh();
@@ -72,7 +90,10 @@ class TakeReviewComponent final
 
     juce::ComboBox takeChooser;
     juce::ComboBox partChooser;
+    juce::TextButton playButton;
+    juce::TextButton exportButton;
     juce::ListBox list;
+    TakeActions takeActions;
 
     Theme currentTheme = Theme::light;
 

@@ -134,8 +134,8 @@ void playbackEventsOf(const score::Score& score, const ClockTable& table, Playba
                             std::max(on + 1, frameOfTick(table, static_cast<double>(end)));
                         const auto trackIndex = static_cast<std::uint8_t>(track);
                         const auto keyNumber = static_cast<std::uint8_t>(key);
-                        into.events.push_back(PlaybackEvent{on, trackIndex, keyNumber, true});
-                        into.events.push_back(PlaybackEvent{off, trackIndex, keyNumber, false});
+                        into.events.push_back(PlaybackEvent{on, trackIndex, keyNumber, true, 0});
+                        into.events.push_back(PlaybackEvent{off, trackIndex, keyNumber, false, 0});
                     }
                 }
             }
